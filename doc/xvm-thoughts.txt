@@ -1,0 +1,1027 @@
+
+core is all interfaces and only interfaces
+
+concept of "this" but also current invocation frame "method"
+- isStatic() aka "this==null" (which is of course impossible to code for statics)
+- getObject() aka "this"
+- getClass() aka "this.getClass()" for non-static .. no equiv for static
+- getMethod()
+
+object
+  struct
+    boolean (boolean)
+    numeric
+      integral
+        signed
+          int8 (byte)
+          int16 (short)
+          int24 ["trint"]
+          int32 (int)
+          int64 (long)
+          int128
+          int256
+        unsigned
+          uint8
+          uint16 (char)
+          uint24 ["unsigned trint"]
+          uint32
+          uint64
+          uint128
+          uint256
+      decimal
+        dec32
+        dec64
+        dec128
+        dec256
+      floatingpoint
+        float32 (float)
+        float64 (double)
+        float128
+        float256
+        float16 [graphics?]
+        float24 [graphics?]
+        float80 [x86]
+    array
+    reference
+
+Integer
+  Signed
+  Unsigned
+FloatingPoint
+  Decimal
+  Binary
+
+--
+
+Comparable
+  equals()
+
+Orderable
+  ? compareTo(?)
+
+Hashable
+  HashCode property
+
+Identifiable
+
+Versionable
+
+Immutable
+
+enumerations?
+
+Context
+
+Frame
+  Method property
+  Object property
+  Class property
+  Parameters property
+  Variables property
+  Instructions property
+
+Class
+  Property property
+  Method property
+
+Method
+
+Array
+  Length property
+
+Collection
+Set
+List
+Map
+
+Value
+Number : Value
+Integer : Number
+UnsignedInteger : Integer
+Float : Number
+Decimal : Number
+Boolean : Value
+Byte : Value
+Binary : Value
+Character : Value
+String : Value
+Date : Value
+DateInterval : Value
+Time : Value
+TimeInterval : Value
+DateTime : Value
+DateTimeInterval : Value
+
+Money
+  Currency property
+  Amount property (Decimal)
+
+Currency
+  some sort of standard ID
+  probably a name (?)
+  Symbol property
+
+Integer8 : Integer
+Integer16 : Integer
+Integer32 : Integer
+Integer64 : Integer
+Integer128 : Integer
+UnsignedInteger8 : UnsignedInteger
+UnsignedInteger16 : UnsignedInteger
+UnsignedInteger32 : UnsignedInteger
+UnsignedInteger64 : UnsignedInteger
+UnsignedInteger128 : UnsignedInteger
+Float16 : Float
+Float32 : Float
+Float64 : Float
+Float128 : Float
+Decimal32 : Decimal
+Decimal64 : Decimal
+Decimal128 : Decimal
+
+Iterable
+
+visibility
+  private - none
+  make visible to inner classes
+  make visible to sub-classes
+  make visible to package / package & sub-packages / assembly / public
+grant visibility to:
+  - can sub-classes see it? ("inheritable")
+  - can inner/outer classes see it? ("shared")
+  - sub-classes of inner/outer classes? ("shared and inheritable")
+  - can other classes in the same (package, sub-packages, all within assembly, published outside of assembly) see it?
+visible to:
+  - subclass
+  - composite
+  - package
+    - subpackages
+  - assembly
+  - public
+
+return values - can be one or more
+
+
+Thread
+
+threadlocal
+
+--
+
+Add regTo, regVal
+Sub regFrom, regVal
+Mul reg
+Div
+Mod
+DivMod
+
+AddChk
+SubChk
+MulChk
+DivChk
+ModChk
+DivModChk
+
+New
+Invoke
+NextInvoke
+Delete
+
+Properties
+  Get
+  Set
+  SetIf
+  GetSet
+  NextGet
+  NextSet
+  NextSetIf
+  NextGetSet
+
+  (is "static" even required anymore? asked differently, could "static" be eliminated? static methods
+  could be mixins, and static fields .. ??? .. classes as first order objects? what about singletons?
+  e.g. Null)
+
+Move
+Swap
+
+Cast
+
+CmpNull
+CmpSame
+CmpType
+
+IfTrue
+IfFalse
+IfNull
+IfSame
+IfType
+
+Jmp offset
+Jsr offset, register
+Ret register
+
+Raise register
+Return [Value[, Value..]]
+
+Nop
+
+
+Invoke MethodConst Object Param* ReturnValue*
+
+Constants
+  Integer
+  UnsignedInteger (?)
+  Float
+  Decimal
+  Boolean
+  Byte
+  Binary
+  Character
+  String
+  Date
+  DateInterval
+  Time
+  TimeInterval
+  DateTime
+  DateTimeInterval
+
+VM-Structure
+- Assembly (Module?)
+- Namespace (Package?)
+- Type (Class?)
+- Method (Function?)
+- Property (Field?)
+
+has:
+- name
+- version information (primarily intended for assembly / namespace / type)
+- URI(s) of source code and/or the source code itself
+
+(any of which can "Requires" other VM-Structures, i.e. "declarative dependencies")
+
+note that type and namespace can come from more than one assembly
+- namespaces merge
+- types overlay e.g. adding methods to "int" or "string"
+- implies some precedence
+- does it require explicit "import" and/or "export" of types etc.?
+
+visible to:
+  - subclass
+  - composite (inner / outer)
+  - package
+    - subpackages
+  - assembly
+  - public
+
+Maybe @visibility(...)
+- list of visibility limiters, or list of visibility declarations (possibilities)?
+- @visibility(assembly) -- does that say "don't let it be visible outside the assembly" or "let it be visible to everything in the assembly"? (or both?)
+
+Runtime-Context
+
+
+Object
+- Lifecycle: is it being constructed? has it finished construction? (and "construction vs. deserialization"?) is it being destroyed? has it been destroyed?
+- what thread created it?
+- has it escaped?
+- is it immutable (read-only?)
+- what is its class?
+- interface: public / assembly / namespace / protected / private "methods" (interface / behavior)
+- structure: public / assembly / namespace / protected / private "fields" (state)
+
+Class (or "Type")
+- who loaded it?
+- is it thread-safe?
+- what is its "interface"? of various visibilities, e.g. public/private/protected?
+
+
+Need something that answers "are two objects equal", otherwise an object has to know if it is equal to another object -- a la Java's equals()
+- Comparator.compareForEquality(o1, o2)
+- Concept of a "facet", which is a Type-based router that could answer questions like equality, but just for a sub-set of the object it is wrapped around, e.g. "facet = new Facet(o1, Size); if (facet == othersize) …"
+- don't necessarily need an "equals" on the base type, as long as you can compare any two objects
+
+TODO research Java's "call sites" (invoke-dynamic)
+
+Variable<T>
+  - T get()
+  - set(T v) i.e. assign(T v)
+  - Name
+  - isAssigned
+  - DefaultValue
+  - Block
+
+Need some sort of ~() (destructor) for RAII-like functionality (?) - need some way that if we CREATE an object within a scope and we leave that scope, that the object is DESTROYED (but what if it escapes?)
+- Escaping "out" means to be assigned to a variable whose scope is outside of the scope in which it is created
+-  returned from the 
+- Es
+
+Escape
+- Outermost Frame/Scope (how far "out" or "up" has the object escaped?)
+- Has it escaped the Thread? If so, then the "outermost" context it has escaped to
+(need to define relationship of Thread to Context)
+- an object knows when it attempts to escape a thread (does it also know when it escapes a context?)
+- can an object "unescape" i.e. be captured by a thread? this seems much more difficult to prove without massive expense
+- the challenge is that poorly behaving code can do things in any "event" handler, such as an "on escape" handler, or in a destructor
+- attempts to escape during destruction should be illegal
+- since the only thing that could attempt to retry illegal behavior would be "catch" (e.g. "finally"), could imagine that catches could be disabled after a period of time to prevent the prevention of destruction, e.g. when a "catch" catches, it could be disabled from catching again, or it could be disabled after a certain period of time; similarly attempts to "wait" or spin could be limited (async exception being thrown); this is primarily for escaped objects, since objects confined to a particular thread could theoretically be less well behaved without damaging the integrity of the overall system
+- since all contiguous execution is a "thread" of execution, perhaps rethink "thread" altogether, and have all entry points be "events"
+
+Arrays
+- Array<T> is a type
+- get(I index) - what type is "I"? signed versus unsigned, number of bits?
+- set(I index, T value)
+- I=Size property
+- T=ElementType property
+- Array<T,I size> is also a type, i.e. "int[4] int.asByteArray()"
+- can always pass from a size-typed array into a non-size-typed
+- can always create an array from an array; think of it like a "cast" to create a facet: "return (int[4]) ai;"
+- the "cast" just takes the first n bytes; also need a "sub-section" method:
+- T sub(I index, Class<T> t) e.g. "return ai.sub(74, int[4]);"
+- T reverse()
+- also transformation capability, i.e. pass a "T2 Closure<T2>(T1 value)" over the contents of the Array<T1> to get an Array<T2>
+- etc.
+
+Composite types
+- quite often it is needed to take some type T1 that also implements some interface T2; this forces developers to create a T3 interface that extends  both T1 and T2, or to extend class T1 and implement interface T2
+- instead, it would be nice to be able to specify a type as (T1|T2) or (T1&T2)
+- example from Java is the syntax sugar for "catch (T1|T2 e)"
+
+Return value of "this type"
+- instead of narrowing explicitly, narrow implicitly
+- e.g. a Clone method is "<this> Clone()"
+
+abstract private
+- need a way to define non-virtual methods in an interface
+- example from Java is for things like serialization (Serializable defines "private readObject" and "private writeObject")
+- example from TDE is using _init and _initPrivate
+- need a way that the object can realize this "private interface", i.e. hand a callable form of it somewhere else
+- similar to the "super" concept in the execution frame, i.e. exposes callable methods that otherwise are not accessible
+
+versioning
+- obviously modules (assemblies) need versioning, but it's possible for namespaces, types (and even smaller granularity structures) to have versions
+
+--
+
+structure-container:
+  - magic
+  - XVM version major/minor
+  - constants - length-encoded (to allow skipping over)? #-constants (like Java)? or "null-terminated" (easy to append)
+  - structure
+
+structure:
+  - structure type (assembly / namespace / type / method / property)
+  - name
+  - attributes
+
+version-attribute:
+  - "version"
+  - major
+  - minor
+  - (etc.?)
+  - opt-human-readable
+
+external-requirements-attribute:
+  - "import"
+  - constant reference (module(s), namespace(s), or type(s))
+  - zero or more version indicators:
+    - (version-name | version-number | version-number-range)
+
+generic-attribute
+  - name-ref
+  - list of other constants referenced (implies there is a "no-op" constant, i.e. a "no-constant" constant)
+  - length-encoded binary (could reference constants by index into the above list)
+
+--
+
+variables
+- null
+- this
+- super
+- frame
+
+--
+
+constant pool
+
+null (or empty) constant:
+- encoding indicator (0?)
+
+boolean constant:
+- encoding indicator
+- value (0=false or 1=true)
+
+integer constants: (variable-length "var" | fixed-length "fix") + "len-" + (signed "s" | unsigned "u") + "int" + (16 | 32 | 64 | 128)
+
+fixed length integer constants:
+- encoding-indicator
+- value (2, 4, 8 or 16 bytes)
+
+variable length integer constants:
+- encoding-indicator
+- value: variable-length encoding (1+ bytes) (note: illegal to have -0, overflow, or negative value for unsigned type)
+
+REVIEW - why do both variable and fixed? probably easier to just support one or the other
+
+character constant
+- encoding-indicator
+- UTF8 encoding
+
+character string constant
+- encoding-indicator
+- character count: variable-length encoding (1+ bytes) -- REVIEW char count or encoded UTF8 byte count?
+- UTF8 encoding
+
+octet constant
+- encoding-indicator
+- value: 1 byte
+
+octet string constant
+- encoding-indicator
+- octet count: variable-length encoding (1+ bytes)
+- value: n bytes
+
+floating point constants: (radix-2 "bin" | radix-10 "dec") + (32 | 64 | 128) -- REVIEW which 754r format for radix-10???
+- encoding-indicator
+- value (4, 8 or 16 bytes)
+
+--
+
+inline constants
+
+--
+
+compiler
+data structures for each type/method/etc.
+intrinsic types
+
+--
+
+parameterized types
+
+--
+
+Frame
+- Method
+- Variables
+- IP
+
+Method
+- Class
+- Parameters
+- Native?
+- Code
+
+--
+
+class Castable {
+  T to<T>()
+}
+
+class Nibble {
+  Int to<Int>()
+  Char to<Char>()
+}
+
+Q: How to turn an array of Nibble into an Int?
+
+trait Array<Nibble>[2] {
+  Byte to<Byte>()
+}
+
+trait Array<Nibble> {
+  Int to<Int>()
+}
+
+Q: How to support "arrays" with non-int indexing?
+
+class Indexable<T : Identity, V> {
+  V get(T)
+  put(T,V)
+}
+
+class Array<V> extends Indexable<Int, V> {
+}
+
+Q: How to make variables, array elements, etc. into "L values" and everything into "R values"? almost as if: 
+
+class Var<T> extends RValue<T>, LValue<T> {..}
+
+// the LValue is a "holder"
+// the RValue is a "value"
+
+class RValue<T> {
+  T load()
+  R process(Function<T,R>)     // return f(load);
+}
+
+class LValue<T> {
+  store(T newValue)
+  boolean CAS(T oldValue, T newValue)
+  R process(Function<T,R>)
+  process(Function<T>)          // while (!done) {T old = load(); done=CAS(old, f(old));}
+}
+
+// need to look at various functional programming / lambda approaches
+
+how to reference the R- versus the L-value?
+-> in C, for a ref "p", the R-value is "*p" and the L-Value is "*p" (to change the ref-ee) or "p" (to change the ref)
+-> in C, for a val "v", the R-value is "v" and the L-Value is "&v"
+-> in C, for an array "a", the R-value for index "i" is "a[i]" and the L-Value
+-> need to find a way to avoid this confusing differentiation
+
+--
+
+public T as<T>();
+public T to<T>();
+
+Type
+Property
+Method
+Code
+
+--
+
+constructors:
+
+- code blocks passed to a constructor, e.g.
+
+	Point p = Point.new {
+		// this is the code block passed to the constructor -- almost as if the "this" has changed!
+		x = 0;
+		y = 0;
+	} // close curly == "constructed=true"
+
+- may implement constructor on the class itself
+
+- injection -> is there a list of required injections?
+
+-- 
+
+0x00 NOP
+0x01 TRY
+0x02 FINALLY
+0x03 END (EXIT, END_COND, END_GUARD, END_TRY, ..)
+0x04 JMP	rel-addr
+0x05 JMP_TRUE	lvalue-bool, rel-addr
+0x06 JMP_FALSE	lvalue-bool, rel-addr
+0x07 JMP_ZERO	lvalue-int, rel-addr
+0x08 JMP_NZERO	lvalue-int, rel-addr
+0x09 JMP_NULL	lvalue, rel-addr
+0x0A JMP_NNULL	lvalue, rel-addr
+0x0B JMP_EQUAL	lvalue, lvalue, rel-addr
+0x0C JMP_NEQUAL	lvalue, lvalue, rel-addr
+0x0D MATCH_2	lvalue, CONST_*, rel-addr, CONST_*, rel-addr
+0x0E MATCH_3	lvalue, CONST_*, rel-addr, CONST_*, rel-addr, CONST_*, rel-addr
+0x0F MATCH	lvalue, #opts:(CONST_*, rel-addr)
+
+0x10 COND_A0														; assertion level 0-7
+0x11 COND_A1
+0x12 COND_A2
+0x13 COND_A3
+0x14 COND_A4
+0x15 COND_A5
+0x16 COND_A6
+0x17 COND_A7
+0x18 COND_D														; running in debugger
+0x19 NCOND_D														; not running in debugger
+0x1A COND_P	(CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY | CONST_STRING)		; VM-structure or named condition present
+0x1B NCOND_P	(CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY | CONST_STRING)		; VM-structure or named condition absent
+0x1C COND_V	(CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY), CONST_VER		; VM-structure of a (>=) specified version present
+0x1D NCOND_V	(CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY), CONST_VER		;                   (<)
+0x1E COND_X	CONST_VER												; XVM of a (>=) specified version (>=)
+0x1F NCOND_X	CONST_VER												;          (<)
+
+0x20 INVOKE_00	lvalue-target, lvalue-method
+0x21 INVOKE_01	lvalue-target, lvalue-method, rvalue-return
+0x22 INVOKE_0N	lvalue-target, lvalue-method, #returns:(rvalue)
+0x23 INVOKE_0T	lvalue-target, lvalue-method, rvalue-return-tuple
+0x24 INVOKE_10	lvalue-target, lvalue-method, lvalue-param
+0x25 INVOKE_11	lvalue-target, lvalue-method, lvalue-param, rvalue-return
+0x26 INVOKE_1N	lvalue-target, lvalue-method, lvalue-param, #returns:(rvalue)
+0x27 INVOKE_1T	lvalue-target, lvalue-method, lvalue-param, rvalue-return-tuple
+0x28 INVOKE_N0	lvalue-target, lvalue-method, #params:(lvalue)
+0x29 INVOKE_N1	lvalue-target, lvalue-method, #params:(lvalue), rvalue-return
+0x2A INVOKE_NN	lvalue-target, lvalue-method, #params:(lvalue), #returns:(rvalue)
+0x2B INVOKE_NT	lvalue-target, lvalue-method, #params:(lvalue), rvalue-return-tuple
+0x2C INVOKE_T0	lvalue-target, lvalue-method, lvalue-params-tuple
+0x2D INVOKE_T1	lvalue-target, lvalue-method, lvalue-params-tuple, rvalue-return
+0x2E INVOKE_TN	lvalue-target, lvalue-method, lvalue-params-tuple, #returns:(rvalue)
+0x2F INVOKE_TT	lvalue-target, lvalue-method, lvalue-params-tuple, rvalue-return-tuple
+
+0x30 RETURN_0
+0x31 RETURN_1	lvalue
+0x32 RETURN_N	#vals:(lvalue)
+0x33 RETURN_T	lvalue
+0x34 ENTER	#vars:(CONST_CLASS, CONST_*)
+0x35 GUARD	#handlers:(CONST_CLASS, rel_addr)
+0x36 MOV	lvalue-from, rvalue-to
+0x37 SWAP	rvalue, rvalue
+0x38 CAST
+0x39
+0x3A
+0x3B
+0x3C
+0x3D
+0x3E
+0x3F
+
+0x30
+0x31
+0x32
+0x33
+0x34
+0x35
+0x36
+0x37
+0x38
+0x39
+0x3A
+0x3B
+0x3C
+0x3D
+0x3E
+0x3F
+
+0x04 JMP	rel-addr
+0x05 JMP_TRUE	lvalue-bool, rel-addr
+0x06 JMP_FALSE	lvalue-bool, rel-addr
+0x07 JMP_ZERO	lvalue-int, rel-addr
+0x08 JMP_NZERO	lvalue-int, rel-addr
+0x09 JMP_NULL	lvalue, rel-addr
+0x0A JMP_NNULL	lvalue, rel-addr
+0x0B JMP_EQUAL	lvalue, lvalue, rel-addr
+0x0C JMP_NEQUAL	lvalue, lvalue, rel-addr
+0x0D MATCH_2	lvalue, CONST_*, rel-addr, CONST_*, rel-addr
+0x0E MATCH_3	lvalue, CONST_*, rel-addr, CONST_*, rel-addr, CONST_*, rel-addr
+0x0F MATCH_N	lvalue, #opts:(CONST_*, rel-addr)
+
+
+0x30
+0x31
+0x32
+0x33
+0x34
+0x35
+0x36
+0x37
+0x38
+0x39
+0x3A
+0x3B
+0x3C
+0x3D
+0x3E
+0x3F
+
+--
+
+containment model for globally visible names:
+
+versioned constants:
+  Module-opt Namespace-opt* Class+
+
+format: (modules are considered global at runtime, so even if a module is physically nested in another module, only the innermost module name is used to identify the module)
+  Module:Namespace/Namespace/Class.Class
+
+Class can be contained by:
+  Namespace
+  Class
+  Method
+
+Method can be contained by:
+  Class
+  Method
+  Property
+
+Property can be contained by:
+  Class
+  Method
+
+containment model for definitions:
+
+File:
+  ModuleDef | NamespaceDef | ClassDef
+
+ModuleDef:
+  ModuleDef* NamespaceDef*
+
+NamespaceDef:
+  NamespaceDef* ClassDef*
+
+ClassDef:
+  ClassDef* PropertyDef* MethodDef*
+
+PropertyDef:
+  MethodDef*
+
+MethodDef:
+  ClassDef* PropertyDef* MethodDef*
+
+
+
+--
+
+a = 1;
+b = 2;
+c = a + b;
+++c;
+c++;
+
+this
+this.private / this.public / this.protected
+super
+etc.
+
+let’s say you have an array:
+
+int[] a1 = {1,2,3};   // immutable; this one is easy — it’s just a constant
+
+int[] a2 = new int[3];   // this is harder .. what does the constructor look like?
+Array<Integer> a2 = …
+// the thing is, there is a type “Array”, but there is also a type “Array<Integer>” — at least at runtime
+// furthermore, there could be an explicit type: Array<Integer> 
+// so what does the constructor look like?
+.. Array<Integer>.new(3); // ?
+// both “Integer” and “3” are parameters of the construction
+
+So, Array has an “element type”. Integer, for example. It shows up in construction. It also defines the parameter types and return value types for various methods, e.g. something like:
+Array<Integer> {
+  Integer get(int i)
+  void set(int i, Integer v)
+}
+
+So how does one _determine_ the element type at runtime?
+
+—
+	
+default de-reference behavior
+- example: ref1.prop1 = ref2.prop2
+- what you see here is that there is a default dereference behavior that differs whether the dereference results in an R-Value or an L-Value.
+- in the case of the l-value, “ref1.prop1 = v“ translates to something like:
+  invoke “set()” against “ref1.prop1” passing “v” 
+- the long form might be:
+  invoke variable:ref1.resolve(property-constant:prop1) => tmpref1
+  invoke variable:tmpref1.resolve(method-constant:set) => tmpref2
+  invoke variable:tmpref1.
+
+TODO partial binding of methods, properties, etc.
+
+—
+
+A major challenge with modularity is that dependencies can be multi-directional. Consider the case of two libraries, A and B. Each of these libraries is useful in its own right, and has usefulness (and must be usable) in the absence of the other. However, when both libraries are present, it would be useful to extend the functionality in each library   For example, if library A depends on the presence of B, it is generally considered poor design if B also depends on A. But what about the case where A could be useful without B
+
+—
+
+2016-06-16
+
+type declaration keywords:
+- class (keyword: extends)
+- interface (“type”) (keyword: implements)
+- trait / mixin (keyword: incorporates)
+- enum
+- singleton
+
+keywords:
+class CLASSNAME extends CLASS_NAME_2
+class CLASSNAME implements TYPE_NAME
+class CLASSNAME incorporates TRAIT_OR_MIXIN_NAME
+interface INTERFACE_NAME extends INTERFACE_NAME_2
+interface INTERFACE_NAME implements TYPE_NAME
+interface INTERFACE_NAME incorporates TRAIT_OR_MIXIN_NAME
+
+class
+ - can extend class
+ - can implement interface(s)
+ - can incorporate mixin(s) and/or trait(s)
+
+interface
+ - can implement (extend?) interface(s)
+ - can incorporate mixin(s) and/or trait(s)
+
+trait
+ - can extend mixin or trait
+ - can implement interface(s)
+ - can incorporate mixin(s) and/or trait(s)
+
+mixin
+ - can extend mixin
+ - can implement interface(s)
+ - can incorporate mixin(s)
+
+value (a specialization of “class”, always immutable)
+ - can extend class or value
+ - can implement interface(s)
+ - can incorporate mixin(s) and/or trait(s)
+
+singleton (a specialization of “class”; not extendible)
+ - can extend class or value
+ - can implement interface(s)
+ - can incorporate mixin(s) and/or trait(s)
+
+enum (not extendible, always immutable … basically a singleton value)
+ - can implement interface(s)
+ - can incorporate mixin(s) and/or trait(s)
+
+TODO explain modules, packages, properties, methods, functions
+
+
+// is a “const” just a singleton value?
+const PI = 3.14159267;
+singleton PI extends NumericLiteral{ call_the_super_constructor(3.14159267) };
+singleton MSG extends StringLiteral(“Hello world!”);
+
+class construction:
+1) validation - mapping from parameters to (1) properties and (2) super validation. how does one specify this?
+2) initialization
+3) construction event
+
+how does trait construction work? can it mix in with the class construction approach?
+
+classes have single inheritance.
+
+—
+20 june 2016
+module and package
+could be a singleton in reality
+e.g. “module ModuleName { . . . }” could be compiled in a similar way to “singleton ClassName { . . . }”
+
+big concerning question:
+  assume: (1) a validator for some class C as part of the construction process.
+          (2) a significant amount of functionality in class C that could be used by the validator.
+  question: how does the validator use that functionality?
+            i.e. it doesn’t have a “this” to call the methods with, and there is no “static” method keyword
+  issues: (1) don’t repeat yourself (DRY) - shouldn’t have to write the code twice or cut & paste
+
+is the “function” type a solution?
+e.g.
+  class Point(int x, int y) {
+    (int x, int y) validate(int x, int y)
+
+—
+
+after a long couple of days working through some design inconsistencies combined with missing items from my wish list, i have come to a shocking conclusion: i am going to reintroduce the concept of “static”. before you burn me at the stake, hear me out. what i need in one case is an elegant way to describe a named constant, such as we would currently use “static final” for in java, for example. in another case, i need an ability to describe a named constant of type function (which, in my design thus far, is a method that is already bound to a “this”). here again, the similarity to java’s “static void foo()” is demonstrable. so what i am proposing is to use the term “static” so that developers coming from Java or C# will find it familiar, even though the underlying concepts (global scope vs. named constants) are seemingly different at the surface level, because i recognize that for the use case that i am suggesting, the java analogue is plenty good, and well understood by many developers already.by borrowing the keyword “static”, i can easily avoid any special “function” keyword or similar, and avoid expressing it as a “state constant whose type is a function”, and instead just modify the “method signature” with the keyword “static”.so the keyword would only be usable with a “property declaration” of a type that is “value” (i.e. immutable at the end of construction) or the aforementioned functions.lastly, as “enum” is an extension of “value”, the concept holds for the named enum values as well.lest i forget, the initial challenge that drove me into this swamp was the design of the “module” and “package” types. i believe that i have now been able to reconcile them both as extensions to the “singleton” type (keyword), which is itself an extension to the “class” type (keyword). how this is related to “static” is a long discussion in and of itself, but that is nowhere near as important as the conclusion that “module” and “static” can leverage all of the existing design building blocks instead of standing separate from them as exceptional cases.and with that, i shall retire for the evening. (it’s a pennsylvania dutch saying .. it means “go to bed”)actually, i should point out that “module”, “package”, and “function” were the last 3 structures that i still had to resolve (in terms of how they fit into the type system and appear in the syntactical system), so if this holds water, it means that i have “closed the loop” at least on one level …quick recap of type system: developer builds a “module”, which contains “package” (recurse), which contains various forms of “class” (recurse). forms of class are (keywords): class, interface, value, singleton, enum (which is also a singleton and also a value), trait, mixin. two special forms of class: module and package (both of which are also singleton and value).so a “type” can be any of those. each is represented by a constant in the module’s constant pool. every type is referenceable by name. however, when a name is used to reference a constant in the constant pool, that name may have a “default de-reference” associated with it. for example, if App.Util is a package, then a reference to the package can be obtained simply by using its name: “Package pkg = App.Util;” for example. But if App.Util.DefaultComparator is a singleton, then the name returns the instance: “Comparator cmp = App.Util.DefaultComparator;” (or even “Comparator cmp = DefaultComparator;” if it has been imported etc.). In the case of a singleton, to access the class, one must use the “!” post operator: “Comparator cmp = DefaultComparator!;”Interestingly in the above example, App.Util is a package, but a package is a type, so “Package pkg = App.Util;” actually obtains the singleton instance of the App.Util class. To get the “class” of the Util “package” instead, it would be “Package pkg = App.Util!;”(The same syntax is used with methods, properties, variables, etc. For example, if the Point class has a property “int x”, then in the code “point.x = 1;” the “point.x” is a reference to an instance of Property, but the “default dereference” is a call to the property’s set() method, i.e. as if the developer had written: “point.x!.set(1);”. similaly, “int value = point.x;” is the same as “int value = point.x!.get();”another way to think about it is to imagine the “!” is a way to tell the compiler, “no dummy, that’s not what i meant .. get me the thing i named!”FWIW - this closes out so many questions / topics that gene and i were going through. as in “it’s done; i’m happy.”
+
+—
+
+on the topic of “this”
+someone calls o.foo() {..}
+what is “this” inside foo?
+well, it’s a couple of different things
+- it represents the “target” reference that the caller used to invoke foo (this:target)
+- it represents the “nothing hidden” reference that o can use to do anything it wants to itself (this:private)
+but it depends on how it is used
+for example “return this;” means this:target
+but ”this.privateMethod()” means this:private
+
+this:target a.k.a. this (where this:target <= this:private)
+super
+frame
+this:private
+this:protected
+this:package
+this:module
+this:public
+
+meta? it it another property? a variable/constant? a bunch of properties?
+immutable - how to make immutable? how to check immutable?
+events (like construction, escaping thread, etc.)
+
+why not properties like:
+class Object {
+  @ro private Object privateThis;
+  @ro protected Object protectedThis;
+  @ro package Object packageThis;
+  @ro module Object moduleThis;
+  @ro public Object publicThis;
+}
+
+when a call is made to o, such as “o.foo()”, the “this” refers to this:target, which is the reference that “o” had to the object.
+if a call is made to o.foo(), which then calls foo2() on itself, then “this” is still “this:target” which is still “o”
+
+types are comparable. so e.g. “if (T1 >= T2) {…}” is a valid comparison.
+
+references can “stack”. a weak or soft ref for example is s shell around another ref. a phantom is an “opaque” ref combined with a weak ref.
+“readonly” might be a ref type. (or it might be a modified vtabl .. or some of each)
+
+private @Weak byte[] cache;
+
+—
+
+with container classes, need to be able to add specialization by Type parameter
+
+bit[] needs a to<byte[]>
+byte[] needs a to<bit[]>
+etc.
+
+also need to be able to add specialization by Type
+for example, Array<T> is defined in the core module
+in module MyApp, it’s possible to define Person
+where could code be written that is for the type Array<Person>?
+
+harder problem is when there is some parameterized “container type” that has both T1 and T2 as parameters e.g. BigBag<T1, T2>
+if module App1 defines Person and App2 defines Job, where should the code for BigBag<Person, Job> be placed?
+
+—
+
+! as the “over-ride default behavior” operator
+
+int x = 0;
+int y = x;
+Variable<int> z = x!;	// not x the value, but x the variable (L-Value)
+
+class X {
+ X foo();	// X is “this type”
+ X! foo2();	// X! is “actually X!!!”
+}
+
+class Y extends X {
+  // implicitly contains:
+  Y foo();	// note that when the ref’d type is “this type”, that it stays “this type” when inherited
+  X foo2();	// still actually X
+}
+
+—
+
+@lazy properties
+(could it also mean “transient”?)
+
+—
+
+class Name<T> { …}T becomes a public property of type Type on class Name—
+
+properties .. public and private .. readonly .. how to make the same name have different public & private vtabls???
+
+for a given property, it appears in both the :public and :private interfaces
+however, its reference can differ between those two
+just like it can differ when “readonly” is applied
+
+—
+
+multi-line comments
+
+
+    /*
+    private static final HTML BUNCHOFHTML = Html:{"
+        | <table cellspacing=10>
+        | <tr>
+        |     <td><a href="https://static.pinboard.in/ob/ob.001.jpg"><img src="https://static.pinboard.in/ob/thumbs/ob.001.thumb.png"></a></td>
+        |
+        |     <td>
+        |     <h1 style="margin-top:0px">The Website Obesity Crisis</h1>
+        |     <ol>
+        |         <li><a href="#crisis">The Crisis</a></li>
+        |         <li><a href="#fixes">Fake Fixes</a></li>
+        |         <li><a href="#fatads">Fat Ads</a></li>
+        |         <li><a href="#fatassets">Fat Assets</a></li>
+        |         <li><a href="#minimalism">Chickenshit Minimalism</a></li>
+        |         <li><a href="#sprawl">Interface Sprawl</a></li>
+        |         <li><a href="#heavyclouds">Heavy Clouds</a></li>
+        |         <li><a href="#conclusion">Stirring Conclusion</a></li>
+        |
+        |     </ol>
+        |      </td>
+        | </tr>"}
+
+    const Map STATES = {{"HI", "Hawaii"}, {"MA", "Massachusetts"}, ...};
+
+    const Map STATES = Map:{"
+        "HI"="Hawaii",
+        "MA"="Massachusetts",
+        "IA"="Iowa",
+        "NY"="New York",
+        };
+
+    STATES.get("MA")
+     */
+    /* TODO remove
+
+    String s = {"This is a test of the emergency
+               | broadcast system"};
+
+    String s = |"
+        | This is a test of the emergency
+        | broadcast system"|;
+
+    // concatenate: '+' followed by SpacingElement-opt followed by literal content
+    // "This is a test of the emergency broadcast system"
+    String s = {"This is a test of the emergency
+               + broadcast system"};
+
+
+    // concatenate with line feed: '|' followed by SpacingElement-opt followed by literal content
+    // '|' followed by SpacingElement-opt is replaced with '\n'
+    // "This is a test of the emergency\nbroadcast system"
+    String s = {"
+        + This is a test of the emergency
+        | broadcast system"};
+
+    String s = "This is a test of the emergency
+broadcast system";
+
+|"
+
+     */
+
+
+    
+—
