@@ -1,0 +1,5 @@
+interface Package
+        implements Class
+    {
+
+    }

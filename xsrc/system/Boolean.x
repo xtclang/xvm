@@ -1,0 +1,1 @@
+enum Boolean {False, True};

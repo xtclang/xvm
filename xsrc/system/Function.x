@@ -1,0 +1,4 @@
+interface Function
+        implements Value
+    {
+    }
