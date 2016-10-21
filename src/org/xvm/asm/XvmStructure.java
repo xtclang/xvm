@@ -510,7 +510,7 @@ public abstract class XvmStructure
         if (collStructs != null && !collStructs.isEmpty())
             {
             out.print(sIndent);
-            out.print(sTitle);
+            out.println(sTitle);
 
             int i = 0;
             String sIndentMore = nextIndent(sIndent);

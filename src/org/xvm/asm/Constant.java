@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.util.Comparator;
 import org.xvm.asm.ConstantPool.ConditionalConstant;
 
 
@@ -174,7 +175,7 @@ public abstract class Constant
         }
 
 
-    // ----- Comparable operations ---------------------------------------------
+    // ----- Comparable interface
 
     @Override
     public int compareTo(Constant that)
@@ -184,39 +185,18 @@ public abstract class Constant
             return 0;
             }
 
-        int cDif = this.m_cRefs - that.m_cRefs;
+        // primary sort of constants is by the "format" i.e. the "binary
+        // type" of the constant
+        int cDif = this.getFormat().ordinal() - that.getFormat().ordinal();
         if (cDif != 0)
             {
-            // most used comes first
-            return -cDif;
-            }
-
-        // REVIEW can't be type because different classes have same type e.g. Conditionals
-        // cDif = this.getType().ordinal() - that.getType().ordinal();
-        cDif = this.getFormat().ordinal() - that.getFormat().ordinal();
-        if (cDif != 0)
-            {
-            // arbitrary: order by types
+            // order by types
             return cDif;
             }
 
-        return compareDetails(that);
-        }
-
-    /**
-     * This method allows each particular type of constant to compare its
-     * detailed information with another instance of the same type of constant
-     * in order to provide a stable and predictable ordering of constants.
-     *
-     * @param that  another Constant of the same Type
-     *
-     * @return a negative integer, zero, or a positive integer as this Constant
-     *         is less than, equal to, or greater than the specified Constant
-     */
-    protected int compareDetails(Constant that)
-        {
-        // inefficient and begs for optimization by sub-classes
-        return this.toString().compareTo(that.toString());
+        // two constants of the same format can be compared by their
+        // contents
+        return this.compareDetails(that);
         }
 
 
@@ -277,6 +257,18 @@ public abstract class Constant
         {
         return null;
         }
+
+    /**
+     * This method allows each particular type of constant to compare its
+     * detailed information with another instance of the same type of constant
+     * in order to provide a stable and predictable ordering of constants.
+     *
+     * @param that  another Constant of the same Type
+     *
+     * @return a negative integer, zero, or a positive integer as this Constant
+     *         is less than, equal to, or greater than the specified Constant
+     */
+    protected abstract int compareDetails(Constant that);
 
     /**
      * Before the registration of constants begins, each Constant's tracking of
@@ -405,115 +397,12 @@ public abstract class Constant
      */
     enum Format // TODO re-do / maybe discard this altogether?
         {
-        /**
-         * Constant-Type: Byte (aka Octet).
-         * <p>
-         * Implementation-Class: {@link ConstantPool.ByteConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0] = 0
-         * [1] = octet-value
-         * </pre></code>
-         */
         Byte,
-
-        /**
-         * Constant-Type: Byte-String (aka Octet-String, aka Binary).
-         * <p>
-         * Implementation-Class: {@link ConstantPool.ByteStringConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 1
-         * [1..] = length of the Byte-String, in variable-length encoded format
-         * [...] = octet-value of each octet in the Octet-String
-         * </pre></code>
-         */
         ByteString,
-
-        /**
-         * Constant-Type: Character (Unicode code-point).
-         * <p>
-         * Implementation-Class: {@link ConstantPool.CharConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 2
-         * [1..] = Unicode code-point of the character, in UTF-8 encoded format
-         * </pre></code>
-         */
         Char,
-
-        /**
-         * Constant-Type: Character-String (aka String).
-         * <p>
-         * Implementation-Class: {@link ConstantPool.CharStringConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 3
-         * [1..] = length of the UTF-8 encoding in bytes, in variable-length
-         *         encoded format
-         * [...] = Unicode code-point of each character of the string, in UTF-8
-         *         encoded format
-         * </pre></code>
-         */
         CharString,
-
-        /**
-         * Constant-Type: Integer. There are two different intended use cases for
-         * this particular constant format: First, to support integers of arbitrary
-         * bit length that do not necessarily have a runtime type, such as when
-         * defining a min and max for the parameters of the integer type itself,
-         * and second, to provide a simple format for constants of the "default"
-         * 64-bit signed integer type.
-         * <p>
-         * Implementation-Class: {@link ConstantPool.IntConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 4
-         * [1..] = integer value, in variable-length encoded format
-         * </pre></code>
-         */
         Int,
-
-        /**
-         * Constant-Type: Parameterized Integer.
-         * <p>
-         * Implementation-Class: {@link ConstantPool.IntConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 5
-         * [1..] = index of the Parameterized Class constant that specifies the
-         *         parameterized integer type, in variable-length encoded format
-         * [...] = integer value, in variable-length encoded format
-         * </pre></code>
-         */
-        IntParmed, // TODO consider a UInt type, even though it would use the same format
-
-        /**
-         * Constant-Type: Version.
-         * <p>
-         * Implementation-Class: {@link ConstantPool.VersionConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = TODO
-         * [1..] = TODO
-         * </pre></code>
-         */
         Version,
-
         ConditionNot,
         ConditionAll,
         ConditionAny,
@@ -521,40 +410,7 @@ public abstract class Constant
         ConditionNamed,
         ConditionPresent,
         ConditionVersion,
-
-        /**
-         * Constant-Type: Module.
-         * <p>
-         * Implementation-Class: {@link ConstantPool.ModuleConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 6
-         * [1..] = index of the Character-String constant that specifies the module
-         *         name, in variable-length encoded format
-         * </pre></code>
-         */
         Module,
-
-        /**
-         * Constant-Type: Package (or Namespace).
-         * <p>
-         * Implementation-Class: {@link ConstantPool.PackageConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 7
-         * [1..] = index of the Module or Package constant that contains this
-         *         package, in variable-length encoded format
-         * [...] = index of the Character-String constant that specifies the
-         *         unqualified package name, in variable-length encoded format
-         * [1..] = index of the Module that this Package serves as an alias of,
-         *         (or -1 if the Package is not a module alias), in
-         *         variable-length encoded format
-         * </pre></code>
-         */
         Package,
 
         /**
@@ -660,13 +516,6 @@ public abstract class Constant
         Method,
 
         /**
-         * TODO
-         * REVIEW
-         * [0] = 11
-         */
-        MethodParmed,
-
-        /**
          * Constant-Type: Property (or Field).
          * <p>
          * Implementation-Class: {@link ConstantPool.PropertyConstant}
@@ -684,9 +533,6 @@ public abstract class Constant
          */
         Property,
 
-        /**
-         *
-         */
         Parameter;
 
         /**
@@ -708,32 +554,30 @@ public abstract class Constant
         }
 
 
-    // ----- intrinsic class identifiers ---------------------------------------
+    // ----- Constant Comparators for ordering ConstantPool --------------------
 
     /**
-     * Enum: Predefined ClassConstants that are intrinsic to the XVM.
+     * A Comparator of Constant values that orders the "most frequently used"
+     * constants to the front of the ConstantPool.
      */
-// REVIEW what are these for?
-//    enum Intrinsic
-//        {
-//        Byte,
-//        Binary,
-//        Char,
-//        String,
-//        Integer,
-//        UInt1,
-//        UInt2,
-//        UInt4,
-//        UInt8,
-//        UInt16,
-//        UInt32,
-//        SInt1,
-//        SInt2,
-//        SInt4,
-//        SInt8,
-//        SInt16,
-//        SInt32,
-//        }
+    public static final Comparator<Constant> MFU_ORDER = new Comparator<Constant>()
+        {
+        @Override
+        public int compare(Constant o1, Constant o2)
+            {
+            if (o1 == o2)
+                {
+                return 0;
+                }
+
+            assert o1.getConstantPool() == o2.getConstantPool();
+
+            int cDif = o1.m_cRefs - o2.m_cRefs;
+
+            // most used comes first
+            return -cDif;
+            }
+        };
 
 
     // ----- data members ------------------------------------------------------

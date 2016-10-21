@@ -121,8 +121,6 @@ public class ConstantPool
             // make sure that the recursively referenced constants are all
             // registered (and that they are aware of their being referenced)
             constant.registerConstants(this);
-
-            markModified();
             }
         else
             {
@@ -625,7 +623,6 @@ public class ConstantPool
                     break;
 
                 case Int:
-                case IntParmed:
                     constant = new IntConstant(this, format, in);
                     break;
 
@@ -784,12 +781,12 @@ public class ConstantPool
         // sort the Constants by how often they are referred to within the
         // FileStructure, with the most frequently referred-to Constants
         // appearing first
-        m_listConst.sort(null);
+        m_listConst.sort(Constant.MFU_ORDER);
 
         // go through and mark each constant with its new position; the
         // iteration is backwards to support the efficient removal of all of the
         // unused Constant from the end of the list
-        for (int i = m_listConst.size() - 1; i <= 0; --i)
+        for (int i = m_listConst.size() - 1; i >= 0; --i)
             {
             Constant constant = m_listConst.get(i);
             if (constant.hasRefs())
@@ -797,14 +794,12 @@ public class ConstantPool
                 if (i != constant.getPosition())
                     {
                     constant.setPosition(i);
-                    markModified();
                     }
                 }
             else
                 {
                 constant.setPosition(-1);
                 m_listConst.remove(i);
-                markModified();
                 }
             }
 
@@ -3763,12 +3758,10 @@ public class ConstantPool
         @Override
         protected int compareDetails(Constant that)
             {
-            int n = this.m_constParent.compareTo(
-                    ((PropertyConstant) that).m_constParent);
+            int n = this.m_constParent.compareTo(((PropertyConstant) that).m_constParent);
             if (n == 0)
                 {
-                n = this.m_constName.compareTo(
-                        ((PropertyConstant) that).m_constName);
+                n = this.m_constName.compareTo(((PropertyConstant) that).m_constName);
                 if (n == 0)
                     {
                     // TODO
@@ -4137,10 +4130,10 @@ public class ConstantPool
         @Override
         protected int compareDetails(Constant that)
             {
-            int n = this.m_constType.compareTo(((ParameterConstant) that).m_constType);
+            int n = this.m_constType.compareDetails(((ParameterConstant) that).m_constType);
             if (n == 0)
                 {
-                n = this.m_constName.compareTo(((ParameterConstant) that).m_constName);
+                n = this.m_constName.compareDetails(((ParameterConstant) that).m_constName);
                 }
             return n;
             }
