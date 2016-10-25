@@ -175,7 +175,7 @@ public abstract class Constant
         }
 
 
-    // ----- Comparable interface
+    // ----- Comparable interface ----------------------------------------------
 
     @Override
     public int compareTo(Constant that)
@@ -412,128 +412,11 @@ public abstract class Constant
         ConditionVersion,
         Module,
         Package,
-
-        /**
-         * Constant-Type: Class (or Type).
-         * <p>
-         * Implementation-Class: {@link ConstantPool.ClassConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 8
-         * [1..] = index of the Module, Package, Class, Property, or Method constant
-         *         that contains this class, in variable-length encoded format
-         * [...] = index of the Character-String constant that specifies the
-         *         unqualified class name, in variable-length encoded format
-         * [...] = number of class specification parameters, in variable-length
-         *         encoded format; then, for each parameter argument:
-         *         -> the index of the Character-String constant for the parameter
-         *            name, in variable-length encoded format
-         *         -> the index of the Class constant specifying the parameter type,
-         *            in variable-length encoded format
-         *         -> the index of the constant specifying the default argument
-         *            value, in variable-length encoded format, or -1 if the
-         *            argument is required; to reference the value of an in-scope
-         *            specification parameter, specify the index of a String
-         *            constant whose value is the name of the specification
-         *            parameter
-         * </pre></code>
-         */
         Class,
-
-        /**
-         * Constant-Type: Parameterized Class.
-         * <p>
-         * Implementation-Class: {@link ConstantPool.ClassConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 9
-         * [1..] = index of the Class Constant that specifies the unparameterized
-         *         class, in variable-length encoded format
-         * [...] = number of parameter arguments, in variable-length encoded format;
-         *         then, for each parameter argument:
-         *         -> the index of the Integer constant (parameter index) or
-         *            Character-String constant (parameter name), in variable-length
-         *            encoded format
-         *         -> the index of the constant specifying the argument value, in
-         *            variable-length encoded format; to reference the value of an
-         *            in-scope specification parameter, specify the index of a
-         *            String constant whose value is the name of the specification
-         *            parameter
-         * </pre></code>
-         */
-        ClassParmed,
-
-        /**
-         * Constant-Type: Method (or Function).
-         * <p>
-         * Implementation-Class: {@link ConstantPool.MethodConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0]   = 10
-         * [1..] = index of the Module, Package, Class, Property, or Method constant
-         *         that contains this method, in variable-length encoded format
-         * [...] = index of the Character-String constant that specifies the
-         *         method name, in variable-length encoded format
-         * [...] = number of method specification parameters, in variable-length
-         *         encoded format; then, for each parameter:
-         *         -> the index of the Character-String constant for the parameter
-         *            name, in variable-length encoded format
-         *         -> the index of the Class constant specifying the parameter type,
-         *            in variable-length encoded format
-         *         -> the index of the constant specifying the default argument
-         *            value, in variable-length encoded format, or -1 if the
-         *            argument is required
-         * [...] = number of method invocation parameters, in variable-length
-         *         encoded format; then, for each parameter argument:
-         *         -> the index of the Character-String constant for the parameter
-         *            name, in variable-length encoded format
-         *         -> the index of the Class constant specifying the parameter type,
-         *            in variable-length encoded format, or the index of the String
-         *            constant specifying the class or method specification
-         *            parameter that identifies the type
-         *         -> the index of the constant specifying the default argument
-         *            value, in variable-length encoded format, or -1 if the
-         *            argument is required
-         * [...] = number of method return values, in variable-length encoded
-         *         format; then, for each return value:
-         *         -> the index of the Character-String constant for the return
-         *            value name, in variable-length encoded format
-         *         -> the index of the Class constant specifying the return type,
-         *            in variable-length encoded format, or the index of the String
-         *            constant specifying the class or method specification
-         *            parameter that identifies the type
-         *         -> the index of the constant specifying the default argument
-         *            value, in variable-length encoded format, or -1 if the
-         *            argument is required
-         * </pre></code>
-         */
         Method,
-
-        /**
-         * Constant-Type: Property (or Field).
-         * <p>
-         * Implementation-Class: {@link ConstantPool.PropertyConstant}
-         * <p>
-         * Binary-Format:
-         * <p>
-         * <code><pre>
-         * [0] = 12
-         * [1..] = index of the Module, Package, Class, Property, or Method
-         *         constant that contains this property, in variable-length
-         *         encoded format
-         * [...] = index of the Character-String constant that specifies the
-         *         unqualified class name, in variable-length encoded format
-         * </pre></code>
-         */
         Property,
 
-        Parameter;
+        Parameter; // TODO remove?
 
         /**
          * Look up a Format enum by its ordinal.
