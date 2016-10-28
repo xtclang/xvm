@@ -1,7 +1,8 @@
-interface Class
-        implements Value
+public value /* or interface? */ Class
     {
-
+    /**
+     * Obtain the public interface of the class.
+     */
     @ro Type PublicType;
     @ro Type ProtectedType;
     @ro Type PrivateType;

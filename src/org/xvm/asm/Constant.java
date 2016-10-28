@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.Comparator;
+
 import org.xvm.asm.ConstantPool.ConditionalConstant;
 
 
@@ -16,15 +17,32 @@ import org.xvm.asm.ConstantPool.ConditionalConstant;
  * example, the string "hello world" is a constant, as is the number 42. By
  * representing these as constant values in a "pool" of constant values, it
  * is possible for multiple uses of the same constant value to all refer to
- * one location within the assembled binary, saving space. Furthermore, it
- * allows a reference to a binary to be made from anywhere with a single
- * number, which is the ordinal position of the constant within the sequence
- * of all constants (whose order can be considered arbitrary).
+ * one location within the assembled binary FileStructure, saving space.
+ * Furthermore, it allows a reference to a particular constant to be made from
+ * anywhere within the FileStructure using an integer, which identifies the
+ * ordinal position (known as the <i>index</i>) of the constant within the
+ * sequence of all constants (whose particular order should be considered to
+ * be arbitrary).
  * <p>
- * A Constant can be compared to another Constant of the same type for
- * purposes of ordering.
+ * In addition to the simple examples of constant values above, constants also
+ * serve to identify structures within the FileStructure, and to identify
+ * structures that must be found in other FileStructures. Specifically:
+ * <ul>
+ * <li>Each identifiable sub-structure within the FileStructure specifies the
+ *     index of the constant that is the identity of that sub-structure, such
+ *     as a Package or a Class or a Method or a Property;</li>
+ * <li>Each reference to a sub-structure that exists within the FileStructure
+ *     is made by specifying the index of the constant that identifies that
+ *     particular sub-structure, such as a Method that is being invoked or a
+ *     Property that is being accessed;</li>
+ * <li>Similarly, each reference to a sub-structure that exists in some other
+ *     FileStructure is made by specifying the index of the constant within
+ *     this FileStructure that exactly identifies (fully qualifies) the
+ *     particular sub-structure in the other FileStructure, such as a Class
+ *     being referenced or a Method being invoked in a different Module.</li>
+ * </ul>
  *
- * @author cp  2012.12.08
+ * @author cp  2015.12.08
  */
 public abstract class Constant
         extends XvmStructure

@@ -1,3 +1,5 @@
+import ecstasy.xtclang.org as x;
+
 import Nullable.Null as null;
 import Boolean as boolean;
 import Boolean.False as false;

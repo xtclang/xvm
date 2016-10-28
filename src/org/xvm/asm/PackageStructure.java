@@ -1,9 +1,18 @@
 package org.xvm.asm;
 
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 import org.xvm.asm.ConstantPool.ModuleConstant;
 import org.xvm.asm.ConstantPool.PackageConstant;
 import org.xvm.asm.StructureContainer.PackageContainer;
+
+import org.xvm.util.Handy;
+
+import static org.xvm.util.Handy.readIndex;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -31,12 +40,65 @@ public class PackageStructure
 
     // ----- XvmStructure methods ----------------------------------------------
 
-    // TODO disassemble
-    // TODO registerConstants
-    // TODO assemble
+    @Override
+    protected void disassemble(DataInput in)
+            throws IOException
+        {
+        m_constModule = (ModuleConstant) getConstantPool().getConstant(readIndex(in));
+
+        super.disassemble(in);
+        }
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        m_constModule = (ModuleConstant) pool.register(m_constModule);
+
+        super.registerConstants(pool);
+        }
+
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        writePackedLong(out, m_constModule == null ? -1 : m_constModule.getPosition());
+
+        super.assemble(out);
+        }
+
     // TODO validate
-    // TODO getDescription
-    // TODO equals
+
+    @Override
+    public String getDescription()
+        {
+        StringBuilder sb = new StringBuilder();
+        sb.append(super.getDescription())
+          .append(", import-module=")
+          .append(m_constModule == null ? "n/a" : m_constModule);
+        return sb.toString();
+        }
+
+
+    // ----- Object methods ----------------------------------------------------
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        if (obj == this)
+            {
+            return true;
+            }
+
+        if (!(obj instanceof PackageStructure && super.equals(obj)))
+            {
+            return false;
+            }
+
+        // compare imported modules
+        PackageStructure that = (PackageStructure) obj;
+        return Handy.equals(this.m_constModule, that.m_constModule);
+        }
+
 
     // ----- accessors ---------------------------------------------------------
 

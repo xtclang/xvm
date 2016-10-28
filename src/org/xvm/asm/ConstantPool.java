@@ -70,7 +70,7 @@ public class ConstantPool
      */
     public Constant getConstant(int i)
         {
-        return m_listConst.get(i);
+        return i == -1 ? null : m_listConst.get(i);
         }
 
     /**
@@ -2502,8 +2502,8 @@ public class ConstantPool
                     throws IOException
                 {
                 super(pool);
-                m_iStruct = readMagnitude(in);
-                m_iVer = readIndex(in);
+                m_iStruct   = readMagnitude(in);
+                m_iVer      = readIndex(in);
                 m_fExactVer = in.readBoolean();
                 }
 

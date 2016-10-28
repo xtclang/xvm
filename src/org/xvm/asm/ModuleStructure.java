@@ -95,6 +95,8 @@ public class ModuleStructure
         super.assemble(out);
         }
 
+    // TODO validate
+
     @Override
     public String getDescription()
         {

@@ -9,7 +9,13 @@ public class Object
     /**
      * The Type property provides the type of the reference that was used to obtain the value of the Type property.
      */
-    public readonly Type type;
+    public readonly Type type
+        {
+        Type get()
+            {
+            return this:target
+            }
+        }
 
     /**
      * TODO - this shouldn't exist?!?!?
@@ -17,7 +23,7 @@ public class Object
      * .. provides the class of the TODO .. it's not the "virtual" class, it's "this" class, i.e. the
      * one that the code is on that is asking the question
      */
-    private readonly Class class;
+    protected readonly Class class;
     // TODO need some sort of composite Class that represents Traits, Mixins, various interfaces, etc.
     // TODO it comes from the perspective through the reference, i.e. the same "object" could have a trait applied through one ref and not another
     // TODO consider a single "meta" property

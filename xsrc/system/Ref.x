@@ -8,6 +8,7 @@ interface Ref<T>
             }
         };
 
-    T get();
+    @ro T get();
+
     void set(T value);
     }

@@ -13,7 +13,7 @@ public interface Constants
     /**
      * The special sequence of bytes that identifies an XVM FileStructure.
      */
-    public static final int FILE_MAGIC = 0xCAFE1CED;
+    public static final int FILE_MAGIC = 0xEC57A5EE;
 
     /**
      * The current major version of the XVM FileStructure. This is the newest
@@ -28,6 +28,7 @@ public interface Constants
      */
     public static final int VERSION_MINOR_CUR = 0;
 
+    // TODO review - where are we going to use these?
     /**
      * Used to specify that an item (such as a parameter) is not specified as
      * being either mutable or immutable. For a parameter, this means that a

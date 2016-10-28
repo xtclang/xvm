@@ -4,7 +4,7 @@ interface List<T>
   int size;
   T get(int i);
   }
-  
+
 {String get(int)} instanceof {Object get(int)} == true
 {void add(String)} instanceof {void add(Object)} == true // only true because we need it to be
 
@@ -22,7 +22,7 @@ int intExtractor(Provider<int> provider)
 	{
 	return provider.get(0);
 	}
-    
+
 List<Object> lo = new ArrayList();
 String s = stringExtractor(lo);
 int n = intExtractor(lo);
@@ -35,7 +35,7 @@ class Logger<T>
     {
     void add(T t);
     }
-    
+
 // why is it LEGAL to pass a List<Object> to this method? i.e List<S> = List<O>
 void stringLogger(Logger<String> logger)
 	{
@@ -73,13 +73,13 @@ interface LogFile<T>
   void log(T val);
   @ro T last;
   }
-  
+
 class SuperDuperLogFile<T>
     implements LogFile<T>
   {
   // ...
   }
-   
+
 interface Logger<T>
   {
   void log(T val);
@@ -89,7 +89,7 @@ interface Recent<T>
   {
   @ro T last;
   }
-  
+
 void logSomeObject(Logger<Object> logger)
   {
   // this will work for Logger<Object>
@@ -105,7 +105,7 @@ void logSomeString(Logger<String>)
   // RTE for any other
   logger.log("Hello world!");
   }
-  
+
 void extractSomeObject(Recent<Object> history)
   {
   // this will work for any Recent<T>
@@ -118,13 +118,13 @@ void extractSomeString(Recent<String> history)
   // RTE for any other
   String s = history.last;
   }
-  
+
 void test()
   {
   LogFile<Object> logAny = new SuperDuperLogFile<Object>;
   LogFile<String> logStr = new SuperDuperLogFile<String>;
   LogFile<int   > logInt = new SuperDuperLogFile<int   >;
-  
+
   logSomeObject(logAny); // types match, no RTE
   logSomeObject(logStr); // auto-castable ("only b/c we need it to be"), but RTE!
   logSomeObject(logInt); // auto-castable ("only b/c we need it to be"), no RTE
@@ -141,3 +141,17 @@ void test()
   extractSomeString(logStr); // types match, no RTE
   extractSomeString(logInt); // compile time error! (would also be an RTE)
   }
+
+// --- narrowing of return values
+
+class StringBuilder
+  {
+  // return value is not actually compiled as "StringBuilder", but rather as "this-class"
+  StringBuilder append(String s) {..}
+  }
+
+class SuperDuperStringBuilder
+  {
+  // implicitly: SuperDuperStringBuilder append(String s);
+  }
+
