@@ -63,6 +63,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
+
     // ----- internal -----
 
     public void testFileStructure(FileStructure structfile)
@@ -95,5 +96,4 @@ public class FileStructureTest
         byte[] ab2 = out.toByteArray();
         Assert.assertTrue(Arrays.equals(ab, ab2));
         }
-
     }

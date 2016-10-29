@@ -43,4 +43,24 @@ public class ClassStructure
         {
         return (ClassConstant) getIdentityConstant();
         }
+
+    public enum Category
+        {
+        Interface,
+        Trait,
+        Mixin,
+        Class,
+        Service,
+        Value,
+        Enum,
+        }
+
+    private Category m_fCategory;
+
+    private boolean m_fSingleton;
+
+    private boolean m_fSynthetic;
+
+
     }
+
