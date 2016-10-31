@@ -3229,8 +3229,8 @@ public class ConstantPool
                 throws IOException
             {
             super(pool);
-            m_iParent = readMagnitude(in);
-            m_iName   = readMagnitude(in);
+            m_iParent = readIndex(in);
+            m_iName   = readIndex(in);
             }
 
         /**
@@ -3295,8 +3295,8 @@ public class ConstantPool
                 throws IOException
             {
             out.writeByte(getFormat().ordinal());
-            writePackedLong(out, m_constParent.getPosition());
-            writePackedLong(out, m_constName.getPosition());
+            writePackedLong(out, indexOf(m_constParent));
+            writePackedLong(out, indexOf(m_constName));
             }
 
         @Override
@@ -3308,10 +3308,10 @@ public class ConstantPool
         @Override
         protected int compareDetails(Constant that)
             {
-            int n = this.m_constParent.compareTo(((ClassConstant) that).m_constParent);
+            int n = this.m_constParent.compareTo(((ClassConstant) that).m_constParent);     // TODO nulls?
             if (n == 0)
                 {
-                n = this.m_constName.compareTo(((ClassConstant) that).m_constName);
+                n = this.m_constName.compareTo(((ClassConstant) that).m_constName);         // TODO nulls?
                 }
             return n;
             }
@@ -3319,7 +3319,7 @@ public class ConstantPool
         @Override
         public String getValueString()
             {
-            return m_constParent instanceof ClassConstant
+            return m_constParent instanceof ClassConstant                                   // TODO nulls?
                     ? m_constParent.getValueString() + '.' + m_constName.getValue()
                     : m_constName.getValue();
             }
@@ -3333,13 +3333,13 @@ public class ConstantPool
                 constParent = ((ClassConstant) constParent).getNamespace();
                 }
 
-            return "class=" + getValueString() + ", " + constParent.getDescription();
+            return "class=" + getValueString() + ", " + constParent.getDescription();       // TODO nulls?
             }
 
         @Override
         public int hashCode()
             {
-            return m_constParent.hashCode() * 17 + m_constName.hashCode();
+            return m_constParent.hashCode() * 17 + m_constName.hashCode();                  // TODO nulls?
             }
 
         /**
@@ -3360,7 +3360,7 @@ public class ConstantPool
          */
         public String getName()
             {
-            return m_constName.getValue();
+            return m_constName.getValue();                                                  // TODO nulls?
             }
 
         /**
@@ -3376,12 +3376,15 @@ public class ConstantPool
         private int m_iName;
 
         /**
-         * The constant that represents the parent of this class.
+         * The constant that represents the parent of this class. Null in the
+         * case of a class that does not have a global identity.
          */
         private Constant m_constParent;
 
         /**
-         * The constant that holds the unqualified name of the class.
+         * The constant that holds the unqualified name of the class. Null in
+         * the case of a class that does not have a name, such as a synthetic
+         * class, or a class of type "Type".
          */
         private CharStringConstant m_constName;
         }

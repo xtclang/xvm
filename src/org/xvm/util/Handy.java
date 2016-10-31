@@ -5,7 +5,6 @@ package org.xvm.util;
 import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,7 +13,6 @@ import java.io.IOException;
 
 import java.io.InputStream;
 import java.io.UTFDataFormatException;
-import java.math.BigInteger;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -23,7 +21,6 @@ import java.nio.charset.Charset;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Objects;
 
 
 /**
@@ -1372,15 +1369,13 @@ public class Handy
             switch (cb)
                 {
                 default:
-                    if (ab[0] == 0x00 && ab[1] == 0x00
-                            && (ab[2] & 0xFF) == 0xFE && (ab[3] & 0xFF) == 0xFF)
+                    if (ab[0] == 0x00 && ab[1] == 0x00 && (ab[2] & 0xFF) == 0xFE && (ab[3] & 0xFF) == 0xFF)
                         {
                         sEncoding = "UTF-32BE";
                         cbBOM = 4;
                         break;
                         }
-                    else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE
-                            && ab[2] == 0x00 && ab[3] == 0x00)
+                    else if ((ab[0] & 0xFF) == 0xFF && (ab[1] & 0xFF) == 0xFE && ab[2] == 0x00 && ab[3] == 0x00)
                         {
                         sEncoding = "UTF-32LE";
                         cbBOM = 4;

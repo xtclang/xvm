@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.Collections;
 import java.util.Map;
+
 import org.xvm.asm.StructureContainer.MethodContainer;
 import org.xvm.asm.ConstantPool.CharStringConstant;
 import org.xvm.asm.ConstantPool.ClassConstant;
@@ -49,7 +50,11 @@ public class ClassStructure
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constModule = (ModuleConstant) getConstantPool().getConstant(readIndex(in));
+        final int nCategory = in.readUnsignedByte();
+        m_fSingleton = (nCategory & SINGLETON) != 0;
+        m_fSynthetic = (nCategory & SYNTHETIC) != 0;
+        m_category   = Category.valueOf(nCategory & CATEGORY);
+        m_mapParams  = disassembleTypeParams(in);
 
         super.disassemble(in);
         }
@@ -57,7 +62,16 @@ public class ClassStructure
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constModule = (ModuleConstant) pool.register(m_constModule);
+        final ListMap<CharStringConstant, ClassConstant> mapOld = m_mapParams;
+        if (mapOld != null && mapOld.size() > 0)
+            {
+            final ListMap<CharStringConstant, ClassConstant> mapNew = new ListMap<>();
+            for (Map.Entry<CharStringConstant, ClassConstant> entry : mapOld.entrySet())
+                {
+                mapNew.put((CharStringConstant) pool.register(entry.getKey()), (ClassConstant) pool.register(entry.getValue()));
+                }
+            m_mapParams = mapNew;
+            }
 
         super.registerConstants(pool);
         }
@@ -66,7 +80,8 @@ public class ClassStructure
     protected void assemble(DataOutput out)
             throws IOException
         {
-        writePackedLong(out, m_constModule == null ? -1 : m_constModule.getPosition());
+        out.writeByte(m_category.ordinal() | (m_fSingleton ?SINGLETON : 0) | (m_fSynthetic ? SYNTHETIC : 0));
+        assembleTypeParams(m_mapParams, out);
 
         super.assemble(out);
         }
@@ -76,10 +91,34 @@ public class ClassStructure
     @Override
     public String getDescription()
         {
+        // <K extends Hashable, V> -- because V is "extends Object" .. see Constants
+
         StringBuilder sb = new StringBuilder();
         sb.append(super.getDescription())
-                .append(", import-module=")
-                .append(m_constModule == null ? "n/a" : m_constModule);
+          .append(", type-params=");
+
+        final ListMap<CharStringConstant, ClassConstant> map = m_mapParams;
+        if (map == null || map.size() == 0)
+            {
+            sb.append("none");
+            }
+        else
+            {
+            sb.append('<');
+            for (Map.Entry<CharStringConstant, ClassConstant> entry : map.entrySet())
+                {
+                sb.append(entry.getKey().getValue());
+                if (entry.getValue())
+
+                entry.getValue()
+                }
+            sb.append('>');
+            }
+
+        sb.append(", singleton=")
+          .append(m_fSingleton)
+          .append(", synthetic=")
+          .append(m_fSynthetic);
         return sb.toString();
         }
 
@@ -151,9 +190,10 @@ public class ClassStructure
         markModified();
         }
 
-    public Map<CharStringConstant, Constant> getTypeParams()
+    public Map<CharStringConstant, ? extends Constant> getTypeParams()
         {
-        return Collections.unmodifiableMap(m_mapParams);
+        final ListMap<CharStringConstant, ? extends Constant> map = m_mapParams;
+        return map == null ? Collections.EMPTY_MAP : Collections.unmodifiableMap(map);
         }
 
     // TODO type parameters: index (contiguous starting with 0), name (unique), type (defaulting to "Object")
@@ -164,18 +204,80 @@ public class ClassStructure
 
     /**
      * Types of classes.
-     * TODO what about "type" i.e. a class without identity?
      */
     public enum Category
         {
+        /**
+         * A type that is identified only by its members.
+         */
+        Type,
+        /**
+         * A type that is itself a reference to a type parameter. (The exact
+         * type is unknown at compile time.)
+         */
+        TypeParam,
+        /**
+         * An <tt>interface</tt> type.
+         */
         Interface,
+        /**
+         * A <tt>trait</tt> type.
+         */
         Trait,
+        /**
+         * A <tt>mixin</tt> type.
+         */
         Mixin,
+        /**
+         * A <tt>class</tt> type.
+         */
         Class,
+        /**
+         * A <tt>service</tt> type.
+         */
         Service,
+        /**
+         * A <tt>value</tt> type.
+         */
         Value,
-        Enum,
+        /**
+         * An <tt>enum</tt> type.
+         */
+        Enum,;
+
+        /**
+         * Look up a Category enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Category enum for the specified ordinal
+         */
+        public static Category valueOf(int i)
+            {
+            return CATEGORIES[i];
+            }
+
+        /**
+         * All of the Category enums.
+         */
+        private static final Category[] CATEGORIES = Category.values();
         }
+
+
+    /**
+     * A mask for the various class category indicators.
+     */
+    public static final int CATEGORY = 0x0F;
+
+    /**
+     * A mask for specifying that the class is a singleton.
+     */
+    public static final int SINGLETON = 0x80;
+
+    /**
+     * A mask for specifying that the class is synthetic.
+     */
+    public static final int SYNTHETIC = 0x40;
 
 
     // ----- data members ------------------------------------------------------
@@ -199,6 +301,6 @@ public class ClassStructure
     /**
      * The name-to-type information for type parameters.
      */
-    private ListMap<CharStringConstant, ? extends Constant> m_mapParams;
+    private ListMap<CharStringConstant, ClassConstant> m_mapParams;
     }
 

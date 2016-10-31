@@ -94,13 +94,13 @@ value String(@ro char[] Chars)
             s.length;
             }
         }
-    
+
     @lazy int Hashcode
         {
         int get() {...}
         }
     }
-    
+
 
 
 -- this --
@@ -143,7 +143,7 @@ x.&y    x.y!
 class Person {
   int age;
   boolean oldEnough();
-  
+
   void foo(Map<String, Person> map) {
     map.values(oldEnough);
     map.values(p -> p.age > 17);
@@ -164,13 +164,13 @@ class Filter1<V>
   {
   boolean evaluate(V v);
   }
-  
+
 class Map<K,V>
   {
   function<V> boolean Filter2(V v);
-  
+
   Set<V> values(Filter2 filter)
-  
+
   Set<V> values(Any filter)
     {
     entries(e -> filter(e.value)).map(e -> e.value);
@@ -180,12 +180,12 @@ class Map<K,V>
 test() {
   Filter2<Person> f2 = p -> p.isMale;
   foo(map.values(f2));
-  
+
   Filter1<Person> f1 = getFilter1FromSomewhere();
   foo(map.values(f1.evaluate);
 
   foo(map.values(p -> p.isMale);
-  
+
   Bob bob = new Bob();
   foo(map.values(bob.testBob(?, 3));
   foo(map.values(Bob.testAge(7));  // REVIEW
@@ -257,7 +257,7 @@ module M3 {
 #endif
 
 #ifdef B
- .. 
+ ..
  #ifdef A
  ..
  #endif
@@ -272,7 +272,7 @@ while (f(&value))
   {
   ...
   }
-  
+
 //
 
 interface Listener<E>
@@ -282,12 +282,12 @@ interface Listener<E>
   }
 
 interface NamedCache<K, V>
-  { 
+  {
   void addValueListener(Listener<? super V> listener)
     {
     m_listener = listener;
     }
-  
+
   void repeat()
     {
     // legal:
@@ -301,24 +301,24 @@ interface NamedCache<K, V>
     Object o = m_listener.getLastEvent();
     m_listener.notify((V) o);
     }
-  
+
   void put(K key, V value)
     {
     m_listener.notify(value);
     }
   }
-  
+
 class SomeApp
   {
   @inject Listener listenerOfAnything;
   @inject NamedCache<String, Person> people;
-  
+
   void main()
     {
     people.addValueListener(listenerOfAnything); // compiler error???
     }
   }
-  
+
 // example 2 with auto-infer of consumer/producer "? super" crap
 
 interface Listener<E>
@@ -327,12 +327,12 @@ interface Listener<E>
   }
 
 interface NamedCache<K, V>
-  { 
-  void addValueListener(Listener<V> listener)  // implied: "? super" 
+  {
+  void addValueListener(Listener<V> listener)  // implied: "? super"
     {
     m_listener = listener;
     }
-  
+
   void test(Object o, V value)
     {
     // legal:
@@ -341,7 +341,7 @@ interface NamedCache<K, V>
     // illegal:
     m_listener.notify(o);
     }
-  
+
   void put(K key, V value)
     {
     m_listener.notify(value);
@@ -354,15 +354,15 @@ class SomeApp
   @inject Listener<Person> listenerOfPerson;
   @inject Listener<String> listenerOfString;
   @inject NamedCache<String, Person> people;
-  
+
   void main()
     {
     // legal (!!!)
     people.addValueListener(listenerOfAnything);
-    
+
     // legal
     people.addValueListener(listenerOfPerson);
-    
+
     // illegal (!!!)
     Listener listener2 = listenerOfString;
     }
@@ -377,12 +377,12 @@ interface Listener<E>
   }
 
 interface NamedCache<K, V>
-  { 
+  {
   void addValueListener(Listener<V> listener)
     {
     m_listener = listener;
     }
-  
+
   void test(Object o, V value)
     {
     // legal:
@@ -390,14 +390,14 @@ interface NamedCache<K, V>
 
     // illegal:
     m_listener.notify(o);
-    
+
     // legal:
     Object o2 = listener.getLastEvent();
-    
+
     // legal:
     V v2 = listener.getLastEvent();
     }
-  
+
   void put(K key, V value)
     {
     m_listener.notify(value);
@@ -410,12 +410,12 @@ class SomeApp
   @inject Listener<Person> listenerOfPerson;
   @inject Listener<String> listenerOfString;
   @inject NamedCache<String, Person> people;
-  
+
   void main()
     {
     // illegal (!!!)
     people.addValueListener(listenerOfAnything);
-    
+
     // legal
     people.addValueListener(listenerOfPerson);
 
@@ -433,18 +433,18 @@ public interface List<T>
   T last();
   // etc...
   }
-  
+
 void handy(List list)
   {
   // always planned to make this ok at run-time
   Type t = list.T;
-  
+
   // what if we made this work at compile time too?
   list.T value = list.first();
   // makes this ok
   list.add(value);
   }
-  
+
 --
 
 interface List<T>
@@ -453,7 +453,7 @@ interface List<T>
   int size;
   T get(int i);
   }
-  
+
 class ArrayList<T>
     implements List<T>
   {
@@ -469,7 +469,7 @@ interface Map<K,V>
     }
   // ...
   }
-  
+
 /**
 * Example bad code that I plan to disallow:
 */
@@ -477,7 +477,7 @@ class HashMap<K,V>
     implements Map<V,K>   // this is illegal in xtc!
   {
   // ...
-  
+
   // the reason that this does not work in Ecstasy is that it implies 4 properties:
   Type K; // Map::K;
   Type V; // Map::V;
@@ -491,7 +491,7 @@ void bar()
   {
   foo(new Map<String, int>);
   }
-  
+
 void foo(Map<K,V> map)
   {
   foo2(new ArrayList<map.Entry>);
@@ -505,7 +505,7 @@ void foo2(List<Map.Entry /* compiler adds "<Object,Object>" */ > list)
 
   list.T.K key = list.get(0).key;
   list.T.V val = list.get(0).value;
-  
+
   // so this is the question to answer: how to do type literals?
   Type eventinterface = Type:"{void onNotify(list.T.K);}";
   // or something like:
@@ -521,7 +521,7 @@ void foo2(List<Map.Entry /* compiler adds "<Object,Object>" */ > list)
   funcdef void notificationfunction(list.T.K);
   // or both?
   }
-  
+
 // --
 
 void foo()
@@ -529,7 +529,7 @@ void foo()
   Type t = String;
   t s = "hello"; // illegal because "t" is not usable as a compile-time type
   }
-  
+
 // type example
 
 class T1 { int x; int y; }
@@ -543,3 +543,23 @@ String s = 6.to<String>();
 int sum = 6 + 5;
 // same as:
 int sum = 6.add(5);
+
+// -- list.T example --
+
+// consider a generic box:
+class Box<T> {private T value; T peek() {..}; void poke(T value) {..}}
+// so class "Box" has parameter of name "T" of type "Object"->"ecstasy.xtclang.org"
+// how does e.g. poke() declare its parameter type? category is "type-param", name is "T", parent is Box
+
+// this one makes total sense
+void foo(List list, list.T element)
+// but what is the type? i.e. the method has a parameter of type "List"->"collections"->"ecstasy.xtclang.org",
+// but what is "list.T"? it's a category "type-param" synthetic with type name "list.T" with parent (!!) set to foo()
+
+// this one is a bit harder to defend ("forward declaration"), but still makes sense
+void foo(list.T element, List list)
+
+// so what's the issue? the issue is that for each type, there has to be a ClassConstant
+// and that ClassConstant may be referenced by other e.g. modules
+// e.g. "I have a variable of that type over in that module, e.g. a return type" - how does it reference it?
+// it has to say "there is class with some type T over in that module, and I'm calling a method that returns that T"

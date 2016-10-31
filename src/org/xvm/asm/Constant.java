@@ -345,6 +345,18 @@ public abstract class Constant
         throw new UnsupportedOperationException();
         }
 
+    /**
+     * TODO
+     *
+     * @param constant
+     *
+     * @return
+     */
+    protected static int indexOf(Constant constant)
+        {
+        return constant == null ? -1 : constant.getPosition();
+        }
+
 
     // ----- constant pool type identifiers ------------------------------------
 

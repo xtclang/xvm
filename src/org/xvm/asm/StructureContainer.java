@@ -17,14 +17,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.ConstantPool.CharStringConstant;
 import org.xvm.asm.ConstantPool.ClassConstant;
 import org.xvm.asm.ConstantPool.ConditionalConstant;
 import org.xvm.asm.ConstantPool.MethodConstant;
 import org.xvm.asm.ConstantPool.PackageConstant;
 
 import org.xvm.util.LinkedIterator;
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -91,6 +94,8 @@ public abstract class StructureContainer
      *
      * @param in  the DataInput containing the XVM structures
      *
+     * @return TODO
+     *
      * @throws IOException  if an I/O exception occurs during disassembly from
      *         the provided DataInput stream, or if there is invalid data in the
      *         stream
@@ -117,6 +122,8 @@ public abstract class StructureContainer
      *
      * @param in  the DataInput containing the XVM structure
      *
+     * @return TODO
+     *
      * @throws IOException  if an I/O exception occurs during disassembly from
      *         the provided DataInput stream, or if there is invalid data in the
      *         stream
@@ -136,6 +143,39 @@ public abstract class StructureContainer
         XvmStructure structSub = constId.instantiate(this);
         structSub.disassemble(in);
         return structSub;
+        }
+
+    /**
+     * Helper method to read a collection of type parameters.
+     *
+     * @param in  the DataInput containing the type parameters
+     *
+     * @return null if there are no type parameters, otherwise a map from
+     *         CharStringConstant to the type constraint for each parameter
+     *
+     * @throws IOException  if an I/O exception occurs during disassembly from
+     *         the provided DataInput stream, or if there is invalid data in the
+     *         stream
+     */
+    protected ListMap<CharStringConstant, ClassConstant> disassembleTypeParams(DataInput in)
+            throws IOException
+        {
+        int c = readMagnitude(in);
+        if (c <= 0)
+            {
+            assert c == 0;
+            return null;
+            }
+
+        ListMap<CharStringConstant, ClassConstant> map = new ListMap<>();
+        for (int i = 0; i < c; ++i)
+            {
+            CharStringConstant constName = (CharStringConstant) getConstantPool().getConstant(readIndex(in));
+            ClassConstant      constType = (ClassConstant)      getConstantPool().getConstant(readIndex(in));
+            assert !map.containsKey(constName);
+            map.put(constName, constType);
+            }
+        return map;
         }
 
     /**
@@ -194,6 +234,33 @@ public abstract class StructureContainer
         else
             {
             structSub.assemble(out);
+            }
+        }
+
+    /**
+     * Helper method to write type parameters to the DataOutput stream.
+     *
+     * @param map  the type parameters
+     * @param out  the DataOutput to write the XVM structure to
+     *
+     * @throws IOException  if an I/O exception occurs during assembly to the
+     *         provided DataOutput stream
+     */
+    protected void assembleTypeParams(ListMap<CharStringConstant, ClassConstant> map, DataOutput out)
+            throws IOException
+        {
+        int c = map == null ? 0 : map.size();
+        writePackedLong(out, c);
+
+        if (c == 0)
+            {
+            return;
+            }
+
+        for (Map.Entry<CharStringConstant, ClassConstant> entry : map.entrySet())
+            {
+            writePackedLong(out, entry.getKey().getPosition());
+            writePackedLong(out, entry.getValue().getPosition());
             }
         }
 

@@ -28,6 +28,10 @@ public interface Constants
      */
     public static final int VERSION_MINOR_CUR = 0;
 
+    public static final String ECSTASY_MODULE = "ecstasy.xtclang.org";
+
+    public static final String CLASS_OBJECT   = "Object";
+
     // TODO review - where are we going to use these?
     /**
      * Used to specify that an item (such as a parameter) is not specified as
