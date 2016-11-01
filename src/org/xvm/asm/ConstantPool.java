@@ -3000,6 +3000,17 @@ public class ConstantPool
             }
 
         /**
+         * Determine if this ModuleConstant is the Ecstasy core module.
+         *
+         * @return true iff this ModuleConstant represents the module
+         *         containing the Ecstasy class library
+         */
+        public boolean isEcstasyModule()
+            {
+            return getQualifiedName().equals(ECSTASY_MODULE);
+            }
+
+        /**
          * During disassembly, this holds the index of the constant that
          * specifies the name.
          */
@@ -3361,6 +3372,19 @@ public class ConstantPool
         public String getName()
             {
             return m_constName.getValue();                                                  // TODO nulls?
+            }
+
+        /**
+         * Determine if this ClassConstant is the "Object" class.
+         *
+         * @return true iff this ClasConstant represents the root Object class
+         *         of the Ecstasy type hierarchy
+         */
+        public boolean isEcstasyObject()
+            {
+            return getName().equals(CLASS_OBJECT)
+                    && getNamespace().getType() == Type.Module
+                    && ((ModuleConstant) getNamespace()).isEcstasyModule();
             }
 
         /**

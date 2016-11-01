@@ -4,7 +4,9 @@ package org.xvm.util;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 
@@ -35,6 +37,16 @@ public class ListMap<K,V>
     public Set<Entry<K, V>> entrySet()
         {
         return m_setEntries;
+        }
+
+    /**
+     * Obtain a read-only list of entries.
+     *
+     * @return the entries of the map in a List
+     */
+    public List<Entry<K,V>> asList()
+        {
+        return Collections.unmodifiableList(m_list);
         }
 
     /**

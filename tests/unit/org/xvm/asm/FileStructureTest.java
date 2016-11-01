@@ -45,6 +45,51 @@ public class FileStructureTest
         }
 
     @Test
+    public void testBaseClass()
+            throws IOException
+        {
+        FileStructure structfile = new FileStructure(Constants.ECSTASY_MODULE, null, null);
+        ((ModuleStructure) structfile.getTopmostStructure()).ensureClass(Constants.CLASS_OBJECT);
+        testFileStructure(structfile);
+        }
+
+    @Test
+    public void testListClass()
+            throws IOException
+        {
+        FileStructure structfile = new FileStructure(Constants.ECSTASY_MODULE, null, null);
+        ClassStructure structobj = ((ModuleStructure) structfile.getTopmostStructure()).ensureClass(Constants.CLASS_OBJECT);
+        PackageStructure structpkg = ((ModuleStructure) structfile.getTopmostStructure()).ensurePackage("collections");
+        ClassStructure structclz = structpkg.ensureClass("List");
+        structclz.setCategory(ClassStructure.Category.Interface);
+        structclz.addTypeParam("T", structobj.getClassConstant());
+        testFileStructure(structfile);
+        }
+
+    @Test
+    public void testMapClass()
+            throws IOException
+        {
+        FileStructure    file    = new FileStructure(Constants.ECSTASY_MODULE, null, null);
+        ModuleStructure  module  = (ModuleStructure) file.getTopmostStructure();
+        ClassStructure   clzObj  = module.ensureClass(Constants.CLASS_OBJECT);
+        PackageStructure pkgColl = module.ensurePackage("collections");
+        ClassStructure   clzHash = module.ensureClass("Hashable");
+        clzHash.setCategory(ClassStructure.Category.Interface);
+
+        ClassStructure clzMap = pkgColl.ensureClass("Map");
+        clzMap.setCategory(ClassStructure.Category.Interface);
+        clzMap.addTypeParam("K", clzObj.getClassConstant());
+        clzMap.addTypeParam("V", clzObj.getClassConstant());
+
+        ClassStructure clzHashMap = pkgColl.ensureClass("HashMap");
+        clzMap.addTypeParam("K", clzHash.getClassConstant());
+        clzMap.addTypeParam("V", clzObj.getClassConstant());
+
+        testFileStructure(file);
+        }
+
+    @Test
     public void testFoo()
             throws IOException
         {

@@ -549,12 +549,12 @@ int sum = 6.add(5);
 // consider a generic box:
 class Box<T> {private T value; T peek() {..}; void poke(T value) {..}}
 // so class "Box" has parameter of name "T" of type "Object"->"ecstasy.xtclang.org"
-// how does e.g. poke() declare its parameter type? category is "type-param", name is "T", parent is Box
+// how does e.g. poke() declare its parameter type? ClassConstant(Box, "T")
 
 // this one makes total sense
 void foo(List list, list.T element)
-// but what is the type? i.e. the method has a parameter of type "List"->"collections"->"ecstasy.xtclang.org",
-// but what is "list.T"? it's a category "type-param" synthetic with type name "list.T" with parent (!!) set to foo()
+// but what is the type?  i.e. the method has a parameter of type "List"->"collections"->"ecstasy.xtclang.org",
+// but what is "list.T"? ClassConstant(foo, "list.T")
 
 // this one is a bit harder to defend ("forward declaration"), but still makes sense
 void foo(list.T element, List list)
@@ -563,3 +563,8 @@ void foo(list.T element, List list)
 // and that ClassConstant may be referenced by other e.g. modules
 // e.g. "I have a variable of that type over in that module, e.g. a return type" - how does it reference it?
 // it has to say "there is class with some type T over in that module, and I'm calling a method that returns that T"
+
+// so let's start by solving the problem within "this" module, i.e. first the declaration
+// then second anyone dependent on that declaration (e.g. a caller)
+// and then we can figure out how to reference it from a different module
+

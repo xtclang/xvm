@@ -5,13 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.StructureContainer.MethodContainer;
 import org.xvm.asm.ConstantPool.CharStringConstant;
 import org.xvm.asm.ConstantPool.ClassConstant;
 
+import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -56,6 +59,8 @@ public class ClassStructure
         m_category   = Category.valueOf(nCategory & CATEGORY);
         m_mapParams  = disassembleTypeParams(in);
 
+        // TODO list of contributions
+
         super.disassemble(in);
         }
 
@@ -73,6 +78,8 @@ public class ClassStructure
             m_mapParams = mapNew;
             }
 
+        // TODO list of contributions
+
         super.registerConstants(pool);
         }
 
@@ -82,6 +89,8 @@ public class ClassStructure
         {
         out.writeByte(m_category.ordinal() | (m_fSingleton ?SINGLETON : 0) | (m_fSynthetic ? SYNTHETIC : 0));
         assembleTypeParams(m_mapParams, out);
+
+        // TODO list of contributions
 
         super.assemble(out);
         }
@@ -105,15 +114,31 @@ public class ClassStructure
         else
             {
             sb.append('<');
+            boolean fFirst = true;
             for (Map.Entry<CharStringConstant, ClassConstant> entry : map.entrySet())
                 {
-                sb.append(entry.getKey().getValue());
-                if (entry.getValue())
+                if (fFirst)
+                    {
+                    fFirst = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
 
-                entry.getValue()
+                sb.append(entry.getKey().getValue());
+
+                ClassConstant constType = entry.getValue();
+                if (!constType.isEcstasyObject())
+                    {
+                    sb.append(" extends ")
+                      .append(entry.getValue().getName());
+                    }
                 }
             sb.append('>');
             }
+
+        // TODO list of contributions
 
         sb.append(", singleton=")
           .append(m_fSingleton)
@@ -133,14 +158,25 @@ public class ClassStructure
             return true;
             }
 
-        if (!(obj instanceof PackageStructure && super.equals(obj)))
+        if (!(obj instanceof ClassStructure && super.equals(obj)))
             {
             return false;
             }
 
-        // compare imported modules
-        PackageStructure that = (PackageStructure) obj;
-        return Handy.equals(this.m_constModule, that.m_constModule);
+        ClassStructure that = (ClassStructure) obj;
+        if (! (this.m_category   == that.m_category
+            && this.m_fSingleton == that.m_fSingleton
+            && this.m_fSynthetic == that.m_fSynthetic))
+            {
+            return false;
+            }
+
+        final Map mapThis = this.m_mapParams;
+        final Map mapThat = that.m_mapParams;
+        final int cThis = mapThis == null ? 0 : mapThis.size();
+        final int cThat = mapThat == null ? 0 : mapThat.size();
+        return cThis == cThat && (cThis == 0 || mapThis.equals(mapThat));
+        // TODO list of contributions
         }
 
 
@@ -157,47 +193,160 @@ public class ClassStructure
         return (ClassConstant) getIdentityConstant();
         }
 
+    /**
+     * TODO
+     *
+     * @return
+     */
     public Category getCategory()
         {
         return m_category;
         }
 
+    /**
+     * TODO
+     *
+     * @param category
+     */
     public void setCategory(Category category)
         {
         m_category = category;
         markModified();
         }
-    
+
+    /**
+     * TODO
+     *
+     * @return
+     */
     public boolean isSingleton()
         {
         return m_fSingleton;
         }
-    
+
+    /**
+     * TODO
+     *
+     * @param fSingleton
+     */
     public void setSingleton(boolean fSingleton)
         {
         m_fSingleton = fSingleton;
         markModified();
         }
 
+    /**
+     * TODO
+     *
+     * @return
+     */
     public boolean isSynthetic()
         {
         return m_fSynthetic;
         }
 
+    /**
+     * TODO
+     *
+     * @param fSynthetic
+     */
     public void setSynthetic(boolean fSynthetic)
         {
         m_fSynthetic = fSynthetic;
         markModified();
         }
 
-    public Map<CharStringConstant, ? extends Constant> getTypeParams()
+    /**
+     * TODO
+     *
+     * @return
+     */
+    public Map<CharStringConstant, ClassConstant> getTypeParams()
         {
-        final ListMap<CharStringConstant, ? extends Constant> map = m_mapParams;
+        final ListMap<CharStringConstant, ClassConstant> map = m_mapParams;
         return map == null ? Collections.EMPTY_MAP : Collections.unmodifiableMap(map);
         }
 
-    // TODO type parameters: index (contiguous starting with 0), name (unique), type (defaulting to "Object")
-    // public addTypeParameter(String sName, sType)
+    /**
+     * TODO
+     *
+     * @return
+     */
+    public List<Map.Entry<CharStringConstant, ClassConstant>> getTypeParamsAsList()
+        {
+        final ListMap<CharStringConstant, ClassConstant> map = m_mapParams;
+        return map == null ? Collections.EMPTY_LIST : map.asList();
+        }
+
+    /**
+     * TODO
+     *
+     * @param sName
+     * @param clz
+     */
+    public void addTypeParam(String sName, ClassConstant clz)
+        {
+        ListMap<CharStringConstant, ClassConstant> map = m_mapParams;
+        if (map == null)
+            {
+            m_mapParams = map = new ListMap<>();
+            }
+
+        map.put(getConstantPool().ensureCharStringConstant(sName), clz);
+        }
+
+    /**
+     * TODO
+     *
+     * @param sName
+     */
+    public void removeTypeParam(String sName)
+        {
+        final ListMap<CharStringConstant, ? extends Constant> map = m_mapParams;
+        if (map != null)
+            {
+            map.remove(getConstantPool().ensureCharStringConstant(sName));
+            }
+        }
+
+    /**
+     * TODO
+     *
+     * @return
+     */
+    public List<Contribution> getContributionsAsList()
+        {
+        return m_listContribs == null ? Collections.EMPTY_LIST : Collections.unmodifiableList(m_listContribs);
+        }
+
+    /**
+     * TODO
+     *
+     * @param composition
+     * @param constant
+     */
+    public void addContribution(Composition composition, ClassConstant constant)
+        {
+        List<Contribution> list = m_listContribs;
+        if (list == null)
+            {
+            m_listContribs = list = new ArrayList<>();
+            }
+
+        list.add(new Contribution(composition, constant));
+        }
+
+    /**
+     * TODO
+     *
+     * @param i
+     */
+    public void removeContribution(int i)
+        {
+        assert m_listContribs != null;
+
+        m_listContribs.remove(i);
+        }
 
 
     // ----- enumeration: class categories -------------------------------------
@@ -264,6 +413,123 @@ public class ClassStructure
         }
 
 
+    // ----- enumeration: class composition ------------------------------------
+
+    /**
+     * Types of composition.
+     */
+    public enum Composition
+        {
+        /**
+         * Represents class inheritance.
+         */
+        Extends,
+        /**
+         * Represents interface inheritance.
+         */
+        Implements,
+        /**
+         * Represents the combining-in of a trait or mix-in.
+         */
+        Incorporates,
+        /**
+         * Represents that the class being composed is one of the enumeration of
+         * a specified type.
+         */
+        Enumerates,;
+
+        /**
+         * Look up a Composition enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Composition enum for the specified ordinal
+         */
+        public static Composition valueOf(int i)
+            {
+            return COMPOSITIONS[i];
+            }
+
+        /**
+         * All of the Composition enums.
+         */
+        private static final Composition[] COMPOSITIONS = Composition.values();
+        }
+
+    /**
+     * Represents one contribution to the definition of a class. A class (with
+     * the term used in the abstract sense, meaning any class, interface, mixin,
+     * trait, value, enum, or service) can be composed of any number of
+     * contributing components.
+     */
+    public static class Contribution
+        {
+        /**
+         * Construct a Contribution.
+         *
+         * @param composition  specifies the type of composition
+         * @param constant     specifies the class being contributed
+         */
+        protected Contribution(Composition composition, ClassConstant constant)
+            {
+            assert composition != null && constant != null;
+
+            m_composition = composition;
+            m_constant    = constant;
+            }
+
+        /**
+         * Obtain the form of composition represented by this contribution.
+         *
+         * @return the Composition type for this contribution
+         */
+        public Composition getComposition()
+            {
+            return m_composition;
+            }
+
+        /**
+         * Obtain the class definition being contributed by this contribution.
+         *
+         * @return the ClassConstant for this contribution
+         */
+        public ClassConstant getClassConstant()
+            {
+            return m_constant;
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            if (!(obj instanceof Contribution))
+                {
+                return false;
+                }
+
+            Contribution that = (Contribution) obj;
+            return this == that ||
+                    (this.m_composition == that.m_composition && this.m_constant.equals(that.m_constant));
+            }
+
+        @Override
+        public String toString()
+            {
+            return m_composition.toString().toLowerCase() + ' ' + m_constant.getName();
+            }
+
+        /**
+         * Defines the form of composition that this component contributes to
+         * the class.
+         */
+        private Composition   m_composition;
+        /**
+         * Defines the class that was used as part of the composition.
+         */
+        private ClassConstant m_constant;
+        }
+
+    // ----- constants ---------------------------------------------------------
+
     /**
      * A mask for the various class category indicators.
      */
@@ -285,7 +551,7 @@ public class ClassStructure
     /**
      * The category of the class.
      */
-    private Category m_category;
+    private Category m_category = Category.Class;
 
     /**
      * True if the class is a singleton within its module/container at runtime.
@@ -302,5 +568,9 @@ public class ClassStructure
      * The name-to-type information for type parameters.
      */
     private ListMap<CharStringConstant, ClassConstant> m_mapParams;
-    }
 
+    /**
+     * The contributions that make up this class.
+     */
+    private List<Contribution> m_listContribs;
+    }
