@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
+import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -59,7 +61,20 @@ public class ClassStructure
         m_category   = Category.valueOf(nCategory & CATEGORY);
         m_mapParams  = disassembleTypeParams(in);
 
-        // TODO list of contributions
+        // read in the "contributions"
+        int c = readMagnitude(in);
+        if (c > 0)
+            {
+            final List<Contribution> list = new ArrayList<>();
+            final ConstantPool       pool = getConstantPool();
+            for (int i = 0; i < c; ++i)
+                {
+                final Composition   composition = Composition.valueOf(in.readUnsignedByte());
+                final ClassConstant constant    = (ClassConstant) pool.getConstant(readIndex(in));
+                list.add(new Contribution(composition, constant));
+                }
+            m_listContribs = list;
+            }
 
         super.disassemble(in);
         }
@@ -73,12 +88,23 @@ public class ClassStructure
             final ListMap<CharStringConstant, ClassConstant> mapNew = new ListMap<>();
             for (Map.Entry<CharStringConstant, ClassConstant> entry : mapOld.entrySet())
                 {
-                mapNew.put((CharStringConstant) pool.register(entry.getKey()), (ClassConstant) pool.register(entry.getValue()));
+                mapNew.put((CharStringConstant) pool.register(entry.getKey()),
+                           (ClassConstant     ) pool.register(entry.getValue()));
                 }
             m_mapParams = mapNew;
             }
 
-        // TODO list of contributions
+        final List<Contribution> listOld = m_listContribs;
+        if (listOld != null && listOld.size() > 0)
+            {
+            final List<Contribution> listNew = new ArrayList<>();
+            for (Contribution contribution : listOld)
+                {
+                listNew.add(new Contribution(contribution.getComposition(),
+                        (ClassConstant) pool.register(contribution.getClassConstant())));
+                }
+            m_listContribs = listNew;
+            }
 
         super.registerConstants(pool);
         }
@@ -90,7 +116,18 @@ public class ClassStructure
         out.writeByte(m_category.ordinal() | (m_fSingleton ?SINGLETON : 0) | (m_fSynthetic ? SYNTHETIC : 0));
         assembleTypeParams(m_mapParams, out);
 
-        // TODO list of contributions
+        // write out the contributions
+        final List<Contribution> listContribs = m_listContribs;
+        final int cContribs = listContribs == null ? 0 : listContribs.size();
+        writePackedLong(out, cContribs);
+        if (cContribs > 0)
+            {
+            for (Contribution contribution : listContribs)
+                {
+                out.writeByte(contribution.getComposition().ordinal());
+                writePackedLong(out, contribution.getClassConstant().getPosition());
+                }
+            }
 
         super.assemble(out);
         }
@@ -100,8 +137,6 @@ public class ClassStructure
     @Override
     public String getDescription()
         {
-        // <K extends Hashable, V> -- because V is "extends Object" .. see Constants
-
         StringBuilder sb = new StringBuilder();
         sb.append(super.getDescription())
           .append(", type-params=");
@@ -138,13 +173,32 @@ public class ClassStructure
             sb.append('>');
             }
 
-        // TODO list of contributions
-
         sb.append(", singleton=")
           .append(m_fSingleton)
           .append(", synthetic=")
           .append(m_fSynthetic);
         return sb.toString();
+        }
+
+    @Override
+    protected void dump(PrintWriter out, String sIndent)
+        {
+        out.print(sIndent);
+        out.println(toString());
+
+        final List<Contribution> listContribs = m_listContribs;
+        final int cContribs = listContribs == null ? 0 : listContribs.size();
+        if (cContribs > 0)
+            {
+            out.print(sIndent);
+            out.println("Contributions");
+            for (int i = 0; i < cContribs; ++i)
+                {
+                out.println(sIndent + '[' + i + "]=" + listContribs.get(i));
+                }
+            }
+
+        dumpStructureMap(out, sIndent, "Methods", getMethodMap());
         }
 
 
@@ -514,7 +568,7 @@ public class ClassStructure
         @Override
         public String toString()
             {
-            return m_composition.toString().toLowerCase() + ' ' + m_constant.getName();
+            return m_composition.toString().toLowerCase() + ' ' + m_constant.getDescription();
             }
 
         /**

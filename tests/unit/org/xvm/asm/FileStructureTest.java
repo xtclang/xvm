@@ -83,8 +83,9 @@ public class FileStructureTest
         clzMap.addTypeParam("V", clzObj.getClassConstant());
 
         ClassStructure clzHashMap = pkgColl.ensureClass("HashMap");
-        clzMap.addTypeParam("K", clzHash.getClassConstant());
-        clzMap.addTypeParam("V", clzObj.getClassConstant());
+        clzHashMap.addTypeParam("K", clzHash.getClassConstant());
+        clzHashMap.addTypeParam("V", clzObj.getClassConstant());
+        clzHashMap.addContribution(ClassStructure.Composition.Implements, clzMap.getClassConstant());
 
         testFileStructure(file);
         }

@@ -167,11 +167,12 @@ public abstract class StructureContainer
             return null;
             }
 
-        ListMap<CharStringConstant, ClassConstant> map = new ListMap<>();
+        final ListMap<CharStringConstant, ClassConstant> map = new ListMap<>();
+        final ConstantPool pool = getConstantPool();
         for (int i = 0; i < c; ++i)
             {
-            CharStringConstant constName = (CharStringConstant) getConstantPool().getConstant(readIndex(in));
-            ClassConstant      constType = (ClassConstant)      getConstantPool().getConstant(readIndex(in));
+            CharStringConstant constName = (CharStringConstant) pool.getConstant(readIndex(in));
+            ClassConstant      constType = (ClassConstant)      pool.getConstant(readIndex(in));
             assert !map.containsKey(constName);
             map.put(constName, constType);
             }
