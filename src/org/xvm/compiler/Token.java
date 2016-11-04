@@ -22,11 +22,11 @@ public class Token
      *
      * @param lStartPos  starting position in the Source (inclusive)
      * @param lEndPos    ending position in the Source (exclusive)
-     * @param nId        identity of the token
+     * @param id         identity of the token
      */
-    public Token(long lStartPos, long lEndPos, int nId)
+    public Token(long lStartPos, long lEndPos, Id id)
         {
-        this(lStartPos, lEndPos, nId, null);
+        this(lStartPos, lEndPos, id, null);
         }
 
     /**
@@ -34,14 +34,14 @@ public class Token
      *
      * @param lStartPos  starting position in the Source (inclusive)
      * @param lEndPos    ending position in the Source (exclusive)
-     * @param nId        identity of the token
+     * @param id         identity of the token
      * @param oValue     value of the token (if it is a literal)
      */
-    public Token(long lStartPos, long lEndPos, int nId, Object oValue)
+    public Token(long lStartPos, long lEndPos, Id id, Object oValue)
         {
         m_lStartPos = lStartPos;
         m_lEndPos   = lEndPos;
-        m_nId       = nId;
+        this.id = id;
         m_oValue    = oValue;
         }
 
@@ -74,9 +74,9 @@ public class Token
      *
      * @return the identity of the token
      */
-    public int getId()
+    public Id getId()
         {
-        return m_nId;
+        return id;
         }
 
     /**
@@ -92,6 +92,7 @@ public class Token
 
     // ----- Object methods ----------------------------------------------------
 
+    @Override
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
@@ -105,9 +106,9 @@ public class Token
           .append(Source.calculateOffset(m_lEndPos))
           .append("] ");
         
-        switch (m_nId)
+        switch (id)
             {
-            case ID_LIT_CHAR:
+            case LIT_CHAR:
                 {
                 sb.append('\'');
                 appendChar(sb, (Character) m_oValue);
@@ -115,24 +116,24 @@ public class Token
                 }
                 break;
 
-            case ID_LIT_STRING:
+            case LIT_STRING:
                 sb.append('\"');
                 appendString(sb, (String) m_oValue);
                 sb.append('\"');
                 break;
 
-            case ID_LIT_INT:
-            case ID_LIT_DEC:
+            case LIT_INT:
+            case LIT_DEC:
                 sb.append(m_oValue);
                 break;
 
-            case ID_IDENTIFIER:
+            case IDENTIFIER:
                 sb.append("name:")
                   .append(m_oValue);
                 break;
 
             default:
-                sb.append(DESC[m_nId]);
+                sb.append(id.TEXT);
                 break;
             }
 
@@ -140,223 +141,156 @@ public class Token
         }
 
 
-    // ----- helpers -----------------------------------------------------------
+    // ----- Token identities --------------------------------------------------
+
 
     /**
-     * For a given token ID, obtain the textual description of that token. This
-     * applies only to those token IDs that correspond to predefined operators,
-     * separators and keywords, i.e. those tokens that have constant
-     * representations.
-     *
-     * @param nId  a token ID
-     *
-     * @return the textual form of the token as it would be expected to occur
-     *         within XTC source code
+     * Token Identity. 
      */
-    public static String getDescription(int nId)
+    public enum Id
         {
-        if (nId < 0 || nId >= DESC.length)
+        COLON      (":"        ),
+        SEMICOLON  (";"        ),
+        COMMA      (","        ),
+        DOT        ("."        ),
+        DOTDOT     (".."       ),
+        AT         ("@"        ),
+        COND       ("?"        ),
+        L_PAREN    ("("        ),
+        R_PAREN    (")"        ),
+        L_CURLY    ("{"        ),
+        R_CURLY    ("}"        ),
+        L_SQUARE   ("["        ),
+        R_SQUARE   ("]"        ),
+        ADD        ("+"        ),
+        SUB        ("-"        ),
+        MUL        ("*"        ),
+        DIV        ("/"        ),
+        MOD        ("%"        ),
+        DIVMOD     ("/%"       ),
+        SHL        ("<<"       ),
+        SHR        (">>"       ),
+        USHR       (">>>"      ),
+        BIT_AND    ("&"        ),
+        BIT_OR     ("|"        ),
+        BIT_XOR    ("^"        ),
+        BIT_NOT    ("~"        ),
+        MOV        ("="        ),
+        ADD_MOV    ("+="       ),
+        SUB_MOV    ("-="       ),
+        MUL_MOV    ("*="       ),
+        DIV_MOV    ("/="       ),
+        MOD_MOV    ("%="       ),
+        DIVMOD_MOV ("/%="      ),
+        SHL_MOV    ("<<="      ),
+        SHR_MOV    (">>="      ),
+        USHR_MOV   (">>>="     ),
+        BIT_AND_MOV("&="       ),
+        BIT_OR_MOV ("|="       ),
+        BIT_XOR_MOV("^="       ),
+        COND_AND   ("&&"       ),
+        COND_OR    ("||"       ),
+        NOT        ("!"        ),
+        COMP_EQ    ("=="       ),
+        COMP_NEQ   ("!="       ),
+        COMP_LT    ("<"        ),
+        COMP_LTEQ  ("<="       ),
+        COMP_GT    (">"        ),
+        COMP_GTEQ  (">="       ),
+        INC        ("++"       ),
+        DEC        ("--"       ),
+        MODULE     ("module"   ),
+        PACKAGE    ("package"  ),
+        CLASS      ("class"    ),
+        IMPORT     ("import"   ),
+        PUBLIC     ("public"   ),
+        PRIVATE    ("private"  ),
+        PROTECTED  ("protected"),
+        THIS       ("this"     ),
+        SUPER      ("super"    ),
+        TRY        ("try"      ),
+        CATCH      ("catch"    ),
+        THROW      ("throw"    ),
+        IF         ("if"       ),
+        ELSE       ("else"     ),
+        DO         ("do"       ),
+        WHILE      ("while"    ),
+        SWITCH     ("switch"   ),
+        CASE       ("case"     ),
+        DEFAULT    ("default"  ),
+        BREAK      ("break"    ),
+        CONTINUE   ("continue" ),
+        RETURN     ("return"   ),
+        IDENTIFIER (null       ),
+        EOL_COMMENT(null       ),
+        ENC_COMMENT(null       ),
+        LIT_CHAR   (null       ),
+        LIT_STRING (null       ),
+        LIT_INT    (null       ),
+        LIT_DEC    (null       );
+
+        /**
+         * Constructor.
+         *
+         * @param sText  a textual representation of the token, or null
+         */
+        Id(final String sText)
             {
-            throw new IllegalArgumentException("token id out of range: " + nId);
+            TEXT = sText;
             }
 
-        return DESC[nId];
-        }
-
-    /**
-     * Determine if the specified String is an XTC keyword.
-     *
-     * @param s  a String
-     *
-     * @return true iff the specified String is a keyword
-     */
-    public static boolean isKeyword(String s)
-        {
-        return KEYWORDS.containsKey(s);
-        }
-
-    /**
-     * Determine the token ID of an XTC keyword.
-     *
-     * @param s  a keyword
-     *
-     * @return the token ID for the keyword
-     */
-    public static int getKeywordId(String s)
-        {
-        Integer id = KEYWORDS.get(s);
-        if (id == null)
+        /**
+         * Look up an Id enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Format enum for the specified ordinal
+         */
+        public static Id valueOf(int i)
             {
-            throw new IllegalArgumentException("not a keyword: " + s);
+            return IDs[i];
             }
-        return id;
-        }
 
-
-    // ----- constants ---------------------------------------------------------
-
-    public static final int ID_COLON        =  0;
-    public static final int ID_SEMICOLON    =  1;
-    public static final int ID_COMMA        =  2;
-    public static final int ID_DOT          =  3;
-    public static final int ID_DOTDOT       =  4;
-    public static final int ID_AT           =  5;
-    public static final int ID_COND         =  6;
-    public static final int ID_L_PAREN      =  7;
-    public static final int ID_R_PAREN      =  8;
-    public static final int ID_L_CURLY      =  9;
-    public static final int ID_R_CURLY      = 10;
-    public static final int ID_L_SQUARE     = 11;
-    public static final int ID_R_SQUARE     = 12;
-    public static final int ID_ADD          = 13;
-    public static final int ID_SUB          = 14;
-    public static final int ID_MUL          = 15;
-    public static final int ID_DIV          = 16;
-    public static final int ID_MOD          = 17;
-    public static final int ID_DIVMOD       = 18;
-    public static final int ID_SHL          = 19;
-    public static final int ID_SHR          = 20;
-    public static final int ID_USHR         = 21;
-    public static final int ID_BIT_AND      = 22;
-    public static final int ID_BIT_OR       = 23;
-    public static final int ID_BIT_XOR      = 24;
-    public static final int ID_BIT_NOT      = 25;
-    public static final int ID_MOV          = 26;
-    public static final int ID_ADD_MOV      = 27;
-    public static final int ID_SUB_MOV      = 28;
-    public static final int ID_MUL_MOV      = 29;
-    public static final int ID_DIV_MOV      = 30;
-    public static final int ID_MOD_MOV      = 31;
-    public static final int ID_DIVMOD_MOV   = 32;
-    public static final int ID_SHL_MOV      = 33;
-    public static final int ID_SHR_MOV      = 34;
-    public static final int ID_USHR_MOV     = 35;
-    public static final int ID_BIT_AND_MOV  = 36;
-    public static final int ID_BIT_OR_MOV   = 37;
-    public static final int ID_BIT_XOR_MOV  = 38;
-    public static final int ID_COND_AND     = 39;
-    public static final int ID_COND_OR      = 40;
-    public static final int ID_NOT          = 41;
-    public static final int ID_COMP_EQ      = 42;
-    public static final int ID_COMP_NEQ     = 43;
-    public static final int ID_COMP_LT      = 44;
-    public static final int ID_COMP_LTEQ    = 45;
-    public static final int ID_COMP_GT      = 46;
-    public static final int ID_COMP_GTEQ    = 47;
-    public static final int ID_INC          = 48;
-    public static final int ID_DEC          = 49;
-    public static final int ID_MODULE       = 50;
-    public static final int ID_PACKAGE      = 51;
-    public static final int ID_CLASS        = 52;
-    public static final int ID_PUBLIC       = 53;
-    public static final int ID_PRIVATE      = 54;
-    public static final int ID_PROTECTED    = 55;
-    public static final int ID_THIS         = 56;
-    public static final int ID_SUPER        = 57;
-    public static final int ID_TRY          = 58;
-    public static final int ID_CATCH        = 59;
-    public static final int ID_THROW        = 60;
-    public static final int ID_IF           = 61;
-    public static final int ID_ELSE         = 62;
-    public static final int ID_DO           = 63;
-    public static final int ID_WHILE        = 64;
-    public static final int ID_SWITCH       = 65;
-    public static final int ID_CASE         = 66;
-    public static final int ID_DEFAULT      = 67;
-    public static final int ID_BREAK        = 68;
-    public static final int ID_CONTINUE     = 69;
-    public static final int ID_RETURN       = 70;
-    public static final int ID_IDENTIFIER   = 71;
-    public static final int ID_EOL_COMMENT  = 72;
-    public static final int ID_ENC_COMMENT  = 73;
-    public static final int ID_LIT_CHAR     = 74;
-    public static final int ID_LIT_STRING   = 75;
-    public static final int ID_LIT_INT      = 76;
-    public static final int ID_LIT_DEC      = 77;
-
-    /**
-     * String representations of tokens that have constant representations.
-     */
-    private static final String[]             DESC     = new String[71];
-    private static final Map<String, Integer> KEYWORDS = new HashMap<>();
-    static
-        {
-        DESC[ID_COLON      ] = ":";
-        DESC[ID_SEMICOLON  ] = ";";
-        DESC[ID_COMMA      ] = ",";
-        DESC[ID_DOT        ] = ".";
-        DESC[ID_DOTDOT     ] = "..";
-        DESC[ID_AT         ] = "@";
-        DESC[ID_COND       ] = "?";
-        DESC[ID_L_PAREN    ] = "(";
-        DESC[ID_R_PAREN    ] = ")";
-        DESC[ID_L_CURLY    ] = "{";
-        DESC[ID_R_CURLY    ] = "}";
-        DESC[ID_L_SQUARE   ] = "[";
-        DESC[ID_R_SQUARE   ] = "]";
-        DESC[ID_ADD        ] = "+";
-        DESC[ID_SUB        ] = "-";
-        DESC[ID_MUL        ] = "*";
-        DESC[ID_DIV        ] = "/";
-        DESC[ID_MOD        ] = "%";
-        DESC[ID_DIVMOD     ] = "/%";
-        DESC[ID_SHL        ] = "<<";
-        DESC[ID_SHR        ] = ">>";
-        DESC[ID_USHR       ] = ">>>";
-        DESC[ID_BIT_AND    ] = "&";
-        DESC[ID_BIT_OR     ] = "|";
-        DESC[ID_BIT_XOR    ] = "^";
-        DESC[ID_BIT_NOT    ] = "~";
-        DESC[ID_MOV        ] = "=";
-        DESC[ID_ADD_MOV    ] = "+=";
-        DESC[ID_SUB_MOV    ] = "-=";
-        DESC[ID_MUL_MOV    ] = "*=";
-        DESC[ID_DIV_MOV    ] = "/=";
-        DESC[ID_MOD_MOV    ] = "%=";
-        DESC[ID_DIVMOD_MOV ] = "/%=";
-        DESC[ID_SHL_MOV    ] = "<<=";
-        DESC[ID_SHR_MOV    ] = ">>=";
-        DESC[ID_USHR_MOV   ] = ">>>=";
-        DESC[ID_BIT_AND_MOV] = "&=";
-        DESC[ID_BIT_OR_MOV ] = "|=";
-        DESC[ID_BIT_XOR_MOV] = "^=";
-        DESC[ID_COND_AND   ] = "&&";
-        DESC[ID_COND_OR    ] = "||";
-        DESC[ID_NOT        ] = "!";
-        DESC[ID_COMP_EQ    ] = "==";
-        DESC[ID_COMP_NEQ   ] = "!=";
-        DESC[ID_COMP_LT    ] = "<";
-        DESC[ID_COMP_LTEQ  ] = "<=";
-        DESC[ID_COMP_GT    ] = ">";
-        DESC[ID_COMP_GTEQ  ] = ">=";
-        DESC[ID_INC        ] = "++";
-        DESC[ID_DEC        ] = "--";
-        DESC[ID_MODULE     ] = "module";
-        DESC[ID_PACKAGE    ] = "package";
-        DESC[ID_CLASS      ] = "class";
-        DESC[ID_PUBLIC     ] = "public";
-        DESC[ID_PRIVATE    ] = "private";
-        DESC[ID_PROTECTED  ] = "protected";
-        DESC[ID_THIS       ] = "this";
-        DESC[ID_SUPER      ] = "super";
-        DESC[ID_TRY        ] = "try";
-        DESC[ID_CATCH      ] = "catch";
-        DESC[ID_THROW      ] = "throw";
-        DESC[ID_IF         ] = "if";
-        DESC[ID_ELSE       ] = "else";
-        DESC[ID_DO         ] = "do";
-        DESC[ID_WHILE      ] = "while";
-        DESC[ID_SWITCH     ] = "switch";
-        DESC[ID_CASE       ] = "case";
-        DESC[ID_DEFAULT    ] = "default";
-        DESC[ID_BREAK      ] = "break";
-        DESC[ID_CONTINUE   ] = "continue";
-        DESC[ID_RETURN     ] = "return";
-
-        for (int i = ID_MODULE; i <= ID_RETURN; ++i)
+        /**
+         * 
+         * Look up an Id enum by its {@link #TEXT}.
+         * 
+         * @param sText  the textual representation of the Id
+         *               
+         * @return an instance of Id, or null if there is no matching
+         *         {@link #TEXT}
+         */
+        public static Id valueByText(String sText)
             {
-            KEYWORDS.put(DESC[i], i);
+            return KEYWORDS.get(sText);
             }
+
+        /**
+         * All of the Format enums.
+         */
+        private static final Id[] IDs = Id.values();
+
+        /**
+         * String representations of tokens that have constant representations.
+         */
+        private static final Map<String, Id> KEYWORDS = new HashMap<>();
+        static
+            {
+            for (Id id : IDs)
+                {
+                String sText = id.TEXT;
+                if (sText != null)
+                    {
+                    KEYWORDS.put(sText, id);
+                    }
+                }
+            }
+
+        /**
+         * A textual representation of the token, if it has a constant
+         * textual representation; otherwise null.
+         */
+        final public String TEXT;
         }
 
 
@@ -375,7 +309,7 @@ public class Token
     /**
      * Identifier of the token.
      */
-    private int m_nId;
+    private Id id;
 
     /**
      * Value of the Token (if it is a literal).

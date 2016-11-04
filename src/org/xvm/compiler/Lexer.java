@@ -5,6 +5,8 @@ import java.util.Iterator;
 
 import java.util.function.Consumer;
 
+import org.xvm.compiler.Token.Id;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.isAsciiLetter;
@@ -67,42 +69,18 @@ public class Lexer
     // ----- public API --------------------------------------------------------
 
     /**
-     * Parse the source, emitting a stream of tokens to the specified consumer.
+     * Lexically analyze the source, emitting a stream of tokens to the
+     * specified consumer.
      *
      * @param consumer  the Token Consumer
      */
-    public void parse(Consumer<Token> consumer)
+    public void emit(Consumer<Token> consumer)
         {
         final Source source = m_source;
         while (source.hasNext())
             {
             consumer.accept(eatToken());
             eatWhitespace();
-            }
-        }
-
-
-    // ----- inner class: ParserException --------------------------------------
-
-    /**
-     * An exception class used to report exceptions in the parsing process.
-     */
-    public static class ParserException
-            extends RuntimeException
-        {
-        public ParserException(String message)
-            {
-            super(message);
-            }
-
-        public ParserException(String message, Throwable cause)
-            {
-            super(message, cause);
-            }
-
-        public ParserException(Throwable cause)
-            {
-            super(cause);
             }
         }
 
@@ -140,38 +118,38 @@ public class Lexer
         switch (chInit)
             {
             case '{':
-                return new Token(lInitPos, source.getPosition(), Token.ID_L_CURLY);
+                return new Token(lInitPos, source.getPosition(), Id.L_CURLY);
             case '}':
-                return new Token(lInitPos, source.getPosition(), Token.ID_R_CURLY);
+                return new Token(lInitPos, source.getPosition(), Id.R_CURLY);
             case '(':
-                return new Token(lInitPos, source.getPosition(), Token.ID_L_PAREN);
+                return new Token(lInitPos, source.getPosition(), Id.L_PAREN);
             case ')':
-                return new Token(lInitPos, source.getPosition(), Token.ID_R_PAREN);
+                return new Token(lInitPos, source.getPosition(), Id.R_PAREN);
             case '[':
-                return new Token(lInitPos, source.getPosition(), Token.ID_L_SQUARE);
+                return new Token(lInitPos, source.getPosition(), Id.L_SQUARE);
             case ']':
-                return new Token(lInitPos, source.getPosition(), Token.ID_R_SQUARE);
+                return new Token(lInitPos, source.getPosition(), Id.R_SQUARE);
 
             case ':':
-                return new Token(lInitPos, source.getPosition(), Token.ID_COLON);
+                return new Token(lInitPos, source.getPosition(), Id.COLON);
             case ';':
-                return new Token(lInitPos, source.getPosition(), Token.ID_SEMICOLON);
+                return new Token(lInitPos, source.getPosition(), Id.SEMICOLON);
             case ',':
-                return new Token(lInitPos, source.getPosition(), Token.ID_COMMA);
+                return new Token(lInitPos, source.getPosition(), Id.COMMA);
             case '.':
                 if (source.hasNext())
                     {
                     if (source.next() == '.')
                         {
-                        return new Token(lInitPos, source.getPosition(), Token.ID_DOTDOT);
+                        return new Token(lInitPos, source.getPosition(), Id.DOTDOT);
                         }
                     source.rewind();
                     }
-                return new Token(lInitPos, source.getPosition(), Token.ID_DOT);
+                return new Token(lInitPos, source.getPosition(), Id.DOT);
             case '@':
-                return new Token(lInitPos, source.getPosition(), Token.ID_AT);
+                return new Token(lInitPos, source.getPosition(), Id.AT);
             case '?':
-                return new Token(lInitPos, source.getPosition(), Token.ID_COND);
+                return new Token(lInitPos, source.getPosition(), Id.COND);
 
             case '/':
                 if (source.hasNext())
@@ -185,12 +163,12 @@ public class Lexer
                             return eatEnclosedComment(lInitPos);
 
                         case '=':
-                            return new Token(lInitPos, source.getPosition(), Token.ID_DIV_MOV);
+                            return new Token(lInitPos, source.getPosition(), Id.DIV_MOV);
                         }
                     source.rewind();
                     }
 
-                return new Token(lInitPos, source.getPosition(), Token.ID_DIV);
+                return new Token(lInitPos, source.getPosition(), Id.DIV);
 
             default:
                 if (!isIdentifierStart(chInit))
@@ -221,9 +199,10 @@ public class Lexer
                     }
 
                 String s = source.toString(lInitPos, source.getPosition());
-                return Token.isKeyword(s)
-                        ? new Token(lInitPos, source.getPosition(), Token.getKeywordId(s))
-                        : new Token(lInitPos, source.getPosition(), Token.ID_IDENTIFIER, s);
+                Id id = Id.valueByText(s);
+                return id == null
+                        ? new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, s)
+                        : new Token(lInitPos, source.getPosition(), id); 
                 }
             }
         }
@@ -246,7 +225,7 @@ public class Lexer
                 }
             }
         final long lPosEnd = source.getPosition();
-        return new Token(lPosTokenStart, lPosEnd, Token.ID_EOL_COMMENT,
+        return new Token(lPosTokenStart, lPosEnd, Id.EOL_COMMENT,
                 source.toString(lPosTextStart, lPosEnd));
         }
 
@@ -275,7 +254,7 @@ public class Lexer
                 source.rewind();
                 final long lPosTextEnd  = source.getPosition();
                 source.setPosition(lPosTokenEnd);
-                return new Token(lPosTokenStart, lPosTokenEnd, Token.ID_ENC_COMMENT,
+                return new Token(lPosTokenStart, lPosTokenEnd, Id.ENC_COMMENT,
                         source.toString(lPosTextStart, lPosTextEnd));
                 }
             else
@@ -290,7 +269,7 @@ public class Lexer
                 m_source.getLine(), m_source.getOffset());
 
         // just pretend that the rest of the file was all one big comment
-        return new Token(lPosTokenStart, source.getPosition(), Token.ID_ENC_COMMENT,
+        return new Token(lPosTokenStart, source.getPosition(), Id.ENC_COMMENT,
                 source.toString(lPosTextStart, source.getPosition()));
         }
 
@@ -640,15 +619,15 @@ public class Lexer
     /**
      * Unexpected End-Of-File (SUB character).
      */
-    public static final String UNEXPECTED_EOF       = "PARSE-01";
+    public static final String UNEXPECTED_EOF       = "LEXER-01";
     /**
      * Expected a comment-ending "star slash" but never found one.
      */
-    public static final String EXPECTED_ENDCOMMENT  = "PARSE-02";
+    public static final String EXPECTED_ENDCOMMENT  = "LEXER-02";
     /**
      * A character was encountered that cannot be the start of a valid token.
      */
-    public static final String ILLEGAL_CHAR         = "PARSE-03";
+    public static final String ILLEGAL_CHAR         = "LEXER-03";
 
 
     // ----- data members ------------------------------------------------------
