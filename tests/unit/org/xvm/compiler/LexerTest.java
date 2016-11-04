@@ -3,7 +3,6 @@ package org.xvm.compiler;
 
 import java.util.List;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 
@@ -12,20 +11,20 @@ import org.junit.Test;
  *
  * @author cp 2015.11.13
  */
-public class ParserTest
+public class LexerTest
     {
     @Test
     public void testSimple()
         {
         Source    source  = new Source("module Test {}");
         ErrorList errlist = new ErrorList(5);
-        Parser    parser  = new Parser(source, errlist);
+        Lexer lexer = new Lexer(source, errlist);
 
 
         System.out.println("tokens:");
-        while (parser.hasNext())
+        while (lexer.hasNext())
             {
-            System.out.println(parser.next());
+            System.out.println(lexer.next());
             }
 
         System.out.println("error list (" + errlist.getSeriousErrorCount()

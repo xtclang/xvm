@@ -137,7 +137,7 @@ public class SourceTest
             int  ofPost    = source.getOffset();
             ++cChars;
 
-            if (Parser.isLineTerminator(ch))
+            if (Lexer.isLineTerminator(ch))
                 {
                 Assert.assertEquals(iLinePre + 1, iLinePost);
                 Assert.assertEquals(0, ofPost);

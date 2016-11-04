@@ -6,7 +6,7 @@ import java.io.IOException;
 
 import java.util.NoSuchElementException;
 
-import static org.xvm.compiler.Parser.isLineTerminator;
+import static org.xvm.compiler.Lexer.isLineTerminator;
 
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isHexit;
@@ -99,7 +99,7 @@ public class Source
         char ch = ach[of++];
 
         // check for new line
-        if (Parser.isLineTerminator(ch))
+        if (Lexer.isLineTerminator(ch))
             {
             // handle the special case of CR:LF by treating it as a single LF
             // character

@@ -19,8 +19,8 @@ import org.xvm.asm.StructureContainer.MethodContainer;
 import org.xvm.util.Handy;
 import org.xvm.util.PackedInteger;
 
-import static org.xvm.compiler.Parser.isValidIdentifier;
-import static org.xvm.compiler.Parser.isValidQualifiedModule;
+import static org.xvm.compiler.Lexer.isValidIdentifier;
+import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
 import static org.xvm.util.Handy.appendIntAsHex;
 import static org.xvm.util.Handy.byteArrayToHexString;
