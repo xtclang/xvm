@@ -41,7 +41,7 @@ public class Token
         {
         m_lStartPos = lStartPos;
         m_lEndPos   = lEndPos;
-        this.id = id;
+        this.id     = id;
         m_oValue    = oValue;
         }
 
@@ -143,7 +143,6 @@ public class Token
 
     // ----- Token identities --------------------------------------------------
 
-
     /**
      * Token Identity. 
      */
@@ -184,7 +183,7 @@ public class Token
         DIVMOD_MOV ("/%="      ),
         SHL_MOV    ("<<="      ),
         SHR_MOV    (">>="      ),
-        USHR_MOV   (">>>="     ),
+        USHR_MOV   (">>>="     ) {public void foo() {System.out.println("hello world!");}},
         BIT_AND_MOV("&="       ),
         BIT_OR_MOV ("|="       ),
         BIT_XOR_MOV("^="       ),
@@ -199,13 +198,14 @@ public class Token
         COMP_GTEQ  (">="       ),
         INC        ("++"       ),
         DEC        ("--"       ),
+        PUBLIC     ("public"   ),
+        PRIVATE    ("private"  ),
+        PROTECTED  ("protected"),
         MODULE     ("module"   ),
         PACKAGE    ("package"  ),
         CLASS      ("class"    ),
         IMPORT     ("import"   ),
-        PUBLIC     ("public"   ),
-        PRIVATE    ("private"  ),
-        PROTECTED  ("protected"),
+        EMBED      ("embed"    ),
         THIS       ("this"     ),
         SUPER      ("super"    ),
         TRY        ("try"      ),
