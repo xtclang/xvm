@@ -38,23 +38,31 @@ public class Parser
 
     // ----- parsing -----------------------------------------------------------
 
-    public void parse()
-        {
-        // TODO not void but returns a top level element
-        }
+    interface TypeDeclaration {}
 
     /**
-     * Parse
+     * Parse the compilation unit.
+     *
+     * @return the top level type declaration
+     *
+     * @throws CompilerException if a parsing error occurs while parsing the
+     *         source code that forces the parser to abandon its progress before
+     *         completion
      */
-    protected void parseImports()
+    public TypeDeclaration parseCompilationUnit()
         {
-        while (peek(Id.IMPORT) != null)
+        // parsing can only occur once
+        if (m_fDone)
             {
-
-            expect(Id.SEMICOLON);
+            return m_typeTop;
             }
+
+        // set the completion flag at this point (in case an exception occurs
+        // during parsing
+        m_fDone = true;
+
         // TODO
-        // parseImports();
+        return null;
         }
 
 
@@ -145,4 +153,17 @@ public class Parser
      * The current token.
      */
     private Token m_token;
+
+    // TODO private Scope m_scope;
+
+    /**
+     * The top-most (outer-most) type declaration of the compilation unit, such
+     * as a module.
+     */
+    private TypeDeclaration m_typeTop;
+
+    /**
+     * True once parsing has occurred.
+     */
+    private boolean m_fDone;
     }

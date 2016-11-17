@@ -150,8 +150,52 @@ class StringBuilder
   StringBuilder append(String s) {..}
   }
 
-class SuperDuperStringBuilder
+class SuperDuperStringBuilder extends StringBuilder
   {
   // implicitly: SuperDuperStringBuilder append(String s);
   }
 
+// ----- syntax for "this class" etc.
+
+class Box<T>
+  {
+  class SomeOtherInner<T> {..}
+
+  // allocation
+  new Inner();
+  // or
+  Inner.new();
+
+  class Inner<T>
+    {
+    T foo2();       // same as "Inner.T"
+    Inner.T foo3(); // same as "T"
+    this.T foo4();  // seems like this should also be legal
+
+    Inner foo4();           // auto-narrowing
+    Box foo5();             // auto-narrowing?
+    SomeOtherInner foo6();  // auto-narrowing?
+
+    Box.this foo7();        // the problem with this is ..
+    Box.this.T foo7();      // this
+
+    // so will we have "static" inner classes? i.e. no ref to outer
+    // do we specify that the inner is "static", or that it is "instance"
+    // maybe @orphan vs. @child
+    @child class Inner<T>
+      {
+      // has implicit "Box" property?
+      // assume that either of these should work:
+      Box.T foo();
+      this.Box.T foo();
+      }
+
+
+
+    Box.T foo1(); // error: need a ref to Box
+    SomeOtherInner.T; // error: need a ref to SomeOtherInner
+
+
+    }
+
+  }
