@@ -40,6 +40,15 @@ trait AddHashcode
         }
     }
 
+interface Bar extends Foo
+    {
+    }
+
+interface Foo<T>
+    {
+    Foo<T1> op<T1, T2>(Foo<T2> f);
+    }
+
 public class TraitExample
     {
     Object foo(@AddHascode Object o)

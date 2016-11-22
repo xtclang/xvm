@@ -199,3 +199,110 @@ class Box<T>
     }
 
   }
+
+
+// --- structs
+
+class Base
+  {
+  private int x;
+  }
+  
+class Derived
+  {
+  private int x;
+  }
+  
+// what does the struct look like?
+
+struct Derived
+  {
+  int x;
+  int x;	// uh .. nope!
+  }
+  
+// answer 1 - i'm writing code and i know my hierarchy
+class Derived
+  {
+  private int x;
+  
+  void writeExternal(OutputStream out)
+    {
+    int n1 = struct:Derived.x
+    int n2 = struct:Base.x
+    }
+  }
+
+// answer 2 - for code that has to work on any arbitrarily
+// horribly complicated hierarchy of composition
+mixin SuperDuperSerializer
+  {
+  construct SuperDuperSerializer(InputStream in)
+    {
+    // there is some "struct" here that we get to fill in
+    // 1) is it a paramater to the constructor?
+    // 2) or is it like "this" in that it is implicitly available?
+    // ...
+    }
+    
+  void writeExternal(OutputStream out)
+    {
+    // ...
+    Struct struct = this:struct;
+    
+    // or
+    for (Struct struct : this) // or this.???
+    }
+  }
+
+// --- static v non-static new
+
+class BaseParent
+  {
+  Child makeMeABaby() { return new Child(); }
+  
+  class Child {...}
+  
+  static class Orphan {...}
+  }
+  
+class DerivedParent
+	extends BaseParent
+  {
+  class Child {...}
+
+  static class Orphan {...}
+  }
+
+BaseParent p1 = new BaseParent()
+BaseParent p2 = new DerivedParent()
+Child      c1 = new p1.Child();	// cannot say "new BaseParent.Child()" - exception!!!
+Child      c2 = new p2.Child();
+Child      c3 = p2.makeMeABaby();
+
+Orphan     o1 = new p1.Orphan();
+Orphan     o2 = new p2.Orphan();
+
+Orphan     o3 = new BaseParent.Orphan();     // is this a good idea to allow?
+Orphan     o4 = new DerivedParent.Orphan();	 // no! this is an exception (or just discouraged?)
+Orphan     o5 = BaseParent.Orphan.findConstructor(Void)();
+
+// question is "how do you de-serialize an orphan?" if you can't "new" the
+// orphan by its class?
+
+
+// ---- what is a "static final" constant field and a "static method" in ecstasy?
+
+class Math
+  {
+  // java has "static final double PI = 3.14;"
+  static double PI = 3.14; // code kind of looks like Java
+  // but it actually is a nested class called "PI" of type "Double" (which is a value)
+  // and it is a "singleton value", just like "Null" and "True" and "False"
+  
+  // java has "static int max(int v1, int v2) {...}"
+  static int max(int v1, int v2) {...}
+  // but it is NOT a method
+  // it is actually a nested class called "max" of type "Function" (which is a value)
+  // and it is a "singleton value"
+  }
