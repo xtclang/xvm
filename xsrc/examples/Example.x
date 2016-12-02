@@ -468,3 +468,25 @@ void foo2(List<Map.Entry> list)
   list.T.K key = list.get(0).key;
   list.T.V val = list.get(0).value;
   }
+
+--
+
+// return types
+
+void foo();
+
+String foo();
+
+(String, Int) foo();
+
+// with names
+(String name, Int age) foo();
+
+// method type params
+
+T foo<T>();
+
+(T1, T2) foo<T1, T2, T3>(T3 value);
+
+// method params
+

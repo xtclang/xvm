@@ -214,5 +214,15 @@ module ecstasy.xtclang.org
     
     // TODO String
     // TODO Array
-    // TODO Tuple
+
+    /**
+     * A Tuple is a container for an arbitrary number of elements, each of an arbitrary
+     * type.
+     */
+    interface Tuple
+            implements Value
+        {
+        @ro int ElementCount;
+        Element[] as<Element[]>();
+        }
     }
