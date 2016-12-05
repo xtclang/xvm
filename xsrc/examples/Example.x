@@ -490,3 +490,66 @@ T foo<T>();
 
 // method params
 
+--
+
+// tuple example
+Tuple t = (1, "hello");
+Int n = t[0];
+String s = t[1];
+Int n2 = t[1]; // compile time error (and obviously it would be a runtime error if it could compile)
+
+// basically, it's some way to do non-uniform index of an "array" like structure
+// i.e. fields by index
+interface UniformIndexed<IndexType, ValueType>
+interface Indexed<ValueType...>
+
+--
+
+class MyFunction<P1, P2, R>
+    {
+    Tuple<P1, P2> Params;
+
+    R foo(P1 p1, P2 p2) {...}
+    }
+
+
+Class clz = MyFunction;
+
+...
+MyFunction f = new MyFunction();
+
+--
+
+    interface Tuple<FieldTypes...>
+
+void foo(Tuple<Int, String> t)
+  {
+  Int i = t[0];
+  }
+
+void foo(Tuple<T0, T1> t)
+  {
+  T0 val0 = t[0];
+  T1 val1 = t[1];
+  }
+
+// so for a multi-type list ("..." format), each element can be referred to using:
+// 1) a constant
+// 2) a parameter
+
+interface Tuple<FieldTypes...>
+    {
+    FieldTypes[index] get(Int index);
+    void set(Int index, FieldTypes[index] newValue);
+    // ...
+    }
+
+void foo(Tuple t)
+    {
+    t.FieldTypes[0] val0 = t[0]; // ugly but correct
+    }
+
+void foo(Tuple t, Int i)
+    {
+    t.FieldTypes[i] val = t[i]; // even uglier but correct
+    }
