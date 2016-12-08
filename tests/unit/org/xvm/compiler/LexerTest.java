@@ -20,7 +20,6 @@ public class LexerTest
         ErrorList errlist = new ErrorList(5);
         Lexer lexer = new Lexer(source, errlist);
 
-
         System.out.println("tokens:");
         while (lexer.hasNext())
             {
