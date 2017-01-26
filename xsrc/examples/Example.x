@@ -885,3 +885,674 @@ Iterator iter =
         return false;
         }
     }
+
+// equality
+
+// when i say:
+if (a == b) {...}
+// how does that compile?
+// first of all, compile time type of a and b must be equal
+// second, the compile time type must _contain_ function Boolean equals(CTT value1, CTT value2)
+
+Int i1 = 1;
+Int i2 = 2;
+Number n1 = i1;
+Number n2 = i2;
+if (i1 == i2) {...}
+if (n1 == n2) {...}
+if (i1 == n2) // CTE!!!
+
+if (&i1 == &i2) {...} // false
+if (&i1 == &n1) {...} // TRUE !!!!!!
+i2 = 1;
+if (&i1 == &i2) {...} // TRUE !!!!!!
+
+Object o1, o2;
+// ...
+if (o1 == o2) // CTE!!!
+if (&o1 == &o2)
+if (&p1 == &o2)
+if (((Object) p1) == o2)
+
+// --- function as dynamic proxy
+
+// let's say we have a function
+function Int fn(Int, Int) = ...;
+
+// we know that it takes some number of parameters (0+) and has some number of return values (0+)
+Int x  = fn(1, 2);
+Int x2 = fn.invoke((1,2));
+Int x3 = fn.invoke.invoke(((1,2)));
+Int x4 = fn.invoke.invoke.invoke((((1,2))));
+
+Function fn3 = fn.invoke;
+fn3.invoke(((1,2)));
+
+Function fn2 = fn;
+((function Int fn(Int, Int)) fn2)(3, 4); // duh
+Tuple tupleReturnValues = fn2.invoke(tupleParams);
+
+fn = fn2; // this is the only question
+// i.e. ...
+function Int fn3(Int, Int) = fn2.to<function Int (Int, Int)>;
+
+// so now I just have to create a Function
+Function<f.ReturnTypes, f.ParamTypes> once(Function f)
+    {
+    return new Function()
+        {
+        Tuple invoke(Tuple params)
+            {
+            if (!alreadyDone)
+                {
+                prevReturnValue = f.invoke(params);
+                alreadyDone = true;
+                }
+            return prevReturnValue;
+            }
+        Boolean alreadyDone = false;
+        Tuple prevReturnValue = Void;
+        }
+    }
+
+function Int (Int, Int) fn4 = once(fn).to<function Int (Int, Int)>;
+
+Int test1 = fn4(1,2);
+Int test2 = fn4.invoke((1,2))
+
+// ---
+
+function Void (Int) consumer = ...
+function Void consumer(Int) {...}
+
+
+foo(function Void consumer1(Int), function Void consumer2(Int))
+
+// ---
+
+service A
+    {
+    Void main()
+        {
+        B b = new B(this.bar);
+
+        try critical
+            {
+            @future Boolean f1 = b.foo();
+
+            // do some local mutation
+            list.foreach(...);
+            // etc. ...
+
+            @future Boolean f2 = b.foo();
+
+            // do some local mutation
+            list.add(...);
+            // etc. ...
+            }
+        catch (Deadlock e)
+            {
+            // WTF can we do anyhow?
+            }
+
+        Boolean f3 = f2.get();
+        }
+
+    Void bar()
+        {
+        // do some local mutation
+        // ...
+        list.add(...);
+        // ...
+        list.remove(...);
+        // ...
+        list.foreach(...);
+        // ...
+        }
+
+    private List list = new List();
+    }
+
+service B(function Void fn())
+    {
+    Boolean foo()
+        {
+        Boolean f1 = false;
+
+        // call out
+        fn();
+
+        // do something
+        // ...
+        f1 = ...
+        // ...
+
+        // call out
+        fn();
+
+        // do something else
+        // ...
+        f1 = ...
+        // ...
+
+        // call out
+        fn();
+
+        return f1;
+        }
+    }
+
+// ---
+
+assert expr;            // conditional assert: assertions must be enabled
+
+assert:test expr;       // conditional assert: assertions ("test" level) must be enabled
+
+assert:debug expr;      // conditional assert: assertions ("debug" level) must be enabled
+
+assert:always expr;     // unconditional assertion (assertions do not have to be enabled)
+
+assert:once expr;       // unconditional assertion that only happens one time
+
+if:test
+if:debug
+if:present
+
+
+assert:once ->
+    {
+    Boolean f = ...
+    Int x = ...
+    for (Int i = ...)
+        {
+        return false;
+        }
+    return true;
+    };
+
+if (@assertionsenabled)
+    {
+    static Boolean ALREADYDONE = false;
+    if (!ALREADYDONE)
+        {
+        ALREADYDONE = true;
+        Boolean f = ...
+        Int x = ...
+        for (Int i = ...)
+            {
+            assert ...;
+            }
+        }
+    }
+
+assert:once foo();
+
+if (@assertionsenabled)
+    {
+    static Boolean ALREADYDONE = false;
+    if (!ALREADYDONE)
+        {
+        ALREADYDONE = true;
+        assert foo();
+        }
+    }
+
+//
+
+enum Key<ValType> {
+    HOST<String>,
+    PORT<Int>,
+    SCORE<Dec>
+}
+
+interface PropertiesStore {
+    Void put(Key key, Key.ValType value);
+    Key.ValType get(Key key);
+}
+
+
+//
+
+class B
+    {
+    Object foo1() {...}
+    String foo1() {...}
+
+    B! foo2() {...}
+
+    Long foo3() {...}
+    String foo3() {...}
+    Object foo3() {...}
+
+    Object foo4() {...}
+    }
+
+class D
+        extends B
+    {
+    String foo1<Object>() {...}     // hides B.foo1()
+
+    B foo2() {...}          // error
+    D foo2() {...}          // hides B.foo2()
+
+    Object foo3() {...}     // hides B.foo3()
+    String foo3() {...}     // another foo3()
+
+    String foo4() {...}     // hides B.foo4()
+    }
+
+//
+
+interface B
+    {
+    Int foo()
+        {
+        return super();    //error
+        }
+    }
+
+interface D extends B
+    {
+    Int foo()
+        {
+        return super();     // ok
+        }
+    }
+
+//
+
+interface B
+    {
+    Int foo()
+        {
+        return ...;
+        }
+    Int bar()
+        {
+        return ...;
+        }
+    }
+
+interface D
+    {
+    Int foo()
+        {
+        return ...;
+        }
+    Int bar()
+        {
+        return ...;
+        }
+    }
+
+interface C
+        extends B
+        extends D
+    {
+    Int foo()
+        {
+        return super();     // B.foo()
+        }
+    Int bar()
+        {
+        return super();     // B.bar()
+        }
+    }
+
+//
+
+// interruptable when:
+// 1) you pop your service stack by returning from the zero-eth stack frame
+// 2) you call yield, assuming there is such a thing
+
+critical
+    {
+    // ...
+    }
+
+// or ...
+try:critical
+    {
+    // ...
+    }
+catch (Deadlock e)
+    {
+    // ...
+    }
+
+// a service is (obviously) an instance of Service, and Service has a “Boolean reentrant;”
+// property; setting to false disallows reentrancy (causes an exception if reentrance is
+// attempted)
+
+// lastly, based on the obvious truth that “a call to console.log() should NEVER EVER CAUSE
+// RE-ENTRANCY” etc., a service will be declarable in a way to say “i don’t care whether
+// you’re in a critical section or not; i promise to never do anything that will call you
+// back”, which is to say “from here on down is a terminal”
+@nevergonnagiveyouup @nevergonnaletyoudown @nevergonnarunaroundanddesertyou service Logger
+    {
+    // ...
+    }
+
+//
+
+service Toaster
+    {
+    Void toast(Bread bread) {...}
+    }
+
+class C
+    {
+    Void main()
+        {
+        Toaster+Service toaster = new Toaster();
+
+        assert toaster instanceof Toaster;
+        assert toaster instanceof Service;
+        assert !(&toaster.as<Toaster>() instanceof Service);
+
+        guardian.guard(&toaster.as<Service>());
+        chef.doYourThing(&toaster.as<Toaster>());
+
+        Service<Toaster> toasterService = somefactory.create(); // has
+        Toaster toaster = toasterService.getImpl();
+        }
+    }
+
+interface Service
+    {
+    @ro Boolean busy;
+    @ro Int backlog;
+    Void pleaseStop();
+    Void iWasn'tKiddingPleasePleaseStop();
+    Void fuckYouIsaidStopPleaseDoItNowOrI'llKillYou();
+    Void kill();
+    }
+
+// --
+
+const Point(Int x, Int y);
+
+Point p = new Point(0, 0);
+Int x = p.x;
+p.x = 5;            // ok it's an error but only because it's a const
+Property<Int> prop = &(p.x);
+prop.set(5);        // ok it's an error but only because it's a const
+Int x2 = prop.get();
+PropertyInfo pi = Point.x;
+Method mp = Point.somemethodthatdoesreflectionandgivesmeamethodbyname("x");
+
+Int x3 = p.*pi.get();
+
+function Int fn() = &(prop.get)
+
+//
+
+(Int result, Int remainder) = 5 /% 3;
+
+//
+
+try
+    {
+    // x ...
+    }
+catch (RTE e)
+    {
+    // y ...
+    }
+finally
+    {
+    // z ...
+    }
+
+GUARDALL
+GUARD 1 RTE label1
+    // x ...
+ENDGUARD
+JMP label2
+label1:
+    // y ...
+FINALLY
+    // z ...
+ENDFINALLY
+label2:
+
+//
+
+interface Doable
+    {
+    List do();
+    }
+
+const SuperDuper (List & AutoImmutable list)
+        implements Doable
+    {
+    Boolean filter(String s)
+        {
+        return list.contains(s);
+        }
+    }
+
+List   l = ["a", "b"];
+Doable d = new SuperDuper(l);
+function Boolean(String) f = d.filter;
+function Boolean(String) f = s -> l.contains(s);
+
+function void f() = new SuperDuper().do;
+
+//
+
+Int? x = ...
+// what methods exist on the interface for "x"?
+// - the intersection of the methods from Int and the methods from Nullable
+
+// constructors
+
+const Person(String name, Date dob)
+    {
+    construct Person(String name, Date dob)
+        {
+        // explicit validation
+        assert:always name != "hitler";
+
+        // this would be stupid to do, but isn't fatal
+        this.name = name;
+
+        this.firstname = ...;  // compiler error!
+
+        // implicit call to:
+        // this.name = name;
+        // this.dob = dob;
+        }
+
+    String firstName
+        {
+        String get()
+            {
+            // ... split the name
+            String s = super();
+            if (s.startsWith
+            return ...;
+            }
+        }
+
+    String lastName
+        {
+        String get()
+            {
+            // ... split the name
+            return ...;
+            }
+        }
+    }
+
+trait Taxable(String taxid);
+
+const Employee(String name, Date dob, String taxid)
+        extends Person(name, dob)
+        incorporates Taxable(taxid)
+    {
+    construct Employee(String name, Date dob, String taxid)
+        {
+        // validation code here
+        assert:always name.length > 0 -> "Name is too short %s".format(name);
+
+        // construct Person(name, dob);
+        // construct Taxable(taxid);
+        }
+
+    @lazy(this.calcRate) Dec taxrate;
+    private Dec calcRate() {...}
+
+    // alt
+    @lazy Dec taxrate
+        {
+        Dec evaluate() {...}
+        }
+
+    }
+
+
+// mutable capture of lvar ref
+
+// stupid example
+Int foo(function Void(Ref<Int>) do)
+    {
+    Int x = 3;
+
+    do(&x);
+
+    return x;
+    }
+
+// problem example
+Ref<Int> foo()
+    {
+    Int x = 3;
+
+    Ref<Int> xref = &x;
+
+    // what is the value? 3, right?
+    print xref.get();
+    x = 5;
+    // what is the value? 5, right?
+    print xref.get();
+
+    // off-topic example
+    Ref<Ref<Int> xrefref = &xref; // can NOT say &&x;
+    xrefref.get().set(4);
+
+    return xref;
+    }
+
+Int count(List<String> list)
+    {
+    Int c = 0;
+    Person p = ...;
+    c++;
+//    Ref<Int> cref = &c;
+
+    function Void(String) visitor = s -> console.out(c);
+    function Void(String) visitor = s -> p = new Person(s);
+//    function Void(String) visitor = s -> cref.inc();
+
+    list.visit(visitor);
+
+    return c;
+    }
+
+// type narrowing on ref test
+
+Object o = ...
+if (o instanceof String && o.length > 4)
+    {
+    Ref<Object> oref = &o;  // Schrödinger's cat! opening the box (just getting the handle) ruins the type assumability
+    print oref.RefType;     // prints "Object", not "String", although both compiler and runtime
+                            // assume that it is (safely) a String (as long as there is no Ref!)
+    oref.set(4);
+    Char ch = o.charAt(4);  // can't do this now!!!
+    // ...
+    } // this line "detaches" oref from o (oref gets its own storage, and holds whatever o is
+      // at this point
+
+// Ref taking on (mixing in) capabilities of RefType
+
+Int c = 0;
+++c;    // what does this mean? what does it "compile as"
+
+// option 1
+c = c + 1;
+INVOKE_11 c Int.add 1 -> c
+// option 2
+ADD c, 1 -> c
+// option 3
+INC c
+
+Ref<Int> cref = &c;
+cref.inc();
+
+//
+
+Object o;
+Ref<Object> ref = &o;
+o = new Person("bob");
+
+//
+
+class Person
+    {
+    construct Person(String name)
+        {
+        this.name = name;       // i.e. "this:struct[Person.name] = name;"
+        }
+
+    String name;
+    }
+
+    Person p = new Person("bob")
+
+//
+
+foo()
+    {
+    Frame frame = this:frame;
+    print "cs:ip=%n:%n", frame.cs, frame.ip
+    print "cs:ip=%n:%n", frame.cs, frame.ip
+    }
+
+// constructor usage dynamically to create a new class instance
+
+Person p = new Person(name);
+function Person(String) new1 = &(Person.new<Person>(String));
+
+function Void() constructor = &(Person.construct(name));
+
+Person p2 = Person.new(constructor);
+
+//
+
+class B { private Int x; Int y; }
+class D extends B { Int x; }
+
+construct D(Int x1, Int x2, Int y)
+    {
+
+    }
+
+// class / singleton
+
+interface /* TODO or class or const */ Module
+    {
+    Class resolveName(String name);
+    }
+
+const Class<ClassType>
+    {
+    conditional ClassType singleton();
+    ClassType:struct newStruct();
+    ClassType new(Tuple params = ());
+    ClassType new(ClassType:struct struct);
+    }
+
+Class clzE = this:module.resolveName("dto.Employee")
+Class clzC = this:module.resolveName("util.Config")
+Class<Runnable> clzR = (<-) this:module.resolveName ("jobs.Reporter")

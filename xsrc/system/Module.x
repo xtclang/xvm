@@ -12,335 +12,24 @@
  * <p>
  * This module is fully and completely self-referential, containing no references to other
  * modules, and no link-time or runtime dependencies.
+ *
+ * @Copyright 2016-2017 xqiz.it
  */
 module ecstasy.xtclang.org
     {
-    interface Ref<RefType>
-        {
-        /**
-         * De-reference the reference to obtain the referent.
-         */
-        RefType get();
+    enum Nullable as Null;
 
-        /**
-         * Specify the referent for this reference.
-         */
-        void set(RefType value);
+    enum Boolean(Bit bit)
+        as False(0), True(1);
 
-        /**
-         * Obtain the actual runtime type of the reference that this Ref currently
-         * holds. The ActualType represents the full set of methods that can be
-         * invoked against the referent, and is always a super-set of the RefType.
-         * (The RefType denotes the constraint of the reference, i.e. the reference
-         * must "be of" the RefType, but is not limited to only having the methods of
-         * the RefType; the RefType is often the <i>compile-time type</i> of the
-         * reference.)
-         */
-        @ro Type ActualType;
+    enum Ordered(String  as Lesser, Equal, Greater;
 
-        /**
-         * Narrow the reference so that it contains only the methods in the specified
-         * type. This strips the runtime reference of any methods that are not present
-         * in the specified type.
-         */
-        SomeType as<Type SomeType>();
-
-        // TODO equality of the "reference" (referring to the same thing?)
-
-        // TODO type of the referent
-        }
-
-    interface Type
-        {
-        // TODO methods
-        // TODO properties
-        }
-
-    /**
-     * This class represents the capabilities that are common to every Ecstasy object;
-     * it is the single inheritance root for the Ecstasy type system.
-     */
-    class Object
-        {
-        /**
-         * Convert this object to an object of another specified type.
-         */
-        SomeType to<SomeType>();
-
-        String to<String>()
-            {
-            // TODO implement a rudimentary to<String>?
-            }
-
-        @ro protected Meta meta;
-        }
-
-    class Meta
-        {
-        boolean immutable;
-
-        /**
-        * The containing module.
-        */
-        Module module;
-
-        Package package;
-
-        TypeComposition class;
-        }
-
-    // -----
-
-    /**
-     * The Number interface represents the properties and operations available on every
-     * numeric type included in Ecstasy.
-     */
-    interface Number
-        {
-        // ----- properties
-
-        /**
-         * The number of bits that the number uses.
-         */
-        @ro Int64 bitLength;
-
-        /**
-         * The number of bytes that the number uses.
-         */
-        @ro Int64 byteLength;
-
-        /**
-         * The Sign of the number.
-         */
-        @ro Sign Sign;
-
-        // ----- operations
-
-        /**
-         * Addition: Add another number to this number, and return the result.
-         */
-        Number add(Number n);
-        /**
-         * Subtraction: Subtract another number from this number, and return the result.
-         */
-        Number sub(Number n);
-        /**
-         * Multiplication: Multiply this number by another number, and return the result.
-         */
-        Number mul(Number n);
-        /**
-         * Division: Divide this number by another number, and return the result.
-         */
-        Number div(Number n);
-
-        /**
-         * The absolute value of this number.
-         */
-        Number abs();
-        /**
-         * The negative of this number.
-         */
-        Number neg();
-        /**
-         * This number raised to the specified power.
-         */
-        Number pow(Number n);
-        /**
-         * The smaller of this number and the passed number.
-         */
-        Number min(Number n);
-        /**
-         * The larger of this number and the passed number.
-         */
-        Number max(Number n);
-
-        // ----- conversions
-
-        /**
-         * Obtain the number as an array of bits.
-         */
-        Boolean[] to<Boolean[]>();
-
-        /**
-         * Obtain the number as an array of bytes.
-         */
-        UInt8[] to<UInt8[]>();
-
-        /**
-         * Convert the number to a variable-length signed integer.
-         */
-        VarInt to<VarInt>();
-
-        /**
-         * Convert the number to a signed 8-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        Int8 to<Int8>()
-            {
-            return to<VarInt>().to<Int8>();
-            }
-
-        /**
-         * Convert the number to a signed 16-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        Int16 to<Int16>();
-            {
-            return to<VarInt>().to<Int16>();
-            }
-
-        /**
-         * Convert the number to a signed 32-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        Int32 to<Int32>();
-            {
-            return to<VarInt>().to<Int32>();
-            }
-
-        /**
-         * Convert the number to a signed 64-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        Int64 to<Int64>();
-            {
-            return to<VarInt>().to<Int64>();
-            }
-
-        /**
-         * Convert the number to a signed 128-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        Int128 to<Int128>();
-            {
-            return to<VarInt>().to<Int128>();
-            }
-
-        /**
-         * Convert the number to a variable-length unsigned integer.
-         */
-        VarUInt to<VarUInt>();
-
-        /**
-         * Convert the number to a unsigned 8-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        UInt8 to<UInt8>()
-            {
-            return to<VarUInt>().to<UInt8>();
-            }
-
-        /**
-         * Convert the number to a unsigned 16-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        UInt16 to<UInt16>();
-            {
-            return to<VarUInt>().to<UInt16>();
-            }
-
-        /**
-         * Convert the number to a unsigned 32-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        UInt32 to<UInt32>();
-            {
-            return to<VarUInt>().to<UInt32>();
-            }
-
-        /**
-         * Convert the number to a unsigned 64-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        UInt64 to<UInt64>();
-            {
-            return to<VarUInt>().to<UInt64>();
-            }
-
-        /**
-         * Convert the number to a unsigned 128-bit integer.
-         * Any additional magnitude is discarded; any fractional value is discarded.
-         */
-        UInt128 to<UInt128>();
-            {
-            return to<VarInt>().to<UInt128>();
-            }
-
-        /**
-         * Convert the number to a variable-length binary radix floating point number.
-         */
-        VarFloat to<VarFloat>();
-
-        /**
-         * Convert the number to a 16-bit radix-2 (binary) floating point number.
-         */
-        Float16 to<Float16>()
-            {
-            return to<VarFloat>().to<Float16>();
-            }
-
-        /**
-         * Convert the number to a 32-bit radix-2 (binary) floating point number.
-         */
-        Float32 to<Float32>()
-            {
-            return to<VarFloat>().to<Float32>();
-            }
-
-        /**
-         * Convert the number to a 64-bit radix-2 (binary) floating point number.
-         */
-        Float64 to<Float64>()
-            {
-            return to<VarFloat>().to<Float64>();
-            }
-
-        /**
-         * Convert the number to a 128-bit radix-2 (binary) floating point number.
-         */
-        Float128 to<Float128>()
-            {
-            return to<VarFloat>().to<Float128>();
-            }
-
-        /**
-         * Convert the number to a variable-length decimal radix floating point number.
-         */
-        VarDec to<VarDec>();
-
-        /**
-         * Convert the number to a 32-bit radix-10 (decimal) floating point number.
-         */
-        Dec32 to<Dec32>()
-            {
-            return to<VarDec>().to<Dec32>();
-            }
-
-        /**
-         * Convert the number to a 64-bit radix-10 (decimal) floating point number.
-         */
-        Dec64 to<Dec64>()
-            {
-            return to<VarDec>().to<Dec64>();
-            }
-
-        /**
-         * Convert the number to a 128-bit radix-10 (decimal) floating point number.
-         */
-        Dec128 to<Dec128>()
-            {
-            return to<VarDec>().to<Dec128>();
-            }
-        }
+    enum Signum(String prefix)
+        as Negative("-"), Zero(""), Positive("+");
 
     interface IntNumber
             extends Number
         {
-        // operations
-        (IntNumber, IntNumber) divmod(IntNumber);
-        IntNumber mod(IntNumber);
-        IntNumber rem(IntNumber);
-
         IntNumber inc();
         IntNumber dec();
 
@@ -392,6 +81,11 @@ module ecstasy.xtclang.org
          */
         Int64 add(IntNumber n);
         // TODO sub / mul / div?
+
+        static Boolean equals(Int64 value1, Int64 value2)
+            {
+            return value1.to<Byte[]> == value2.to<Byte[]>;
+            }
         }
 
     interface UIntNumber
@@ -486,8 +180,8 @@ module ecstasy.xtclang.org
         FPNumber rad2deg();
         }
 
-    interface BFPNumber
-            extends FPNumber
+    interface BinaryNumber
+            extends FloatingPointNumber
         {
         @ro Int radix
             {
@@ -505,7 +199,7 @@ module ecstasy.xtclang.org
             }
         }
 
-    interface DecNumber
+    interface DecimalNumber
             extends FPNumber
         {
         @ro Int radix
@@ -580,15 +274,6 @@ module ecstasy.xtclang.org
         {
         }
 
-    interface Service
-        {
-        }
-
-    interface Method
-        {
-        String name;
-        }
-
     interface Property<T>
             extends Ref<T>
         {
@@ -599,6 +284,50 @@ module ecstasy.xtclang.org
         // TODO evaluate:
         // peek / poke?
         // CAS?
+        }
+
+    mixin Lazy<RefType> into Ref<RefType>
+        {
+        conditional RefType peek()
+            {
+            if (filled)
+                {
+                return true, get();
+                }
+
+            return false;
+            }
+
+        RefType get()
+            {
+            if (!filled)
+                {
+                set(evaluate());
+                assert:always filled;
+                }
+
+            return super();
+            }
+
+        Void set(RefType value)
+            {
+            assert:always !filled;
+            super(value);
+            filled = true;
+            }
+
+        protected RefType evaluate();
+
+        private Boolean filled = false;
+        }
+
+    mixin FnLazy<RefType>(function RefType () produce)
+            extends Lazy<RefType>
+        {
+        RefType evaluate()
+            {
+            return produce();
+            }
         }
 
 //    interface Element<T>
@@ -658,13 +387,7 @@ module ecstasy.xtclang.org
         Char[] to<Char[]>()
         }
 
-    enum Nullable {Null};
 
-    enum Boolean {False, True};
-
-    enum Ordered (Lesser, Equal, Greater);
-
-    enum Signum {Negative, Zero, Positive};
 
     // TODO Comparable, Hashable
 
@@ -699,43 +422,69 @@ module ecstasy.xtclang.org
         Ref<ElementType> elementAt(IndexType index);
         }
 
+    interface Iteratable<ElementType>
+        {
+        Iterator<ElementType> iterator();
+
+        Iterator<ElementType> iterator(function Boolean fn(ElementType))
+            {
+            return new Iterator<ElementType>()
+                {
+                Iterator iter = iterator();
+
+                conditional ElementType next()
+                    {
+                    while (ElementType value : iter.next())
+                        {
+                        if (fn(value))
+                            {
+                            return (true, value);
+                            }
+                        }
+
+                    return false;
+                    }
+                }
+            }
+        }
+
     interface Sequence<ElementType>
             extends UniformIndexed<Int, ElementType>
+            extends Iterable<ElementType>
         {
+        /**
+         * The length of the Sequence, which is the number of elements in the Sequence.
+         */
         @ro Int length;
 
         /**
-        TODO
-         * Returns a sub-sequence backed by this sequence.
+         * Returns a SubSequence of this Sequence. The SubSequence is backed by this
+         * Sequence, which means that changes made to the SubSequence will be visible
+         * through this Sequence.
+         *
+         * @param start  first index to include in the SubSequence, inclusive
+         * @param end    last index to include in the SubSequence, exclusive
          */
         SubSequence<ElementType> subSequence(Int start, Int end);
-
-        Iterator<ElementType> iterator();
         }
 
     interface SubSequence
             extends Sequence<ElementType>
         {
         /**
-        TODO
-         * Returns a new sequence that changes to it do not affect the original sequence that this
-         * sub-sequence was based on, nor do changes to the original sequence show up in the new
-         * one ...
-         * ... could be copy-on-write
+         * Obtain a Sequence of the same length and that contains the same values
+         * as this SubSequence. Changes to the returned Sequence are not visible
+         * through this SubSequence, and subsequent changes to this SubSequence
+         * are not visible through the returned Sequence.
          */
         Sequence<ElementType> reify();
-        }
-
-    interface Iteratable<ElementType>
-        {
-        Iterator<ElementType> iterator();
         }
 
     interface Iterator<ElementType>
         {
         conditional ElementType next();
 
-        void forEach(function void fn(ElementType))
+        Void forEach(function Void fn(ElementType)) // ElementType -> ()
             {
             while (ElementType value : next())
                 {
@@ -792,8 +541,13 @@ module ecstasy.xtclang.org
                 throw new IllegalArrayIndex(index, 0, length);
                 }
 
-            Element element = head;
-            // TODO start with first, walk list
+            Element element = (Element) head;
+            while (index-- > 0)
+                {
+                element = (Element) element.next;
+                }
+
+            return element;
             }
 
         private Element<ElementType>? head;
@@ -824,7 +578,7 @@ module ecstasy.xtclang.org
     interface Field<RefType>
             extends Ref<RefType> // REVIEW does it (could it) derive from property?
         {
-        String name;
+        @ro String name;
         }
 
     /**
