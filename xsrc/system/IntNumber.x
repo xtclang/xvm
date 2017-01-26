@@ -7,11 +7,18 @@ interface IntNumber
     /**
      * Integer increment.
      */
-    @op IntNumber inc();
+    @op IntNumber inc()
+        {
+        return this + 1;
+        }
+        
     /**
      * Integer decrement.
      */
-    @op IntNumber dec();
+    @op IntNumber dec()
+        {
+        return this - 1;
+        }
 
     /**
      * Shift bits left. This is both a logical left shift and arithmetic left shift, for
@@ -44,14 +51,14 @@ interface IntNumber
      * Rotate bits left.
      * <p/>
      * Note: For an integer of size n bits, only the least significant log2(n) bits of the
-     *       count value are used.
+     *       count value are guaranteed to be used.
      */ 
     IntNumber rol(Int count);
     /**
      * Rotate bits right.
      * <p/>
      * Note: For an integer of size n bits, only the least significant log2(n) bits of the
-     *       count value are used.
+     *       count value are guaranteed to be used.
      */ 
     IntNumber ror(Int count);
     }

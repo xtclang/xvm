@@ -22,7 +22,8 @@ module ecstasy.xtclang.org
     enum Boolean(Bit bit)
         as False(0), True(1);
 
-    enum Ordered(String  as Lesser, Equal, Greater;
+    enum Ordered(String symbol)
+        as Lesser("<"), Equal("="), Greater(">");
 
     enum Signum(String prefix)
         as Negative("-"), Zero(""), Positive("+");
