@@ -27,19 +27,6 @@ module ecstasy.xtclang.org
     enum Signum(String prefix)
         as Negative("-"), Zero(""), Positive("+");
 
-    interface IntNumber
-            extends Number
-        {
-        IntNumber inc();
-        IntNumber dec();
-
-        IntNumber shl(Int n);
-        IntNumber shr(Int n);
-        IntNumber ushr(Int n);
-        IntNumber rol(Int n);
-        IntNumber ror(Int n);
-        }
-
     const IntLiteral(String literal)
             implements IntNumber
         {
