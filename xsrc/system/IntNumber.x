@@ -61,4 +61,12 @@ interface IntNumber
      *       count value are guaranteed to be used.
      */ 
     IntNumber ror(Int count);
+    
+    // TODO leftmostBit
+    // TODO rightmostBit
+    // TODO leadingZeros (+"Count"?)
+    // TODO trailingZeros (+"Count"?)
+    // TODO countBits
+    // TODO reverseBits
+    // TODO reverseBytes
     }

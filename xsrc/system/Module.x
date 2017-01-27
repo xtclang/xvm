@@ -332,57 +332,12 @@ module ecstasy.xtclang.org
         @ro String Name;
         }
 
-    value Bit(Boolean flag)
-            implements Integer
-        {
-        /**
-         * Construct a Bit from an Integer, where the Bit value is 0 iff the Integer value is 0.
-         */
-        construct Bit(Bit:Struct struct, Integer value)
-            {
-            struct.flag = value != 0;
-            }
-
-        Boolean to<Boolean>()
-            {
-            return flag;
-            }
-
-        Integer to<Integer>()
-            {
-            return flag ? 1 : 0;
-            }
-        }
-
-    const Char
-        {
-        }
-
     value Binary
         {
         // TODO
         }
 
-    value Char
-            extends String
-        {
-        Integer to<Integer>();
-        Int8 to<Int8>();
-        Int16 to<Int16>();
-        Int32 to<Int32>();
-        Int64 to<Int64>();
-        }
-
-    value String
-        {
-        Char[] to<Char[]>()
-        }
-
-
-
     // TODO Comparable, Hashable
-
-    // TODO String
 
     /**
      * UniformIndexed is an interface that allows the square bracket operators

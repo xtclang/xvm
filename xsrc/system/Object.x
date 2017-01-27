@@ -24,6 +24,9 @@ public class Object
         meta.
         }
 
+    // TODO consider Sequence<this:type> to<Sequence<this:type>>()
+    // TODO consider Tuple<this:type[]> to<Tuple<this:type[]>>()
+    
     @ro protected Meta meta;
     }
 
