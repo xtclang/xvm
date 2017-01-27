@@ -76,14 +76,22 @@ interface Number
      * This number raised to the specified power.
      */
     Number pow(Number n);
+
     /**
      * The smaller of this number and the passed number.
      */
-    Number min(Number n);
+    Number min(Number n)
+        {
+        return n < this ? n : this;
+        }
+
     /**
      * The larger of this number and the passed number.
      */
-    Number max(Number n);
+    Number max(Number n)
+        {
+        return n > this ? n : this;
+        }
 
     // ----- conversions
 
@@ -116,27 +124,27 @@ interface Number
      * Convert the number to a signed 8-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    Int8 to<Int8>()
-        {
-        return to<VarInt>().to<Int8>();
-        }
+//     Int8 to<Int8>()
+//         {
+//         return to<VarInt>().to<Int8>();
+//         }
 
     /**
      * Convert the number to a signed 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    Int16 to<Int16>();
-        {
-        return to<VarInt>().to<Int16>();
-        }
+//     Int16 to<Int16>();
+//         {
+//         return to<VarInt>().to<Int16>();
+//         }
 
     /**
      * Convert the number to a signed 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    Int32 to<Int32>();
+    Short to<Short>();
         {
-        return to<VarInt>().to<Int32>();
+        return to<VarInt>().to<Short>();
         }
 
     /**
@@ -152,9 +160,9 @@ interface Number
      * Convert the number to a signed 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    Int128 to<Int128>();
+    Long to<Long>();
         {
-        return to<VarInt>().to<Int128>();
+        return to<VarInt>().to<Long>();
         }
 
     /**
@@ -175,18 +183,18 @@ interface Number
      * Convert the number to a unsigned 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    UInt16 to<UInt16>();
-        {
-        return to<VarUInt>().to<UInt16>();
-        }
+//     UInt16 to<UInt16>();
+//         {
+//         return to<VarUInt>().to<UInt16>();
+//         }
 
     /**
      * Convert the number to a unsigned 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    UInt32 to<UInt32>();
+    UShort to<UShort>();
         {
-        return to<VarUInt>().to<UInt32>();
+        return to<VarUInt>().to<UShort>();
         }
 
     /**
@@ -202,10 +210,10 @@ interface Number
      * Convert the number to a unsigned 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    ULong to<ULong>();
-        {
-        return to<VarInt>().to<ULong>();
-        }
+//     ULong to<ULong>();
+//         {
+//         return to<VarInt>().to<ULong>();
+//         }
 
     /**
      * Convert the number to a variable-length binary radix floating point number.
@@ -215,18 +223,18 @@ interface Number
     /**
      * Convert the number to a 16-bit radix-2 (binary) floating point number.
      */
-    Float16 to<Float16>()
-        {
-        return to<VarFloat>().to<Float16>();
-        }
+//     Float16 to<Float16>()
+//         {
+//         return to<VarFloat>().to<Float16>();
+//         }
 
     /**
      * Convert the number to a 32-bit radix-2 (binary) floating point number.
      */
-    Float32 to<Float32>()
-        {
-        return to<VarFloat>().to<Float32>();
-        }
+//     Float32 to<Float32>()
+//         {
+//         return to<VarFloat>().to<Float32>();
+//         }
 
     /**
      * Convert the number to a 64-bit radix-2 (binary) floating point number.
@@ -252,24 +260,24 @@ interface Number
     /**
      * Convert the number to a 32-bit radix-10 (decimal) floating point number.
      */
-    Dec32 to<Dec32>()
-        {
-        return to<VarDec>().to<Dec32>();
-        }
+//     Dec32 to<Dec32>()
+//         {
+//         return to<VarDec>().to<Dec32>();
+//         }
 
     /**
      * Convert the number to a 64-bit radix-10 (decimal) floating point number.
      */
-    Dec64 to<Dec64>()
-        {
-        return to<VarDec>().to<Dec64>();
-        }
+//     Dec64 to<Dec64>()
+//         {
+//         return to<VarDec>().to<Dec64>();
+//         }
 
     /**
      * Convert the number to a 128-bit radix-10 (decimal) floating point number.
      */
-    Dec128 to<Dec128>()
+    Dec to<Dec>()
         {
-        return to<VarDec>().to<Dec128>();
+        return to<VarDec>().to<Dec>();
         }
     }

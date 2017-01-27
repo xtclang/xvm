@@ -9,7 +9,7 @@ const Int(Bit[] bits)
         assert:always bits.
         this.bits = bits;
         }
-        
+
     Int bitLength
         {
         Int get()
@@ -34,7 +34,7 @@ const Int(Bit[] bits)
                 {
                 return Negative;
                 }
-                
+
             for (Bit bit : bits)
                 {
                 if (bit)
@@ -46,7 +46,7 @@ const Int(Bit[] bits)
             return Zero;
             }
         }
-        
+
 // TODO
     @op Int add(Int n);
 
@@ -70,40 +70,6 @@ const Int(Bit[] bits)
 
 // TODO
     Int pow(Int n);
-
-    Int min(Int n);
-        {
-        return n > this ? n : this;
-        }
-
-    Int max(Int n)
-        {
-        return n > this ? n : this;
-        }
-
-    Boolean[] to<Boolean[]>()
-        {
-        Boolean[] bools = new Boolean[0x40];
-        for (Int i = 0; i < 0x40; ++i)
-            {
-            bools[i] = bits[i].to<Boolean>();
-            }
-        return bools;
-        }
-
-    Bit[] to<Bit[]>()
-        {
-        Bit[] copy = new Bit[0x40];
-        for (Int i = 0; i < 0x40; ++i)
-            {
-            copy[i] = bits[i];
-            }
-        return copy;
-        }
-
-    // TODO Nibble[] to<Nibble[]>()
-
-    // TODO Byte[] to<Byte[]>()
 
     @op Int shl(Int count)
         {
@@ -136,7 +102,7 @@ const Int(Bit[] bits)
         bits[0x3F] = 0;
         return new Int(bits);
         }
-    
+
     Int rol(Int count)
         {
         Bit[] bits  = to<Bit[]>();
@@ -168,4 +134,30 @@ const Int(Bit[] bits)
             }
         return new Int(bits);
         }
+
+    Boolean[] to<Boolean[]>()
+        {
+        Boolean[] bools = new Boolean[0x40];
+        for (Int i = 0; i < 0x40; ++i)
+            {
+            bools[i] = bits[i].to<Boolean>();
+            }
+        return bools;
+        }
+
+    Bit[] to<Bit[]>()
+        {
+        Bit[] copy = new Bit[0x40];
+        for (Int i = 0; i < 0x40; ++i)
+            {
+            copy[i] = bits[i];
+            }
+        return copy;
+        }
+
+    // TODO Nibble[] to<Nibble[]>()
+
+    // TODO Byte[] to<Byte[]>()
+
+    // TODO to...
     }
