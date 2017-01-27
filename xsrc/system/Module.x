@@ -19,14 +19,17 @@ module ecstasy.xtclang.org
     {
     enum Nullable as Null;
 
-    enum Boolean(Bit bit)
-        as False(0), True(1);
+    typedef Null        null;
+    typedef False       false;
+    typedef True        true;
+    typedef UInt8       Byte;
+    typedef Int64       Int;
+    typedef UInt64      UInt;
+    typedef Decimal128  Dec;
+
 
     enum Ordered(String symbol)
         as Lesser("<"), Equal("="), Greater(">");
-
-    enum Signum(String prefix)
-        as Negative("-"), Zero(""), Positive("+");
 
     const IntLiteral(String literal)
             implements IntNumber
@@ -391,23 +394,23 @@ module ecstasy.xtclang.org
         /**
          * Obtain the value of the specified element.
          */
-        ElementType get(IndexType index)
-            {
-            return elementAt(index).get();
-            }
+        ElementType get(IndexType index);
 
         /**
          * Modify the value in the specified element.
          */
         Void set(IndexType index, ElementType newValue)
             {
-            elementAt(index).set(newValue);
+            throw new TODO
             }
 
         /**
          * Obtain a Ref for the specified element.
          */
-        Ref<ElementType> elementAt(IndexType index);
+        Ref<ElementType> elementAt(IndexType index)
+            {
+            return new TODO
+            }
         }
 
     interface Iteratable<ElementType>
@@ -453,12 +456,8 @@ module ecstasy.xtclang.org
          * @param start  first index to include in the SubSequence, inclusive
          * @param end    last index to include in the SubSequence, exclusive
          */
-        SubSequence<ElementType> subSequence(Int start, Int end);
-        }
+        Sequence<ElementType> subSequence(Int start, Int end);
 
-    interface SubSequence
-            extends Sequence<ElementType>
-        {
         /**
          * Obtain a Sequence of the same length and that contains the same values
          * as this SubSequence. Changes to the returned Sequence are not visible
