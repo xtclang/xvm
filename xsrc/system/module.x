@@ -17,37 +17,16 @@
  */
 module ecstasy.xtclang.org
     {
-    enum Nullable as Null;
+    enum Nullable {Null};
+    enum Ordered(String symbol) {Lesser("<"), Equal("="), Greater(">")}
 
-    typedef Null        null;
-    typedef False       false;
-    typedef True        true;
-    typedef UInt8       Byte;
-    typedef Int64       Int;
-    typedef UInt64      UInt;
-    typedef Decimal128  Dec;
-
-
-    enum Ordered(String symbol)
-        as Lesser("<"), Equal("="), Greater(">");
-
-    const IntLiteral(String literal)
-            implements IntNumber
-        {
-        // TODO the idea is that it holds on to the "source code" representation of an integer
-        //      number and provides automatic conversion of that number to any runtime Int or
-        //      FP number
-
-        String to<String>()
-            {
-            return literal;
-            }
-
-        Int64 to<Int64>()
-            {
-            // TODO
-            }
-        }
+    typedef Nullable.Null null;
+    typedef Boolean.False false;
+    typedef Boolean.True  true;
+    typedef UInt8         Byte;
+    typedef Int64         Int;
+    typedef UInt64        UInt;
+    typedef Decimal128    Dec;
 
     const Int64
             implements IntNumber

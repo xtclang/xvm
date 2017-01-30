@@ -1,5 +1,6 @@
 enum Boolean(Bit bit)
-    as False(0)
+    {
+    False(0)
         {
         @op Boolean and(Boolean that)
             {
@@ -11,7 +12,7 @@ enum Boolean(Bit bit)
             }
         @op Boolean xor(Boolean that)
             {
-            return that == True;
+            return that;
             }
         @op Boolean not()
             {
@@ -36,8 +37,8 @@ enum Boolean(Bit bit)
             {
             return False;
             }
-        }
-    {
+        };
+
     Bit to<Bit>()
         {
         return bit;

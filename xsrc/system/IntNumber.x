@@ -11,7 +11,7 @@ interface IntNumber
         {
         return this + 1;
         }
-        
+
     /**
      * Integer decrement.
      */
@@ -46,27 +46,27 @@ interface IntNumber
      *       count value are used.
      */
     @op IntNumber ushr(Int count);
-    
+
     /**
      * Rotate bits left.
      * <p/>
      * Note: For an integer of size n bits, only the least significant log2(n) bits of the
      *       count value are guaranteed to be used.
-     */ 
+     */
     IntNumber rol(Int count);
     /**
      * Rotate bits right.
      * <p/>
      * Note: For an integer of size n bits, only the least significant log2(n) bits of the
      *       count value are guaranteed to be used.
-     */ 
+     */
     IntNumber ror(Int count);
-    
-    // TODO leftmostBit
-    // TODO rightmostBit
-    // TODO leadingZeros (+"Count"?)
-    // TODO trailingZeros (+"Count"?)
-    // TODO countBits
-    // TODO reverseBits
-    // TODO reverseBytes
+
+    @ro IntNumber leftmostBit;
+    @ro IntNumber rightmostBit;
+    @ro IntNumber leadingZeroCount;
+    @ro IntNumber trailingZeroCount;
+    @ro IntNumber bitCount;
+    IntNumber reverseBits();
+    IntNumber reverseBytes();
     }
