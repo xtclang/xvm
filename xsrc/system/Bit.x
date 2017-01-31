@@ -1,7 +1,5 @@
-const Bit
+const Bit(IntLiteral literal)
     {
-    IntLiteral literal;
-
     construct Bit(IntLiteral literal)
         {
         assert:always literal == 0 || literal == 1;
@@ -18,7 +16,7 @@ const Bit
         return literal == 1;
         }
 
-    Byte to<Byte>()
+    @auto Byte to<Byte>()
         {
         return literal.to<Byte>();
         }
@@ -35,17 +33,17 @@ const Bit
 
     @op Bit and(Bit that)
         {
-        return this.literal == 1 && that.literal == 1;
+        return this.literal == 1 && that.literal == 1 ? 1 : 0;
         }
 
     @op Bit or(Bit that)
         {
-        return this.literal == 1 || that.literal == 1;
+        return this.literal == 1 || that.literal == 1 ? 1 : 0;
         }
 
     @op Bit xor(Bit that)
         {
-        return this.literal == 1 ^ that.literal == 1;
+        return this.literal == 1 ^ that.literal == 1 ? 1 : 0;
         }
 
     @op Bit not()

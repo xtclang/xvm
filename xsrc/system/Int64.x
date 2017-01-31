@@ -1,3 +1,4 @@
+
 /**
  * An Int is a 64-bit signed integer.
  */
@@ -10,45 +11,59 @@ const Int(Bit[] bits)
         this.bits = bits;
         }
 
-    Int bitLength
+    Int bitLength.get()
         {
-        Int get()
-            {
-            return 64;
-            }
+        return 64;
         }
 
-    Int byteLength
+    Int byteLength.get()
         {
-        Int get()
-            {
-            return 8;
-            }
+        return 8;
         }
 
-    Signum sign
+    Signum sign.get()
         {
-        Int get()
+        if (bits[0x3F] == 1)
             {
-            if (bits[0x3F] == 1)
-                {
-                return Negative;
-                }
+            return Negative;
+            }
 
-            for (Bit bit : bits)
-                {
-                if (bit)
-                    {
-                    return Positive;
-                    }
-                }
-
+        if (this == 0)
+            {
             return Zero;
             }
+            
+        return Positive;
+        }
+
+    /**
+     * The minimum value for an Int64.
+     */
+    static IntLiteral minvalue = -0x8000000000000000;
+    /**
+     * The maximum value for an Int64.
+     */
+    static IntLiteral maxvalue =  0x7FFFFFFFFFFFFFFF;
+
+    @ro UInt64 magnitude
+        {
+        return to<Int128>().abs().to<UInt64>();
+        }
+
+    static Boolean equals(Int64 value1, Int64 value2)
+        {
+        return value1.to<Byte[]> == value2.to<Byte[]>;
         }
 
 // TODO
     @op Int add(Int n);
+
+// TODO / REVIEW
+    /**
+     * In addition to the implicit "add(Int64 n)" method, this method allows any
+     * integer to be added to this value.
+     */
+    Int64 add(IntNumber n);
 
 // TODO
     @op Int sub(Int n);

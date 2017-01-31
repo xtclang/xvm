@@ -1,6 +1,6 @@
 /**
- * An IntLiteral is an IntNumber that is able to convert to any text string containing a legal representation of an
- * IntNumber into any of the built-in IntNumber implementations.
+ * An IntLiteral is an IntNumber that is able to convert to any text string containing a
+ * legal representation of an IntNumber into any of the built-in IntNumber implementations.
  * <p>
  * There are a number of formats for an IntLiteral:
  * <ul>
@@ -11,14 +11,16 @@
  * </ul>
  * Furthermore, any of the above may be signed using the "+" or "-" sign.
  * <p>
- * While most text strings have an unambiguous translation to an integer, there are cases that are ambiguous without
- * knowing the exact integer type that the value will be converted to. For example, 0x80 could be an Int8 of -128, but
- * as any other integer type (e.g. Int16, UInt8, UInt16), 0x80 would be the value 128.
+ * While most text strings have an unambiguous translation to an integer, there are cases
+ * that are ambiguous without knowing the exact integer type that the value will be
+ * converted to. For example, 0x80 could be an Int8 of -128, but as any other integer type
+ * (e.g. Int16, UInt8, UInt16), 0x80 would be the value 128.
  */
 const IntLiteral(String text)
     {
     /**
-     * If the literal begins with an explicit "+" or "-" sign, this property indicates that sign.
+     * If the literal begins with an explicit "+" or "-" sign, this property indicates
+     * that sign.
      */
     Signum explicitSign = Zero;
 
@@ -27,7 +29,11 @@ const IntLiteral(String text)
      */
     Int radix = 10;
 
-    VarInt value;
+    /**
+     * This is the magnitude of the literal, but does not include the application of any
+     * explicit sign.
+     */
+    VarInt magnitude;
 
     construct IntLiteral(String text)
         {
@@ -107,7 +113,8 @@ const IntLiteral(String text)
             underscoreOk = true;
             }
 
-        this.value = value;
+        assert:always digits > 0;
+        this.magnitude = value;
         }
 
     /**
@@ -116,6 +123,7 @@ const IntLiteral(String text)
      */
     @ro Int minIntBits.get()
         {
+        return magnitude.leftmostbit // TODO
         }
 
     /**

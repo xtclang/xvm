@@ -68,5 +68,27 @@ interface IntNumber
     @ro IntNumber trailingZeroCount;
     @ro IntNumber bitCount;
     IntNumber reverseBits();
+    
+    /**
+     * Swap the byte ordering of this integer's bytes to produce a new integer with the
+     * opposite byte order.
+     */
     IntNumber reverseBytes();
+
+    /**
+     * Bitwise AND.
+     */    
+    @op IntNumber and(IntNumber that);
+    /**
+     * Bitwise OR.
+     */    
+    @op IntNumber or(IntNumber that);
+    /**
+     * Bitwise XOR.
+     */    
+    @op IntNumber xor(IntNumber that);
+    /**
+     * Bitwise NOT.
+     */    
+    @op IntNumber not();
     }
