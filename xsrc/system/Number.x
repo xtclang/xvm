@@ -5,7 +5,11 @@
 interface Number
     {
     enum Signum(String prefix)
-        as Negative("-"), Zero(""), Positive("+");
+        {
+        Negative("-"),
+        Zero(""),
+        Positive("+")
+        }
 
     // ----- properties
 
@@ -30,18 +34,22 @@ interface Number
      * Addition: Add another number to this number, and return the result.
      */
     @op Number add(Number n);
+
     /**
      * Subtraction: Subtract another number from this number, and return the result.
      */
     @op Number sub(Number n);
+
     /**
      * Multiplication: Multiply this number by another number, and return the result.
      */
     @op Number mul(Number n);
+
     /**
      * Division: Divide this number by another number, and return the result.
      */
     @op Number div(Number n);
+
     /**
      * Modulo: Return the modulo that would result from dividing this number by another number.
      */
@@ -62,26 +70,41 @@ interface Number
      * and for signed dividend values that are zero or positive, but for signed dividend values
      * that are negative, the remainder will be zero or negative.
      */
-    Number rem(Number n)
+    Number remainder(Number n)
         {
         return this - (this / n * n);
         }
 
     /**
-     * The absolute value of this number.
+     * Calculate the absolute value of this number. If there is no absolute value representable
+     * using this number's type, then an exception is thrown; this can happen for a signed integer
+     * of the minimum value for that integer type, since the positive range for a 2s-complement
+     * signed integer is always one smaller than the negative range.
      */
-    Number abs();
+    Number abs()
+        {
+        if (sign != Negative)
+            {
+            return this;
+            }
+
+        Number n = -this;
+        assert:always n.sign != Negative;
+        return n;
+        };
+
     /**
-     * The negative of this number.
+     * Calculate the negative of this number.
      */
     @op Number neg();
+
     /**
-     * This number raised to the specified power.
+     * Calculate this number raised to the specified power.
      */
     Number pow(Number n);
 
     /**
-     * The smaller of this number and the passed number.
+     * Determine the smaller of this number and the passed number.
      */
     Number min(Number n)
         {
@@ -89,7 +112,7 @@ interface Number
         }
 
     /**
-     * The larger of this number and the passed number.
+     * Determine the larger of this number and the passed number.
      */
     Number max(Number n)
         {
@@ -109,7 +132,7 @@ interface Number
     Bit[] to<Bit[]>();
 
     /**
-     * Obtain the number as an array of bits.
+     * Obtain the number as an array of nibbles.
      */
     Nibble[] to<Nibble[]>();
 

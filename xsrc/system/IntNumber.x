@@ -7,7 +7,7 @@ interface IntNumber
     /**
      * Integer increment.
      */
-    @op IntNumber inc()
+    @op IntNumber increment()
         {
         return this + 1;
         }
@@ -15,80 +15,100 @@ interface IntNumber
     /**
      * Integer decrement.
      */
-    @op IntNumber dec()
+    @op IntNumber decrement()
         {
         return this - 1;
         }
 
     /**
+     * Bitwise AND.
+     */
+    @op IntNumber and(IntNumber that);
+
+    /**
+     * Bitwise OR.
+     */
+    @op IntNumber or(IntNumber that);
+
+    /**
+     * Bitwise XOR.
+     */
+    @op IntNumber xor(IntNumber that);
+
+    /**
+     * Bitwise NOT.
+     */
+    @op IntNumber not();
+
+    /**
      * Shift bits left. This is both a logical left shift and arithmetic left shift, for
      * both signed and unsigned integer values.
-     * <p/>
-     * Note: For an integer of size n bits, only the least significant log2(n) bits of the
-     *       count value are used.
      */
-    @op IntNumber shl(Int count);
+    @op IntNumber shiftLeft(Int count);
+
     /**
      * Shift bits right. For signed integer values, this is an arithmetic right shift. For
      * unsigned integer values, this is both a logical right shift and arithmetic right
      * shift.
-     * <p/>
-     * Note: For an integer of size n bits, only the least significant log2(n) bits of the
-     *       count value are used.
      */
-    @op IntNumber shr(Int count);
+    @op IntNumber shiftRight(Int count);
+
     /**
-     * "Unsigned" Shift bits right. For signed integer values, this is an logical right
+     * "Unsigned" shift bits right. For signed integer values, this is an logical right
      * shift. For unsigned integer values, this is both a logical right shift and arithmetic
      * right shift.
-     * <p/>
-     * Note: For an integer of size n bits, only the least significant log2(n) bits of the
-     *       count value are used.
      */
-    @op IntNumber ushr(Int count);
+    @op IntNumber shiftAllRight(Int count);
 
     /**
      * Rotate bits left.
-     * <p/>
-     * Note: For an integer of size n bits, only the least significant log2(n) bits of the
-     *       count value are guaranteed to be used.
      */
-    IntNumber rol(Int count);
+    IntNumber rotateLeft(Int count);
+
     /**
      * Rotate bits right.
-     * <p/>
-     * Note: For an integer of size n bits, only the least significant log2(n) bits of the
-     *       count value are guaranteed to be used.
      */
-    IntNumber ror(Int count);
+    IntNumber rotateRight(Int count);
 
+    /**
+     * If any bits are set in this integer, then return an integer with only the most significant
+     * (left-most) of those bits set, otherwise return zero.
+     */
     @ro IntNumber leftmostBit;
+
+    /**
+     * If any bits are set in this integer, then return an integer with only the least significant
+     * (right-most) of those bits set, otherwise return zero.
+     */
     @ro IntNumber rightmostBit;
+
+    /**
+     * Determine, from left-to-right (most significant to least) the number of bits that are zero
+     * preceding the most significant (left-most) bit.
+     */
     @ro IntNumber leadingZeroCount;
+
+    /**
+     * Determine, from right-to-left (least significant to most) the number of bits that are zero
+     * following the least significant (right-most) bit.
+     */
     @ro IntNumber trailingZeroCount;
+
+    /**
+     * Determine the number of bits that are set (non-zero) in the integer.
+     */
     @ro IntNumber bitCount;
+
+    /**
+     * Swap the bit ordering of this integer's bits to produce a new integer with the
+     * opposite bit order.
+     */
     IntNumber reverseBits();
-    
+
     /**
      * Swap the byte ordering of this integer's bytes to produce a new integer with the
-     * opposite byte order.
+     * opposite byte order. This can be used to convert a little endian integer to a big endian
+     * integer, and vice versa.
      */
     IntNumber reverseBytes();
-
-    /**
-     * Bitwise AND.
-     */    
-    @op IntNumber and(IntNumber that);
-    /**
-     * Bitwise OR.
-     */    
-    @op IntNumber or(IntNumber that);
-    /**
-     * Bitwise XOR.
-     */    
-    @op IntNumber xor(IntNumber that);
-    /**
-     * Bitwise NOT.
-     */    
-    @op IntNumber not();
     }

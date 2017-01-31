@@ -1,5 +1,7 @@
-const Bit(IntLiteral literal)
+const Bit
     {
+    private IntLiteral literal;
+
     construct Bit(IntLiteral literal)
         {
         assert:always literal == 0 || literal == 1;
