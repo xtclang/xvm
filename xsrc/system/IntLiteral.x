@@ -18,23 +18,6 @@
  */
 const IntLiteral(String text)
     {
-    /**
-     * If the literal begins with an explicit "+" or "-" sign, this property indicates
-     * that sign.
-     */
-    Signum explicitSign = Zero;
-
-    /**
-     * This is the radix of the integer literal, one of 2, 8, 10, or 16.
-     */
-    Int radix = 10;
-
-    /**
-     * This is the magnitude of the literal, but does not include the application of any
-     * explicit sign.
-     */
-    VarInt magnitude;
-
     construct IntLiteral(String text)
         {
         assert:always text.length > 0;
@@ -83,8 +66,8 @@ const IntLiteral(String text)
             }
 
         // digits
-        VarInt  value  = 0;
-        Int     digits = 0;
+        VarUInt magnitude = 0;
+        Int     digits    = 0;
         while (of < text.length)
             {
             Char ch = chars[of++];
@@ -108,14 +91,34 @@ const IntLiteral(String text)
                 }
 
             assert:always nch < radix;
-            value = value * radix + nch.to<VarInt>();
+            if (explicitSign == Negative)
+                {
+                value = magnitude * radix - nch.to<VarInt>();
+                }
+            magnitude = magnitude * radix + nch.to<VarInt>();
             ++digits;
             underscoreOk = true;
             }
 
         assert:always digits > 0;
-        this.magnitude = value;
+        this.magnitude = magnitude;
         }
+
+    /**
+     * If the literal begins with an explicit "+" or "-" sign, this property indicates
+     * that sign.
+     */
+    Signum explicitSign = Zero;
+
+    /**
+     * This is the radix of the integer literal, one of 2, 8, 10, or 16.
+     */
+    Int radix = 10;
+
+    /**
+     * This is the value of the literal in VarInt form.
+     */
+    VarUInt magnitude;
 
     /**
      * The minimum number of bits to store the IntLiteral's value as a signed integer in a twos-complement format,
@@ -123,7 +126,24 @@ const IntLiteral(String text)
      */
     @ro Int minIntBits.get()
         {
-        return magnitude.leftmostbit // TODO
+        if (magnitude == 0)
+            {
+            // smallest int: 8 bits (1 byte)
+            return 8;
+            }
+
+        // determining the number of required signed int bits is more complicated than
+        // determining the number of required unsigned int bits. in the case of decimal
+        // integer numbers, , because of the 
+        127 8 bits
+        128 16 bits
+        -128 8 bits
+        0x80 8 bits
+        -0x80 8 bits
+        -0x81 16 bits 
+        +0x80 16 bits
+        
+        return  // TODO
         }
 
     /**
@@ -132,6 +152,15 @@ const IntLiteral(String text)
      */
     @ro Int minUIntBits.get()
         {
+        assert:always explicitSign != Negative;
+                
+        if (magnitude == 0)
+            {
+            // smallest int: 8 bits (1 byte)
+            return 8;
+            }
+
+        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.max(8).to<Int>();
         }
 
     /**
@@ -140,6 +169,7 @@ const IntLiteral(String text)
      */
     @ro Int minFloatBits.get()
         {
+        TODO
         }
 
     /**
@@ -148,6 +178,7 @@ const IntLiteral(String text)
      */
     @ro Int minDecBits.get()
         {
+        TODO
         }
 
     /**

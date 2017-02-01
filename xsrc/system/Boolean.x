@@ -6,6 +6,18 @@ enum Boolean
             {
             return 0;
             }
+        Byte to<Byte>()
+            {
+            return 0;
+            }
+        Int to<Int>()
+            {
+            return 0;
+            }
+        UInt to<UInt>()
+            {
+            return 0;
+            }
         @op Boolean and(Boolean that)
             {
             return False;
@@ -30,6 +42,18 @@ enum Boolean
             {
             return 1;
             }
+        Byte to<Byte>()
+            {
+            return 1;
+            }
+        Int to<Int>()
+            {
+            return 1;
+            }
+        UInt to<UInt>()
+            {
+            return 1;
+            }
         @op Boolean and(Boolean that)
             {
             return that;
@@ -49,22 +73,10 @@ enum Boolean
         };
 
     Bit to<Bit>();
-
-    Byte to<Byte>()
-        {
-        return bit.to<Byte>();
-        }
-
-    Int to<Int>()
-        {
-        return bit.to<Int>();
-        }
-
-    UInt to<UInt>()
-        {
-        return bit.to<UInt>();
-        }
-
+    Byte to<Byte>();
+    Int to<Int>();
+    UInt to<UInt>();
+    
     @op Boolean and(Boolean that);
     @op Boolean or(Boolean that);
     @op Boolean xor(Boolean that);

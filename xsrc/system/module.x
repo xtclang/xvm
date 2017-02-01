@@ -26,7 +26,7 @@ module ecstasy.xtclang.org
     typedef UInt8         Byte;
     typedef Int64         Int;
     typedef UInt64        UInt;
-    typedef Decimal128    Dec;
+    typedef Decimal64     Dec;
 
     /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for
@@ -41,6 +41,7 @@ module ecstasy.xtclang.org
     interface Module
             extends Package
         {
+        // TODO
         }
 
     /**
@@ -53,6 +54,7 @@ module ecstasy.xtclang.org
     interface Package
             extends Class
         {
+        // TODO
         }
 
     interface Interface
@@ -75,6 +77,10 @@ module ecstasy.xtclang.org
             extends Comparable, Hashable
         {
         String to<String>();
+        
+        // TODO equals
+        // TODO compare
+        // TODO hash
         }
 
     interface Enum
@@ -184,32 +190,6 @@ module ecstasy.xtclang.org
             }
         }
 
-    interface Iteratable<ElementType>
-        {
-        Iterator<ElementType> iterator();
-
-        Iterator<ElementType> iterator(function Boolean fn(ElementType))
-            {
-            return new Iterator<ElementType>()
-                {
-                Iterator iter = iterator();
-
-                conditional ElementType next()
-                    {
-                    while (ElementType value : iter.next())
-                        {
-                        if (fn(value))
-                            {
-                            return (true, value);
-                            }
-                        }
-
-                    return false;
-                    }
-                }
-            }
-        }
-
     interface Sequence<ElementType>
             extends UniformIndexed<Int, ElementType>
             extends Iterable<ElementType>
@@ -236,19 +216,6 @@ module ecstasy.xtclang.org
          * are not visible through the returned Sequence.
          */
         Sequence<ElementType> reify();
-        }
-
-    interface Iterator<ElementType>
-        {
-        conditional ElementType next();
-
-        Void forEach(function Void fn(ElementType)) // ElementType -> ()
-            {
-            while (ElementType value : next())
-                {
-                fn(value);
-                }
-            }
         }
 
     /**
