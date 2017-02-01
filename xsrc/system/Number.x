@@ -21,7 +21,13 @@ interface Number
     /**
      * The number of bytes that the number uses.
      */
-    @ro Int byteLength;
+    @ro Int byteLength.get()
+        {
+        // make sure the bit length is at least 8, and also a power-of-two
+        assert:always bitLength == (bitLength & ~0x7).leftmostBit;
+
+        return bitLength / 8;
+        }
 
     /**
      * The Sign of the number.
@@ -31,7 +37,8 @@ interface Number
     // ----- operations
 
     /**
-     * Addition: Add another number to this number, and return the result.
+     * Addition: Add another number to this number, and retu
+     rn the result.
      */
     @op Number add(Number n);
 
@@ -124,22 +131,71 @@ interface Number
     /**
      * Obtain the number as an array of bits.
      */
-    Boolean[] to<Boolean[]>();
-
-    /**
-     * Obtain the number as an array of bits.
-     */
     Bit[] to<Bit[]>();
 
     /**
      * Obtain the number as an array of nibbles.
      */
     Nibble[] to<Nibble[]>();
+        {
+        // make sure the bit length is at least 4, and also a power-of-two
+        assert:always bitLength == (bitLength & ~0x3).leftmostBit;
+
+        return new Sequence<Nibble>()
+            {
+            @override Int length.get()
+                {
+                return IntNumber.this.bitCount / 4;
+                }
+
+            @override Boolean get(Int index)
+                {
+                return new Nibble(IntNumber.this.to<Bit[]>().subSequence(index * 4, index * 4 + 4));
+                }
+
+            @override Void set(Int index, Nibble newValue)
+                {
+                Bit[] oldBits = Number.this.to<Bit[]>();
+                Bit[] newBits = newValue.to<Bit[]>();
+                for (Int ofOld = index * 4, ofNew = 0; ofNew < 4; )
+                    {
+                    oldBits[ofOld++] = newBits[ofNew++];
+                    }
+                }
+            }
+        }
 
     /**
      * Obtain the number as an array of bytes.
      */
     Byte[] to<Byte[]>();
+        {
+        // make sure the bit length is at least 8, and also a power-of-two
+        assert:always bitLength == (bitLength & ~0x7).leftmostBit;
+
+        return new Sequence<Byte>()
+            {
+            @override Int length.get()
+                {
+                return IntNumber.this.bitCount / 8;
+                }
+
+            @override Boolean get(Int index)
+                {
+                return new Byte(IntNumber.this.to<Bit[]>().subSequence(index * 8, index * 8 + 8));
+                }
+
+            @override Void set(Int index, Nibble newValue)
+                {
+                Bit[] oldBits = Number.this.to<Bit[]>();
+                Bit[] newBits = newValue.to<Bit[]>();
+                for (Int ofOld = index * 8, ofNew = 0; ofNew < 8; )
+                    {
+                    oldBits[ofOld++] = newBits[ofNew++];
+                    }
+                }
+            }
+        }
 
     /**
      * Convert the number to a variable-length signed integer.

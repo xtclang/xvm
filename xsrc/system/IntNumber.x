@@ -111,4 +111,23 @@ interface IntNumber
      * integer, and vice versa.
      */
     IntNumber reverseBytes();
+
+    /**
+     * Obtain the number as an array of boolean values.
+     */
+    Boolean[] to<Boolean[]>()
+        {
+        return new Sequence<Boolean>()
+            {
+            @override Int length.get()
+                {
+                return IntNumber.this.bitCount;
+                }
+
+            @override Boolean get(Int index)
+                {
+                return IntNumber.this.to<Bit[]>()[index].to<Boolean>();
+                }
+            }
+        }
     }

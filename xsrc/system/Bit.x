@@ -1,12 +1,14 @@
 const Bit
     {
-    private IntLiteral literal;
-
     construct Bit(IntLiteral literal)
         {
         assert:always literal == 0 || literal == 1;
         this.literal = literal;
         }
+
+    private IntLiteral literal;
+
+    static Bit defaultValue = 0;
 
     IntLiteral to<IntLiteral>()
         {
@@ -52,4 +54,4 @@ const Bit
         {
         return literal == 1 ? 0 : 1;
         }
-    };
+    }
