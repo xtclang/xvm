@@ -113,8 +113,7 @@ interface Number
     /**
      * Determine the smaller of this number and the passed number.
      */
-// TODO "at most"?
-    Number min(Number n)
+    Number atMost(Number n)
         {
         return n < this ? n : this;
         }
@@ -122,8 +121,7 @@ interface Number
     /**
      * Determine the larger of this number and the passed number.
      */
-// TODO "at least"?
-    Number max(Number n)
+    Number atLeast(Number n)
         {
         return n > this ? n : this;
         }
