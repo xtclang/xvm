@@ -57,6 +57,8 @@ module ecstasy.xtclang.org
         // TODO
         }
 
+// TODO -------------- split out everything below this point -----------------
+
     interface Interface
         {
         }
@@ -159,7 +161,6 @@ module ecstasy.xtclang.org
         // TODO
         }
 
-    // TODO Comparable, Hashable
 
     // REVIEW this is roughly what I'm thinking as the basis for Tuple
     // NOTE that Tuple == Struct in many ways
@@ -178,4 +179,9 @@ module ecstasy.xtclang.org
 
     interface Map<KeyType, ValueType>
             extends Indexed<KeyType>
+            
+    // TODO Comparable, Hashable
+    
+    class HashMap ... TODO
+    // TODO how will HashMap specify that its KeyType has to have "static equals()"
     }

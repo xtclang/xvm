@@ -4,11 +4,11 @@
  */
 interface Number
     {
-    enum Signum(String prefix)
+    enum Signum(String prefix, Int factor)
         {
-        Negative("-"),
-        Zero(""),
-        Positive("+")
+        Negative("-", -1),
+        Zero    ("" ,  0),
+        Positive("+", +1)
         }
 
     // ----- properties

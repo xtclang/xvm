@@ -46,6 +46,7 @@ const String
         {
         return chars;
         }
+        
     //
     const StringAscii(Byte[] bytes)
         {

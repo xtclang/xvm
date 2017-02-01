@@ -25,6 +25,7 @@ interface Sequence<ElementType>
      * as this SubSequence. Changes to the returned Sequence are not visible
      * through this SubSequence, and subsequent changes to this SubSequence
      * are not visible through the returned Sequence.
+TODO REVIEW comment / is it copy-on-write?
      */
     Sequence<ElementType> reify()
         {
@@ -33,6 +34,19 @@ interface Sequence<ElementType>
 
     Iterator<ElementType> iterator()
         {
-        return new TODO
+        return new Iterator<ElementType>()
+            {
+            private Int i = 0;
+            
+            conditional ElementType next()
+                {
+                if (i < Sequence.this.length)
+                    {
+                    return true, Sequence.this[i++];
+                    }
+                    
+                return false;
+                }
+            }
         }
     }

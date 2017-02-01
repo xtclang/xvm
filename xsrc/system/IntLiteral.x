@@ -56,7 +56,7 @@ const IntLiteral(String text)
                     radix = 2;
                     break;
 
-                case 'o':
+                case 'o':           // TODO / REVIEW possible addition to lang spec
                     radix = 8;
                     break;
                 }
@@ -94,10 +94,6 @@ const IntLiteral(String text)
                 }
 
             assert:always nch < radix;
-            if (explicitSign == Negative)
-                {
-                value = magnitude * radix - nch.to<VarInt>();
-                }
             magnitude = magnitude * radix + nch.to<VarInt>();
             ++digits;
             underscoreOk = true;
@@ -127,7 +123,7 @@ const IntLiteral(String text)
      * The minimum number of bits to store the IntLiteral's value as a signed integer in a twos-complement format,
      * where the number of bits is a power-of-two of at least 8.
      */
-    @ro Int minIntBits.get()
+    Int minIntBits.get()
         {
         Int count;
         
@@ -164,31 +160,7 @@ const IntLiteral(String text)
             }
         
         // round up to nearest power of 2 (at least 8)
-        return (count * 2 - 1).leftmostBit.max(8);
-            
-        return magnitude
-        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.max(8)
-        8.max()
-        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.max(8)
-        8.max()
-        // determining the number of required signed int bits is more complicated than
-        // determining the number of required unsigned int bits. in the case of decimal
-        // integer numbers, , because of the
-        127 8 bits
-        128 16 bits
-        -128 8 bits
-        -0x80 8 bits
-        -0x81 16 bits
-        0x7F 8 bits
-        +0x7F 8 bits
-        0x80 8 bits
-        +0x80 16 bits
-        0xFF 8 bits
-
-        return  // TODO
-            return 8.max(minbits * 2).leftmostBit;
-            return 8.max();
-            // TODO make 11 into 16
+        return (count * 2 - 1).leftmostBit.atLeast(8);
         }
 
     /**
@@ -197,6 +169,7 @@ const IntLiteral(String text)
      */
     @ro Int minUIntBits.get()
         {
+// TODO review        
         assert:always explicitSign != Negative;
 
         if (magnitude == 0)
@@ -228,7 +201,13 @@ const IntLiteral(String text)
 
     @auto Bit to<Bit>()
         {
-        // TODO
+        if (magnitude == 0)
+            {
+            return 0;
+            }
+        
+        assert:always magnitude == 1 && explicitSign != Negative;
+        return 1;
         }
 
     @auto Nibble to<Nibble>()

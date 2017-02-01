@@ -8,12 +8,12 @@ interface UniformIndexed<IndexType, ElementType>
     /**
      * Obtain the value of the specified element.
      */
-    ElementType get(IndexType index);
+    @op ElementType get(IndexType index);
 
     /**
      * Modify the value in the specified element.
      */
-    Void set(IndexType index, ElementType newValue)
+    @op Void set(IndexType index, ElementType value)
         {
         throw new TODO
         }
@@ -21,8 +21,19 @@ interface UniformIndexed<IndexType, ElementType>
     /**
      * Obtain a Ref for the specified element.
      */
-    Ref<ElementType> elementAt(IndexType index)
+    @op Ref<ElementType> elementAt(IndexType index)
         {
-        return new TODO
+        return new Ref<ElementType>()
+            {
+            RefType get()
+                {
+                return UniformIndexed.this.get(index);
+                }
+                
+            Void set(RefType value)
+                {
+                UniformIndexed.this.set(index, value);
+                }
+            }
         }
     }

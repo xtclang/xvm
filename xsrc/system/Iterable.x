@@ -11,7 +11,7 @@ interface Iteratable<ElementType>
     /**
      * TODO
      */
-    Iterator<ElementType> iterator(function Boolean fn(ElementType))
+    Iterator<ElementType> iterator(function Boolean(ElementType) fn)
         {
         return new Iterator<ElementType>()
             {

@@ -1,22 +1,24 @@
 
 /**
- * An Int is a 64-bit signed integer.
+ * An Int64 is a 64-bit signed integer.
  */
-const Int(Bit[] bits)
+const Int64
         implements IntNumber
     {
-    construct Int(Bit[] bits)
+    construct Int64(Bit[] bits)
         {
         assert:always bits.
         this.bits = bits;
         }
 
-    Int bitLength.get()
+    private Bit[] bits;
+    
+    Int64 bitLength.get()
         {
         return 64;
         }
 
-    Int byteLength.get()
+    Int64 byteLength.get()
         {
         return 8;
         }
@@ -56,7 +58,7 @@ const Int(Bit[] bits)
         }
 
 // TODO
-    @op Int add(Int n);
+    @op Int64 add(Int64 n);
 
 // TODO / REVIEW
     /**
@@ -66,30 +68,30 @@ const Int(Bit[] bits)
     Int64 add(IntNumber n);
 
 // TODO
-    @op Int sub(Int n);
+    @op Int64 sub(Int64 n);
 
 // TODO
-    @op Int mul(Int n);
+    @op Int64 mul(Int64 n);
 
 // TODO
-    @op Int div(Int n);
+    @op Int64 div(Int64 n);
 
 // TODO
-    @op Int mod(Int n);
+    @op Int64 mod(Int64 n);
 
 // TODO
-    Int abs();
+    Int64 abs();
 
 // TODO
-    @op Int neg();
+    @op Int64 neg();
 
 // TODO
-    Int pow(Int n);
+    Int64 pow(Int64 n);
 
-    @op Int shl(Int count)
+    @op Int64 shl(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
-        for (Int i = 0x3F; i > 0; --i)
+        for (Int64 i = 0x3F; i > 0; --i)
             {
             bits[i] = bits[i-1];
             }
@@ -97,20 +99,20 @@ const Int(Bit[] bits)
         return new Int(bits);
         }
 
-    @op Int shr(Int count)
+    @op Int64 shr(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
-        for (Int i = 0; i < 0x3F; ++i)
+        for (Int64 i = 0; i < 0x3F; ++i)
             {
             bits[i] = bits[i+1];
             }
         return new Int(bits);
         }
 
-    @op IntInt ushr(Int count)
+    @op IntInt64 ushr(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
-        for (Int i = 0; i < 0x3F; ++i)
+        for (Int64 i = 0; i < 0x3F; ++i)
             {
             bits[i] = bits[i+1];
             }
@@ -118,14 +120,14 @@ const Int(Bit[] bits)
         return new Int(bits);
         }
 
-    Int rol(Int count)
+    Int64 rol(Int64 count)
         {
         Bit[] bits  = to<Bit[]>();
-        Int   rolls = count & 0x3F;
+        Int64   rolls = count & 0x3F;
         while (rolls-- > 0)
             {
             Bit carry = bits[0x3F];
-            for (Int i = 0x3F; i > 0; --i)
+            for (Int64 i = 0x3F; i > 0; --i)
                 {
                 bits[i] = bits[i-1];
                 }
@@ -134,14 +136,14 @@ const Int(Bit[] bits)
         return new Int(bits);
         }
 
-    Int ror(Int count)
+    Int64 ror(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
-        Int   rolls = count & 0x3F;
+        Int64   rolls = count & 0x3F;
         while (rolls-- > 0)
             {
             Bit carry = bits[0];
-            for (Int i = 0; i < 0x3F; ++i)
+            for (Int64 i = 0; i < 0x3F; ++i)
                 {
                 bits[i] = bits[i+1];
                 }
@@ -153,7 +155,7 @@ const Int(Bit[] bits)
     Boolean[] to<Boolean[]>()
         {
         Boolean[] bools = new Boolean[0x40];
-        for (Int i = 0; i < 0x40; ++i)
+        for (Int64 i = 0; i < 0x40; ++i)
             {
             bools[i] = bits[i].to<Boolean>();
             }
@@ -163,7 +165,7 @@ const Int(Bit[] bits)
     Bit[] to<Bit[]>()
         {
         Bit[] copy = new Bit[0x40];
-        for (Int i = 0; i < 0x40; ++i)
+        for (Int64 i = 0; i < 0x40; ++i)
             {
             copy[i] = bits[i];
             }

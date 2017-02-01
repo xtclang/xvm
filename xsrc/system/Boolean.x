@@ -72,9 +72,9 @@ enum Boolean
             }
         };
 
-    Bit to<Bit>();
+    Bit  to<Bit>();
     Byte to<Byte>();
-    Int to<Int>();
+    Int  to<Int>();
     UInt to<UInt>();
     
     @op Boolean and(Boolean that);
