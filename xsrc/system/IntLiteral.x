@@ -129,24 +129,66 @@ const IntLiteral(String text)
      */
     @ro Int minIntBits.get()
         {
+        Int count;
+        
         if (magnitude == 0)
             {
-            // smallest int: 8 bits (1 byte)
-            return 8;
+            // it doesn't take much to store a zero
+            count = 1;
             }
-
+        else if (explicitSign == Zero && radix != 10)
+            {
+            // combination of no explicit sign and a non-decimal radix implies that the
+            // number of bits necessary is the number of bits to hold the magnitude
+            // itself; examples:
+            //   0x7F -> 8 bits
+            //   0x80 -> 8 bits
+            //   0xFF -> 8 bits
+            count = magnitude.leftmostBit.trailingZeroCount + 1;
+            }
+        else if (explicitSign == Negative)
+            {
+            // examples:
+            //   -0x7F -> 8 bits
+            //   -0x80 -> 8 bits
+            //   -0x81 -> 16 bits
+            //   -0xFF -> 16 bits
+            count = (magnitude - 1).leftmostBit.trailingZeroCount + 2;
+            }
+        else
+            {
+            // examples:
+            //   127  +0x7F  -> 8 bits
+            //   128  +0x80  -> 16 bits
+            count = magnitude.leftmostBit.trailingZeroCount + 2;
+            }
+        
+        // round up to nearest power of 2 (at least 8)
+        return (count * 2 - 1).leftmostBit.max(8);
+            
+        return magnitude
+        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.max(8)
+        8.max()
+        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.max(8)
+        8.max()
         // determining the number of required signed int bits is more complicated than
         // determining the number of required unsigned int bits. in the case of decimal
         // integer numbers, , because of the
         127 8 bits
         128 16 bits
         -128 8 bits
-        0x80 8 bits
         -0x80 8 bits
         -0x81 16 bits
+        0x7F 8 bits
+        +0x7F 8 bits
+        0x80 8 bits
         +0x80 16 bits
+        0xFF 8 bits
 
         return  // TODO
+            return 8.max(minbits * 2).leftmostBit;
+            return 8.max();
+            // TODO make 11 into 16
         }
 
     /**
