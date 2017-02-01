@@ -6,6 +6,16 @@ const Char(UInt32 codepoint)
         assert:always codepoint <= 0x10FFFF
         }
 
+    construct Char(Byte b)
+        {
+        construct(b.to<UInt32>());
+        }
+
+    construct Char(Int n)
+        {
+        construct(n.to<UInt32>());
+        }
+
     /**
      * A direct conversion from the Char to a Byte is supported because of ASCII. An
      * out-of-range value will result in an exception.
@@ -15,7 +25,7 @@ const Char(UInt32 codepoint)
         assert:always codepoint <= 0x7f;
         return codepoint.to<Byte>();
         }
-    
+
     /**
      * A conversion to Byte[] results in a byte array with between 1-6 bytes containing
      * a UTF-8 formatted codepoint.
@@ -31,17 +41,17 @@ const Char(UInt32 codepoint)
         assert:always actual == length;
         return bytes;
         }
-        
+
     UInt32 to<UInt32>()
         {
         return codepoint;
         }
-        
+
     Int to<Int>()
         {
         return codepoint.to<Int>();
         }
-    
+
     @auto to<String>()
         {
         }
@@ -52,7 +62,7 @@ const Char(UInt32 codepoint)
             {
             return 1;
             }
-        
+
         UInt32 codepoint = this.codepoint >> 11;
         Int    length    = 2;
         while (codepoint != 0)
@@ -63,7 +73,7 @@ const Char(UInt32 codepoint)
 
         return length;
         }
-    
+
     Int formatUtf8(Byte[] bytes, Int of)
         {
         if (codepoint <= 0x7F)
@@ -135,5 +145,5 @@ const Char(UInt32 codepoint)
             {
             out.write(0b10_000000 | (ch >>> --cTrail * 6 & 0b00_111111));
             }
-        } 
+        }
     };

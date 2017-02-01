@@ -11,10 +11,13 @@
  * </ul>
  * Furthermore, any of the above may be signed using the "+" or "-" sign.
  * <p>
- * While most text strings have an unambiguous translation to an integer, there are cases
- * that are ambiguous without knowing the exact integer type that the value will be
- * converted to. For example, 0x80 could be an Int8 of -128, but as any other integer type
- * (e.g. Int16, UInt8, UInt16), 0x80 would be the value 128.
+ * The IntLiteral is complicated by its use both for signed and unsigned integer literals;
+ * there are some edge cases in which the same literal can represent a different value,
+ * depending on what actual type its value is represented by. While most text strings have
+ * an unambiguous translation to an integer, there are cases that are ambiguous without
+ * knowing the exact integer type that the value will be converted to. For example, 0x80
+ * could be an Int8 of -128, but as any other integer type (e.g. Int16, UInt8, UInt16),
+ * 0x80 would be the value 128.
  */
 const IntLiteral(String text)
     {
@@ -134,15 +137,15 @@ const IntLiteral(String text)
 
         // determining the number of required signed int bits is more complicated than
         // determining the number of required unsigned int bits. in the case of decimal
-        // integer numbers, , because of the 
+        // integer numbers, , because of the
         127 8 bits
         128 16 bits
         -128 8 bits
         0x80 8 bits
         -0x80 8 bits
-        -0x81 16 bits 
+        -0x81 16 bits
         +0x80 16 bits
-        
+
         return  // TODO
         }
 
@@ -153,7 +156,7 @@ const IntLiteral(String text)
     @ro Int minUIntBits.get()
         {
         assert:always explicitSign != Negative;
-                
+
         if (magnitude == 0)
             {
             // smallest int: 8 bits (1 byte)
@@ -179,6 +182,16 @@ const IntLiteral(String text)
     @ro Int minDecBits.get()
         {
         TODO
+        }
+
+    @auto Bit to<Bit>()
+        {
+        // TODO
+        }
+
+    @auto Nibble to<Nibble>()
+        {
+        // TODO
         }
 
     /**
