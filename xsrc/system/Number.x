@@ -138,29 +138,25 @@ interface Number
      */
     Nibble[] to<Nibble[]>();
         {
-        // make sure the bit length is at least 4, and also a power-of-two
-        assert:always bitLength == (bitLength & ~0x3).leftmostBit;
+        // make sure the bit length is at least 8, and also a power-of-two
+        assert:always Number.this.bitLength == (Number.this.bitLength & ~0x7).leftmostBit;
 
         return new Sequence<Nibble>()
             {
             @override Int length.get()
                 {
-                return IntNumber.this.bitCount / 4;
+                return Number.this.bitCount / 4;
                 }
 
-            @override Boolean get(Int index)
+            @override Nibble get(Int index)
                 {
-                return new Nibble(IntNumber.this.to<Bit[]>().subSequence(index * 4, index * 4 + 4));
-                }
+                assert:always index >= 0 && index < length;
 
-            @override Void set(Int index, Nibble newValue)
-                {
-                Bit[] oldBits = Number.this.to<Bit[]>();
-                Bit[] newBits = newValue.to<Bit[]>();
-                for (Int ofOld = index * 4, ofNew = 0; ofNew < 4; )
-                    {
-                    oldBits[ofOld++] = newBits[ofNew++];
-                    }
+                // the nibble array is in the opposite (!!!) sequence of the bit array; bit 0 is
+                // the least significant (rightmost) bit, while nibble 0 is the leftmost nibble
+                Bit[] bits = Number.this.to<Bit[]>();
+                Int   of   = bit.length - index * 4 -  1;
+                return new Nibble(new Bit[] {bits[of], bits[of-1], bits[of-2], bits[of-3]});
                 }
             }
         }
@@ -177,22 +173,19 @@ interface Number
             {
             @override Int length.get()
                 {
-                return IntNumber.this.bitCount / 8;
+                return Number.this.bitCount / 8;
                 }
 
             @override Boolean get(Int index)
                 {
-                return new Byte(IntNumber.this.to<Bit[]>().subSequence(index * 8, index * 8 + 8));
-                }
+                assert:always index >= 0 && index < length;
 
-            @override Void set(Int index, Nibble newValue)
-                {
-                Bit[] oldBits = Number.this.to<Bit[]>();
-                Bit[] newBits = newValue.to<Bit[]>();
-                for (Int ofOld = index * 8, ofNew = 0; ofNew < 8; )
-                    {
-                    oldBits[ofOld++] = newBits[ofNew++];
-                    }
+                // the byte array is in the opposite (!!!) sequence of the bit array; bit 0 is
+                // the least significant (rightmost) bit, while byte 0 is the leftmost byte
+                Bit[] bits = Number.this.to<Bit[]>();
+                Int   of   = bit.length - index * 8 -  1;
+                return new Byte(new Bit[] {bits[of], bits[of-1], bits[of-2], bits[of-3],
+                         bits[of-4], bits[of-5], bits[of-6], bits[of-7]});
                 }
             }
         }

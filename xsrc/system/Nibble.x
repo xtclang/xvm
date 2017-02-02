@@ -6,6 +6,12 @@ const Nibble
         this.bits = bits;
         }
 
+    construct Bit(TODO Int n)
+        {
+        assert:always n >= 0 && n <= 0xF;
+        this. = ;
+        }
+
     private Bit[] bits;
 
     static Nibble defaultValue = 0;
