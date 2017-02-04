@@ -59,6 +59,27 @@ module ecstasy.xtclang.org
 
 // TODO -------------- split out everything below this point -----------------
 
+    interface AutoConst
+        {
+        AutoConst ensureConst();
+        }
+
+    interface AutoMutable
+        {
+        AutoMutable ensureMutable();
+        }
+
+    interface AutoPersistent
+        {
+        AutoPersistent ensurePersistent();
+        }
+
+
+interface AutoMutable
+interface Auto
+
+interface 
+
     interface Interface
         {
         }
@@ -80,7 +101,7 @@ module ecstasy.xtclang.org
         {
         String to<String>();
 
-        // TODO equals
+        // TODO equals (child function)
         // TODO compare
         // TODO hash
         }
