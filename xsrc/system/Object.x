@@ -8,7 +8,7 @@
  * interface of this class. Since everything is an object and an object is only accessible via a reference, the Object
  * class also represents the concept of a referent.
  */
-public class Object
+class Object
     {
     @ro protected Meta meta;
 
@@ -16,7 +16,7 @@ public class Object
      * By default, comparing any two objects will only result in equality if they are the
      * same object, or if they are two constant objects with identical values.
      */
-    function Boolean equals(Object o1, Object o2)
+    static Boolean equals(Object o1, Object o2)
         {
         return &o1 == &o2;
         }
@@ -27,13 +27,32 @@ public class Object
     String to<String>()
         {
         // TODO implement a rudimentary to<String> showing class information
-        meta.
+        return meta.class.to<String>();
+        }
+    
+    /**
+     * Obtain a read-only array of length 1 containing a reference to this object.
+     */
+    Object[] to<Object[]>()
+        {
+        return new this:type[] {this};
+        }
+        
+    /**
+     * Obtain a read-only tuple of one element containing a reference to this object.
+     */
+    (Object) to<(Object)>()
+        {
+        return (this);
         }
 
     /**
-     * Obtain a 
+     * A reference to any object can be used to provide a function that returns a
+     * reference to that same object.
      */
-    Sequence<Object> to<Sequence<Object>>()
-    Tuple<Object> to<Tuple<Object>>()
+    @auto function Object() to<function Object()>()
+        {
+        return () -> return this;
+        }
     }
 

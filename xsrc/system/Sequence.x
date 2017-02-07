@@ -15,23 +15,26 @@ interface Sequence<ElementType>
      * @param start  first index to include in the SubSequence, inclusive
      * @param end    last index to include in the SubSequence, exclusive
      */
-    Sequence<ElementType> subSequence(Int start, Int end)
-        {
-        return new TODO
-        }
+    Sequence<ElementType> subSequence(Int start, Int end);
 
     /**
      * Obtain a Sequence of the same length and that contains the same values
-     * as this SubSequence. Changes to the returned Sequence are not visible
-     * through this SubSequence, and subsequent changes to this SubSequence
-     * are not visible through the returned Sequence.
-TODO REVIEW comment / is it copy-on-write?
+     * as this SubSequence, but which has two additional attributes:
+     * <ul>
+     * <li>First, if this Sequence is a portion of a larger Sequence, then the returned
+     *     Sequence will no longer be dependent on the larger Sequence for its storage;</li>
+     * <li>Second, if this Sequence is a portion of a larger Sequence, then changes to
+     *     the returned Sequence will not be visible in the larger Sequence, and changes
+     *     to the larger Sequence will not be visible in the returned Sequence.</li>
+     * </ul>
+     * The contract is designed to allow for the use of copy-on-write and other lazy
+     * semantics to achieve efficiency for both time and space.
      */
-    Sequence<ElementType> reify()
-        {
-        return this;
-        }
+    Sequence<ElementType> reify();
 
+    /**
+     * Provide an Iterator that will iterate over the contents of the Sequence.
+     */
     Iterator<ElementType> iterator()
         {
         return new Iterator<ElementType>()

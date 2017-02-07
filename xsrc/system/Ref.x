@@ -52,14 +52,44 @@
 interface Ref<RefType>
     {
     /**
+     * The optional name of the reference. References are used for arguments, local
+     * variables, object properties, constant pool values, array elements, fields of
+     * structures, elements of tuples, and many other purposes; in some of these uses,
+     * it is common for a reference to be named. For example, arguments, local variables,
+     * struct fields, and properties are almost always named, but tuple elements are often
+     * not named, and array elements are never named.
+     */
+    @ro String? name;
+    
+    /**
      * De-reference the reference to obtain the referent.
      */
     RefType get();
+    
+    /**
+     * An alternative implementation of get() for a read-only reference.
+     */
+    @ro RefType get()
+        {
+        // TODO this seems to conflate two concepts
+        // (1) the Ref is read-only, so you can't call set() on the Ref
+        // (2) the Ref points to an object, but the Ref is an @ro Ref, so it needs to
+        //     return a referent viewed through an @ro reference
+        return (@ro) this:private.get();
+        }
 
     /**
      * Specify the referent for this reference.
      */
     Void set(RefType value);
+
+    /**
+     * An alternative implementation of set() for a read-only reference.
+     */
+    @ro Void set(RefType value)
+        {
+        throw new TODO
+        }
 
     /**
      * Obtain the actual runtime type of the reference that this Ref currently
@@ -73,10 +103,7 @@ interface Ref<RefType>
      * the RefType; the RefType is often the <i>compile-time type</i> of the
      * reference.)
      */
-    Type ActualType.get()
-        {
-        return Ref.this.get().Type;
-        }
+    @ro Type ActualType;
 
     /**
      * Transform the reference such that it contains the methods in the specified
@@ -89,7 +116,7 @@ interface Ref<RefType>
      * For a reference to an object from the same module as the caller, this method
      * allows the reference to be widened as well.
      */
-    SomeType as<Type SomeType>();
+    @ro asType as(Type asType);
 
     /**
      * Reference equality is used to determine if two references are referring to
@@ -105,4 +132,19 @@ interface Ref<RefType>
         {
         return value1 == value2;
         }
+
+    /**
+     * The reference uses a number of bytes for its own storage; while the size of the
+     * reference is not expected to dynamically change, reference sizes may vary from one
+     * reference to another. References may be larger than expected, because references
+     * may include additional information (and potentially even the entire referent!)
+     * within the reference itself.
+     */
+    @ro Int byteLength;
+    
+    /**
+     * Determine if the reference is completely self-contained, in that the referent is
+     * actually embedded within the reference itself.
+     */
+    @ro Boolean selfContained;
     }

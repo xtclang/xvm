@@ -81,10 +81,6 @@ module ecstasy.xtclang.org
 
 //
 
-    interface Interface
-        {
-        }
-
     interface Class
         {
         }
@@ -95,16 +91,6 @@ module ecstasy.xtclang.org
 
     interface Trait
         {
-        }
-
-    interface Const
-            extends Comparable, Hashable
-        {
-        String to<String>();
-
-        // TODO equals (child function)
-        // TODO compare
-        // TODO hash
         }
 
     interface Enum
