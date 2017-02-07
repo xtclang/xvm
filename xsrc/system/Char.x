@@ -1,13 +1,15 @@
-const Char(UInt32 codepoint)
+const Char
 // TODO dooes Char extend String, or have an "@auto to<String>()"
     {
     construct Char(UInt32 codepoint)
         {
-        assert:always codepoint <= 0x10FFFF
+        assert:always codepoint <= 0x10FFFF;
+        this.codepoint = codepoint;
         }
 
     construct Char(Byte b)
         {
+        assert:always codepoint <= 0x7F
         construct(b.to<UInt32>());
         }
 
@@ -16,6 +18,8 @@ const Char(UInt32 codepoint)
         construct(n.to<UInt32>());
         }
 
+    UInt32 codepoint;
+    
     /**
      * A direct conversion from the Char to a Byte is supported because of ASCII. An
      * out-of-range value will result in an exception.
@@ -54,6 +58,7 @@ const Char(UInt32 codepoint)
 
     @auto to<String>()
         {
+        // TODO
         }
 
     Int calcUtf8Length()

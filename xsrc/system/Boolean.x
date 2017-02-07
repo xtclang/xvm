@@ -64,7 +64,7 @@ enum Boolean
             }
         @op Boolean xor(Boolean that)
             {
-            return that == False;
+            return !that;
             }
         @op Boolean not()
             {

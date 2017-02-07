@@ -8,7 +8,7 @@ const Bit
 
     private IntLiteral literal;
 
-    static Bit defaultValue = 0;
+    static Bit defaultValue = 0;        // TODO could this be an annotation on Bit?
 
     IntLiteral to<IntLiteral>()
         {

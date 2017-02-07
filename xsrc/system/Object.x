@@ -10,11 +10,17 @@
  */
 public class Object
     {
-    /**
-     * Convert this object to an object of another specified type.
-     */
-    ToType to<ToType extends Object>();
+    @ro protected Meta meta;
 
+    /**
+     * By default, comparing any two objects will only result in equality if they are the
+     * same object, or if they are two constant objects with identical values.
+     */
+    function Boolean equals(Object o1, Object o2)
+        {
+        return &o1 == &o2;
+        }
+        
     /**
      * Provide a String representation of the object.
      */
@@ -24,9 +30,10 @@ public class Object
         meta.
         }
 
-    // TODO consider Sequence<this:type> to<Sequence<this:type>>()
-    // TODO consider Tuple<this:type[]> to<Tuple<this:type[]>>()
-    
-    @ro protected Meta meta;
+    /**
+     * Obtain a 
+     */
+    Sequence<Object> to<Sequence<Object>>()
+    Tuple<Object> to<Tuple<Object>>()
     }
 

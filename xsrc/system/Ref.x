@@ -73,7 +73,10 @@ interface Ref<RefType>
      * the RefType; the RefType is often the <i>compile-time type</i> of the
      * reference.)
      */
-    @ro Type ActualType;
+    Type ActualType.get()
+        {
+        return Ref.this.get().Type;
+        }
 
     /**
      * Transform the reference such that it contains the methods in the specified

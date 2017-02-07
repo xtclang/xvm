@@ -11,11 +11,11 @@ interface Iterator<ElementType>
     /**
      * TODO
      */
-    Void forEach(function Void(ElementType) fn)
+    Void forEach(function Void(ElementType) process)
         {
         while (ElementType value : next())
             {
-            fn(value);
+            process(value);
             }
         }
     }

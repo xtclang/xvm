@@ -1,5 +1,5 @@
 /**
- * An IntLiteral is an IntNumber that is able to convert to any text string containing a
+ * An IntLiteral is a constant type that is able to convert any text string containing a
  * legal representation of an IntNumber into any of the built-in IntNumber implementations.
  * <p>
  * There are a number of formats for an IntLiteral:
@@ -17,7 +17,7 @@
  * an unambiguous translation to an integer, there are cases that are ambiguous without
  * knowing the exact integer type that the value will be converted to. For example, 0x80
  * could be an Int8 of -128, but as any other integer type (e.g. Int16, UInt8, UInt16),
- * 0x80 would be the value 128.
+ * 0x80 would be the value 128. TODO ... and???
  */
 const IntLiteral(String text)
     {
@@ -120,8 +120,8 @@ const IntLiteral(String text)
     VarUInt magnitude;
 
     /**
-     * The minimum number of bits to store the IntLiteral's value as a signed integer in a twos-complement format,
-     * where the number of bits is a power-of-two of at least 8.
+     * The minimum number of bits to store the IntLiteral's value as a signed integer in
+     * a twos-complement format, where the number of bits is a power-of-two of at least 8.
      */
     Int minIntBits.get()
         {

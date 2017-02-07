@@ -18,19 +18,19 @@ class Array<ElementType>
         this.capacity = capacity;
         }
 
-    construct (Int capacity, function ElementType fn())
+    construct (Int capacity, function ElementType(Int) supply)
         {
         construct Array(capacity);
 
         Element<ElementType>? head = null;
         if (capacity > 0)
             {
-            head = new Element<ElementType>(fn());
+            head = new Element<ElementType>(supply(0));
 
             Element<ElementType> tail = head;
             for (Int i : 1..capacity)
                 {
-                Element<ElementType> node = new Element<ElementType>(fn());
+                Element<ElementType> node = new Element<>(supply(i));
                 tail.next = node;
                 tail      = node;
                 }
@@ -44,6 +44,7 @@ class Array<ElementType>
     public/private Int capacity = 0;
     public/private Int length   = 0;
 
+    @override
     Ref<ElementType> elementAt(Int index)
         {
         if (index < 0 || index >= length)

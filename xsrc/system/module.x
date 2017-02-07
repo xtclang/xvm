@@ -61,7 +61,11 @@ module ecstasy.xtclang.org
 
     interface AutoConst
         {
-        AutoConst ensureConst();
+        @const AutoConst ensureConst();
+        }
+    interface AutoService
+        {
+        @service AutoService ensureService();
         }
 
     interface AutoMutable
@@ -75,10 +79,7 @@ module ecstasy.xtclang.org
         }
 
 
-interface AutoMutable
-interface Auto
-
-interface 
+//
 
     interface Interface
         {

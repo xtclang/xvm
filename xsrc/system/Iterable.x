@@ -11,7 +11,7 @@ interface Iteratable<ElementType>
     /**
      * TODO
      */
-    Iterator<ElementType> iterator(function Boolean(ElementType) fn)
+    Iterator<ElementType> iterator(function Boolean(ElementType) match)
         {
         return new Iterator<ElementType>()
             {
@@ -21,7 +21,7 @@ interface Iteratable<ElementType>
                 {
                 while (ElementType value : iter.next())
                     {
-                    if (fn(value))
+                    if (match(value))
                         {
                         return (true, value);
                         }
@@ -35,11 +35,11 @@ interface Iteratable<ElementType>
     /**
      * TODO
      */
-    Void forEach(function Void(ElementType) fn)
+    Void forEach(function Void(ElementType) process)
         {
         for (ElementType value : this)
             {
-            fn(value);
+            process(value);
             }
         }
     }
