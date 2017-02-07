@@ -1,4 +1,7 @@
-public interface Meta
+/**
+ * TODO
+ */
+interface Meta
     {
     /**
     * The Class represents the actual type composition of the object.
