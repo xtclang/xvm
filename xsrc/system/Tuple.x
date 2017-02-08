@@ -13,7 +13,6 @@ class Tuple<ElementType...>
      */
     Field[] to<Field[]>();
 
-    // REVIEW - basically this says we can convert any tuple to a "struct" at runtime
     /**
      * Obtain a Struct that represents the contents of this Tuple.
      * <p>

@@ -153,37 +153,10 @@ module ecstasy.xtclang.org
             }
         }
 
-//    interface Element<T>
-//            implements Ref<T>
-//        {
-//        }
-
-    interface Variable<T>
-            implements Ref<T>
-        {
-        @ro String Name;
-        }
-
     value Binary
         {
         // TODO
         }
-
-
-    // REVIEW this is roughly what I'm thinking as the basis for Tuple
-    // NOTE that Tuple == Struct in many ways
-    // - Tuple has (optionally) named elements; Struct has named elements
-    // - Tuple has int-indexed elements; Struct _could_ be accessed in the same way
-    //   -> probably have Struct.to<Tuple<ElementType>>(); instead
-
-    interface Field<RefType>
-            extends Ref<RefType> // REVIEW does it (could it) derive from property?
-        {
-        @ro String name;
-        }
-
-
-
 
     interface Map<KeyType, ValueType>
             extends Indexed<KeyType>
