@@ -1,14 +1,11 @@
 /**
-TODO clean this up
- * This class represents the capabilities that are common to every Ecstasy object;
- * it is the single inheritance root for the Ecstasy type system.
- * <p>
- * In Ecstasy, "everything is an object", and every object is of a class that extends
- * this Object class. As such, this class
- * represents the root of the class hierarchy, and all object references always include
- * the public portion of the interface of this class. Since everything is an object and an
- * object is only accessible via a reference, the Object class also represents the concept
- * of a referent.
+ * This class represents the capabilities that are common to every Ecstasy object; this class is the
+ * single inheritance root for the Ecstasy type system. In other words, "everything is an object",
+ * and every object is of a class that extends this Object class. An object is reachable through a
+ * reference, and an object reference always includes the public portion of the interface of this
+ * class. Some meta-information about the object is available through the reference to the object,
+ * represented by the {@link Ref} interface; additional meta-information about an object is
+ * available within the object itself, via its own protected {@link meta} property.
  */
 class Object
     {
@@ -29,16 +26,18 @@ class Object
         {
         return &o1 == &o2;
         }
-        
+
     /**
      * Provide a String representation of the object.
+     * <p>
+     * This is intended primarily for debugging, log messages, and other diagnostic features.
      */
     String to<String>()
         {
-        // TODO implement a rudimentary to<String> showing class information
+        // the Object's rudimentary to<String> shows class information only
         return meta.class.to<String>();
         }
-    
+
     /**
      * Obtain a read-only array of length 1 containing a reference to this object.
      */
@@ -46,7 +45,7 @@ class Object
         {
         return new this:type[] {this};
         }
-        
+
     /**
      * Obtain a read-only tuple of one element containing a reference to this object.
      */

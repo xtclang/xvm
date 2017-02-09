@@ -50,6 +50,7 @@
  * @Copyright 2016 xqiz.it
  */
 interface Ref<RefType>
+        extends Referent
     {
     /**
      * De-reference the reference to obtain the referent.
@@ -96,7 +97,6 @@ interface Ref<RefType>
      */
     @ro Boolean assigned;
 
-// TODO move to Ref/Meta common base
     /**
      * Obtain the actual runtime type of the reference that this Ref currently
      * holds. The ActualType represents the full set of methods that can be
@@ -122,7 +122,7 @@ interface Ref<RefType>
      * For a reference to an object from the same module as the caller, this method
      * allows the reference to be widened as well.
      */
-    @ro asType as(Type asType);
+    @ro AsType as(Type AsType);
 
     /**
      * Reference equality is used to determine if two references are referring to
@@ -139,7 +139,6 @@ interface Ref<RefType>
         return value1 == value2;
         }
 
-// TODO move to Ref/Meta common base
     /**
      * The reference uses a number of bytes for its own storage; while the size of the
      * reference is not expected to dynamically change, reference sizes may vary from one

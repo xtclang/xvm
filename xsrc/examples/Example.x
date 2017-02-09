@@ -1556,3 +1556,34 @@ const Class<ClassType>
 Class clzE = this:module.resolveName("dto.Employee")
 Class clzC = this:module.resolveName("util.Config")
 Class<Runnable> clzR = (<-) this:module.resolveName ("jobs.Reporter")
+
+// -- meta
+
+// auto-narrowing
+class C
+    {
+    C foo();        // "C" will auto-narrow, i.e. this:type
+    C.Type foo2();  // non-auto-narrowing "C"
+    }
+
+C o =  new C();
+Ref<C> r = &o;
+
+// how to get the "type" of o
+Type t = o.Type;            // ugh. now Object has a Type property
+Type t = &o.ActualType;     // yeah, this will work.
+Type t = typeof(o);         // C called and wants its compiler back
+Type t = o.meta.Type;       // only works if you have access to meta! (but it does make some sense)
+
+// is o immutable? which one(s) of these would work?
+if (o.immutable) ...        // ugh. now Object has an immutable property
+if (&o.immutable) ...       // asking the reference seems weird
+if (o.meta.immutable) ...   // obviously this could work, unless you can't get o.meta
+if (o is immutable) ...     // hack
+
+// ----
+
+async Reader
+    implements ...
+    {
+    }

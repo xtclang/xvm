@@ -39,11 +39,11 @@ interface Const
         Field[] fields = meta.struct.to<Field[]>();
         // TODO use meta.struct
         }
-    
+
     /**
      * TODO
      */
-    @lazy UInt hash.get()
+    @lazy Int hash.get()
         {
         // TODO use meta.struct
         }
