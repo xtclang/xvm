@@ -1,7 +1,7 @@
 /**
  * TODO
  */
-interface Iteratable<ElementType>
+interface Iterable<ElementType>
     {
     /**
      * TODO
@@ -31,7 +31,7 @@ interface Iteratable<ElementType>
                 }
             }
         }
-        
+
     /**
      * TODO
      */
