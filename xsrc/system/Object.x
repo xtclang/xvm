@@ -12,7 +12,14 @@ TODO clean this up
  */
 class Object
     {
-    @ro protected Meta meta;
+    /**
+     * The meta-data for each object is represented by the Meta interface.
+     */
+    protected Meta meta.get()
+        {
+        // the Meta object is provided by the runtime
+        return super();
+        }
 
     /**
      * By default, comparing any two objects will only result in equality if they are the

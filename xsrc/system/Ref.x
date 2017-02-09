@@ -52,20 +52,10 @@
 interface Ref<RefType>
     {
     /**
-     * The optional name of the reference. References are used for arguments, local
-     * variables, object properties, constant pool values, array elements, fields of
-     * structures, elements of tuples, and many other purposes; in some of these uses,
-     * it is common for a reference to be named. For example, arguments, local variables,
-     * struct fields, and properties are almost always named, but tuple elements are often
-     * not named, and array elements are never named.
-     */
-    @ro String? name;
-    
-    /**
      * De-reference the reference to obtain the referent.
      */
     RefType get();
-    
+
     /**
      * An alternative implementation of get() for a read-only reference.
      */
@@ -91,6 +81,22 @@ interface Ref<RefType>
         throw new TODO
         }
 
+    /**
+     * The optional name of the reference. References are used for arguments, local
+     * variables, object properties, constant pool values, array elements, fields of
+     * structures, elements of tuples, and many other purposes; in some of these uses,
+     * it is common for a reference to be named. For example, arguments, local variables,
+     * struct fields, and properties are almost always named, but tuple elements are often
+     * not named, and array elements are never named.
+     */
+    @ro String? name;
+
+    /**
+     *
+     */
+    @ro Boolean assigned;
+
+// TODO move to Ref/Meta common base
     /**
      * Obtain the actual runtime type of the reference that this Ref currently
      * holds. The ActualType represents the full set of methods that can be
@@ -126,13 +132,14 @@ interface Ref<RefType>
      * <p>
      * Because the reference identity is impossible to represent in Ecstasy, the
      * actual implementation of this function is also impossible to represent in
-     * Ecstasy.
+     * Ecstasy, hence the implementation may appear to be infinitely recursive.
      */
     static Boolean equals(Ref value1, Ref value2)
         {
         return value1 == value2;
         }
 
+// TODO move to Ref/Meta common base
     /**
      * The reference uses a number of bytes for its own storage; while the size of the
      * reference is not expected to dynamically change, reference sizes may vary from one
@@ -141,7 +148,7 @@ interface Ref<RefType>
      * within the reference itself.
      */
     @ro Int byteLength;
-    
+
     /**
      * Determine if the reference is completely self-contained, in that the referent is
      * actually embedded within the reference itself.

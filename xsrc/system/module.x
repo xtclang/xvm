@@ -27,6 +27,7 @@ module ecstasy.xtclang.org
     typedef Int64         Int;
     typedef UInt64        UInt;
     typedef Decimal64     Dec;
+    typedef ().Type       Void;
 
     /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for
