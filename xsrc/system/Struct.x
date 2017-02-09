@@ -4,6 +4,7 @@
  * TODO: Explain what that means
  */
 interface Struct
+        // TODO UniformIndexed[Name] ?
     {
     /**
      * Obtain a Tuple that represents the contents of this Struct.
@@ -17,5 +18,5 @@ interface Struct
      * Obtain an Array that represents the contents of this Struct.
      * TODO define mutability guarantees
      */
-    Field[] to<Field[]>();
+    Ref[] to<Ref[]>();
     }

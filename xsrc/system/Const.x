@@ -11,7 +11,8 @@ interface Const
         }
 
     /**
-     * TODO
+     * The default implementation of comparison-for-equality for Const implementations is to
+     * compare each of the fields for equality.
      */
     static Boolean equals(Const value1, Const value2)
         {
@@ -45,6 +46,7 @@ interface Const
      */
     @lazy Int hash.get()
         {
+        Ref[] fields = meta.struct.to<Field[]>();
         // TODO use meta.struct
         }
     }

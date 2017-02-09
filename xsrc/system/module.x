@@ -28,6 +28,9 @@ module ecstasy.xtclang.org
     typedef UInt64        UInt;
     typedef Decimal64     Dec;
     typedef ().Type       Void;
+    typedef LazyRef       lazy;
+    typedef SoftRef       soft;
+    typedef WeakRef       weak;
 
     /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for
@@ -110,50 +113,6 @@ module ecstasy.xtclang.org
         // CAS?
         }
 
-    mixin Lazy<RefType> into Ref<RefType>
-        {
-        conditional RefType peek()
-            {
-            if (filled)
-                {
-                return true, get();
-                }
-
-            return false;
-            }
-
-        RefType get()
-            {
-            if (!filled)
-                {
-                set(evaluate());
-                assert:always filled;
-                }
-
-            return super();
-            }
-
-        Void set(RefType value)
-            {
-            assert:always !filled;
-            super(value);
-            filled = true;
-            }
-
-        protected RefType evaluate();
-
-        private Boolean filled = false;
-        }
-
-    mixin FnLazy<RefType>(function RefType () produce)
-            extends Lazy<RefType>
-        {
-        RefType evaluate()
-            {
-            return produce();
-            }
-        }
-
     value Binary
         {
         // TODO
@@ -161,9 +120,4 @@ module ecstasy.xtclang.org
 
     interface Map<KeyType, ValueType>
             extends Indexed<KeyType>
-            
-    // TODO Comparable, Hashable
-    
-    class HashMap ... TODO
-    // TODO how will HashMap specify that its KeyType has to have "static equals()"
     }

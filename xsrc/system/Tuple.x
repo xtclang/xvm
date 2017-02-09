@@ -11,7 +11,7 @@ class Tuple<ElementType...>
      * Obtain the Fields of this Tuple as an Array. Note that the data types of the
      * fields can vary, so the FieldType of each Field may differ.
      */
-    Field[] to<Field[]>();
+    Ref[] to<Ref[]>();
 
     /**
      * Obtain a Struct that represents the contents of this Tuple.
@@ -20,19 +20,4 @@ class Tuple<ElementType...>
      * <li>The Struct is read-only iff this Tuple is read-only.</li>
      */
     Struct to<Struct>();
-
-    // REVIEW does this make sense? can you use this as a "return type" of "Void"?
-    singleton value Void
-            implements Tuple<>
-        {
-        Int FieldCount
-            {
-            Int get()
-                {
-                return 0;
-                }
-            }
-
-        // ...
-        }
     }
