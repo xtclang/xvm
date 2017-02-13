@@ -1587,3 +1587,63 @@ async Reader
     implements ...
     {
     }
+
+// lazy prop
+
+Point(Int x, Int y)
+    {
+    // lambda style
+    public/private @lazy(() -> x ^ y) Int hash;
+
+    // alternatively use method bound to "this"
+    public/private @lazy(calcHash) Int hash;
+
+    Int calcHash()
+        {
+        return x ^ y;
+        }
+    }
+
+
+// weak / soft prop
+class C
+    {
+
+    }
+const Movie
+    {
+    // ...
+    @lazy(decompress) @soft Byte[] bytes;
+
+    private Byte[] decompress() {...}
+    }
+
+
+class WHM<K,V>
+    {
+    private RefStream notifier = new RefStream();
+    class Entry<K,V>(K key, V value)
+        {
+        @weak(Entry<K,V>) K key;
+        V value;
+        // etc.
+        }
+
+    .. put(K k, V v)
+        {
+        Entry e = new Entry(k, v);
+        e.&key.tellMeAfterYouGCTheKey(notifier, e);
+        // ...
+        }
+
+    Entry?[] getBucketArray()
+        {
+        notifier.forEach(cleanup);
+        }
+
+    Void cleanup(Entry)
+        {
+        }
+
+    }
+

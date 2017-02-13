@@ -58,39 +58,14 @@ interface Ref<RefType>
     RefType get();
 
     /**
-     * An alternative implementation of get() for a read-only reference.
-     */
-    @ro RefType get()
-        {
-        // TODO this seems to conflate two concepts
-        // (1) the Ref is read-only, so you can't call set() on the Ref
-        // (2) the Ref points to an object, but the Ref is an @ro Ref, so it needs to
-        //     return a referent viewed through an @ro reference
-        return (@ro) this:private.get();
-        }
-
-    /**
      * Specify the referent for this reference.
      */
     Void set(RefType value);
 
     /**
-     * An alternative implementation of set() for a read-only reference.
+     *
      */
-    @ro Void set(RefType value)
-        {
-        throw new TODO
-        }
-
-    /**
-     * The optional name of the reference. References are used for arguments, local
-     * variables, object properties, constant pool values, array elements, fields of
-     * structures, elements of tuples, and many other purposes; in some of these uses,
-     * it is common for a reference to be named. For example, arguments, local variables,
-     * struct fields, and properties are almost always named, but tuple elements are often
-     * not named, and array elements are never named.
-     */
-    @ro String? name;
+    @ro Boolean strong;
 
     /**
      *
@@ -138,6 +113,16 @@ interface Ref<RefType>
         {
         return value1 == value2;
         }
+
+    /**
+     * The optional name of the reference. References are used for arguments, local
+     * variables, object properties, constant pool values, array elements, fields of
+     * structures, elements of tuples, and many other purposes; in some of these uses,
+     * it is common for a reference to be named. For example, arguments, local variables,
+     * struct fields, and properties are almost always named, but tuple elements are often
+     * not named, and array elements are never named.
+     */
+    @ro String? name;
 
     /**
      * The reference uses a number of bytes for its own storage; while the size of the
