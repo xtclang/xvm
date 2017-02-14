@@ -31,6 +31,7 @@ module ecstasy.xtclang.org
     typedef LazyRef       lazy;
     typedef SoftRef       soft;
     typedef WeakRef       weak;
+    typedef ReadOnly      ro;
 
     /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for
