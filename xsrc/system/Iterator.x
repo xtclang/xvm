@@ -4,11 +4,6 @@
 interface Iterator<ElementType>
     {
     /**
-     * @rerun true if the iterator has more available elements; false otherwise
-     */
-    Boolean hasNext();
-
-    /**
      * Get a next element.
      *
      * @return a tuple of (true, nextValue) or (false) if no elements are available
