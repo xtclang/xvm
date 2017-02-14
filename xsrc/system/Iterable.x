@@ -1,17 +1,17 @@
 /**
- * TODO
+ * Iterable interface
  */
-interface Iteratable<ElementType>
+interface Iterable<ElementType>
     {
     /**
-     * TODO
+     * @return an Iterator
      */
     Iterator<ElementType> iterator();
 
     /**
-     * TODO
+     * @return an iterator that produces elements that match the specified predicate
      */
-    Iterator<ElementType> iterator(function Boolean(ElementType) match)
+    Iterator<ElementType> iterator(function Boolean (ElementType) match)
         {
         return new Iterator<ElementType>()
             {
@@ -27,11 +27,11 @@ interface Iteratable<ElementType>
                         }
                     }
 
-                return false;
+                return (false);
                 }
             }
         }
-        
+
     /**
      * TODO
      */
