@@ -2,12 +2,13 @@ mixin LazyRef<RefType>(function RefType() calculate)
         into Ref<RefType>
     {
     private function RefType() calculate;
+    private Boolean assignable = false;
 
     conditional RefType peek()
         {
         if (assigned)
             {
-            return (true, get());
+            return true, get();
             }
 
         return false;
@@ -18,7 +19,16 @@ mixin LazyRef<RefType>(function RefType() calculate)
         if (!assigned)
             {
             RefType value = calculate();
-            set(value);
+            try
+                {
+                assignable = true;
+                set(value);
+                }
+            finally
+                {
+                assignable = false;
+                }
+
             return value;
             }
 
@@ -27,7 +37,7 @@ mixin LazyRef<RefType>(function RefType() calculate)
 
     Void set(RefType value)
         {
-        assert !assigned;
+        assert !assigned && assignable;
         super(value);
         }
     }
