@@ -5,22 +5,20 @@ public class Example
     private People[] = new People[5] -> f();
     }
 
-value Point(int x, int y);
+const Point(Int x, Int y);
 
-class Point implements Value // and is immutable after construction
+class Point implements Const // and is immutable after construction
     {
-    validator(int x, int y) {..}
-
-    initializer(int x, int y)
+    construct(Int x, Int y)
         {
         this.x = x;
         this.y = y;
 
-        Immutable = true; // ???
+        meta.immutable = true;
         }
 
-    package @soft int x;
-    module int y;
+    Int x;
+    Int y;
 
     // hashcode
     // equals
@@ -97,8 +95,8 @@ value String(@ro char[] Chars)
     {
     foo
         {
-        String? s = ..;
-        if (s?)
+        String | Runnable s = foo();
+        if (s  insof Strring)
             {
             s.length;
             }
@@ -873,7 +871,9 @@ Meta
 
 // -- function / method / type short-hand
 
-Iterator iter =
+typedef Map<Stirn, Person> People;
+
+Iterator<ElementType> iter =
     {
     conditional ElementType next()
         {
@@ -883,6 +883,11 @@ Iterator iter =
             }
 
         return false;
+        }
+    ElType el;
+    if (el : iter.next())
+        {
+        print(el);
         }
     }
 
@@ -917,7 +922,16 @@ if (((Object) p1) == o2)
 // --- function as dynamic proxy
 
 // let's say we have a function
-function Int fn(Int, Int) = ...;
+function (Int, Boolean) fn(Int, Int) = (x, y) -> {x+y, True};
+
+(i, b) = fn(1,2);
+
+function Int (String) fn = String.length;
+String s = "hello";
+
+function String (Int) fn = s.substring(2, _);
+
+function Int () fn = s.length.get;
 
 // we know that it takes some number of parameters (0+) and has some number of return values (0+)
 Int x  = fn(1, 2);
@@ -1593,12 +1607,18 @@ async Reader
 Point(Int x, Int y)
     {
     // lambda style
-    public/private @lazy(() -> x ^ y) Int hash;
+    @lazy(() -> x ^ y) Int hash;
 
     // alternatively use method bound to "this"
-    public/private @lazy(calcHash) Int hash;
+    @lazy(calcHash) Int hash;
 
     Int calcHash()
+        {
+        return x ^ y;
+        }
+
+    // or "implement the prop by over-riding calc"
+    @lazy Int hash.calc()
         {
         return x ^ y;
         }
@@ -1631,8 +1651,8 @@ class WHM<K,V>
 
     .. put(K k, V v)
         {
-        Entry e = new Entry(k, v);
-        e.&key.tellMeAfterYouGCTheKey(notifier, e);
+        Entry e = new Entry(k, v, notifier); // &key.tellMeAfterYouGCTheKey(notifier, this);
+
         // ...
         }
 
@@ -1647,3 +1667,35 @@ class WHM<K,V>
 
     }
 
+// lambda
+
+function Int(Int) foo(Int i)
+    {
+    return n -> n + i*i;
+
+    const function Int(Int i, Int n) foo$1 = {return n + i*i;};
+    return &foo$1(i,?);
+    }
+
+// auto-mixin (under consideration)
+
+// what i want to be able to say is:
+//   "yeah, there's a handy container data type C, and there's a handy data type D ...
+//   but there's a third type that is implicit, which is a C<D>, and any time that
+//   someone creates a C<D>, I have some extra capabilities that need to be included"
+@auto mixin X           // name is required, and should be meaningful, although somewhat extraneous
+        into C<D>
+    {
+    // the "this" is a C<D>
+    }
+
+
+// conditional type composition
+
+class HandyDBDriver
+        implements SpringResource // should only implement this if Spring is present
+    {
+    Connection connect(String url);
+
+    // TODO SpringResource method(s)
+    }

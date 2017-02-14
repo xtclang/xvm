@@ -195,7 +195,10 @@ class Box<T>
     Box.T foo1(); // error: need a ref to Box
     SomeOtherInner.T; // error: need a ref to SomeOtherInner
 
-
+    clone(Box that)
+        {
+        that.T elementThat =
+        }
     }
 
   }
@@ -207,12 +210,12 @@ class Base
   {
   private int x;
   }
-  
+
 class Derived
   {
   private int x;
   }
-  
+
 // what does the struct look like?
 
 struct Derived
@@ -220,12 +223,12 @@ struct Derived
   int x;
   int x;	// uh .. nope!
   }
-  
+
 // answer 1 - i'm writing code and i know my hierarchy
 class Derived
   {
   private int x;
-  
+
   void writeExternal(OutputStream out)
     {
     int n1 = struct:Derived.x
@@ -244,12 +247,12 @@ mixin SuperDuperSerializer
     // 2) or is it like "this" in that it is implicitly available?
     // ...
     }
-    
+
   void writeExternal(OutputStream out)
     {
     // ...
     Struct struct = this:struct;
-    
+
     // or
     for (Struct struct : this) // or this.???
     }
@@ -260,12 +263,12 @@ mixin SuperDuperSerializer
 class BaseParent
   {
   Child makeMeABaby() { return new Child(); }
-  
+
   class Child {...}
-  
+
   static class Orphan {...}
   }
-  
+
 class DerivedParent
 	extends BaseParent
   {
@@ -299,7 +302,7 @@ class Math
   static double PI = 3.14; // code kind of looks like Java
   // but it actually is a nested class called "PI" of type "Double" (which is a value)
   // and it is a "singleton value", just like "Null" and "True" and "False"
-  
+
   // java has "static int max(int v1, int v2) {...}"
   static int max(int v1, int v2) {...}
   // but it is NOT a method

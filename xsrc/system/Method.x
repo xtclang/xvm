@@ -1,5 +1,4 @@
 const Method<TargetType,
-             TypeParamType extends Tuple,
              ParamType extends Tuple,
              ReturnType extends Tuple>
     {
@@ -40,9 +39,8 @@ const Method<TargetType,
      */
     InvocationParam[] invokeParam;
 
-    Method bindTypeParam(...)
     Method bindParam(...)
-    Function bindTarget(Object o)
+    Lambda bindTarget(TargetType target) // Lambda : Function
 
     ReturnType invoke(TargetType target, TypeParamType typeParams, ParamType args)
         {
