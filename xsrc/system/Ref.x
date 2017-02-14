@@ -68,7 +68,14 @@ interface Ref<RefType>
     @ro Boolean strong;
 
     /**
-     *
+     * Determine if there is a referent. There are a few specific cases in which a reference may
+     * not have a referent, including:
+     * <ul>
+     * <li>Conditional return values;</li>
+     * <li>Uninitialized fields in an object structure during construction;</li>
+     * <li>Lazy references that have not yet lazily populated;</li>
+     * <li>Soft or weak references that have had their referents collected.</li>
+     * </ul>
      */
     @ro Boolean assigned;
 

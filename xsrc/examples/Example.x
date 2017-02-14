@@ -1616,6 +1616,12 @@ Point(Int x, Int y)
         {
         return x ^ y;
         }
+
+    // or "implement the prop by over-riding calc"
+    @lazy Int hash.calc()
+        {
+        return x ^ y;
+        }
     }
 
 
@@ -1669,4 +1675,27 @@ function Int(Int) foo(Int i)
 
     const function Int(Int i, Int n) foo$1 = {return n + i*i;};
     return &foo$1(i,?);
+    }
+
+// auto-mixin (under consideration)
+
+// what i want to be able to say is:
+//   "yeah, there's a handy container data type C, and there's a handy data type D ...
+//   but there's a third type that is implicit, which is a C<D>, and any time that
+//   someone creates a C<D>, I have some extra capabilities that need to be included"
+@auto mixin X           // name is required, and should be meaningful, although somewhat extraneous
+        into C<D>
+    {
+    // the "this" is a C<D>
+    }
+
+
+// conditional type composition
+
+class HandyDBDriver
+        implements SpringResource // should only implement this if Spring is present
+    {
+    Connection connect(String url);
+
+    // TODO SpringResource method(s)
     }

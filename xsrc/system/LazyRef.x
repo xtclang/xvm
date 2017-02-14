@@ -40,4 +40,9 @@ mixin LazyRef<RefType>(function RefType() calculate)
         assert !assigned && assignable;
         super(value);
         }
+
+    RefType calc()
+        {
+        return calculate();
+        }
     }

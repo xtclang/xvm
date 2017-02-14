@@ -71,6 +71,13 @@ interface IntNumber
     IntNumber rotateRight(Int count);
 
     /**
+     * Keep the specified number of least-significant bit values unchanged, zeroing any remaining
+     * bits. Note that for negative values, if any bits are zeroed, this will change the sign of the
+     * resulting value.
+     */
+    IntNumber truncate(Int count);
+
+    /**
      * If any bits are set in this integer, then return an integer with only the most significant
      * (left-most) of those bits set, otherwise return zero.
      */
@@ -111,6 +118,11 @@ interface IntNumber
      * integer, and vice versa.
      */
     IntNumber reverseBytes();
+
+    /**
+     * Obtain a range of integers from this number to that number.
+     */
+    Range<IntNumber> to(IntNumber that);
 
     /**
      * Obtain the number as an array of boolean values.
