@@ -26,17 +26,20 @@ interface Iterator<ElementType>
      * Perform the specified action for all remaining elements in the iterator, allowing for
      * a possibility to stop the iteration at any time.
      *
-     * @param consume  an action to perform on each element; if the action returns false, the
-     *                 method returns immediately and no more elements are iterated over
+     * @param consume  an action to perform on each element; if the action returns true, the
+     *                 iterator is considered "short-circuited", the method returns immediately
+     *                 and no more elements are iterated over
+     * @return true iff the iterator was "short-circuited"
      */
-    Void forEach(function Boolean consume(ElementType))
+    Boolean forEach(function Boolean consume(ElementType))
         {
         while (ElementType value : next())
             {
-            if (!consume(value))
+            if (consume(value))
                 {
-                return;
+                return true;
                 }
             }
+        return false;
         }
     }
