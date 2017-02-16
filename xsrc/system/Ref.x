@@ -80,6 +80,19 @@ interface Ref<RefType>
     @ro Boolean assigned;
 
     /**
+     * TODO explain why this is important for @lazy, @future, @soft, @weak
+     */
+    conditional RefType peek()
+        {
+        if (assigned)
+            {
+            return true, get();
+            }
+
+        return false;
+        }
+
+    /**
      * Obtain the actual runtime type of the reference that this Ref currently
      * holds. The ActualType represents the full set of methods that can be
      * invoked against the referent, and is always a super-set of the RefType:
