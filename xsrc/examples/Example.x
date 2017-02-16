@@ -1644,9 +1644,14 @@ class WHM<K,V>
     private RefStream notifier = new RefStream();
     class Entry<K,V>(K key, V value)
         {
-        @weak(Entry<K,V>) K key;
+        @weak(cleanup) K key;
         V value;
         // etc.
+
+        Void cleanup()
+            {
+            WHM.this.remove(this);
+            }
         }
 
     .. put(K k, V v)
@@ -1661,9 +1666,6 @@ class WHM<K,V>
         notifier.forEach(cleanup);
         }
 
-    Void cleanup(Entry)
-        {
-        }
 
     }
 
@@ -1699,3 +1701,59 @@ class HandyDBDriver
 
     // TODO SpringResource method(s)
     }
+
+// mixins for refs
+
+@lazy(function RefType ()?)
+@weak(function Void ()?)
+@soft(function Void ()?)
+@future
+@watch(function Void(RefType))
+
+combos that work:
+@lazy @weak
+@lazy @soft
+
+combos that don't work:
+@lazy @future
+
+TODO
+@ro
+@atomic
+
+//  timeout
+
+service Pi
+    {
+    String calc(Int digits)
+        {
+        String value;
+        // some calculation code goes here
+        // ...
+        return value;
+        }
+    }
+
+Void printPi(Console console)
+    {
+    Pi pi = new Pi();
+
+    // blocking call to the Pi calculation service - wait for 100 digits
+    console.print(pi.calc(100));
+
+    // potentially async call to the Pi calculation service
+    @future String fs = pi.withTimeout(...).calc(99999);
+    fs.onResult(value -> console.print(value));
+    fs.onThrown(e -> console.print(e.to<String>()));
+    fs.onExpiry(() -> console.print("it took too long!"));
+    fs.onFinish(() -> console.print("done"));
+    }
+
+Void foo()
+    {
+    this:service.pushSLA(5 seconds)
+    printPi(console);
+    this:service.popSLA()
+    }
+
+
