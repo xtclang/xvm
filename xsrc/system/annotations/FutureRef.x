@@ -31,46 +31,71 @@
 mixin FutureRef<RefType>((function Void () | function Void (RefType))? notify)
         into Ref<RefType>
     {
-    enum Status {Pending, Processing, Complete};
-    public/private Status status;
+    enum Completion {Pending, Result, Thrown, Expiry};
+    public/private Completion completion = Pending;
+    public/private Exception? exception;
+    public/private Boolean    expired;
 
-    public/private function Void ()? complete;
-    public/private function Void (RefType)? notifyValue;
-    public/private function Void (Exception)? notifyException;
-    public/private function Void ()? notifyTimeout;
+    private Boolean    assignable;
+
+    function Void (RefType)? onResult;
+    function Void (Exception)? onThrown;
+    function Void ()? onExpiry;
+    function Void (Completion)? onFinish;
 
     Void begin()
         {
-        assert !assigned;
-        status = Pending;
+        clear();
+        }
+
+    Void clear()
+        {
+        super();
+        eThrown = null;
         }
 
     Void set(RefType value)
         {
+        assert !assigned && assignable;
         super(value);
-        status = Complete;
-
-        if (notify != null)
-            {
-            }
         }
 
     Void complete(RefType value)
         {
-        set(value);
+        assert !assigned && completion == Pending;
+
+        try
+            {
+            completion = Result;
+            assignable = true;
+            set(value);
+            }
+        finally
+            {
+            assignable = false;
+            }
+
+        onResult?(value);
+        onFinish?(Result);
         }
 
     Void completeExceptionally(Exception e)
         {
+        assert !assigned && completion == Pending;
+        exception  = e;
+        completion = Thrown;
+
+        onThrown?(e);
+        onFinish?(Thrown);
         }
 
-    Void abandon()
+    Void timedOut()
         {
+        assert !assigned && completion == Pending;
+        expired    = true;
+        completion = Expiry;
+
+        onExpiry?();
+        onFinish?(Expiry);
         }
-
-    /**
-     * TODO / review
-     */
-    Void interrupt()
-
     }
