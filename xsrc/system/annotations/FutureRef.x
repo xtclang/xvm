@@ -28,36 +28,84 @@
  *       fs.onFinish(() -> console.print("done"));
  *       }
  */
-mixin FutureRef<RefType>((function Void () | function Void (RefType))? notify)
+mixin FutureRef<RefType>
         into Ref<RefType>
     {
+    /**
+     * Construct the future reference with any number (0-4) of the optional notification functions:
+     * * {@link onResult}
+     * * {@link onThrown}
+     * * {@link onExpiry}
+     * * {@link onFinish}
+     */
+    construct((function Void (RefType) | function Void (Exception) | function Void ()
+            | function Void (Completion)) ... functions)
+        {
+        for ((function Void (RefType) | function Void (Exception) | function Void ()
+                | function Void (Completion)) fn : functions)
+            {
+            switch (&fn.ActualType)
+                {
+                case function Void (RefType):
+                    assert onResult = null;
+                    onResult = fn;
+                    break;
+
+                case function Void (Exception):
+                    assert onThrown = null;
+                    onThrown = fn;
+                    break;
+
+                case function Void ():
+                    assert onExpiry = null;
+                    onExpiry = fn;
+                    break;
+
+                case function Void (Completion):
+                    assert onFinish = null;
+                    onFinish = fn;
+                    break;
+                }
+            }
+        }
+
+    /**
+     * Future completion:
+     * * Pending: The future has not completed.
+     * * Result: The future completed because the operation returned successfully.
+     * * Thrown: The future completed because the operation threw an exception.
+     * * Expire: The future completed because the operation timed out.
+     */
     enum Completion {Pending, Result, Thrown, Expiry};
+
     public/private Completion completion = Pending;
-    public/private Exception? exception;
-    public/private Boolean    expired;
+    public/private Exception? exception  = null;
+    public/private Boolean    expired    = false;
+    private        Boolean    assignable = false;
 
-    private Boolean    assignable;
-
-    function Void (RefType)? onResult;
-    function Void (Exception)? onThrown;
-    function Void ()? onExpiry;
-    function Void (Completion)? onFinish;
-
-    Void begin()
-        {
-        clear();
-        }
-
-    Void clear()
-        {
-        super();
-        eThrown = null;
-        }
+    function Void (RefType)?    onResult = null;
+    function Void (Exception)?  onThrown = null;
+    function Void ()?           onExpiry = null;
+    function Void (Completion)? onFinish = null;
 
     Void set(RefType value)
         {
         assert !assigned && assignable;
         super(value);
+        }
+
+    Void clear()
+        {
+        super();
+
+        completion = Pending;
+        exception  = null;
+        expired    = false;
+        }
+
+    Void begin()
+        {
+        clear();
         }
 
     Void complete(RefType value)
