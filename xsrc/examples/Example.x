@@ -1858,3 +1858,60 @@ service LongRunning
     @watch @atomic Int percentDone;
     // ....
     }
+
+// future
+
+// pairing down java's stage ..
+public interface Future<T>
+    {
+    public <U> CompletionStage<U> thenApply(Function<? super T,? extends U> fn);
+
+    public CompletionStage<Void> thenAccept(Consumer<? super T> action);
+
+    public CompletionStage<Void> thenRun(Runnable action);
+
+    public <U,V> CompletionStage<V> thenCombine
+        (CompletionStage<? extends U> other,
+         BiFunction<? super T,? super U,? extends V> fn);
+
+    public <U> CompletionStage<Void> thenAcceptBoth
+        (CompletionStage<? extends U> other,
+         BiConsumer<? super T, ? super U> action);
+
+    public CompletionStage<Void> runAfterBoth(CompletionStage<?> other,
+                                              Runnable action);
+
+    public <U> CompletionStage<U> applyToEither
+        (CompletionStage<? extends T> other,
+         Function<? super T, U> fn);
+
+    public CompletionStage<Void> acceptEither
+        (CompletionStage<? extends T> other,
+         Consumer<? super T> action);
+
+    public CompletionStage<Void> runAfterEither(CompletionStage<?> other,
+                                                Runnable action);
+
+    public <U> CompletionStage<U> thenCompose
+        (Function<? super T, ? extends CompletionStage<U>> fn);
+
+    public CompletionStage<T> exceptionally
+        (Function<Throwable, ? extends T> fn);
+
+    public CompletionStage<T> whenComplete
+        (BiConsumer<? super T, ? super Throwable> action);
+
+    public <U> CompletionStage<U> handle
+        (BiFunction<? super T, Throwable, ? extends U> fn);
+    }
+
+
+
+service s
+
+s.doSomething().thenDo(() -> ...).thenDo(() -> ...).thenDo(() -> ...).thenDo(() -> ...)
+
+s.doSomething().or(s2.doSomething()).thenDo(() -> ...);
+s.doSomething().and(s2.doSomething()).thenDo(() -> ...);
+
+s.makeString().transform(s -> new IntLiteral(s).to<Int>()).passTo(countSlowly);

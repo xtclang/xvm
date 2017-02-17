@@ -88,6 +88,10 @@ mixin FutureRef<RefType>
     function Void ()?           onExpiry = null;
     function Void (Completion)? onFinish = null;
 
+    RefType get()
+        {
+        }
+
     Void set(RefType value)
         {
         assert !assigned && assignable;
@@ -124,7 +128,7 @@ mixin FutureRef<RefType>
             }
 
         onResult?(value);
-        onFinish?(Result);
+        onFinish?(completion);
         }
 
     Void completeExceptionally(Exception e)
@@ -134,7 +138,7 @@ mixin FutureRef<RefType>
         completion = Thrown;
 
         onThrown?(e);
-        onFinish?(Thrown);
+        onFinish?(completion);
         }
 
     Void timedOut()
@@ -144,6 +148,6 @@ mixin FutureRef<RefType>
         completion = Expiry;
 
         onExpiry?();
-        onFinish?(Expiry);
+        onFinish?(completion);
         }
     }
