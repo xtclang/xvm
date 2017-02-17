@@ -1234,6 +1234,16 @@ catch (Deadlock e)
     // ...
     }
 
+// or ...
+try (new CriticalSection())
+    {
+    // ...
+    }
+catch (Deadlock e)
+    {
+    // ...
+    }
+
 // a service is (obviously) an instance of Service, and Service has a “Boolean reentrant;”
 // property; setting to false disallows reentrancy (causes an exception if reentrance is
 // attempted)
@@ -1641,7 +1651,7 @@ const Movie
 
 class WHM<K,V>
     {
-    private RefStream notifier = new RefStream();
+// got rid of this:    private RefStream notifier = new RefStream();
     class Entry<K,V>(K key, V value)
         {
         @weak(cleanup) K key;
@@ -1654,6 +1664,26 @@ class WHM<K,V>
             }
         }
 
+    V get(K k)
+        {
+        [] a = getBucketArray()
+        I  h = k.hash;
+        E? e = a[h%a.length]
+        while (e != null)
+            {
+            conditional K ko = e.&k.peek();
+            if (ko)
+               {
+               (_, K k) = ko;
+
+            if (K k2 : e.&k.peek() && k == k2)
+                {
+                return e.v;
+                }
+            }
+        return null; // bad design; get() should be conditional
+        }
+
     .. put(K k, V v)
         {
         Entry e = new Entry(k, v, notifier); // &key.tellMeAfterYouGCTheKey(notifier, this);
@@ -1663,7 +1693,9 @@ class WHM<K,V>
 
     Entry?[] getBucketArray()
         {
-        notifier.forEach(cleanup);
+        // not this anymore: notifier.forEach(cleanup);
+        this:service.processClearedRefEvents();
+        // ...
         }
 
 
@@ -1718,8 +1750,11 @@ combos that don't work:
 @lazy @future
 
 TODO
-@ro
+@ro - HOW? WHAT? WTF?
 @atomic
+@inject
+
+@auto
 
 //  timeout
 
@@ -1757,3 +1792,69 @@ Void foo()
     }
 
 
+// --- atomic
+
+service Progress
+    {
+    @watch(raiseEvents) Int percentDone;
+
+    Void registerForUpdate(function Void (Int) notify) {list.add(notify);}
+
+    private Void raiseEvents()
+        {
+        Int percent = percentDone;
+
+        // notify each listener
+        for (function Void (Int) notify : list)
+            {
+            notify(percent);
+            }
+        }
+    }
+
+service LongRunning
+    {
+    // instead of Progress
+    public/private @atomic Int percentDone;
+
+    Void runForALongTimeDoingSomethingImportant(Progress progress)
+        {
+        Int lastPercent = 0;
+        for (Int i : 0..workCount)
+            {
+            Int percent = i * 100 / workCount
+            // if (percent != lastPercent)
+            if (percent != percentDone)
+                {
+                // progress.percentDone = percent;
+                // lastPercent = percent;
+                percentDone = percent;
+                }
+
+            // ...
+        //
+        }
+    }
+
+// lambda again
+
+class c
+    method m
+        {
+        foo(s -> s.length); // v1
+        bar(y -> y.length); // v2
+        }
+
+// cas
+
+String oldValue = ...
+String newValue = ...
+while (oldValue : casFailed(oldValue, newValue)
+    {
+    }
+
+service LongRunning
+    {
+    @watch @atomic Int percentDone;
+    // ....
+    }

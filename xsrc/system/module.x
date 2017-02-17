@@ -20,18 +20,22 @@ module ecstasy.xtclang.org
     enum Nullable {Null};
     enum Ordered(String symbol) {Lesser("<"), Equal("="), Greater(">")}
 
-    typedef Nullable.Null null;
-    typedef Boolean.False false;
-    typedef Boolean.True  true;
-    typedef UInt8         Byte;
-    typedef Int64         Int;
-    typedef UInt64        UInt;
-    typedef Decimal64     Dec;
-    typedef ().Type       Void;
-    typedef LazyRef       lazy;
-    typedef SoftRef       soft;
-    typedef WeakRef       weak;
-    typedef ReadOnly      ro;
+    typedef Nullable.Null           null;
+    typedef Boolean.False           false;
+    typedef Boolean.True            true;
+    typedef UInt8                   Byte;
+    typedef Int64                   Int;
+    typedef UInt64                  UInt;
+    typedef Decimal64               Dec;
+    typedef ().Type                 Void;
+    typedef annotations.AtomicRef   atomic;
+    typedef annotations.Automagic   auto;
+    typedef annotations.FutureRef   future;
+    typedef annotations.LazyRef     lazy;
+    typedef annotations.ReadOnly    ro;
+    typedef annotations.SoftRef     soft;
+    typedef annotations.WatchRef    watch;
+    typedef annotations.WeakRef     weak;
 
     /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for

@@ -55,9 +55,42 @@
 interface Service
     {
     /**
-     * Determine if the service is still running.
+     * Request a copy of the service proxy that has a timeout.
+     *
+     * Note that the actual timeout used by invocations via the proxy will be less than the
+     * specified timeout if there is currently a timeout for this service and this service's
+     * remaining timeout is less than the requested timeout.
+     *
+     * This method must be invoked via a proxy, and *not* from _this_ service.
      */
-    @ro @atomic Boolean running;
+    Service withTimeout(Duration timeout)
+        {
+        assert this != this:service;
+        return super(timeout);
+        }
+
+    /**
+     * Request a copy of the service proxy that has a timeout that is completely independent of any
+     * pre-existing timeout.
+     *
+     * This allows a call to be made to the other service that will be bound neither by the timeout
+     * previously configured for that service, nor bound by the remaining timeout that exists for
+     * this service. Specifically, it allows a long-running asynchronous process to be begun that
+     * may necessarily exceed the time-out that is currently being enforced.
+     *
+     * This method must be invoked via a proxy, and *not* from _this_ service.
+     */
+    Service withIndependentTimeout(Duration timeout)
+        {
+        assert this != this:service;
+        return super(timeout);
+        }
+
+    /**
+     * The _remaining_ time that the service has for its current execution based on the timeout (if
+     * any) used to invoke the service.
+     */
+    @ro @atomic Duration remainingTime;
 
     /**
      * The wall-clock uptime for the service.
@@ -74,46 +107,20 @@ interface Service
     @ro @atomic Duration cpuTime;
 
     /**
-     * The _remaining_ time that the service has for its current execution.
+     * A service exposes its status through a status indicator:
+     *
+     * * Idle indicates that the service is ready to accept a request;
+     * * Busy indicates that the service is processing a request;
+     * * ShuttingDown indicates that the service has received a shutdown request;
+     * * Terminated indicates that the service terminated as a result of either a shutdown or kill
+     *   request.
      */
-    @ro @atomic Duration timeout;
+    enum StatusIndicator {Idle, Busy, ShuttingDown, Terminated};
 
     /**
-     * Request a copy of the service proxy that has a timeout.
-     *
-     * Note that the actual timeout used by invocations via the proxy will be less than the
-     * specified timeout if there is currently a timeout for this service and this service's
-     * remaining timeout is less than the requested timeout.
-     *
-     * This method must be invoked via a proxy, and *not* from _this_ service.
+     * Determine if the service is still running.
      */
-    Service withTimeout(Duration timeout);
-        {
-        assert this != this:service;
-        return super(timeout);
-        }
-
-    /**
-     * Request a copy of the service proxy that has a timeout that is completely independent of any
-     * pre-existing timeout.
-     *
-     * This allows a call to be made to the other service that will not be bound by the timeout
-     * previously configured for that service, nor bound by the remaining timeout that exists for
-     * this service. Specifically, it allows a long-running asynchronous process to be begun that
-     * may necessarily exceed the time-out that is currently being enforced.
-     *
-     * This method must be invoked via a proxy, and *not* from _this_ service.
-     */
-    Service withIndependentTimeout(Duration timeout) // REVIEW separate? independent? isolated?
-        {
-        assert this != this:service;
-        return super(timeout);
-        }
-
-    /**
-     * Determine if the service is currently processing.
-     */
-    @ro @atomic Boolean busy;
+    @ro @atomic StatusIndicator statusIndicator;
 
     /**
      * Determine if there is currently any _visible_ contention for the service. A service is
@@ -128,7 +135,8 @@ interface Service
     @ro @atomic Boolean contended;
 
     /**
-     * If the service maintains a backlog of pending requests, determine the depth of that queue.
+     * If the service maintains a backlog to manage pending requests, determine the depth of that
+     * backlog (i.e. the length of the queue).
      *
      * As a result of the potential for different approaches to managing contention on a service,
      * it is possible that a service does not maintain a formal backlog, and thus the value of this
@@ -141,7 +149,7 @@ interface Service
      *
      * This method must not be invoked from another service (i.e. via a proxy).
      */
-    Void onStarted()
+    protected Void onStarted()
         {
         assert this == this:service;
         }
@@ -151,7 +159,7 @@ interface Service
      *
      * This method must not be invoked from another service (i.e. via a proxy).
      */
-    Void onShuttingDown()
+    protected Void onShuttingDown()
         {
         assert this == this:service;
         }
@@ -163,7 +171,7 @@ interface Service
      *
      * This method must not be invoked from another service (i.e. via a proxy).
      */
-    Void onUnhandledException(Exception e)
+    protected Void onUnhandledException(Exception e)
         {
         assert this == this:service;
         }
@@ -171,36 +179,34 @@ interface Service
     /**
      * Optional re-entrancy settings for a service:
      *
+     * * Prioritized (default): general re-entrancy is permitted, but priority is given to the
+     *   conceptual thread(s) of execution that have already entered the service.
+     * * Open: general re-entrancy is permitted, and requests are processed in a FIFO fashion.
+     * * Exclusive: re-entrancy is only permitted for requests originating from the conceptual
+     *   thread of execution that has already entered the service (service A invoked service B
+     *   invokes service A).
      * * Forbidden: absolutely no re-entrancy is allowed; a request must complete and return before
-     *   a new request can begin
-     * * Threaded: re-entrancy is only permitted for the thread of execution that initially entered
-     *   the service
-     * * Open: general re-entrancy is permitted
-     * * Prioritized: general re-entrancy is permitted, but re-entrancy for the thread(s) of
-     *   execution that have already entered the service will be prioritized
+     *   a new request can begin. This setting is dangerous because of its ability to easily create
+     *   deadlock situations, which will result in a DeadlockException.
      */
-    enum Reentrancy {Forbidden, Threaded, Open, Prioritized};
+    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden};
 
     /**
      * The re-entrancy setting for this service.
+     *
+     * This property can only be modified from within this service (i.e. _not_ via a proxy).
      */
-    Reentrancy reentrant;
-
-TODO REVIEW
-    /**
-     * A service "boomerangs" when it turns around and invokes the service that called it. This
-     * property is used to indicate whether a boomerang is even considered possible. A service that
-     * does not boomerang can be used even during a critical section.
-     */
-    @ro @atomic Boolean canBoomerang.get()
+    @atomic Reentrancy reentrant
         {
-        return true;
+        Void set(Reentrancy reentrant)
+            {
+            assert this == this:service;
+            super(reentrant);
+            }
         }
 
     /**
-     * Allow execution of a pending item in the service's backlog, if any. The optional duration
-     * allows the caller to indicate a longer period of time for processing multiple items from the
-     * backlog.
+     * Allow execution of a pending item in the service's backlog, if any.
      *
      * A caller should generally not yield in a loop or for an extended period of time in order to
      * wait for some event to occur; instead, the caller should use a {@link FutureRef} to request
@@ -208,26 +214,41 @@ TODO REVIEW
      * continuation at a later time.
      *
      * If reentrant is set to Forbidden, this has no effect.
+     *
+     * This method must not be called from another service (i.e. via a proxy).
      */
-    Void yield(Duration notLongerThan = Duration:"0s");
+    Void yield()
+        {
+        assert this == this:service;
+        super();
+        }
+
+    /**
+     * Add a function-to-invoke to the service's backlog.
+     *
+     * This method must not be called from another service (i.e. via a proxy).
+     */
+    Void invokeLater(function Void () doLater)
+        {
+        assert this == this:service;
+        super(doLater);
+        }
 
     /**
      * This is the memory footprint of the service, including memory that might not be being fully
      * utilized at the moment.
      */
-    @ro Int bytesReserved;
+    @ro @atomic Int bytesReserved;
 
     /**
      * This is the amount of memory that the service currently has allocated for stuff.
      */
-    @ro Int bytesAllocated;
+    @ro @atomic Int bytesAllocated;
 
     /**
      * Request the service to look for objects that are no longer used and reclaim their memory.
      */
     Void gc();
-
-    // TODO gc stats?
 
     /**
      * After a service conducts garbage collection, if any {@link WeakRef} or {@link SoftRef}
@@ -249,7 +270,7 @@ TODO REVIEW
      *
      * This method can be invoked from within the service, or via a proxy to the service.
      */
-    Boolean shutdown();
+    Void shutdown();
 
     /**
      * Forcibly terminate the Service without giving it a chance to shut down gracefully.

@@ -80,10 +80,16 @@ interface Ref<RefType>
     @ro Boolean assigned;
 
     /**
+     * TODO only works if this is mutable and there is a default value, or if called by runtime
+     */
+    Void clear();
+
+    /**
      * TODO explain why this is important for @lazy, @future, @soft, @weak
      */
     conditional RefType peek()
         {
+        // the following is treated as a critical section by the runtime
         if (assigned)
             {
             return true, get();
