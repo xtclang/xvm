@@ -1,17 +1,39 @@
-interface Future<RefType>
+mixin Future<RefType>
     {
+    /**
+     * Future completion:
+     * * Pending: The future has not completed.
+     * * Result: The future completed because the operation returned successfully.
+     * * Error: The future completed because the operation threw an exception (which may indicate
+     *   that the operation timed out).
+     */
+    private enum Completion {Pending, Result, Error};
+    private Completion completion = Pending;
+    private (RefType | Exception)? result = null;
+
+    /**
+     * Determine if the future has completed, either successfully or exceptionally.
+     */
+    Boolean completed.get()
+        {
+        return completion != Pending;
+        }
+
     /**
      * Perform a non-blocking examination of the future:
      * * Peek returns negatively iff the future has not completed.
      * * Peek throws an exception iff the future completed exceptionally.
      * * Peek returns positively with the result iff the future has completed successfully.
      */
-    conditional RefType peek();
+    conditional RefType peek()
+        {
+        if (completion == Pending)
+            {
+            return false;
+            }
 
-    /**
-     * Determine if the future has completed, either successfully or exceptionally.
-     */
-    @ro Boolean completed;
+        return true, get();
+        }
 
     /**
      * Perform a blocking wait-for-result of the future:
@@ -21,7 +43,18 @@ interface Future<RefType>
      *   results in a TimeoutException.
      * * If the future completes successfully, get() returns the result of the future.
      */
-    RefType get();
+    RefType get()
+        {
+        while (completion == Pending)
+            {
+            this:service.yield();
+            }
+
+        if (completion == Error)
+            {
+            throw
+            }
+        }
 
     Future.Type<RefType> thenDo(function Void () run);
 
@@ -61,5 +94,14 @@ interface Future<RefType>
      * Cause the future to complete exceptionally with an exception, if the future has not already
      * completed.
      */
-    Void completeExceptionally(Exception e);
+    Void completeExceptionally(Exception e)
+        {
+        if (completion == Pending)
+            {
+            }
+        }
+
+    // impl
+
+
     }
