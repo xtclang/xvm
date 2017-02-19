@@ -106,18 +106,6 @@ module ecstasy.xtclang.org
         {
         }
 
-    interface Property<T>
-            extends Ref<T>
-        {
-        @ro String Name;
-
-        @ro boolean Assigned;
-
-        // TODO evaluate:
-        // peek / poke?
-        // CAS?
-        }
-
     value Binary
         {
         // TODO

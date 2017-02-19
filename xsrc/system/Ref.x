@@ -63,7 +63,7 @@ interface Ref<RefType>
     Void set(RefType value);
 
     /**
-     *
+     * TODO can we get rid of this?
      */
     @ro Boolean strong;
 
@@ -79,11 +79,6 @@ interface Ref<RefType>
      * </ul>
      */
     @ro Boolean assigned;
-
-    /**
-     * TODO only works if this is mutable and there is a default value, or if called by runtime
-     */
-    protected Void clear();
 
     /**
      * TODO explain why this is important for @lazy, @future, @soft, @weak
