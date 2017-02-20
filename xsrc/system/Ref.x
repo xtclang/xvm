@@ -63,7 +63,7 @@ interface Ref<RefType>
     Void set(RefType value);
 
     /**
-     *
+     * TODO can we get rid of this?
      */
     @ro Boolean strong;
 
@@ -71,6 +71,7 @@ interface Ref<RefType>
      * Determine if there is a referent. There are a few specific cases in which a reference may
      * not have a referent, including:
      * <ul>
+     * <li>Future return values;</li>
      * <li>Conditional return values;</li>
      * <li>Uninitialized fields in an object structure during construction;</li>
      * <li>Lazy references that have not yet lazily populated;</li>
@@ -78,11 +79,6 @@ interface Ref<RefType>
      * </ul>
      */
     @ro Boolean assigned;
-
-    /**
-     * TODO only works if this is mutable and there is a default value, or if called by runtime
-     */
-    protected Void clear();
 
     /**
      * TODO explain why this is important for @lazy, @future, @soft, @weak
