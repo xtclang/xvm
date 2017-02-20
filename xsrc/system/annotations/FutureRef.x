@@ -22,7 +22,12 @@
  *
  *       // potentially async call to the Pi calculation service
  *       @future String fs = pi.calc(99999);
-TODO update examples
+ *       // it is not guaranteed that the calculation will occur asynchronously, but it is both
+ *       // possible and likely, allowing code to execute after the call is made, but before the
+ *       // call is complete. what the future allows is for the "what to do when the calculation is
+ *       // completed" to be expressed in a series of simple steps.
+ *       &fs.handle(e -> e.to<String>())
+ *          .passTo(s -> console.print(s));
  *       }
  */
 mixin FutureRef<RefType>
@@ -30,7 +35,7 @@ mixin FutureRef<RefType>
     {
     /**
      * Future completion status:
-     * * Pending: The future has not completed.
+     * * Pending: The future has not yet completed.
      * * Result: The future completed because the operation returned successfully.
      * * Error: The future completed because the operation threw an exception (which may indicate
      *   that the operation timed out).
@@ -45,12 +50,12 @@ mixin FutureRef<RefType>
     /**
      * True if the value of the future can be set.
      */
-    private Boolean assignable;
+    private Boolean assignable = false;
 
     /**
      * The exception, if the future completes exceptionally.
      */
-    private Exception? failure;
+    private Exception? failure = null;
 
     /**
      * The function type used to notify dependent futures.
@@ -60,15 +65,9 @@ mixin FutureRef<RefType>
     /**
      * The future that is chained to this future, that this future sends its completion result to.
      */
-    protected NotifyDependent? chained;
+    protected NotifyDependent? notify = null;
 
-    /**
-     * Determine if the future has completed, either successfully or exceptionally.
-     */
-    Boolean completed.get()
-        {
-        return completion != Pending;
-        }
+    // ----- Ref interface -------------------------------------------------------------------------
 
     /**
      * Perform a non-blocking examination of the future:
@@ -108,7 +107,7 @@ mixin FutureRef<RefType>
             throw (Exception) failure;
             }
 
-        return super;
+        return super();
         }
 
     @Override
@@ -118,8 +117,20 @@ mixin FutureRef<RefType>
         super(value);
         }
 
+    // ----- composing future behavior -------------------------------------------------------------
+
     /**
-     * TODO
+     * Create and return a new future that will execute the specified function when this future
+     * completes successfully, or immediately if this future has already completed successfully.
+     *
+     * * If this future completes exceptionally, the new future will complete exceptionally with
+     *   the same exception as this future.
+     * * If this future completes successfully, the new future will execute the specified function.
+     * * If that function throws an exception, then the new future will complete exceptionally with
+     *   that exception.
+     * * If that function returns, then the new future will complete successfully.
+     * * If the new future completes successfully, then its value will be the same as this
+     *   future's value.
      */
     Future.Type<RefType> thenDo(function Void () run)
         {
@@ -127,7 +138,19 @@ mixin FutureRef<RefType>
         }
 
     /**
-     * TODO
+     * Create and return a new future that will execute the specified function passing the value of
+     * this future, when this future completes successfully, or immediately if this future has
+     * already completed successfully.
+     *
+     * * If this future completes exceptionally, the new future will complete exceptionally with
+     *   the same exception as this future.
+     * * If this future completes successfully, the new future will execute the specified function,
+     *   passing the value of this future.
+     * * If that function throws an exception, then the new future will complete exceptionally with
+     *   that exception.
+     * * If that function returns, then the new future will complete successfully.
+     * * If the new future completes successfully, then its value will be the same as this
+     *   future's value.
      */
     Future.Type<RefType> passTo(function Void (RefType) consume)
         {
@@ -135,7 +158,41 @@ mixin FutureRef<RefType>
         }
 
     /**
-     * TODO
+     * Create and return a new future that will transform the value of this future into a
+     * potentially new value of a potentially different type. When this future completes
+     * successfully (or immediately if this future has already completed successfully), the new
+     * future will execute the specified value transformation function passing the value of this
+     * future.
+     *
+     * * If this future completes exceptionally, the new future will complete exceptionally with
+     *   the same exception as this future.
+     * * If this future completes successfully, the new future will execute the specified function,
+     *   passing the value of this future.
+     * * If that function throws an exception, then the new future will complete exceptionally with
+     *   that exception.
+     * * If that function returns, then the new future will complete successfully with the value
+     *   returned from the function.
+     */
+    <NewType> Future.Type<NewType> transform(function NewType (RefType) convert)
+        {
+        return chain(new TransformStep<NewType, RefType>(convert));
+        }
+
+    /**
+     * Create and return a new future that will handle an exceptional completion from this future.
+     * When this future completes exceptionally (or immediately if this future has already completed
+     * exceptionally), the new future will execute the specified exception-handling function,
+     * allowing the new future to transform that exception into a value for a successful completion.
+     *
+     * * If this future completes successfully, the new future will complete successfully with the
+     *   value of this future. (In other words, the new future is a pass-through for a successful
+     *   completion.)
+     * * If this future completes exceptionally, the new future will execute the specified function,
+     *   passing the exception from this future.
+     * * If that function throws an exception, then the new future will complete exceptionally with
+     *   that exception.
+     * * If that function returns, then the new future will complete successfully with the value
+     *   returned from the function.
      */
     Future.Type<RefType> handle(function RefType (Exception) convert)
         {
@@ -143,15 +200,38 @@ mixin FutureRef<RefType>
         }
 
     /**
-     * TODO
+     * Create and return a new future that will have the opportunity to transform both successful
+     * and exceptional completion of this future into either the successful or exceptional
+     * completion of the new future. (In other words, this future can do pretty much anything it
+     * wants with any completion input to create any completion output.) When this future completes
+     * (or immediately if this future has already completed), the new future will execute the
+     * specified function, passing the value (from this future's successful completion) and the
+     * exception (from this future's exceptional completion).
+     *
+     * * If this future completes, the new future will execute the specified function, passing the
+     *   value of this future and the exception of this future (at least one of which will be null).
+     * * If that function throws an exception, then the new future will complete exceptionally with
+     *   that exception.
+     * * If that function returns, then the new future will complete successfully with the value
+     *   returned from the function.
      */
-    Future.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
+    <NewType> Future.Type<NewType> transform(function NewType (RefType?, Exception?) convert)
         {
-        return chain(new WhenCompleteStep<RefType>(notify));
+        return chain(new Transform2Step<NewType, RefType>(convert));
         }
 
     /**
-     * TODO
+     * Create and return a new future that will complete when either *one* of _this_ future or the
+     * _other_ specified future completes. In other words, in general terms, the first of two
+     * futures to complete will trigger the completion of the new future. If one or both of the two
+     * futures has already completed, then the new future will complete immediately. Note that the
+     * ordering is _generally_ that the first of the two to complete will cause the completion of
+     * the new future, but there are no strict ordering guarantees.
+     *
+     * * If this future or the other future completes successfully, and the new future has not
+     *   already completed, then the new future will complete successfully with the same value.
+     * * If this future or the other future completes exceptionally, and the new future has not
+     *   already completed, then the new future will complete exceptionally with the same exception.
      */
     Future.Type<RefType> or(Future.Type<RefType> other)
         {
@@ -159,7 +239,18 @@ mixin FutureRef<RefType>
         }
 
     /**
-     * TODO
+     * Create and return a new future that will complete when *any* *one* of _this_ future or the
+     * _other_ specified futures completes. In other words, in general terms, the first of the
+     * futures to complete will trigger the completion of the new future. If one or more of the
+     * futures has already completed, then the new future will complete immediately. Note that the
+     * ordering is _generally_ that the first of the futures to complete will cause the completion
+     * of the new future, but there are no strict ordering guarantees.
+     *
+     * * If this future or one of the other futures completes successfully, and the new future has
+     *   not already completed, then the new future will complete successfully with the same value.
+     * * If this future or one of the other futures completes exceptionally, and the new future has
+     *   not already completed, then the new future will complete exceptionally with the same
+     *   exception.
      */
     Future.Type<RefType> orAny(Future.Type<RefType> ... others)
         {
@@ -169,7 +260,22 @@ mixin FutureRef<RefType>
         }
 
     /**
-     * TODO
+     * Create and return a new future that will complete when *both* of _this_ future and the
+     * _other_ specified future completes successfully, or when *either* completes exceptionally.
+     * If both of the two futures has already completed successfully, or one of the two futures has
+     * already completed exceptionally, then the new future will complete immediately. Since the
+     * types of the two futures can differ, a function must be provided to combine the two values
+     * into a single result; a default function is provided to combine the two values into a tuple.
+     *
+     * * If this future or the other future completes exceptionally, and the new future has not
+     *   already completed, then the new future will complete exceptionally with the same exception.
+     * * If both this future and the other future completes successfully, and the new future has not
+     *   already completed, then the provided function will be executed, passing the result of this
+     *   future and the result of the other future.
+     * * If that function throws an exception, then the new future will complete exceptionally with
+     *   that exception.
+     * * If that function returns, then the new future will complete successfully with the value
+     *   returned from the function.
      */
     <NewType> Future.Type<NewType> and(Future.Type other,
             function Future.Type<NewType> (RefType, other.RefType) combine = v1, v2 -> (v1, v2))
@@ -178,28 +284,36 @@ mixin FutureRef<RefType>
         }
 
     /**
-     * TODO
+     * Create and return a new future that will execute the specified function on completion.
+     *
+     * * If this future completes, either successfully or exceptionally, then the new future will
+     *   execute the specified function, passing the value of this future and the exception of this
+     *   future (at least one of which will be null).
+     * * If that function throws an exception, then the new future will complete exceptionally with
+     *   that exception.
+     * * If that function returns, then the new future will complete successfully in the same manner
+     *   (successfully or exceptionally) and with the same result (value or exception) as this
+     *   future.
      */
-    <NewType> Future.Type<NewType> transform(function NewType (RefType) convert)
+    Future.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
         {
-        return chain(new TransformStep<NewType, RefType>(convert));
+        return chain(new WhenCompleteStep<RefType>(notify));
         }
 
-    /**
-     * TODO
-     */
-    <NewType> Future.Type<NewType> transform(function NewType (RefType?, Exception?) convert)
-        {
-        return chain(new Transform2Step<NewType, RefType>(convert));
-        }
+// TODO - need to verify that this method should exist, and be able to explain what it does
+//    <NewType> Future.Type<NewType> createContinuation(function Future.Type<NewType> (RefType) create)
+//        {
+//        return chain(new ContinuationStep<>(create));
+//        }
+
+    // ----- completion handling -------------------------------------------------------------------
 
     /**
-     * TODO
+     * Determine if the future has completed, either successfully or exceptionally.
      */
-    <NewType> Future.Type<NewType> createContinuation(function Future.Type<NewType> (RefType) create)
+    Boolean completed.get()
         {
-        // TODO - need to verify that this method should exist, and be able to explain what it does
-        return chain(new ContinuationStep<>(create));
+        return completion != Pending;
         }
 
     /**
@@ -245,12 +359,15 @@ mixin FutureRef<RefType>
     protected Void thisCompleted(RefType? result, Exception? e)
         {
         // by default, the only completion logic is to chain the completion
-        chained?(completion, result, e);
-        chained = null;
+        notify?(completion, result, e);
+        notify = null;
         }
 
     /**
-     * TODO
+     * Add a DependentFuture to the list of things that this future must notify when it completes.
+     * The DependentFuture contains a {@link DependentFuture.parentCompleted} method that is used as
+     * a {@link NotifyDependent} function, allowing one or more FutureRef instances to notify it of
+     * their completion. The FutureRef can chain to any number of DependentFuture instances.
      */
     Future.Type<future.RefType> chain(DependentFuture future)
         {
@@ -259,20 +376,21 @@ mixin FutureRef<RefType>
         }
 
     /**
-     * TODO
+     * Add a NotifyDependent function to the list of things that this future must notify when it
+     * completes. The FutureRef can chain to any number of NotifyDependent functions.
      */
     Void chain(NotifyDependent notify)
         {
         switch (completion)
             {
             case Pending:
-                if (chained == null)
+                if (this.notify == null)
                     {
-                    chained = notify;
+                    this.notify = notify;
                     }
                 else
                     {
-                    chained = new MultiCompleter(chained, notify).parentCompleted;
+                    this.notify = new MultiCompleter(this.notify, notify).parentCompleted;
                     }
                 break;
 
@@ -288,15 +406,17 @@ mixin FutureRef<RefType>
             }
         }
 
+    // ----- inner classes -------------------------------------------------------------------------
+
     /**
      * A DependentFuture is the base class for making simple futures that are dependent on the
-     * result of another future. Specifically, a future invokes the {@link chained} method of the
-     * DependentFuture, which in turn completes the future, which in turn invokes the next in the
-     * chain.
+     * result of another future. Specifically, a future invokes the {@link parentCompleted} method
+     * of the DependentFuture, which in turn completes the future, which in turn invokes the next in
+     * the chain.
      */
     static class DependentFuture<RefType, InputType>
             implements Ref<RefType>
-            incorporates Future<RefType>
+            incorporates FutureRef<RefType>
             delegates Ref<RefType>(&result)
         {
         @Override
@@ -331,11 +451,11 @@ mixin FutureRef<RefType>
         {
         construct MultiCompleter(NotifyDependent first, NotifyDependent second)
             {
-            chained  = first;
-            chained2 = second;
+            this.notify  = first;
+            this.notify2 = second;
             }
 
-        protected NotifyDependent? chained2;
+        protected NotifyDependent? notify2;
 
         @Override
         Void chain(NotifyDependent chain)
@@ -351,8 +471,8 @@ mixin FutureRef<RefType>
             {
             super(result, e);
 
-            chained2?(completion, result, e);
-            chained2 = null;
+            notify2?(completion, result, e);
+            notify2 = null;
             }
         }
 
@@ -530,9 +650,8 @@ mixin FutureRef<RefType>
 
         public/private function Future.Type<NewType> (RefType, other.RefType) combine;
 
-        // TODO / REVIEW - conditional vs. Nullable
-        private conditional InputType input1;
-        private conditional InputType input2;
+        private conditional InputType  input1 = false;
+        private conditional Input2Type input2 = false;
 
         /**
          * Handle the completion of the first parent.
