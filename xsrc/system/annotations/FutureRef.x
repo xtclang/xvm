@@ -215,7 +215,7 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> Future.Type<NewType> transform(function NewType (RefType?, Exception?) convert)
+    <NewType> Future.Type<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
         {
         return chain(new Transform2Step<NewType, RefType>(convert));
         }
@@ -300,11 +300,27 @@ mixin FutureRef<RefType>
         return chain(new WhenCompleteStep<RefType>(notify));
         }
 
-// TODO - need to verify that this method should exist, and be able to explain what it does
-//    <NewType> Future.Type<NewType> createContinuation(function Future.Type<NewType> (RefType) create)
-//        {
-//        return chain(new ContinuationStep<>(create));
-//        }
+    /**
+     * Create and return a new future that will use the value of this future as the argument to a
+     * function that will be executed in an attempted-asynchronous manner, with the result of that
+     * function providing the completion of the new future. When this future completes
+     * successfully (or immediately if this future has already completed successfully), the new
+     * future will execute the specified asynchronous function, passing the value of this future.
+     *
+     * * If this future completes exceptionally, the new future will complete exceptionally with
+     *   the same exception as this future.
+     * * If this future completes successfully, the new future will execute the specified function
+     *   in an attempted-asynchronous manner (i.e. requesting a future), passing the value of this
+     *   future.
+     * * If that function throws an exception, then the new future will complete exceptionally with
+     *   that exception.
+     * * If that function returns, then the new future will complete successfully with the value
+     *   returned from the function.
+     */
+    <NewType> Future.Type<NewType> createContinuation(function <NewType> (RefType) async)
+        {
+        return chain(new ContinuationStep<NewType, RefType>(async));
+        }
 
     // ----- completion handling -------------------------------------------------------------------
 
@@ -785,6 +801,61 @@ mixin FutureRef<RefType>
             else
                 {
                 super(completion, input, e);
+                }
+            }
+        }
+
+    /**
+     * A dependent future that uses a provided {@link async} function, which is then executed to
+     * obtain a future result, which upon completion will complete this future with its result.
+     *
+     * If the parent completed exceptionally, or if the parent completed successfully but the
+     * {@link async} function throws an exception, then this future completes exceptionally.
+     */
+    static class ContinuationStep<RefType, InputType>(function RefType (InputType) async)
+            extends DependentFuture<RefType, InputType>
+        {
+        protected FutureRef<RefType>? asyncResult;
+
+        @Override
+        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+            {
+            assert completion != Pending;
+
+            if (completion == Result)
+                {
+                if (!this.completed && asyncResult == null)
+                    {
+                    // this is the point at which the continuation is created, i.e. the input to the
+                    // async call is now available, so the async call needs to be made, with the
+                    // future result of the async call triggering the completion of _this_ future,
+                    // thus forming a "continuation". note that the function may execute
+                    // synchronously, at the whim of the runtime, but even if it does, the result
+                    // (including exceptional result) will be captured in the future
+                    asyncResult = &executeAsync(input);
+                    asyncResult.chain(asyncCompleted);
+                    }
+                }
+            else
+                {
+                super(completion, null, e);
+                }
+            }
+
+        /**
+         * When the invoked function completes, its future invokes this method, allowing this future
+         * to complete.
+         */
+        protected Void asyncCompleted(Completion completion, RefType? input, Exception? e)
+            {
+            assert completion != Pending;
+            if (completion == Result)
+                {
+                complete((RefType) input);
+                }
+            else
+                {
+                completeExceptionally((Exception) e);
                 }
             }
         }
