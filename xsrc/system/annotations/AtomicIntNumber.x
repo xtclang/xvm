@@ -1,18 +1,32 @@
 /**
- * The AtomicIntNumber mixin adds atomic capabilities such as increment and decrement to an atomic
- * reference to an integer number.
+ * The AtomicIntNumber mixin adds atomic capabilities such as increment and decrement to every
+ * atomic reference to any of the integer number types.
  */
 @auto mixin AtomicIntNumber<RefType>
         into AtomicRef<IntNumber>
     {
-    @op RefType increment()
+    @op RefType preIncrement()
         {
-        return postIncrement() + 1;
+        RefType oldValue = get();
+        RefType newValue;
+        do
+            {
+            newValue = oldValue + 1;
+            }
+        while (oldValue : replaceFailed(oldValue, newValue))
+        return newValue;
         }
 
-    @op RefType decrement()
+    @op RefType preDecrement()
         {
-        return postDecrement() - 1;
+        RefType oldValue = get();
+        RefType newValue;
+        do
+            {
+            newValue = oldValue - 1;
+            }
+        while (oldValue : replaceFailed(oldValue, newValue))
+        return newValue;
         }
 
     @op RefType postIncrement()

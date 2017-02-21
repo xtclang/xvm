@@ -27,7 +27,7 @@ module ecstasy.xtclang.org
     typedef Int64                   Int;
     typedef UInt64                  UInt;
     typedef Decimal64               Dec;
-    typedef ().Type                 Void;
+    typedef &().RefType             Void;
     typedef annotations.AtomicRef   atomic;
     typedef annotations.Automagic   auto;
     typedef annotations.FutureRef   future;
@@ -65,52 +65,4 @@ module ecstasy.xtclang.org
         {
         // TODO
         }
-
-// TODO -------------- split out everything below this point -----------------
-
-    interface AutoConst
-        {
-        @const AutoConst ensureConst();
-        }
-    interface AutoService
-        {
-        @service AutoService ensureService();
-        }
-
-    interface AutoMutable
-        {
-        AutoMutable ensureMutable();
-        }
-
-    interface AutoPersistent
-        {
-        AutoPersistent ensurePersistent();
-        }
-
-
-//
-
-    interface Class
-        {
-        }
-
-    interface Mixin
-        {
-        }
-
-    interface Trait
-        {
-        }
-
-    interface Enum
-        {
-        }
-
-    value Binary
-        {
-        // TODO
-        }
-
-    interface Map<KeyType, ValueType>
-            extends Indexed<KeyType>
     }
