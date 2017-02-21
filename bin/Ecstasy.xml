@@ -1,0 +1,21 @@
+<filetype binary="false" description="Ecstasy Source" name="Ecstasy">
+  <highlighting>
+    <options>
+      <option name="LINE_COMMENT" value="//" />
+      <option name="COMMENT_START" value="/*" />
+      <option name="COMMENT_END" value="*/" />
+      <option name="HEX_PREFIX" value="0x" />
+      <option name="NUM_POSTFIXES" value="" />
+      <option name="HAS_BRACES" value="true" />
+      <option name="HAS_BRACKETS" value="true" />
+      <option name="HAS_PARENS" value="true" />
+    </options>
+    <keywords keywords="class;const;construct;enum;extends;function;implements;interface;into;mixin;private;protected;public;service;static;trait" ignore_case="false" />
+    <keywords2 keywords="assert;case;catch;else;false;finally;for;if;instanceof;new;null;return;super;switch;true;try;while" />
+    <keywords3 keywords="conditional" />
+    <keywords4 keywords="@Inject;@Override;@auto;@future;@lazy;@op;@ro;@soft;@watch;typedef" />
+  </highlighting>
+  <extensionMap>
+    <mapping ext="x" />
+  </extensionMap>
+</filetype>
