@@ -29,6 +29,20 @@
  *       &fs.handle(e -> e.to<String>())
  *          .passTo(s -> console.print(s));
  *       }
+ *
+ * The FutureRef does override the behavior of the Ref interface in a few specific ways:
+ * * The {@link assigned} property on a FutureRef indicates whether the future has completed, either
+ *   successfully or exceptionally.
+ * * The {@link peek} method performs a non-blocking examination of the future:
+ * * * {@code peek} returns negatively iff the future has not completed.
+ * * * {@code peek} throws an exception iff the future completed exceptionally.
+ * * * {@code peek} returns positively with the result iff the future has completed successfully.
+ * * The {@link get} method performs a blocking examination of the future:
+ * * * {@code get} blocks until the future completes.
+ * * * {@code get} throws an exception iff the future completed exceptionally.
+ * * * {@code get} returns the result iff the future has completed successfully.
+ * * The {@link set} method can only be invoked by completing the future; the future's value cannot
+ *   be modified once it is set.
  */
 mixin FutureRef<RefType>
         into Ref<RefType>
@@ -40,12 +54,12 @@ mixin FutureRef<RefType>
      * * Error: The future completed because the operation threw an exception (which may indicate
      *   that the operation timed out).
      */
-    private enum Completion {Pending, Result, Error};
+    protected enum Completion {Pending, Result, Error};
 
     /**
      * Tracks whether and how the future has completed.
      */
-    private Completion completion = Pending;
+    protected Completion completion = Pending;
 
     /**
      * True if the value of the future can be set.
@@ -70,20 +84,12 @@ mixin FutureRef<RefType>
     // ----- Ref interface -------------------------------------------------------------------------
 
     /**
-     * Perform a non-blocking examination of the future:
-     * * Peek returns negatively iff the future has not completed.
-     * * Peek throws an exception iff the future completed exceptionally.
-     * * Peek returns positively with the result iff the future has completed successfully.
+     * Determine if the future has completed, either successfully or exceptionally.
      */
     @Override
-    conditional RefType peek()
+    Boolean assigned.get()
         {
-        if (completion == Pending)
-            {
-            return false;
-            }
-
-        return true, get();
+        return completion != Pending;
         }
 
     /**
@@ -113,7 +119,7 @@ mixin FutureRef<RefType>
     @Override
     Void set(RefType value)
         {
-        assert assignable;
+        assert assignable && !assigned;
         super(value);
         }
 
@@ -325,14 +331,6 @@ mixin FutureRef<RefType>
     // ----- completion handling -------------------------------------------------------------------
 
     /**
-     * Determine if the future has completed, either successfully or exceptionally.
-     */
-    Boolean completed.get()
-        {
-        return completion != Pending;
-        }
-
-    /**
      * Cause the future to complete successfully with a result, if the future has not already
      * completed.
      */
@@ -385,10 +383,10 @@ mixin FutureRef<RefType>
      * a {@link NotifyDependent} function, allowing one or more FutureRef instances to notify it of
      * their completion. The FutureRef can chain to any number of DependentFuture instances.
      */
-    Future.Type<future.RefType> chain(DependentFuture future)
+    Future.Type<nextFuture.RefType> chain(DependentFuture nextFuture)
         {
-        chain(future.parentCompleted);
-        return future;
+        chain(nextFuture.parentCompleted);
+        return nextFuture;
         }
 
     /**
@@ -435,22 +433,22 @@ mixin FutureRef<RefType>
             incorporates FutureRef<RefType>
             delegates Ref<RefType>(&result)
         {
-        @Override
-        Boolean assigned.get()
-            {
-            return completed;
-            }
-
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            assert completion != Pending;
-            if (completion == Result)
+            if (!assigned)
                 {
-                complete((RefType) input);
-                }
-            else
-                {
-                completeExceptionally((Exception) e);
+                assert completion != Pending;
+                if (completion == Result)
+                    {
+                    // this default implementation assumes that the InputType is the same as the
+                    // RefType, i.e. the value is an as-is "pass through"; any sub-class that has a
+                    // different RefType from the InputType must override this behavior
+                    complete((RefType) input);
+                    }
+                else
+                    {
+                    completeExceptionally((Exception) e);
+                    }
                 }
             }
 
@@ -471,6 +469,12 @@ mixin FutureRef<RefType>
             this.notify2 = second;
             }
 
+        /**
+         * The "multi" completer is actually a "bi" completer, and the FutureRef's implementation
+         * of the chain method will link multiple of them together in a left-legged-only binary tree
+         * in order to emulate a linked list of notifications (i.e. notifications are always
+         * appended to the end of the list).
+         */
         protected NotifyDependent? notify2;
 
         @Override
@@ -506,22 +510,20 @@ mixin FutureRef<RefType>
         @Override
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!this.completed && completion == Result)
+            if (!assigned && completion == Result)
                 {
                 try
                     {
                     run();
-                    complete(input);
                     }
                 catch (Exception e2)
                     {
                     completeExceptionally(e2);
+                    return;
                     }
                 }
-            else
-                {
-                super(completion, input, e);
-                }
+
+            super(completion, input, e);
             }
         }
 
@@ -539,22 +541,20 @@ mixin FutureRef<RefType>
         @Override
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!this.completed && completion == Result)
+            if (!assigned && completion == Result)
                 {
                 try
                     {
                     consume(input);
-                    complete(input);
                     }
                 catch (Exception e2)
                     {
                     completeExceptionally(e2);
+                    return;
                     }
                 }
-            else
-                {
-                super(completion, input, e);
-                }
+
+            super(completion, input, e);
             }
         }
 
@@ -576,7 +576,7 @@ mixin FutureRef<RefType>
         @Override
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!this.completed && completion == Error)
+            if (!assigned && completion == Error)
                 {
                 try
                     {
@@ -611,7 +611,7 @@ mixin FutureRef<RefType>
         @Override
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!this.completed && completion != Pending)
+            if (!assigned && completion != Pending)
                 {
                 try
                     {
@@ -644,7 +644,9 @@ mixin FutureRef<RefType>
         {
         construct (Future.Type<RefType> other)
             {
-            // TODO is this illegal by using "this"?
+            }
+        finally
+            {
             other.whenComplete((result, e) -> parentCompleted(e == null ? Result : Error, result, e));
             }
         }
@@ -660,7 +662,9 @@ mixin FutureRef<RefType>
         {
         construct (Future.Type<Input2Type> other, function RefType (InputType, Input2Type) combine)
             {
-            // TODO is this illegal by using "this"?
+            }
+        finally
+            {
             other.whenComplete((result, e) -> parent2Completed(e == null ? Result : Error, result, e));
             }
 
@@ -675,7 +679,7 @@ mixin FutureRef<RefType>
         @Override
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!completed && !input1)
+            if (!assigned && !input1)
                 {
                 assert completion != Pending;
 
@@ -699,7 +703,7 @@ mixin FutureRef<RefType>
          */
         Void parent2Completed(Completion completion, Input2Type? input, Exception? e)
             {
-            if (!completed && !input2)
+            if (!assigned && !input2)
                 {
                 assert completion != Pending;
 
@@ -751,23 +755,20 @@ mixin FutureRef<RefType>
             {
             assert completion != Pending;
 
-            if (completion == Result)
+            if (!assigned && completion == Result)
                 {
-                if (!this.completed)
+                try
                     {
-                    try
-                        {
-                        complete(convert(input));
-                        }
-                    catch (Exception e2)
-                        {
-                        completeExceptionally(e2);
-                        }
+                    complete(convert(input));
+                    }
+                catch (Exception e2)
+                    {
+                    completeExceptionally(e2);
                     }
                 }
             else
                 {
-                super(completion, null, e);
+                super(completion, input, e);
                 }
             }
         }
@@ -786,7 +787,7 @@ mixin FutureRef<RefType>
         @Override
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!this.completed)
+            if (!assigned)
                 {
                 assert completion != Pending;
                 try
@@ -797,10 +798,6 @@ mixin FutureRef<RefType>
                     {
                     completeExceptionally(e2);
                     }
-                }
-            else
-                {
-                super(completion, input, e);
                 }
             }
         }
@@ -820,11 +817,14 @@ mixin FutureRef<RefType>
         @Override
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            assert completion != Pending;
-
-            if (completion == Result)
+            if (!assigned)
                 {
-                if (!this.completed && asyncResult == null)
+                assert completion != Pending;
+                if (completion == Error)
+                    {
+                    super(completion, null, e);
+                    }
+                else if (asyncResult == null)
                     {
                     // this is the point at which the continuation is created, i.e. the input to the
                     // async call is now available, so the async call needs to be made, with the
@@ -836,22 +836,18 @@ mixin FutureRef<RefType>
                     asyncResult.chain(asyncCompleted);
                     }
                 }
-            else
-                {
-                super(completion, null, e);
-                }
             }
 
         /**
          * When the invoked function completes, its future invokes this method, allowing this future
          * to complete.
          */
-        protected Void asyncCompleted(Completion completion, RefType? input, Exception? e)
+        protected Void asyncCompleted(Completion completion, RefType? result, Exception? e)
             {
             assert completion != Pending;
             if (completion == Result)
                 {
-                complete((RefType) input);
+                complete((RefType) result);
                 }
             else
                 {
