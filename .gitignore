@@ -21,6 +21,10 @@
 *.tar
 *.zip
 
+# User specific tool settings
+#############################
+*.iws
+
 # Logs and databases #
 ######################
 *.log
