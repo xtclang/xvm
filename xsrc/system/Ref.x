@@ -53,21 +53,6 @@ interface Ref<RefType>
         extends Referent
     {
     /**
-     * De-reference the reference to obtain the referent.
-     */
-    RefType get();
-
-    /**
-     * Specify the referent for this reference.
-     */
-    Void set(RefType value);
-
-    /**
-     * TODO can we get rid of this?
-     */
-    @ro Boolean strong;
-
-    /**
      * Determine if there is a referent. There are a few specific cases in which a reference may
      * not have a referent, including:
      * <ul>
@@ -93,6 +78,16 @@ interface Ref<RefType>
 
         return false;
         }
+
+    /**
+     * De-reference the reference to obtain the referent.
+     */
+    RefType get();
+
+    /**
+     * Specify the referent for this reference.
+     */
+    Void set(RefType value);
 
     /**
      * Obtain the actual runtime type of the reference that this Ref currently

@@ -251,16 +251,26 @@ interface Service
     Void gc();
 
     /**
-     * After a service conducts garbage collection, if any {@link WeakRef} or {@link SoftRef}
-     * references were cleared that had a notification registered, then this will be {@code true}
-     * until the pending notifications are processed by {@link processClearedRefEvents}.
+     * When the runtime needs to report information to the service, it enqueues an event that
+     * represents the information to communicate. The reason that the information must be enqueued
+     * as an event is that the service may be busy processing when the event actually occurs, and
+     * there is no mechanism for interrupting that processing in order to deliver the event. These
+     * events will be automatically processed by a service when it is not busy processing, or the
+     * events can be processed on demand by invoking the {@link dispatchRuntimeEvents} method from
+     * either from within or from outside of the service.
+     *
+     * Runtime events include:
+     * * {@code @soft} and {@code @weak} reference-cleared notifications
      */
-    @ro Boolean hasClearedRefEvents();
+    @ro Boolean pendingRuntimeEvents;
 
     /**
-     * Process any pending notifications of cleared {@link WeakRef} or {@link SoftRef} references.
+     * Process any pending notifications from the runtime.
+     *
+     * Runtime events include:
+     * * {@code @soft} and {@code @weak} reference-cleared notifications
      */
-    Void processClearedRefEvents();
+    Void dispatchRuntimeEvents();
 
     /**
      * Attempt to terminate the Service gracefully by asking it to shut down itself.

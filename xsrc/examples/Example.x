@@ -1915,3 +1915,50 @@ s.doSomething().or(s2.doSomething()).thenDo(() -> ...);
 s.doSomething().and(s2.doSomething()).thenDo(() -> ...);
 
 s.makeString().transform(s -> new IntLiteral(s).to<Int>()).passTo(countSlowly);
+
+// stuff TODO from module.x
+
+    interface AutoConst
+        {
+        @const AutoConst ensureConst();
+        }
+    interface AutoService
+        {
+        @service AutoService ensureService();
+        }
+
+    interface AutoMutable
+        {
+        AutoMutable ensureMutable();
+        }
+
+    interface AutoPersistent
+        {
+        AutoPersistent ensurePersistent();
+        }
+
+    interface Class
+        {
+        }
+
+    interface Mixin
+        {
+        }
+
+    interface Trait
+        {
+        }
+
+    interface Enum
+        {
+        }
+
+    value Binary
+        {
+        // TODO
+        }
+
+    interface Map<KeyType, ValueType>
+            extends Indexed<KeyType>
+
+// -
