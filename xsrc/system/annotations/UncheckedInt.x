@@ -1,3 +1,9 @@
+/**
+ * The UncheckedInt mixin is used with integer types to alter the default behavior for exceptional conditions such as
+ * integer overflow. Specifically, the mixin is used to ignore the exceptions caused by the result exceeding the size
+ * of the destination type; all operations are conducted as if in an arbitrarily-large-enough integer type, and then
+ * truncated to the size of the original operands.
+ */
 mixin UncheckedInt
         into IntNumber
     {

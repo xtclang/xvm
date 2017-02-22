@@ -1,16 +1,14 @@
 /**
  * A Ref represents a <i>reference</i> to an Ecstasy object. In Ecstasy, "everything
  * is an object", and the only way that one can interact with an object is through
- * a reference to that object. The <i>referent</i> is the object being referred to;
- * the <i>reference</i> (encapsulated in and represented by a Ref object) is the
+ * a reference to that object. The _referent_ is the object being referred to;
+ * the _reference_ (encapsulated in and represented by a Ref object) is the
  * object that refers to the referent.
- * <p>
+ *
  * An Ecstasy reference is conceptually composed of two pieces of information:
- * <ol>
- * <li>A type;</li>
- * <li>An identity.</li>
- * </ol>
- * <p>
+ * * A type;
+ * * An identity.
+ *
  * The type portion of an Ecstasy reference (represented by the ActualType property
  * of the Ref) is simply the set of operations that can be invoked against the
  * referent. Regardless of the actual operations that the referent implements, only

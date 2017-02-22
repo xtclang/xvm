@@ -11,9 +11,9 @@
         RefType newValue;
         do
             {
-            newValue = oldValue + 1;
+            newValue = oldValue.increment();
             }
-        while (oldValue : replaceFailed(oldValue, newValue))
+        while (oldValue : replaceFailed(oldValue, newValue));
         return newValue;
         }
 
@@ -23,23 +23,23 @@
         RefType newValue;
         do
             {
-            newValue = oldValue - 1;
+            newValue = oldValue.decrement();
             }
-        while (oldValue : replaceFailed(oldValue, newValue))
+        while (oldValue : replaceFailed(oldValue, newValue));
         return newValue;
         }
 
     @op RefType postIncrement()
         {
         RefType oldValue = get();
-        while (oldValue : replaceFailed(oldValue, oldValue + 1) {}
+        while (oldValue : replaceFailed(oldValue, oldValue.increment())) {}
         return oldValue;
         }
 
     @op RefType postDecrement()
         {
         RefType oldValue = get();
-        while (oldValue : replaceFailed(oldValue, oldValue - 1) {}
+        while (oldValue : replaceFailed(oldValue, oldValue.decrement())) {}
         return oldValue;
         }
 
