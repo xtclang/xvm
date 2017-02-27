@@ -53,15 +53,27 @@
  *   other services, and its resources can easily be reclaimed; however, since it is likely that
  *   other services still hold proxy references to the service, subsequent invocation through those
  *   proxies will result in an exception.
+ * * The runtime itself may provide events to the service, enqueing them so that if the service is
+ *   running, the event does not interrupt the execution. These events will be automatically
+ *   processed by a service when it is not busy processing, such as when the current service
+ *   invocation returns, calls {@link yield}, or even potentially when another service is invoked by
+ *   this service. Runtime events may be processed even if the {@link reentrancy} setting is
+ *   {@link Reentrancy.Forbidden}. Runtime events include only:
+ * * * Timeout notification for the currently executing service invocation, although the runtime
+ *     may temporarily suppress these notifications within a {@link CriticalSection}.
+ * * * {@code @soft} and {@code @weak} reference-cleared notifications.
  */
 interface Service(String? serviceName)
     {
     /**
-     * The name assigned to the service when it was created. If no name is provided, the name
+     * The name assigned to the service. If no name is provided, the name
      * defaults to the name of the service class. This property is intended as a means to help
      * diagnose faults, and to provide runtime manageability information.
      */
-    @ro @atomic String serviceName;
+    @atomic String serviceName.get()
+        {
+        return super() ?: meta.class.to<String>();
+        }
 
     /**
      * A service exposes its status through a status indicator:
@@ -95,7 +107,8 @@ interface Service(String? serviceName)
      *   invokes service A).
      * * Forbidden: absolutely no re-entrancy is allowed; a request must complete and return before
      *   a new request can begin. This setting is dangerous because of its ability to easily create
-     *   deadlock situations, which will result in a DeadlockException.
+     *   deadlock situations, which will result in a DeadlockException. Note that runtime events can
+     *   still be processed (e.g. by calling {@link yield}) even when reentrancy is Forbidden.
      */
     enum Reentrancy {Prioritized, Open, Exclusive, Forbidden};
 
@@ -124,7 +137,10 @@ interface Service(String? serviceName)
      * By default, this is the same as the incoming Timeout, but can be overridden by creating a new
      * Timeout.
      */
-    @ro @atomic Timeout? timeout;
+    @ro @atomic Timeout? timeout.get()
+        {
+        return super() ?: incomingTimeout;
+        }
 
     /**
      * The wall-clock uptime for the service.
@@ -187,7 +203,7 @@ interface Service(String? serviceName)
      *
      * Exceptions raised by the {@code doLater} function are considered _unhandled_.
      */
-    Void invokeLater(function Void () doLater);
+    Void invokeLater(function Void doLater());
 
     /**
      * This is the memory footprint of the service, including memory that might not be being fully
@@ -204,33 +220,6 @@ interface Service(String? serviceName)
      * Request the service to look for objects that are no longer used and reclaim their memory.
      */
     Void gc();
-
-    /**
-     * Process any pending notifications from the runtime.
-     *
-     * When the runtime needs to report information to the service, it enqueues an event that
-     * represents the information to communicate. The reason that the information must be enqueued
-     * as an event is that the service may be busy processing when the event actually occurs, and
-     * there is no mechanism for interrupting that processing in order to deliver the event. This
-     * method exists to allow these events to be explicitly and synchronously processed. Otherwise,
-     * these events will be automatically processed by a service when it is not busy processing,
-     * such as when the current service invocation returns, calls {@link yield}, or even potentially
-     * when another service is invoked by this service.
-     *
-     * Runtime events include:
-     * * Timeout notification for the currently executing service invocation, although the runtime
-     *   may temporarily suppress these notifications within a {@link CriticalSection}.
-     * * {@code @soft} and {@code @weak} reference-cleared notifications.
-     *
-     * Runtime events do *not* include:
-     * * Invocations from other services (which are instead managed in the _backlog_)
-     * * Future completions from other services (which are also managed in the _backlog_)
-     *
-     * This method is intended primarily to be used from within the service, so that these pending
-     * events can be explicitly dispatched, even though the code that is currently running within
-     * the service is otherwise uninterruptable.
-     */
-    Void dispatchRuntimeEvents();
 
     /**
      * Attempt to terminate the Service gracefully by asking it to shut down itself.
@@ -266,7 +255,7 @@ interface Service(String? serviceName)
      *
      * Exceptions raised by the notification function are considered _unhandled_.
      */
-    Void registerShuttingDownNotification(function Void ());
+    Void registerShuttingDownNotification(function Void notify());
 
     /**
      * Register a function to invoke when an exception occurs that cannot be propagated to a caller,
@@ -275,5 +264,5 @@ interface Service(String? serviceName)
      *
      * Exceptions raised by the notification function are ignored and lost by the runtime.
      */
-    Void registerUnhandledExceptionNotification(function Void (Exception));
+    Void registerUnhandledExceptionNotification(function Void notify(Exception));
     }

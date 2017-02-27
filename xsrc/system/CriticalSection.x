@@ -7,8 +7,8 @@
  * The CriticalSection mechanism is a cooperative mechanism, and is not intended to be used as a
  * strict arbiter of reentrancy. Rather, it is intended for uses in which reducing concurrency and
  * interruption is preferable to the potential side effects of unexpected state manipulation; by
- * preventing reentrancy, the CriticalSection mechanism prevents opportunities for unexpected state
- * change.
+ * controlling reentrancy policy, the CriticalSection mechanism prevents opportunities for
+ * unexpected state change.
  *
  * The CriticalSection is stored on the current service and exposed as {@link
  * Service.criticalSection}. When a new CriticalSection is created, it automatically registers
@@ -40,7 +40,7 @@
  * The CriticalSection also keeps track of when it began ({@link startTime}), and thus its {@link
  * duration}, as a potential aid to both the developer and the runtime.
  */
-const CriticalSection(Service.Reentrancy reentrancy)
+const CriticalSection
     {
     construct CriticalSection(Service.Reentrancy reentrancy = Forbidden)
         {

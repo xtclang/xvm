@@ -16,7 +16,7 @@
  * timeout is created, it automatically registers itself with the current service using the {@link
  * Service.registerTimeout} method. Employing either a {@code using} or {@code try}-with-resources
  * block will automatically unregister the timeout at the conclusion of the block, causing all
- * of the potentially-asynchronous service invocations that occurred during the block to be infected
+ * of the potentially-asynchronous service invocations that occurred within the block to be infected
  * by the timeout. When the timeout unregisters itself, it re-registers whatever previous timeout it
  * replaced (if any).
  *
@@ -198,7 +198,7 @@ const Timeout
             {
             // the reason that the timeout checks whether it is registered instead of if it is
             // active is that it is possible that a downstream Timeout was not properly closed,
-            // e.g. by failing to use a "using" or "try"-with-resources construction
+            // e.g. by failing to use a "using" or "try"-with-resources construct
             this:service.registerTimeout(previousTimeout);
             }
         }
