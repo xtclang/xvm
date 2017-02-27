@@ -1,0 +1,205 @@
+/**
+ * A Timeout is used to constrain the wall-clock time limit for calls made to other services
+ * from this service. Specifically, once a timeout is put in place, all service invocations that
+ * originate from this service will carry the timeout, such that those service invocations will
+ * need to complete within the remainder of that timeout, or risk a TimeoutException being raised.
+ *
+ * The Timeout mechanism is a cooperative mechanism, and is not intended to be used as a strict
+ * resource management mechanism. Rather, it is intended for uses in which returning with a bad
+ * answer (or an exception) is preferable to not returning at all. Generally, timeouts are useful
+ * for user-interactive systems, in which failing to respond within a reasonable period of time is
+ * unacceptable, and for systems that need to assume the worst if an external process -- such as a
+ * persistent storage system or network communication with a remote system -- takes an unexpectedly
+ * long period of time.
+ *
+ * The timeout is stored on the current service and exposed as {@link Service.timeout}. When a new
+ * timeout is created, it automatically registers itself with the current service using the {@link
+ * Service.registerTimeout} method. Employing either a {@code using} or {@code try}-with-resources
+ * block will automatically unregister the timeout at the conclusion of the block, causing all
+ * of the potentially-asynchronous service invocations that occurred during the block to be infected
+ * by the timeout. When the timeout unregisters itself, it re-registers whatever previous timeout it
+ * replaced (if any).
+ *
+ * Timeouts _nest_. When a new timeout is created, it configures itself to use no more time than
+ * remains on the current timeout. This allows the developer to create a new timeout without
+ * concern that it is violating an existing timeout. In the following example, two different
+ * time-outs (1 second and 500 milli-seconds) are used, but if there is less than 1 second remaining
+ * on the current timeout for the current service, then the timeouts in the example will be reduced
+ * in order to fit within that existing timeout:
+ *
+ *   // to obtain asynchronous results from other services, use future references for the return
+ *   // values from methods on those services
+ *   @future Body body;
+ *   @future Ad   ad1;
+ *   @future Ad   ad2;
+ *
+ *   // async request for the page body, but don't wait more than 1000ms for it
+ *   using (new Timeout(Duration:"1s"))
+ *       {
+ *       body = contentSvc.genBody();
+ *
+ *       // async request for two advertisements, but don't wait more than 500ms for either
+ *       using (new Timeout(Duration:"500ms"))
+ *           {
+ *           ad1 = adSvc1.selectAd();
+ *           ad2 = adSvc2.selectAd();
+ *           }
+ *       }
+ *
+ *   // handle time-outs and other exceptions using some default content
+ *   ad1  = &ad1.handle(e -> blankAd);
+ *   ad2  = &ad2.handle(e -> blankAd);
+ *   body = &body.handle(e -> errPage(e));
+ *
+ *   // an attempt to dereference a future will automatically wait for the future to complete;
+ *   // at this point, wait for the three separate results, and use them to render the page, but
+ *   // regardless, try not to take more than 1000ms total for all three parts to complete
+ *   return renderPage(body, ad1, ad2);
+ *
+ * If a service needs to begin a long-running task that is independent of the timeout that the
+ * service is currently constrained by, construct an _independent_ timeout:
+ *
+ *   using (new Timeout(Duration:"5h", true))
+ *       {
+ *       new LongRunningReports().begin();
+ *       }
+ */
+const Timeout
+    {
+    construct Timeout(Duration remainingTime, Boolean independent = false)
+        {
+        assert remainingTime > Duration:"0s";
+
+        // store off the previous timeout; it will be replaced by this timeout, and restored when
+        // this timeout is closed
+        previousTimeout = this:service.timeout;
+
+        // calculate the duration of this Timeout
+        duration = remainingTime;
+        if (!independent && previousTimeout?)
+            {
+            // because the timeout is not independent, it must respect the current outgoing timeout
+            // that it is replacing
+            duration = duration.atMost(previousTimeout.remainingTime);
+            }
+
+        startTime = runtimeClock.time;
+        deadline  = startTime + duration;
+        }
+    finally
+        {
+        this:service.registerTimeout(this);
+        }
+
+    /**
+     * The clock selected by the runtime to manage timeouts.
+     */
+    @inject Clock runtimeClock;
+
+    /**
+     * The {@code Timeout} that this timeout replaced, if any.
+     */
+    Timeout? previousTimeout;
+
+    /**
+     * True indicates that this timeout is independent of any previous timeout. By using an
+     * independent timeout, the new timeout may have a duration greater than the timeout that
+     * governs this service.
+     */
+    Boolean independent;
+
+    /**
+     * The time at which this Timeout began.
+     */
+    Time startTime;
+
+    /**
+     * The duration of this Timeout.
+     */
+    Duration duration;
+
+    /**
+     * The time according to the {@link runtimeClock} at which this time timeout is expired.
+     */
+    Time deadline;
+
+    /**
+     * Determine the amount of remaining time on this timeout. This value decreases until it
+     * reaches zero.
+     */
+    Duration remainingTime.get()
+        {
+        return (deadline - runtimeClock.time).atLeast(Duration:"0s");
+        }
+
+    /**
+     * Determine whether this timeout has timed out.
+     */
+    Boolean expired.get()
+        {
+        return runtimeClock.time > deadline;
+        }
+
+    /**
+     * Determine whether this timeout is the active timeout for the current service.
+     */
+    Boolean active.get()
+        {
+        return this:service.timeout == this;
+        }
+
+    /**
+     * Determine whether this timeout is registered with the current service, regardless of whether
+     * it is the currently-active timeout.
+     */
+    Boolean registered.get()
+        {
+        Timeout? registered = this:service.timeout;
+        while (registered?)
+            {
+            if (this == registered)
+                {
+                return true;
+                }
+
+            registered = registered.previousTimeout;
+            }
+
+        return false;
+        }
+
+    /**
+     * Check to see if the timeout has expired, and if it has, invoke its expiration.
+     */
+    Void checkExpiry()
+        {
+        if (expired)
+            {
+            onExpiry();
+            }
+        }
+
+    /**
+     * This method is invoked when the timeout determines that it has expired. The default behavior
+     * of this method is to throw a TimeoutException.
+     */
+    protected Void onExpiry()
+        {
+        throw new TimeoutException(this);
+        }
+
+    /**
+     * Close the timeout. This method is invoked automatically by the {@code using} or {@code try}
+     * with-resources keywords.
+     */
+    Void close()
+        {
+        if (registered)
+            {
+            // the reason that the timeout checks whether it is registered instead of if it is
+            // active is that it is possible that a downstream Timeout was not properly closed,
+            // e.g. by failing to use a "using" or "try"-with-resources construction
+            this:service.registerTimeout(previousTimeout);
+            }
+        }
+    }

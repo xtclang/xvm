@@ -19,8 +19,8 @@
  *   collection (GC) of the unreachable objects within that dynamic memory. As a benefit, a service
  *   provides real-time information related to its memory foot-print.
  * * A service has a natural surface boundary. Calls originating within another service must enter
- *   that service boundary, and calls from a service to another service must exit that service
- *   boundary. Only two specific types of objects can permeate the boundary: Immutable objects and
+ *   this service boundary, and calls from this service to another service must exit this service
+ *   boundary. Only two specific types of objects can permeate the boundary: Immutable objects, and
  *   services. What this means in practice is that all parameters to an invocation of a service
  *   method, and all return values from the same, must either be service references or references to
  *   immutable objects.
@@ -30,7 +30,9 @@
  *   Similarly, when the proxy is invoked, the invocation is treated as if it were an invocation
  *   against the service itself. Lastly, if the proxy is passed back _as a parameter_ to the service
  *   from whence it originated, the proxy is automatically transformed into a reference to the
- *   original function (i.e. the proxy is _unwrapped_).
+ *   original function (i.e. the proxy is _unwrapped_). It is also possible that a function is also
+ *   an immutable (for example, if all of its captures are immutable), in which case the function
+ *   _may_ be passed as an immutable and not as a proxy back to the function in the calling service.
  * * Immutable objects passed through the surface boundary may be transferred either as immutable
  *   objects, or under certain circumstances they may be passed by proxy. If passed as an immutable
  *   object, and if the object is located within the memory managed by the calling service, then a
@@ -52,59 +54,14 @@
  *   other services still hold proxy references to the service, subsequent invocation through those
  *   proxies will result in an exception.
  */
-interface Service
+interface Service(String? serviceName)
     {
     /**
-     * Request a copy of the service proxy that has a timeout.
-     *
-     * Note that the actual timeout used by invocations via the proxy will be less than the
-     * specified timeout if there is currently a timeout for this service and this service's
-     * remaining timeout is less than the requested timeout.
-     *
-     * This method must be invoked via a proxy, and *not* from _this_ service.
+     * The name assigned to the service when it was created. If no name is provided, the name
+     * defaults to the name of the service class. This property is intended as a means to help
+     * diagnose faults, and to provide runtime manageability information.
      */
-    Service withTimeout(Duration timeout)
-        {
-        assert this != this:service;
-        return super(timeout);
-        }
-
-    /**
-     * Request a copy of the service proxy that has a timeout that is completely independent of any
-     * pre-existing timeout.
-     *
-     * This allows a call to be made to the other service that will be bound neither by the timeout
-     * previously configured for that service, nor bound by the remaining timeout that exists for
-     * this service. Specifically, it allows a long-running asynchronous process to be begun that
-     * may necessarily exceed the time-out that is currently being enforced.
-     *
-     * This method must be invoked via a proxy, and *not* from _this_ service.
-     */
-    Service withIndependentTimeout(Duration timeout)
-        {
-        assert this != this:service;
-        return super(timeout);
-        }
-
-    /**
-     * The _remaining_ time that the service has for its current execution based on the timeout (if
-     * any) used to invoke the service.
-     */
-    @ro @atomic Duration remainingTime;
-
-    /**
-     * The wall-clock uptime for the service.
-     */
-    @ro @atomic Duration upTime;
-
-    /**
-     * The amount of time that this service has consumed the CPU.
-     *
-     * In some cases, a service may not track CPU time if the runtime calculates that the cost of
-     * tracking the CPU time is too significant to accept in relation to the service's actual CPU
-     * time.
-     */
-    @ro @atomic Duration cpuTime;
+    @ro @atomic String serviceName;
 
     /**
      * A service exposes its status through a status indicator:
@@ -121,6 +78,67 @@ interface Service
      * Determine if the service is still running.
      */
     @ro @atomic StatusIndicator statusIndicator;
+
+    /**
+     * The current CriticalSection for the service, if any.
+     */
+    @ro @atomic CriticalSection? criticalSection;
+
+    /**
+     * Optional re-entrancy settings for a service:
+     *
+     * * Prioritized (default): general re-entrancy is permitted, but priority is given to the
+     *   conceptual thread(s) of execution that have already entered the service.
+     * * Open: general re-entrancy is permitted, and requests are processed in a FIFO fashion.
+     * * Exclusive: re-entrancy is only permitted for requests originating from the conceptual
+     *   thread of execution that has already entered the service (service A invoked service B
+     *   invokes service A).
+     * * Forbidden: absolutely no re-entrancy is allowed; a request must complete and return before
+     *   a new request can begin. This setting is dangerous because of its ability to easily create
+     *   deadlock situations, which will result in a DeadlockException.
+     */
+    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden};
+
+    /**
+     * The re-entrancy setting for this service.
+     *
+     * This method is intended primarily to be used from within the service, so that the running
+     * code can control the conditions on which it can be arbitrarily interleaved with other threads
+     * of execution in the event that an opportunity arrises to process requests from the service's
+     * backlog.
+     *
+     * An attempt to set this from outside of the service when the service is processing will likely
+     * result in an exception for the caller.
+     */
+    @atomic Reentrancy reentrancy;
+
+    /**
+     * The Timeout that was used when the service was invoked, if any. This is the timeout that this
+     * service is subject to.
+     */
+    @ro @atomic Timeout? incomingTimeout;
+
+    /**
+     * The current Timeout that will be used by the service when it invokes other services.
+     *
+     * By default, this is the same as the incoming Timeout, but can be overridden by creating a new
+     * Timeout.
+     */
+    @ro @atomic Timeout? timeout;
+
+    /**
+     * The wall-clock uptime for the service.
+     */
+    @ro @atomic Duration upTime;
+
+    /**
+     * The amount of time that this service has consumed the CPU.
+     *
+     * In some cases, a service may not track CPU time if the runtime calculates that the cost of
+     * tracking the CPU time is too significant to accept in relation to the service's actual CPU
+     * time.
+     */
+    @ro @atomic Duration cpuTime;
 
     /**
      * Determine if there is currently any _visible_ contention for the service. A service is
@@ -145,94 +163,31 @@ interface Service
     @ro @atomic Int backlogDepth;
 
     /**
-     * A self-notification that occurs when the service is started.
+     * Allow the runtime to process pending runtime notifications for this service, or other service
+     * requests in the service's backlog -- if the setting of {@link reentrancy} allows it.
      *
-     * This method must not be invoked from another service (i.e. via a proxy).
-     */
-    protected Void onStarted()
-        {
-        assert this == this:service;
-        }
-
-    /**
-     * A self-notification that occurs when the service is being shut down cleanly.
-     *
-     * This method must not be invoked from another service (i.e. via a proxy).
-     */
-    protected Void onShuttingDown()
-        {
-        assert this == this:service;
-        }
-
-    /**
-     * A self-notification that occurs when the service encounters an exception that was not caught
-     * by user code. This notification is provided primarily for logging or debugging purposes; the
-     * communication of the exception back through the proxy is managed independently.
-     *
-     * This method must not be invoked from another service (i.e. via a proxy).
-     */
-    protected Void onUnhandledException(Exception e)
-        {
-        assert this == this:service;
-        }
-
-    /**
-     * Optional re-entrancy settings for a service:
-     *
-     * * Prioritized (default): general re-entrancy is permitted, but priority is given to the
-     *   conceptual thread(s) of execution that have already entered the service.
-     * * Open: general re-entrancy is permitted, and requests are processed in a FIFO fashion.
-     * * Exclusive: re-entrancy is only permitted for requests originating from the conceptual
-     *   thread of execution that has already entered the service (service A invoked service B
-     *   invokes service A).
-     * * Forbidden: absolutely no re-entrancy is allowed; a request must complete and return before
-     *   a new request can begin. This setting is dangerous because of its ability to easily create
-     *   deadlock situations, which will result in a DeadlockException.
-     */
-    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden};
-
-    /**
-     * The re-entrancy setting for this service.
-     *
-     * This property can only be modified from within this service (i.e. _not_ via a proxy).
-     */
-    @atomic Reentrancy reentrant
-        {
-        Void set(Reentrancy reentrant)
-            {
-            assert this == this:service;
-            super(reentrant);
-            }
-        }
-
-    /**
-     * Allow execution of a pending item in the service's backlog, if any.
-     *
-     * A caller should generally not yield in a loop or for an extended period of time in order to
+     * A caller should generally *not* yield in a loop or for an extended period of time in order to
      * wait for some event to occur; instead, the caller should use a {@link FutureRef} to request
      * a continuation on completion of a call to another service, or a {@link Timer} to request a
-     * continuation at a later time.
+     * continuation at some specified later time.
      *
-     * If reentrant is set to Forbidden, this has no effect.
-     *
-     * This method must not be called from another service (i.e. via a proxy).
+     * Limitations:
+     * * {@code yield} has no effect on the backlog if reentrancy is set to Forbidden;
+     * * {@code yield} has no effect if it is invoked from outside of the service.
      */
-    Void yield()
-        {
-        assert this == this:service;
-        super();
-        }
+    Void yield();
 
     /**
      * Add a function-to-invoke to the service's backlog.
      *
-     * This method must not be called from another service (i.e. via a proxy).
+     * This method is intended primarily to be used from within the service, so that the running
+     * code can defer some separate unit of work until the existing backlog is processed. With
+     * respect to calls from outside of the service, all such calls are treated similarly _as if_
+     * they were queued in the backlog via this method.
+     *
+     * Exceptions raised by the {@code doLater} function are considered _unhandled_.
      */
-    Void invokeLater(function Void () doLater)
-        {
-        assert this == this:service;
-        super(doLater);
-        }
+    Void invokeLater(function Void () doLater);
 
     /**
      * This is the memory footprint of the service, including memory that might not be being fully
@@ -251,24 +206,29 @@ interface Service
     Void gc();
 
     /**
+     * Process any pending notifications from the runtime.
+     *
      * When the runtime needs to report information to the service, it enqueues an event that
      * represents the information to communicate. The reason that the information must be enqueued
      * as an event is that the service may be busy processing when the event actually occurs, and
-     * there is no mechanism for interrupting that processing in order to deliver the event. These
-     * events will be automatically processed by a service when it is not busy processing, or the
-     * events can be processed on demand by invoking the {@link dispatchRuntimeEvents} method from
-     * either from within or from outside of the service.
+     * there is no mechanism for interrupting that processing in order to deliver the event. This
+     * method exists to allow these events to be explicitly and synchronously processed. Otherwise,
+     * these events will be automatically processed by a service when it is not busy processing,
+     * such as when the current service invocation returns, calls {@link yield}, or even potentially
+     * when another service is invoked by this service.
      *
      * Runtime events include:
-     * * {@code @soft} and {@code @weak} reference-cleared notifications
-     */
-    @ro Boolean pendingRuntimeEvents;
-
-    /**
-     * Process any pending notifications from the runtime.
+     * * Timeout notification for the currently executing service invocation, although the runtime
+     *   may temporarily suppress these notifications within a {@link CriticalSection}.
+     * * {@code @soft} and {@code @weak} reference-cleared notifications.
      *
-     * Runtime events include:
-     * * {@code @soft} and {@code @weak} reference-cleared notifications
+     * Runtime events do *not* include:
+     * * Invocations from other services (which are instead managed in the _backlog_)
+     * * Future completions from other services (which are also managed in the _backlog_)
+     *
+     * This method is intended primarily to be used from within the service, so that these pending
+     * events can be explicitly dispatched, even though the code that is currently running within
+     * the service is otherwise uninterruptable.
      */
     Void dispatchRuntimeEvents();
 
@@ -278,14 +238,42 @@ interface Service
      * can shut itself down, or the service can be shut down by the runtime when the
      * service is no longer reachable.
      *
-     * This method can be invoked from within the service, or via a proxy to the service.
+     * This method can be invoked from either inside or outside of the service.
      */
     Void shutdown();
 
     /**
      * Forcibly terminate the Service without giving it a chance to shut down gracefully.
      *
-     * This method can be invoked from within the service, or via a proxy to the service.
+     * This method can be invoked from either inside or outside of the service.
      */
     Void kill();
+
+    /**
+     * Register a Timeout for the service, replacing any previously registered Timeout.
+     */
+    Void registerTimeout(Timeout? timeout);
+
+    /**
+     * Register a CriticalSection for the service, replacing any previously registered
+     * CriticalSection.
+     */
+    Void registerCriticalSection(CriticalSection? criticalSection);
+
+    /**
+     * Register a function to invoke when the service is shutting down. This notification is not
+     * invoked if the service is killed.
+     *
+     * Exceptions raised by the notification function are considered _unhandled_.
+     */
+    Void registerShuttingDownNotification(function Void ());
+
+    /**
+     * Register a function to invoke when an exception occurs that cannot be propagated to a caller,
+     * and thus the information in the exception would be lost. This notification is provided
+     * primarily for logging or debugging purposes.
+     *
+     * Exceptions raised by the notification function are ignored and lost by the runtime.
+     */
+    Void registerUnhandledExceptionNotification(function Void (Exception));
     }

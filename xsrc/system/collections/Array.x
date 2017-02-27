@@ -18,7 +18,7 @@ class Array<ElementType>
         this.capacity = capacity;
         }
 
-    construct (Int capacity, function ElementType(Int) supply)
+    construct Array(Int capacity, function ElementType(Int) supply)
         {
         construct Array(capacity);
 

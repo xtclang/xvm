@@ -54,12 +54,12 @@ mixin FutureRef<RefType>
      * * Error: The future completed because the operation threw an exception (which may indicate
      *   that the operation timed out).
      */
-    protected enum Completion {Pending, Result, Error};
+    enum Completion {Pending, Result, Error};
 
     /**
      * Tracks whether and how the future has completed.
      */
-    protected Completion completion = Pending;
+    public/private Completion completion = Pending;
 
     /**
      * True if the value of the future can be set.
@@ -79,7 +79,7 @@ mixin FutureRef<RefType>
     /**
      * The future that is chained to this future, that this future sends its completion result to.
      */
-    protected NotifyDependent? notify = null;
+    private NotifyDependent? notify = null;
 
     // ----- Ref interface -------------------------------------------------------------------------
 
@@ -103,10 +103,7 @@ mixin FutureRef<RefType>
     @Override
     RefType get()
         {
-        while (completion == Pending)
-            {
-            this:service.yield();
-            }
+        waitForCompletion();
 
         if (completion == Error)
             {
@@ -331,6 +328,19 @@ mixin FutureRef<RefType>
     // ----- completion handling -------------------------------------------------------------------
 
     /**
+     * Wait for the completion of the future.
+     */
+    FutureRef<RefType> waitForCompletion()
+        {
+        while (completion == Pending)
+            {
+            this:service.yield();
+            }
+
+        return this;
+        }
+
+    /**
      * Cause the future to complete successfully with a result, if the future has not already
      * completed.
      */
@@ -364,6 +374,26 @@ mixin FutureRef<RefType>
             failure    = e;
             thisCompleted(null, e);
             }
+        }
+
+    /**
+     * For futures that complete with an exception, this allows a caller to obtain that exception.
+     *
+     * An exceptional completion causes both the {@link peek} and {@link get} methods to re-throw
+     * the exception that the future completed with. This method provides a means to obtain that
+     * exception without having to {@code catch} it.
+     *
+     * In much the same way that {@link peek} corresponds to {@link complete}, this {@code
+     * peekException} method corresponds to {@link completeExceptionally}.
+     */
+    conditional Exception peekException()
+        {
+        if (completion == Error)
+            {
+            return true, (Exception) failure;
+            }
+
+        return false;
         }
 
     /**
@@ -465,6 +495,8 @@ mixin FutureRef<RefType>
         {
         construct MultiCompleter(NotifyDependent first, NotifyDependent second)
             {
+            // while "notify" is a private property of the super-class, all properties with storage
+            // (i.e. fields in the "this" struct) are visible at construction
             this.notify  = first;
             this.notify2 = second;
             }
@@ -475,7 +507,7 @@ mixin FutureRef<RefType>
          * in order to emulate a linked list of notifications (i.e. notifications are always
          * appended to the end of the list).
          */
-        protected NotifyDependent? notify2;
+        private NotifyDependent? notify2;
 
         @Override
         Void chain(NotifyDependent chain)

@@ -1961,4 +1961,71 @@ s.makeString().transform(s -> new IntLiteral(s).to<Int>()).passTo(countSlowly);
     interface Map<KeyType, ValueType>
             extends Indexed<KeyType>
 
-// -
+// - equality
+
+List -> AbstractList -> {ArrayList, LinkedList}
+
+List l1 = new ArrayList() ...;
+List l2 = new LinkedList() ...;
+if (l1 == l2)       // calls xtc.ecstasy.org:collections/List/equals
+    {
+    //...
+    }
+
+// mixins
+
+List + Serializable value = new List(x) + Serializable(y);
+
+@Serializable(y) List value = new List(x);
+
+typedef List + Serializable T;
+T value = new T(x); // not sure how to construct Serializable with params
+
+class MyList(Int x, Int y)
+    implements List(x)
+    incorporates Serializable(y)
+
+// timeout
+
+try (new Timeout(Duration:"1s"))
+    {
+    try (new Timeout(Duration:"500ms"))
+        {
+        // ...
+        }
+    catch (TimeoutException e)
+        {
+        // ...
+        }
+    // ...
+    }
+
+service:
+-> in flight requests
+    -> request
+-> busy (which request?)
+-> contended or not / queue length
+    -> request
+-> is it in a critical section? how critical?
+
+service-request
+-> is someone waiting?
+-> "thread" identity / back-call-stack info
+-> timeout info
+    -> incoming time-out (duration remaining)
+    -> outgoing time-out (timeout object?)
+
+service-stack:
+-> # of outstanding proxy invocations (futures)
+    -> future
+-> # of frames
+    -> code (method / function body) identifier
+    -> location within the code
+    -> registers
+
+// enter critical section
+using (new CriticalSection())
+    {
+    // ...
+    }
+// exit critical section

@@ -38,6 +38,29 @@ module ecstasy.xtclang.org
     typedef annotations.WeakRef     weak;
 
     /**
+     * A DeadlockException is raised by the runtime in response to a situation in which re-entrancy
+     * to a service is necessary, but for one of several reasons cannot be accomplished.
+     */
+    const DeadlockException(String? text, Exception? cause)
+            extends Exception(text, cause)
+        {
+        /**
+         * The stack traces of the various other threads-of-execution contributing to the deadlock,
+         * if any.
+         */
+        @inject Iterable<StackFrame>[] stackTraces;
+        };
+
+    /**
+     * A TimeoutException is raised by the runtime in response to a thread-of-execution exceeding a
+     * timeout (wall clock time) limitation within which it was running.
+     */
+    const TimeoutException(Timeout timeout, String? text, Exception? cause)
+            extends Exception(text, cause);
+        {
+        }
+
+    /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for
      * source code, and the aggregate unit for compiled code distribution and deployment.
      * <p>
