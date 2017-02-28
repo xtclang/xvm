@@ -9,7 +9,7 @@ interface Enum
     /**
      * The Enumeration that contains this Enum value.
      */
-    @ro Enumeration enumeration
+    @ro Enumeration enumeration.get()
         {
         Class+Enumeration clz = (Class+Enumeration) meta.class;
         if (clz.parent instanceof Class+Enumeration && clz.extends(clz.parent))
@@ -27,7 +27,7 @@ interface Enum
     /**
      * The unique name (within the Enumeration) of this Enum value.
      */
-    @ro String name
+    @ro String name.get()
         {
         return meta.class.name;
         }
@@ -39,7 +39,7 @@ interface Enum
         {
         if (ordinal + 1 < enumeration.count)
             {
-            return enumeration.values[ordinal + 1];
+            return true, enumeration.values[ordinal + 1];
             }
 
         return false;
@@ -52,7 +52,7 @@ interface Enum
         {
         if (ordinal > 0)
             {
-            return enumeration.values[ordinal - 1];
+            return true, enumeration.values[ordinal - 1];
             }
 
         return false;
@@ -63,7 +63,7 @@ interface Enum
      */
     Enum atMost(Enum that)
         {
-        return this < this ? that : this;
+        return this < that ? this : that;
         }
 
     /**
@@ -71,7 +71,7 @@ interface Enum
      */
     Enum atLeast(Enum that)
         {
-        return that > this ? that : this;
+        return this > that ? this : that;
         }
 
     /**

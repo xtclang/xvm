@@ -1,6 +1,11 @@
-public interface Class<ClassType>
+interface Class<ClassType>
     {
-    Class | Method | Function | Property | ... parent
+    Class | Method | Function | Property | ... ? parent
+
+    /**
+     * Simple (unqualified) name.
+     */
+    String name;
 
     /**
      * Obtain the public interface of the class.

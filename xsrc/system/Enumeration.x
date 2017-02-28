@@ -1,5 +1,5 @@
 /**
- * An Enumeration is class of singleton Enum value objects.
+ * An Enumeration is a class of singleton Enum value objects.
  *
  * Consider the following examples:
  * * {@link Nullable.Null} is a singleton instance Enum value, of the class (or a subclass of)
@@ -45,7 +45,7 @@
  *   its Enum values are instances of the class of Enumeration values (or a subclass thereof), and
  *   no class can extend the class of any Enum.
  */
- @auto mixin Enumeration<EnumType implements Enum>
+@auto mixin Enumeration<EnumType implements Enum>
         into Class<EnumType>
     {
     /**
@@ -77,7 +77,8 @@
         }
 
     /**
-     * The name of the Enumeration. These correspond in their positions to the {@link values}.
+     * The names of the Enum values in the Enumeration. These correspond in their positions to the
+     * {@link values}.
      *
      * Consider the following examples:
      * * {"Null"} for {@link Nullable}
@@ -99,7 +100,7 @@
      */
     @lazy EnumType[] values.calc()
         {
-        return byName.values.to<String[]>();
+        return byName.values.to<EnumType[]>();
         }
 
     /**
@@ -112,7 +113,6 @@
      */
     @lazy Map<String, EnumType> byName.calc()
         {
-        assert !singleton;
         assert !(parent instanceof Class+Enumeration && this.extends(parent));
 
         // the Enumeration class contains singleton Enum class/values; collect those values into a
@@ -120,11 +120,12 @@
         ListMap<String, EnumType> map = new ListMap<>()
         for (Class clz : classes.values)
             {
-            if (clz.extends(this) && clz.isConst && clz instanceof Class<EnumType> && EnumType instance : clz.singleton)
+            if (clz.extends(this) && clz.isConst && clz instanceof Class<EnumType>
+                    && (EnumType instance : clz.singleton))
                 {
                 assert instance.ordinal == map.size;
                 assert !map.contains(clz.name);
-                map.put(clz.name, clz.instance);
+                map.put(clz.name, instance);
                 }
             }
 

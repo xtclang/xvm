@@ -19,11 +19,10 @@ interface Referent
      * by the members defined by the object's class. The requested type must be a subset of the
      * referent's {@link ActualType}.
      * <p>
-     * This method will result in a narrower reference that only contains the methods in the
-     * specified type, stripping the runtime reference of any methods that are not present in the
-     * specified type.
+     * This method will result in a reference that only contains the members in the specified type,
+     * stripping the runtime reference of any members that are not present in the specified type.
      */
-    <ToType> ToType narrowTo(Type ToType);
+    <AsType> AsType maskAs(Type AsType);
 
     /**
      * Obtain a new reference to the referent such that the reference contains the methods and
@@ -32,11 +31,11 @@ interface Referent
      * referent's {@link ActualType}.
      * <p>
      * For a reference to an object from the same module as the caller, this method will return a
-     * widened reference that contains the methods in the specified type. For a reference to an
-     * object from a different module, this method cannot produce a wider reference, and will return
-     * a conditional false.
+     * reference that contains the members in the specified type. For a reference to an object from
+     * a different module, this method cannot produce an original reference, and will result in the
+     * conditional false.
      */
-    <ToType> conditional ToType widenTo(Type ToType);
+    <AsType> conditional AsType revealAs(Type AsType);
 
     /**
      * Determine if the referent is an instance of the specified type.

@@ -2087,19 +2087,31 @@ if (Boolean b : False.next())        // consider a "prev" as well?
 
 // - meta-model for classes and objects
 
-Class           Object
-ConstClass?     Const
-EnumClass?      Enum
-ServiceClass    Service
-Property        Ref     ??
-MethodClass?    Method
-FunctionClass?  Function
-PackageClass?   Package
-ModuleClass?    Module
+Class           Object(1)
+                Const
+Enumeration(2)  Enum
+                Service
+                Ref
+                Method
+                Function
+                Package
+                Module
+(1) class
+(2) mixin
+
 
 static Void foo() {...}
 function Void () f = foo;
-Function<Tuple<Void>, Tuple<>> f = foo;
+Function<Void, Void> f = foo;
+
+function Void () f = () -> print "hello world";
+
+Int i = 5;
+String s = "world";
+function Void () f = () -> print "hello " + s;   // not actually how it compiles ...
+// function Void (String s) fHidden = s -> print "hello " + s;
+// function Void () f = fHidden.bind(0, s);     // TODO figure out API for Function
+
 
 Class
   Class   parentClass
@@ -2124,3 +2136,71 @@ ultimately the question is: what is the class of a function?
 - doc
 - file name
 - starting line of code / length in lines of code
+
+
+class Class<Nullable> incorporates Enumeration ...
+
+abstract class Nullable
+        implements Enum
+    {
+    final Int ordinal;
+    Nullable(Int i)
+        {
+        ordinal = i;
+        }
+    static final Nullable Null = new Nullable(0) {};
+    }
+
+abstract class Boolean
+        implements Enum
+    {
+    static final Boolean False = new Boolean(0) {};
+    static final Boolean True  = new Boolean(1) {};
+    }
+
+// --- asOnly example
+
+interface FileSystem
+    {
+    Binary read(String file);
+    Void write(String file, Binary contents);
+    }
+
+service SuperDuperFileSystem(UnsafeIoObject unsafeIoObject)
+        implements FileSystem
+    {
+    Void formatDisk() {...}
+    Void eraseDrive() {...}
+    Void eraseBackups() {...}
+    Void trashHeads() {...}
+    Binary read(String file) {...}
+    Void write(String file, Binary contents) {...}
+    }
+
+Void injectStuff(Container container)
+    {
+    if (container.needs(FileSystem))
+        {
+        SuperDuperFileSystem fs = new SuperDuperFileSystem(unsafeIoObject);
+        container.inject(&fs.asOnly(FileSystem));
+        }
+    if (container.needs(function Void (FileSystem)))
+        {
+        container.inject(Foo);
+        }
+    }
+
+Void foo(FileSystem fs)
+    {
+    fs.formatDisk();                                        // compiler error
+    assert fs instanceof SuperDuperFileSystem;              // runtime exception
+    SuperDuperFileSystem sdfs = (SuperDuperFileSystem) fs;  // runtime exception
+
+    // hey, the container called us back! passing us a FileSystem ... is it the one that we passed in?
+    if (SuperDuperFileSystem sdfs : &fs.cast(SuperDuperFileSystem))
+        {
+        sdfs.formatDisk();      // ok
+        }
+    }
+
+// later on the container calls us back on some callback function
