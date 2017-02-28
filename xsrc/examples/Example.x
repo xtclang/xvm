@@ -2029,3 +2029,98 @@ using (new CriticalSection())
     // ...
     }
 // exit critical section
+
+// ----- elvis (has entered the building)
+
+a?.b();
+if (a != null) { a.b(); }
+
+x = a?.b?.c?.d : e;
+// translates to:
+x = a != null && a.b != null && a.b.c != null ? a.b.c.d : e;
+
+if (a?) {..}
+// translates to:
+if (a != null) {..}
+
+x = a.b ?: c;
+// translates to:
+x = a.b != null ? a.b : c;
+
+x = a?.b ?: c;
+// translates to:
+x = a != null && a.b != null ? a.b : c;
+
+
+// -- enums
+
+interface Enum
+        extends Const
+    {
+//    @ro int Count;
+//    @ro String[] Names;
+//    @ro T[] Values;
+//    @ro Map<String, T> NameTable;
+
+    @ro Enumeration enumeration;
+
+    @ro int Ordinal;
+    @ro String Name;
+
+    // TODO some sort of "next / previous" that allows iteration over the individual elements?
+    }
+
+// for the "class" of enums:
+Int                 numbools  = Boolean.count;      // 2
+String[]            boolnames = Boolean.names;      // "False", "True"
+Boolean[]           boolvals  = Boolean.values;     // False, True
+byOrdinal
+Map<String,Boolean> mapbools  = Boolean.byName;     // Map:{"False"=False, "True"=True}
+
+// for an instance of an enum:
+Int     n = False.ordinal;  // 0
+String  s = True.name;      // "True"
+if (Boolean b : False.next())        // consider a "prev" as well?
+    {
+    // b==True
+    }
+
+// - meta-model for classes and objects
+
+Class           Object
+ConstClass?     Const
+EnumClass?      Enum
+ServiceClass    Service
+Property        Ref     ??
+MethodClass?    Method
+FunctionClass?  Function
+PackageClass?   Package
+ModuleClass?    Module
+
+static Void foo() {...}
+function Void () f = foo;
+Function<Tuple<Void>, Tuple<>> f = foo;
+
+Class
+  Class   parentClass
+  String  name
+  ...     whatisit???   // Module/Package/Class/Interface/Mixin/Trait/Const/Enum/Service
+  Boolean singleton     // Module/Package/Enum=true, Service/Const=true|false, others=false
+  Boolean constant      // Module/Package/Const/Enum=true, Service=false, others=???
+  ...     recipe        // composition-information
+
+ultimately the question is: what is the class of a function?
+- a property of T might be pretty straight-forward, since it is represented as a function returning a Ref<T>
+- the class of a function is something that is invocable
+  - possibly multiple ways, e.g. "Tuple invoke(Tuple)" as the most generic
+  - possibly (T1, T2) "invoke(T3, T4, T5)" (specific to the function)
+- also has code
+- might have source code
+- params
+  - type
+  - name
+  - default
+- return values
+- doc
+- file name
+- starting line of code / length in lines of code

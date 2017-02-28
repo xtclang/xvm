@@ -64,7 +64,19 @@ interface Ref<RefType>
     @ro Boolean assigned;
 
     /**
-     * TODO explain why this is important for @lazy, @future, @soft, @weak
+     * Conditionally dereference the reference to obtain the referent, iff the reference is
+     * assigned; otherwise return false.
+     *
+     * A small number of references cannot be blindly dereferenced without risking a runtime
+     * exception:
+     * * {@code @lazy} references ({@link annotations.LazyRef}) are allowed to be unassigned,
+     *   because they will lazily assign themselves on the first dereference attempt.
+     * * {@code @future} references ({@link annotations.FutureRef}) are allowed to be unassigned,
+     *   because they assigned only on completion of the future, and an attempt to dereference
+     *   before that point in time will block until that completion occurs.
+     * * {@code @soft} and {@code @weak} references ({@link annotations.SoftRef} and {@link
+     *   annotations.SoftRef}) are allowed to be unassigned, because the garbage collector is
+     *   allowed under specific conditions to clear the reference.
      */
     conditional RefType peek()
         {
@@ -100,19 +112,6 @@ interface Ref<RefType>
      * reference.)
      */
     @ro Type ActualType;
-
-    /**
-     * Transform the reference such that it contains the methods in the specified
-     * type.
-     * <p>
-     * For any reference, this method will narrow the reference so that it contains
-     * only the methods in the specified type. This strips the runtime reference of
-     * any methods that are not present in the specified type.
-     * <p>
-     * For a reference to an object from the same module as the caller, this method
-     * allows the reference to be widened as well.
-     */
-    @ro AsType as(Type AsType);
 
     /**
      * Reference equality is used to determine if two references are referring to

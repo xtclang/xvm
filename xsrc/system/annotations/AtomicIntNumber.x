@@ -5,6 +5,18 @@
 @auto mixin AtomicIntNumber<RefType>
         into AtomicRef<IntNumber>
     {
+    @op Void blindIncrement()
+        {
+        RefType oldValue = get();
+        while (oldValue : replaceFailed(oldValue, oldValue.increment())) {}
+        }
+
+    @op Void blindDecrement()
+        {
+        RefType oldValue = get();
+        while (oldValue : replaceFailed(oldValue, oldValue.decrement())) {}
+        }
+
     @op RefType preIncrement()
         {
         RefType oldValue = get();

@@ -17,7 +17,17 @@
  */
 module ecstasy.xtclang.org
     {
-    enum Nullable {Null};
+    /**
+     * The Nullable type is the only type that can contain the value Null.
+     *
+     * Nullable is an Enumeration whose only value is the singleton enum value {@code Null}.
+     */
+    enum Nullable {Null}
+
+    /**
+     * The Ordered enumeration describes the result of comparing two items for the prurpose of
+     * ordering.
+     */
     enum Ordered(String symbol) {Lesser("<"), Equal("="), Greater(">")}
 
     typedef Nullable.Null           null;

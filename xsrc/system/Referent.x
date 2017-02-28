@@ -14,23 +14,29 @@ interface Referent
     @ro Type ActualType;
 
     /**
+     * Obtain a new reference to the referent such that the reference contains only the methods and
+     * properties in the specified {@link Type}. The members of the requested type must be satisfied
+     * by the members defined by the object's class. The requested type must be a subset of the
+     * referent's {@link ActualType}.
+     * <p>
+     * This method will result in a narrower reference that only contains the methods in the
+     * specified type, stripping the runtime reference of any methods that are not present in the
+     * specified type.
+     */
+    <ToType> ToType narrowTo(Type ToType);
+
+    /**
      * Obtain a new reference to the referent such that the reference contains the methods and
      * properties in the specified {@link Type}. The members of the requested type must be satisfied
-     * by the members defined by the object's class.
+     * by the members defined by the object's class. The requested type may be a superset of the
+     * referent's {@link ActualType}.
      * <p>
-     * A caller from within the same module as the class of the referent can use this method to
-     * obtain a new reference to the referent, as long as the referent's class can satisfy the
-     * members of the requested type. In other words, the requested type can represent any
-     * combination of added and removed members, allowing an arbitrarily narrowed or widened to be
-     * requested.
-     * <p>
-     * A caller from outside of the module of the class of the referent can only use this method to
-     * obtain a reference with a subset of the members in the reference that they are holding.
-     *
-     * @throws TODO if the requested type cannot be satisfied by the object's class, or if the
-     *              caller does not have standing to request the specified type
+     * For a reference to an object from the same module as the caller, this method will return a
+     * widened reference that contains the methods in the specified type. For a reference to an
+     * object from a different module, this method cannot produce a wider reference, and will return
+     * a conditional false.
      */
-    @ro asType as(Type asType);
+    <ToType> conditional ToType widenTo(Type ToType);
 
     /**
      * Determine if the referent is an instance of the specified type.
