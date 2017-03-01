@@ -1,4 +1,6 @@
-Welcome to Ecstasy! This is the private repository for the Ecstasy (xtclang.org) project.
+# Welcome to Ecstasy! #
+
+This is the private repository for the Ecstasy ([xtclang.org](Link URL)) project.
 
 All content of the project is (c) xqiz.it, all rights reserved.
 
@@ -10,4 +12,4 @@ Example code and various other "white-boards" are located under src/xsrc/example
 
 Java code for the prototype is located under src/src/org/xvm/.
 
-Questions? Email cameron@xqiz.it or gene@xqiz.it
+Questions? Email [cameron@xqiz.it](Link URL) or [gene@xqiz.it](Link URL)
