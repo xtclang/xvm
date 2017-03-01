@@ -6,7 +6,8 @@ All content of the project is (c) xqiz.it, all rights reserved.
 
 Once the project boot-straps the language runtime, the Ecstasy sources will be transitioned to a public repository under an Apache 2.0 license.
 
-Start here to browse source code: [https://bitbucket.org/xtclang/src/src/]
+Start here to browse source code: [https://bitbucket.org/xtclang/src/src/](https://bitbucket.org/xtclang/src/src/)
+
 Ecstasy .x source files are located under src/xsrc/system/.
 
 Example code and various other "white-boards" are located under src/xsrc/examples/.
