@@ -1,7 +1,6 @@
 package org.xvm.proto;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,18 +11,18 @@ import java.util.Set;
  */
 public class Type
     {
+    private String m_sName; // optional
     private int m_nId;
 
     private Map<String, PropertyTypelet> m_props = new HashMap<>();
     private Map<String, MultiMethodTypelet> m_methods = new HashMap<>();
+
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
     private boolean m_fTrusted;
 
     public int getId()
         {
-        int id = m_nId;
-        assert(id > 0);
-        return id;
+        return m_nId;
         }
 
     public void setId(int id)
@@ -32,46 +31,137 @@ public class Type
         m_nId = id;
         }
 
+    public void addProperty(String sName, Type type)
+        {
+
+        }
+
+    public void resolve(TypeSet typeset)
+        {
+
+        }
 
     /**
-     * @return  0 if the specified type is equal to this one; 1 if this type extends it; -1 otherwise
+     * @return  Relation between this and that type
      */
-    public Relation extension(Type type)
+    public Relation calculateRelation(Type that)
         {
-        int nCompare = 0;
-        if (nCompare == 1)
+        Relation relation = Relation.INCOMPATIBLE;
+
+        // TODO: compare
+
+        if (relation != Relation.EQUAL)
             {
             // cache the results
-            m_relations.put(type.getId(), Relation.SUB);
-            return Relation.SUB;
+            m_relations.put(that.getId(), Relation.SUB);
             }
-        else if (nCompare == -1)
-            {
-            m_relations.put(type.getId(), Relation.SUPER);
-            return Relation.SUPER;
-            }
-        else
-            {
-            return Relation.EQUAL;
-            }
+
+        return relation;
         }
 
     public enum Relation {EQUAL, SUPER, SUB, INCOMPATIBLE};
 
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Id=").append(m_nId);
+        if (m_sName != null)
+            {
+            sb.append(" Name=").append(m_sName);
+            }
+
+        if (!m_props.isEmpty())
+            {
+            sb.append("\nProperties:");
+            for (PropertyTypelet t : m_props.values())
+                {
+                sb.append(t);
+                }
+
+            sb.append("\nMethods:");
+            for (MultiMethodTypelet t : m_methods.values())
+                {
+                sb.append(t);
+                }
+            }
+        return sb.toString();
+        }
+
     public static class PropertyTypelet
         {
+        String m_sName;
         Type m_type;
+
+        PropertyTypelet(String sName, Type type)
+            {
+            m_sName = sName;
+            m_type = type;
+            }
+
+        @Override
+        public String toString()
+            {
+            // e.g. "#17 name"
+            return "\n  #" + m_type + " " + m_sName;
+            }
         }
 
     public static class MultiMethodTypelet
         {
+        String m_sName;
         Set<MethodTypelet> m_setMethods;
-        }
 
-    public static class MethodTypelet
-        {
-        Type[] m_typeArg;
-        Type[] m_typeRet;
-        }
+        @Override
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+            for (MethodTypelet mt : m_setMethods)
+                {
+                sb.append("\n  ").append(mt);
+                }
+            return sb.toString();
+            }
 
+        protected class MethodTypelet
+            {
+            Type[] m_typeArg;
+            Type[] m_typeRet;
+
+            MethodTypelet(Type[] typeArg, Type[] typeRet)
+                {
+                m_typeArg = typeArg;
+                m_typeRet = typeRet;
+                }
+
+            @Override
+            public String toString()
+                {
+                // e.g. "(#17) foo(#11, #34)"
+                StringBuilder sb = new StringBuilder();
+                sb.append('(');
+                for (int i = 0, c = m_typeRet.length; i < c; i++)
+                    {
+                    sb.append('#').append(m_typeRet[i].m_nId);
+                    if (i < c)
+                        {
+                        sb.append(", ");
+                        }
+                    }
+                sb.append(") ").append(MultiMethodTypelet.this.m_sName);
+
+                sb.append('(');
+                for (int i = 0, c = m_typeArg.length; i < c; i++)
+                    {
+                    sb.append('#').append(m_typeArg[i].m_nId);
+                    if (i < c)
+                        {
+                        sb.append(", ");
+                        }
+                    }
+                sb.append(')');
+                return sb.toString();
+                }
+            }
+        }
     }

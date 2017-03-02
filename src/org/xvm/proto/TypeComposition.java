@@ -1,7 +1,5 @@
 package org.xvm.proto;
 
-import java.util.Map;
-
 /**
  * TypeComposition (e.g. ArrayList<String>)
  *
@@ -10,10 +8,30 @@ import java.util.Map;
 public class TypeComposition
     {
     TypeCompositionTemplate m_template;
-    Type[] m_atActualGeneric; // corresponding to the m_template's composite name
+
+    // at the moment, ignore the case of ArrayList<Runnable | String>
+    String[] m_asGenericActual; // corresponding to the m_template's GenericTypeName
+
+    String m_sName; // concatenation of the template name and the generic parameters
 
     Type m_typePublic;
     Type m_typeProtected;
     Type m_typePrivate;
 
+    TypeComposition(TypeCompositionTemplate template, String[] asGenericActual)
+        {
+        m_template = template;
+        m_asGenericActual = asGenericActual;
+        m_sName = template.m_sName + Formatting.formatArray(asGenericActual, "<", ">", ", ");
+        }
+
+    Type getPublicType()
+        {
+        Type type = m_typePublic;
+        if (type == null)
+            {
+            // type = m_typePublic = m_template.createType(m_asGenericActual, TypeCompositionTemplate.Access.Public);
+            }
+        return type;
+        }
     }
