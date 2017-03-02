@@ -10,10 +10,10 @@
       <option name="HAS_BRACKETS" value="true" />
       <option name="HAS_PARENS" value="true" />
     </options>
-    <keywords keywords="class;const;construct;enum;extends;function;implements;interface;into;module;mixin;package;private;protected;public;service;static;trait;value" ignore_case="false" />
+    <keywords keywords="class;const;construct;enum;extends;function;implements;incorporates;interface;into;module;mixin;package;private;protected;public;service;static;trait" ignore_case="false" />
     <keywords2 keywords="assert;case;catch;else;false;finally;for;if;instanceof;new;null;return;super;switch;true;try;while" />
-    <keywords3 keywords="conditional" />
-    <keywords4 keywords="@Inject;@Override;@auto;@future;@lazy;@op;@ro;@soft;@watch;typedef" />
+    <keywords3 keywords="conditional;typedef" />
+    <keywords4 keywords="@auto;@future;@inject;@lazy;@op;@ro;@soft;@watch;@Override" />
   </highlighting>
   <extensionMap>
     <mapping ext="x" />
