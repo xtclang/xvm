@@ -1,11 +1,11 @@
 interface Class<ClassType>
     {
-    Class | Method | Function | Property | ... ? parent
+    @ro Class | Method | Function | Property | ... ? parent
 
     /**
      * Simple (unqualified) name.
      */
-    String name;
+    @ro String name;
 
     /**
      * Obtain the public interface of the class.
