@@ -42,7 +42,7 @@ class Array<ElementType>
         }
 
     public/private Int capacity = 0;
-    public/private Int length   = 0;
+    public/private Int size     = 0;
 
     @override
     Ref<ElementType> elementAt(Int index)
@@ -78,4 +78,37 @@ class Array<ElementType>
 
         Element<RefType>? next;
         }
+
+
+    @Override
+    Sequence<ElementType> ensureMutable();
+
+    /**
+     * Return a fixed-size tuple (whose values are mutable) of the same type and with the same
+     * contents as this tuple. If this tuple is already a fixed-size tuple, then _this_ is returned.
+     */
+    @Override
+    Sequence<ElementType> ensureFixedSize();
+
+    /**
+     * Return a persistent tuple of the same element types and values as are present in this tuple.
+     * If this tuple is already persistent or {@code const}, then _this_ is returned.
+     *
+     * A _persistent_ tuple does not support replacing the contents of the elements in this tuple
+     * using the {@link replace} method; instead, calls to {@link replace} will return a new tuple.
+     */
+    @Override
+    Sequence<ElementType> ensurePersistent();
+
+    /**
+     * Return a {@code const} array of the same type and contents as this array.
+     *
+     * All mutating calls to a {@code const} array will result in the creation of a new
+     * {@code const} array with the requested changes incorporated.
+     *
+     * @throws Exception if any of the values in the array are not {@code const} and are not
+     *         {@link ConstAble}
+     */
+    @Override
+    Array<ElementType> ensureConst();
     }

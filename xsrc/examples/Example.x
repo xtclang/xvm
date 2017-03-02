@@ -1918,25 +1918,6 @@ s.makeString().transform(s -> new IntLiteral(s).to<Int>()).passTo(countSlowly);
 
 // stuff TODO from module.x
 
-    interface AutoConst
-        {
-        @const AutoConst ensureConst();
-        }
-    interface AutoService
-        {
-        @service AutoService ensureService();
-        }
-
-    interface AutoMutable
-        {
-        AutoMutable ensureMutable();
-        }
-
-    interface AutoPersistent
-        {
-        AutoPersistent ensurePersistent();
-        }
-
     interface Class
         {
         }
@@ -2204,3 +2185,28 @@ Void foo(FileSystem fs)
     }
 
 // later on the container calls us back on some callback function
+
+// --- function binding
+
+String foo(Int i, String s, Boolean b) {...}
+
+// Function<(String), (Int)>
+function String (Int) f2 = foo(?, "hi", True);
+
+// -- tuples
+
+Tuple<T1, T2, T3> t = ...
+
+(T1 t1, T2 t2, T3 t3) = t;
+
+t = (t1, t2, t3);
+
+(T1, T2, T3) foo(T1 p1, T2 p2, T3 p3) {...}
+t = foo(t);
+
+Function<Tuple<T1,T2,T3>, Tuple<T1,T2,T3>> fn = foo;
+
+Function<Tuple<T1,T2,T3>, Tuple<T2>> fn2 = fn.bind(t1, ?, t3);
+
+// -----
+
