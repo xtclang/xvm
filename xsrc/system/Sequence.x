@@ -3,32 +3,30 @@ interface Sequence<ElementType>
         extends Iterable<ElementType>
     {
     /**
-     * The length of the Sequence, which is the number of elements in the Sequence.
+     * The size of the Sequence, which is the number of elements in the Sequence.
      */
-    @ro Int length;
+    @ro Int size;
 
     /**
-     * Returns a SubSequence of this Sequence. The SubSequence is backed by this
-     * Sequence, which means that changes made to the SubSequence will be visible
-     * through this Sequence.
+     * Returns a sub-sequence of this Sequence. The new Sequence may be backed by this Sequence,
+     * which means is this Sequence is mutable, that changes made to this Sequence may be visible
+     * through the new Sequence, and vice versa; if that behavior is not desired, {@link reify} the
+     * value returned from this method.
+     */
+    @op Sequence<ElementType> slice(Range<Int> range);
+
+    /**
+     * Obtain a Sequence of the same length and that contains the same values as this Sequence, but
+     * which has two additional attributes:
      *
-     * @param start  first index to include in the SubSequence, inclusive
-     * @param end    last index to include in the SubSequence, exclusive
-     */
-    Sequence<ElementType> subSequence(Int start, Int end);
-
-    /**
-     * Obtain a Sequence of the same length and that contains the same values
-     * as this SubSequence, but which has two additional attributes:
-     * <ul>
-     * <li>First, if this Sequence is a portion of a larger Sequence, then the returned
-     *     Sequence will no longer be dependent on the larger Sequence for its storage;</li>
-     * <li>Second, if this Sequence is a portion of a larger Sequence, then changes to
-     *     the returned Sequence will not be visible in the larger Sequence, and changes
-     *     to the larger Sequence will not be visible in the returned Sequence.</li>
-     * </ul>
-     * The contract is designed to allow for the use of copy-on-write and other lazy
-     * semantics to achieve efficiency for both time and space.
+     * * First, if this Sequence is a portion of a larger Sequence, then the returned Sequence will
+     *   no longer be dependent on the larger Sequence for its storage;
+     * * Second, if this Sequence is a portion of a larger Sequence, then changes to the returned
+     *   Sequence will not be visible in the larger Sequence, and changes to the larger Sequence
+     *   will not be visible in the returned Sequence.
+     *
+     * The contract is designed to allow for the use of copy-on-write and other lazy semantics to
+     * achieve efficiency for both time and space.
      */
     Sequence<ElementType> reify();
 

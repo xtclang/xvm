@@ -39,8 +39,7 @@ const Method<TargetType,
      */
     InvocationParam[] invokeParam;
 
-    Method bindParam(...)
-    Lambda bindTarget(TargetType target) // Lambda : Function
+    Function bindTarget(TargetType target);
 
     ReturnType invoke(TargetType target, TypeParamType typeParams, ParamType args)
         {

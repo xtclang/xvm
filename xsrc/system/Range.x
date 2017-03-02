@@ -1,0 +1,127 @@
+/**
+ * A range is an interval whose values are known to be sequential. A range adds some capabilities,
+ * including the ability to union two adjoining ranges, and to iterate over the values in the range.
+ */
+@auto mixin Range<ElementType>
+        into Interval<Sequential>
+        implements Iterable<ElementType>
+    {
+    /**
+     * Obtain an iterator over all of the values in the range. Note that the values are iterated
+     * in the order that the range was specified, so if the range was specified with a higher
+     * value first, then the values from the iterator will be in descending order.
+     */
+    @Override
+    Iterator<ElementType> iterator()
+        {
+        if (reversed)
+            {
+            return new Iterator<ElementType>()
+                {
+                private ElementType nextValue = upperBound;
+                private Boolean done = false;
+
+                conditional ElementType next()
+                    {
+                    if (done)
+                        {
+                        return false;
+                        }
+
+                    ElementType value = nextValue;
+                    if (!(nextValue : value.prev()))
+                        {
+                        done = true;
+                        }
+
+                    return value;
+                    }
+                }
+            }
+        else
+            {
+            return new Iterator<ElementType>()
+                {
+                private ElementType nextValue = lowerBound;
+                private Boolean done = false;
+
+                conditional ElementType next()
+                    {
+                    if (done)
+                        {
+                        return false;
+                        }
+
+                    ElementType value = nextValue;
+                    if (!(nextValue : value.next()))
+                        {
+                        done = true;
+                        }
+
+                    return value;
+                    }
+                }
+            }
+        }
+
+    @Override
+    Void forEach(function Void(ElementType) process)
+        {
+        if (reversed)
+            {
+            ElementType value = upperBound;
+            do
+                {
+                process(value);
+                value = value.prevValue();
+                }
+            while (value.compareTo(lowerBound) != Lesser)
+            }
+        else
+            {
+            ElementType value = lowerBound;
+            do
+                {
+                process(value);
+                value = value.nextValue();
+                }
+            while (value.compareTo(upperBound) != Greater)
+            }
+        }
+
+    /**
+     * Two ranges adjoin iff the union of all of the values from both ranges forms a single
+     * contiguous Range.
+     */
+    Boolean adjoins(Range<ElementType> that)
+        {
+        if (this.upperBound.compareTo(that.lowerBound) == Lesser)
+            {
+            // this range precedes that range
+            return this.upperBound.nextValue.compareTo(that.lowerBound) == Equal;
+            }
+        else if (this.lowerBound.compareTo(that.upperBound) == Greater)
+            {
+            // this range follows that range
+            return this.lowerBound.prevValue.compareTo(that.upperBound) == Equal;
+            }
+        else
+            {
+            return true;
+            }
+        }
+
+    /**
+     * Two ranges that are contiguous or overlap can be joined together to form a larger range.
+     */
+    @Override
+    conditional Range<ElementType> union(Range<ElementType> that)
+        {
+        if (!this.adjoins(that))
+            {
+            return false;
+            }
+
+        return true, new Interval(this.lowerBound.minOf(that.lowerBound), this.upperBound.maxOf(that.upperBound));
+        }
+    }
