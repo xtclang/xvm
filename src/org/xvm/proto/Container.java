@@ -1,5 +1,7 @@
 package org.xvm.proto;
 
+import org.xvm.proto.template.*;
+
 import java.util.Set;
 
 /**
@@ -9,8 +11,23 @@ import java.util.Set;
  */
 public class Container
     {
-    ObjectHeap m_heapGlobal; // only immutable objects
     TypeSet m_typeSet;
     ServiceContext m_service;
     Set<ServiceContext> m_setServices;
+
+    void initTypes()
+        {
+        TypeSet types = m_typeSet = new TypeSet();
+
+        // depth first traversal starting with Object
+
+        types.addCompositionTemplate(new xObject(types));     // -> Meta, String, Array, Tuple, Function
+        }
+
+    public static void main(String[] asArg)
+        {
+        Container container = new Container();
+        container.initTypes();
+        container.m_typeSet.dumpTemplates();
+        }
     }

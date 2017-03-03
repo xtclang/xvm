@@ -9,7 +9,7 @@ public class Frame
         extends Ops
     {
     final ServiceContext f_context;
-    final Function f_function;
+    final TypeCompositionTemplate.InvocationTemplate f_function;
     final byte[] f_abOps;
 
     final ObjectHandle[] f_ahArgs; // arguments; arg[0] represents "this"?
@@ -21,7 +21,7 @@ public class Frame
 
     static final int I_SCOPE = 0;
 
-    Frame(ServiceContext context, Function function, ObjectHandle[] ahArgs, int cVars, int cReturns)
+    Frame(ServiceContext context, TypeCompositionTemplate.InvocationTemplate function, ObjectHandle[] ahArgs, int cVars, int cReturns)
         {
         f_context = context;
         f_function = function;

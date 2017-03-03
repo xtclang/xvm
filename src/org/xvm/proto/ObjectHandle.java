@@ -11,6 +11,7 @@ package org.xvm.proto;
 public class ObjectHandle
     {
     Type m_type;
+    Struct m_struct;
 
     public static long createHandle(int nTypeId, int nIdentityId, boolean fMutable)
         {
