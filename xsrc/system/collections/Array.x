@@ -44,7 +44,19 @@ class Array<ElementType>
     public/private Int capacity = 0;
     public/private Int size     = 0;
 
-    @override
+    @Override
+    @op ElementType get(Int index)
+        {
+        return elementAt(index).get();
+        }
+
+    @Override
+    @op Void set(Int index, ElementType value)
+        {
+        elementAt(index).set();
+        }
+
+    @Override
     Ref<ElementType> elementAt(Int index)
         {
         if (index < 0 || index >= length)
@@ -61,34 +73,40 @@ class Array<ElementType>
         return element;
         }
 
+    @op Array.Type<ElementType> slice(Range<Int> range);
+
+    Array.Type<ElementType> reify();
+
+    @op Array.Type<ElementType> add(Array.Type<ElementType> that);
+    @op Array.Type<ElementType> replace(Int index, ElementTypevalue);
+
+    static Ordered compare(Array value1, Array value2)
+        {
+        for (Int i = 0; i < )
+        }
+
+    // ----- internal implementation details -------------------------------------------------------
+
     private Element<ElementType>? head;
 
-    class Element<RefType>(ElementType value)
-            extends Ref<RefType>
+    private class Element(ElementType value)
+            delegates Ref<ElementType>(&value)
         {
-        ElementType get()
-            {
-            return value;
-            }
-
-        void set(ElementType value)
-            {
-            this.value = value;
-            }
-
         Element<RefType>? next;
         }
 
-
     @Override
-    Sequence<ElementType> ensureMutable();
+    Array.Type<ElementType> ensureMutable()
+        {
+        return
+        }
 
     /**
      * Return a fixed-size tuple (whose values are mutable) of the same type and with the same
      * contents as this tuple. If this tuple is already a fixed-size tuple, then _this_ is returned.
      */
     @Override
-    Sequence<ElementType> ensureFixedSize();
+    Array.Type<ElementType> ensureFixedSize();
 
     /**
      * Return a persistent tuple of the same element types and values as are present in this tuple.
@@ -98,7 +116,7 @@ class Array<ElementType>
      * using the {@link replace} method; instead, calls to {@link replace} will return a new tuple.
      */
     @Override
-    Sequence<ElementType> ensurePersistent();
+    Array.Type<ElementType> ensurePersistent();
 
     /**
      * Return a {@code const} array of the same type and contents as this array.
@@ -110,5 +128,5 @@ class Array<ElementType>
      *         {@link ConstAble}
      */
     @Override
-    Array<ElementType> ensureConst();
+    Const+Array.Type<ElementType> ensureConst();
     }

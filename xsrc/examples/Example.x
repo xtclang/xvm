@@ -2208,5 +2208,152 @@ Function<Tuple<T1,T2,T3>, Tuple<T1,T2,T3>> fn = foo;
 
 Function<Tuple<T1,T2,T3>, Tuple<T2>> fn2 = fn.bind(t1, ?, t3);
 
-// -----
+// ----- arrays
 
+// same as saying:
+// Array<String> names = new Array<String>(); // mutable, growable, empty
+String[] names = new String[];
+
+names += "bob";     // bad ... do NOT support this crap
+names += "sam";
+
+names.add("bob");   // better
+names.add("sam");
+
+names[0] = "bob";   // arguably OK (each "set" is at the size boundary), but .. not 100% comfy with this
+names[1] = "sam";
+
+// ----- arrays ==
+
+Person[] people1 = functionThatReturnsArrayOfEmployeeObjects();
+Person[] people2 = functionThatReturnsArrayOfCustomerObjects();
+if (people1 == people2) {...}
+
+// the problem isn't the Array.equals function ...
+// the problem is that Array.equals has NO IDEA WHAT THE ElementType IS!!!!!!
+
+        // we can ask the runtime ElementType (Employee and Customer would be the answer), but we have
+        // no idea what the compile-time ElementType was .. was it Person? was it DataRecord? Was it
+        // Const? Was it Object? or whatever superclass or interface or type that these objects might
+        // have in common?
+
+interface Array
+    {
+    // ...
+
+    static Boolean equals(Type<Array> ArrayType, ArrayType a1, ArrayType a2)
+        {
+        if (a1.size != a2.size)
+            {
+            return false;
+            }
+
+        for (ArrayType.ElementType v1 : a1,
+             ArrayType.ElementType v2 : a2)
+            {
+            if (v1 != v2)
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+    }
+
+interface Map
+    {
+    // ...
+
+    static Boolean equals(Type<Map> MapType, MapType map1, MapType map2)
+        {
+        if (map1.size != map2.size)
+            {
+            return false;
+            }
+
+        for (Map.Entry<MapType.KeyType, MapType.ValueType>> entry : map1)
+            {
+            if (!(MapType.ValueType value : map2.get(entry.key) && entry.value == value))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+    }
+
+// instead we need something like
+Arrays.equals(Array a1, Array a2, Type compileTimeType)
+// except that compileTimeType doesn't tell us what ElementType was... although we can figure that out
+// but even figuring that out doesn't tell us what the equals function is for the type, so maybe:
+
+Arrays.equals(Array<ElementType> a1, Array<ElementType> a2, Type ElementType, function Boolean(ElementType, ElementType))
+
+// for any generic type C, it has some number of formal type parameters T1, T2, ...
+// for any compile time type CTT that the compiler allows to be compared with == or !=, there exists
+// a function on CTT (or a superclass (supertype?) thereof) of the conceptual form
+//   "Boolean equals(? super CTT v1, ? super CTT v2)"
+
+// how does the compiler communicate to that equals function what the values of T1, T2, etc. are, or
+// alternatively, what the equals functions are for T1, T2, etc.
+// 1) it can provide the compile-time type that it is using as an argument to equals
+//    - e.g. "Array of Person" (example above)
+//    - e.g. "Map of String to Int"
+// 2) however, even with the compile time type being somehow non-ambiguous, i.e. T1 and T2 are known
+//    example, how would the equals function on the genericized class find the equals function for
+//    each of the formal type parameters?
+//    - does Type interface have a property like "functionThatComparesForEquality"?
+//    - if so, does Type interface have a property like "functionThatComparesForOrder"?
+//    - if so, where does it stop? obviously the only capabilities it would naturally have are those
+//      that we are explicitly aware of, so anything similar faced by a developer, and they are SOL
+
+// here's the other issue. we are going to write Array.equals ...
+// - what does it look like?
+// - how does the comiler know what to call it with?
+// - some types have 0 formal params; some have 1; some have 2 ... so it's not some simple signature
+
+// - here's the other problem:
+class Complicated<A,B,C,D>
+    {
+    A a;
+    B b;
+    C c;
+    D d;
+
+    static Boolean equals(Complicated value1, Complicated value2)
+        {
+        // 1) how would the compiler explain to this function that a certain type corresponds to
+        //    "A", versus "B", versus "C", versus "D"
+        //    -> we've lost "compile time information" .. only have runtime information
+        //    -> we don't have a way to communicate "A"
+        //    -> we could use a convention, like "Type A, Type B, Type C, Type D", i.e. matching names
+        }
+
+    // 1. let's assume that we use a standard signature for equals
+    function Boolean equals(Type T, T, T)
+
+    // 2. but we know
+    }
+
+// 1. let us posit that for any type T, if the type T is known at compile time, then the compiler can
+// identify a function "equals" to use, or if T cannot be resolved at compile time, then the runtime
+// can identify a function "equals" to use.
+
+// 2. let us posit that for any parameterized type T1<T2>, that both the types T1 and T2 are known
+// at runtime, and _may_ be known at compile time
+
+// 3. the Type interface has to provide a means to resolve a function at runtime that provides the
+// "equals" functionality
+interface Type<T>
+    {
+    @ro function Boolean (T v1, T v2) compareForEquality;
+    @ro function Ordered (T v1, T v2) compareForOrder;
+    }
+
+Person[] people1 = functionThatReturnsArrayOfEmployeeObjects();
+Person[] people2 = functionThatReturnsArrayOfCustomerObjects();
+if (people1 == people2) {...}
+// compiler knows that the compile-time-type is Array<Person>
+// so the "last line of code" that the compiler generates is the call to the function equals(v1,v2)

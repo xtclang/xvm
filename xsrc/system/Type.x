@@ -1,5 +1,15 @@
-const Type<T>
+/**
+ * A Type is a const object that ... TODO
+ */
+const Type<DataType>
+        implements Comparator<DataType>
     {
+    @Override
+    @ro function Boolean (DataType v1, DataType v2) compareForEquality.get();
+
+    @Override
+    @ro function Ordered (DataType v1, DataType v2) compareForOrder;
+
     Set<Method> methods;
 
     Map<String, Property> properties;

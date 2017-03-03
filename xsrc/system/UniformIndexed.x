@@ -22,14 +22,14 @@ interface UniformIndexed<IndexType, ElementType>
      */
     @op Ref<ElementType> elementAt(IndexType index)
         {
-        return new SimpleRef<ElementType>();
+        return new SimpleRef();
 
         /**
          * An implementation of Ref that delegates all of the complicated Ref responsibilities to
          * the return value from the {@link UniformIndexed.get} method.
          */
-        protected class SimpleRef<RefType>
-                delegates Ref<RefType>(&get())
+        protected class SimpleRef
+                delegates Ref<ElementType>(&get())
             {
             Boolean assigned.get()
                 {

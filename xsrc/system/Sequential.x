@@ -3,7 +3,7 @@
  * both its next and previous value in the series, if any.
  */
 interface Sequential
-        extends Comparable
+        extends Orderable
     {
     /**
      * Obtain the value that precedes this value, if there is one.

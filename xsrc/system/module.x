@@ -37,7 +37,7 @@ module ecstasy.xtclang.org
     typedef Int64                   Int;
     typedef UInt64                  UInt;
     typedef Decimal64               Dec;
-    typedef &().RefType             Void;
+    typedef Tuple<>                 Void;
     typedef annotations.AtomicRef   atomic;
     typedef annotations.Automagic   auto;
     typedef annotations.FutureRef   future;

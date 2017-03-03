@@ -7,7 +7,7 @@
 mixin UncheckedInt
         into IntNumber
     {
-    @op IntNumber increment()
+    @op IntNumber nextValue()
         {
         try
             {
@@ -19,7 +19,7 @@ mixin UncheckedInt
             }
         }
 
-    @op IntNumber decrement()
+    @op IntNumber prevValue()
         {
         try
             {

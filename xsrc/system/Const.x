@@ -1,5 +1,6 @@
 interface Const
         extends Hashable
+        extends Orderable
     {
     /**
      * TODO

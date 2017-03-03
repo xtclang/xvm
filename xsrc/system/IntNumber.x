@@ -3,21 +3,66 @@
  */
 interface IntNumber
         extends Number
+        extends Seqential
     {
     /**
      * Integer increment.
+     *
+     * @throws BoundsException if _this_ is the maximum value
      */
-    @op IntNumber increment()
+    @Override
+    IntNumber nextValue()
         {
         return this + 1;
         }
 
     /**
      * Integer decrement.
+     *
+     * @throws BoundsException if _this_ is the minimum value
      */
-    @op IntNumber decrement()
+    @Override
+    IntNumber prevValue()
         {
         return this - 1;
+        }
+
+    /**
+     * Checked integer increment.
+     */
+    @Override
+    conditional IntNumber next()
+        {
+        try
+            {
+            IntNumber n = this + 1;
+            if (n > this)
+                {
+                return true, n;
+                }
+            }
+        catch (Exception e) {}
+
+        return false;
+        }
+
+    /**
+     * Checked integer decrement.
+     */
+    @Override
+    conditional IntNumber prev()
+        {
+        try
+            {
+            IntNumber n = this - 1;
+            if (n < this)
+                {
+                return true, n;
+                }
+            }
+        catch (Exception e) {}
+
+        return false;
         }
 
     /**
@@ -122,7 +167,8 @@ interface IntNumber
     /**
      * Obtain a range of integers from this number to that number.
      */
-    Range<IntNumber> to(IntNumber that);
+    @Override
+    @op Range<IntNumber> to(IntNumber that);
 
     /**
      * Obtain the number as an array of boolean values.
