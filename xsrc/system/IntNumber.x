@@ -3,8 +3,10 @@
  */
 interface IntNumber
         extends Number
-        extends Seqential
+        extends Sequential
     {
+    // ----- Sequential interface ------------------------------------------------------------------
+
     /**
      * Integer increment.
      *
@@ -64,6 +66,8 @@ interface IntNumber
 
         return false;
         }
+
+    // ----- additional IntNumber capabilities -----------------------------------------------------
 
     /**
      * Bitwise AND.
@@ -163,12 +167,6 @@ interface IntNumber
      * integer, and vice versa.
      */
     IntNumber reverseBytes();
-
-    /**
-     * Obtain a range of integers from this number to that number.
-     */
-    @Override
-    @op Range<IntNumber> to(IntNumber that);
 
     /**
      * Obtain the number as an array of boolean values.

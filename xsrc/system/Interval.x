@@ -1,7 +1,7 @@
 /**
  * An interval specifies a lower bound and an upper bound.
  */
-const Interval<ElementType extends Comparable>
+const Interval<ElementType extends Orderable>
     {
     construct(ElementType first, ElementType last)
         {

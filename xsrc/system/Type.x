@@ -54,4 +54,21 @@ const Type<DataType>
     Type add(Type that);
 
     Type sub(Type that);
+
+        /**
+         * Dereference a name to obtain a field.
+         */
+        @op Ref elementFor(String name)
+            {
+            for (Ref ref : to<Ref[]>())
+                {
+                if (ref.name? == name)
+                    {
+                    return ref;
+                    }
+                }
+
+            throw new Exception("no such field: " + name);
+            }
+
     }

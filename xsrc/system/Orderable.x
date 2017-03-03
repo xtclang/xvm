@@ -1,15 +1,16 @@
 /**
- * The Orderable interface allows two values of the same type to be compared for purposes of
- * ordering.
+ * The Orderable interface represents the general capabilities of data types that can be compared
+ * for purposes of ordering.
  */
 interface Orderable
     {
     /**
-     * Create a Range that represents the range of values from _this_ to _that_.
+     * Create an Interval that represents the values between _this_ (inclusive) to _that_
+     * (inclusive).
      */
-    @op Range<Orderable> to(Orderable that)
+    @op Interval<Orderable> to(Orderable that)
         {
-        return new Range<Comparable>(this, that);
+        return new Interval<Orderable>(this, that);
         }
 
     /**
