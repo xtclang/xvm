@@ -3,8 +3,9 @@
  * numeric type included in Ecstasy.
  */
 interface Number
+        extends Orderable
     {
-    enum Signum(String prefix, Int factor, Ordered ordered)
+    enum Signum(String prefix, IntLiteral factor, Ordered ordered)
         {
         Negative("-", -1, Lesser ),
         Zero    ("" ,  0, Equal  ),
@@ -109,22 +110,6 @@ interface Number
      * Calculate this number raised to the specified power.
      */
     Number pow(Number n);
-
-    /**
-     * Determine the smaller of this number and the passed number.
-     */
-    Number atMost(Number n)
-        {
-        return n < this ? n : this;
-        }
-
-    /**
-     * Determine the larger of this number and the passed number.
-     */
-    Number atLeast(Number n)
-        {
-        return n > this ? n : this;
-        }
 
     // ----- conversions
 

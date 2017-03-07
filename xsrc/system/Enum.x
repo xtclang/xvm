@@ -5,6 +5,7 @@
  */
 interface Enum
         extends Const
+        extends Sequential
     {
     /**
      * The Enumeration that contains this Enum value.
@@ -56,22 +57,6 @@ interface Enum
             }
 
         return false;
-        }
-
-    /**
-     * Determine the enum with the smaller ordinal of this enum and the passed enum.
-     */
-    Enum atMost(Enum that)
-        {
-        return this < that ? this : that;
-        }
-
-    /**
-     * Determine the larger of this number and the passed number.
-     */
-    Enum atLeast(Enum that)
-        {
-        return this > that ? this : that;
         }
 
     /**

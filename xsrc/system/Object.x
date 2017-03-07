@@ -22,14 +22,14 @@ class Object
      * By default, comparing any two objects will only result in equality if they are the
      * same object, or if they are two constant objects with identical values.
      */
-    static Boolean equals(Object o1, Object o2)
+    static Boolean equals(Type<Object> ObjectType, ObjectType o1, ObjectType o2)
         {
         return &o1 == &o2;
         }
 
     /**
      * Provide a String representation of the object.
-     * <p>
+     *
      * This is intended primarily for debugging, log messages, and other diagnostic features.
      */
     String to<String>()
@@ -49,9 +49,9 @@ class Object
     /**
      * Obtain a read-only tuple of one element containing a reference to this object.
      */
-    (Object) to<(Object)>()
+    Tuple<Object> to<Tuple<Object>>()
         {
-        return (this);
+        return Tuple:(this);
         }
 
     /**

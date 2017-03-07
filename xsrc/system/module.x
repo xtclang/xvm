@@ -88,6 +88,15 @@ module ecstasy.xtclang.org
         }
 
     /**
+     * An UnsupportedOperationException is raised when an attempt is made to invoke functionality
+     * that is not present or has not yet been implemented.
+     */
+    const UnsupportedOperationException(String? text, Exception? cause)
+            extends Exception(text, cause)
+        {
+        }
+
+    /**
      * A data structure that is able to provide a _mutable_ copy of itself should implement this
      * interface.
      *
