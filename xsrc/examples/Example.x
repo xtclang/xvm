@@ -2714,6 +2714,11 @@ for any method m of a parameterized type with a type parameter T:
 - let m "consume" T if any of the following holds true:
  1. m has a parameter type declared as T;
  2. m has a return type that "consumes T";
+   - there is a notable exception to this rule for a method on a type corresponding to a property,
+     which returns a Ref to represent the property type, and thus (due to the methods on Ref<T>)
+     appears to "consume T"; however, if the type containing the property is explicitly immutable,
+     or the method returning the Ref<T> is annotated with @ro/ReadOnly, then m is assumed to not
+     "consume T"
  3. m has a parameter type that "produces T".
 - let m "produce" T if any of the following holds true:
  1. m has a return type declared as T;
@@ -2778,3 +2783,55 @@ C<String>      x = new C<Object>();  // ok
 C<Object>      x = new PC<String>(); // fails
 PC<Object>     x = new PC<String>(); // ok
 FakePCofObject x = new PC<String>(); // fails
+
+// how does auto-mixin work with class -> formal type -> resolved type if the mixin mixes in
+// because of the information in the resolved type?
+
+
+// --- new
+
+how does new work?
+
+class C
+    {
+    construct C(Int i)
+        {
+        // ...
+        }
+
+    construct C(String s)
+        {
+        // ...
+        }
+    finally
+        {
+        // ...
+        }
+    }
+
+// compiles as
+class C
+    {
+    function Void construct(Struct this, Int i) {...}
+    function function Void () construct(Struct this, String s) {...}
+    }
+
+C instance1 = C.new_(C.construct(_, 5)));
+C instance2 = C.new_(C.construct(_, "hello world")));
+
+// 0xA0 NEW	rvalue-class TODO fn-constructor
+C c = new C(n);
+
+IVAR Int n
+...
+IVAR Function temp
+BIND construct _ n -> temp
+IVAR C c
+NEW  C temp -> c
+
+
+class Class<ClassType>
+    {
+    ClassType new_(function Void (Struct) construct);
+    ClassType new_(function function Void () (Struct) construct);
+    }
