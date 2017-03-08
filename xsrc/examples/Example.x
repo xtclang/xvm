@@ -532,10 +532,10 @@ void doStringExtracting(Extractor<String> extractor
     }
 
 // now, going back to our previous example:
-doObjectLogging(listString);    // compile: OK. runtime: RTE!
-doStringLogging(listString);    // compile: OK. runtime: OK.
-doObjectExtracting(listString); // compile: OK. runtime: OK.
-doStringExtracting(listString); // compile: OK. runtime: OK.
+doObjectLogging(listString);    // compile: OK. runtime: RTE! Object auto-narrowing to String!!!
+doStringLogging(listString);    // compile: OK. runtime: OK.  (DUH!)
+doObjectExtracting(listString); // compile: OK. runtime: OK.  String auto-widening to Object is safe
+doStringExtracting(listString); // compile: OK. runtime: OK.  (DUH!)
 
 doObjectLogging(listObject);    // compile: OK. runtime: RTE!
 doStringLogging(listObject);    // compile: ERR! (cast required). runtime: OK.
@@ -547,10 +547,10 @@ doStringExtracting((List<String>) listObject); // compile: OK. runtime: OK.
 // Now, let's introduce a List that only contains objects:
 List<Object> listOnlyObject = new List<Object>();
 // and let's fix the obvious compile errors and see the results:
-doObjectLogging(listOnlyObject);                    // compile: OK. runtime: OK.
-doStringLogging((Logger<String>) listOnlyObject);     // compile: OK. runtime: RTE. (not List<String>)
-doObjectExtracting(listOnlyObject);                 // compile: OK. runtime: OK.
-doStringExtracting((Extractor<String>) listOnlyObject);  // compile: OK. runtime: RTE. (not List<String>)
+doObjectLogging(listOnlyObject);                        // compile: OK. runtime: OK.
+doStringLogging((Logger<String>) listOnlyObject);       // compile: OK. runtime: RTE. (not List<String>)
+doObjectExtracting(listOnlyObject);                     // compile: OK. runtime: OK.
+doStringExtracting((Extractor<String>) listOnlyObject); // compile: OK. runtime: RTE. (not List<String>)
 
 //                   widening                narrowing
 // T<P1> -> T<P2>    P1=String -> P2=Object  P1=Object -> P2=String
@@ -574,7 +574,7 @@ doStringExtracting((Extractor<String>) listOnlyObject);  // compile: OK. runtime
 // while we define "produces" and "consumes" in the positive sense, we only use it in the
 // negative sense
 
-// implicit converson from T2 to T1 example:
+// implicit conversion from T2 to T1 example:
 // T2 v2 = ...
 // T1 v1 = v2;
 //
@@ -2227,6 +2227,19 @@ names[1] = "sam";
 
 Person[] people1 = functionThatReturnsArrayOfEmployeeObjects();
 Person[] people2 = functionThatReturnsArrayOfCustomerObjects();
+
+Runnable[] people1 = functionThatReturnsArrayOfEmployeeObjects();
+Runnable[] people2 = functionThatReturnsArrayOfCustomerObjects();
+
+Hashable[] people1 = functionThatReturnsArrayOfEmployeeObjects();
+Hashable[] people2 = functionThatReturnsArrayOfCustomerObjects();
+
+Object[] people1 = functionThatReturnsArrayOfEmployeeObjects();
+Object[] people2 = functionThatReturnsArrayOfCustomerObjects();
+
+DataRecord[] people1 = functionThatReturnsArrayOfEmployeeObjects();
+DataRecord[] people2 = functionThatReturnsArrayOfCustomerObjects();
+
 if (people1 == people2) {...}
 
 // the problem isn't the Array.equals function ...
@@ -2237,7 +2250,7 @@ if (people1 == people2) {...}
         // Const? Was it Object? or whatever superclass or interface or type that these objects might
         // have in common?
 
-interface Array
+interface Array<ElementType>
     {
     // ...
 
@@ -2261,7 +2274,7 @@ interface Array
         }
     }
 
-interface Map
+interface Map<KeyType, ValueType>
     {
     // ...
 
@@ -2357,3 +2370,468 @@ Person[] people2 = functionThatReturnsArrayOfCustomerObjects();
 if (people1 == people2) {...}
 // compiler knows that the compile-time-type is Array<Person>
 // so the "last line of code" that the compiler generates is the call to the function equals(v1,v2)
+
+
+// --- gene's for loop
+
+for (Person person : people, Int i : 0) //  (but also give me "i", "first", "last"))
+    {
+    if (first)
+        {
+        ...
+        }
+
+    if (index % 100 == 0)
+        {
+        // ...
+        }
+
+    if (last)
+        {
+        ...
+        }
+    }
+
+// ---
+
+switch (a <=> b)
+    {
+    case Lesser:
+    case Greater:
+    case Equal:
+    }
+
+// --- to()
+
+String s = o.to<String>();  // could use inference
+
+o.to();                     // compiler error
+o.to<String>();             // the <String> is used by the compiler and then thrown away
+
+Int i = 0;
+Int j = new IntLiteral("123454");
+Dec d = new IntLiteral("123454");
+Float f = new IntLiteral("123454");
+
+Float fl = 0;
+Float fl2 = 0.0;
+Dec d = 0.0;
+
+
+// ----- Type
+
+// idea is that Type itself is an "abstract const" that implements the "type contract", but has
+// several implementations
+const Type<DataType>
+    {
+    // obviously, it has one implied property: DataType
+    Type DataType;
+
+    // however, it has a number (0 or more) of other "type parameter" properties, one for each
+    // unique type parameter of the type composition, e.g. for map:
+    Type KeyType;
+    Type ValueType;
+
+    // example for what this would look like for the type of a HashMap<KeyType, ValueType>
+    Type<Hashable>? KeyType;
+    Type<Object>? ValueType;
+
+    // the same information could be represented by a standard data structure, e.g. by name:
+    Map<String, Type> typeParameterByName; // TODO type could be null, though .. if unresolved
+    // for each type parameter, there is a name, there is a constraint, and there is a type
+
+    // there is some concept of whether or not the type parameters have been resolved, i.e. if their
+    // types are known, or if they are simply playing the part of a "type TBD"
+    Boolean resolved;
+
+    // it's not necessarily exposed as a property on Type, but the information is obviously there in
+    // the background of what the "unresolved version of the Type" looks like ... is it exposed?
+    Type unresolved;
+    }
+
+// what about function "param types"
+// - might need to specify that the value has to be const
+// - might need to specify that the value has to be immutable or service
+
+// a Type that represents a value that is an instance of either type A or type B (possibly both)
+const OrType
+    {
+    // the "all methods" represents the intersection of the two types
+    // one property to obtain the resolved type of this, i.e. the intersection type
+    // two properties to obtain the type A and type B
+    // implements an equals to compare with another OrType
+    // note: order (of A and B) is important
+    }
+
+// a Type that represents the public/protected/private interface of a "type composition" / class
+const ClassType
+    {
+    enum Access {Public, Private, Protected}
+    Class clz; // is this a public property? TODO shouldn't this be hidden?
+    Access access;
+
+    // note: this type also has a property for each "type parameter" of the class
+    }
+
+// arbitrary type created by modifying another type
+const SyntheticType
+    {
+    }
+
+// if there is a class C of some T, there is an unresolved type (the one that refers to type "T"),
+// and there is a resolved type (where "T" has been replaced with a proper type)
+class C<T>
+    {
+    T foo();
+    Void bar(T value);
+    }
+
+Type t = C.Type;
+// so what does "t" have? it has a method "foo" that returns an unresolved "T", and method "bar"
+// that takes an unresolved "T"!
+
+// Some of the questions that Type answers:
+//  &object.RefType             what is the type constraint of the Ref that holds the reference to "object"?
+//  &object.ActualType          what is the type of the object, as seen through the Ref?
+//  type.TypeParams             what are the type params for the type?
+
+// Some of the questions that Class answers:
+//  enum {Module, Package, Class, Const, Enum, Trait, Mixin, Interface} form
+//  Boolean isAbstract
+//  Boolean isConst
+//  Boolean isService
+//  Boolean isSingleton
+//  Type Type                   what is the (public) type of a class?
+//  Type ProtectedType          what is the protected type of a class?
+//  Type PrivateType            what is the private type of a class?
+//  Type TypeParams             what are the type params (as a tuple) for the class?
+//
+
+
+Type t = HashMap.Type;              // compile time error .. requires the k & v to be provided      TODO disagree?
+Type t = HashMap<String, Int>.Type; // compile time error .. requires the k & v to be provided
+print t.class.name;                 // "NativeConstantPoolType"
+Type t2 = t + Iterable.Type;
+print t2.class.name;                // "SyntheticType"
+Type t3 = t2 | String;
+print t3.class.name;                // "OrType"
+
+// back to the Type t of HashMap
+Type k = t.KeyType;             // exception!
+
+
+// ----- parameterized types
+
+Map<String, Int> map = new HashMap<String, Int>();  // ok?
+Map<String, Int> map = new HashMap<>(); // no! why is the "<>" required here? it seems STUPID
+Map<String, Int> map = new HashMap();   // why not this instead?
+Map map = new HashMap<String, Int>();   // is this the same thing? NO! type of "map" is <O,O>
+
+Map map = new HashMap();            // three possible answers here:
+                                    // 1. compiler error (two different type specs, <O,O> and <H,O>)
+                                    // 2. type of "map" is <O,O>
+                                    // 3. type of "map" is <H,O>
+
+// ---- getting a class
+
+// 1) you can get a class from something that you can name
+Class c  = String;
+Class c2 = Runnable;
+
+// 2) you can get a class from loading a module
+Class c3 = magicalInjectedContainerCreator.defineModule(...).giveMeAClass(...)
+
+
+// ---- classes and types
+
+Class c = HashMap;          // is that legal?
+                            // 1. No. KeyType and ValueType are required. (there is no allowance for
+                            //    a class that represents HashMap without its type parameters being
+                            //    specified)
+                            // 2. Yes. KeyType is assumed to be Hashable and ValueType is Object
+
+// then would THIS be necessary?
+Class c2 = HashMap<K,V>.Entry<K,V>;
+
+Class pkg = x.collections;
+
+
+//
+interface Array<ElementType>
+    {
+    // "Array.Type" is not really using a ".Type" property on the "Array" class ... what this really
+    // means is "Array", because when we say "Array" we actually mean "this:type" and NOT "Array"
+    Array.Type<ElementType> ensureMutable();
+    }
+
+//
+interface Array<ElementType>
+    {
+    // instead consider the use of "bang" to say "no, not this:type, but actually use (any) Array!"
+    Array!<ElementType> ensureMutable();
+    }
+
+
+// discussion of const/immutable params / requiring immutable value
+
+class Test
+    {
+    HashMap<String, Int> map;
+
+    Void foo(Object o)
+        {
+        // the developer knows that he/she only passes a String to foo
+        map.put(o, 1);
+        }
+    }
+
+class SSN
+        implements Hashable
+    {
+    String s;
+    Void makeThisImmutable() {...}
+    }
+
+class Test
+    {
+    HashMap<SSN, Int> map;
+
+    Void foo(SSN o)
+        {
+        Int n = map.get(o);
+
+        // the developer knows that he/she only passes an immutable SSN to foo
+        map.put(o, 1);
+        }
+    }
+
+
+// ---
+
+// what are the questions we want to be able to answer?
+// 1) how do i specify in a signature that a type (e.g. param type) must be immutable?
+// 2) how do i specify that something needs to implement the interface of a const without being
+//    immutable? (Gene: "who cares .. don't do it ..")
+
+class MyClass<T> {..}                   // T can be any object
+class MyClass<T extends I> {..}         // T can be any object that is assignable to I
+class MyClass<T extends immutable I> {..}   // T can be any object that is assignable to I and is immutable
+
+// will this be useful?
+class MyClass<T extends const I> {..}   // T can be any object that is assignable to I and is a const
+class MyClass<T extends enum I> {..}    // T can be any object that is assignable to I and is an enum
+class MyClass<T extends service I> {..} // T can be any object that is assignable to I and is a service
+
+// as if Type included:
+Boolean immutable;
+Boolean isConst;
+Boolean isEnum;
+Boolean isService;
+
+// then it could be e.g. typedef'd
+typedef @ro Runnable ImmutableRunnable;
+
+assert o instanceof ImmutableRunnable;
+ImmutableRunnable ir = (ImmutableRunnable) runnableObject;
+
+MyClass<T extends ImmutableRunnable>
+    {
+    Void foo(T ir)
+        {
+        ir.run();
+        }
+    }
+
+Void foo2(Runnable runnable)
+    {
+    MyClass<ImmutableRunnable> my = new MyClass();
+    // someone passed me a runnable
+    my.foo((ImmutableRunnable) runnable);
+    }
+
+
+// ----- assignability / instanceof / successfully castable rules
+
+T2 v2 = ...
+T1 v1 = v2;
+
+T2 is assignable to T1 iff
+  - T2 === T1
+  - class of T2 implements T1 (or class of T1)
+  - class of T2 extends class of T1
+  - class of T2 incorporates class of T1
+  - for each m1 in {M1}, there exists an m2 in {M2} *with the same name* that at least one of the
+    following holds true:
+    - m1 === m2
+    - m1 and m2 have the same # of parameters and return values and both of the following hold true:
+      - for each parameter p1 of m1 and p2 of m2 at least one of the following holds true:
+        - p1 is resolved from this:type and p2 is resolved from this:type
+        - p1 is assignable to p2
+        - both p1 and p2 are resolved from some type parameter P that is common to both T1 and T2
+          and p2 assignable to p1 (!)
+      - for each return r1 of m1 and r2 of m2 at least one of the following holds true:
+        - r1 is resolved from this:type and r2 is resolved from this:type
+        - r2 is assignable to r1
+
+T2<TP21, TP22, ..., TP2N> is assignable to T1<TP11, TP12, ..., TP1N> iff both of the following are true
+  - TP2i is assignable to TP1i
+  - the fully resolved T2 is assignable to the fully resolved T1
+
+
+--
+
+let "Class category" be one of: module, package, class, const, enum, service, mixin, trait,
+interface.
+
+let "Class" be a named item within a specific Class category, defined as a composition of one or
+more other Classes via extension, implementation, and/or incorporation, and subject to the
+composition rules defined by the Ecstasy language specification.
+
+for any two Classes CD and CB, let CD be a "derivative Class" of the "base Class" CB iff CD
+extends, implements, or incorporates CB or any derivative Class of CB.
+
+let "type parameter" be a formal named parameter of a Class whose value resolves to (or will at
+runtime resolve to) a Type.
+
+let "this:type" specify a type parameter that is present on every Class.
+
+let "Type" be a set of methods (and the Type may specify that it is "explicitly immutable")
+- let "formal Type" be a Type that may include unresolved type parameters
+- let "resolved Type" be a Type that does not have any unresolved type parameters
+
+let each Class define a formal Type.
+
+let "parameterized Class" be a Class that declares one or more type parameters, and/or a Class with
+a base Class that is a parameterized Class.
+
+let the "type parameters" of the parameterized Class be the union of the one or more type parameters
+declared by a parameterized Class, with the type parameters of all of the base Classes of the
+parameterized Class.
+
+let "parameterized type" be a Type that originates from the formal Type of a parameterized Class.
+
+for any method m of a parameterized type with a type parameter T:
+- let m "consume" T if any of the following holds true:
+ 1. m has a parameter type declared as T;
+ 2. m has a return type that "consumes T";
+   - there is a notable exception to this rule for a method on a type corresponding to a property,
+     which returns a Ref to represent the property type, and thus (due to the methods on Ref<T>)
+     appears to "consume T"; however, if the type containing the property is explicitly immutable,
+     or the method returning the Ref<T> is annotated with @ro/ReadOnly, then m is assumed to not
+     "consume T"
+ 3. m has a parameter type that "produces T".
+- let m "produce" T if any of the following holds true:
+ 1. m has a return type declared as T;
+ 2. has a return type that "produces T";
+ 3. has a parameter type that "consumes T".
+
+let T1 and T2 be two types
+- let M1 be the set of all methods in T1 (including those representing properties)
+- let M2 be the set of all methods in T2 (including those representing properties)
+- let T2 be a "derivative type" of T1 iff
+ 1. T1 originates from a Class C1
+ 2. T2 originates from a Class C2
+ 3. C2 is a derivative Class of C1
+- if T1 and T2 are both parameterized types, let "same type parameter" be a type parameter of
+  T1 that also is a type parameter of T2 because T2 is a derivative type of T1, or T1 is a
+  derivative type of T1, or both T1 and T2 are derivative types of some T3.
+
+Type T2 is assignable to a Type T1 iff both of the following hold true:
+1. for each m1 in M1, there exists an m2 in M2 for which all of the following hold true:
+  1.1 m1 and m2 have the same name
+  1.2 m1 and m2 have the same number of parameters, and for each parameter type p1 of m1 and p2 of
+      m2, at least one of the following holds true:
+    1.2.1 p1 is assignable to p2
+    1.2.2 both p1 and p2 are (or are resolved from) the same type parameter, and both of the
+          following hold true:
+      1.2.2.1 p2 is assignable to p1
+      1.2.2.2 T1 produces p1
+  1.3 m1 and m2 have the same number of return values, and for each return type r1 of m1 and r2 of
+      m2, the following holds true:
+    1.3.1 r2 is assignable to r1
+2. If T1 is explicitly immutable, then T2 must also be explicitly immutable.
+
+// example covariance testing
+
+class P<T>
+    {
+    T p() {...}
+    }
+
+class C<T>
+    {
+    Void c(T value) {...}
+    }
+
+class PC<T> extends P<T>, C<T>
+    {
+    }
+
+class FakePCofObject
+    {
+    Object p() {...}
+    Void c(Object value) {...}
+    }
+
+class FakePCofString
+    {
+    String p() {...}
+    Void c(String value) {...}
+    }
+
+C<String>      x = new C<Object>();  // ok
+C<Object>      x = new PC<String>(); // fails
+PC<Object>     x = new PC<String>(); // ok
+FakePCofObject x = new PC<String>(); // fails
+
+// how does auto-mixin work with class -> formal type -> resolved type if the mixin mixes in
+// because of the information in the resolved type?
+
+
+// --- new
+
+how does new work?
+
+class C
+    {
+    construct C(Int i)
+        {
+        // ...
+        }
+
+    construct C(String s)
+        {
+        // ...
+        }
+    finally
+        {
+        // ...
+        }
+    }
+
+// compiles as
+class C
+    {
+    function Void construct(Struct this, Int i) {...}
+    function function Void () construct(Struct this, String s) {...}
+    }
+
+C instance1 = C.new_(C.construct(_, 5)));
+C instance2 = C.new_(C.construct(_, "hello world")));
+
+// 0xA0 NEW	rvalue-class TODO fn-constructor
+C c = new C(n);
+
+IVAR Int n
+...
+IVAR Function temp
+BIND construct _ n -> temp
+IVAR C c
+NEW  C temp -> c
+
+
+class Class<ClassType>
+    {
+    ClassType new_(function Void (Struct) construct);
+    ClassType new_(function function Void () (Struct) construct);
+    }

@@ -1,4 +1,4 @@
-interface Class<ClassType>
+interface Class<Type>
     {
     @ro Class | Method | Function | Property | ... ? parent
 

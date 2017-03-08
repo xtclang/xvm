@@ -78,11 +78,25 @@ class Array<ElementType>
     Array.Type<ElementType> reify();
 
     @op Array.Type<ElementType> add(Array.Type<ElementType> that);
-    @op Array.Type<ElementType> replace(Int index, ElementTypevalue);
+    @op Array.Type<ElementType> replace(Int index, ElementType value);
 
-    static Ordered compare(Array value1, Array value2)
+    static Boolean equals(Type<Array> ArrayType, ArrayType a1, ArrayType a2)
         {
-        for (Int i = 0; i < )
+        if (a1.size != a2.size)
+            {
+            return false;
+            }
+
+        for (ArrayType.ElementType v1 : a1,
+             ArrayType.ElementType v2 : a2)
+            {
+            if (v1 != v2)
+                {
+                return false;
+                }
+            }
+
+        return true;
         }
 
     // ----- internal implementation details -------------------------------------------------------

@@ -55,7 +55,7 @@ const CriticalSection
         previousCriticalSection = this:service.criticalSection;
 
         // calculate the re-entrancy for the critical section
-        this.reentrancy = reentrancy.atLeast(previousReentrancy);
+        this.reentrancy = reentrancy.maxOf(previousReentrancy);
 
         // keep track of when the critical section began
         startTime = previousCriticalSection?.startTime : runtimeClock.time;
@@ -113,15 +113,15 @@ const CriticalSection
      */
     Boolean registered.get()
         {
-        CriticalSection? registered = this:service.criticalSection;
-        while (registered?)
+        CriticalSection? cs = this:service.criticalSection;
+        while (cs?)
             {
-            if (this == registered)
+            if (this == cs)
                 {
                 return true;
                 }
 
-            registered = registered.previousCriticalSection;
+            cs = cs.previousCriticalSection;
             }
 
         return false;

@@ -1,6 +1,6 @@
 const Method<TargetType,
-             ParamType extends Tuple,
-             ReturnType extends Tuple>
+             ParamTypes extends Tuple,
+             ReturnTypes extends Tuple>
     {
     /**
      * The

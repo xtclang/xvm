@@ -75,7 +75,7 @@
                 process(value);
                 value = value.prevValue();
                 }
-            while (value.compareTo(lowerBound) != Lesser)
+            while (value >= lowerBound)
             }
         else
             {
@@ -85,7 +85,7 @@
                 process(value);
                 value = value.nextValue();
                 }
-            while (value.compareTo(upperBound) != Greater)
+            while (value <= upperBound)
             }
         }
 
@@ -95,15 +95,15 @@
      */
     Boolean adjoins(Range<ElementType> that)
         {
-        if (this.upperBound.compareTo(that.lowerBound) == Lesser)
+        if (this.upperBound < that.lowerBound)
             {
             // this range precedes that range
-            return this.upperBound.nextValue.compareTo(that.lowerBound) == Equal;
+            return this.upperBound.nextValue == that.lowerBound;
             }
-        else if (this.lowerBound.compareTo(that.upperBound) == Greater)
+        else if (this.lowerBound > that.upperBound)
             {
             // this range follows that range
-            return this.lowerBound.prevValue.compareTo(that.upperBound) == Equal;
+            return this.lowerBound.prevValue == that.upperBound;
             }
         else
             {
@@ -122,6 +122,6 @@
             return false;
             }
 
-        return true, new Interval(this.lowerBound.minOf(that.lowerBound), this.upperBound.maxOf(that.upperBound));
+        return true, this.lowerBound.minOf(that.lowerBound) .. this.upperBound.maxOf(that.upperBound);
         }
     }

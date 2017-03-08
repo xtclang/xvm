@@ -5,7 +5,7 @@ const Interval<ElementType extends Orderable>
     {
     construct(ElementType first, ElementType last)
         {
-        if (first.compareTo(last) == Greater)
+        if (first > last)
             {
             lowerBound = last;
             upperBound = first;
@@ -39,8 +39,7 @@ const Interval<ElementType extends Orderable>
      */
     Boolean contains(ElementType value)
         {
-        return lowerBound.compareTo(value) != Greater &&
-               upperBound.compareTo(value) != Lesser;
+        return lowerBound <= value && upperBound >= value;
         }
 
     /**
@@ -48,8 +47,7 @@ const Interval<ElementType extends Orderable>
      */
     Boolean contains(Interval<ElementType> that)
         {
-        return this.lowerBound.compareTo(that.lowerBound) != Greater &&
-               this.upperBound.compareTo(that.upperBound) != Lesser;
+        return this.lowerBound <= that.lowerBound && this.upperBound >= that.upperBound;
         }
 
     /**
@@ -65,8 +63,7 @@ const Interval<ElementType extends Orderable>
      */
     Boolean overlaps(Interval<ElementType> that)
         {
-        return this.upperBound.compareTo(that.lowerBound) != Lesser &&
-               this.lowerBound.compareTo(that.upperBound) != Greater)
+        return this.upperBound >= that.lowerBound) && this.lowerBound <= that.upperBound;
         }
 
     /**

@@ -80,7 +80,7 @@ const Timeout
             {
             // because the timeout is not independent, it must respect the current outgoing timeout
             // that it is replacing
-            duration = duration.atMost(previousTimeout.remainingTime);
+            duration = duration.minOf(previousTimeout.remainingTime);
             }
 
         startTime = runtimeClock.time;
@@ -129,7 +129,7 @@ const Timeout
      */
     Duration remainingTime.get()
         {
-        return (deadline - runtimeClock.time).atLeast(Duration:"0s");
+        return (deadline - runtimeClock.time).maxOf(Duration:"0s");
         }
 
     /**
