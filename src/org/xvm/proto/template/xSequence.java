@@ -13,14 +13,14 @@ public class xSequence
     public xSequence(TypeSet types)
         {
         super(types, "x:Sequence<ElementType>", "x:Object", Shape.Interface);
-
-        addImplement("x:UniformIndex");
-        addImplement("x:Iterable");
         }
 
     @Override
     public void initDeclared()
         {
+        addImplement("x:UniformIndex<x:Int, ElementType>");
+        addImplement("x:Iterable<ElementType>");
+
         //    @ro Int size;
         //    Sequence<ElementType> subSequence(Int start, Int end);
         //    Sequence<ElementType> reify();

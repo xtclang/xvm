@@ -1,6 +1,11 @@
 package org.xvm.proto;
 
-import java.util.*;
+import org.xvm.asm.ConstantPool.ClassConstant;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 
 /**
@@ -13,7 +18,17 @@ public class TypeSet
     private int m_nMaxTypeId = 0;
     private Map<Integer, Type> m_mapTypes = new TreeMap<>(Integer::compare);
     private Map<String, TypeCompositionTemplate> m_mapTemplates = new TreeMap<>();
+    private Map<String, String> m_mapAliases = new TreeMap<>();
     private Map<String, TypeComposition> m_mapCompositions = new TreeMap<>();
+    private ConstantPoolAdapter m_constantPool;
+
+    // secondary index - TypeCompositions keyed by the ConstId from the ConstPool
+    private Map<Integer, TypeComposition> m_mapConstCompositions = new TreeMap<>(Integer::compare);
+
+    TypeSet(ConstantPoolAdapter adapter)
+        {
+        m_constantPool = adapter;
+        }
 
     public Type getType(int nTypeId)
         {
@@ -53,15 +68,17 @@ public class TypeSet
         return type;
         }
 
-    public TypeCompositionTemplate getCompositionTemplate(String sName)
+    // ----- TypeCompositionTemplates -----
+
+    public TypeCompositionTemplate getTemplate(String sName)
         {
         return m_mapTemplates.get(sName);
         }
-    public boolean existsCompositionTemplate(String sName)
+    public boolean existsTemplate(String sName)
         {
         return m_mapTemplates.containsKey(sName);
         }
-    public void addCompositionTemplate(TypeCompositionTemplate template)
+    public void addTemplate(TypeCompositionTemplate template)
         {
         String sName = template.m_sName;
         if (m_mapTemplates.putIfAbsent(sName, template) != null)
@@ -70,19 +87,33 @@ public class TypeSet
             }
         template.initDeclared();
         }
-    public void forEachComposition(Consumer<TypeCompositionTemplate> consumer)
+    public void forEachTemplate(Consumer<TypeCompositionTemplate> consumer)
         {
         m_mapTemplates.values().forEach(consumer::accept);
         }
 
     public TypeCompositionTemplate ensureTemplate(String sName)
         {
-        TypeCompositionTemplate template = getCompositionTemplate(sName);
+        TypeCompositionTemplate template = getTemplate(sName);
         if (template == null && !m_setMisses.contains(sName))
             {
             System.out.println(sName);
 
-            String sSuffix = sName.substring(sName.indexOf(':') + 1).substring(sName.lastIndexOf('.') + 1);
+            String sAlias = m_mapAliases.get(sName);
+            if (sAlias != null)
+                {
+                template = getTemplate(sAlias);
+                if (template == null)
+                    {
+                    template = ensureTemplate(sAlias);
+                    }
+                m_mapTemplates.put(sName, template);
+                return template;
+                }
+
+            String sSuffix = sName.substring(sName.indexOf(':') + 1);
+            sSuffix = sSuffix.substring(sSuffix.lastIndexOf('.') + 1);
+
             String sClz= "org.xvm.proto.template.x" + sSuffix;
             try
                 {
@@ -90,40 +121,84 @@ public class TypeSet
 
                 template = clz.getConstructor(TypeSet.class).newInstance(this);
 
-                addCompositionTemplate(template);
+                addTemplate(template);
                 }
-            catch (Throwable e)
+            catch (ClassNotFoundException e)
                 {
                 System.out.println("Missing template for " + sName);
                 m_setMisses.add(sName);
                 // throw new RuntimeException(e);
                 }
+            catch (Throwable e)
+                {
+                e.printStackTrace();
+                }
             }
         return template;
         }
 
+    // TODO: temporary
     private Set<String> m_setMisses = new HashSet<>();
 
-    public TypeComposition getComposition(String sName)
+    public void addAlias(String sAlias, String sRealName)
         {
-        return m_mapCompositions.get(sName);
+        m_mapAliases.put(sAlias, sRealName);
+        }
+
+    // ----- TypeCompositions -----
+
+    public TypeComposition getComposition(String sSignature)
+        {
+        return m_mapCompositions.get(sSignature);
         }
     public void addComposition(TypeComposition composition)
         {
-        String sName = composition.m_sName;
-        if (m_mapCompositions.putIfAbsent(sName, composition) != null)
+        String sSig = composition.m_sSignature;
+        if (m_mapCompositions.putIfAbsent(sSig, composition) != null)
             {
             throw new IllegalArgumentException("CompositionName is already used:" + composition);
             }
         }
+    public TypeComposition getConstComposition(int nConstId)
+        {
+        return m_mapConstCompositions.get(nConstId);
+        }
+
+    public TypeComposition ensureConstComposition(int nConstTypeId)
+        {
+        TypeComposition typeComposition = getConstComposition(nConstTypeId);
+        if (typeComposition == null)
+            {
+            ClassConstant classConstant = m_constantPool.getClassConstant(nConstTypeId);   // must exist
+
+            String sCompositionSignature = ConstantPoolAdapter.getClassSignature(classConstant);
+
+            typeComposition = getComposition(sCompositionSignature);
+            if (typeComposition == null)
+                {
+                String sCompositionName = ConstantPoolAdapter.getClassName(classConstant);
+
+                TypeCompositionTemplate template = ensureTemplate(sCompositionName);
+                TypeName[] atn = null; // classConst -> TypeName[]
+
+                typeComposition = template.resolve(atn);
+                }
+
+            m_mapConstCompositions.put(nConstTypeId, typeComposition);
+            }
+        return typeComposition;
+        }
+
+
+    // ----- debugging -----
 
     public void dumpTemplates()
         {
         m_mapTemplates.values().forEach(template ->
-        {
-        System.out.print("\n\n### Composition for ");
-        System.out.println(template);
-        });
+                {
+                System.out.print("\n\n### Composition for ");
+                System.out.println(template);
+                });
         }
 
     public String dumpCompositions()
@@ -145,5 +220,4 @@ public class TypeSet
 
         return sb.toString();
         }
-
     }

@@ -27,6 +27,6 @@ public class xNullable
         {
         // in-place declaration for True and False
         // in-place generation of Hashable
-        m_types.addCompositionTemplate(new TypeCompositionTemplate(m_types, "x:Null", "x:Nullable", Shape.Enum));
+        m_types.addTemplate(new TypeCompositionTemplate(m_types, "x:Null", "x:Nullable", Shape.Enum));
         }
     }

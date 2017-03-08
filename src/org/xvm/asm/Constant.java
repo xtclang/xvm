@@ -363,7 +363,7 @@ public abstract class Constant
     /**
      * Enum: Types of Constant values in the ConstantPool.
      */
-    enum Type
+    public enum Type
         {
         Byte,
         ByteString,

@@ -14,8 +14,6 @@ public class xConst
     public xConst(TypeSet types)
         {
         super(types, "x:Const", "x:Object", Shape.Interface);
-
-        addImplement("x:collections.Hashable");
         }
 
     @Override
@@ -27,7 +25,10 @@ public class xConst
         // @ro Int hash;
         tctHashable.addPropertyTemplate("hash", "x:Int").makeReadOnly();
 
-        m_types.addCompositionTemplate(tctHashable);
+        m_types.addTemplate(tctHashable);
+
+        addImplement("x:collections.Hashable");
+        addImplement("x:Orderable");
 
         //    static Ordered compare(Const value1, Const value2)
         //
@@ -49,7 +50,7 @@ public class xConst
         // an override
         addMethodTemplate("to", STRING, STRING);
 
-        addMethodTemplate("to", new String[] {"x:Array<x:Byte>"}, new String[] {"x:Array<x:Byte>"});
+        addMethodTemplate("to", new String[] {"x:collections.Array<x:Byte>"}, new String[] {"x:collections.Array<x:Byte>"});
 
         // TODO: @LazyRef Int hash.get()
         }

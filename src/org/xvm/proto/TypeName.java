@@ -17,6 +17,8 @@ public interface TypeName
         return true;
         }
 
+    String getSimpleName();
+
     void ensureDependents(TypeCompositionTemplate template);
 
     static String format(TypeName[] at)
@@ -185,11 +187,16 @@ public interface TypeName
             }
 
         @Override
+        public String getSimpleName()
+            {
+            return m_sName;
+            }
+
+        @Override
         public void ensureDependents(TypeCompositionTemplate template)
             {
-            if (m_sName.equals("this"))
+            if (m_sName.equals("this.Type"))
                 {
-                m_sName = "this";
                 m_fActual = true;
                 }
             else if (!Arrays.asList(template.m_asFormalType).contains(m_sName))
@@ -219,6 +226,12 @@ public interface TypeName
         public void add(TypeName typeName)
             {
             m_aTypeName.add(typeName);
+            }
+
+        @Override
+        public String getSimpleName()
+            {
+            return toString();
             }
 
         @Override
@@ -263,6 +276,12 @@ public interface TypeName
             }
 
         @Override
+        public String getSimpleName()
+            {
+            return m_sActualName;
+            }
+
+        @Override
         public String toString()
             {
             return m_sActualName + Formatting.formatArray(m_aTypeName.toArray(), "<", ">", ", ");
@@ -297,10 +316,9 @@ public interface TypeName
             }
         }
 
-    public static void main(String[] args)
+    // unit test
+    static void main(String[] args)
         {
-        TypeSet types = new TypeSet();
-
         System.out.println(parseName("A"));
         System.out.println(parseName("A<B>"));
         System.out.println(parseName("A<B,C>"));

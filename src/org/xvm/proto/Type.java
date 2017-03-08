@@ -18,7 +18,7 @@ public class Type
     private Map<String, MultiMethodTypelet> m_methods = new HashMap<>();
 
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
-    private boolean m_fTrusted;
+    private boolean m_fConstant;
 
     public int getId()
         {

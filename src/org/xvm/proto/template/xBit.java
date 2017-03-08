@@ -41,7 +41,7 @@ public class xBit
         addMethodTemplate("to", BOOLEAN, BOOLEAN);
         addMethodTemplate("to", new String[]{"x:Byte"}, new String[]{"x:Byte"});
         addMethodTemplate("to", INT, INT);
-        addMethodTemplate("to", new String[] {"x:UInt64"}, new String[] {"x:UInt64"});
+        // addMethodTemplate("to", new String[] {"x:UInt64"}, new String[] {"x:UInt64"});
 
         addMethodTemplate("and", THIS, THIS);
         addMethodTemplate("or",  THIS, THIS);

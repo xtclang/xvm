@@ -12,7 +12,7 @@ public class xClass
     {
     public xClass(TypeSet types)
         {
-        super(types, "x:Class", "x:Object", Shape.Interface);
+        super(types, "x:Class<ClassType>", "x:Object", Shape.Interface);
         }
 
     @Override
@@ -40,5 +40,15 @@ public class xClass
         addPropertyTemplate("ProtectedType", "x:Type").makeReadOnly();
         addPropertyTemplate("PrivateType", "x:Type").makeReadOnly();
         addPropertyTemplate("children", "x:Map<x:String,x:Class|x:MultiMethod|x:Property|x:MultiFunction>").makeReadOnly();
+        addPropertyTemplate("classes", "x:Map<x:String,x:Class>").makeReadOnly();
+        addPropertyTemplate("methods", "x:Map<x:String,x:MultiMethod").makeReadOnly();
+        addPropertyTemplate("properties", "x:Map<x:String,x:Property").makeReadOnly();
+        addPropertyTemplate("functions", "x:Map<x:String,x:MultiFunction>").makeReadOnly();
+        addMethodTemplate("implements", new String[] {"x:Class"}, BOOLEAN); // non-"virtual"
+        addMethodTemplate("extends", new String[] {"x:Class"}, BOOLEAN); // non-"virtual"
+        addMethodTemplate("incorporates", new String[] {"x:Class"}, BOOLEAN); // non-"virtual"
+        addPropertyTemplate("isService", "x:Boolean").makeReadOnly();
+        addPropertyTemplate("isConst", "x:Boolean").makeReadOnly();
+        addPropertyTemplate("singleton", "x:ConditionalTuple<ClassType>").makeReadOnly();
         }
     }

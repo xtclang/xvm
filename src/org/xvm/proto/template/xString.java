@@ -13,13 +13,15 @@ public class xString
     public xString(TypeSet types)
         {
         super(types, "x:String", "x:Object", Shape.Const);
-
-        addImplement("x:Sequence");
         }
 
     @Override
     public void initDeclared()
         {
-        // TODO
+        addImplement("x:Sequence<x:Char>");
+
+        //     Int length.get()
+
+        addPropertyTemplate("length", "x:Int").makeReadOnly();
         }
     }

@@ -13,13 +13,13 @@ public class xMeta
     public xMeta(TypeSet types)
         {
         super(types, "x:Meta", "x:Object", Shape.Interface);
-
-        addImplement("x:Referent");
         }
 
     @Override
     public void initDeclared()
         {
+        addImplement("x:Referent");
+
         //    @ro Class class;
         //    @ro Module module;
         //    @ro Struct struct;

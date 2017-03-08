@@ -39,15 +39,15 @@ public class xObject
         addFunctionTemplate("equals", new String[]{"x:Object", "x:Object"}, VOID);
 
         addMethodTemplate("to", STRING, STRING);
-        addMethodTemplate("to", new String[]{"x:Array<x:String>"}, new String[]{"x:Array<x:String>"});
+        addMethodTemplate("to", new String[]{"x:collections.Array<x:String>"}, new String[]{"x:collections.Array<x:String>"});
         addMethodTemplate("to", new String[]{"x:Tuple<x:Object>"}, new String[]{"x:Tuple<x:Object>"});
         addMethodTemplate("to", new String[]{"x:Function"}, new String[]{"x:Function"});
         }
 
     public static String[] VOID = new String[0];
     public static String[] BOOLEAN = new String[]{"x:Boolean"};
-    public static String[] NUMBER = new String[]{"x:Number"};
     public static String[] INT = new String[]{"x:Int"};
     public static String[] STRING = new String[]{"x:String"};
     public static String[] THIS = new String[]{"this.Type"};
+    public static String[] CONDITIONAL_THIS = new String[]{"x:ConditionalTuple<this.Type>"};
     }

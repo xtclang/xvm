@@ -26,9 +26,8 @@ public class xBoolean
     public void initDeclared()
         {
         // in-place declaration for True and False
-        // in-place generation of Hashable
-        m_types.addCompositionTemplate(new TypeCompositionTemplate(m_types, "x:True", "x:Boolean", Shape.Enum));
-        m_types.addCompositionTemplate(new TypeCompositionTemplate(m_types, "x:False", "x:Boolean", Shape.Enum));
+        m_types.addTemplate(new TypeCompositionTemplate(m_types, "x:True", "x:Boolean", Shape.Enum));
+        m_types.addTemplate(new TypeCompositionTemplate(m_types, "x:False", "x:Boolean", Shape.Enum));
 
         //    Bit  to<Bit>();
         //    Byte to<Byte>();
@@ -43,7 +42,7 @@ public class xBoolean
         addMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
         addMethodTemplate("to", new String[]{"x:Byte"}, new String[]{"x:Byte"});
         addMethodTemplate("to", INT, INT);
-        addMethodTemplate("to", new String[]{"x:UInt64"}, new String[]{"x:UInt64"});
+        // addMethodTemplate("to", new String[]{"x:UInt64"}, new String[]{"x:UInt64"});
 
         addMethodTemplate("and", THIS, THIS);
         addMethodTemplate("or",  THIS, THIS);

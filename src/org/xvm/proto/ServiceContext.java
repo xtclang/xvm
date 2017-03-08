@@ -17,8 +17,8 @@ public class ServiceContext
     Stack<Frame> m_frames;
     TypeSet m_types;
 
-    ObjectHandle createHandle(int nType, int nConstValue)
+    public ObjectHandle ensureConstHandle(int nConstType, int nConstValue)
         {
-        return null; // TODO
+        return m_heap.ensureConstHandle(nConstType, nConstValue);
         }
     }

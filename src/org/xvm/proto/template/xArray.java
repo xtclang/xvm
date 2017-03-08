@@ -1,6 +1,9 @@
 package org.xvm.proto.template;
 
+import com.sun.xml.internal.bind.v2.model.core.Ref;
 import org.xvm.proto.TypeSet;
+
+import java.lang.annotation.ElementType;
 
 /**
  * TODO:
@@ -13,8 +16,6 @@ public class xArray
     public xArray(TypeSet types)
         {
         super(types, "x:collections.Array<ElementType>", "x.Object", Shape.Class);
-
-        addImplement("x:collections.Sequence<ElementType>");
         }
 
     // subclassing
@@ -26,6 +27,8 @@ public class xArray
     @Override
     public void initDeclared()
         {
+        addImplement("x:Sequence<ElementType>");
+
         //    construct Array(Int capacity)
         //    construct Array(Int capacity, function ElementType(Int) supply)
         //
@@ -33,9 +36,15 @@ public class xArray
         //    public/private Int size     = 0;
         //
         //    Ref<ElementType> elementAt(Int index)
-        //    private Element<ElementType>? head;
+        //    @op Array.Type<ElementType> slice(Range<Int> range);
+        //    Array.Type<ElementType> reify();
+        //    @op Array.Type<ElementType> add(Array.Type<ElementType> that);
+        //    @op Array.Type<ElementType> replace(Int index, ElementType value);
         //
-        //    class Element<RefType>(ElementType value)
+        //    static Ordered compare(Array value1, Array value2)
+        //
+        //    private Element<ElementType>? head;
+        //    private class Element<RefType>(ElementType value)
 
         // TODO construct
         // TODO initialization?
@@ -46,11 +55,18 @@ public class xArray
         PropertyTemplate ptLen = addPropertyTemplate("size", "x:Int");
         ptLen.setSetAccess(Access.Private);
 
+        addMethodTemplate("elementAt", INT, new String[]{"x:Ref<ElementType>"});
+        addMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, THIS);
+        addMethodTemplate("reify", VOID, THIS);
+        addMethodTemplate("add", THIS, THIS);
+        addMethodTemplate("replace", new String[]{"x:Int","ElementType"}, THIS);
+
+        addFunctionTemplate("compare", new String[] {"this.Type", "this.Type"}, new String[] {"x:Ordered"});
+
         PropertyTemplate ptHead = addPropertyTemplate("head", "x:Ref<ElementType>");
         ptHead.setGetAccess(Access.Private);
         ptHead.setSetAccess(Access.Private);
 
-        addMethodTemplate("elementAt", INT, new String[] {"x:Ref<ElementType>"});
 
         // TODO child class
         }

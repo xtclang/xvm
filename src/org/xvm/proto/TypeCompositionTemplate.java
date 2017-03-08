@@ -19,7 +19,7 @@ public class TypeCompositionTemplate
     Shape  m_shape;
     TypeCompositionTemplate m_parent;
 
-    List<String> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
+    List<TypeName> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
     List<String> m_listIncorporate = new LinkedList<>();
 
     Map<String, PropertyTemplate> m_mapProperties = new TreeMap<>();
@@ -47,7 +47,7 @@ public class TypeCompositionTemplate
             for (int i = 0; i < asFormalType.length; i++)
                 {
                 String sFormalType = asFormalType[i];
-                assert (!types.existsCompositionTemplate(sFormalType)); // must not be know
+                assert (!types.existsTemplate(sFormalType)); // must not be know
                 }
             m_sName = sName.substring(0, ofBracket);
             m_asFormalType = asFormalType;
@@ -73,9 +73,10 @@ public class TypeCompositionTemplate
     // add an "implement"
     public void addImplement(String sInterface)
         {
-        m_listImplement.add(sInterface);
+        TypeName tnInterface = TypeName.parseName(sInterface);
+        m_listImplement.add(tnInterface);
 
-        m_types.ensureTemplate(sInterface);
+        m_types.ensureTemplate(tnInterface.getSimpleName());
         }
 
     // add an "incorporate"
@@ -123,11 +124,31 @@ public class TypeCompositionTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
-    TypeComposition resolve(String[] asGenericActual)
+    public TypeComposition resolve(TypeName[] atnGenericActual)
         {
-        return new TypeComposition(this, asGenericActual);
+        return new TypeComposition(this, atnGenericActual);
         }
 
+    // ---- OpCode support -----
+
+    public ObjectHandle createHandle()
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    public ObjectHandle createHandle(Object oValue)
+        {
+        ObjectHandle handle = createHandle();
+        assignHandle(handle, oValue);
+        return handle;
+        }
+
+    public void assignHandle(ObjectHandle handle, Object oValue)
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    // ----- debugging support -----
 
     @Override
     public String toString()
@@ -259,7 +280,7 @@ public class TypeCompositionTemplate
 
         // TODO: pointer to what XVM Structure?
         int m_cVars; // number of local vars
-        byte[] m_abOps;
+        Op[] m_aop;
 
         InvocationTemplate(String[] asArgType, String[] asRetType)
             {

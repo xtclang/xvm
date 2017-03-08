@@ -12,14 +12,14 @@ public class xRef
     {
     public xRef(TypeSet types)
         {
-        super(types, "x:Ref", "x:Object", Shape.Interface);
-
-        addImplement("x:Referent");
+        super(types, "x:Ref<RefType>", "x:Object", Shape.Interface);
         }
 
     @Override
     public void initDeclared()
         {
+        addImplement("x:Referent");
+
         //    @ro Boolean assigned;
         //    conditional RefType peek()
         //    RefType get();
