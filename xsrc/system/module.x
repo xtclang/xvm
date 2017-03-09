@@ -194,6 +194,26 @@ module ecstasy.xtclang.org
          * will simply return {@code this}.
          */
         Constable+Const ensureConst();
+
+        /**
+         * To ensure that the object is a {@code const}, use the object returned from this method.
+         * Unlike {@link ensureConst}, this method will attempt to convert {@code this} to an
+         * immutable object that implements the Const interface, and will only create a new object
+         * if this object cannot be
+         *
+         * The expected implementation of this method on a {@code const} object is that the method
+         * will simply return {@code this}.
+         */
+        Constable+Const makeConst()
+            {
+            if (this instanceof Const)
+                {
+                meta.immutable = true;
+                return this;
+                }
+
+            return ensureConst();
+            }
         }
 
     /**
@@ -209,7 +229,14 @@ module ecstasy.xtclang.org
     interface Module
             extends Package
         {
-        // TODO
+        // TODO version number
+
+        // TODO list of depends-on other modules
+
+        /**
+         * Objects within a module is subject to
+         */
+        @ro Iterable<Class> autoMixins;
         }
 
     /**
@@ -220,8 +247,9 @@ module ecstasy.xtclang.org
      * defining the package itself, while in this case we are defining the "Package" type.
      */
     interface Package
-            extends Class
         {
-        // TODO
+        // TODO what is the class for this
+
+        // TODO name-to-contents map
         }
     }

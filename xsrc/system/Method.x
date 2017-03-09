@@ -17,6 +17,8 @@ const Method<TargetType,
      */
     ReturnValue[] returnValue;
 
+    Boolean property;
+
     /**
      * True if the method has a conditional return. A conditional return is one that conditionally
      * has a value. As such, the return value has one additional Boolean value prepended to the

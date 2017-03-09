@@ -1,9 +1,15 @@
 /**
- * A Type is a const object that represents an Ecstasy data type.
+ * A Type is a const object that represents an Ecstasy data type. The Type class itself is abstract,
+ * but it has a number of well-known concrete implementations.
  *
  * At one level, a data type is simply a set of capabilities, and can be thought of as a set of
  * properties and methods. Simplifying further, a property can be thought of as a method that
  * returns a reference; as a result, a type can be thought of as simply a set of methods.
+ *
+ * A _parameterized type_ is a type that originates from the formal type of a parameterized class. A
+ * parameterized type has a number of named _type parameters_, each of which indicates a particular
+ * type that is associated with the name. A type parameter whose value is unknown is _unresolved_,
+ * and a type that has one or more unresolved type parameters is an _unresolved type_.
  *
  * A type also provides runtime support for relational operators, such as equality ({@code ==}),
  * inequality ({@code !=}), less-than ({@code <}), less-than-or-equal ({@code <=}), greater-than
@@ -16,8 +22,6 @@
  * {@code instanceof} relational operator, answering the question of whether or not the specified
  * object is either assignable to (i.e. _assignment-compatible with_) or castable to this type.
  *
- * Types are also parameterizable, using . A type without parameters TODO
- *
  * A type can also represent an option (a selection) of two of more types, as if the type were
  * _"any one of"_ a set of types. Such a type has two specific attributes:
  * # A set of types; and
@@ -27,11 +31,31 @@
 const Type<DataType>
         implements Comparator<DataType>
     {
+    // ----- raw type information ------------------------------------------------------------------
+
     /**
      * Obtain the raw set of all methods on the type. This includes methods that represent
      * properties.
      */
-    @ro Set<Method> allMethods;
+    Set<Method> allMethods;
+
+    /**
+     * A type can be explicitly immutable. An object can only be assigned to an explicitly immutable
+     * type if the object is immutable.
+     */
+    Boolean explicitlyImmutable;
+
+    /**
+     * A map of type parameters by name.
+     */
+    Map<String, TypeParameter> paramsByName;
+
+    // -----
+
+    const TypeParameter<TypeContraint>(String name, Type<TypeContraint> type, Boolean resolved);
+
+
+    // -----
 
     /**
      * Obtain the set of methods on the type that are not present to represent a property. These
@@ -98,6 +122,10 @@ const Type<DataType>
         return o&.ActualType.isA(this);
         }
 
+    // TODO
+    Boolean isAssignableTo(Type that);
+    Boolean isAssignableFrom(Type that);
+
     /**
      *
      */
@@ -127,10 +155,6 @@ const Type<DataType>
         // TODO this is wrong
         return this >= that;
         }
-
-    // TODO enum properties / map name->prop
-
-    // TODO enum methods / map name->multimethod sig->method
 
     static Boolean equals(Type value1, Type value2)
         {

@@ -2835,3 +2835,59 @@ class Class<ClassType>
     ClassType new_(function Void (Struct) construct);
     ClassType new_(function function Void () (Struct) construct);
     }
+
+// inner class example
+
+class BaseParent
+    {
+    class Child {}
+
+    static class Orphan {}
+
+    Child createChild()
+        {
+        return new Child();
+        }
+
+    Orphan createOrphan()
+        {
+        return new Orphan();
+        }
+    }
+
+class DerivedParent
+	extends BaseParent
+  {
+  class extends Child {}
+
+  static class extends Orphan {}
+  }
+
+BaseParent parent1 = new BaseParent();
+BaseParent.Child  child1  = parent1.createChild();
+BaseParent.Orphan orphan1 = parent1.createOrphan();
+
+BaseParent parent2 = new DerivedParent();
+BaseParent.Child  child2  = parent2.createChild();
+BaseParent.Orphan orphan2 = parent2.createOrphan();
+
+BaseParent p1 = new BaseParent()
+BaseParent p2 = new DerivedParent()
+Child      c1 = new p1.Child();	// cannot say "new BaseParent.Child()" - exception!!!
+Child      c2 = new p2.Child();
+Child      c3 = p2.makeMeABaby();
+
+Orphan     o1 = new p1.Orphan();
+Orphan     o2 = new p2.Orphan();
+
+Orphan     o3 = new BaseParent.Orphan();     // is this a good idea to allow?
+Orphan     o4 = new DerivedParent.Orphan();	 // no! this is an exception (or just discouraged?)
+Orphan     o5 = BaseParent.Orphan.findConstructor(Void)();
+
+// question is "how do you de-serialize an orphan?" if you can't "new" the
+// orphan by its class?
+
+//--
+
+Class<HashMap<Int,String>> c = HashMap.narrow(new TypeParameter("KeyType", Int), new TypeParameter("ValueType", String));
+

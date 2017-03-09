@@ -129,6 +129,6 @@
                 }
             }
 
-        return map.ensureConst();
+        return map.makeConst();
         }
     }
