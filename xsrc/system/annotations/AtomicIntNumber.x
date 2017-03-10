@@ -5,16 +5,16 @@
 @auto mixin AtomicIntNumber<RefType>
         into AtomicRef<IntNumber>
     {
-    @op Void blindIncrement()
+    @op Void increment()
         {
         RefType oldValue = get();
-        while (oldValue : replaceFailed(oldValue, oldValue.increment())) {}
+        while (oldValue : replaceFailed(oldValue, oldValue.nextValue())) {}
         }
 
-    @op Void blindDecrement()
+    @op Void decrement()
         {
         RefType oldValue = get();
-        while (oldValue : replaceFailed(oldValue, oldValue.decrement())) {}
+        while (oldValue : replaceFailed(oldValue, oldValue.prevValue())) {}
         }
 
     @op RefType preIncrement()
@@ -23,7 +23,7 @@
         RefType newValue;
         do
             {
-            newValue = oldValue.increment();
+            newValue = oldValue.nextValue();
             }
         while (oldValue : replaceFailed(oldValue, newValue));
         return newValue;
@@ -35,7 +35,7 @@
         RefType newValue;
         do
             {
-            newValue = oldValue.decrement();
+            newValue = oldValue.prevValue();
             }
         while (oldValue : replaceFailed(oldValue, newValue));
         return newValue;
@@ -44,14 +44,14 @@
     @op RefType postIncrement()
         {
         RefType oldValue = get();
-        while (oldValue : replaceFailed(oldValue, oldValue.increment())) {}
+        while (oldValue : replaceFailed(oldValue, oldValue.nextValue())) {}
         return oldValue;
         }
 
     @op RefType postDecrement()
         {
         RefType oldValue = get();
-        while (oldValue : replaceFailed(oldValue, oldValue.decrement())) {}
+        while (oldValue : replaceFailed(oldValue, oldValue.prevValue())) {}
         return oldValue;
         }
 

@@ -15,7 +15,7 @@ mixin UncheckedInt
             }
         catch (MathException e)
             {
-            return this.to<VarInt>().increment().truncate(bitLength).to<this:type>();
+            return this.to<VarInt>().nextValue().truncate(bitLength).to<this:type>();
             }
         }
 
@@ -27,7 +27,7 @@ mixin UncheckedInt
             }
         catch (MathException e)
             {
-            return this.to<VarInt>().decrement().truncate(bitLength).to<this:type>();
+            return this.to<VarInt>().prevValue().truncate(bitLength).to<this:type>();
             }
         }
 

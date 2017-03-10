@@ -32,6 +32,7 @@ import types.MultiFunction;
  * references using {@code const} classes.)
  */
 class Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>
+        implements Const, Constable
     {
     // ----- data types ----------------------------------------------------------------------------
     
@@ -59,19 +60,19 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     typedef function Void (StructType) Constructor;
 
     /**
+     * The second half of the constructor-finally pair.
+     *
+     * @see ConstructorFinally
+     */
+    typedef function Void (PrivateType) Completion;
+
+    /**
      * A constructor-finally pair is a combination of a constructor function that operates on the
      * read/write structure that will contain the values of the newly constructed object and which
      * returns a function that will be executed once a "this" exists for the constructed object,
      * but _before_ the constructed object is returned to the instantiator of the object.
      */
     typedef function Completion (StructType) ConstructorFinally;
-
-    /**
-     * The second half of the constructor-finally pair.
-     *
-     * @see ConstructorFinally
-     */
-    typedef function Void (PrivateType) Completion;
 
     /**
      * An action describes the manner in which one step of the class composition was achieved:
@@ -135,14 +136,14 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     Class[] classes;
 
     /**
-     * The child methods of this class.
-     */
-    Method[] methods;
-
-    /**
      * The child properties of this class.
      */
     Property[] properties;
+
+    /**
+     * The child methods of this class.
+     */
+    Method[] methods;
 
     /**
      * The child function literals of this class.
@@ -268,31 +269,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
 
         for (Composition step : composition)
             {
-            if (step.ingredient == that)
-                {
-                return true;
-                }
-            }
-
-        return false;
-        }
-
-    /**
-     * Determine if the class implements the specified interface.
-     */
-    Boolean implements_(Class that)
-        {
-        assert that.category == Interface;
-
-        if (this == that)
-            {
-            return true;
-            }
-
-        for (Composition step : composition)
-            {
-            if ((step.action == Implements && step.ingredient == that)
-                    || step.ingredient.implements_(that))
+            if (step.ingredient == that || step.ingredient.derivesFrom(that))
                 {
                 return true;
                 }
@@ -317,6 +294,30 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             {
             if ((step.action == Extends && step.ingredient == that) ||
                 (step.action != Implements && step.ingredient.extends_(that)))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * Determine if the class implements the specified interface.
+     */
+    Boolean implements_(Class that)
+        {
+        assert that.category == Interface;
+
+        if (this == that)
+            {
+            return true;
+            }
+
+        for (Composition step : composition)
+            {
+            if ((step.action == Implements && step.ingredient == that)
+                    || step.ingredient.implements_(that))
                 {
                 return true;
                 }
@@ -364,14 +365,14 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
 
         ListMap<String, NamedChild> map = new ListMap();
         map.putAll(classesByName);
-        map.putAll(methodsByName);
         map.putAll(propertiesByName);
+        map.putAll(methodsByName);
         map.putAll(functionsByName);
         map.putAll(literalsByName);
 
         assert map.size == classesByName.size
-                         + methodsByName.size
                          + propertiesByName.size
+                         + methodsByName.size
                          + functionsByName.size
                          + literalsByName.size;
 
@@ -396,6 +397,23 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         }
 
     /**
+     * The class properties, by name. This is a sub-set of the contents of {@link childrenByName}.
+     */
+    @lazy Map<String, Property> propertiesByName.calc()
+        {
+        assert meta.immutable;
+
+        ListMap<String, Property> map = new ListMap();
+        for (Property property : properties)
+            {
+            assert !map.contains(property.name);
+            map.put(property.name, property);
+            }
+
+        return map.makeConst();
+        }
+
+    /**
      * The class methods, by name. This is a sub-set of the contents of {@link childrenByName}.
      */
     @lazy Map<String, MultiMethod> methodsByName.calc()
@@ -413,23 +431,6 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
                 {
                 map.put(method.name, new MultiMethod(method.to<Method[]>()));
                 }
-            }
-
-        return map.makeConst();
-        }
-
-    /**
-     * The class properties, by name. This is a sub-set of the contents of {@link childrenByName}.
-     */
-    @lazy Map<String, Property> propertiesByName.calc()
-        {
-        assert meta.immutable;
-
-        ListMap<String, Property> map = new ListMap();
-        for (Property property : properties)
-            {
-            assert !map.contains(property.name);
-            map.put(property.name, property);
             }
 
         return map.makeConst();

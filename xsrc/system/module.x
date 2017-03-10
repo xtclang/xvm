@@ -193,18 +193,18 @@ module ecstasy.xtclang.org
          * The expected implementation of this method on a {@code const} object is that the method
          * will simply return {@code this}.
          */
-        Constable+Const ensureConst();
+        immutable (Constable+Const) ensureConst();
 
         /**
          * To ensure that the object is a {@code const}, use the object returned from this method.
          * Unlike {@link ensureConst}, this method will attempt to convert {@code this} to an
          * immutable object that implements the Const interface, and will only create a new object
-         * if this object cannot be
+         * if this object cannot be converted to an immutable form.
          *
          * The expected implementation of this method on a {@code const} object is that the method
          * will simply return {@code this}.
          */
-        Constable+Const makeConst()
+        immutable (Constable+Const) makeConst()
             {
             if (this instanceof Const)
                 {

@@ -2891,3 +2891,5 @@ Orphan     o5 = BaseParent.Orphan.findConstructor(Void)();
 
 Class<HashMap<Int,String>> c = HashMap.narrow(new TypeParameter("KeyType", Int), new TypeParameter("ValueType", String));
 
+// -- class & type
+

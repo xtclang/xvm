@@ -1,5 +1,5 @@
 /**
- * A Type is a const object that represents an Ecstasy data type. The Type class itself is abstract,
+ * A Type is an object that represents an Ecstasy data type. The Type class itself is abstract,
  * but it has a number of well-known concrete implementations.
  *
  * At one level, a data type is simply a set of capabilities, and can be thought of as a set of
@@ -27,17 +27,22 @@
  * # A set of types; and
  * # A set of methods that reflects the intersection of the sets of methods from each of those
  *   types.
+ *
+ * Unfortunately, Type cannot be declared as a {@code const} because of the potential for circular
+ * references. (The property values of a {@code const} are fully known and immutable before the
+ * {@code const} object even has a "{@code this}"; as a result, it is impossible to create circular
+ * references using {@code const} classes.)
  */
-const Type<DataType>
-        implements Comparator<DataType>
+class Type<DataType>
+        implements Const, Constable
     {
-    // ----- raw type information ------------------------------------------------------------------
+    // ----- primary state -------------------------------------------------------------------------
 
     /**
      * Obtain the raw set of all methods on the type. This includes methods that represent
      * properties.
      */
-    Set<Method> allMethods;
+    Method[] allMethods;
 
     /**
      * A type can be explicitly immutable. An object can only be assigned to an explicitly immutable
@@ -45,46 +50,54 @@ const Type<DataType>
      */
     Boolean explicitlyImmutable;
 
-    /**
-     * A map of type parameters by name.
-     */
-    Map<String, TypeParameter> paramsByName;
-
-    // -----
-
-    const TypeParameter<TypeContraint>(String name, Type<TypeContraint> type, Boolean resolved);
-
-
-    // -----
+    // ----- calculated properties -----------------------------------------------------------------
 
     /**
-     * Obtain the set of methods on the type that are not present to represent a property. These
-     * methods are what developers think of as _methods_.
+     * The type's methods (all of them, including those that represent properties), by name.
      */
-    @lazy Set<Method> methods.calc()
+    @lazy Map<String, MultiMethod> allMethodsByName.calc()
         {
-        return allMethods.filter(m -> m.ReturnTypes.size != 1 || !m.ReturnTypes[0].isA(Ref));
+        assert meta.immutable;
+
+        ListMap<String, Method> map = new ListMap();
+        for (Method method : allMethods)
+            {
+            if (MultiMethod multi : map.get(method.name))
+                {
+                map.put(method.name, multi.add(method));
+                }
+            else
+                {
+                map.put(method.name, new MultiMethod(method.to<Method[]>()));
+                }
+            }
+
+        return map.makeConst();
         }
 
     /**
      * Obtain the set of properties that exist on the type.
      */
-    @lazy Set<Property> properties.calc()
+    @lazy Property[] properties.calc()
         {
-        Set<Property> set = new ListSet<>();
-        // TODO allMethods.filter(m -> m.ReturnTypes.size == 1 && m.ReturnTypes[0].isA(Ref));
-        return set;
-        }
+        assert meta.immutable;
 
-    @lazy Map<String, MultiMethod> methodsByName.calc()
-        {
-        Map<String, MultiMethod> map = new ListMap<>();
-        // TODO
-        return map;
+        Property[] list = new Property[];
+        for (Method method : allMethods)
+            {
+            Property? property = method.property;
+            if (property?)
+                {
+                list += property;
+                }
+            }
+        return list;
         }
 
     @lazy Map<String, Property> propertiesByName.calc()
         {
+        assert meta.immutable;
+
         Map<String, Property> map = new ListMap<>();
         for (Property prop : properties)
             {
@@ -94,53 +107,74 @@ const Type<DataType>
         }
 
     /**
-     * Obtain a function that will evaluate two instances of the type for equality. This is used to
-     * provide the functionality of the relational operator "{@code ==}" (and thus "{@code !=}").
-     *
-     * @throws UnsuportedOperationException if the type does not support an equality function
+     * Obtain the set of methods on the type that are not present to represent a property. These
+     * methods are what developers think of as _methods_.
      */
-    @Override
-    @ro function Boolean (DataType v1, DataType v2) compareForEquality;
-
-    /**
-     * Obtain a function that will evaluate two instances of the type for ordering purposes. This is
-     * used to provide the functionality of the relational ordering operator "{@code <=>}", also
-     * known as _the spaceship operator_, and thus a number of other relational operators such as
-     * less-than ({@code <}), less-than-or-equal ({@code <=}), greater-than ({@code >}), and
-     * greater-than-or-equal ({@code >=}).
-     *
-     * @throws UnsuportedOperationException if the type does not support an ordering function
-     */
-    @Override
-    @ro function Ordered (DataType v1, DataType v2) compareForOrder;
-
-    /**
-     * Test whether the specified object is an {@code instanceof} this type.
-     */
-    Boolean isInstance(Object o)
+    @lazy Method[] methods.calc()
         {
-        return o&.ActualType.isA(this);
+        Method[] list = new Method[];
+        for (Method method : allMethods)
+            {
+            if (method.property == null)
+                {
+                list += method;
+                }
+            }
+        return list;
         }
 
-    // TODO
-    Boolean isAssignableTo(Type that);
-    Boolean isAssignableFrom(Type that);
+    @lazy Map<String, MultiMethod> methodsByName.calc()
+        {
+        assert meta.immutable;
+
+        ListMap<String, Method> map = new ListMap();
+        for (Method method : methods)
+            {
+            if (MultiMethod multi : map.get(method.name))
+                {
+                map.put(method.name, multi.add(method));
+                }
+            else
+                {
+                map.put(method.name, new MultiMethod(method.to<Method[]>()));
+                }
+            }
+
+        return map.makeConst();
+        }
 
     /**
+     * Determine if references and values of the specified type will be _assignable to_ references
+     * of this type.
      *
+     * let _T1_ and _T2_ be two types
+     * * let _M1_ be the set of all methods in _T1_ (including those representing properties)
+     * * let _M2_ be the set of all methods in _T2_ (including those representing properties)
+     * * let _T2_ be a "derivative type" of _T1_ iff
+     *   1. _T1_ originates from a Class _C1_
+     *   2. _T2_ originates from a Class _C2_
+     *   3. _C2_ is a derivative Class of _C1_
+     * * if _T1_ and _T2_ are both parameterized types, let "same type parameter" be a type
+     *   parameter of _T1_ that also is a type parameter of _T2_ because _T2_ is a derivative type
+     *   of _T1_, or _T1_ is a derivative type of _T1_, or both _T1_ and _T2_ are derivative types
+     *   of some _T3_.
+     *
+     * Type _T2_ is assignable to a Type _T1_ iff both of the following hold true:
+     * 1. for each _m1_ in _M1_, there exists an _m2_ in _M2_ for which all of the following hold
+     *    true:
+     *    1. _m1_ and _m2_ have the same name
+     *    2. _m1_ and _m2_ have the same number of parameters, and for each parameter type _p1_ of
+     *       _m1_ and _p2_ of _m2_, at least one of the following holds true:
+     *       1. _p1_ is assignable to _p2_
+     *       2. both _p1_ and _p2_ are (or are resolved from) the same type parameter, and both of
+     *          the following hold true:
+     *          1. _p2_ is assignable to _p1_
+     *          2. _t1_ produces _p1_
+     *    3. _m1_ and _m2_ have the same number of return values, and for each return type _r1_ of
+     *       _m1_ and _r2_ of _m2_, the following holds true:
+     *      1. _r2_ is assignable to _r1_
+     * 2. if _t1_ is explicitly immutable, then _t2_ must also be explicitly immutable.
      */
-    DataType cast(Object o)
-        {
-        assert isInstance(o);
-        return (DataType) o;
-        }
-
-    DataType cast(Object o)
-        {
-        assert isInstance(o);
-        return (DataType) o;
-        }
-
     Boolean isA(Type that)
         {
         if (this == that)
@@ -148,43 +182,132 @@ const Type<DataType>
             return true;
             }
 
-        // this type must have a matching method for each method of that type
-        this.methods
-        that.methods
+        if (that.explicitlyImmutable && !this.explicitlyImmutable)
+            {
+            return false;
+            }
 
-        // TODO this is wrong
-        return this >= that;
+        // this type must have a matching method for each method of that type
+        nextMethod: for (Method thatMethod : that.allMethods)
+            {
+            // find the corresponding method on this type
+            for (Method thisMethod : this.allMethodsByName[thatMethod.name].methods)
+                {
+                if (thisMethod.isSubstitutableFor(thatMethod))
+                    {
+                    continue nextMethod;
+                    }
+                }
+
+            // no such matching method
+            return false;
+            }
+
+        return true;
+        }
+
+    /**
+     * Determine if this type _consumes_ that type.
+     *
+     * @see Method.consumes
+     */
+    Boolean consumes(Type that)
+        {
+        for (Method method : methods)
+            {
+            if (method.consumes(that))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * Determine if this type _produces_ that type.
+     *
+     * @see Method.produces
+     */
+    Boolean produces(Type that)
+        {
+        for (Method method : methods)
+            {
+            if (method.produces(that))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * Test whether the specified object is an {@code instanceof} this type.
+     */
+    Boolean isInstance(Object o)
+        {
+        return &o.ActualType.isA(this);
+        }
+
+    /**
+     * Cast the specified object to this type.
+     */
+    DataType cast(Object o)
+        {
+        assert isInstance(o);
+        return (DataType) o;
+        }
+
+    // ----- dynamic type manipulation -------------------------------------------------------------
+
+    /**
+     * TODO should it be possible to create a new type from the union of two existing types?
+     */
+    Type add(Type that)
+        {
+        TODO +
+        }
+
+    /**
+     * TODO should it be possible to explicitly remove things from a type?
+     */
+    Type sub(Type that)
+        {
+        TODO -
+        }
+
+    // ----- const contract ------------------------------------------------------------------------
+
+    @Override
+    @lazy Int hash.calc()
+        {
+        TODO hash
         }
 
     static Boolean equals(Type value1, Type value2)
         {
-        return value1 == value2;
+        TODO ==
         }
 
-// TODO types are not "strictly" comparable, i.e. t1 could be < or = or > t2, but it could also be none of the above
     static Order compare(Type value1, Type value2)
         {
-        return value1 == value2;
+        TODO <=>
         }
 
-    Type add(Type that);
+    // ----- Constable interface -------------------------------------------------------------------
 
-    Type sub(Type that);
+    @Override
+    immutable Type<DataType> ensureConst()
+        {
+        return new Type<DataType>(allMethods, explicitlyImmutable).makeConst();
+        }
 
-        /**
-         * Dereference a name to obtain a field.
-         */
-        @op Ref elementFor(String name)
-            {
-            for (Ref ref : to<Ref[]>())
-                {
-                if (ref.name? == name)
-                    {
-                    return ref;
-                    }
-                }
-
-            throw new Exception("no such field: " + name);
-            }
-
+    @Override
+    immutable Type<DataType> makeConst()
+        {
+        allMethods = allMethods.makeConst();
+        meta.immutable = true;
+        return this;
+        }
     }
