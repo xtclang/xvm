@@ -34,7 +34,7 @@
  * references using {@code const} classes.)
  */
 class Type<DataType>
-        implements Const, Constable
+        implements Const, ConstAble
     {
     // ----- primary state -------------------------------------------------------------------------
 
@@ -213,15 +213,7 @@ class Type<DataType>
      */
     Boolean consumes(Type that)
         {
-        for (Method method : methods)
-            {
-            if (method.consumes(that))
-                {
-                return true;
-                }
-            }
-
-        return false;
+        return methods.matchAny(method -> method.consumes(that));
         }
 
     /**
@@ -231,15 +223,8 @@ class Type<DataType>
      */
     Boolean produces(Type that)
         {
-        for (Method method : methods)
-            {
-            if (method.produces(that))
-                {
-                return true;
-                }
-            }
-
-        return false;
+        // TODO
+        return methods.matchAny(method -> method.produces(that));
         }
 
     /**
@@ -295,12 +280,14 @@ class Type<DataType>
         TODO <=>
         }
 
-    // ----- Constable interface -------------------------------------------------------------------
+    // ----- ConstAble interface -------------------------------------------------------------------
 
     @Override
     immutable Type<DataType> ensureConst()
         {
-        return new Type<DataType>(allMethods, explicitlyImmutable).makeConst();
+        return this instanceof immutable
+                ? this
+                : new Type<DataType>(allMethods, explicitlyImmutable).makeConst();
         }
 
     @Override

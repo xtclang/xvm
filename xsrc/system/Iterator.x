@@ -22,24 +22,40 @@ interface Iterator<ElementType>
             consume(value);
             }
         }
+
     /**
      * Perform the specified action for all remaining elements in the iterator, allowing for
      * a possibility to stop the iteration at any time.
      *
-     * @param consume  an action to perform on each element; if the action returns true, the
-     *                 iterator is considered "short-circuited", the method returns immediately
-     *                 and no more elements are iterated over
+     * @param match  an action to perform on each element; if the action returns true, the
+     *               iterator is considered "short-circuited", the method returns immediately
+     *               and no more elements are iterated over
      * @return true iff the iterator was "short-circuited"
      */
-    Boolean forEach(function Boolean consume(ElementType))
+    Boolean matchAny(function Boolean match(ElementType))
         {
         while (ElementType value : next())
             {
-            if (consume(value))
+            if (match(value))
                 {
                 return true;
                 }
             }
         return false;
+        }
+
+    /**
+     * TODO
+     */
+    Boolean matchAll(function Boolean match(ElementType))
+        {
+        while (ElementType value : next())
+            {
+            if (!match(value))
+                {
+                return false;
+                }
+            }
+        return true;
         }
     }

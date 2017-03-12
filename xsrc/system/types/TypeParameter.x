@@ -11,17 +11,17 @@
  *   class HashMap<KeyType extends Hashable, Value>
  *           implements Map<KeyType, ValueType> {...}
  */
-const TypeParameter(String name, Type value = Object)
+const TypeParameter(String name, Type type = Object)
     {
     /**
      * Construct a type parameter by narrowing an existing type parameter.
      */
-    construct TypeParameter(TypeParameter param, Type value)
+    construct TypeParameter(TypeParameter param, Type type)
         {
         // this type parameter has to be a narrower type than the template that it is based on
-        assert param.value.isAssignableFrom(value);
+        assert param.type.isAssignableFrom(type);
 
-        this.name  = param.name;
-        this.value = value;
+        this.name = param.name;
+        this.type = type;
         }
     }

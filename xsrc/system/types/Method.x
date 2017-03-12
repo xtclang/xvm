@@ -28,7 +28,7 @@ const Method<TargetType,
      *
      * TODO note about compile time types
      */
-    @lazy Property? property.get()
+    @lazy Property? property.calc()
         {
         if (ReturnTypes.size == 1 && ReturnTypes[0].isA(Ref) && ParamTypes.size == 0)
             {
@@ -161,7 +161,7 @@ const Method<TargetType,
      * Given an object reference of a type that contains this method, invoke that method passing
      * the specified arguments, and returning the results.
      */
-    ReturnType invoke(TargetType target, ParamType args)
+    ReturnType invoke(TargetType target, ParamTypes args)
         {
         return bindTarget(target).invoke(args);
         }

@@ -38,14 +38,14 @@ interface Tuple<ElementTypes...>
      * value, then the compile-time type of the returned value is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @op ElementTypes[index] get(Int index);
+    @op ElementTypes[index] getElement(Int index);
 
     /**
      * Modify the value in the specified element in the tuple.
      *
      * This operation will throw an exception if the tuple is either persistent or {@code const}.
      */
-    @op Void set(Int index, ElementTypes[index] newValue);
+    @op Void setElement(Int index, ElementTypes[index] newValue);
 
     /**
      * Obtain the Ref for the specified element.

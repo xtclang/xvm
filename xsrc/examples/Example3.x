@@ -14,14 +14,14 @@ class Provider<T>
     }
 
 String stringExtractor(Provider<String> provider)
-	{
-	return provider.get(0);
-	}
+    {
+    return provider.get(0);
+    }
 
 int intExtractor(Provider<int> provider)
-	{
-	return provider.get(0);
-	}
+    {
+    return provider.get(0);
+    }
 
 List<Object> lo = new ArrayList();
 String s = stringExtractor(lo);
@@ -38,14 +38,14 @@ class Logger<T>
 
 // why is it LEGAL to pass a List<Object> to this method? i.e List<S> = List<O>
 void stringLogger(Logger<String> logger)
-	{
-	logger.add("hi cam");
-	}
+    {
+    logger.add("hi cam");
+    }
 
 void intLogger(Logger<int> logger)
-	{
-	logger.add(42);
-	}
+    {
+    logger.add(42);
+    }
 
 stringLogger(lo); // would be an error today ..
 intLogger(lo);    // would be an error today ..
@@ -221,7 +221,7 @@ class Derived
 struct Derived
   {
   int x;
-  int x;	// uh .. nope!
+  int x;    // uh .. nope!
   }
 
 // answer 1 - i'm writing code and i know my hierarchy
@@ -270,7 +270,7 @@ class BaseParent
   }
 
 class DerivedParent
-	extends BaseParent
+    extends BaseParent
   {
   class Child {...}
 
@@ -279,7 +279,7 @@ class DerivedParent
 
 BaseParent p1 = new BaseParent()
 BaseParent p2 = new DerivedParent()
-Child      c1 = new p1.Child();	// cannot say "new BaseParent.Child()" - exception!!!
+Child      c1 = new p1.Child(); // cannot say "new BaseParent.Child()" - exception!!!
 Child      c2 = new p2.Child();
 Child      c3 = p2.makeMeABaby();
 
@@ -287,7 +287,7 @@ Orphan     o1 = new p1.Orphan();
 Orphan     o2 = new p2.Orphan();
 
 Orphan     o3 = new BaseParent.Orphan();     // is this a good idea to allow?
-Orphan     o4 = new DerivedParent.Orphan();	 // no! this is an exception (or just discouraged?)
+Orphan     o4 = new DerivedParent.Orphan();  // no! this is an exception (or just discouraged?)
 Orphan     o5 = BaseParent.Orphan.findConstructor(Void)();
 
 // question is "how do you de-serialize an orphan?" if you can't "new" the

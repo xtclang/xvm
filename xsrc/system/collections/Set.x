@@ -1,8 +1,8 @@
 interface Set<ElementType>
-	{
-	@ro Int size;
+    {
+    @ro Int size;
 
-	Boolean contains(ElementType value);
+    Boolean contains(ElementType value);
 
     // ...
-	}
+    }

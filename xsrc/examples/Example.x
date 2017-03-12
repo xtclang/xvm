@@ -871,7 +871,7 @@ Meta
 
 // -- function / method / type short-hand
 
-typedef Map<Stirn, Person> People;
+typedef Map<String, Person> People;
 
 Iterator<ElementType> iter =
     {
@@ -2819,7 +2819,7 @@ class C
 C instance1 = C.new_(C.construct(_, 5)));
 C instance2 = C.new_(C.construct(_, "hello world")));
 
-// 0xA0 NEW	rvalue-class TODO fn-constructor
+// 0xA0 NEW rvalue-class TODO fn-constructor
 C c = new C(n);
 
 IVAR Int n
@@ -2856,7 +2856,7 @@ class BaseParent
     }
 
 class DerivedParent
-	extends BaseParent
+    extends BaseParent
   {
   class extends Child {}
 
@@ -2873,7 +2873,7 @@ BaseParent.Orphan orphan2 = parent2.createOrphan();
 
 BaseParent p1 = new BaseParent()
 BaseParent p2 = new DerivedParent()
-Child      c1 = new p1.Child();	// cannot say "new BaseParent.Child()" - exception!!!
+Child      c1 = new p1.Child(); // cannot say "new BaseParent.Child()" - exception!!!
 Child      c2 = new p2.Child();
 Child      c3 = p2.makeMeABaby();
 
@@ -2881,7 +2881,7 @@ Orphan     o1 = new p1.Orphan();
 Orphan     o2 = new p2.Orphan();
 
 Orphan     o3 = new BaseParent.Orphan();     // is this a good idea to allow?
-Orphan     o4 = new DerivedParent.Orphan();	 // no! this is an exception (or just discouraged?)
+Orphan     o4 = new DerivedParent.Orphan();  // no! this is an exception (or just discouraged?)
 Orphan     o5 = BaseParent.Orphan.findConstructor(Void)();
 
 // question is "how do you de-serialize an orphan?" if you can't "new" the
@@ -2893,3 +2893,50 @@ Class<HashMap<Int,String>> c = HashMap.narrow(new TypeParameter("KeyType", Int),
 
 // -- class & type
 
+class Point(Int x, Int y) {}
+
+out.println(new TypeFormatter(&p.ActualType)).detailedOutput());
+// Point
+// Properties:
+//   Int x
+//   Int y
+// Methods
+//   to<String()>
+//   ...
+
+out.println(new TypeFormatter(&p.ActualType)).detailedRawOutput());
+// Point
+// Methods
+//   Ref<Int> x();
+//   Ref<Int> y();
+//   String to();
+//   ...
+
+Method<Point, <Int>, Void> getter = Point.x.get;
+function Int() fn = p.&x.get;
+Int n = fn();
+function Int() fn2 = getter.bindTarget(p);
+
+// ----- Map
+
+// we have a few choices here if key is missing:
+// 1) throw an exception
+// 2) return null (return type is Nullable | ValueType)
+val = map[key];
+
+// same problem here:
+val = map.get(key);
+
+// which is why we did this:
+if (val : map.get(key)) {...}
+
+// could us a "get with default", a la java's ...
+val = map.getOrDefault(key, dftval);
+
+if (val : map[key]) {...}
+val = map[key]; // could throw on miss
+val = map[key]; // returns null on miss
+
+conditional ValueType load(KeyType key)
+conditional Void store(KeyType key, ValueType val)
+ValueType? get(KeyType);

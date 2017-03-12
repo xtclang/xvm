@@ -179,7 +179,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      *       }
      *
      *   class DerivedParent
-     *   	extends BaseParent
+     *      extends BaseParent
      *     {
      *     @Override
      *     class Child {}                                       // inner class
@@ -488,7 +488,6 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * compile-time type is required to regain the compile-time type.
      */
     Class narrow(TypeParameter... params);
-    /*
         {
         // first, verify that there is something that is being modified
         Map<String, TypeParameter> mapParams = paramsByName;
@@ -509,21 +508,24 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             }
 
         // next, create the class that uses the new type parameters
-        Class that = TODO;
+        Class that = TODO
 
         // now that the new class exists, see what Automagic mixins this module is exposed to, and
         // select any that apply to the new class (that are not already mixed in to this class)
-        for (Class mixin_ : this:module.autoMixins)
+        while (true)
             {
-            if (!this.incorporates(mixin_) && that.PublicType.isAssignableTo(mixin_.appliesTo))
+            for (Class mixin_ : this:module.autoMixins)
                 {
-                that = that.incorporate(mixin_);
+                if (!that.incorporates(mixin_) && that.PublicType.isAssignableTo(mixin_.appliesTo))
+                    {
+                    that = that.incorporate(mixin_);
+                    break;
+                    }
                 }
-            }
 
-        return that;
+            return that;
+            }
         }
-     */
 
     /**
      * Incorporate a trait or mixin, producing a new Class if the specified trait or mixin is not

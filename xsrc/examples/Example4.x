@@ -4,11 +4,11 @@ module x // module or package ..
   // short form alias
   import module spring.vmware.com;    
   // medium form alias
-  import module spring.vmware.com as spring;   		// alias the module any time i refer to "spring"
+  import module spring.vmware.com as spring;        // alias the module any time i refer to "spring"
   // long form alias
   import module spring.vmware.com as  spring; // alias the module any time i refer to "spring"
   // long form embed
-  embed [module] spring.vmware.com as spring;	// embed the entire module into package "spring"
+  embed [module] spring.vmware.com as spring;   // embed the entire module into package "spring"
 
 
 
@@ -43,13 +43,13 @@ class ArrayBag<Val>
     }
   
   Int size
-  	{
-  	public Int get(); // implied
-  	public Int get() {return super();} // implied
+    {
+    public Int get(); // implied
+    public Int get() {return super();} // implied
 
-  	protected set(Int n);
-  	protected set(Int n) {super(n);} // implied
-  	}
+    protected set(Int n);
+    protected set(Int n) {super(n);} // implied
+    }
   
   Boolean empty.get()
     {

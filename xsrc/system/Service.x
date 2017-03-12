@@ -158,8 +158,8 @@ interface Service(String? serviceName)
 
     /**
      * Determine if there is currently any _visible_ contention for the service. A service is
-	 * considered to be contended if it is running and if any other requests are pending for the
-	 * service.
+     * considered to be contended if it is running and if any other requests are pending for the
+     * service.
      *
      * The use of the term _visible_ is intended to convey the scenario in which minor contention on
      * the service may exist for such a minuscule period of time that the cost of making the
