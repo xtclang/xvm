@@ -1,7 +1,6 @@
 package org.xvm.proto;
 
-import org.xvm.proto.op.Return;
-import org.xvm.proto.op.Return1;
+import org.xvm.proto.op.*;
 import org.xvm.proto.template.xObject;
 
 import java.util.Set;
@@ -13,11 +12,16 @@ import java.util.Set;
  */
 public class Container
     {
-    TypeSet m_types;
-    ConstantPoolAdapter m_constantPoolAdapter;
-    ObjectHeap m_heap;
+    public TypeSet m_types;
+    public ConstantPoolAdapter m_constantPoolAdapter;
+    public ObjectHeap m_heap;
     ServiceContext m_service;
     Set<ServiceContext> m_setServices;
+
+    public Container()
+        {
+        init();
+        }
 
     void init()
         {
@@ -26,7 +30,6 @@ public class Container
         m_heap  = new ObjectHeap(m_constantPoolAdapter, m_types);
 
         initTypes();
-        initConstants();
         }
 
     void initTypes()
@@ -46,36 +49,117 @@ public class Container
         // container.m_typeSet.dumpTemplates();
         }
 
-    void initConstants()
-        {
-        m_constantPoolAdapter.registerClasses(m_types);
-        }
-
     public static void main(String[] asArg)
         {
         Container container = new Container();
-        container.init();
 
-        /*
-        ServiceContext context = container.createServiceContext();
-
-        Frame frame = context.createFrame("onStarted");
-
-        Frame(ServiceContext context, TypeCompositionTemplate.InvocationTemplate function, ObjectHandle[] ahArgs, int cVars, int cReturns)
-
-        */
+        container.runTest();
         }
 
-    Op[] test1(ConstantPoolAdapter adapter)
+    public void runTest()
         {
-        //        Int foo()
-        //            {
-        //            return 99;              // RETURN_1 99         ; 99 goes into constant pool
-        //            }
+        xTest clzTest = new xTest(m_types);
 
-        return new Op[]
+        m_types.addTemplate(clzTest);
+
+        ObjectHandle hTest = clzTest.newInstance(Utils.TYPE_NONE, Utils.OBJECTS_NONE);
+
+        ServiceContext context = new ServiceContext(this); // todo: xService
+
+        // test.test1();
             {
-            new Return1(-adapter.ensureConstantValue(99)),
-            };
+            ObjectHandle[] ahVars = new ObjectHandle[clzTest.mtTest1.m_cVars];
+            ObjectHandle[] ahReturn = new ObjectHandle[1]; // for exceptions
+
+            Frame frame1 = context.createFrame(hTest, null, clzTest.mtTest1, ahVars, ahReturn);
+            frame1.execute();
+            }
+
+        // test.test3();
+            {
+            ObjectHandle[] ahVars = new ObjectHandle[clzTest.mtTest3.m_cVars];
+            ObjectHandle[] ahReturn = new ObjectHandle[1]; // for exceptions
+
+            Frame frame3 = context.createFrame(hTest, null, clzTest.mtTest3, ahVars, ahReturn);
+            frame3.execute();
+            }
+        }
+
+    //////////////////////////////////////////////////////////////////
+
+    public class xTest extends xObject
+        {
+        public MethodTemplate mtTest1;
+        public MethodTemplate mtTest2;
+        public MethodTemplate mtTest3;
+
+        public xTest(TypeSet types)
+            {
+            super(types, "x:Test", "x:Object", Shape.Class);
+            }
+
+        @Override
+        public void initDeclared()
+            {
+            ConstantPoolAdapter adapter = m_constantPoolAdapter;
+
+            mtTest1 = addMethodTemplate("test1", VOID, VOID);
+                {
+                //  Void test1()
+                //      {
+                //      return;         // RETURN
+                //      }
+                mtTest1.m_anRetTypeId = Utils.TYPE_ID_NONE;
+                mtTest1.m_aop = new Op[]
+                        {
+                        new Return(),
+                        };
+                mtTest1.m_cVars = 1;
+                }
+
+            mtTest2 = addMethodTemplate("test2", VOID, INT);
+                {
+                //  Int test2()
+                //      {
+                //      return 99;       // RETURN_1 -@99    ; 99 goes into constant pool
+                //      }
+                int nIntClass = adapter.getClassConstId("x:Int64");
+                int n99 = adapter.ensureConstantValue(99);
+                mtTest2.m_aop = new Op[]
+                        {
+                        new Return_1(-n99),
+                        };
+                mtTest2.m_cVars = 1;
+                mtTest2.m_anRetTypeId = new int[] {nIntClass};
+                }
+
+
+            mtTest3 = addMethodTemplate("test3", VOID, VOID);
+                {
+                //  Void test3()         // reg #0 = this:private
+                //      {
+                //      Int i = test2(); // VAR x:Int64 (#1)
+                //                       // INVOKE_01 -@"x:Method/test2" #0
+                //      print i;         // PRINT #1
+                //      return;          // RETURN
+                //      }
+                int nIntClass = adapter.getClassConstId("x:Int64");
+                int nTest2Method = adapter.getMethodConstId("x:Test", "test2");
+                mtTest3.m_aop = new Op[]
+                        {
+                        new Var(nIntClass), // #1
+                        new Invoke_01(0, -nTest2Method, 1),
+                        new X_Print(1),
+                        new Return(),
+                        };
+                mtTest3.m_cVars = 3;
+                }
+            }
+
+        @Override
+        public void initializeHandle(ObjectHandle handle, ObjectHandle[] ahArg)
+            {
+            return;
+            }
         }
     }

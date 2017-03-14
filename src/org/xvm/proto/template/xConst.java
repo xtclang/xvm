@@ -1,6 +1,5 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -20,12 +19,12 @@ public class xConst
     public void initDeclared()
         {
         // in-place generation of Hashable
-        TypeCompositionTemplate tctHashable = new TypeCompositionTemplate(m_types, "x:collections.Hashable", "x:Object", Shape.Interface);
+        xObject tctHashable = new xObject(f_types, "x:collections.Hashable", "x:Object", Shape.Interface);
 
         // @ro Int hash;
         tctHashable.addPropertyTemplate("hash", "x:Int").makeReadOnly();
 
-        m_types.addTemplate(tctHashable);
+        f_types.addTemplate(tctHashable);
 
         addImplement("x:collections.Hashable");
         addImplement("x:Orderable");

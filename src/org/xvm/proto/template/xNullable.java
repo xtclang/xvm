@@ -1,6 +1,5 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -25,8 +24,10 @@ public class xNullable
     @Override
     public void initDeclared()
         {
+        if (!f_sName.equals("x:Nullable")) return; // avoid recursion
+
         // in-place declaration for True and False
         // in-place generation of Hashable
-        m_types.addTemplate(new TypeCompositionTemplate(m_types, "x:Null", "x:Nullable", Shape.Enum));
+        f_types.addTemplate(new xNullable(f_types, "x:Null", "x:Nullable", Shape.Enum));
         }
     }

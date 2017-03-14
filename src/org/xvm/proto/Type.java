@@ -11,14 +11,19 @@ import java.util.Set;
  */
 public class Type
     {
-    private String m_sName; // optional
+    final private String f_sName; // optional
     private int m_nId;
 
     private Map<String, PropertyTypelet> m_props = new HashMap<>();
     private Map<String, MultiMethodTypelet> m_methods = new HashMap<>();
+    private boolean m_fConstant;
 
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
-    private boolean m_fConstant;
+
+    public Type(String sName)
+        {
+        f_sName = sName;
+        }
 
     public int getId()
         {
@@ -59,18 +64,46 @@ public class Type
         return relation;
         }
 
+    // SUPER == assignable from; SUB == assignable to
     public enum Relation {EQUAL, SUPER, SUB, INCOMPATIBLE};
+
+    @Override
+    public int hashCode()
+        {
+        assert m_nId != 0;
+
+        return m_nId;
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        assert m_nId != 0;
+
+        Type that = (Type) obj;
+        return that.m_nId == this.m_nId;
+        }
 
     @Override
     public String toString()
         {
+        return f_sName + "(id=" + m_nId + ")";
+        }
+
+    // ----- debugging support ------
+
+    public String getDescription()
+        {
         StringBuilder sb = new StringBuilder();
         sb.append("Id=").append(m_nId);
-        if (m_sName != null)
+        if (f_sName != null)
             {
-            sb.append(" Name=").append(m_sName);
+            sb.append(" Name=").append(f_sName);
             }
-
+        if (m_fConstant)
+            {
+            sb.append(" constant");
+            }
         if (!m_props.isEmpty())
             {
             sb.append("\nProperties:");

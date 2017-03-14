@@ -1,6 +1,16 @@
 package org.xvm.proto;
 
-import java.util.*;
+import org.xvm.asm.ConstantPool;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * TypeCompositionTemplate represents a design unit (e.g. Class, Interface, Mixin, etc) that
@@ -9,15 +19,15 @@ import java.util.*;
  *
  * @author gg 2017.02.23
  */
-public class TypeCompositionTemplate
+public abstract class TypeCompositionTemplate
     {
-    protected TypeSet m_types;
+    final protected TypeSet f_types;
 
-    String m_sName; // globally known type composition name (e.g. x:Boolean or x:annotation.AtomicRef)
-    String[] m_asFormalType;
-    String m_sSuper; // super composition name; always x:Object for interfaces
-    Shape  m_shape;
-    TypeCompositionTemplate m_parent;
+    final protected String f_sName; // globally known type composition name (e.g. x:Boolean or x:annotation.AtomicRef)
+    final protected String[] f_asFormalType;
+    final protected String f_sSuper; // super composition name; always x:Object for interfaces
+    final protected Shape f_shape;
+    protected TypeCompositionTemplate m_parent;
 
     List<TypeName> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
     List<String> m_listIncorporate = new LinkedList<>();
@@ -27,16 +37,19 @@ public class TypeCompositionTemplate
 
     Map<String, MultiFunctionTemplate> m_mapMultiFunctions = new TreeMap<>(); // class level child functions
 
+    // cache of TypeCompositions
+    Map<List<Type>, TypeComposition> m_mapCompositions = new HashMap<>();
+
     // construct a simple (non-generic) type template
     public TypeCompositionTemplate(TypeSet types, String sName, String sSuper, Shape shape)
         {
-        m_types = types;
+        f_types = types;
 
         int ofBracket = sName.indexOf('<');
         if (ofBracket < 0)
             {
-            m_sName = sName;
-            m_asFormalType = TypeName.NON_GENERIC;
+            f_sName = sName;
+            f_asFormalType = TypeName.NON_GENERIC;
             }
         else
             {
@@ -49,12 +62,12 @@ public class TypeCompositionTemplate
                 String sFormalType = asFormalType[i];
                 assert (!types.existsTemplate(sFormalType)); // must not be know
                 }
-            m_sName = sName.substring(0, ofBracket);
-            m_asFormalType = asFormalType;
+            f_sName = sName.substring(0, ofBracket);
+            f_asFormalType = asFormalType;
             }
 
-        m_sSuper = sSuper;
-        m_shape = shape;
+        f_sSuper = sSuper;
+        f_shape = shape;
         }
 
     /**
@@ -76,7 +89,7 @@ public class TypeCompositionTemplate
         TypeName tnInterface = TypeName.parseName(sInterface);
         m_listImplement.add(tnInterface);
 
-        m_types.ensureTemplate(tnInterface.getSimpleName());
+        f_types.ensureTemplate(tnInterface.getSimpleName());
         }
 
     // add an "incorporate"
@@ -107,7 +120,17 @@ public class TypeCompositionTemplate
 
         templateM.ensureDependents(this);
 
+        f_types.f_constantPool.registerMethod(templateM);
+
         return templateM;
+        }
+
+    public MethodTemplate getMethodTemplate(String sMethodName, String sSig)
+        {
+        MultiMethodTemplate mmt = m_mapMultiMethods.get(sMethodName);
+
+        // TODO: signature support
+        return mmt.m_setInvoke.iterator().next();
         }
 
     // add a function
@@ -123,56 +146,91 @@ public class TypeCompositionTemplate
         return templateF;
         }
 
-    // produce a TypeComposition for this template by resolving the generic types
-    public TypeComposition resolve(TypeName[] atnGenericActual)
+    public FunctionTemplate getFunctionTemplate(String sFunctionName, String sSig)
         {
-        return new TypeComposition(this, atnGenericActual);
+        MultiFunctionTemplate mft = m_mapMultiFunctions.get(sFunctionName);
+
+        // TODO: signature support
+        return mft.m_setInvoke.iterator().next();
+        }
+
+    // produce a TypeComposition for this template by resolving the generic types
+    public TypeComposition resolve(Type[] atGenericActual)
+        {
+        List<Type> key = atGenericActual.length == 0 ?
+                Collections.emptyList() : Arrays.asList(atGenericActual);
+
+        return m_mapCompositions.computeIfAbsent(key,
+                (x) -> new TypeComposition(this, atGenericActual));
+        }
+
+    public TypeComposition resolve(ConstantPool.ClassConstant classConstant)
+        {
+        // TODO: awaiting support from ClassConstant
+        return resolve(Utils.TYPE_NONE);
+        }
+
+    public Type createType(Type[] atGenericActual, Access access)
+        {
+        Type type = new Type(f_sName);
+        return null;
         }
 
     // ---- OpCode support -----
 
-    public ObjectHandle createHandle()
-        {
-        throw new UnsupportedOperationException();
-        }
+    // create an un-initialized handle (Int i;)
+    abstract public ObjectHandle createHandle(TypeComposition clazz);
 
-    public ObjectHandle createHandle(Object oValue)
+    // assign (Int i = 5;)
+    abstract public void assignConstValue(ObjectHandle handle, Object oValue);
+
+    // construct (Point p = new Point(0, 0);)
+    abstract public void initializeHandle(ObjectHandle handle, ObjectHandle[] ahArg);
+
+    public ObjectHandle newInstance(Type[] aType, ObjectHandle[] ahArg)
         {
-        ObjectHandle handle = createHandle();
-        assignHandle(handle, oValue);
+        switch (f_shape)
+            {
+            case Interface: case Trait: case Mixin: case Enum:
+                throw new IllegalStateException();
+            }
+
+        TypeComposition clazz = resolve(aType);
+        ObjectHandle handle = createHandle(clazz);
+        initializeHandle(handle, ahArg);
         return handle;
         }
-
-    public void assignHandle(ObjectHandle handle, Object oValue)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    // ----- debugging support -----
 
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-        sb.append(m_shape).append(' ').append(m_sName)
-          .append(Formatting.formatArray(m_asFormalType, "<", ">", ", "));
+        return f_shape + " " + f_sName + Utils.formatArray(f_asFormalType, "<", ">", ", ");
+        }
 
-        switch (m_shape)
+    // ----- debugging support -----
+
+    public String getDescription()
+        {
+        StringBuilder sb = new StringBuilder();
+        sb.append(f_shape).append(' ').append(f_sName)
+          .append(Utils.formatArray(f_asFormalType, "<", ">", ", "));
+
+        switch (f_shape)
             {
             case Class:
-                if (m_sSuper != null)
+                if (f_sSuper != null)
                     {
-                    sb.append("\n  extends ").append(m_sSuper);
+                    sb.append("\n  extends ").append(f_sSuper);
                     }
                 if (!m_listImplement.isEmpty())
                     {
                     sb.append("\n  implements ")
-                      .append(Formatting.formatIterator(m_listImplement.iterator(), "", "", ", "));
+                      .append(Utils.formatIterator(m_listImplement.iterator(), "", "", ", "));
                     }
                 if (!m_listIncorporate.isEmpty())
                     {
                     sb.append("\n  incorporates ")
-                      .append(Formatting.formatIterator(m_listIncorporate.iterator(), "", "", ", "));
+                      .append(Utils.formatIterator(m_listIncorporate.iterator(), "", "", ", "));
                     }
                 break;
 
@@ -180,7 +238,7 @@ public class TypeCompositionTemplate
                 if (!m_listImplement.isEmpty())
                     {
                     sb.append("\n  extends ")
-                      .append(Formatting.formatIterator(m_listImplement.iterator(), "", "", ", "));
+                      .append(Utils.formatIterator(m_listImplement.iterator(), "", "", ", "));
                     }
                 break;
             }
@@ -267,6 +325,11 @@ public class TypeCompositionTemplate
     public abstract class FunctionContainer
         {
         Map<String, MultiFunctionTemplate> m_mapMultiFunctions; // names could be synthetic for anonymous functions
+
+        public TypeCompositionTemplate getClazzTemplate()
+            {
+            return TypeCompositionTemplate.this;
+            }
         }
 
     public abstract class InvocationTemplate
@@ -279,10 +342,12 @@ public class TypeCompositionTemplate
         Set<FunctionTemplate> m_setFunctions; // method/function level function templates (lambdas)
 
         // TODO: pointer to what XVM Structure?
-        int m_cVars; // number of local vars
-        Op[] m_aop;
+        public int m_cArgs; // number of args
+        public int m_cVars; // number of local vars
+        public int[] m_anRetTypeId; // could be zeros for formal types
+        public Op[] m_aop;
 
-        InvocationTemplate(String[] asArgType, String[] asRetType)
+        protected InvocationTemplate(String[] asArgType, String[] asRetType)
             {
             TypeName[] aTypes;
             aTypes = new TypeName[asArgType.length];
@@ -291,6 +356,7 @@ public class TypeCompositionTemplate
                 aTypes[i] = TypeName.parseName(asArgType[i]);
                 }
             m_argTypeName = aTypes;
+            m_cArgs = aTypes.length;
 
             aTypes = new TypeName[asRetType.length];
             for (int i = 0; i < aTypes.length; i++)
@@ -300,7 +366,7 @@ public class TypeCompositionTemplate
             m_retTypeName = aTypes;
             }
 
-        void ensureDependents(TypeCompositionTemplate template)
+        protected void ensureDependents(TypeCompositionTemplate template)
             {
             for (TypeName t : m_argTypeName)
                 {
@@ -313,16 +379,9 @@ public class TypeCompositionTemplate
                 }
             }
 
-        void setAccess(Access access)
+        protected void setAccess(Access access)
             {
             m_access = access;
-            }
-
-        Frame createFrame(ServiceContext context, ObjectHandle[] ahArgs)
-            {
-            assert ahArgs.length == m_argTypeName.length;
-
-            return new Frame(context, this, ahArgs, m_cVars, m_retTypeName.length);
             }
         }
 
@@ -347,7 +406,7 @@ public class TypeCompositionTemplate
     public class MethodTemplate
             extends InvocationTemplate
         {
-        String m_sMethodName;
+        protected String m_sMethodName;
 
         MethodTemplate(String sName, String[] asArgType, String[] asRetType)
             {
@@ -360,7 +419,7 @@ public class TypeCompositionTemplate
     public class FunctionTemplate
             extends InvocationTemplate
         {
-        String m_sFunctionName;
+        protected String m_sFunctionName;
 
         FunctionTemplate(String sName, String[] asArgType, String[] asRetType)
             {

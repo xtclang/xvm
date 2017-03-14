@@ -1,6 +1,5 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -25,9 +24,11 @@ public class xBoolean
     @Override
     public void initDeclared()
         {
+        if (!f_sName.equals("x:Boolean")) return; // avoid recursion
+
         // in-place declaration for True and False
-        m_types.addTemplate(new TypeCompositionTemplate(m_types, "x:True", "x:Boolean", Shape.Enum));
-        m_types.addTemplate(new TypeCompositionTemplate(m_types, "x:False", "x:Boolean", Shape.Enum));
+        f_types.addTemplate(new xBoolean(f_types, "x:True", "x:Boolean", Shape.Enum));
+        f_types.addTemplate(new xBoolean(f_types, "x:False", "x:Boolean", Shape.Enum));
 
         //    Bit  to<Bit>();
         //    Byte to<Byte>();

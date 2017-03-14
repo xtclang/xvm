@@ -19,57 +19,59 @@ public class ObjectHeap
 
     Map<Long, ObjectHandle> m_mapConstants = new HashMap<>();
 
-    ObjectHeap(ConstantPoolAdapter adapter, TypeSet types)
+    public ObjectHeap(ConstantPoolAdapter adapter, TypeSet types)
         {
         m_types = types;
         m_constantPool = adapter;
         }
 
-    // *Ids  -- as known by the ConstantPool
-    ObjectHandle ensureConstHandle(int nConstTypeID, int nConstValueId)
+    // nClassConstId - ClassConstant in the ConstantPool
+    public ObjectHandle ensureHandle(int nClassConstId)
+        {
+        TypeComposition typeComposition = m_types.ensureConstComposition(nClassConstId);
+
+        return typeComposition.f_template.createHandle(typeComposition);
+        }
+
+    // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
+    public ObjectHandle ensureConstHandle(int nClassConstId, int nValueConstId)
         {
         ObjectHandle handle = null;
-        if (nConstValueId > 0)
+        if (nValueConstId > 0)
             {
-            handle = getConstHandle(nConstTypeID, nConstValueId);
+            handle = getConstHandle(nClassConstId, nValueConstId);
             }
 
         if (handle == null)
             {
-            TypeComposition typeComposition = m_types.ensureConstComposition(nConstTypeID);
-            TypeCompositionTemplate template = typeComposition.m_template;
+            TypeComposition typeComposition = m_types.ensureConstComposition(nClassConstId);
+            TypeCompositionTemplate template = typeComposition.f_template;
 
-            if (nConstValueId > 0)
+            Constant constValue = m_constantPool.getConstantValue(nValueConstId); // must exist
+            handle = template.createHandle(typeComposition);
+            switch (constValue.getType())
                 {
-                Constant constValue = m_constantPool.getConstantValue(nConstValueId); // must exist
-                switch (constValue.getType())
-                    {
-                    case Int:
-                        handle = template.createInitializedHandle(((IntConstant) constValue).getValue());
-                        break;
+                case Int:
+                    template.assignConstValue(handle, ((IntConstant) constValue).getValue());
+                    break;
 
-                    case CharString:
-                        handle = template.createInitializedHandle(((CharStringConstant) constValue).getValue());
-                        break;
-                    }
-                registerConstHandle(nConstTypeID, nConstValueId, handle);
+                case CharString:
+                    template.assignConstValue(handle, ((CharStringConstant) constValue).getValue());
+                    break;
                 }
-            else
-                {
-
-                }
+            registerConstHandle(nClassConstId, nValueConstId, handle);
             }
 
         return handle;
         }
 
-    ObjectHandle getConstHandle(int nConstType, int nConstValue)
+    public ObjectHandle getConstHandle(int nClassConstId, int nValueConstId)
         {
-        return m_mapConstants.get(((long) nConstType << 32) | ((long) nConstValue));
+        return m_mapConstants.get(((long) nClassConstId << 32) | ((long) nValueConstId));
         }
-    void registerConstHandle(int nConstType, int nConstValue, ObjectHandle handle)
+    protected void registerConstHandle(int nClassConstId, int nValueConstId, ObjectHandle handle)
         {
-        m_mapConstants.put(((long) nConstType << 32) | ((long) nConstValue), handle);
+        m_mapConstants.put(((long) nClassConstId << 32) | ((long) nValueConstId), handle);
         }
 
     }

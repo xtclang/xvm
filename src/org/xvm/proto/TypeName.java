@@ -23,7 +23,7 @@ public interface TypeName
 
     static String format(TypeName[] at)
         {
-        return at.length == 0 ? "Void" : Formatting.formatArray(at, "", "", ", ");
+        return at.length == 0 ? "Void" : Utils.formatArray(at, "", "", ", ");
         }
 
     String[] NON_GENERIC = new String[0];
@@ -199,9 +199,9 @@ public interface TypeName
                 {
                 m_fActual = true;
                 }
-            else if (!Arrays.asList(template.m_asFormalType).contains(m_sName))
+            else if (!Arrays.asList(template.f_asFormalType).contains(m_sName))
                 {
-                template.m_types.ensureTemplate(m_sName);
+                template.f_types.ensureTemplate(m_sName);
                 m_fActual = true;
                 }
             }
@@ -270,7 +270,7 @@ public interface TypeName
         @Override
         public void ensureDependents(TypeCompositionTemplate template)
             {
-            template.m_types.ensureTemplate(m_sActualName);
+            template.f_types.ensureTemplate(m_sActualName);
 
             super.ensureDependents(template);
             }
@@ -284,7 +284,7 @@ public interface TypeName
         @Override
         public String toString()
             {
-            return m_sActualName + Formatting.formatArray(m_aTypeName.toArray(), "<", ">", ", ");
+            return m_sActualName + Utils.formatArray(m_aTypeName.toArray(), "<", ">", ", ");
             }
         }
 
@@ -298,7 +298,7 @@ public interface TypeName
         @Override
         public String toString()
             {
-            return Formatting.formatArray(m_aTypeName.toArray(), "", "", " | ");
+            return Utils.formatArray(m_aTypeName.toArray(), "", "", " | ");
             }
         }
 
@@ -312,7 +312,7 @@ public interface TypeName
         @Override
         public String toString()
             {
-            return Formatting.formatArray(m_aTypeName.toArray(), "", "", " + ");
+            return Utils.formatArray(m_aTypeName.toArray(), "", "", " + ");
             }
         }
 

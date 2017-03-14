@@ -3,15 +3,28 @@ package org.xvm.proto;
 /**
  * Runtime operates on Object handles holding the struct references or the values themselves
  * for the following types:
- *  Bit, Boolean, Char, Int, UInt,
- * as well as Nullable.Null, Void
+ *  Bit, Boolean, Char, Int, UInt, Nullable.Null, and optionally for some Tuples
  *
  * @author gg 2017.02.15
  */
-public class ObjectHandle
+public abstract class ObjectHandle
     {
-    Type m_type;
-    Struct m_struct;
+    final public Type m_type;
+    final public TypeComposition m_clazz;
+
+    protected ObjectHandle(Type type, TypeComposition clazz)
+        {
+        m_type = type;
+        m_clazz = clazz;
+        }
+
+    @Override
+    public String toString()
+        {
+        return "Class=" + m_clazz + "; value=";
+        }
+
+    // ----- REMOVE STUFF BELOW ----
 
     public static long createHandle(int nTypeId, int nIdentityId, boolean fMutable)
         {

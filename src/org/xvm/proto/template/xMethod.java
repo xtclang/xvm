@@ -1,5 +1,8 @@
 package org.xvm.proto.template;
 
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.Type;
+import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -22,4 +25,34 @@ public class xMethod
         // todo
         addPropertyTemplate("name", "x:String");
         }
+
+    @Override
+    public ObjectHandle createHandle(TypeComposition clazz)
+        {
+        return super.createHandle(clazz);
+        }
+
+    @Override
+    public void assignConstValue(ObjectHandle handle, Object oValue)
+        {
+        // TODO: oValue should be a MethodConstant, allowing to find the necessary info in the module
+        }
+
+    public static class MethodHandle
+            extends ObjectHandle
+        {
+        protected String m_sName;
+
+        protected MethodHandle(Type type, TypeComposition clazz)
+            {
+            super(type, clazz);
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_sName;
+            }
+        }
+
     }

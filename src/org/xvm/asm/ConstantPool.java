@@ -3785,10 +3785,10 @@ public class ConstantPool
         @Override
         protected int compareDetails(Constant that)
             {
-            int n = this.m_constParent.compareTo(((PropertyConstant) that).m_constParent);
+            int n = this.m_constParent.compareTo(((MethodConstant) that).m_constParent);
             if (n == 0)
                 {
-                n = this.m_constName.compareTo(((PropertyConstant) that).m_constName);
+                n = this.m_constName.compareTo(((MethodConstant) that).m_constName);
                 if (n == 0)
                     {
                     // TODO

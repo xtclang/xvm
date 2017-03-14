@@ -3,6 +3,8 @@ package org.xvm.proto;
 import java.util.Queue;
 import java.util.Stack;
 
+import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
+
 /**
  * TODO:
  *
@@ -10,15 +12,25 @@ import java.util.Stack;
  */
 public class ServiceContext
     {
-    Container m_container;
+    public final Container f_container;
+    public final ObjectHeap f_heap;
+    public final ConstantPoolAdapter f_constantPool;
+
     Thread m_thread;
     Queue m_queueInvocations;
-    ObjectHeap m_heap;
     Stack<Frame> m_frames;
-    TypeSet m_types;
 
-    public ObjectHandle ensureConstHandle(int nConstType, int nConstValue)
+    public ServiceContext(Container container)
         {
-        return m_heap.ensureConstHandle(nConstType, nConstValue);
+        f_container = container;
+        f_heap = container.m_heap;
+        f_constantPool = container.m_constantPoolAdapter;
         }
+
+    public Frame createFrame(ObjectHandle hTarget, Frame framePrev, InvocationTemplate template,
+                             ObjectHandle[] ahVars, ObjectHandle[] ahReturn)
+        {
+        return new Frame(this, framePrev, hTarget, template, ahVars, ahReturn);
+        }
+
     }
