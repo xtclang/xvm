@@ -2940,3 +2940,7 @@ val = map[key]; // returns null on miss
 conditional ValueType load(KeyType key)
 conditional Void store(KeyType key, ValueType val)
 ValueType? get(KeyType);
+
+// ----- entry processor
+
+map.process(key, e -> e.remove());
