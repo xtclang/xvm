@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 
 /**
  * TypeCompositionTemplate represents a design unit (e.g. Class, Interface, Mixin, etc) that
@@ -21,12 +22,15 @@ import java.util.TreeMap;
  */
 public abstract class TypeCompositionTemplate
     {
-    final protected TypeSet f_types;
+    protected final TypeSet f_types;
 
-    final protected String f_sName; // globally known type composition name (e.g. x:Boolean or x:annotation.AtomicRef)
-    final protected String[] f_asFormalType;
-    final protected String f_sSuper; // super composition name; always x:Object for interfaces
-    final protected Shape f_shape;
+    protected final String f_sName; // globally known type composition name (e.g. x:Boolean or x:annotation.AtomicRef)
+    protected final String[] f_asFormalType;
+    protected final String f_sSuper; // super composition name; always x:Object for interfaces
+    protected final Shape f_shape;
+
+    public final TypeComposition f_clazzCanonical; // public non-parameterized
+
     protected TypeCompositionTemplate m_parent;
 
     List<TypeName> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
@@ -40,7 +44,7 @@ public abstract class TypeCompositionTemplate
     // cache of TypeCompositions
     Map<List<Type>, TypeComposition> m_mapCompositions = new HashMap<>();
 
-    // construct a simple (non-generic) type template
+    // construct the template
     public TypeCompositionTemplate(TypeSet types, String sName, String sSuper, Shape shape)
         {
         f_types = types;
@@ -50,6 +54,7 @@ public abstract class TypeCompositionTemplate
             {
             f_sName = sName;
             f_asFormalType = TypeName.NON_GENERIC;
+            f_clazzCanonical = new TypeComposition(this, Utils.TYPE_NONE);
             }
         else
             {
@@ -64,6 +69,7 @@ public abstract class TypeCompositionTemplate
                 }
             f_sName = sName.substring(0, ofBracket);
             f_asFormalType = asFormalType;
+            f_clazzCanonical = null;
             }
 
         f_sSuper = sSuper;
@@ -120,7 +126,7 @@ public abstract class TypeCompositionTemplate
 
         templateM.ensureDependents(this);
 
-        f_types.f_constantPool.registerMethod(templateM);
+        f_types.f_constantPool.registerInvocable(templateM);
 
         return templateM;
         }
@@ -133,6 +139,17 @@ public abstract class TypeCompositionTemplate
         return mmt.m_setInvoke.iterator().next();
         }
 
+    public void forEachMethod(Consumer<MethodTemplate> consumer)
+        {
+        for (MultiMethodTemplate mmt : m_mapMultiMethods.values())
+            {
+            for (MethodTemplate mt : mmt.m_setInvoke)
+                {
+                consumer.accept(mt);
+                }
+            }
+        }
+
     // add a function
     public FunctionTemplate addFunctionTemplate(String sFunctionName, String[] asArgTypes, String[] asRetTypes)
         {
@@ -142,6 +159,8 @@ public abstract class TypeCompositionTemplate
                 add(templateF);
 
         templateF.ensureDependents(this);
+
+        f_types.f_constantPool.registerInvocable(templateF);
 
         return templateF;
         }
@@ -185,8 +204,38 @@ public abstract class TypeCompositionTemplate
     abstract public void assignConstValue(ObjectHandle handle, Object oValue);
 
     // construct (Point p = new Point(0, 0);)
-    abstract public void initializeHandle(ObjectHandle handle, ObjectHandle[] ahArg);
+    public void initializeHandle(ObjectHandle handle, ObjectHandle[] ahArg)
+        {
+        // singletons and "native" types are never constructed
+        throw new IllegalStateException();
+        }
 
+    // invokeNative with 0 arguments and 0 return values
+    // @return - an exception handle
+    public ObjectHandle invokeNative00(Frame frame, ObjectHandle hTarget,
+                                  MethodTemplate method, ObjectHandle[] ahReturn)
+        {
+        // many classes don't have native methods
+        throw new IllegalStateException();
+        }
+
+    // invokeNative with 0 arguments and 1 return value
+    // @return - an exception handle
+    public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget,
+                                  MethodTemplate method, ObjectHandle[] ahReturn)
+        {
+        throw new IllegalStateException();
+        }
+
+    // invokeNative with 1 argument and 1 return value
+    // @return - an exception handle
+    public ObjectHandle invokeNative11(Frame frame, ObjectHandle hTarget,
+                                       MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
+        {
+        throw new IllegalStateException();
+        }
+
+    // helper
     public ObjectHandle newInstance(Type[] aType, ObjectHandle[] ahArg)
         {
         switch (f_shape)
@@ -256,7 +305,7 @@ public abstract class TypeCompositionTemplate
                 mmt.m_setInvoke.forEach(mt ->
                         sb.append("\n  ")
                                 .append(TypeName.format(mt.m_retTypeName))
-                                .append(' ').append(mt.m_sMethodName)
+                                .append(' ').append(mt.f_sName)
                                 .append('(')
                                 .append(TypeName.format(mt.m_argTypeName))
                                 .append(')'));
@@ -269,7 +318,7 @@ public abstract class TypeCompositionTemplate
                 mft.m_setInvoke.forEach(ft ->
                         sb.append("\n  ")
                                 .append(TypeName.format(ft.m_retTypeName))
-                                .append(' ').append(ft.m_sFunctionName)
+                                .append(' ').append(ft.f_sName)
                                 .append('(')
                                 .append(TypeName.format(ft.m_argTypeName))
                                 .append(')'));
@@ -335,20 +384,26 @@ public abstract class TypeCompositionTemplate
     public abstract class InvocationTemplate
             extends FunctionContainer
         {
+        public final String f_sName;
+
         TypeName[] m_argTypeName; // length = 0 for zero args
         TypeName[] m_retTypeName; // length = 0 for Void return type
 
         Access m_access;
+        boolean m_fNative;
         Set<FunctionTemplate> m_setFunctions; // method/function level function templates (lambdas)
 
         // TODO: pointer to what XVM Structure?
         public int m_cArgs; // number of args
-        public int m_cVars; // number of local vars
+        public int m_cVars; // max number of local vars (including "this")
+        public int m_cScopes = 1; // max number of scopes
         public int[] m_anRetTypeId; // could be zeros for formal types
         public Op[] m_aop;
 
-        protected InvocationTemplate(String[] asArgType, String[] asRetType)
+        protected InvocationTemplate(String sName, String[] asArgType, String[] asRetType)
             {
+            f_sName = sName;
+
             TypeName[] aTypes;
             aTypes = new TypeName[asArgType.length];
             for (int i = 0; i < aTypes.length; i++)
@@ -379,9 +434,18 @@ public abstract class TypeCompositionTemplate
                 }
             }
 
-        protected void setAccess(Access access)
+        public void setAccess(Access access)
             {
             m_access = access;
+            }
+
+        public boolean isNative()
+            {
+            return m_fNative;
+            }
+        public void markNative()
+            {
+            m_fNative = true;
             }
         }
 
@@ -406,29 +470,28 @@ public abstract class TypeCompositionTemplate
     public class MethodTemplate
             extends InvocationTemplate
         {
-        protected String m_sMethodName;
-
         MethodTemplate(String sName, String[] asArgType, String[] asRetType)
             {
-            super(asArgType, asRetType);
-
-            m_sMethodName = sName;
+            super(sName, asArgType, asRetType);
             }
         }
 
     public class FunctionTemplate
             extends InvocationTemplate
         {
-        protected String m_sFunctionName;
-
         FunctionTemplate(String sName, String[] asArgType, String[] asRetType)
             {
-            super(asArgType, asRetType);
-
-            m_sFunctionName = sName;
+            super(sName, asArgType, asRetType);
             }
         }
 
     public static enum Shape {Class, Interface, Trait, Mixin, Const, Service, Enum}
     public static enum Access {Public, Protected, Private}
+
+    public static String[] VOID = new String[0];
+    public static String[] BOOLEAN = new String[]{"x:Boolean"};
+    public static String[] INT = new String[]{"x:Int"};
+    public static String[] STRING = new String[]{"x:String"};
+    public static String[] THIS = new String[]{"this.Type"};
+    public static String[] CONDITIONAL_THIS = new String[]{"x:ConditionalTuple<this.Type>"};
     }

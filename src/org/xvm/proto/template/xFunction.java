@@ -34,7 +34,7 @@ public class xFunction
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new FunctionHandle(clazz.ensurePublicType(), clazz);
+        return new FunctionHandle(clazz);
         }
 
     @Override
@@ -52,9 +52,9 @@ public class xFunction
         {
         protected Struct m_struct;
 
-        public FunctionHandle(Type type, TypeComposition clazz)
+        public FunctionHandle(TypeComposition clazz)
             {
-            super(type, clazz);
+            super(clazz, clazz.ensurePublicType());
             }
         }
     }

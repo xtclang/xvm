@@ -43,9 +43,9 @@ public class xMethod
         {
         protected String m_sName;
 
-        protected MethodHandle(Type type, TypeComposition clazz)
+        protected MethodHandle(TypeComposition clazz)
             {
-            super(type, clazz);
+            super(clazz, clazz.ensurePublicType());
             }
 
         @Override

@@ -46,7 +46,7 @@ public class xObject
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new GenericHandle(clazz.ensurePublicType(), clazz);
+        return new GenericHandle(clazz);
         }
 
     @Override
@@ -75,9 +75,9 @@ public class xObject
         {
         protected Struct m_struct;
 
-        public GenericHandle(Type type, TypeComposition clazz)
+        public GenericHandle(TypeComposition clazz)
             {
-            super(type, clazz);
+            super(clazz, clazz.ensurePublicType());
             }
 
         @Override
@@ -86,13 +86,5 @@ public class xObject
             return super.toString() + m_struct;
             }
         }
-
-
-    public static String[] VOID = new String[0];
-    public static String[] BOOLEAN = new String[]{"x:Boolean"};
-    public static String[] INT = new String[]{"x:Int"};
-    public static String[] STRING = new String[]{"x:String"};
-    public static String[] THIS = new String[]{"this.Type"};
-    public static String[] CONDITIONAL_THIS = new String[]{"x:ConditionalTuple<this.Type>"};
 
     }

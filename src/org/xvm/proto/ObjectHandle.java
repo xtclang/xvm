@@ -9,13 +9,13 @@ package org.xvm.proto;
  */
 public abstract class ObjectHandle
     {
-    final public Type m_type;
     final public TypeComposition m_clazz;
+    final public Type m_type;
 
-    protected ObjectHandle(Type type, TypeComposition clazz)
+    protected ObjectHandle(TypeComposition clazz, Type type)
         {
-        m_type = type;
         m_clazz = clazz;
+        m_type = type;
         }
 
     @Override

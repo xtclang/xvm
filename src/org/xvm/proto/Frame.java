@@ -12,9 +12,10 @@ public class Frame
 
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVars;       // arguments/local vars (index 0 for target:private)
-    public final ObjectHandle[] f_ahReturns;    // the return values (index 0 - for exceptions)
+    public final ObjectHandle[] f_ahReturns;    // the return values
     public final int[]          f_anRetTypeId;  // the return types
     public final Frame          f_framePrev;
+    public ObjectHandle         m_hException;
 
     public Frame(ServiceContext context, Frame framePrev, ObjectHandle hTarget,
                  TypeCompositionTemplate.InvocationTemplate function, ObjectHandle[] ahVars, ObjectHandle[] ahReturns)
@@ -24,14 +25,14 @@ public class Frame
         f_function = function;
         f_hTarget = hTarget;
         f_anRetTypeId = function.m_anRetTypeId;
-        f_ahReturns = ahReturns; // [0] - an exception
+        f_ahReturns = ahReturns;
         f_ahVars = ahVars; // [0] - target:private for methods
         }
 
-    public boolean execute()
+    public ObjectHandle execute()
         {
-        int[] aiRegister = new int[1];       // current scope at index 0
-        int[] anScopeNextVar = new int[128]; // at index i, the first var register for scope i
+        int[] aiRegister = new int[1]; // current scope at index 0
+        int[] anScopeNextVar = new int[f_function.m_cScopes]; // at index i, the first var register for scope i
 
         anScopeNextVar[0] = f_function.m_cArgs;
 
@@ -64,10 +65,17 @@ public class Frame
             {
             default:
             case Op.RETURN_NORMAL:
-                return true;
+                return null;
 
             case Op.RETURN_EXCEPTION:
-                return false;
+                assert m_hException != null;
+                return m_hException;
             }
+        }
+
+    @Override
+    public String toString()
+        {
+        return "Frame:" + (f_hTarget == null ? "" : f_hTarget) + " " + f_function.f_sName;
         }
     }
