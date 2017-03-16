@@ -1,6 +1,6 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
 
 /**
  * TODO:
@@ -29,5 +29,32 @@ public class xFunction
         addPropertyTemplate("ReturnType", "x:collections.Array<x:Type>");
         addPropertyTemplate("ParamType", "x:collections.Array<x:Type>");
         addMethodTemplate("invoke", new String[] {"x:Tuple"}, new String[] {"x:Tuple"});
+        }
+
+    @Override
+    public ObjectHandle createHandle(TypeComposition clazz)
+        {
+        return new FunctionHandle(clazz);
+        }
+
+    @Override
+    public void assignConstValue(ObjectHandle handle, Object oValue)
+        {
+        // TODO: wrong
+        FunctionHandle hThis = (FunctionHandle) handle;
+        FunctionHandle hThat = (FunctionHandle) oValue;
+
+        hThis.m_struct = hThat.m_struct;
+        }
+
+    public static class FunctionHandle
+            extends ObjectHandle
+        {
+        protected Struct m_struct;
+
+        public FunctionHandle(TypeComposition clazz)
+            {
+            super(clazz, clazz.ensurePublicType());
+            }
         }
     }

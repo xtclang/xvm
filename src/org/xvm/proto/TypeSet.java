@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Consumer;
 
 /**
  * TODO:
@@ -19,15 +18,15 @@ public class TypeSet
     private Map<Integer, Type> m_mapTypes = new TreeMap<>(Integer::compare);
     private Map<String, TypeCompositionTemplate> m_mapTemplates = new TreeMap<>();
     private Map<String, String> m_mapAliases = new TreeMap<>();
-    private Map<String, TypeComposition> m_mapCompositions = new TreeMap<>();
-    private ConstantPoolAdapter m_constantPool;
 
-    // secondary index - TypeCompositions keyed by the ConstId from the ConstPool
+    public final ConstantPoolAdapter f_constantPool;
+
+    // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
     private Map<Integer, TypeComposition> m_mapConstCompositions = new TreeMap<>(Integer::compare);
 
     TypeSet(ConstantPoolAdapter adapter)
         {
-        m_constantPool = adapter;
+        f_constantPool = adapter;
         }
 
     public Type getType(int nTypeId)
@@ -80,17 +79,17 @@ public class TypeSet
         }
     public void addTemplate(TypeCompositionTemplate template)
         {
-        String sName = template.m_sName;
+        String sName = template.f_sName;
         if (m_mapTemplates.putIfAbsent(sName, template) != null)
             {
             throw new IllegalArgumentException("CompositionTemplateName is already used:" + sName);
             }
+
+        f_constantPool.registerClass(template);
+
         template.initDeclared();
         }
-    public void forEachTemplate(Consumer<TypeCompositionTemplate> consumer)
-        {
-        m_mapTemplates.values().forEach(consumer::accept);
-        }
+
 
     public TypeCompositionTemplate ensureTemplate(String sName)
         {
@@ -147,44 +146,26 @@ public class TypeSet
 
     // ----- TypeCompositions -----
 
-    public TypeComposition getComposition(String sSignature)
-        {
-        return m_mapCompositions.get(sSignature);
-        }
-    public void addComposition(TypeComposition composition)
-        {
-        String sSig = composition.m_sSignature;
-        if (m_mapCompositions.putIfAbsent(sSig, composition) != null)
-            {
-            throw new IllegalArgumentException("CompositionName is already used:" + composition);
-            }
-        }
+
     public TypeComposition getConstComposition(int nConstId)
         {
         return m_mapConstCompositions.get(nConstId);
         }
 
-    public TypeComposition ensureConstComposition(int nConstTypeId)
+    // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
+    public TypeComposition ensureConstComposition(int nClassConstId)
         {
-        TypeComposition typeComposition = getConstComposition(nConstTypeId);
+        TypeComposition typeComposition = getConstComposition(nClassConstId);
         if (typeComposition == null)
             {
-            ClassConstant classConstant = m_constantPool.getClassConstant(nConstTypeId);   // must exist
+            ClassConstant classConstant = f_constantPool.getClassConstant(nClassConstId);   // must exist
 
-            String sCompositionSignature = ConstantPoolAdapter.getClassSignature(classConstant);
+            String sTemplate = ConstantPoolAdapter.getClassName(classConstant);
+            TypeCompositionTemplate template = ensureTemplate(sTemplate);
 
-            typeComposition = getComposition(sCompositionSignature);
-            if (typeComposition == null)
-                {
-                String sCompositionName = ConstantPoolAdapter.getClassName(classConstant);
+            typeComposition = template.resolve(classConstant);
 
-                TypeCompositionTemplate template = ensureTemplate(sCompositionName);
-                TypeName[] atn = null; // classConst -> TypeName[]
-
-                typeComposition = template.resolve(atn);
-                }
-
-            m_mapConstCompositions.put(nConstTypeId, typeComposition);
+            m_mapConstCompositions.put(nClassConstId, typeComposition);
             }
         return typeComposition;
         }
@@ -201,11 +182,11 @@ public class TypeSet
                 });
         }
 
-    public String dumpCompositions()
+    public String dumpConstCompositions()
         {
         StringBuilder sb = new StringBuilder();
 
-        m_mapCompositions.entrySet().forEach(entry ->
+        m_mapConstCompositions.entrySet().forEach(entry ->
                 sb.append('\n').append(entry.getKey()).append(':').append(entry.getValue()));
 
         return sb.toString();

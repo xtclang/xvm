@@ -7,31 +7,36 @@ package org.xvm.proto;
  */
 public class TypeComposition
     {
-    TypeCompositionTemplate m_template;
+    public final TypeCompositionTemplate f_template;
 
     // at the moment, ignore the case of ArrayList<Runnable | String>
-    TypeName[] m_atnGenericActual; // corresponding to the m_template's GenericTypeName
+    public final Type[] f_atGenericActual; // corresponding to the m_template's GenericTypeName
 
-    String m_sSignature; // concatenation of the template name and the generic parameters
+    private Type m_typePublic;
+    private Type m_typeProtected;
+    private Type m_typePrivate;
 
-    Type m_typePublic;
-    Type m_typeProtected;
-    Type m_typePrivate;
-
-    TypeComposition(TypeCompositionTemplate template, TypeName[] atnGenericActual)
+    public TypeComposition(TypeCompositionTemplate template, Type[] atnGenericActual)
         {
-        m_template = template;
-        m_atnGenericActual = atnGenericActual;
-        m_sSignature = template.m_sName + Formatting.formatArray(atnGenericActual, "<", ">", ", ");
+        // assert(atnGenericActual.length == template.f_asFormalType.length);
+
+        f_template = template;
+        f_atGenericActual = atnGenericActual;
         }
 
-    Type getPublicType()
+    public Type ensurePublicType()
         {
         Type type = m_typePublic;
         if (type == null)
             {
-            // type = m_typePublic = m_template.createType(m_asGenericActual, TypeCompositionTemplate.Access.Public);
+            type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Public);
             }
         return type;
+        }
+
+    @Override
+    public String toString()
+        {
+        return f_template.f_sName + Utils.formatArray(f_atGenericActual, "<", ">", ", ");
         }
     }

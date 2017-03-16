@@ -1,8 +1,7 @@
 package org.xvm.proto;
 
-import org.xvm.proto.op.Return;
-import org.xvm.proto.op.Return1;
 import org.xvm.proto.template.xObject;
+import org.xvm.proto.template.xTest;
 
 import java.util.Set;
 
@@ -13,23 +12,20 @@ import java.util.Set;
  */
 public class Container
     {
-    TypeSet m_types;
-    ConstantPoolAdapter m_constantPoolAdapter;
-    ObjectHeap m_heap;
+    public TypeSet m_types;
+    public ConstantPoolAdapter m_constantPoolAdapter;
+    public ObjectHeap m_heap;
     ServiceContext m_service;
     Set<ServiceContext> m_setServices;
 
-    void init()
+    public Container()
         {
         m_constantPoolAdapter = new ConstantPoolAdapter();
         m_types = new TypeSet(m_constantPoolAdapter);
         m_heap  = new ObjectHeap(m_constantPoolAdapter, m_types);
-
-        initTypes();
-        initConstants();
         }
 
-    void initTypes()
+    void init()
         {
         TypeSet types = m_types;
 
@@ -46,36 +42,20 @@ public class Container
         // container.m_typeSet.dumpTemplates();
         }
 
-    void initConstants()
-        {
-        m_constantPoolAdapter.registerClasses(m_types);
-        }
-
     public static void main(String[] asArg)
         {
         Container container = new Container();
         container.init();
 
-        /*
-        ServiceContext context = container.createServiceContext();
-
-        Frame frame = context.createFrame("onStarted");
-
-        Frame(ServiceContext context, TypeCompositionTemplate.InvocationTemplate function, ObjectHandle[] ahArgs, int cVars, int cReturns)
-
-        */
+        container.runTest();
         }
 
-    Op[] test1(ConstantPoolAdapter adapter)
+    public void runTest()
         {
-        //        Int foo()
-        //            {
-        //            return 99;              // RETURN_1 99         ; 99 goes into constant pool
-        //            }
+        xTest clzTest = new xTest(m_types, m_constantPoolAdapter);
 
-        return new Op[]
-            {
-            new Return1(-adapter.ensureConstantValue(99)),
-            };
+        m_types.addTemplate(clzTest);
+
+        clzTest.runTests(new ServiceContext(this));  // todo: xService
         }
     }

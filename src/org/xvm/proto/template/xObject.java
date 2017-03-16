@@ -1,7 +1,6 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
 
 /**
  * TODO:
@@ -44,10 +43,48 @@ public class xObject
         addMethodTemplate("to", new String[]{"x:Function"}, new String[]{"x:Function"});
         }
 
-    public static String[] VOID = new String[0];
-    public static String[] BOOLEAN = new String[]{"x:Boolean"};
-    public static String[] INT = new String[]{"x:Int"};
-    public static String[] STRING = new String[]{"x:String"};
-    public static String[] THIS = new String[]{"this.Type"};
-    public static String[] CONDITIONAL_THIS = new String[]{"x:ConditionalTuple<this.Type>"};
+    @Override
+    public ObjectHandle createHandle(TypeComposition clazz)
+        {
+        return new GenericHandle(clazz);
+        }
+
+    @Override
+    public void assignConstValue(ObjectHandle handle, Object oValue)
+        {
+        throw new IllegalStateException();
+        }
+
+    public void copy(ObjectHandle handle, ObjectHandle that)
+        {
+        GenericHandle hThis = (GenericHandle) handle;
+        GenericHandle hThat = (GenericHandle) that;
+
+        // check the type?
+        hThis.m_struct = hThat.m_struct;
+        }
+
+    @Override
+    public void initializeHandle(ObjectHandle handle, ObjectHandle[] ahArg)
+        {
+        throw new UnsupportedOperationException("TODO");
+        }
+
+    public static class GenericHandle
+            extends ObjectHandle
+        {
+        protected Struct m_struct;
+
+        public GenericHandle(TypeComposition clazz)
+            {
+            super(clazz, clazz.ensurePublicType());
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_struct;
+            }
+        }
+
     }

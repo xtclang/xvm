@@ -1,7 +1,6 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
 
 /**
  * TODO:
@@ -9,7 +8,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xBoolean
-        extends xObject
+        extends TypeCompositionTemplate
     {
     public xBoolean(TypeSet types)
         {
@@ -25,9 +24,11 @@ public class xBoolean
     @Override
     public void initDeclared()
         {
+        if (!f_sName.equals("x:Boolean")) return; // avoid recursion
+
         // in-place declaration for True and False
-        m_types.addTemplate(new TypeCompositionTemplate(m_types, "x:True", "x:Boolean", Shape.Enum));
-        m_types.addTemplate(new TypeCompositionTemplate(m_types, "x:False", "x:Boolean", Shape.Enum));
+        f_types.addTemplate(new xBoolean(f_types, "x:True", "x:Boolean", Shape.Enum));
+        f_types.addTemplate(new xBoolean(f_types, "x:False", "x:Boolean", Shape.Enum));
 
         //    Bit  to<Bit>();
         //    Byte to<Byte>();
@@ -48,5 +49,36 @@ public class xBoolean
         addMethodTemplate("or",  THIS, THIS);
         addMethodTemplate("xor", THIS, THIS);
         addMethodTemplate("not", VOID, THIS);
+        }
+
+    @Override
+    public void assignConstValue(ObjectHandle handle, Object oValue)
+        {
+        BooleanHandle hThis = (BooleanHandle) handle;
+
+        hThis.m_fValue = ((Boolean) oValue).booleanValue();
+        }
+
+    @Override
+    public ObjectHandle createHandle(TypeComposition clazz)
+        {
+        return new BooleanHandle(clazz.ensurePublicType(), clazz);
+        }
+
+    public static class BooleanHandle
+            extends ObjectHandle
+        {
+        protected boolean m_fValue;
+
+        protected BooleanHandle(Type type, TypeComposition clazz)
+            {
+            super(clazz, type);
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_fValue;
+            }
         }
     }

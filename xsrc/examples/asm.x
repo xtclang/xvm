@@ -20,9 +20,25 @@ Void foo()
     return;                 // RETURN_0
     }
 
+
+
+// a specific "Int64" constant type in the constant pool
 Int foo()
     {
-    return 99;              // RETURN_1 99         ; 99 goes into constant pool
+    return 99;              // RETURN_1 -17         ; 99 goes into constant pool as IntConstant #17
+    }
+
+// if the return type is ambiguous, the compiler would do this:
+Object foo()
+    {
+    return 99;              // IVAR Int64 -17       ; 99 goes into constant pool as IntConstant #17
+                            // RETURN_1 1;          ; register 1
+    }
+
+// choice 3: generic approach using return type of the function to figure out what type to convert the "int constant" into
+Int foo()
+    {
+    return 99;              // RETURN_1 -99         ; 99 goes into constant pool
     }
 
 Int foo(Int x)
@@ -85,4 +101,9 @@ Int f(Int a, Int b, Int c)
     return a + local * b;       // MUL #4 #2 #5
                                 // ADD #1 #5 #5
                                 // RETURN_1 #5
+    }
+
+Void foo()
+    {
+    Class c = HashMap;
     }
