@@ -40,12 +40,36 @@ interface Map<KeyType, ValueType>
         @ro KeyType key;
 
         /**
+         * True iff the entry is existent in its map. An entry does not exist in its map before its
+         * {@link value} is assigned, or after a call to {@link remove}.
+         */
+        @ro Boolean exists;
+
+        /**
          * The value associated with the entry's key.
          *
          * The value property is not settable if the containing map is a _persistent_ or
          * {@code const} map.
+         *
+         * If the entry does not {@link exist}, then the value is not readable; an attempt to get
+         * the value of an will raise a {@link BoundsException}
+         *
+         * @throws BoundsException if an attempt is made to read the value of the entry when {@link
+         *         exists} is false
+         * @throws ReadOnlyException if an attempt is made to write the value of the entry when
+         *         the map is _persistent_ or {@code const}
          */
         ValueType value;
+
+        /**
+         * Remove the entry from its map.
+         *
+         * The entry is removable if the containing map is _mutable_; it is not removable if the
+         * containing map is _fixed size_, _persistent_, or {@code const}.
+         *
+         * @throws ReadOnlyException if the map is _fixed size_, _persistent_, or {@code const}
+         */
+        Void remove();
 
         /**
          * Two entries are equal iff they contain equal keys and equal values.
@@ -79,6 +103,11 @@ interface Map<KeyType, ValueType>
     /**
      * Obtain the value associated with the specified key, iff that key is present in the map. If
      * the key is not present in the map, then this method returns a conditional {@code false}.
+     *
+     * @param key  the key to look up in the map
+     *
+     * @return a conditional true and the value for the associated key if it exists in the map;
+     *         otherwise a conditional false
      */
     conditional ValueType get(KeyType key)
         {
@@ -93,6 +122,10 @@ interface Map<KeyType, ValueType>
     /**
      * Obtain the value associated with the specified key, or the value {@code null} if the key is
      * not present in the map.
+     *
+     * @param key  the key to look up in the map
+     *
+     * @return the value for the associated key if it exists in the map; otherwise null
      */
     ValueType? getOrNull(KeyType key)
         {
@@ -100,10 +133,18 @@ interface Map<KeyType, ValueType>
         }
 
     /**
-     * Obtain the value associated with the specified key, or compute a default using the specified
-     * function.
+     * Obtain the value associated with the specified key, or if the key does not already exist in
+     * the map, compute a default value using the specified function. Note that his method does not
+     * store the result of the computation; it simply returns the computed value. To store the
+     * result, use {@link computeIfAbsent} instead.
+     *
+     * @param key      specifies the key that may or may not already be present in the map
+     * @param compute  the function that will be called iff the key does not exist in the map
+     *
+     * @return the value for the specified key if it exists in the map; otherwise, the result of the
+     *         specified function
      */
-    ValueType getOrDefault(KeyType key, function ValueType (KeyType) compute)
+    ValueType getOrDefault(KeyType key, function ValueType () compute)
         {
         return (ValueType value : get(key)) ? value : compute();
         }
@@ -112,6 +153,11 @@ interface Map<KeyType, ValueType>
      * Obtain the entry that represents the key/value mapping for the specified key, iff that key is
      * present in the map. If the key is not present in the map, then this method returns a
      * conditional {@code false}.
+     *
+     * @param key  the key to look up in the map
+     *
+     * @return a conditional true and the {@link Entry} for the associated key if it exists in the
+     *         map; otherwise a conditional false
      */
     conditional Entry<KeyType, ValueType> getEntry(KeyType key);
 
@@ -147,26 +193,52 @@ interface Map<KeyType, ValueType>
     // ----- write operations ----------------------------------------------------------------------
 
     /**
-     * Remove all key/value mappings from the map.
-     *
-     * A _mutable_ map will perform the operation in place; all other modes of map will return a
-     * new map that reflects the requested changes.
-     *
-     * @return a map that has no key/value mappings
-     */
-    Map<KeyType, ValueType> clear();
-
-    /**
-     * Map the specified key to the specified value, regardless of whether that key is currently
-     * present in the map.
+     * Store a mapping of the specified key to the specified value, regardless of whether that key
+     * is already present in the map.
      *
      * A _mutable_ map will perform the operation in place. A _fixed size_ map will perform the
      * operation in place iff the key is currently present in the map. In all other cases, including
      * all other modes of map, a new map will be returned reflecting the requested change.
      *
-     * @return a map that contains the specified key/value mapping
+     * @param key    the key to store in the map
+     * @param value  the value to associate with the specified key
+     *
+     * @return the resultant map, which is the same as {@code this} for a mutable map
      */
     Map<KeyType, ValueType> put(KeyType key, ValueType value);
+
+    /**
+     * Store in this map each of the mappings of key and values specified in another map, regardless
+     * of whether those keys and/or values are already present in this map.
+     *
+     * A _mutable_ map will perform the operation in place. A _fixed size_ map will perform the
+     * operation in place iff all of the keys are already present in the map. In all other cases,
+     * including all other modes of map, a new map will be returned reflecting the requested change.
+     *
+     * @param that  another map containing keys and associated values to put into this map
+     *
+     * @return the resultant map, which is the same as {@code this} for a mutable map
+     */
+    Map<KeyType, ValueType> putAll(Map<KeyType, ValueType> that);
+
+    /**
+     * Remove the specified key and any associated value from this map.
+     *
+     * @param key  the key to remove from this map
+     *
+     * @return the resultant map, which is the same as {@code this} for a mutable map
+     */
+    Map<KeyType, ValueType> remove(KeyType key);
+
+    /**
+     * Remove all key/value mappings from the map.
+     *
+     * A _mutable_ map will perform the operation in place; all other modes of map will return a
+     * new map that reflects the requested changes.
+     *
+     * @return the resultant map, which is the same as {@code this} for a mutable map
+     */
+    Map<KeyType, ValueType> clear();
 
     /**
      * Map the specified key to the specified value, iff that key is *not* currently present in the
@@ -175,7 +247,12 @@ interface Map<KeyType, ValueType>
      * A _mutable_ map will perform the operation in place; all other modes of map will return a
      * new map that reflects the requested change.
      *
-     * @return a map that contains the specified key/value mapping
+     * @param key    the key to store in the map
+     * @param value  the value to associate with the specified key iff the key does not already
+     *               exist in the map
+     *
+     * @return a conditional true and the resultant map if the key did not previously exist in the
+     *         map; otherwise a conditional false
      */
     conditional Map<KeyType, ValueType> putIfAbsent(KeyType key, ValueType value)
         {
@@ -187,37 +264,17 @@ interface Map<KeyType, ValueType>
         return true, put(key, value);
         }
 
-    Map<KeyType, ValueType> putAll(Map<KeyType, ValueType> that)
-        {
-        Map<KeyType, ValueType> result = this;
-
-        that.entries.forEach(e -> result = result.put(e.key, e.value));
-
-        return result;
-        }
-
-    conditional Map<KeyType, ValueType> remove(KeyType key);
-
-    conditional Map<KeyType, ValueType> remove(KeyType key, ValueType value)
-        {
-        if ((ValueType valueOld : get(key)) && value == valueOld)
-            {
-            return remove(key);
-            }
-
-        return false;
-        }
-
-    conditional Map<KeyType, ValueType> replace(KeyType key, ValueType value)
-        {
-        if (keys.contains(key))
-            {
-            return true, put(key, value);
-            }
-
-        return false;
-        }
-
+    /**
+     * Store the specified new value in the map associated with the specified key, iff that key is
+     * currently associated with the specified old value.
+     *
+     * @param key       the key to store in the map
+     * @param valueOld  the value to verify is currently associated with the specified key
+     * @param valueNew  the value to associate with the specified key
+     *
+     * @return a conditional true and the resultant map if the key did exist in the map and was
+     *         associated with the previous value; otherwise a conditional false
+     */
     conditional Map<KeyType, ValueType> replace(KeyType key, ValueType valueOld, ValueType valueNew)
         {
         if ((ValueType valueCur : get(key)) && valueOld == valueCur)
@@ -228,27 +285,85 @@ interface Map<KeyType, ValueType>
         return false;
         }
 
+    /**
+     * Remove the specified key and the associated value from this map, iff the key exists in this
+     * map and is associated with the specified value.
+     *
+     * @param key    the key to remove from the map
+     * @param value  the value to verify is currently associated with the specified key
+     *
+     * @return a conditional true and the resultant map if the key did in the map and was
+     *         associated with the specified value; otherwise a conditional false
+     */
+    conditional Map<KeyType, ValueType> remove(KeyType key, ValueType value)
+        {
+        if ((ValueType valueOld : get(key)) && value == valueOld)
+            {
+            return remove(key);
+            }
+
+        return false;
+        }
+
     // ----- read/write operations -----------------------------------------------------------------
 
     /**
-     * TODO
+     * Apply the specified function to the entry for the specified key. If that key does not exist
+     * in the map, an Entry is provided to it whose {@link Entry.exists exists} property is false;
+     * setting the value of the entry will cause the entry to _appear in_ the map, which is to say
+     * that the map will contain an entry for that key with that value. Similarly, calling {@link
+     * Entry.remove remove} on the entry will ensure that the key and any associated value are _not_
+     * present in the map.
+     *
+     * @param key      specifies which entry to process
+     * @param compute  the function that will operate against the entry
+     *
+     * @return the result of the specified function
+     *
+     * @throws ReadOnlyException if an attempt is made to add or remove an entry in a map that is
+     *         not _mutable_, or to modify an entry in a map that is not _mutable_ or _fixed size_
      */
-    ValueType computeIfAbsent(KeyType key, function ValueType (KeyType) compute);
+    compute.ReturnTypes process(KeyType key, function compute.ReturnTypes (Entry<KeyType, ValueType>) compute);
 
     /**
-     * TODO
+     * Apply the specified function to the entry for the specified key, iff such an entry exists in
+     * the map.
+     *
+     * @param key      specifies which entry to process
+     * @param compute  the function that will operate against the entry, iff the entry already
+     *                 exists in the map
+     *
+     * @return a conditional true and the result of the specified function iff the entry exists;
+     *         otherwise a conditional false
+     *
+     * @throws ReadOnlyException if an attempt is made to modify an entry in a map that is not
+     *         _mutable_ or _fixed size_
      */
-    ValueType computeIfPresent(KeyType key, function ValueType (KeyType, ValueType) remap);
+    conditional compute.ReturnTypes processIfPresent(KeyType key,
+            function compute.ReturnTypes (Entry<KeyType, ValueType>) compute)
+        {
+        return process(key,  e -> { if (e.exists) { return true, compute(e); } else { return false; } });
+        }
 
     /**
-     * TODO
+     * Obtain the existing value for the specified key, or if the key does not already exist in the
+     * map, create a new entry in the map containing the specified key and the result of the
+     * specified function.
+     *
+     * @param key      specifies the key that may or may not already be present in the map
+     * @param compute  the function that will be called iff the key does not already exist in the
+     *                 map, and which will return the new value to associate with that key
+     *
+     * @return the value for the specified key, which may have already existed in the map, or may
+     *         have just been calculated by the specified function and placed into the map
+     *
+     * @throws ReadOnlyException if an attempt is made to add an entry in a map that is not
+     *         _mutable_
      */
-    ValueType compute(KeyType key, function ValueType? (KeyType, ValueType?) remap);
-
-    /**
-     * TODO
-     */
-    ValueType merge(KeyType key, ValueType value, function ValueType (KeyType, ValueType) remap);
+    ValueType computeIfAbsent(KeyType key, function ValueType () compute)
+        {
+        return process(key, e -> { if (!e.exists) { e.value = compute(); } return e.value; });
+        }
 
     // ----- UniformedIndex ------------------------------------------------------------------------
 
@@ -279,6 +394,10 @@ interface Map<KeyType, ValueType>
      *
      * @param index  the index (key) of the element to store
      * @param value  the value to store associated with the specified index (key)
+     *
+     * @throws BoundsException if the specified index (key) does not exist and the map is not
+     *         of the _mutable_ variety
+     * @throws ReadOnlyException if the map is of the _persistent_ or {@code const} variety
      */
     @Override
     @op Void setElement(KeyType index, ValueType value)
