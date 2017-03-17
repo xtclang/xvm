@@ -30,7 +30,9 @@ interface Iterator<ElementType>
      * @param match  an action to perform on each element; if the action returns true, the
      *               iterator is considered "short-circuited", the method returns immediately
      *               and no more elements are iterated over
-     * @return true iff the iterator was "short-circuited"
+     *
+     * @return true iff the iterator was short-circuited; otherwise false if the iteration
+     *         completed without short-circuiting
      */
     Boolean matchAny(function Boolean match(ElementType))
         {
@@ -45,7 +47,15 @@ interface Iterator<ElementType>
         }
 
     /**
-     * TODO
+     * Perform the specified action for all remaining elements in the iterator, allowing for
+     * a possibility to stop the iteration at any time.
+     *
+     * @param match  an action to perform on each element; if the action returns false, the
+     *               iterator is considered "short-circuited", the method returns immediately
+     *               and no more elements are iterated over
+     *
+     * @return true iff the iteration completed without short-circuiting; otherwise false if the
+     *         iterator was short-circuited
      */
     Boolean matchAll(function Boolean match(ElementType))
         {

@@ -135,7 +135,7 @@ mixin FutureRef<RefType>
      * * If the new future completes successfully, then its value will be the same as this
      *   future's value.
      */
-    Future.Type<RefType> thenDo(function Void () run)
+    FutureRef.Type<RefType> thenDo(function Void () run)
         {
         return chain(new ThenDoStep<RefType>(run));
         }
@@ -155,7 +155,7 @@ mixin FutureRef<RefType>
      * * If the new future completes successfully, then its value will be the same as this
      *   future's value.
      */
-    Future.Type<RefType> passTo(function Void (RefType) consume)
+    FutureRef.Type<RefType> passTo(function Void (RefType) consume)
         {
         return chain(new PassToStep<RefType>(consume));
         }
@@ -176,7 +176,7 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> Future.Type<NewType> transform(function NewType (RefType) convert)
+    <NewType> FutureRef.Type<NewType> transform(function NewType (RefType) convert)
         {
         return chain(new TransformStep<NewType, RefType>(convert));
         }
@@ -197,7 +197,7 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    Future.Type<RefType> handle(function RefType (Exception) convert)
+    FutureRef.Type<RefType> handle(function RefType (Exception) convert)
         {
         return chain(new HandleStep<RefType>(convert));
         }
@@ -218,7 +218,7 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> Future.Type<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
+    <NewType> FutureRef.Type<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
         {
         return chain(new Transform2Step<NewType, RefType>(convert));
         }
@@ -236,7 +236,7 @@ mixin FutureRef<RefType>
      * * If this future or the other future completes exceptionally, and the new future has not
      *   already completed, then the new future will complete exceptionally with the same exception.
      */
-    Future.Type<RefType> or(Future.Type<RefType> other)
+    FutureRef.Type<RefType> or(FutureRef.Type<RefType> other)
         {
         return chain(new OrStep<RefType>(other));
         }
@@ -255,9 +255,9 @@ mixin FutureRef<RefType>
      *   not already completed, then the new future will complete exceptionally with the same
      *   exception.
      */
-    Future.Type<RefType> orAny(Future.Type<RefType> ... others)
+    FutureRef.Type<RefType> orAny(FutureRef.Type<RefType> ... others)
         {
-        Future.Type<RefType> result = this;
+        FutureRef.Type<RefType> result = this;
         others.forEach(other -> result = result.or(other));
         return result;
         }
@@ -280,8 +280,8 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> Future.Type<NewType> and(Future.Type other,
-            function Future.Type<NewType> (RefType, other.RefType) combine = v1, v2 -> (v1, v2))
+    <NewType> FutureRef.Type<NewType> and(FutureRef.Type other,
+            function FutureRef.Type<NewType> (RefType, other.RefType) combine = v1, v2 -> (v1, v2))
         {
         return chain(new AndStep<NewType, RefType, other.RefType>(other, combine));
         }
@@ -298,7 +298,7 @@ mixin FutureRef<RefType>
      *   (successfully or exceptionally) and with the same result (value or exception) as this
      *   future.
      */
-    Future.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
+    FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
         {
         return chain(new WhenCompleteStep<RefType>(notify));
         }
@@ -320,7 +320,7 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> Future.Type<NewType> createContinuation(function <NewType> (RefType) async)
+    <NewType> FutureRef.Type<NewType> createContinuation(function <NewType> (RefType) async)
         {
         return chain(new ContinuationStep<NewType, RefType>(async));
         }
@@ -413,7 +413,7 @@ mixin FutureRef<RefType>
      * a {@link NotifyDependent} function, allowing one or more FutureRef instances to notify it of
      * their completion. The FutureRef can chain to any number of DependentFuture instances.
      */
-    Future.Type<nextFuture.RefType> chain(DependentFuture nextFuture)
+    FutureRef.Type<nextFuture.RefType> chain(DependentFuture nextFuture)
         {
         chain(nextFuture.parentCompleted);
         return nextFuture;
@@ -674,7 +674,7 @@ mixin FutureRef<RefType>
     static class OrStep<RefType>
             extends DependentFuture<RefType, RefType>
         {
-        construct (Future.Type<RefType> other)
+        construct (FutureRef.Type<RefType> other)
             {
             }
         finally
@@ -692,7 +692,7 @@ mixin FutureRef<RefType>
     static class AndStep<RefType, InputType, Input2Type>
             extends DependentFuture<RefType, InputType>
         {
-        construct (Future.Type<Input2Type> other, function RefType (InputType, Input2Type) combine)
+        construct (FutureRef.Type<Input2Type> other, function RefType (InputType, Input2Type) combine)
             {
             }
         finally
@@ -700,7 +700,7 @@ mixin FutureRef<RefType>
             other.whenComplete((result, e) -> parent2Completed(e == null ? Result : Error, result, e));
             }
 
-        public/private function Future.Type<NewType> (RefType, other.RefType) combine;
+        public/private function FutureRef.Type<NewType> (RefType, other.RefType) combine;
 
         private conditional InputType  input1 = false;
         private conditional Input2Type input2 = false;

@@ -217,6 +217,20 @@ module ecstasy.xtclang.org
         }
 
     /**
+     * The interface associated with objects that are automatically closed by the {@code using} and
+     * {@code try}-with-resources blocks.
+     */
+    interface Closeable
+        {
+        /**
+         * This method is invoked to mark the end of the use of an object. The object may release
+         * its resources at this point, and may subsequently be cantankerous and/or unusable as a
+         * result.
+         */
+        Void close();
+        }
+
+    /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for
      * source code, and the aggregate unit for compiled code distribution and deployment.
      * <p>

@@ -7,6 +7,8 @@
  * defined as:
  * * A *mutable* map is one that allows items to be added and removed, and whose values for
  *   particular keys can be replaced, and whose contents are generally not required to be immutable.
+ *   If an implementation provides support for more than one mode, including a *mutable* mode, then
+ *   it should implement the {@link MutableAble} interface.
  * * A *fixed size* map is one that does not allow items to be added or removed, but whose values
  *   for particular keys can be replaced, and whose contents are generally not required to be
  *   immutable. Requesting a persistent map to add or remove contents will result in a new fixed
@@ -76,7 +78,9 @@ interface Map<KeyType, ValueType>
          */
         static Boolean equals(Type<Entry> EntryType, EntryType entry1, EntryType entry2)
             {
-            return entry1.key == entry2.key && entry1.value == entry2.value;
+            return entry1.key == entry2.key
+                && entry1.exists && entry2.exists
+                && entry1.value == entry2.value;
             }
         }
 
@@ -323,7 +327,8 @@ interface Map<KeyType, ValueType>
      * @throws ReadOnlyException if an attempt is made to add or remove an entry in a map that is
      *         not _mutable_, or to modify an entry in a map that is not _mutable_ or _fixed size_
      */
-    compute.ReturnTypes process(KeyType key, function compute.ReturnTypes (Entry<KeyType, ValueType>) compute);
+    compute.ReturnTypes process(KeyType key,
+            function compute.ReturnTypes (Entry<KeyType, ValueType>) compute);
 
     /**
      * Apply the specified function to the entry for the specified key, iff such an entry exists in
@@ -342,7 +347,14 @@ interface Map<KeyType, ValueType>
     conditional compute.ReturnTypes processIfPresent(KeyType key,
             function compute.ReturnTypes (Entry<KeyType, ValueType>) compute)
         {
-        return process(key,  e -> { if (e.exists) { return true, compute(e); } else { return false; } });
+        return process(key, entry ->
+            {
+            if (entry.exists)
+                {
+                return true, compute(entry);
+                }
+            return false;
+            });
         }
 
     /**
@@ -362,7 +374,14 @@ interface Map<KeyType, ValueType>
      */
     ValueType computeIfAbsent(KeyType key, function ValueType () compute)
         {
-        return process(key, e -> { if (!e.exists) { e.value = compute(); } return e.value; });
+        return process(key, entry ->
+            {
+            if (!entry.exists)
+                {
+                entry.value = compute();
+                }
+            return entry.value;
+            });
         }
 
     // ----- UniformedIndex ------------------------------------------------------------------------
@@ -419,7 +438,7 @@ interface Map<KeyType, ValueType>
             return false;
             }
 
-        for (Map.Entry<MapType.KeyType, MapType.ValueType>> entry : map1)
+        for (Map.Entry<MapType.KeyType, MapType.ValueType> entry : map1)
             {
             if (!(MapType.ValueType value : map2.get(entry.key) && entry.value == value))
                 {
