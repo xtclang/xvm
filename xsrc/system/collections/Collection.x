@@ -80,9 +80,19 @@ interface Collection<ElementType>
         return true;
         }
 
+    /**
+     * Obtain an Iterator that will iterate over the contents of this Collection.
+     *
+     * @return an Iterator that will iterate over the contents of this Collection
+     */
     @Override
     Iterator<ElementType> iterator();
 
+    /**
+     * Obtain a Stream over the contents of this Collection.
+     *
+     * @return a Stream over the contents of this Collection
+     */
     Stream<ElementType> stream();
 
     // ----- write operations ----------------------------------------------------------------------
