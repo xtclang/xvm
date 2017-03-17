@@ -70,14 +70,7 @@ interface Collection<ElementType>
      */
     Boolean containsAll(Collection.Type<ElementType> values)
         {
-        for (ElementType value : values)
-            {
-            if (!contains(value))
-                {
-                return false;
-                }
-            }
-        return true;
+        return iterator().matchAll(this.contains);
         }
 
     /**

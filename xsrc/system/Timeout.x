@@ -65,6 +65,7 @@
  *       }
  */
 const Timeout
+        implements Closeable
     {
     construct Timeout(Duration remainingTime, Boolean independent = false)
         {

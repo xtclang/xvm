@@ -41,6 +41,7 @@
  * duration}, as a potential aid to both the developer and the runtime.
  */
 const CriticalSection
+        implements Closeable
     {
     construct CriticalSection(Service.Reentrancy reentrancy = Forbidden)
         {
