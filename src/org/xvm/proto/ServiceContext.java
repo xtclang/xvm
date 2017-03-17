@@ -6,7 +6,7 @@ import java.util.Stack;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 
 /**
- * TODO:
+ * The service context.
  *
  * @author gg 2017.02.15
  */

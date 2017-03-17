@@ -6,6 +6,9 @@
     <content url="file://$MODULE_DIR$/../bin">
       <sourceFolder url="file://$MODULE_DIR$/../bin" type="java-resource" />
     </content>
+    <content url="file://$MODULE_DIR$/../doc">
+      <sourceFolder url="file://$MODULE_DIR$/../doc" type="java-resource" />
+    </content>
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$" />
     </content>

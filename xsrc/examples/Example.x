@@ -2802,6 +2802,7 @@ class C
     construct C(String s)
         {
         // ...
+        return &finally;
         }
     finally
         {
@@ -2812,8 +2813,8 @@ class C
 // compiles as
 class C
     {
-    function Void construct(Struct this, Int i) {...}
-    function function Void () construct(Struct this, String s) {...}
+    function Void construct(this:struct this, Int i) {...}
+    function function Void () construct(this:struct this, String s) {...}
     }
 
 C instance1 = C.new_(C.construct(_, 5)));

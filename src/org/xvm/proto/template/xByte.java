@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
 
@@ -47,5 +49,19 @@ public class xByte
         addMethodTemplate("or",  THIS, THIS);
         addMethodTemplate("xor", THIS, THIS);
         addMethodTemplate("not", VOID, THIS);
+        }
+
+    @Override
+    public void assignConstValue(ObjectHandle handle, Object oValue)
+        {
+        ObjectHandle.JavaLong hThis = (ObjectHandle.JavaLong) handle;
+
+        hThis.m_lValue = ((Byte) oValue).longValue();
+        }
+
+    @Override
+    public ObjectHandle createHandle(TypeComposition clazz)
+        {
+        return new ObjectHandle.JavaLong(clazz);
         }
     }

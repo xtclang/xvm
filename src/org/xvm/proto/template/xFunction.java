@@ -28,6 +28,7 @@ public class xFunction
 
         addPropertyTemplate("ReturnType", "x:collections.Array<x:Type>");
         addPropertyTemplate("ParamType", "x:collections.Array<x:Type>");
+
         addMethodTemplate("invoke", new String[] {"x:Tuple"}, new String[] {"x:Tuple"});
         }
 
@@ -44,13 +45,13 @@ public class xFunction
         FunctionHandle hThis = (FunctionHandle) handle;
         FunctionHandle hThat = (FunctionHandle) oValue;
 
-        hThis.m_struct = hThat.m_struct;
+        hThis.m_invoke = hThat.m_invoke;
         }
 
     public static class FunctionHandle
             extends ObjectHandle
         {
-        protected Struct m_struct;
+        protected InvocationTemplate m_invoke;
 
         public FunctionHandle(TypeComposition clazz)
             {

@@ -24,6 +24,41 @@ public abstract class ObjectHandle
         return "Class=" + m_clazz + "; value=";
         }
 
+    public static class JavaDelegate
+            extends ObjectHandle
+        {
+        public Object m_oValue;
+
+        public JavaDelegate(TypeComposition clazz)
+            {
+            super(clazz, clazz.ensurePublicType());
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_oValue;
+            }
+        }
+
+    // anything that fits in a long
+    public static class JavaLong
+            extends ObjectHandle
+        {
+        public long m_lValue;
+
+        public JavaLong(TypeComposition clazz)
+            {
+            super(clazz, clazz.ensurePublicType());
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_lValue;
+            }
+        }
+
     // ----- REMOVE STUFF BELOW ----
 
     public static long createHandle(int nTypeId, int nIdentityId, boolean fMutable)

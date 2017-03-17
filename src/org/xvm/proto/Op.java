@@ -2,7 +2,7 @@ package org.xvm.proto;
 
 
 /**
- * TODO:
+ * The ops.
  *
  * @author gg 2017.02.21
  */
