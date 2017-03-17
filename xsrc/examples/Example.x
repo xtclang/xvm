@@ -2945,3 +2945,8 @@ ValueType? get(KeyType);
 // ----- entry processor
 
 map.process(key, e -> e.remove());
+
+map.entries.stream().filter(...).map(...).produceANewMap().do
+
+    processor.ReturnTypes[0] process(KeyType key, EntryProcessor processor);
+
