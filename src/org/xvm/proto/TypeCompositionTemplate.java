@@ -192,7 +192,8 @@ public abstract class TypeCompositionTemplate
     public Type createType(Type[] atGenericActual, Access access)
         {
         Type type = new Type(f_sName);
-        return null;
+        // TODO create the specified type
+        return type;
         }
 
     // ---- OpCode support -----

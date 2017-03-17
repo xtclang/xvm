@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * TODO:
+ * Heap and constants.
  *
  * @author gg 2017.02.15
  */

@@ -1,6 +1,10 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:

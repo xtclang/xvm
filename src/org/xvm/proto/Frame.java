@@ -1,7 +1,7 @@
 package org.xvm.proto;
 
 /**
- * TODO:
+ * A call stack frame.
  *
  * @author gg 2017.02.15
  */
@@ -46,7 +46,7 @@ public class Frame
 
         int iPC = 0;
 
-        do
+        while (true)
             {
             Op op = abOps[iPC];
 
@@ -58,18 +58,23 @@ public class Frame
                 {
                 iPC = op.process(this, iPC, aiRegister, anScopeNextVar);
                 }
-            }
-        while (iPC >= 0);
 
-        switch (iPC)
-            {
-            default:
-            case Op.RETURN_NORMAL:
-                return null;
+            switch (iPC)
+                {
+                case Op.RETURN_EXCEPTION:
+                    assert m_hException != null;
 
-            case Op.RETURN_EXCEPTION:
-                assert m_hException != null;
-                return m_hException;
+                    // iPC = findGuard()
+                    if (iPC < 0)
+                        {
+                        // not handled by this frame
+                        return m_hException;
+                        }
+                    break;
+
+                case Op.RETURN_NORMAL:
+                    return null;
+                }
             }
         }
 

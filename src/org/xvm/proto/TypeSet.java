@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * TODO:
+ * The type registry.
  *
  * @author gg 2017.02.15
  */

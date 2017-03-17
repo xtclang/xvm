@@ -1,6 +1,10 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -54,31 +58,14 @@ public class xBoolean
     @Override
     public void assignConstValue(ObjectHandle handle, Object oValue)
         {
-        BooleanHandle hThis = (BooleanHandle) handle;
+        JavaLong hThis = (JavaLong) handle;
 
-        hThis.m_fValue = ((Boolean) oValue).booleanValue();
+        hThis.m_lValue = ((Boolean) oValue).booleanValue() ? 1 : 0;
         }
 
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new BooleanHandle(clazz.ensurePublicType(), clazz);
-        }
-
-    public static class BooleanHandle
-            extends ObjectHandle
-        {
-        protected boolean m_fValue;
-
-        protected BooleanHandle(Type type, TypeComposition clazz)
-            {
-            super(clazz, type);
-            }
-
-        @Override
-        public String toString()
-            {
-            return super.toString() + m_fValue;
-            }
+        return new JavaLong(clazz);
         }
     }

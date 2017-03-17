@@ -47,15 +47,9 @@ public class Container
         Container container = new Container();
         container.init();
 
-        container.runTest();
-        }
+        xTest clzTest = new xTest(container.m_types, container.m_constantPoolAdapter);
+        container.m_types.addTemplate(clzTest);
 
-    public void runTest()
-        {
-        xTest clzTest = new xTest(m_types, m_constantPoolAdapter);
-
-        m_types.addTemplate(clzTest);
-
-        clzTest.runTests(new ServiceContext(this));  // todo: xService
+        clzTest.runTests(new ServiceContext(container));  // todo: xService
         }
     }

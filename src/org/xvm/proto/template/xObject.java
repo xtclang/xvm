@@ -2,6 +2,8 @@ package org.xvm.proto.template;
 
 import org.xvm.proto.*;
 
+import java.util.Map;
+
 /**
  * TODO:
  *
@@ -61,7 +63,7 @@ public class xObject
         GenericHandle hThat = (GenericHandle) that;
 
         // check the type?
-        hThis.m_struct = hThat.m_struct;
+        hThis.m_mapFields = hThat.m_mapFields;
         }
 
     @Override
@@ -73,7 +75,8 @@ public class xObject
     public static class GenericHandle
             extends ObjectHandle
         {
-        protected Struct m_struct;
+        // keyed by the property name
+        Map<String, ObjectHandle> m_mapFields;
 
         public GenericHandle(TypeComposition clazz)
             {
@@ -83,7 +86,7 @@ public class xObject
         @Override
         public String toString()
             {
-            return super.toString() + m_struct;
+                return super.toString() + m_mapFields;
             }
         }
 

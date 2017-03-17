@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Stack;
 
 /**
- * TODO:
+ * TypeName represents fully qualified generic names for the type system.
  *
  * @author gg 2017.02.27
  */
