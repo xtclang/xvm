@@ -327,8 +327,8 @@ interface Map<KeyType, ValueType>
      * @throws ReadOnlyException if an attempt is made to add or remove an entry in a map that is
      *         not _mutable_, or to modify an entry in a map that is not _mutable_ or _fixed size_
      */
-    compute.ReturnTypes process(KeyType key,
-            function compute.ReturnTypes (Entry<KeyType, ValueType>) compute);
+    <ResultType> ResultType process(KeyType key,
+            function ResultType (Entry<KeyType, ValueType>) compute);
 
     /**
      * Apply the specified function to the entry for the specified key, iff such an entry exists in
@@ -344,8 +344,8 @@ interface Map<KeyType, ValueType>
      * @throws ReadOnlyException if an attempt is made to modify an entry in a map that is not
      *         _mutable_ or _fixed size_
      */
-    conditional compute.ReturnTypes processIfPresent(KeyType key,
-            function compute.ReturnTypes (Entry<KeyType, ValueType>) compute)
+    <ResultType> conditional ResultType processIfPresent(KeyType key,
+            function ResultType (Entry<KeyType, ValueType>) compute)
         {
         return process(key, entry ->
             {
