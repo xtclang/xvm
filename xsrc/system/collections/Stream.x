@@ -377,56 +377,17 @@ interface Stream<ElementType>
 
     // ----- advanced terminal operations ----------------------------------------------------------
 
-// TODO from here down
-
     /**
-     * Performs a mutable reduction operation on the elements of this stream using a
-     * {@code Collector}.
-     *
-     * This is a terminal operation.
-     *
-     * @apiNote
-     * The following will accumulate strings into an ArrayList:
-     * <pre>{@code
-     *     List<String> asList = stringStream.collect(Collectors.toList());
-     * }</pre>
-     *
-     * <p>The following will classify {@code Person} objects by city:
-     * <pre>{@code
-     *     Map<String, List<Person>> peopleByCity
-     *         = personStream.collect(Collectors.groupingBy(Person.city));
-     * }</pre>
-     *
-     * <p>The following will classify {@code Person} objects by state and city,
-     * cascading two {@code Collector}s together:
-     * <pre>{@code
-     *     Map<String, Map<String, List<Person>>> peopleByStateAndCity
-     *         = personStream.collect(Collectors.groupingBy(Person.state,
-     *              Collectors.groupingBy(Person.city)));
-     * }</pre>
-     *
-     * @param collector the {@code Collector} describing the reduction
-     *
-     * @return the result of the reduction
-     */
-    <ResultType, AccumulationType> ResultType collect(
-            Collector<ElementType, AccumulationType, ResultType> collector)
-        {
-        AccumulationType      container  = collector.supply();
-        Collector.Accumulator accumulate = collector.accumulate;
-
-        forEach(element -> accumulate(container, element));
-
-        return collector.finish(container);
-        }
-
-    /**
-     * Performs a reduction on the elements of this stream, using the provided
-     * identity value and an associative accumulation function, and returns the
-     * reduced value.
+     * Performs a reduction on the elements of this stream, using the provided identity value and an
+     * associative accumulation function, and returns the reduced value.
      *
      * The {@code identity} value must be an identity for the accumulator function. This means that
      * for all {@code el}, {@code accumulate(identity, el)} is equal to {@code el}.
+     *
+     * For example, to sum a stream of Int values:
+     *
+     *   Stream<Int> ints = ...
+     *   Int sum = ints.reduce(0, (n1, n2) -> n1 + n2);
      *
      * This is a terminal operation.
      *
@@ -438,23 +399,26 @@ interface Stream<ElementType>
     ElementType reduce(ElementType identity, function ElementType accumulate(ElementType, ElementType))
         {
         ElementType result = identity;
-        for (ElementType element : iterator())
+        for (ElementType element : this)
             {
             result = accumulate(result, element);
             }
         return result;
-
         }
 
     /**
-     * Performs a reduction on the elements of this stream, using an
-     * associative accumulation function, and returns a conditional reduced value,
-     * if any.
+     * Performs a reduction on the elements of this stream, using an associative accumulation
+     * function, and returns a conditional reduced value, if any.
+     *
+     * For example, to concatenate a stream of String values:
+     *
+     *   Stream<String> strings = ...
+     *   String concat = strings.reduce((s1, s2) -> s1 + s2);
      *
      * This is a terminal operation.
      *
-     * @param accumulate  an associative, non-interfering, stateless
-     *                    function for combining two values
+     * @param accumulate  an associative function for combining two values
+     *
      * @return a conditional result of the reduction
      */
     conditional ElementType reduce(function ElementType accumulate(ElementType, ElementType))
@@ -462,45 +426,16 @@ interface Stream<ElementType>
         Iterator<ElementType> iterator = iterator();
         if (ElementType result : iterator.next())
             {
-            for (ElementType element : iterator)
+            while (ElementType element : iterator.next())
                 {
                 result = accumulate(result, element);
                 }
-            return (true, result)
+            return true, result;
             }
         else
             {
             return false;
             }
-        }
-
-    /**
-     * Performs a reduction on the elements of this stream, using the provided identity,
-     * accumulation and combining functions.  This is equivalent to:
-     * <pre>{@code
-     *     U result = identity;
-     *     for (ElementType element : this stream)
-     *         result = accumulator.apply(result, element)
-     *     return result;
-     * }</pre>
-     * but is not constrained to execute sequentially.
-     *
-     * This is a terminal operation.
-     *
-     * @param identity the identity value for the combiner function
-     * @param accumulate  an associative, non-interfering, stateless
-     *                    function for combining two values
-     * @param combine     an associative, non-interfering, stateless
-     *                    function for combining two values, which must be
-     *                    compatible with the accumulator function
-     * @return the result of the reduction
-     */
-    <ResultType> ResultType reduce(
-                    ResultType identity,
-                    function ResultType accumulate(ResultType, ElementType),
-                    function ResultType combine(ResultType, ResultType))
-        {
-        return collect(UniformCollector.of(() -> identity, accumulate, combine));
         }
 
     /**
@@ -534,5 +469,108 @@ interface Stream<ElementType>
                     function ResultType combine(ResultType, ResultType))
         {
         return collect(UniformCollector.of(supply, accumulate, combine));
+        }
+
+    /**
+     * Performs a mutable reduction operation on the elements of this stream using a
+     * {@code Collector}. The Collector encapsulates the functionality of all of the various stages
+     * of reduction, including support for parallelization.
+     *
+     * This is a terminal operation.
+     *
+     * @param collector the {@code Collector} that defines the functions to utilize for the various
+     *        stages of the reduction
+     *
+     * @return the result of the reduction
+     */
+    <ResultType, AccumulationType>
+    ResultType collect(Collector<ElementType, AccumulationType, ResultType> collector)
+        {
+        // the default behavior delegates to the Iterator, but an implementation that parallelizes
+        // the stream will likely override this behavior
+        AccumulationType      container  = collector.supply();
+        Collector.Accumulator accumulate = collector.accumulate;
+        iterator().forEach(element -> accumulate(container, element));
+        return collector.finish(container);
+        }
+
+    /**
+     * The Collector interface encapsulates the functionality of all of the various stages of
+     * reduction, including support for parallelization.
+     */
+    interface Collector<ElementType, AccumulationType, ResultType>
+        {
+        typedef function AccumulationType () Supplier;
+        typedef function Boolean (AccumulationType, ElementType) Accumulator;
+        typedef function AccumulationType (AccumulationType, AccumulationType) Combiner;
+        typedef function ResultType (AccumulationType) Finisher;
+
+        /**
+         * A function which returns a new, mutable result container.
+         */
+        @ro Supplier supply;
+
+        /**
+         * A function which folds a value into a mutable result container.
+         */
+        @ro Accumulator accumulate;
+
+        /**
+         * A function which combines two partial results into a combined result.
+         */
+        @ro Combiner combine;
+
+        /**
+         * A function which transforms the intermediate result to the final result.
+         */
+        @ro Finisher finish;
+
+        /**
+         * Create a Collector from a Supplier function, an Accumulator function, and a Combiner
+         * function; use an identity function as the Finisher function. This method is only
+         * appropriate for cases in which the AccumulationType is the same as the ResultType.
+         *
+         * @param supply      the supplier function for the new collector
+         * @param accumulate  the accumulator function for the new collector
+         * @param combine     the combiner function for the new collector
+         *
+         * @return a new {@code Collector} described by the given {@code supply},
+         *         {@code accumulate}, and {@code combine} functions assuming that
+         *         the ResultType is the same as the AccumulationType
+         */
+        <ElementType, AccumulationType, ResultType>
+        static Collector<ElementType, ResultType, ResultType> of(
+                Supplier supply, Accumulator accumulate, Combiner combine)
+            {
+            return new SimpleCollector<ElementType, AccumulationType, ResultType>(
+                    supply, accumulate, combine, result -> result);
+            }
+
+        /**
+         * Create a Collector from a Supplier function, an Accumulator function, a Combiner
+         * function, and a Finisher function.
+         *
+         * @param supply      the supplier function for the new collector
+         * @param accumulate  the accumulator function for the new collector
+         * @param combine     the combiner function for the new collector
+         * @param finish      the finisher function for the new collector
+         *
+         * @return a new {@code Collector} described by the given {@code supply},
+         *         {@code accumulate}, {@code combine} and {@code finish} functions
+         */
+        <ElementType, AccumulationType, ResultType>
+        static Collector<ElementType, AccumulationType, ResultType> of(
+                Supplier supply, Accumulator accumulate, Combiner combine, Finisher finish)
+            {
+            return new SimpleCollector<ElementType, AccumulationType, ResultType>(
+                    supply, accumulate, combine, finish);
+            }
+
+        /**
+         * Trivial Collector.
+         */
+        static const SimpleCollector<ElementType, AccumulationType, ResultType>
+            (Supplier supply, Accumulator accumulate, Combiner combine, Finisher finish)
+                implements Collector<ElementType, AccumulationType, ResultType>;
         }
     }
