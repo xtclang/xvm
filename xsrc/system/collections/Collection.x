@@ -59,7 +59,12 @@ interface Collection<ElementType>
      *
      * @return {@code true} iff the specified value exists in this collection
      */
-    Boolean contains(ElementType value);
+    Boolean contains(ElementType value)
+        {
+        // this should be overridden by any implementation that has a structure that can do better
+        // than an O(n) search, such as a sorted structure (binary search) or a hashed structure
+        return iterator().untilAny(element -> element == value);
+        }
 
     /**
      * Determine if the collection contains all of the specified values.
@@ -70,7 +75,7 @@ interface Collection<ElementType>
      */
     Boolean containsAll(Collection.Type<ElementType> values)
         {
-        return iterator().matchAll(this.contains);
+        return values.iterator().matchAll(this.contains);
         }
 
     /**
@@ -100,7 +105,10 @@ interface Collection<ElementType>
      *
      * @return the resultant collection, which is the same as {@code this} for a mutable collection
      */
-    Collection<ElementType> add(ElementType value);
+    Collection<ElementType> add(ElementType value)
+        {
+        TODO element addition is not supported
+        }
 
     /**
      * Add all of the passed values to this collection.
@@ -112,7 +120,18 @@ interface Collection<ElementType>
      *
      * @return the resultant collection, which is the same as {@code this} for a mutable collection
      */
-    Collection<ElementType> addAll(Collection.Type<ElementType> values);
+    Collection<ElementType> addAll(Collection.Type<ElementType> values)
+        {
+        // this naive implementation is likely to be overridden in cases where optimizations can be
+        // made with knowledge of either this collection and/or the passed in values, for example
+        // if both are ordered; it must obviously be overridden for non-mutable collections
+        Collection<ElementType> result = this;
+        for (ElementType value : values)
+            {
+            result = add(value);
+            }
+        return result;
+        }
 
     /**
      * Remove the specified value from this collection.
@@ -124,7 +143,10 @@ interface Collection<ElementType>
      *
      * @return the resultant collection, which is the same as {@code this} for a mutable collection
      */
-    Collection<ElementType> remove(ElementType value);
+    Collection<ElementType> remove(ElementType value)
+        {
+        TODO element removal is not supported
+        }
 
     /**
      * Remove all of the specified values from this collection.
@@ -136,8 +158,19 @@ interface Collection<ElementType>
      *
      * @return the resultant collection, which is the same as {@code this} for a mutable collection
      */
-    Collection<ElementType> removeAll(Collection.Type<ElementType> values);
-    
+    Collection<ElementType> removeAll(Collection.Type<ElementType> values)
+        {
+        // this naive implementation is likely to be overridden in cases where optimizations can be
+        // made with knowledge of either this collection and/or the passed in values, for example
+        // if both are ordered; it must obviously be overridden for non-mutable collections
+        Collection<ElementType> result = this;
+        for (ElementType value : values)
+            {
+            result = remove(value);
+            }
+        return result;
+        }
+
     /**
      * For each value in the collection, evaluate it using the specified function, removing each
      * value for which the specified function evaluates to {@code true}.
@@ -150,7 +183,20 @@ interface Collection<ElementType>
      *
      * @return the resultant collection, which is the same as {@code this} for a mutable collection
      */
-    Collection<ElementType> removeIf(function Boolean (ElementType) shouldRemove);
+    Collection<ElementType> removeIf(function Boolean (ElementType) shouldRemove)
+        {
+        // this naive implementation does require that the iterator be stable despite removes
+        // occurring during iteration; it must obviously be overridden for non-mutable collections
+        Collection<ElementType> result = this;
+        for (ElementType value : this)
+            {
+            if (shouldRemove(value))
+                {
+                result = remove(value);
+                }
+            }
+        return result;
+        }
     
     /**
      * Remove all of the values from this collection that do not occur in the specified collection.
@@ -162,7 +208,13 @@ interface Collection<ElementType>
      *
      * @return the resultant collection, which is the same as {@code this} for a mutable collection
      */
-    Collection<ElementType> retainAll(Collection.Type<ElementType> values);
+    Collection<ElementType> retainAll(Collection.Type<ElementType> values)
+        {
+        // this naive implementation is likely to be overridden in cases where optimizations can be
+        // made with knowledge of either this collection and/or the passed in values, for example
+        // if both are ordered; it must obviously be overridden for non-mutable collections
+        return removeIf(value -> !values.contains(value));
+        }
 
     /**
      * Remove all values from the collection.
@@ -172,7 +224,11 @@ interface Collection<ElementType>
      *
      * @return the resultant collection, which is the same as {@code this} for a mutable collection
      */
-    Collection<ElementType> clear();
+    Collection<ElementType> clear()
+        {
+        // this naive implementation is likely to be overridden for obvious reasons
+        return removeIf(value -> true);
+        }
 
     // ----- equality ------------------------------------------------------------------------------
 

@@ -8,43 +8,64 @@
 class ExtHashMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
     {
-    @ro Int size;
+    // ----- constructors --------------------------------------------------------------------------
 
-    conditional ValueType get(KeyType key)
+    construct ExtHashMap(Hasher<KeyType> hasher, Int initCapacity = 0)
         {
-        if (Entry entry = getEntry(key)
-            {
-            return true, entry.value;
-            }
-
-        return false;
+        this.hasher = hasher;
+        buckets = new Entry<KeyType, ValueType>?[calcBucketCount(initCapacity)];
         }
 
-    HashMap<KeyType, ValueType> put(KeyType key, ValueType value)
-        {
+    // ----- internal state ------------------------------------------------------------------------
 
+    /**
+     * The Hasher is the thing that knows how to take a key and provide a hash code, or compare two
+     * keys for equality -- even if the keys don't know how to do that themselves.
+     */
+    protected/private Hasher<KeyType> hasher;
+
+    /**
+     * The size of the map is maintained internally.
+     */
+    public/private Int size = 0;
+
+    /**
+     * An array of hash buckets.
+     */
+    private Entry<KeyType, ValueType>?[] buckets;
+
+    /**
+     * The size at which the capacity must grow.
+     */
+    private Int threshold = 0;
+
+    // ----- Map interface -------------------------------------------------------------------------
+
+    @Override
+    conditional Entry<KeyType, ValueType> getEntry(KeyType key)
+        {
         }
 
-    // ----- UniformedIndex ---
-
-    /**
-     * Obtain the value of the specified element.
-     */
-    @op ElementType get(IndexType index);
-
-    /**
-     * Modify the value in the specified element.
-     */
-    @op Void set(IndexType index, ElementType value)
+    @lazy public/private Set<Entry<KeyType, ValueType>> entries.calc()
         {
-        throw new ReadOnlyException();
         }
 
-    /**
-     * Obtain a Ref for the specified element.
-     */
-    @op Ref<ElementType> elementAt(IndexType index)
+    @lazy public/private Set<KeyType> keys.calc()
+        {
+        }
 
+    @lazy public/private Collection<ValueType> values.calc()
+        {
+        }
 
-    // ...
+    // ----- UniformedIndex interface --------------------------------------------------------------
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    protected static Int calcBucketCount(Int capacity)
+        {
+        assert capacity >= 0;
+        // TODO should be a prime number
+        return (capacity.maxOf(1) + (capacity >>> 2)).maxOf(7);
+        }
     }

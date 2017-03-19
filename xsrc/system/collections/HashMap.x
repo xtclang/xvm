@@ -1,7 +1,14 @@
-class HashMap<KeyType, ValueType>
-        implements Map<KeyType extends immutable Hashable, ValueType>
+class HashMap<KeyType extends immutable Hashable, ValueType>
+        extends ExtHashMap<KeyType, ValueType>
     {
-    @ro Int size;
+    // ----- constructors --------------------------------------------------------------------------
+
+    construct HashMap(Int initCapacity = 0)
+        {
+        construct ExtHashMap(new NaturalHasher<KeyType>(), initCapacity);
+        }
+
+// TODO
 
     conditional ValueType get(KeyType key)
         {

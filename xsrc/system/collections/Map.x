@@ -448,4 +448,159 @@ interface Map<KeyType, ValueType>
 
         return true;
         }
+
+    // ----- values collection implementations -----------------------------------------------------
+
+    /**
+     * An implementation of the Collection for the {@link Map.values} property that delegates back
+     * to the map and to the map's {@link Map.entries entries}.
+     */
+    class EntryBasedValuesCollection<KeyType, ElementType>
+            implements Collection<ElementType>
+        {
+        construct ValuesCollection(Map<KeyType, ElementType> map)
+            {
+            this.map = map;
+            }
+
+        protected/private Map<KeyType, ElementType> map;
+
+        @Override
+        Int size.get()
+            {
+            return map.size;
+            }
+
+        @Override
+        Boolean empty.get()
+            {
+            return map.empty;
+            }
+
+        @Override
+        Iterator<ElementType> iterator()
+            {
+            return new Iterator()
+                {
+                Iterator entryIterator = map.entries.iterator(); // TODO verify this is private
+
+                conditional ElementType next()
+                    {
+                    if (Entry<KeyType, ElementType> entry : entryIterator)
+                        {
+                        return true, entry.value;
+                        }
+                    return false;
+                    }
+                };
+            }
+
+        @Override
+        Collection<ElementType> remove(ElementType value)
+            {
+            map.entries.iterator().untilAny(entry ->
+                {
+                if (entry.value == value)
+                    {
+                    entry.remove();
+                    return true;
+                    }
+                return false;
+                });
+
+            return this;
+            }
+
+        @Override
+        Collection<ElementType> removeIf(function Boolean (ElementType) shouldRemove)
+            {
+            map.entries.removeIf(entry -> shouldRemove(entry.value));
+            }
+
+        @Override
+        Collection<ElementType> clear()
+            {
+            map.clear();
+            return this;
+            }
+        }
+
+    /**
+     * An implementation of the Collection for the {@link Map.values} property that delegates back
+     * to the map and to the map's {@link Map.keys keys}.
+     */
+    class KeyBasedValuesCollection<KeyType, ElementType>
+            implements Collection<ElementType>
+        {
+        construct ValuesCollection(Map<KeyType, ElementType> map)
+            {
+            this.map = map;
+            }
+
+        protected/private Map<KeyType, ElementType> map;
+
+        @Override
+        Int size.get()
+            {
+            return map.size;
+            }
+
+        @Override
+        Boolean empty.get()
+            {
+            return map.empty;
+            }
+
+        @Override
+        Iterator<ElementType> iterator()
+            {
+            return new Iterator()
+                {
+                Iterator keyIterator = map.keys.iterator(); // TODO verify this is private
+
+                conditional ElementType next()
+                    {
+                    if (KeyType key : keyIterator)
+                        {
+                        return map.get(key);
+                        }
+
+                    return false;
+                    }
+                };
+            }
+
+        @Override
+        Collection<ElementType> remove(ElementType value)
+            {
+            map.keys.iterator().untilAny(key ->
+                {
+                if (ElementType keyvalue : map.get(key) && keyvalue == value)
+                    {
+                    assert map == map.remove(key);
+                    return true;
+                    }
+                return false;
+                });
+
+            return this;
+            }
+
+        @Override
+        Collection<ElementType> removeIf(function Boolean (ElementType) shouldRemove)
+            {
+            map.keys.removeIf(key ->
+                {
+                assert ElementType keyvalue : map.get(key);
+                return shouldRemove(keyvalue);
+                });
+            }
+
+        @Override
+        Collection<ElementType> clear()
+            {
+            map.clear();
+            return this;
+            }
+        }
     }
