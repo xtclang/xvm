@@ -32,7 +32,12 @@ interface Map<KeyType, ValueType>
     // ----- Entry interface -----------------------------------------------------------------------
 
     /**
-     * A Map Entry represents a single mapping from a particular key to its value.
+     * A Map Entry represents a single mapping from a particular key to its value. The Entry
+     * interface is designed to allow a Map implementor to re-use a temporary Entry instance to
+     * represent a _current_ Entry, for example during iteration; this allows a single Entry object
+     * to represent every Entry in the Map. As a consequence of this approach, an Entry consumer
+     * *must* call {@link reify} on each entry that will be held beyond the scope of the current
+     * iteration.
      */
     interface Entry<KeyType, ValueType>
         {
@@ -72,6 +77,16 @@ interface Map<KeyType, ValueType>
          * @throws ReadOnlyException if the map is _fixed size_, _persistent_, or {@code const}
          */
         Void remove();
+
+        /**
+         * If the entry is a temporary object, for example an entry that can be re-used to represent
+         * multiple logical entries within an entry iterator, then obtain a reference to the same
+         * entry that is _not_ temporary, allowing the resulting reference to be held indefinitely.
+         */
+        Entry<KeyType, ValueType> reify()
+            {
+            return this;
+            }
 
         /**
          * Two entries are equal iff they contain equal keys and equal values.
@@ -449,6 +464,255 @@ interface Map<KeyType, ValueType>
         return true;
         }
 
+    // ----- keys set implementations --------------------------------------------------------------
+
+    /**
+     * An implementation of the Set for the {@link Map.keys} property that delegates back
+     * to the map and to the map's {@link Map.entries entries}.
+     */
+    class EntryBasedKeysSet<ElementType, ValueType>
+            implements Set<ElementType>
+        {
+        construct EntryBasedKeysSet(Map<ElementType, ValueType> map)
+            {
+            this.map = map;
+            }
+
+        protected/private Map<ElementType, ValueType> map;
+
+        @Override
+        Int size.get()
+            {
+            return map.size;
+            }
+
+        @Override
+        Boolean empty.get()
+            {
+            return map.empty;
+            }
+
+        @Override
+        Iterator<ElementType> iterator()
+            {
+            return new Iterator()
+                {
+                Iterator entryIterator = map.entries.iterator();
+
+                conditional ElementType next()
+                    {
+                    if (Entry<KeyType, ElementType> entry : entryIterator)
+                        {
+                        return true, entry.key;
+                        }
+                    return false;
+                    }
+                };
+            }
+
+        @Override
+        Collection<ElementType> remove(ElementType key)
+            {
+            Map newMap = map.remove(key);
+            assert &map == &newMap;
+            return this;
+            }
+
+        @Override
+        Collection<ElementType> removeIf(function Boolean (ElementType) shouldRemove)
+            {
+            map.entries.removeIf(entry -> shouldRemove(entry.key));
+            }
+
+        @Override
+        Collection<ElementType> clear()
+            {
+            map.clear();
+            return this;
+            }
+        }
+
+    // ----- entries set implementations -----------------------------------------------------------
+
+    /**
+     * An implementation of the Set for the {@link Map.entries} property that delegates back to the
+     * map and to the map's {@link Map.keys keys}.
+     */
+    class KeyBasedEntriesSet<KeyType, ValueType>
+            implements Collection<Entry<KeyType, ValueType>>
+        {
+        construct KeyBasedEntriesSet(Map<KeyType, ValueType> map)
+            {
+            this.map = map;
+            }
+
+        protected/private Map<KeyType, ElementType> map;
+
+        @Override
+        Int size.get()
+            {
+            return map.size;
+            }
+
+        @Override
+        Boolean empty.get()
+            {
+            return map.empty;
+            }
+
+        @Override
+        Iterator<Entry<KeyType, ValueType>> iterator()
+            {
+            return new Iterator()
+                {
+                Iterator keyIterator = map.keys.iterator();             // TODO verify this is private
+
+                conditional ElementType next()
+                    {
+                    if (KeyType key : keyIterator)
+                        {
+                        // TODO verify this is private (becomes a private property on the anon inner class)
+                        static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(map, key);
+                        return true, entry.advance(key);
+                        }
+
+                    return false;
+                    }
+                };
+            }
+
+        @Override
+        Collection<Entry<KeyType, ValueType>> remove(ElementType entry)
+            {
+            // value is an Entry; remove the requested entry from the map only if the specified
+            // entry's key/value pair exists in the map
+            if (ValueType value : map.get(entry.key) && value == entry.value)
+                {
+                Map newMap = map.remove(entry.key);
+                assert &map == &newMap;
+                }
+            return this;
+            }
+
+        @Override
+        Collection<Entry<KeyType, ValueType>> removeIf(function Boolean (ElementType) shouldRemove)
+            {
+            Collection<KeyType> oldKeys = map.keys;
+            Collection<KeyType> newKeys = oldKeys.removeIf(key ->
+                {
+                static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(map, key);
+                return shouldRemove(entry.advance(key));
+                });
+            assert &newKeys == &oldKeys;
+
+            return this;
+            }
+
+        @Override
+        Collection<Entry<KeyType, ValueType>> clear()
+            {
+            map.clear();
+            return this;
+            }
+        }
+
+    // ----- Entry implementations -----------------------------------------------------------------
+
+    /**
+     * An implementation of Entry that delegates back to the map for a specified key.
+     */
+    class KeyBasedEntry<KeyType, ValueType>(Map<KeyType, ValueType> map, KeyType key)
+            implements Entry<KeyType, ValueType>
+        {
+        @Override
+        public/private KeyType key;
+
+        @Override
+        Boolean exists.get()
+            {
+            return map.get(key)
+            }
+
+        @Override
+        ValueType value
+            {
+            ValueType get()
+                {
+                return map.get(key);
+                }
+
+            Void set(ValueType value)
+                {
+                map.put(key, value);
+                }
+            }
+
+        @Override
+        Void remove()
+            {
+            Map newMap = map.remove(key);
+            assert &map == &newMap;
+            }
+        }
+
+    /**
+     * An implementation of Entry that can be used as a cursor over any number of keys, and
+     * delegates back to the map for its functionality.
+     */
+    class KeyBasedCursorEntry<KeyType, ValueType>(Map<KeyType, ValueType> map, KeyType key)
+            implements Entry<KeyType, ValueType>
+        {
+        public/private KeyType key;
+
+        /**
+         * Specify the new "cursor key" for this Entry.
+         *
+         * @param key  the new key for this Entry
+         *
+         * @return this Entry
+         */
+        KeyBasedCursorEntry<KeyType, ValueType> advance(KeyType key)
+            {
+            this.key = key;
+            return this;
+            }
+
+        @Override
+        Boolean exists.get()
+            {
+            return map.get(key)
+            }
+
+        @Override
+        ValueType value
+            {
+            ValueType get()
+                {
+                return map.get(key);
+                }
+
+            Void set(ValueType value)
+                {
+                map.put(key, value);
+                }
+            }
+
+        @Override
+        Void remove()
+            {
+            Map newMap = map.remove(key);
+            assert &map == &newMap;
+            }
+
+        @Override
+        Entry<KeyType, ValueType> reify()
+            {
+            // this entry class is re-usable for different keys, so return an entry whose key cannot
+            // be modified
+            return new KeyBasedEntry(map, key);
+            }
+        }
+
     // ----- values collection implementations -----------------------------------------------------
 
     /**
@@ -458,7 +722,7 @@ interface Map<KeyType, ValueType>
     class EntryBasedValuesCollection<KeyType, ElementType>
             implements Collection<ElementType>
         {
-        construct ValuesCollection(Map<KeyType, ElementType> map)
+        construct EntryBasedValuesCollection(Map<KeyType, ElementType> map)
             {
             this.map = map;
             }
@@ -482,7 +746,7 @@ interface Map<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator entryIterator = map.entries.iterator(); // TODO verify this is private
+                Iterator entryIterator = map.entries.iterator();
 
                 conditional ElementType next()
                     {
@@ -532,7 +796,7 @@ interface Map<KeyType, ValueType>
     class KeyBasedValuesCollection<KeyType, ElementType>
             implements Collection<ElementType>
         {
-        construct ValuesCollection(Map<KeyType, ElementType> map)
+        construct KeyBasedValuesCollection(Map<KeyType, ElementType> map)
             {
             this.map = map;
             }
@@ -556,7 +820,7 @@ interface Map<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                Iterator keyIterator = map.keys.iterator(); // TODO verify this is private
+                Iterator keyIterator = map.keys.iterator();
 
                 conditional ElementType next()
                     {
@@ -577,7 +841,8 @@ interface Map<KeyType, ValueType>
                 {
                 if (ElementType keyvalue : map.get(key) && keyvalue == value)
                     {
-                    assert map == map.remove(key);
+                    Map newMap = map.remove(key);
+                    assert &map == &newMap;
                     return true;
                     }
                 return false;
