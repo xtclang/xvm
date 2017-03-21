@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.asm.ConstantPool.MethodConstant;
 import org.xvm.proto.*;
 
 /**
@@ -41,21 +43,30 @@ public class xFunction
     @Override
     public void assignConstValue(ObjectHandle handle, Object oValue)
         {
-        // TODO: wrong
         FunctionHandle hThis = (FunctionHandle) handle;
-        FunctionHandle hThat = (FunctionHandle) oValue;
+        MethodConstant constFunction = (MethodConstant) oValue; // TODO: replace with function when implemented
+        ClassConstant constClass = (ClassConstant) constFunction.getNamespace();
 
-        hThis.m_invoke = hThat.m_invoke;
+        String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
+        TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
+
+        hThis.m_invoke = target.getFunctionTemplate(constFunction.getName(), "");
         }
 
     public static class FunctionHandle
             extends ObjectHandle
         {
-        protected InvocationTemplate m_invoke;
+        public InvocationTemplate m_invoke;
 
         public FunctionHandle(TypeComposition clazz)
             {
             super(clazz, clazz.ensurePublicType());
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_invoke;
             }
         }
     }

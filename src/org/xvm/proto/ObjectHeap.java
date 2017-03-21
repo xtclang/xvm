@@ -1,6 +1,7 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ConstantPool.IntConstant;
 import org.xvm.asm.ConstantPool.CharStringConstant;
 
@@ -34,7 +35,19 @@ public class ObjectHeap
         }
 
     // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
-    public ObjectHandle ensureConstHandle(int nClassConstId, int nValueConstId)
+    public ObjectHandle resolveConstHandle(ObjectHandle hTarget, TypeName tn, int nValueConstId)
+        {
+        assert(tn.isResolved());
+
+        String sType = tn.getSimpleName();
+        // TODO: generic names
+        int nClassConstId = m_constantPool.getClassConstId(sType);
+
+        return resolveConstHandle(nClassConstId, nValueConstId);
+        }
+
+    // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
+    public ObjectHandle resolveConstHandle(int nClassConstId, int nValueConstId)
         {
         ObjectHandle handle = null;
         if (nValueConstId > 0)
@@ -58,11 +71,23 @@ public class ObjectHeap
                 case CharString:
                     template.assignConstValue(handle, ((CharStringConstant) constValue).getValue());
                     break;
+
+                case Method: // TODO: function is not currently there
+                    template.assignConstValue(handle, constValue);
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException("type " + constValue.getType());
                 }
             registerConstHandle(nClassConstId, nValueConstId, handle);
             }
 
         return handle;
+        }
+
+    public String getPropertyName(int nValueConstId)
+        {
+        return ((CharStringConstant) m_constantPool.getConstantValue(nValueConstId)).getValue();
         }
 
     public ObjectHandle getConstHandle(int nClassConstId, int nValueConstId)

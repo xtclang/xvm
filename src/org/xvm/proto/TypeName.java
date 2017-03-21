@@ -201,6 +201,8 @@ public interface TypeName
                 }
             else if (!Arrays.asList(template.f_asFormalType).contains(m_sName))
                 {
+                m_sName = template.f_types.replaceAlias(m_sName);
+
                 template.f_types.ensureTemplate(m_sName);
                 m_fActual = true;
                 }
@@ -270,6 +272,8 @@ public interface TypeName
         @Override
         public void ensureDependents(TypeCompositionTemplate template)
             {
+            m_sActualName = template.f_types.replaceAlias(m_sActualName);
+
             template.f_types.ensureTemplate(m_sActualName);
 
             super.ensureDependents(template);

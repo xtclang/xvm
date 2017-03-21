@@ -13,7 +13,6 @@ public class Frame
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVars;       // arguments/local vars (index 0 for target:private)
     public final ObjectHandle[] f_ahReturns;    // the return values
-    public final int[]          f_anRetTypeId;  // the return types
     public final Frame          f_framePrev;
     public ObjectHandle         m_hException;
 
@@ -24,7 +23,6 @@ public class Frame
         f_framePrev = framePrev;
         f_function = function;
         f_hTarget = hTarget;
-        f_anRetTypeId = function.m_anRetTypeId;
         f_ahReturns = ahReturns;
         f_ahVars = ahVars; // [0] - target:private for methods
         }

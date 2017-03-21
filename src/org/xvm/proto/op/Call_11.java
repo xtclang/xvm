@@ -11,13 +11,13 @@ import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
  */
 public class Call_11 extends OpCallable
     {
+    protected final int f_nFunctionValue;
     private final int f_nArgValue;
     private final int f_nRetValue;
 
     public Call_11(int nFunction, int nArg, int nRet)
         {
-        super(nFunction);
-
+        f_nFunctionValue = nFunction;
         f_nArgValue = nArg;
         f_nRetValue = nRet;
         }
@@ -25,10 +25,10 @@ public class Call_11 extends OpCallable
     @Override
     public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
         {
-        FunctionTemplate function = getFunctionTemplate(frame);
+        FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
 
         ObjectHandle[] ahVars = new ObjectHandle[function.m_cVars];
-        ahVars[0] = frame.f_ahVars[f_nArgValue];
+        ahVars[0] = resolveArgument(frame, frame.f_function.m_argTypeName[0], f_nArgValue);
 
         ObjectHandle[] ahRet = new ObjectHandle[1];
 

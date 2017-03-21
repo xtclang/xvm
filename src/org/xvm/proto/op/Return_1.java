@@ -1,7 +1,9 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
+import org.xvm.proto.TypeName;
 
 /**
  * RETURN_1 op-code.
@@ -10,21 +12,17 @@ import org.xvm.proto.Op;
  */
 public class Return_1 extends Op
     {
-    private final int f_nRetValue;
+    private final int f_nValue;
 
-    public Return_1(int nRetValue)
+    public Return_1(int nValue)
         {
-        f_nRetValue = nRetValue;
+        f_nValue = nValue;
         }
 
     @Override
     public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
         {
-        int nRetValue = f_nRetValue;
-
-        frame.f_ahReturns[0] = nRetValue > 0 ?
-                frame.f_ahVars[nRetValue] :
-                frame.f_context.f_heap.ensureConstHandle(frame.f_anRetTypeId[0], -nRetValue);
+        frame.f_ahReturns[0] = resolveArgument(frame, frame.f_function.m_retTypeName[0], f_nValue);
 
         return RETURN_NORMAL;
         }

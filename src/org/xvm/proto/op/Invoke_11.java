@@ -11,14 +11,14 @@ import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 public class Invoke_11 extends OpInvocable
     {
     private final int f_nTargetValue;
+    protected final int f_nMethodValue;
     private final int f_nArgValue;
     private final int f_nRetValue;
 
     public Invoke_11(int nTarget, int nMethod, int nArg, int nRet)
         {
-        super(nMethod);
-
         f_nTargetValue = nTarget;
+        f_nMethodValue = nMethod;
         f_nArgValue = nArg;
         f_nRetValue = nRet;
         }
@@ -27,13 +27,13 @@ public class Invoke_11 extends OpInvocable
     public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
         {
         ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
-        ObjectHandle hArg    = frame.f_ahVars[f_nArgValue];
 
-        TypeCompositionTemplate template = hTarget.m_clazz.f_template;
+        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        MethodTemplate method = getMethodTemplate(frame, template);
+        MethodTemplate method = getMethodTemplate(frame, template, f_nMethodValue);
 
-        ObjectHandle[] ahRet = new ObjectHandle[1]; // either an exception or a return handle
+        ObjectHandle hArg    = resolveArgument(frame, method.m_argTypeName[0], f_nArgValue);
+        ObjectHandle[] ahRet = new ObjectHandle[1];
         ObjectHandle hException;
 
         if (method.isNative())

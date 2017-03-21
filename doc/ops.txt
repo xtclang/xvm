@@ -1,0 +1,217 @@
+0x00 NOP                                                                                                        ; traditional no-op, which does nothing
+0x01 LINE                                                                                                        ; advance line counter
+0x02 BREAK                                                                                                        ; explicit break-point for debugger
+0x03 YIELD                                                                                                        ; explicit service yield point (check the backlog)
+0x04 ENTER                                                                                                        ; variable scope begin
+0x05 EXIT                                                                                                        ; variable scope end
+0x06 GUARD        #handlers:(CONST_CLASS, rel_addr)                                                                ; try { (+ “catch” addresses)        // note: ENTER
+0x07 ENDGUARD                                                                                                        ; } ...                                // note: EXIT
+0x08 GUARDALL                                                                                                        ; try {                                // note: ENTER
+0x09 FINALLY                                                                                                        ; } finally {                        // note: EXIT, ENTER
+0x0A ENDFINALLY                                                                                                        ; }                                // note: EXIT
+0x0B THROW        rvalue                                                                                                ; raise exception
+0x0C ASSERT        rvalue                                                                                                ; assert
+0x0D ASSERT_T        rvalue, CONST_STRING                                                                                ; assert with assertion text (e.g. assertion expression)
+0x0E ASSERT_V        rvalue, CONST_STRING, #vals(rvalue)                                                                ; assert with assertion text and variables to print
+0x0F __RSVD_0F
+
+0x10 COND        CONST_COND                                                                                        ; specified condition is true        // note: ENTER
+0x11 NCOND        CONST_COND                                                                                        ; specified condition is false        // note: ENTER
+0x12 ACOND                                                                                                        ; assertions enabled                // note: ENTER
+0x13 NACOND                                                                                                        ; assertions not enabled         // ...
+0x14 TCOND                                                                                                        ; test mode enabled (implies assertions enabled)
+0x15 NTCOND                                                                                                        ; test mode not enabled
+0x16 DCOND                                                                                                        ; running in debugger
+0x17 NDCOND                                                                                                        ; not running in debugger
+0x18 PCOND        (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY | CONST_STRING)        ; VM-structure or named condition present
+0x19 NPCOND        (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY | CONST_STRING)        ; VM-structure or named condition absent
+0x1A VCOND        (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY), CONST_VER        ; VM-structure of a (>=) specified version present
+0x1B NVCOND        (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY), CONST_VER        ;                   (<)
+0x1C XCOND        CONST_VER                                                                                        ; XVM of a (>=) specified version (>=)
+0x1D NXCOND        CONST_VER                                                                                        ;          (<)
+0x1E __RSVD_1E
+0x1F END_COND                                                                                                        ; end conditional block                // note: EXIT
+
+0x20 GOTO        abs-addr                                                                ; unconditional absolute jump
+0x21 JMP        rel-addr                                                                ; unconditional relative jump
+0x22 JMP_TRUE        rvalue-bool, rel-addr                                                        ; jump if value is true
+0x23 JMP_FALSE        rvalue-bool, rel-addr                                                        ; jump if value is false
+0x24 JMP_ZERO        rvalue-int, rel-addr                                                        ; jump if value is zero
+0x25 JMP_NZERO        rvalue-int, rel-addr                                                        ; jump if value is NOT zero
+0x26 JMP_NULL        rvalue, rel-addr                                                        ; jump if value is null
+0x27 JMP_NNULL        rvalue, rel-addr                                                        ; jump if value is NOT null
+0x28 JMP_EQ        rvalue, rvalue, rel-addr                                                ; jump if value is equal
+0x29 JMP_NEQ        rvalue, rvalue, rel-addr                                                ; jump if value is NOT equal
+0x2A JMP_LT        rvalue, rvalue, rel-addr                                                ; jump if value is less than
+0x2B JMP_LTE        rvalue, rvalue, rel-addr                                                ; jump if value is less than or equal
+0x2C JMP_GT        rvalue, rvalue, rel-addr                                                ; jump if value is greater than
+0x2D JMP_GTE        rvalue, rvalue, rel-addr                                                ; jump if value is greater than or equal
+0x2E JMP_TYPE        rvalue, rvalue-type, rel-addr                                                ; jump if type of the value is “instanceof" specified type
+0x2F JMP_NTYPE        rvalue, rvalue-type, rel-addr                                                ; jump if type of the value is NOT “instanceof" specified type
+
+0x30 MATCH_2        rvalue, CONST_*, rel-addr, CONST_*, rel-addr                                ; if the value equals one of the two constants, jump accordingly
+0x31 MATCH_3        rvalue, CONST_*, rel-addr, CONST_*, rel-addr, CONST_*, rel-addr                ; if the value equals one of the three constants, jump accordingly
+0x32 MATCH_N        rvalue, #opts:(CONST_*, rel-addr)                                        ; if the value equals one of the N constants, jump accordingly
+0x33 VAR        CONST_CLASS                                                                ; next register is an uninitialized anonymous variable
+0x34 IVAR        CONST_CLASS, CONST_*                                                        ; next register is an initialized anonymous variable
+0x35 NVAR        CONST_CLASS, CONST_STRING                                                ; next register is an uninitialized named variable
+0x36 INVAR        CONST_CLASS, CONST_STRING, CONST_*                                        ; next register is an initialized named variable
+0x37 REF        lvalue                                                                        ; next register represents the Variable ref for the specified variable
+0x38 CREF        rvalue                                                                        ; next register represents the @ro Variable ref for the specified variable
+0x39 CAST        rvalue, CONST_CLASS                                                        ; next register holds the type-casted value
+0x3A MOV        lvalue-dest, rvalue-src                                                        ; move source value to destination
+0x3B MOV_REF        lvalue-dest, lvalue-src                                                        ; move reference-to-source to destination
+0x3C MOV_CREF   lvalue-dest, rvalue-src                                                        ; move reference-to-source to destination
+0x3D MOV_CAST        lvalue-dest, rvalue-src, CONST_CLASS                                        ; move type-casted source reference to destination
+0x3E SWAP        lvalue, lvalue                                                                ; swap source and destination values
+0x3F __RSVD_3F
+
+TODO DUP
+
+0x40 GET        rvalue-target, CONST_PROPERTY, lvalue                                        ; get property
+0x41 LGET        CONST_PROPERTY, lvalue                                                        ; local get (target=this)
+0x42 SET        rvalue-target, CONST_PROPERTY, rvalue                                        ; set property
+0x43 LSET        CONST_PROPERTY, rvalue                                                        ; local set (target=this)
+0x44 PROP        rvalue-target, CONST_PROPERTY                                                ; next register represents the Property ref for the specified property
+0x45 LPROP         CONST_PROPERTY                                                                ; next register represents the Property ref for the specified local property (target=this)
+0x46 CPROP        rvalue-target, CONST_PROPERTY                                                ; next register represents the @ro Property ref for the specified property
+0x47 __RSVD47
+0x48 MBIND        rvalue-target, rvalue-method, lvalue-fn-result
+0x49 FBIND        rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
+0x4A FBINDN        rvalue-fn, #params:(CONST_STRING, rvalue-param), lvalue-fn-result        ; TODO is this something that could be deferred or eliminated???
+0x4B __RSVD4B
+0x4C RETURN_0                                                                                ; return (no return value)
+0x4D RETURN_1        rvalue                                                                        ; return (single return value)
+0x4E RETURN_N        #vals:(rvalue)                                                                ; return (multiple return value)
+0x4F RETURN_T        rvalue                                                                        ; return (a tuple of return values)
+
+0x50 CALL_00        rvalue-function
+0x51 CALL_01        rvalue-function, lvalue-return                                                ; note: return value can be into the next available register
+0x52 CALL_0N        rvalue-function, #returns:(lvalue)
+0x53 CALL_0T        rvalue-function, lvalue-return-tuple
+0x54 CALL_10        rvalue-function, rvalue-param
+0x55 CALL_11        rvalue-function, rvalue-param, lvalue-return
+0x56 CALL_1N        rvalue-function, rvalue-param, #returns:(lvalue)
+0x57 CALL_1T        rvalue-function, rvalue-param, lvalue-return-tuple
+0x58 CALL_N0        rvalue-function, #params:(rvalue)
+0x59 CALL_N1        rvalue-function, #params:(rvalue), lvalue-return
+0x5A CALL_NN        rvalue-function, #params:(rvalue), #returns:(lvalue)
+0x5B CALL_NT        rvalue-function, #params:(rvalue), lvalue-return-tuple
+0x5C CALL_T0        rvalue-function, rvalue-params-tuple
+0x5D CALL_T1        rvalue-function, rvalue-params-tuple, lvalue-return
+0x5E CALL_TN        rvalue-function, rvalue-params-tuple, #returns:(lvalue)
+0x5F CALL_TT        rvalue-function, rvalue-params-tuple, lvalue-return-tuple
+
+0x60 INVOKE_00        rvalue-target, rvalue-method
+0x61 INVOKE_01        rvalue-target, rvalue-method, lvalue-return
+0x62 INVOKE_0N        rvalue-target, rvalue-method, #returns:(lvalue)
+0x63 INVOKE_0T        rvalue-target, rvalue-method, lvalue-return-tuple
+0x64 INVOKE_10        rvalue-target, rvalue-method, rvalue-param
+0x65 INVOKE_11        rvalue-target, rvalue-method, rvalue-param, lvalue-return
+0x66 INVOKE_1N        rvalue-target, rvalue-method, rvalue-param, #returns:(lvalue)
+0x67 INVOKE_1T        rvalue-target, rvalue-method, rvalue-param, lvalue-return-tuple
+0x68 INVOKE_N0        rvalue-target, rvalue-method, #params:(rvalue)
+0x69 INVOKE_N1        rvalue-target, rvalue-method, #params:(rvalue), lvalue-return
+0x6A INVOKE_NN        rvalue-target, rvalue-method, #params:(rvalue), #returns:(lvalue)
+0x6B INVOKE_NT        rvalue-target, rvalue-method, #params:(rvalue), lvalue-return-tuple
+0x6C INVOKE_T0        rvalue-target, rvalue-method, rvalue-params-tuple
+0x6D INVOKE_T1        rvalue-target, rvalue-method, rvalue-params-tuple, lvalue-return
+0x6E INVOKE_TN        rvalue-target, rvalue-method, rvalue-params-tuple, #returns:(lvalue)
+0x6F INVOKE_TT        rvalue-target, rvalue-method, rvalue-params-tuple, lvalue-return-tuple
+
+0x70 ADD        rvalue-target, rvalue-second, lvalue-return                                ; T + T -> T
+0x71 SUB        rvalue-target, rvalue-second, lvalue-return                                ; T - T -> T
+0x72 MUL        rvalue-target, rvalue-second, lvalue-return                                ; T * T -> T
+0x73 DIV        rvalue-target, rvalue-second, lvalue-return                                ; T / T -> T
+0x74 MOD        rvalue-target, rvalue-second, lvalue-return                                ; T % T -> T
+0x75 SHL        rvalue-target, rvalue-second, lvalue-return                                ; T << Int -> T
+0x76 SHR        rvalue-target, rvalue-second, lvalue-return                                ; T >> Int -> T
+0x77 USHR        rvalue-target, rvalue-second, lvalue-return                                ; T >>> Int -> T
+0x78 AND        rvalue-target, rvalue-second, lvalue-return                                ; T & T -> T
+0x79 OR                rvalue-target, rvalue-second, lvalue-return                                ; T | T -> T
+0x7A XOR        rvalue-target, rvalue-second, lvalue-return                                ; T ^ T -> T
+0x7B DIVMOD        rvalue-target, rvalue-second, lvalue-div-return, lvalue-mod-return        ; T /% T -> T, T
+0x7C POS        rvalue-target, lvalue-return                                                ; +T -> T                ; TODO make this reserved? (it’s a no-op for built-in types)
+0x7D NEG        rvalue-target, lvalue-return                                                ; -T -> T
+0x7E COMPL        rvalue-target, lvalue-return                                                ; ~T -> T                ; WHY DOES THIS EXIST?
+0x7F NOT        rvalue-target, lvalue-return                                                ; !T -> Boolean
+
+0x80 INC        lvalue-target                                                                ; ++T
+0x81 DEC        lvalue-target                                                                ; —-T
+0x82 POSTINC        lvalue-target, lvalue-return                                                ; T++ -> T
+0x83 POSTDEC        lvalue-target, lvalue-return                                                ; T-— -> T
+0x84 ZERO        rvalue-int, lvalue-return                                                ; T == 0 -> Boolean
+0x85 NZERO        rvalue-int, lvalue-return                                                ; T != 0 -> Boolean
+0x86 NULL        rvalue, lvalue-return                                                        ; T == null -> Boolean
+0x87 NNULL        rvalue, lvalue-return                                                        ; T != null -> Boolean
+0x88 EQ        rvalue, rvalue, lvalue-return                                                        ; T == T -> Boolean
+0x89 NEQ        rvalue, rvalue, lvalue-return                                                ; T != T -> Boolean
+0x8A LT        rvalue, rvalue, lvalue-return                                                        ; T < T -> Boolean
+0x8B LTE        rvalue, rvalue, lvalue-return                                                ; T <= T -> Boolean
+0x8C GT        rvalue, rvalue, lvalue-return                                                        ; T > T -> Boolean
+0x8D GTE        rvalue, rvalue, lvalue-return                                                ; T >= T -> Boolean
+0x8E TYPE        rvalue, rvalue-type, lvalue-return                                        ; T instanceof Type -> Boolean
+0x8F NTYPE        rvalue, rvalue-type, lvalue-return                                        ; !(T instanceof Type) -> Boolean
+
+0x90 ADD_ASGN        lvalue-target, rvalue-second                                                ; T += T
+0x91 SUB_ASGN        lvalue-target, rvalue-second                                                ; T -= T
+0x92 MUL_ASGN        lvalue-target, rvalue-second                                                ; T *= T
+0x93 DIV_ASGN        lvalue-target, rvalue-second                                                ; T /= T
+0x94 MOD_ASGN        lvalue-target, rvalue-second                                                ; T %= T
+0x95 SHL_ASGN        lvalue-target, rvalue-second                                                ; T <<= Int
+0x96 SHR_ASGN        lvalue-target, rvalue-second                                                ; T >>= Int
+0x97 USHR_ASGN        lvalue-target, rvalue-second                                                ; T >>>= Int
+0x98 AND_ASGN        lvalue-target, rvalue-second                                                ; T &= T
+0x99 OR_ASGN        lvalue-target, rvalue-second                                                ; T |= T
+0x9A XOR_ASGN        lvalue-target, rvalue-second                                                ; T ^= T
+0x9B __RSVD9B
+0x9C AGET        rvalue-target, rvalue-index, lvalue-return                                ; T = T[Ti]
+0x9D ASET        rvalue-target, rvalue-index, rvalue-new-value                                ; T[Ti] = T
+0x9E AREF        rvalue-target, rvalue-index, lvalue-return                                ; Ref<T> = &T[Ti]
+0x9F ACREF        rvalue-target, rvalue-index, lvalue-return                                ; @ro Ref<T> = &T[Ti]
+
+0xA0 NEW_0      CONST-CONSTRUCT, lvalue-return
+0xA1 NEW_1      CONST-CONSTRUCT, rvalue-param, lvalue-return
+0xA2 NEW_N      CONST-CONSTRUCT, #params:(rvalue), lvalue-return
+0xA3 NEW_T      CONST-CONSTRUCT, rvalue-params-tuple, lvalue-return
+0xA4 NEW_0G     CONST-CONSTRUCT, rvalue-type, lvalue-return                                 ; generic "new"
+0xA5 NEW_1G     CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
+0xA6 NEW_NG     CONST-CONSTRUCT, rvalue-type, #params:(rvalue), lvalue-return
+0xA7 NEW_TG     CONST-CONSTRUCT, rvalue-type, rvalue-params-tuple, lvalue-return
+0xA8 NEWC_0     CONST-CONSTRUCT, rvalue-parent, lvalue-return                               ; virtual "new" for child classes
+0xA9 NEWC_1     CONST-CONSTRUCT, rvalue-parent, rvalue-param, lvalue-return
+0xAA NEWC_N     CONST-CONSTRUCT, rvalue-parent, #params:(rvalue), lvalue-return
+0xAB NEWC_T     CONST-CONSTRUCT, rvalue-parent, rvalue-params-tuple, lvalue-return
+0xAC
+0xAD
+0xAE
+0xAF
+
+TODO is a service?
+TODO is a const?
+TODO is immutable?
+
+0xB0 RTYPE_1 CLASS_CONST, rvalue-type, lvalue-return                                    ; resolve generic type; lvalue-return - a Type object
+0xB1 RTYPE_N CLASS_CONST, #type-params:(rvalue-type), lvalue-return
+0xB2
+0xB3
+0xB4
+0xB5
+0xB6
+0xB7
+0xB8
+0xB9
+0xBA
+0xBB
+0xBC
+0xBD
+0xBE
+0xBF
+
+
+
+
+
+
+new HashMap<List<K>, Map<K, V>>
+

@@ -144,6 +144,12 @@ public class TypeSet
         m_mapAliases.put(sAlias, sRealName);
         }
 
+    public String replaceAlias(String sName)
+        {
+        String sRealName = m_mapAliases.get(sName);
+        return sRealName == null ? sName : sRealName;
+        }
+
     // ----- TypeCompositions -----
 
 

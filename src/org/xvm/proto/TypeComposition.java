@@ -15,6 +15,7 @@ public class TypeComposition
     private Type m_typePublic;
     private Type m_typeProtected;
     private Type m_typePrivate;
+    private Type m_typeStruct;
 
     public TypeComposition(TypeCompositionTemplate template, Type[] atnGenericActual)
         {
@@ -29,7 +30,36 @@ public class TypeComposition
         Type type = m_typePublic;
         if (type == null)
             {
-            type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Public);
+            m_typePublic = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Public);
+            }
+        return type;
+        }
+    public Type ensureProtectedType()
+        {
+        Type type = m_typeProtected;
+        if (type == null)
+            {
+            m_typeProtected = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Protected);
+            }
+        return type;
+        }
+
+    public Type ensurePrivateType()
+        {
+        Type type = m_typePrivate;
+        if (type == null)
+            {
+            m_typePrivate = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Private);
+            }
+        return type;
+        }
+
+    public Type ensureStructType()
+        {
+        Type type = m_typeStruct;
+        if (type == null)
+            {
+            m_typeStruct = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Struct);
             }
         return type;
         }
