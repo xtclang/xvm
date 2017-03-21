@@ -1,6 +1,7 @@
 package org.xvm.proto;
 
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 
 /**
@@ -10,24 +11,17 @@ import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
  */
 public abstract class OpCallable extends Op
     {
-    protected final int f_nFunctionValue;
-
-    protected OpCallable(int nFunction)
+    protected FunctionTemplate getFunctionTemplate(Frame frame, int nFunctionValue)
         {
-        f_nFunctionValue = nFunction;
-        }
-
-    protected FunctionTemplate getFunctionTemplate(Frame frame)
-        {
-        if (f_nFunctionValue >= 0)
+        if (nFunctionValue >= 0)
             {
-            ObjectHandle hFunction = frame.f_ahVars[f_nFunctionValue]; // xFunction instance
+            ObjectHandle hFunction = frame.f_ahVars[nFunctionValue]; // xFunction instance
             return null; // TODO: hFunction -> function template
             }
         else
             {
             ConstantPool.MethodConstant constFunction =
-                    frame.f_context.f_constantPool.getMethodConstant(-f_nFunctionValue);
+                    frame.f_context.f_constantPool.getMethodConstant(-nFunctionValue);
 
             String sClass = ConstantPoolAdapter.getClassName((ConstantPool.ClassConstant) constFunction.getNamespace());
 
@@ -36,5 +30,4 @@ public abstract class OpCallable extends Op
             return template.getFunctionTemplate(constFunction.getName(), "");
             }
         }
-
     }

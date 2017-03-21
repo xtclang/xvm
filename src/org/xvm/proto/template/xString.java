@@ -31,7 +31,7 @@ public class xString
         addPropertyTemplate("length", "x:Int").makeReadOnly();
 
         addMethodTemplate("indexOf", STRING, INT).markNative();
-        addMethodTemplate("indexOf", STRING = new String[]{"x:String", "x:Int"}, INT).markNative();
+        addMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
         }
 
     @Override

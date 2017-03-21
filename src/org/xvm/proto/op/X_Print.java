@@ -23,11 +23,17 @@ public class X_Print extends Op
         {
         int nValue = f_nValue;
 
-        ObjectHandle handle = frame.f_ahVars[nValue];
+        if (nValue >= 0)
+            {
+            ObjectHandle handle = frame.f_ahVars[nValue];
 
-        System.out.println("################");
-        System.out.println(handle);
+            System.out.println(handle);
+            }
+        else
+            {
+            System.out.println(frame.f_context.f_constantPool.getConstantValue(-nValue).getValueString());
+            }
 
-        return RETURN_NORMAL;
+        return iPC + 1;
         }
     }

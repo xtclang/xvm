@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.proto.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -51,12 +52,6 @@ public class xObject
         return new GenericHandle(clazz);
         }
 
-    @Override
-    public void assignConstValue(ObjectHandle handle, Object oValue)
-        {
-        throw new IllegalStateException();
-        }
-
     public void copy(ObjectHandle handle, ObjectHandle that)
         {
         GenericHandle hThis = (GenericHandle) handle;
@@ -67,20 +62,57 @@ public class xObject
         }
 
     @Override
-    public void initializeHandle(ObjectHandle handle, ObjectHandle[] ahArg)
+    public ObjectHandle createStruct()
         {
-        throw new UnsupportedOperationException("TODO");
+        assert f_asFormalType.length == 0;
+
+        GenericHandle hThis = new GenericHandle(f_clazzCanonical, f_clazzCanonical.ensureStructType());
+
+        forEachProperty(pt ->
+            {
+            if (!pt.isReadOnly())
+                {
+                hThis.m_mapFields.put(pt.f_sPropertyName, null);
+                }
+            });
+        return hThis;
+        }
+
+    @Override
+    public ObjectHandle getProperty(ObjectHandle hTarget, String sName)
+        {
+        GenericHandle hThis = (GenericHandle) hTarget;
+        ObjectHandle  hProp = hThis.m_mapFields.get(sName);
+        if (hProp == null)
+            {
+            throw new IllegalStateException((hThis.m_mapFields.containsKey(sName) ?
+                    "Un-initialized property " : "Invalid property ") + sName);
+            }
+        return hProp;
+        }
+
+    @Override
+    public void setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
+        {
+        // check the access
+        GenericHandle hThis = (GenericHandle) hTarget;
+        hThis.m_mapFields.put(sName, hValue);
         }
 
     public static class GenericHandle
             extends ObjectHandle
         {
         // keyed by the property name
-        Map<String, ObjectHandle> m_mapFields;
+        Map<String, ObjectHandle> m_mapFields = new HashMap<>();
 
         public GenericHandle(TypeComposition clazz)
             {
             super(clazz, clazz.ensurePublicType());
+            }
+
+        public GenericHandle(TypeComposition clazz, Type type)
+            {
+            super(clazz, type);
             }
 
         @Override

@@ -9,19 +9,19 @@ package org.xvm.proto;
  */
 public abstract class ObjectHandle
     {
-    final public TypeComposition m_clazz;
-    final public Type m_type;
+    final public TypeComposition f_clazz;
+    public Type m_type;
 
     protected ObjectHandle(TypeComposition clazz, Type type)
         {
-        m_clazz = clazz;
+        f_clazz = clazz;
         m_type = type;
         }
 
     @Override
     public String toString()
         {
-        return "Class=" + m_clazz + "; value=";
+        return "(" + f_clazz + ") ";
         }
 
     public static class JavaDelegate

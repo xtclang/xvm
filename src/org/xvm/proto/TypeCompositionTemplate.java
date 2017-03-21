@@ -3,7 +3,6 @@ package org.xvm.proto;
 import org.xvm.asm.ConstantPool;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -111,9 +110,19 @@ public abstract class TypeCompositionTemplate
 
         m_mapProperties.put(sPropertyName, templateP);
 
-        templateP.m_propertyTypeName.ensureDependents(this);
+        templateP.f_propertyTypeName.ensureDependents(this);
 
         return templateP;
+        }
+
+    public PropertyTemplate getPropertyTemplate(String sPropertyName)
+        {
+        return m_mapProperties.get(sPropertyName);
+        }
+
+    public void forEachProperty(Consumer<PropertyTemplate> consumer)
+        {
+        m_mapProperties.values().forEach(consumer::accept);
         }
 
     // add a method
@@ -143,10 +152,7 @@ public abstract class TypeCompositionTemplate
         {
         for (MultiMethodTemplate mmt : m_mapMultiMethods.values())
             {
-            for (MethodTemplate mt : mmt.m_setInvoke)
-                {
-                consumer.accept(mt);
-                }
+            mmt.m_setInvoke.forEach(consumer::accept);
             }
         }
 
@@ -173,12 +179,23 @@ public abstract class TypeCompositionTemplate
         return mft.m_setInvoke.iterator().next();
         }
 
+    public void forEachFunction(Consumer<FunctionTemplate> consumer)
+        {
+        for (MultiFunctionTemplate mft : m_mapMultiFunctions.values())
+            {
+            mft.m_setInvoke.forEach(consumer::accept);
+            }
+        }
+
     // produce a TypeComposition for this template by resolving the generic types
     public TypeComposition resolve(Type[] atGenericActual)
         {
-        List<Type> key = atGenericActual.length == 0 ?
-                Collections.emptyList() : Arrays.asList(atGenericActual);
+        if (atGenericActual.length == 0)
+            {
+            return f_clazzCanonical;
+            }
 
+        List<Type> key = Arrays.asList(atGenericActual);
         return m_mapCompositions.computeIfAbsent(key,
                 (x) -> new TypeComposition(this, atGenericActual));
         }
@@ -202,12 +219,8 @@ public abstract class TypeCompositionTemplate
     abstract public ObjectHandle createHandle(TypeComposition clazz);
 
     // assign (Int i = 5;)
-    abstract public void assignConstValue(ObjectHandle handle, Object oValue);
-
-    // construct (Point p = new Point(0, 0);)
-    public void initializeHandle(ObjectHandle handle, ObjectHandle[] ahArg)
+    public void assignConstValue(ObjectHandle handle, Object oValue)
         {
-        // singletons and "native" types are never constructed
         throw new IllegalStateException();
         }
 
@@ -236,7 +249,28 @@ public abstract class TypeCompositionTemplate
         throw new IllegalStateException();
         }
 
-    // helper
+    // get a property value
+    public ObjectHandle getProperty(ObjectHandle hTarget, String sName)
+        {
+        throw new IllegalStateException();
+        }
+
+    // set a property value
+    public void setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
+        {
+        throw new IllegalStateException();
+        }
+
+    public ObjectHandle createStruct()
+        {
+        throw new IllegalStateException();
+        }
+
+    public void toPublic(ObjectHandle handle)
+        {
+        }
+
+    // TODO: temporary helper...
     public ObjectHandle newInstance(Type[] aType, ObjectHandle[] ahArg)
         {
         switch (f_shape)
@@ -247,7 +281,6 @@ public abstract class TypeCompositionTemplate
 
         TypeComposition clazz = resolve(aType);
         ObjectHandle handle = createHandle(clazz);
-        initializeHandle(handle, ahArg);
         return handle;
         }
 
@@ -296,8 +329,8 @@ public abstract class TypeCompositionTemplate
         sb.append("\nProperties:");
         m_mapProperties.values().forEach(
                 template -> sb.append("\n  ")
-                        .append(template.m_propertyTypeName)
-                        .append(' ').append(template.m_sPropertyName));
+                        .append(template.f_propertyTypeName)
+                        .append(' ').append(template.f_sPropertyName));
 
         sb.append("\nMethods:");
         m_mapMultiMethods.values().forEach(
@@ -339,22 +372,23 @@ public abstract class TypeCompositionTemplate
     public class PropertyTemplate
             extends MethodContainer
         {
-        String m_sPropertyName;
-        TypeName m_propertyTypeName;
-        boolean m_fReadOnly = false;
-        Access m_accessGet = Access.Public;
-        Access m_accessSet = Access.Public;
+        public final String f_sPropertyName;
+        public final TypeName f_propertyTypeName;
+
+        private boolean m_fReadOnly = false;
+        public Access m_accessGet = Access.Public;
+        public Access m_accessSet = Access.Public;
 
         // the following fields don't impact the type (and neither do the super fields)
         // (e.g. a presence of a "get" implementation doesn't change the type)
-        MethodTemplate m_templateGet; // can be null
-        MethodTemplate m_templateSet; // can be null
+        public MethodTemplate m_templateGet; // can be null
+        public MethodTemplate m_templateSet; // can be null
 
         // construct a property template
         public PropertyTemplate(String sName, String sType)
             {
-            m_sPropertyName = sName;
-            m_propertyTypeName = TypeName.parseName(sType);
+            f_sPropertyName = sName;
+            f_propertyTypeName = TypeName.parseName(sType);
             }
 
         public void makeReadOnly()
@@ -362,6 +396,11 @@ public abstract class TypeCompositionTemplate
             m_fReadOnly = true;
             m_accessSet = null;
             }
+        public boolean isReadOnly()
+            {
+            return m_fReadOnly;
+            }
+
         public void setGetAccess(Access access)
             {
             m_accessGet = access;
@@ -387,8 +426,8 @@ public abstract class TypeCompositionTemplate
         {
         public final String f_sName;
 
-        TypeName[] m_argTypeName; // length = 0 for zero args
-        TypeName[] m_retTypeName; // length = 0 for Void return type
+        public TypeName[] m_argTypeName; // length = 0 for zero args
+        public TypeName[] m_retTypeName; // length = 0 for Void return type
 
         Access m_access;
         boolean m_fNative;
@@ -396,9 +435,9 @@ public abstract class TypeCompositionTemplate
 
         // TODO: pointer to what XVM Structure?
         public int m_cArgs; // number of args
+        public int m_cReturns; // number of return values
         public int m_cVars; // max number of local vars (including "this")
         public int m_cScopes = 1; // max number of scopes
-        public int[] m_anRetTypeId; // could be zeros for formal types
         public Op[] m_aop;
 
         protected InvocationTemplate(String sName, String[] asArgType, String[] asRetType)
@@ -420,6 +459,7 @@ public abstract class TypeCompositionTemplate
                 aTypes[i] = TypeName.parseName(asRetType[i]);
                 }
             m_retTypeName = aTypes;
+            m_cReturns = aTypes.length;
             }
 
         protected void ensureDependents(TypeCompositionTemplate template)
@@ -487,7 +527,7 @@ public abstract class TypeCompositionTemplate
         }
 
     public static enum Shape {Class, Interface, Trait, Mixin, Const, Service, Enum}
-    public static enum Access {Public, Protected, Private}
+    public static enum Access {Public, Protected, Private, Struct}
 
     public static String[] VOID = new String[0];
     public static String[] BOOLEAN = new String[]{"x:Boolean"};
