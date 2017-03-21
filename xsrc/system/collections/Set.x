@@ -1,8 +1,18 @@
+/**
+ * A Set is a container data structure that represents a group of _distinct values_. While the Set's
+ * interface is identical to that of the Collection, its default behavior is subtly different.
+ */
 interface Set<ElementType>
+        implements Collection<ElementType>
     {
-    @ro Int size;
+    // ----- read operations -----------------------------------------------------------------------
 
-    Boolean contains(ElementType value);
-
-    // ...
+    /**
+     * A Set is always composed of distinct values.
+     */
+    @Override
+    Boolean distinct.get()
+        {
+        return true;
+        }
     }

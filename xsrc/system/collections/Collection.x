@@ -37,13 +37,19 @@ interface Collection<ElementType>
     /**
      * Metadata: Is the collection limited to a distinct set of values?
      */
-    @ro Boolean distinct;
+    @ro Boolean distinct.get()
+        {
+        return false;
+        }
 
     /**
      * Metadata: Is the collection maintained in an order that is a function of the elements in the
      * collection? And if so, what is the Comparator that represents that ordering?
      */
-    conditional Comparator sortedBy();
+    conditional Comparator sortedBy()
+        {
+        return false;
+        }
 
     /**
      * Determine the size of the Collection, which is the number of elements in the Collection.
@@ -261,6 +267,37 @@ interface Collection<ElementType>
      */
     static Boolean equals(Type<Collection> CollectionType, CollectionType collection1, CollectionType collection2)
         {
-        return collection1.size == collection2.size && collection1.containsAll(collection2);
+        // they must be of the same arity
+        if (collection1.size != collection2.size)
+            {
+            return false;
+            }
+
+        if (collection1.sortedBy() || collection2.sortedBy())
+            {
+            // if either is sorted, then both must be of the same order
+            Iterator iter1 = collection1.iterator();
+            Iterator iter2 = collection2.iterator();
+            while (CollectionType.ElementType value1 : iter1.next())
+                {
+                // the collections were of the same arity, so the second iterator shouldn't run out
+                // before the first
+                assert CollectionType.ElementType value2 : iter2.next();
+
+                if (value1 != value2)
+                    {
+                    return false;
+                    }
+                }
+
+            // the collections were of the same arity, so the first iterator shouldn't run out
+            // before the second
+            assert !iter2.next();
+            return true;
+            }
+        else
+            {
+            return collection1.containsAll(collection2);
+            }
         }
     }
