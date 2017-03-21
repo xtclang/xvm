@@ -162,6 +162,15 @@ interface Map<KeyType, ValueType>
         }
 
     /**
+     * Obtain the Entry for the specified key, if the entry exists in the Map.
+     *
+     * @param key  the key to find the entry for
+     *
+     * @return the conditional Entry if the key exists in the Map
+     */
+    conditional HashEntry getEntry(KeyType key);
+
+    /**
      * Obtain the value associated with the specified key, iff that key is present in the map. If
      * the key is not present in the map, then this method returns a conditional {@code false}.
      *
@@ -170,7 +179,14 @@ interface Map<KeyType, ValueType>
      * @return a conditional true and the value for the associated key if it exists in the map;
      *         otherwise a conditional false
      */
-    conditional ValueType get(KeyType key);
+    conditional ValueType get(KeyType key)
+        {
+        if (Entry<KeyType, ValueType> entry : getEntry(key))
+            {
+            return true, entry.value;
+            }
+        return false;
+        }
 
     /**
      * Obtain the value associated with the specified key, or the value {@code null} if the key is

@@ -70,11 +70,18 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    conditional ValueType get(KeyType key)
+    conditional HashEntry getEntry(KeyType key)
         {
-        if (HashEntry entry : getEntry(key))
+        Int        keyhash  = hasher.hashOf(key);
+        Int        bucketId = keyhash % buckets.size;
+        HashEntry? entry    = buckets[bucketId];
+        while (entry?)
             {
-            return true, entry.value;
+            if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
+                {
+                return true, entry;
+                }
+            entry = entry.next;
             }
         return false;
         }
@@ -176,7 +183,6 @@ class ExtHashMap<KeyType, ValueType>
             buckets = new HashEntry?[bucketCount];
             removeCount += entryCount;
             assert size == 0;
-            checkCapacity();
             }
         return this;
         }
@@ -188,7 +194,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    public/private Set<Entry<KeyType, ValueType>> entries = new HashEntrySet();
+    public/private HashEntrySet entries = new HashEntrySet();
 
     @Override
     @lazy public/private Collection<ValueType> values.calc()
@@ -205,6 +211,9 @@ class ExtHashMap<KeyType, ValueType>
 
     // ----- HashEntry implementation --------------------------------------------------------------
 
+    /**
+     * A representation of all of the HashEntry objects in the Map.
+     */
     class HashEntrySet
             extends KeyBasedEntriesSet<HashEntry>
         {
@@ -213,12 +222,18 @@ class ExtHashMap<KeyType, ValueType>
             {
             return new Iterator()
                 {
-                HashEntry?[] buckets    = ExtHashMap.this.buckets;
-                Int          nextBucket = 0;
-                HashEntry?   nextEntry  = null;
+                HashEntry?[] buckets     = ExtHashMap.this.buckets;
+                Int          nextBucket  = 0;
+                HashEntry?   nextEntry   = null;
+                Int          addSnapshot = ExtHashMap.this.addCount;
 
                 conditional KeyType next()
                     {
+                    if (addSnapshot != ExtHashMap.this.addCount)
+                        {
+                        throw new ConcurrentModificationException();
+                        }
+
                     Int bucketCount = buckets.size;
                     while (nextEntry == null && nextBucket < bucketCount)
                         {
@@ -353,7 +368,7 @@ class ExtHashMap<KeyType, ValueType>
         /**
          * HashedEntry objects form a linked list within a hash bucket.
          */
-        private HashEntry? next = null;
+        private HashEntry? next;
         }
 
     /**
@@ -377,29 +392,6 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Obtain the HashEntry for the specified key.
-     *
-     * @param key  the key to find the entry for
-     *
-     * @return the conditional HashEntry if the key exists in the ExtHashMap
-     */
-    conditional HashEntry getEntry(KeyType key)
-        {
-        Int        keyhash  = hasher.hashOf(key);
-        Int        bucketId = keyhash % buckets.size;
-        HashEntry? entry    = buckets[bucketId];
-        while (entry?)
-            {
-            if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
-                {
-                return true, entry;
-                }
-            entry = entry.next;
-            }
-        return false;
-        }
 
     /**
      * Check to see if the ExtHashMap needs to grow or shrink based on the current capacity need.

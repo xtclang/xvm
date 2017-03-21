@@ -282,7 +282,8 @@ interface Collection<ElementType>
                 {
                 // the collections were of the same arity, so the second iterator shouldn't run out
                 // before the first
-                assert CollectionType.ElementType value2 : iter2.next();
+                CollectionType.ElementType value2;
+                assert value2 : iter2.next();
 
                 if (value1 != value2)
                     {

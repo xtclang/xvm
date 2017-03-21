@@ -88,6 +88,16 @@ module ecstasy.xtclang.org
         }
 
     /**
+     * A ConcurrentModificationException is raised when an object detects a modification that it was
+     * not expecting, and is unable to predictably continue processing according to the contracts
+     * that it provides.
+     */
+    const ConcurrentModificationException(String? text, Exception? cause)
+            extends Exception(text, cause)
+        {
+        }
+
+    /**
      * An UnsupportedOperationException is raised when an attempt is made to invoke functionality
      * that is not present or has not yet been implemented.
      */
