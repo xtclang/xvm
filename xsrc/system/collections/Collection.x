@@ -31,6 +31,7 @@
  */
 interface Collection<ElementType>
         implements Iterable<ElementType>
+        implements VariablyMutable
     {
     // ----- read operations -----------------------------------------------------------------------
 
@@ -109,6 +110,17 @@ interface Collection<ElementType>
      * @return a Stream over the contents of this Collection
      */
     Stream<ElementType> stream();
+
+    /**
+     * Obtain a shallow clone of the Collection. The definition of "shallow clone" is that the new
+     * collection will contain the same element references, but changes made to this collection
+     * through the Collection interface will not appear in the returned collection, nor will changes
+     * made to the returned collection through the Collection interface appear in this collection.
+     *
+     * @return a Collection such that changes to this Collection do not appear in that collection,
+     *         nor vice versa
+     */
+    Collection<ElementType> clone();
 
     // ----- write operations ----------------------------------------------------------------------
 

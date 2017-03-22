@@ -21,7 +21,7 @@ class ExtHashMap<KeyType, ValueType>
         this.hasher = hasher;
 
         // allocate the initial capacity
-        (Int bucketCount, growAt) = calcBucketCount(initCapacity);
+        (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
         buckets = new HashEntry?[bucketCount];
         }
 
@@ -144,9 +144,9 @@ class ExtHashMap<KeyType, ValueType>
     @Override
     ExtHashMap<KeyType, ValueType> remove(KeyType key)
         {
-        Int        keyhash  = hasher.hashOf(key);
-        Int        bucketId = keyhash % buckets.size;
-        HashEntry? entry    = buckets[bucketId];
+        Int        keyhash   = hasher.hashOf(key);
+        Int        bucketId  = keyhash % buckets.size;
+        HashEntry? entry     = buckets[bucketId];
         HashEntry? prevEntry = null;
         while (entry?)
             {
@@ -179,7 +179,7 @@ class ExtHashMap<KeyType, ValueType>
         Int entryCount = size;
         if (entryCount > 0)
             {
-            (Int bucketCount, growAt, shrinkAt) = calcBucketCount(0);
+            (Int bucketCount, this.growAt, this.shrinkAt) = calcBucketCount(0);
             buckets = new HashEntry?[bucketCount];
             removeCount += entryCount;
             assert size == 0;
@@ -220,7 +220,7 @@ class ExtHashMap<KeyType, ValueType>
         @Override
         Iterator<HashEntry> iterator()
             {
-            return new Iterator()
+            return new Iterator<HashEntry>()
                 {
                 HashEntry?[] buckets     = ExtHashMap.this.buckets;
                 Int          nextBucket  = 0;
@@ -467,7 +467,7 @@ class ExtHashMap<KeyType, ValueType>
      * @return return the suggested number of buckets to achieve the specified capacity, and the
      *         suggested grow and shrink thresholds
      */
-    protected static (Int, Int, Int) calcBucketCount(Int capacity)
+    protected static (Int bucketCount, Int growAt, Int shrinkAt) calcBucketCount(Int capacity)
         {
         assert capacity >= 0;
 

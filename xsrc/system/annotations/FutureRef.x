@@ -482,7 +482,7 @@ mixin FutureRef<RefType>
                 }
             }
 
-        private RefType? result = null;
+        private RefType? result = null; // TODO this is a type mismatch with the "delegates" clause due to the type being (Nullable|RefType) instead of RefType
         }
 
     /**

@@ -29,12 +29,12 @@
                         }
 
                     ElementType value = nextValue;
-                    if (!(nextValue : value.prev()))
+                    if (value == lowerBound || !(nextValue : value.prev()))
                         {
                         done = true;
                         }
 
-                    return value;
+                    return true, value;
                     }
                 }
             }
@@ -53,12 +53,12 @@
                         }
 
                     ElementType value = nextValue;
-                    if (!(nextValue : value.next()))
+                    if (value == upperBound || !(nextValue : value.next()))
                         {
                         done = true;
                         }
 
-                    return value;
+                    return true, value;
                     }
                 }
             }
@@ -86,6 +86,35 @@
                 value = value.nextValue();
                 }
             while (value <= upperBound)
+            }
+        }
+
+    /**
+     * This is the same as the {@link forEach} method, except that the last value in the Range is
+     * considered to be exclusive of the range. This means that a hypothetical range of {@code 0..0}
+     * would not have any values processed by this method.
+     *
+     * @param process  the function to call with each value from the range
+     */
+    Void forEachExclusive(function Void(ElementType) process)
+        {
+        if (reversed)
+            {
+            ElementType value = upperBound;
+            while (value > lowerBound)
+                {
+                process(value);
+                value = value.prevValue();
+                }
+            }
+        else
+            {
+            ElementType value = lowerBound;
+            while (value < upperBound)
+                {
+                process(value);
+                value = value.nextValue();
+                }
             }
         }
 

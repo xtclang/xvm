@@ -28,6 +28,7 @@
  */
 interface Map<KeyType, ValueType>
         implements UniformIndexed<KeyType, ValueType>
+        implements VariablyMutable
     {
     // ----- Entry interface -----------------------------------------------------------------------
 
@@ -168,7 +169,7 @@ interface Map<KeyType, ValueType>
      *
      * @return the conditional Entry if the key exists in the Map
      */
-    conditional HashEntry getEntry(KeyType key);
+    conditional Entry<KeyType, ValueType> getEntry(KeyType key);
 
     /**
      * Obtain the value associated with the specified key, iff that key is present in the map. If

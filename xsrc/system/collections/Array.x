@@ -1,10 +1,9 @@
-TODO need a growable-from-empty array a-la arraylist (maybe with max and/or init capacity?)
-TODO need a fixed size array that inits each element based on a value or fn()
-TODO need a const array
-TODO need that interface that allows things to be made const / made persistent / cloned to make mutable ...
-
 /**
  * An array is a container of elements of a particular type.
+ *
+ * TODO need a growable-from-empty array a-la arraylist (maybe with max and/or init capacity?)
+ * TODO need a fixed size array that inits each element based on a value or fn()
+ * TODO need a const array
  */
 class Array<ElementType>
         implements Sequence<ElementType>

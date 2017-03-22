@@ -1,10 +1,10 @@
-s/**
- * A Comparator is a const object that knows how to compare any two objects of a particular type for
- * ordering purposes.
+/**
+ * A NaturalComparator uses the object's own relational operators for determining equality and
+ * ordering.
  *
  * @param DataType  the _Resolved Declarative Type_ to compare
  */
-const Comparator<DataType>
+const NaturalComparator<DataType>
     {
     /**
      * Obtain the function that can compare two instances of the _Resolved Declarative Type_ for
@@ -15,7 +15,7 @@ const Comparator<DataType>
      */
     @ro function Boolean (DataType v1, DataType v2) compareForEquality.get()
         {
-        return (v1, v2) -> compareForOrder(v1, v2) == Equal;
+        return (v1, v2) -> v1 == v2;
         }
 
     /**
@@ -25,5 +25,8 @@ const Comparator<DataType>
      * @throws UnsupportedOperationException if the Comparator does not support comparison of the
      *         {@code DataType} for the purpose of determining order
      */
-    @ro function Ordered (DataType v1, DataType v2) compareForOrder;
+    @ro function Ordered (DataType v1, DataType v2) compareForOrder.get()
+        {
+        return (v1, v2) -> v1 <=> v2;
+        }
     }
