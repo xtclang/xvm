@@ -29,7 +29,7 @@ public class ErrorList
 
     @Override
     public boolean log(Severity severity, String sCode, Object[] aoParam,
-            int iLineStart, int ofStart, int iLineEnd, int ofEnd)
+            Source source, long lPosStart, long lPosEnd)
         {
         // remember the highest severity encountered
         if (severity.ordinal() > m_severity.ordinal())
@@ -38,7 +38,7 @@ public class ErrorList
             }
 
         // accumulate all the errors in a list
-        m_list.add(new ErrorInfo(severity, sCode, aoParam, iLineStart, ofStart, iLineEnd, ofEnd));
+        m_list.add(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
 
         // keep track of the number of serious errors; quit the process once
         // that number grows too large
@@ -106,22 +106,17 @@ public class ErrorList
          *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
          * @param sCode       the error code that identifies the error message
          * @param aoParam     the parameters for the error message; may be null
-         * @param iLineStart  the line number where the error was detected
-         * @param ofStart     the offset in the line where the error was
-         *                    detected
-         * @param iLineEnd    the line number at which the error concluded
-         * @param ofEnd       the offset in the line where the error concluded
+         * TODO
          */
         public ErrorInfo(Severity severity, String sCode, Object[] aoParam,
-                int iLineStart, int ofStart, int iLineEnd, int ofEnd)
+                Source source, long lPosStart, long lPosEnd)
             {
-            m_severity = severity;
-            m_sCode = sCode;
-            m_aoParam = aoParam;
-            m_iLineStart = iLineStart;
-            m_ofStart = ofStart;
-            m_iLineEnd = iLineEnd;
-            m_ofEnd = ofEnd;
+            m_severity   = severity;
+            m_sCode      = sCode;
+            m_aoParam    = aoParam;
+            m_source     = source;
+            m_lPosStart  = lPosStart;
+            m_lPosEnd    = lPosEnd;
             }
 
         /**
@@ -188,7 +183,15 @@ public class ErrorList
                     }
                 }
 
-            return null;
+            return sb.toString();
+            }
+
+        /**
+         * @return the starting position in the source (opaque)
+         */
+        public long getPos()
+            {
+            return m_lPosStart;
             }
 
         /**
@@ -196,7 +199,7 @@ public class ErrorList
          */
         public int getLine()
             {
-            return m_iLineStart;
+            return Source.calculateLine(m_lPosStart);
             }
 
         /**
@@ -204,7 +207,15 @@ public class ErrorList
          */
         public int getOffset()
             {
-            return m_ofStart;
+            return Source.calculateOffset(m_lPosStart);
+            }
+
+        /**
+         * @return the ending position in the source (opaque)
+         */
+        public long getEndPos()
+            {
+            return m_lPosEnd;
             }
 
         /**
@@ -212,7 +223,7 @@ public class ErrorList
          */
         public int getEndLine()
             {
-            return m_iLineEnd;
+            return Source.calculateLine(m_lPosEnd);
             }
 
         /**
@@ -220,23 +231,40 @@ public class ErrorList
          */
         public int getEndOffset()
             {
-            return m_ofEnd;
+            return Source.calculateOffset(m_lPosEnd);
             }
 
         @Override
         public String toString()
             {
-            return "[" + getLine() + ":" + getOffset() + ".."
-                    + getEndLine() + ":" + getEndOffset() + "] "  + getMessage();
+            StringBuilder sb = new StringBuilder();
+            sb.append('[')
+              .append(getLine())
+              .append(':')
+              .append(getOffset())
+              .append("..")
+              .append(getEndLine())
+              .append(':')
+              .append(getEndOffset())
+              .append(']')
+              .append(getMessage());
+
+            if (m_source != null && m_lPosStart != m_lPosEnd)
+                {
+                sb.append(" (")
+                  .append(m_source.toString(m_lPosStart, m_lPosEnd))
+                  .append(')');
+                }
+
+            return sb.toString();
             }
 
         private Severity m_severity;
         private String   m_sCode;
         private Object[] m_aoParam;
-        private int      m_iLineStart;
-        private int      m_ofStart;
-        private int      m_iLineEnd;
-        private int      m_ofEnd;
+        private Source   m_source;
+        private long     m_lPosStart;
+        private long     m_lPosEnd;
         }
 
 

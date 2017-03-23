@@ -1,14 +1,19 @@
 package org.xvm.compiler;
 
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Iterator;
 
+import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
+import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isAsciiLetter;
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.parseDelimitedString;
@@ -114,7 +119,7 @@ public class Lexer
         {
         final Source source   = m_source;
         final long   lInitPos = source.getPosition();
-        final char   chInit   = source.next();
+        final char   chInit   = nextChar();
         switch (chInit)
             {
             case '{':
@@ -139,9 +144,16 @@ public class Lexer
             case '.':
                 if (source.hasNext())
                     {
-                    if (source.next() == '.')
+                    switch (nextChar())
                         {
-                        return new Token(lInitPos, source.getPosition(), Id.DOTDOT);
+                        case '.':
+                            return new Token(lInitPos, source.getPosition(), Id.DOTDOT);
+
+                        case '0': case '1': case '2': case '3': case '4':
+                        case '5': case '6': case '7': case '8': case '9':
+                            source.rewind();
+                            source.rewind();
+                            return eatNumericLiteral();
                         }
                     source.rewind();
                     }
@@ -151,10 +163,65 @@ public class Lexer
             case '?':
                 return new Token(lInitPos, source.getPosition(), Id.COND);
 
+            case '+':
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '+':
+                            return new Token(lInitPos, source.getPosition(), Id.INC);
+
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.ADD_MOV);
+
+                        case '0': case '1': case '2': case '3': case '4':
+                        case '5': case '6': case '7': case '8': case '9':
+                        case '.':
+                            source.rewind();
+                            source.rewind();
+                            return eatNumericLiteral();
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.ADD);
+
+            case '-':
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '-':
+                            return new Token(lInitPos, source.getPosition(), Id.DEC);
+
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.SUB_MOV);
+
+                        case '0': case '1': case '2': case '3': case '4':
+                        case '5': case '6': case '7': case '8': case '9':
+                        case '.':
+                            source.rewind();
+                            source.rewind();
+                            return eatNumericLiteral();
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.SUB);
+
+            case '*':
+                if (source.hasNext())
+                    {
+                    if (nextChar() == '=')
+                        {
+                        return new Token(lInitPos, source.getPosition(), Id.MUL_MOV);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.MUL);
+
             case '/':
                 if (source.hasNext())
                     {
-                    switch (source.next())
+                    switch (nextChar())
                         {
                         case '/':
                             return eatSingleLineComment(lInitPos);
@@ -164,19 +231,168 @@ public class Lexer
 
                         case '=':
                             return new Token(lInitPos, source.getPosition(), Id.DIV_MOV);
+
+                        case '%':
+                            if (source.hasNext())
+                                {
+                                if (nextChar() == '=')
+                                    {
+                                    return new Token(lInitPos, source.getPosition(), Id.DIVMOD_MOV);
+                                    }
+                                source.rewind();
+                                }
+                            return new Token(lInitPos, source.getPosition(), Id.DIVMOD);
                         }
                     source.rewind();
                     }
-
                 return new Token(lInitPos, source.getPosition(), Id.DIV);
+
+            case '<':
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '<':
+                            if (source.hasNext())
+                                {
+                                if (nextChar() == '=')
+                                    {
+                                    return new Token(lInitPos, source.getPosition(), Id.SHL_MOV);
+                                    }
+                                source.rewind();
+                                }
+                            return new Token(lInitPos, source.getPosition(), Id.SHL);
+
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.COMP_LTEQ);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.COMP_LT);
+
+            case '>':
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '>':
+                            if (source.hasNext())
+                                {
+                                switch (nextChar())
+                                    {
+                                    case '>':
+                                        if (source.hasNext())
+                                            {
+                                            if (nextChar() == '=')
+                                                {
+                                                return new Token(lInitPos, source.getPosition(), Id.USHR_MOV);
+                                                }
+                                            source.rewind();
+                                            }
+                                        return new Token(lInitPos, source.getPosition(), Id.USHR);
+
+                                    case '=':
+                                        return new Token(lInitPos, source.getPosition(), Id.SHR_MOV);
+                                    }
+                                source.rewind();
+                                }
+                            return new Token(lInitPos, source.getPosition(), Id.SHR);
+
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.COMP_GTEQ);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.COMP_GT);
+
+            case '&':
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '&':
+                            return new Token(lInitPos, source.getPosition(), Id.COND_AND);
+
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.BIT_AND_MOV);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.BIT_AND);
+
+            case '|':
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '|':
+                            return new Token(lInitPos, source.getPosition(), Id.COND_OR);
+
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.BIT_OR_MOV);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.BIT_OR);
+
+            case '=':
+                if (source.hasNext())
+                    {
+                    if (nextChar() == '=')
+                        {
+                        return new Token(lInitPos, source.getPosition(), Id.COMP_EQ);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.MOV);
+
+            case '%':
+                if (source.hasNext())
+                    {
+                    if (nextChar() == '=')
+                        {
+                        return new Token(lInitPos, source.getPosition(), Id.MOD_MOV);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.MOD);
+
+            case '!':
+                if (source.hasNext())
+                    {
+                    if (nextChar() == '=')
+                        {
+                        return new Token(lInitPos, source.getPosition(), Id.COMP_NEQ);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.NOT);
+
+            case '^':
+                if (source.hasNext())
+                    {
+                    if (nextChar() == '=')
+                        {
+                        return new Token(lInitPos, source.getPosition(), Id.BIT_XOR_MOV);
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.BIT_XOR);
+
+            case '~':
+                return new Token(lInitPos, source.getPosition(), Id.BIT_NOT);
+
+            case '0': case '1': case '2': case '3': case '4':
+            case '5': case '6': case '7': case '8': case '9':
+                source.rewind();
+                return eatNumericLiteral();
 
             default:
                 if (!isIdentifierStart(chInit))
                     {
                     m_errorListener.log(Severity.ERROR, ILLEGAL_CHAR,
                             new Object[] {quotedChar(chInit)},
-                            Source.calculateLine(lInitPos), Source.calculateOffset(lInitPos),
-                            m_source.getLine(), m_source.getOffset());
+                            source, lInitPos, source.getPosition());
                     }
                 // fall through
             case 'A':case 'B':case 'C':case 'D':case 'E':case 'F':case 'G':
@@ -191,7 +407,7 @@ public class Lexer
                 {
                 while (source.hasNext())
                     {
-                    if (!isIdentifierPart(source.next()))
+                    if (!isIdentifierPart(nextChar()))
                         {
                         source.rewind();
                         break;
@@ -205,6 +421,306 @@ public class Lexer
                         : new Token(lInitPos, source.getPosition(), id); 
                 }
             }
+        }
+
+    /**
+     * Eat a numeric literal.
+     *
+     * @return the numeric literal as a Token
+     */
+    protected Token eatNumericLiteral()
+        {
+        final Source source    = m_source;
+        final long   lPosStart = source.getPosition();
+
+        // eat the first part of the number (or the entire number, if it is an integer literal)
+        int[] results = new int[2];
+        PackedInteger piWhole = eatIntegerLiteral(results);
+        int mantissaRadix = results[0];
+        int signScalar    = results[1];
+
+        // parse optional '.' + value
+        PackedInteger piFraction = null;
+        int           fractionalDigits = 0;
+        if (source.hasNext())
+            {
+            if (source.next() == '.')
+                {
+                piFraction = eatDigits(false, mantissaRadix, results);
+                fractionalDigits = results[0];
+
+                if (fractionalDigits == 0)
+                    {
+                    m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                            source, lPosStart, source.getPosition());
+                    }
+                }
+            else
+                {
+                source.rewind();
+                }
+            }
+
+        // parse optional exponent
+        PackedInteger piExp = null;
+        boolean mustBeBinary = false;
+        if (source.hasNext())
+            {
+            char ch = source.next();
+            switch (ch)
+                {
+                case 'E': case 'e':
+                    piExp = eatIntegerLiteral(null);
+                    break;
+
+                case 'P': case 'p':
+                    piExp = eatIntegerLiteral(null);
+                    mustBeBinary = true;
+                    break;
+
+                default:
+                    // anything else should be whitespace or some type of operator/separator
+                    long lEndPos = source.getPosition();
+                    source.rewind();
+                    if (isIdentifierPart(ch))
+                        {
+                        m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                source, source.getPosition(), lEndPos);
+                        }
+                    break;
+                }
+            }
+
+        final long lPosEnd = source.getPosition();
+        if (piFraction == null && piExp == null)
+            {
+            return new Token(lPosStart, lPosEnd, Id.LIT_INT, piWhole);
+            }
+        else if (!mustBeBinary && mantissaRadix == 10)
+            {
+            // TODO convert to IEEE-754 decimal floating point format
+            BigDecimal dec;
+            if (piFraction == null)
+                {
+                dec = new BigDecimal(piWhole.getBigInteger());
+                }
+            else
+                {
+                BigInteger biWhole = piWhole.getBigInteger();
+                if (biWhole.signum() < 0)
+                    {
+                    biWhole = biWhole.negate();
+                    }
+                dec = new BigDecimal(biWhole.multiply(BigInteger.valueOf(10 * fractionalDigits))
+                        .add(piFraction.getBigInteger()), fractionalDigits);
+                if (signScalar < 0)
+                    {
+                    // the unfortunate side-effect of not having a -0
+                    dec = dec.negate();
+                    }
+                }
+            if (piExp != null)
+                {
+                long lExp = piExp.getLong();
+                if (lExp > 6144 || lExp < (1-6144))
+                    {
+                    m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                            source, lPosStart, lPosEnd);
+                    }
+                else
+                    {
+                    dec = dec.scaleByPowerOfTen((int) lExp);
+                    }
+                }
+            // TODO exponent
+            return new Token(lPosStart, lPosEnd, Id.LIT_DEC, dec);
+            }
+        else
+            {
+            // convert to IEEE-754 binary floating point format
+            // TODO
+            return new Token(lPosStart, lPosEnd, Id.LIT_BIN, source.toString(lPosStart, lPosEnd));
+            }
+        }
+
+    /**
+     * The next character must begin an integer literal. Parse it and return it as a PackedInteger.
+     *
+     * @return a PackedInteger
+     */
+    protected PackedInteger eatIntegerLiteral(int[] otherResults)
+        {
+        final Source source    = m_source;
+        final long   lPosStart = source.getPosition();
+
+        // the first character could be a sign (+ or -)
+        boolean fNeg = false;
+        char    ch   = needCharOrElse(ILLEGAL_NUMBER);
+        if (ch == '+' || ch == '-')
+            {
+            fNeg = (ch == '-');
+            ch   = needCharOrElse(ILLEGAL_NUMBER);
+            }
+
+        // if the next character is '0', it is potentially part of a prefix denoting a radix
+        int radix = 10;
+        if (ch == '0' && source.hasNext())
+            {
+            switch (nextChar())
+                {
+                case 'B':
+                case 'b':
+                    radix = 2;
+                    break;
+                case 'o':
+                    radix = 8;
+                    break;
+                case 'X':
+                case 'x':
+                    radix = 16;
+                    break;
+                default:
+                    source.rewind();
+                    source.rewind();
+                    break;
+                }
+            }
+        else
+            {
+            source.rewind();
+            }
+
+        // don't you just wish that Java had multiple return values?
+        if (otherResults != null)
+            {
+            if (otherResults.length > 0)
+                {
+                otherResults[0] = radix;
+                }
+            if (otherResults.length > 1)
+                {
+                otherResults[1] = fNeg ? -1 : 1;
+                }
+            }
+
+        return eatDigits(fNeg, radix, null);
+        }
+
+    /**
+     * The next character must begin a sequence of digits of the specified radix. Parse it and
+     * return it as a PackedInteger.
+     *
+     * @return a PackedInteger
+     */
+    protected PackedInteger eatDigits(boolean fNeg, int radix, int[] digitCount)
+        {
+        long       lValue  = 0;
+        BigInteger bigint  = null;   // just in case
+        boolean    fError  = false;
+        int        cDigits = 0;
+
+        final Source source = m_source;
+        final long lPosStart = source.getPosition();
+        Parsing: while (source.hasNext())
+            {
+            final long lPos = source.getPosition();
+            final char ch   = nextChar();
+            switch (ch)
+                {
+                case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+                case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+                    if (radix < 16)
+                        {
+                        // "e" is used as the decimal exponent indicator
+                        if (ch != 'E' && ch != 'e')
+                            {
+                            if (!fError)
+                                {
+                                m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                        source, lPos, source.getPosition());
+                                fError = true;
+                                }
+                            }
+                        source.rewind();
+                        break Parsing;
+                        }
+                    break;
+
+                case '9': case '8':
+                    if (radix < 10)
+                        {
+                        if (!fError)
+                            {
+                            m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                    source, lPos, source.getPosition());
+                            fError = true;
+                            }
+                        // while an error was encountered, it was at least a digit, so continue
+                        // parsing those digits (even if they are bad)
+                        continue Parsing;
+                        }
+                    break;
+
+                case '7': case '6': case '5': case '4': case '3': case '2':
+                    if (radix < 8)
+                        {
+                        if (!fError)
+                            {
+                            m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                    source, lPos, source.getPosition());
+                            fError = true;
+                            }
+                        // while an error was encountered, it was at least a digit, so continue
+                        // parsing those digits (even if they are bad)
+                        continue Parsing;
+                        }
+                    break;
+
+                case '1': case '0':
+                    break;
+
+                case '_':
+                    if (cDigits == 0 && !fError)
+                        {
+                        // it's an error to start the sequence of digits with an underscore
+                        m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                source, lPos, source.getPosition());
+                        fError = true;
+                        }
+                    continue Parsing;
+
+                default:
+                    // anything else (including '.') means go to the next step
+                    source.rewind();
+                    break Parsing;
+                }
+
+            if (bigint == null)
+                {
+                lValue = lValue * radix + hexitValue(ch);
+                if (lValue > 0x00FFFFFFFFFFFFFFL)
+                    {
+                    bigint = BigInteger.valueOf(fNeg ? -lValue : lValue);
+                    }
+                }
+            else
+                {
+                bigint = bigint.multiply(BigInteger.valueOf(radix)).add(BigInteger.valueOf(hexitValue(ch)));
+                }
+            ++cDigits;
+            }
+
+        if (!fError && cDigits == 0)
+            {
+            m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                    source, lPosStart, source.getPosition());
+            }
+
+        if (digitCount != null && digitCount.length > 0)
+            {
+            digitCount[0] = cDigits;
+            }
+        return bigint == null ? new PackedInteger(fNeg ? -lValue : lValue) : new PackedInteger(bigint);
         }
 
     /**
@@ -265,8 +781,7 @@ public class Lexer
 
         // missing the enclosing "*/"
         m_errorListener.log(Severity.ERROR, EXPECTED_ENDCOMMENT, null,
-                Source.calculateLine(lPosTokenStart), Source.calculateOffset(lPosTokenStart),
-                m_source.getLine(), m_source.getOffset());
+                source, lPosTextStart, source.getPosition());
 
         // just pretend that the rest of the file was all one big comment
         return new Token(lPosTokenStart, source.getPosition(), Id.ENC_COMMENT,
@@ -289,17 +804,37 @@ public class Lexer
             // back up to get the location of the SUB character
             final long lPos = m_source.getPosition();
             m_source.rewind();
-            final int iLine   = m_source.getLine();
-            final int iOffset = m_source.getOffset();
+            final long lStartPos = m_source.getPosition();
             m_source.setPosition(lPos);
 
             m_errorListener.log(Severity.ERROR, UNEXPECTED_EOF, null,
-                    iLine, iOffset, m_source.getLine(), m_source.getOffset());
+                    m_source, lStartPos, m_source.getPosition());
             }
 
         return ch;
         }
 
+    /**
+     * Get the next character of source code, but do some additional checks
+     * on the character to make sure it's legal, such as checking for an illegal
+     * SUB character.
+     */
+    protected char needCharOrElse(String sError)
+        {
+        try
+            {
+            return nextChar();
+            }
+        catch (NoSuchElementException e)
+            {
+            m_errorListener.log(Severity.ERROR, sError, null,
+                    m_source, m_source.getPosition(), m_source.getPosition());
+            }
+
+        // already logged an error; just pretend we hit a closing brace (since all roads should have
+        // gone there)
+        return '}';
+        }
 
     // ----- helper methods ----------------------------------------------------
 
@@ -327,13 +862,9 @@ public class Lexer
             //   U+001E  30  RS   Record Separator
             //   U+001F  31  US   Unit Separator
             //   U+0020  32  SP   Space
-            //
-            //                                0               1               2               3
-            //                                0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
-            return ch < 64 && ((1L << ch) & 0b0000000001111100000000000010111110000000000000000000000000000000L) != 0L;
-            // or eliminate the conditional to achieve a slightly more
-            // efficient expression: 
-            // return (((~(((long) ch) >>> 6) & 1L) << ch) & 0x7C002F80000000L) != 0L;
+            //                                               2               1      0
+            //                                               0FEDCBA9876543210FEDCBA9
+            return ch >= 9 && ch <= 32 && ((1 << (ch-9)) & 0b111110100000000000011111) != 0;
             }
 
         // this handles the following cases:
@@ -628,6 +1159,10 @@ public class Lexer
      * A character was encountered that cannot be the start of a valid token.
      */
     public static final String ILLEGAL_CHAR         = "LEXER-03";
+    /**
+     * Number format exception.
+     */
+    public static final String ILLEGAL_NUMBER       = "LEXER-03";
 
 
     // ----- data members ------------------------------------------------------

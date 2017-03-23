@@ -41,7 +41,7 @@ public class Token
         {
         m_lStartPos = lStartPos;
         m_lEndPos   = lEndPos;
-        this.id     = id;
+        m_id        = id;
         m_oValue    = oValue;
         }
 
@@ -76,7 +76,7 @@ public class Token
      */
     public Id getId()
         {
-        return id;
+        return m_id;
         }
 
     /**
@@ -106,7 +106,7 @@ public class Token
           .append(Source.calculateOffset(m_lEndPos))
           .append("] ");
         
-        switch (id)
+        switch (m_id)
             {
             case LIT_CHAR:
                 {
@@ -124,6 +124,7 @@ public class Token
 
             case LIT_INT:
             case LIT_DEC:
+            case LIT_BIN:
                 sb.append(m_oValue);
                 break;
 
@@ -132,8 +133,30 @@ public class Token
                   .append(m_oValue);
                 break;
 
+            case ENC_COMMENT:
+                {
+                String sComment = (String) m_oValue;
+                if (sComment.length() > 47)
+                    {
+                    sComment = sComment.substring(0, 44) + "...";
+                    }
+                appendString(sb.append("/*"), sComment).append("*/");
+                }
+                break;
+
+            case EOL_COMMENT:
+                {
+                String sComment = (String) m_oValue;
+                if (sComment.length() > 50)
+                    {
+                    sComment = sComment.substring(0, 47) + "...";
+                    }
+                appendString(sb.append("//"), sComment);
+                }
+                break;
+
             default:
-                sb.append(id.TEXT);
+                sb.append(m_id.TEXT);
                 break;
             }
 
@@ -148,92 +171,102 @@ public class Token
      */
     public enum Id
         {
-        COLON      (":"        ),
-        SEMICOLON  (";"        ),
-        COMMA      (","        ),
-        DOT        ("."        ),
-        DOTDOT     (".."       ),
-        AT         ("@"        ),
-        COND       ("?"        ),
-        L_PAREN    ("("        ),
-        R_PAREN    (")"        ),
-        L_CURLY    ("{"        ),
-        R_CURLY    ("}"        ),
-        L_SQUARE   ("["        ),
-        R_SQUARE   ("]"        ),
-        ADD        ("+"        ),
-        SUB        ("-"        ),
-        MUL        ("*"        ),
-        DIV        ("/"        ),
-        MOD        ("%"        ),
-        DIVMOD     ("/%"       ),
-        SHL        ("<<"       ),
-        SHR        (">>"       ),
-        USHR       (">>>"      ),
-        BIT_AND    ("&"        ),
-        BIT_OR     ("|"        ),
-        BIT_XOR    ("^"        ),
-        BIT_NOT    ("~"        ),
-        MOV        ("="        ),
-        ADD_MOV    ("+="       ),
-        SUB_MOV    ("-="       ),
-        MUL_MOV    ("*="       ),
-        DIV_MOV    ("/="       ),
-        MOD_MOV    ("%="       ),
-        DIVMOD_MOV ("/%="      ),
-        SHL_MOV    ("<<="      ),
-        SHR_MOV    (">>="      ),
-        USHR_MOV   (">>>="     ),
-        BIT_AND_MOV("&="       ),
-        BIT_OR_MOV ("|="       ),
-        BIT_XOR_MOV("^="       ),
-        COND_AND   ("&&"       ),
-        COND_OR    ("||"       ),
-        NOT        ("!"        ),
-        COMP_EQ    ("=="       ),
-        COMP_NEQ   ("!="       ),
-        COMP_LT    ("<"        ),
-        COMP_LTEQ  ("<="       ),
-        COMP_GT    (">"        ),
-        COMP_GTEQ  (">="       ),
-        INC        ("++"       ),
-        DEC        ("--"       ),
-        PUBLIC     ("public"   ),
-        PRIVATE    ("private"  ),
-        PROTECTED  ("protected"),
-        MODULE     ("module"   ),
-        PACKAGE    ("package"  ),
-        CLASS      ("class"    ),
-        INTERFACE  ("interface"),
-        TRAIT      ("trait"    ),
-        MIXIN      ("mixin"    ),
-        VALUE      ("value"    ),
-        ENUM       ("enum"     ),
-        SERVICE    ("service"  ),
-        IMPORT     ("import"   ),
-        EMBED      ("embed"    ),
-        THIS       ("this"     ),
-        SUPER      ("super"    ),
-        TRY        ("try"      ),
-        CATCH      ("catch"    ),
-        THROW      ("throw"    ),
-        IF         ("if"       ),
-        ELSE       ("else"     ),
-        DO         ("do"       ),
-        WHILE      ("while"    ),
-        SWITCH     ("switch"   ),
-        CASE       ("case"     ),
-        DEFAULT    ("default"  ),
-        BREAK      ("break"    ),
-        CONTINUE   ("continue" ),
-        RETURN     ("return"   ),
-        IDENTIFIER (null       ),
-        EOL_COMMENT(null       ),
-        ENC_COMMENT(null       ),
-        LIT_CHAR   (null       ),
-        LIT_STRING (null       ),
-        LIT_INT    (null       ),
-        LIT_DEC    (null       );
+        COLON       (":"            ),
+        SEMICOLON   (";"            ),
+        COMMA       (","            ),
+        DOT         ("."            ),
+        DOTDOT      (".."           ),
+        AT          ("@"            ),
+        COND        ("?"            ),
+        L_PAREN     ("("            ),
+        R_PAREN     (")"            ),
+        L_CURLY     ("{"            ),
+        R_CURLY     ("}"            ),
+        L_SQUARE    ("["            ),
+        R_SQUARE    ("]"            ),
+        ADD         ("+"            ),
+        SUB         ("-"            ),
+        MUL         ("*"            ),
+        DIV         ("/"            ),
+        MOD         ("%"            ),
+        DIVMOD      ("/%"           ),
+        SHL         ("<<"           ),
+        SHR         (">>"           ),
+        USHR        (">>>"          ),
+        BIT_AND     ("&"            ),
+        BIT_OR      ("|"            ),
+        BIT_XOR     ("^"            ),
+        BIT_NOT     ("~"            ),
+        MOV         ("="            ),
+        ADD_MOV     ("+="           ),
+        SUB_MOV     ("-="           ),
+        MUL_MOV     ("*="           ),
+        DIV_MOV     ("/="           ),
+        MOD_MOV     ("%="           ),
+        DIVMOD_MOV  ("/%="          ),
+        SHL_MOV     ("<<="          ),
+        SHR_MOV     (">>="          ),
+        USHR_MOV    (">>>="         ),
+        BIT_AND_MOV ("&="           ),
+        BIT_OR_MOV  ("|="           ),
+        BIT_XOR_MOV ("^="           ),
+        COND_AND    ("&&"           ),
+        COND_OR     ("||"           ),
+        NOT         ("!"            ),
+        COMP_EQ     ("=="           ),
+        COMP_NEQ    ("!="           ),
+        COMP_LT     ("<"            ),
+        COMP_LTEQ   ("<="           ),
+        COMP_GT     (">"            ),
+        COMP_GTEQ   (">="           ),
+        INC         ("++"           ),
+        DEC         ("--"           ),
+        PUBLIC      ("public"       ),
+        PRIVATE     ("private"      ),
+        PROTECTED   ("protected"    ),
+        MODULE      ("module"       ),
+        PACKAGE     ("package"      ),
+        CLASS       ("class"        ),
+        INTERFACE   ("interface"    ),
+        TRAIT       ("trait"        ),
+        MIXIN       ("mixin"        ),
+        CONST       ("const"        ),
+        ENUM        ("enum"         ),
+        SERVICE     ("service"      ),
+        EXTENDS     ("extends"      ),
+        IMPLEMENTS  ("implements"   ),
+        INCORPORATES("incorporates" ),
+        INTO        ("into"         ),
+        IMPORT      ("import"       ),
+        EMBED       ("embed"        ),
+        THIS        ("this"         ),
+        SUPER       ("super"        ),
+        USING       ("using"        ),
+        TRY         ("try"          ),
+        CATCH       ("catch"        ),
+        THROW       ("throw"        ),
+        IF          ("if"           ),
+        ELSE        ("else"         ),
+        DO          ("do"           ),
+        WHILE       ("while"        ),
+        SWITCH      ("switch"       ),
+        CASE        ("case"         ),
+        DEFAULT     ("default"      ),
+        BREAK       ("break"        ),
+        CONTINUE    ("continue"     ),
+        RETURN      ("return"       ),
+        FUNCTION    ("function"     ),
+        CONSTRUCT   ("construct"    ),
+        IMMUTABLE   ("immutable"    ),
+        STATIC      ("static"       ),
+        IDENTIFIER  (null           ),
+        EOL_COMMENT (null           ),
+        ENC_COMMENT (null           ),
+        LIT_CHAR    (null           ),
+        LIT_STRING  (null           ),
+        LIT_INT     (null           ),
+        LIT_DEC     (null           ),
+        LIT_BIN     (null           );
 
         /**
          * Constructor.
@@ -315,7 +348,7 @@ public class Token
     /**
      * Identifier of the token.
      */
-    private Id id;
+    private Id m_id;
 
     /**
      * Value of the Token (if it is a literal).

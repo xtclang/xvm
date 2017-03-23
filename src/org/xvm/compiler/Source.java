@@ -4,10 +4,12 @@ package org.xvm.compiler;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 import static org.xvm.compiler.Lexer.isLineTerminator;
 
+import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.readFileChars;
@@ -387,6 +389,60 @@ public class Source
         m_iLineOffset = 0;
         }
 
+    /**
+     * @return a String intended to make this usable in a debugger
+     */
+    public String toString()
+        {
+        long lCur = getPosition();
+
+        String sIntro = "...";
+        for (int i = 0; i < 20; ++i)
+            {
+            try
+                {
+                rewind();
+                }
+            catch (NoSuchElementException e)
+                {
+                sIntro = "";
+                break;
+                }
+            }
+        long lPre = getPosition();
+        setPosition(lCur);
+
+        String sEpilogue = "...";
+        for (int i = 0; i < 20; ++i)
+            {
+            try
+                {
+                next();
+                }
+            catch (NoSuchElementException e)
+                {
+                sEpilogue = "(EOF)";
+                break;
+                }
+            }
+        long lPost = getPosition();
+        setPosition(lCur);
+
+        String sPre = toString(lPre, lCur);
+        String sPost = toString(lCur, lPost);
+
+        StringBuilder sb = new StringBuilder(sIntro);
+        appendString(sb, sPre);
+        char[] achIndent = new char[sb.length()];
+        Arrays.fill(achIndent, ' ');
+
+        appendString(sb, sPost)
+          .append(sEpilogue)
+          .append('\n')
+          .append(new String(achIndent))
+          .append('^');
+        return sb.toString();
+        }
 
     // ----- data members ------------------------------------------------------
 

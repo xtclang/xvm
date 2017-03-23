@@ -40,3 +40,6 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# build directory
+classes/
