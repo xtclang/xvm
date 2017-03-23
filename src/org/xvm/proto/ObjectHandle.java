@@ -1,5 +1,10 @@
 package org.xvm.proto;
 
+import sun.util.resources.lv.CalendarData_lv;
+
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Runtime operates on Object handles holding the struct references or the values themselves
  * for the following types:
@@ -8,14 +13,32 @@ package org.xvm.proto;
  * @author gg 2017.02.15
  */
 public abstract class ObjectHandle
+        implements Cloneable
     {
     final public TypeComposition f_clazz;
     public Type m_type;
+
+    protected ObjectHandle(TypeComposition clazz)
+        {
+        this(clazz, clazz.ensurePublicType());
+        }
 
     protected ObjectHandle(TypeComposition clazz, Type type)
         {
         f_clazz = clazz;
         m_type = type;
+        }
+
+    public ObjectHandle cloneHandle()
+        {
+        try
+            {
+            return (ObjectHandle) super.clone();
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new IllegalStateException();
+            }
         }
 
     @Override
@@ -27,11 +50,11 @@ public abstract class ObjectHandle
     public static class JavaDelegate
             extends ObjectHandle
         {
-        public Object m_oValue;
+        private Object m_oValue;
 
         public JavaDelegate(TypeComposition clazz)
             {
-            super(clazz, clazz.ensurePublicType());
+            super(clazz);
             }
 
         @Override
@@ -45,11 +68,28 @@ public abstract class ObjectHandle
     public static class JavaLong
             extends ObjectHandle
         {
-        public long m_lValue;
+        private long m_lValue = UNASSIGNED;
 
         public JavaLong(TypeComposition clazz)
             {
-            super(clazz, clazz.ensurePublicType());
+            super(clazz);
+            }
+
+        public JavaLong(TypeComposition clazz, long lValue)
+            {
+            super(clazz);
+            m_lValue = lValue;
+            }
+
+        public long getValue()
+            {
+            return m_lValue;
+            }
+
+        public void assign(long lValue)
+            {
+            assert m_lValue == UNASSIGNED;
+            m_lValue = lValue;
             }
 
         @Override
@@ -57,7 +97,9 @@ public abstract class ObjectHandle
             {
             return super.toString() + m_lValue;
             }
+        private final static long UNASSIGNED = 0xBADBAD0BADBADBADl;
         }
+
 
     // ----- REMOVE STUFF BELOW ----
 

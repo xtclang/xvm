@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.TypeComposition;
@@ -36,20 +38,16 @@ public class xInt64
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Object oValue)
+    public void assignConstValue(ObjectHandle handle, Constant constant)
         {
         JavaLong hThis = (JavaLong) handle;
 
-        hThis.m_lValue = oValue instanceof PackedInteger ?
-                ((PackedInteger) oValue).getLong() : (Long) oValue;
+        hThis.assign(((ConstantPool.IntConstant) constant).getValue().getLong());
         }
 
-
     public static xInt64 INSTANCE;
-    public static JavaLong makeCanonicalHandle(long lValue)
+    public static JavaLong makeHandle(long lValue)
         {
-        JavaLong h = new JavaLong(INSTANCE.f_clazzCanonical);
-        h.m_lValue = lValue;
-        return h;
+        return new JavaLong(INSTANCE.f_clazzCanonical, lValue);
         }
     }

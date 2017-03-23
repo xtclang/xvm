@@ -1,8 +1,11 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
 
@@ -12,7 +15,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xBit
-        extends xObject
+        extends TypeCompositionTemplate
     {
     public xBit(TypeSet types)
         {
@@ -53,11 +56,11 @@ public class xBit
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Object oValue)
+    public void assignConstValue(ObjectHandle handle, Constant constant)
         {
         JavaLong hThis = (JavaLong) handle;
 
-        hThis.m_lValue = ((Integer) oValue).longValue();
+        hThis.assign(((ConstantPool.IntConstant) constant).getValue().getLong());
         }
 
     @Override

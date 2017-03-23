@@ -1,9 +1,8 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ConstantPool.IntConstant;
 import org.xvm.asm.ConstantPool.CharStringConstant;
+import org.xvm.proto.TypeName.UnionTypeName;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,35 +14,45 @@ import java.util.Map;
  */
 public class ObjectHeap
     {
-    private TypeSet m_types;
-    private ConstantPoolAdapter m_constantPool;
+    public final TypeSet f_types;
+    public final ConstantPoolAdapter f_constantPool;
 
     Map<Long, ObjectHandle> m_mapConstants = new HashMap<>();
 
     public ObjectHeap(ConstantPoolAdapter adapter, TypeSet types)
         {
-        m_types = types;
-        m_constantPool = adapter;
+        f_types = types;
+        f_constantPool = adapter;
         }
 
     // nClassConstId - ClassConstant in the ConstantPool
     public ObjectHandle ensureHandle(int nClassConstId)
         {
-        TypeComposition typeComposition = m_types.ensureConstComposition(nClassConstId);
+        TypeComposition typeComposition = f_types.ensureConstComposition(nClassConstId);
 
+        // TODO: ByComposition may not have a single template
         return typeComposition.f_template.createHandle(typeComposition);
         }
 
     // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
-    public ObjectHandle resolveConstHandle(ObjectHandle hTarget, TypeName tn, int nValueConstId)
+    public ObjectHandle resolveConstHandle(TypeName typeName, int nValueConstId)
         {
-        assert(tn.isResolved());
+        assert(typeName.isResolved());
 
-        String sType = tn.getSimpleName();
-        // TODO: generic names
-        int nClassConstId = m_constantPool.getClassConstId(sType);
-
-        return resolveConstHandle(nClassConstId, nValueConstId);
+        if (typeName instanceof UnionTypeName)
+            {
+            for (TypeName tn : ((UnionTypeName) typeName).m_aTypeName)
+                {
+                }
+                return null;
+            }
+        else
+            {
+            String sType = typeName.getSimpleName();
+            // TODO: generic names
+            int nClassConstId = f_constantPool.getClassConstId(sType);
+            return resolveConstHandle(nClassConstId, nValueConstId);
+            }
         }
 
     // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
@@ -57,28 +66,15 @@ public class ObjectHeap
 
         if (handle == null)
             {
-            TypeComposition typeComposition = m_types.ensureConstComposition(nClassConstId);
+            TypeComposition typeComposition = f_types.ensureConstComposition(nClassConstId);
             TypeCompositionTemplate template = typeComposition.f_template;
 
-            Constant constValue = m_constantPool.getConstantValue(nValueConstId); // must exist
+            Constant constValue = f_constantPool.getConstantValue(nValueConstId); // must exist
+
             handle = template.createHandle(typeComposition);
-            switch (constValue.getType())
-                {
-                case Int:
-                    template.assignConstValue(handle, ((IntConstant) constValue).getValue());
-                    break;
 
-                case CharString:
-                    template.assignConstValue(handle, ((CharStringConstant) constValue).getValue());
-                    break;
+            template.assignConstValue(handle, constValue);
 
-                case Method: // TODO: function is not currently there
-                    template.assignConstValue(handle, constValue);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("type " + constValue.getType());
-                }
             registerConstHandle(nClassConstId, nValueConstId, handle);
             }
 
@@ -87,7 +83,7 @@ public class ObjectHeap
 
     public String getPropertyName(int nValueConstId)
         {
-        return ((CharStringConstant) m_constantPool.getConstantValue(nValueConstId)).getValue();
+        return ((CharStringConstant) f_constantPool.getConstantValue(nValueConstId)).getValue();
         }
 
     public ObjectHandle getConstHandle(int nClassConstId, int nValueConstId)

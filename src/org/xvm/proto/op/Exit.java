@@ -15,10 +15,10 @@ public class Exit extends Op
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
-        int iScope = aiRegister[I_SCOPE];
-        aiRegister[I_SCOPE] = --iScope;
+        frame.f_aiRegister[I_SCOPE]--;
+
         return iPC + 1;
         }
     }

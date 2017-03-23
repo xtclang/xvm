@@ -1,9 +1,8 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.Type;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeSet;
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.proto.*;
 
 /**
  * TODO:
@@ -27,31 +26,32 @@ public class xMethod
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
+    public void assignConstValue(ObjectHandle handle, Constant constant)
         {
-        return super.createHandle(clazz);
-        }
+        MethodHandle hThis = (MethodHandle) handle;
+        ConstantPool.MethodConstant constMethod = (ConstantPool.MethodConstant) constant;
+        ConstantPool.ClassConstant constClass = (ConstantPool.ClassConstant) constMethod.getNamespace();
 
-    @Override
-    public void assignConstValue(ObjectHandle handle, Object oValue)
-        {
-        // TODO: oValue should be a MethodConstant, allowing to find the necessary info in the module
+        String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
+        TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
+
+        hThis.m_method = target.getMethodTemplate(constMethod.getName(), "");
         }
 
     public static class MethodHandle
             extends ObjectHandle
         {
-        protected String m_sName;
+        public MethodTemplate m_method;
 
         protected MethodHandle(TypeComposition clazz)
             {
-            super(clazz, clazz.ensurePublicType());
+            super(clazz);
             }
 
         @Override
         public String toString()
             {
-            return super.toString() + m_sName;
+            return super.toString() + m_method;
             }
         }
 

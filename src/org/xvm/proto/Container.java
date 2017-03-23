@@ -1,8 +1,9 @@
 package org.xvm.proto;
 
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xTest;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -12,44 +13,44 @@ import java.util.Set;
  */
 public class Container
     {
-    public TypeSet m_types;
-    public ConstantPoolAdapter m_constantPoolAdapter;
-    public ObjectHeap m_heap;
+    final public TypeSet f_types;
+    final public ConstantPoolAdapter f_constantPoolAdapter;
+    final public ObjectHeap f_heap;
     ServiceContext m_service;
-    Set<ServiceContext> m_setServices;
+    Set<ServiceContext> m_setServices = new HashSet<>();
 
     public Container()
         {
-        m_constantPoolAdapter = new ConstantPoolAdapter();
-        m_types = new TypeSet(m_constantPoolAdapter);
-        m_heap  = new ObjectHeap(m_constantPoolAdapter, m_types);
+        f_constantPoolAdapter = new ConstantPoolAdapter();
+        f_types = new TypeSet(f_constantPoolAdapter);
+        f_heap = new ObjectHeap(f_constantPoolAdapter, f_types);
+
+        init();
         }
 
-    void init()
+    protected void init()
         {
-        TypeSet types = m_types;
+        TypeSet types = f_types;
 
         // depth first traversal starting with Object
 
         // typedef Int64   Int;
         // typedef UInt64  UInt;
 
-        types.addAlias("x:Int",  "x:Int64");
+        types.addAlias("x:Int", "x:Int64");
         types.addAlias("x:UInt", "x:UInt64");
 
         types.addTemplate(new xObject(types));
+        types.addTemplate(new xException(types));
 
         // container.m_typeSet.dumpTemplates();
         }
 
-    public static void main(String[] asArg)
+    // TODO: for xService only
+    public ServiceContext createContext(xObject xo)
         {
-        Container container = new Container();
-        container.init();
-
-        xTest clzTest = new xTest(container.m_types, container.m_constantPoolAdapter);
-        container.m_types.addTemplate(clzTest);
-
-        clzTest.runTests(new ServiceContext(container));  // todo: xService
+        ServiceContext ctx = new ServiceContext(this);
+        m_setServices.add(ctx);
+        return ctx;
         }
     }

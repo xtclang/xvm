@@ -28,6 +28,6 @@ public class xNullable
 
         // in-place declaration for True and False
         // in-place generation of Hashable
-        f_types.addTemplate(new xNullable(f_types, "x:Null", "x:Nullable", Shape.Enum));
+        f_types.addTemplate(new xNullable(f_types, "x:Nullable.Null", "x:Nullable", Shape.Enum));
         }
     }

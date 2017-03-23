@@ -35,7 +35,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         implements Const, Constable
     {
     // ----- data types ----------------------------------------------------------------------------
-    
+
     /**
      * A class exists within a namespace. The namespace can be one of several Ecstasy language
      * structures.
@@ -52,7 +52,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * A class contains other named child structures.
      */
     typedef Class | MultiMethod | Property | MultiFunction | Literal NamedChild;
-    
+
     /**
      * A normal constructor is a function that operates on a read/write structure that will contain
      * the values of the newly constructed object.
@@ -542,5 +542,5 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Create a new instance of this class.
      */
-    PublicType newInstance(Constructor | ConstructorFinally constuctor);
+    PublicType newInstance(Constructor | ConstructorFinally constructor);
     }

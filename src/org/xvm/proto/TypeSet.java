@@ -166,6 +166,7 @@ public class TypeSet
             {
             ClassConstant classConstant = f_constantPool.getClassConstant(nClassConstId);   // must exist
 
+            // TODO: combination types (String?)
             String sTemplate = ConstantPoolAdapter.getClassName(classConstant);
             TypeCompositionTemplate template = ensureTemplate(sTemplate);
 

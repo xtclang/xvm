@@ -5,7 +5,7 @@ import org.xvm.proto.*;
 import org.xvm.proto.op.*;
 
 /**
- * TODO:
+ * A test class.
  *
  * @author gg 2017.03.15
  */
@@ -38,6 +38,9 @@ public class xTest extends xObject
         add_method1(adapter);
 
         add_test3(adapter);
+
+        add_throwing(adapter);
+        add_test4(adapter);
         }
 
     private void add_getIntValue(ConstantPoolAdapter adapter)
@@ -162,11 +165,11 @@ public class xTest extends xObject
 
     private void add_test3(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ft = addFunctionTemplate("test4", VOID, VOID);
+        FunctionTemplate ft = addFunctionTemplate("test3", VOID, VOID);
         //  static Void test3()
         //      {
         //      Test t = new Test("Hello");  // VAR x:Test (#0)
-        //                                   // NEW_1 @"xTest#construct" -@"Hello" #0
+        //                                   // NEW_1 @"x:Test#construct" -@"Hello" #0
         //      print t.prop1                // VAR x:String (#1)
         //                                   // GET #1  @"prop1" #1
         //                                   // PRINT #1
@@ -190,20 +193,67 @@ public class xTest extends xObject
         ft.m_cVars = 3;
         }
 
+    private void add_throwing(ConstantPoolAdapter adapter)
+        {
+        FunctionTemplate ft = addFunctionTemplate("throwing", VOID, INT);
+        //  static Void throwing()
+        //      {
+        //      throw new Exception("bye");  // VAR x:Exception (#0)
+        //                                   // NEW_N @"#x:Exception:construct" 2 -@"bye" -@"x:Nullable.Null" #0
+        //                                   // THROW #0
+        //      }
+        ft.m_aop = new Op[]
+            {
+            new Var(adapter.getClassConstId("x:Exception")),
+            new New_N(adapter.getMethodConstId("x:Exception", "construct"), new int[]
+                    {
+                    -adapter.ensureConstantValue("bye"),
+                    -adapter.getClassConstId("x:Nullable.Null"),
+                    }, 0),
+            new Throw(0),
+            };
+        ft.m_cVars = 1;
+        }
+
+    private void add_test4(ConstantPoolAdapter adapter)
+        {
+        FunctionTemplate ft = addFunctionTemplate("test4", VOID, VOID);
+        // static void test4()
+        //      {
+        //      throwing();                 // CALL_00 -@"x:Test#throwing"
+        //      return;
+        //      }
+        ft.m_aop = new Op[]
+            {
+            new Call_00(-adapter.getMethodConstId("x:Test", "throwing")),
+            new Return(),
+            };
+        }
 
     ///////////////////////////////////////
 
-    public void runTests(ServiceContext context)
+    public static void main(String[] asArg)
         {
-        forEachFunction (ft ->
-            {
-            if (ft.f_sName.startsWith("test"))
-                {
-                ObjectHandle[] ahVars = new ObjectHandle[ft.m_cVars];
-                ObjectHandle[] ahReturn = new ObjectHandle[ft.m_cReturns];
+        Container container = new Container();
 
-                Frame frame = context.createFrame(null, null, ft, ahVars, ahReturn);
-                frame.execute();
+        xTest test = new xTest(container.f_types, container.f_constantPoolAdapter);
+
+        container.f_types.addTemplate(test);
+
+        ServiceContext context = container.createContext(test);
+
+        test.forEachFunction(function ->
+            {
+            if (function.f_sName.startsWith("test") && function.m_cArgs == 0)
+                {
+                ObjectHandle[] ahReturn = new ObjectHandle[function.m_cReturns];
+
+                ObjectHandle hException = context.createFrame(null, null,
+                        function, new ObjectHandle[function.m_cVars], ahReturn).execute();
+                if (hException != null)
+                    {
+                    System.out.println("Function " + function.f_sName + " threw unhandled " + hException);
+                    }
                 }
             });
         }

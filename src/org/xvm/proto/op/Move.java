@@ -20,7 +20,7 @@ public class Move extends Op
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
         frame.f_ahVars[f_nToValue] = frame.f_ahVars[f_nFromValue];
 

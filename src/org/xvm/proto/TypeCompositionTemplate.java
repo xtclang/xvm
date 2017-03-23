@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import java.util.Arrays;
@@ -32,16 +33,22 @@ public abstract class TypeCompositionTemplate
 
     protected TypeCompositionTemplate m_parent;
 
-    List<TypeName> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
-    List<String> m_listIncorporate = new LinkedList<>();
+    protected List<TypeName> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
+    protected List<String> m_listIncorporate = new LinkedList<>();
 
-    Map<String, PropertyTemplate> m_mapProperties = new TreeMap<>();
-    Map<String, MultiMethodTemplate> m_mapMultiMethods = new TreeMap<>();
+    protected Map<String, PropertyTemplate> m_mapProperties = new TreeMap<>();
+    protected Map<String, MultiMethodTemplate> m_mapMultiMethods = new TreeMap<>();
 
-    Map<String, MultiFunctionTemplate> m_mapMultiFunctions = new TreeMap<>(); // class level child functions
+    protected Map<String, MultiFunctionTemplate> m_mapMultiFunctions = new TreeMap<>(); // class level child functions
+
+    // ----- caches ------
 
     // cache of TypeCompositions
-    Map<List<Type>, TypeComposition> m_mapCompositions = new HashMap<>();
+    protected Map<List<Type>, TypeComposition> m_mapCompositions = new HashMap<>();
+
+    // cache of relationships
+    protected enum Relation {EXTENDS, IMPLEMENTS, INCOMPATIBLE};
+    protected Map<TypeCompositionTemplate, Relation> m_mapRelations = new HashMap<>();
 
     // construct the template
     public TypeCompositionTemplate(TypeSet types, String sName, String sSuper, Shape shape)
@@ -219,9 +226,9 @@ public abstract class TypeCompositionTemplate
     abstract public ObjectHandle createHandle(TypeComposition clazz);
 
     // assign (Int i = 5;)
-    public void assignConstValue(ObjectHandle handle, Object oValue)
+    public void assignConstValue(ObjectHandle handle, Constant constant)
         {
-        throw new IllegalStateException();
+        throw new UnsupportedOperationException("type " + constant.getType() + " for " + this);
         }
 
     // invokeNative with 0 arguments and 0 return values
@@ -261,26 +268,49 @@ public abstract class TypeCompositionTemplate
         throw new IllegalStateException();
         }
 
-    public ObjectHandle createStruct()
+    // return a handle with this:struct access
+    public ObjectHandle createStruct(Frame frame)
         {
         throw new IllegalStateException();
         }
 
-    public void toPublic(ObjectHandle handle)
+    // does this template extend that?
+    public boolean extends_(TypeCompositionTemplate that)
         {
-        }
+        assert that.f_shape != Shape.Interface;
 
-    // TODO: temporary helper...
-    public ObjectHandle newInstance(Type[] aType, ObjectHandle[] ahArg)
-        {
-        switch (f_shape)
+        if (this == that)
             {
-            case Interface: case Trait: case Mixin: case Enum:
-                throw new IllegalStateException();
+            return true;
             }
 
-        TypeComposition clazz = resolve(aType);
-        ObjectHandle handle = createHandle(clazz);
+        Relation relation = m_mapRelations.get(that);
+        if (relation != null)
+            {
+            return relation == Relation.EXTENDS;
+            }
+
+        TypeCompositionTemplate templateSuper = f_types.getTemplate(f_sSuper);
+        while (templateSuper != null)
+            {
+            m_mapRelations.put(that, Relation.EXTENDS);
+
+            // there is just one template instance per name
+            if (templateSuper == that)
+                {
+                return true;
+                }
+            templateSuper = f_types.getTemplate(templateSuper.f_sSuper);
+            }
+
+        m_mapRelations.put(that, Relation.INCOMPATIBLE);
+        return false;
+        }
+
+    public ObjectHandle changeType(ObjectHandle handle, Access access)
+        {
+        handle = handle.cloneHandle();
+        handle.m_type = handle.f_clazz.ensurePublicType();
         return handle;
         }
 
@@ -487,6 +517,13 @@ public abstract class TypeCompositionTemplate
         public void markNative()
             {
             m_fNative = true;
+            }
+
+        @Override
+        public String toString()
+            {
+            return getClass().getSimpleName() + " " +
+                    f_sName + " " + Utils.formatArray(m_argTypeName, "<", ">", ", ");
             }
         }
 

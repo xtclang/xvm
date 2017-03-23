@@ -18,14 +18,14 @@ public class Var extends Op
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
-        int iScope = aiRegister[I_SCOPE];
-        int nNextVar = anScopeNextVar[iScope];
+        int iScope = frame.f_aiRegister[I_SCOPE];
+        int nNextVar = frame.f_anNextVar[iScope];
 
         frame.f_ahVars[nNextVar] = frame.f_context.f_heap.ensureHandle(f_nClassConst); // TODO: cache this
 
-        anScopeNextVar[iScope] = nNextVar+1;
+        frame.f_anNextVar[iScope] = nNextVar+1;
         return iPC + 1;
         }
 

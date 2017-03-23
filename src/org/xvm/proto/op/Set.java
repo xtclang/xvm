@@ -26,7 +26,7 @@ public class Set extends Op
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
         ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
         String sProperty = frame.f_context.f_heap.getPropertyName(f_nPropConstId); // TODO: cache this
@@ -36,10 +36,8 @@ public class Set extends Op
         PropertyTemplate property = template.getPropertyTemplate(sProperty);
         MethodTemplate method = property.m_templateSet;
 
-        int nValue = f_nValue;
-        ObjectHandle hArg = nValue > 0 ?
-                frame.f_ahVars[nValue] :
-                frame.f_context.f_heap.resolveConstHandle(hTarget, method.m_argTypeName[0], -nValue);
+        ObjectHandle hArg = f_nValue >= 0 ? frame.f_ahVars[f_nValue] :
+                resolveConst(frame, method.m_argTypeName[0], -f_nValue);
 
         if (method == null)
             {

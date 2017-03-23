@@ -24,7 +24,7 @@ public class Invoke_11 extends OpInvocable
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
         ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
 
@@ -32,7 +32,7 @@ public class Invoke_11 extends OpInvocable
 
         MethodTemplate method = getMethodTemplate(frame, template, f_nMethodValue);
 
-        ObjectHandle hArg    = resolveArgument(frame, method.m_argTypeName[0], f_nArgValue);
+        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVars[f_nArgValue] : resolveConstArgument(frame, 0, f_nArgValue);
         ObjectHandle[] ahRet = new ObjectHandle[1];
         ObjectHandle hException;
 

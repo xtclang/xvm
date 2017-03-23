@@ -8,11 +8,11 @@ import org.xvm.proto.Op;
  *
  * @author gg 2017.03.08
  */
-public class Return_1 extends Op
+public class Throw extends Op
     {
     private final int f_nValue;
 
-    public Return_1(int nValue)
+    public Throw(int nValue)
         {
         f_nValue = nValue;
         }
@@ -20,9 +20,9 @@ public class Return_1 extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        frame.f_ahReturns[0] = f_nValue >= 0 ? frame.f_ahVars[f_nValue] :
-                resolveConstReturn(frame, 0, f_nValue);
+        // there are no "const" exceptions
+        frame.m_hException = frame.f_ahVars[f_nValue];
 
-        return RETURN_NORMAL;
+        return RETURN_EXCEPTION;
         }
     }

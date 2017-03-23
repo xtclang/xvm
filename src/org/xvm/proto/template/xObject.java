@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constant;
+
 import org.xvm.proto.*;
 
 import java.util.HashMap;
@@ -52,17 +54,8 @@ public class xObject
         return new GenericHandle(clazz);
         }
 
-    public void copy(ObjectHandle handle, ObjectHandle that)
-        {
-        GenericHandle hThis = (GenericHandle) handle;
-        GenericHandle hThat = (GenericHandle) that;
-
-        // check the type?
-        hThis.m_mapFields = hThat.m_mapFields;
-        }
-
     @Override
-    public ObjectHandle createStruct()
+    public ObjectHandle createStruct(Frame frame)
         {
         assert f_asFormalType.length == 0;
 
@@ -107,7 +100,7 @@ public class xObject
 
         public GenericHandle(TypeComposition clazz)
             {
-            super(clazz, clazz.ensurePublicType());
+            super(clazz);
             }
 
         public GenericHandle(TypeComposition clazz, Type type)
@@ -118,7 +111,7 @@ public class xObject
         @Override
         public String toString()
             {
-                return super.toString() + m_mapFields;
+            return super.toString() + m_mapFields;
             }
         }
 

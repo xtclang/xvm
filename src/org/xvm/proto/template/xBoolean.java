@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.TypeComposition;
@@ -31,8 +33,8 @@ public class xBoolean
         if (!f_sName.equals("x:Boolean")) return; // avoid recursion
 
         // in-place declaration for True and False
-        f_types.addTemplate(new xBoolean(f_types, "x:True", "x:Boolean", Shape.Enum));
-        f_types.addTemplate(new xBoolean(f_types, "x:False", "x:Boolean", Shape.Enum));
+        f_types.addTemplate(new xBoolean(f_types, "x:Boolean.True", "x:Boolean", Shape.Enum));
+        f_types.addTemplate(new xBoolean(f_types, "x:Boolean.False", "x:Boolean", Shape.Enum));
 
         //    Bit  to<Bit>();
         //    Byte to<Byte>();
@@ -56,11 +58,11 @@ public class xBoolean
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Object oValue)
+    public void assignConstValue(ObjectHandle handle, Constant constant)
         {
         JavaLong hThis = (JavaLong) handle;
 
-        hThis.m_lValue = ((Boolean) oValue).booleanValue() ? 1 : 0;
+        hThis.assign(((ConstantPool.IntConstant) constant).getValue().getLong() | 0x1);
         }
 
     @Override

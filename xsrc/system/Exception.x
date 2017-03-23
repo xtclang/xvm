@@ -7,7 +7,7 @@
  * hiding portions of the stack trace that represent information from outside of the current
  * container.
  */
-const Exception(String? text, Exception? cause)
+const Exception(String? text, Exception? cause = null)
     {
     @inject Iterable<StackFrame> stackTrace;
 

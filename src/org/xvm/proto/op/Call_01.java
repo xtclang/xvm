@@ -20,7 +20,7 @@ public class Call_01 extends OpCallable
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
         FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
 

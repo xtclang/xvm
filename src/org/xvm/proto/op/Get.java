@@ -26,7 +26,7 @@ public class Get extends Op
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
         ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
         String sProperty = frame.f_context.f_heap.getPropertyName(f_nPropConstId); // TODO: cache this

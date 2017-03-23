@@ -15,7 +15,7 @@ public class Return extends Op
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
         return RETURN_NORMAL;
         }

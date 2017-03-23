@@ -19,7 +19,7 @@ public class X_Print extends Op
         }
 
     @Override
-    public int process(Frame frame, int iPC, int[] aiRegister, int[] anScopeNextVar)
+    public int process(Frame frame, int iPC)
         {
         int nValue = f_nValue;
 

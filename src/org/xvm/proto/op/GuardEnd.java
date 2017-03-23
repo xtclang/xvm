@@ -1,26 +1,28 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.Frame.Guard;
 import org.xvm.proto.Op;
 
 /**
- * ENTER op-code.
+ * ENDGUARD op-code.
  *
  * @author gg 2017.03.08
  */
-public class Enter extends Op
+public class GuardEnd extends Op
     {
-    public Enter()
+    public GuardEnd()
         {
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.f_aiRegister[I_SCOPE]++;
+        frame.f_aiRegister[I_GUARD]--;
 
-        // start where the previous scope ended
-        frame.f_anNextVar[iScope + 1] = frame.f_anNextVar[iScope];
+        // ++ Exit
+        frame.f_aiRegister[I_SCOPE]--;
+        // --
 
         return iPC + 1;
         }

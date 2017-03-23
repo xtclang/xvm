@@ -13,6 +13,7 @@ import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 public class ServiceContext
     {
     public final Container f_container;
+    public final TypeSet f_types;
     public final ObjectHeap f_heap;
     public final ConstantPoolAdapter f_constantPool;
 
@@ -23,8 +24,9 @@ public class ServiceContext
     public ServiceContext(Container container)
         {
         f_container = container;
-        f_heap = container.m_heap;
-        f_constantPool = container.m_constantPoolAdapter;
+        f_heap = container.f_heap;
+        f_types = container.f_types;
+        f_constantPool = container.f_constantPoolAdapter;
         }
 
     public Frame createFrame(ObjectHandle hTarget, Frame framePrev, InvocationTemplate template,

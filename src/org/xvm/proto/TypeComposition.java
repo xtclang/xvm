@@ -1,7 +1,9 @@
 package org.xvm.proto;
 
+import org.xvm.proto.TypeCompositionTemplate.Shape;
+
 /**
- * TypeComposition (e.g. ArrayList<String>)
+ * TypeComposition represents a fully resolved class (e.g. ArrayList<String>)
  *
  * @author gg 2017.02.23
  */
@@ -62,6 +64,20 @@ public class TypeComposition
             m_typeStruct = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Struct);
             }
         return type;
+        }
+
+    // does this class extend that?
+    public boolean extends_(TypeComposition that)
+        {
+        assert that.f_template.f_shape != Shape.Interface;
+
+        if (this.f_template.extends_(that.f_template))
+            {
+            // TODO: check the generic type relationship
+            return true;
+            }
+
+        return false;
         }
 
     @Override

@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.TypeComposition;
@@ -35,11 +37,11 @@ public class xString
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Object oValue)
+    public void assignConstValue(ObjectHandle handle, Constant constant)
         {
         StringHandle hThis = (StringHandle) handle;
 
-        hThis.m_sValue = (String) oValue;
+        hThis.m_sValue = ((ConstantPool.CharStringConstant) constant).getValue();
         }
 
     @Override
@@ -59,7 +61,7 @@ public class xString
                     {
                     int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
 
-                    ahReturn[0] = xInt64.makeCanonicalHandle(nOf);
+                    ahReturn[0] = xInt64.makeHandle(nOf);
                     return null;
                     }
             }
@@ -75,11 +77,17 @@ public class xString
     public static class StringHandle
             extends ObjectHandle
         {
-        protected String m_sValue;
+        private String m_sValue = UNASSIGNED;
 
         protected StringHandle(TypeComposition clazz)
             {
-            super(clazz, clazz.ensurePublicType());
+            super(clazz);
+            }
+        protected StringHandle(TypeComposition clazz, String sValue)
+            {
+            super(clazz);
+
+            m_sValue = sValue;
             }
 
         @Override
@@ -87,13 +95,13 @@ public class xString
             {
             return super.toString() + m_sValue;
             }
+
+        private final static String UNASSIGNED = "\0UNASSIGNED\0";
         }
 
     public static xString INSTANCE;
-    public static StringHandle makeCanonicalHandle(String sValue)
+    public static StringHandle makeHandle(String sValue)
         {
-        StringHandle h = new StringHandle(INSTANCE.f_clazzCanonical);
-        h.m_sValue = sValue;
-        return h;
+        return new StringHandle(INSTANCE.f_clazzCanonical, sValue);
         }
     }
