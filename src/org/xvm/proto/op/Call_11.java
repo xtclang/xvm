@@ -11,7 +11,7 @@ import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
  */
 public class Call_11 extends OpCallable
     {
-    protected final int f_nFunctionValue;
+    private final int f_nFunctionValue;
     private final int f_nArgValue;
     private final int f_nRetValue;
 

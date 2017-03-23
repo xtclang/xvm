@@ -35,7 +35,7 @@ public abstract class Op
 
     protected TypeComposition resolveClassTemplate(Frame frame, int nClassConstId)
         {
-        return frame.resolveClassTemplate(nClassConstId);
+        return frame.resolveClass(nClassConstId);
         }
 
     // returns a positive iPC or a negative RETURN_*

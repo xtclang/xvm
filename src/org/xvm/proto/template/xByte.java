@@ -2,7 +2,10 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ConstantPool.IntConstant;
+
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
@@ -55,11 +58,10 @@ public class xByte
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Constant constant)
+    public ObjectHandle createConstHandle(Constant constant)
         {
-        ObjectHandle.JavaLong hThis = (ObjectHandle.JavaLong) handle;
-
-        hThis.assign(((ConstantPool.IntConstant) constant).getValue().getLong() | 0xFF);
+        return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
+            (((ConstantPool.IntConstant) constant).getValue().getLong() | 0xFF)) : null;
         }
 
     @Override

@@ -1,5 +1,10 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -8,7 +13,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xNullable
-        extends xObject
+        extends TypeCompositionTemplate
     {
     public xNullable(TypeSet types)
         {
@@ -28,6 +33,39 @@ public class xNullable
 
         // in-place declaration for True and False
         // in-place generation of Hashable
-        f_types.addTemplate(new xNullable(f_types, "x:Nullable.Null", "x:Nullable", Shape.Enum));
+        f_types.addTemplate(new xNullable(f_types, "x:Nullable$Null", "x:Nullable", Shape.Enum));
+
+        NULL = new NullHandle(f_clazzCanonical);
+        }
+
+    @Override
+    public ObjectHandle createConstHandle(Constant constant)
+        {
+        if (constant instanceof ClassConstant)
+            {
+            ClassConstant constClass = (ClassConstant) constant;
+            if (constClass.getName().equals("Null"))
+                {
+                return NULL;
+                }
+            }
+        return null;
+        }
+
+    public static NullHandle NULL;
+
+    private static class NullHandle
+                extends ObjectHandle
+        {
+        NullHandle(TypeComposition clz)
+            {
+            super(clz);
+            }
+
+        @Override
+        public String toString()
+            {
+            return "null";
+            }
         }
     }

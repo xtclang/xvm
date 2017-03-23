@@ -1,7 +1,8 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ConstantPool.ClassConstant;
+
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.TypeComposition;
@@ -33,8 +34,11 @@ public class xBoolean
         if (!f_sName.equals("x:Boolean")) return; // avoid recursion
 
         // in-place declaration for True and False
-        f_types.addTemplate(new xBoolean(f_types, "x:Boolean.True", "x:Boolean", Shape.Enum));
-        f_types.addTemplate(new xBoolean(f_types, "x:Boolean.False", "x:Boolean", Shape.Enum));
+        f_types.addTemplate(new xBoolean(f_types, "x:Boolean$True", "x:Boolean", Shape.Enum));
+        f_types.addTemplate(new xBoolean(f_types, "x:Boolean$False", "x:Boolean", Shape.Enum));
+
+        TRUE = new BooleanHandle(f_clazzCanonical, true);
+        FALSE = new BooleanHandle(f_clazzCanonical, false);
 
         //    Bit  to<Bit>();
         //    Byte to<Byte>();
@@ -58,16 +62,50 @@ public class xBoolean
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Constant constant)
+    public ObjectHandle createConstHandle(Constant constant)
         {
-        JavaLong hThis = (JavaLong) handle;
-
-        hThis.assign(((ConstantPool.IntConstant) constant).getValue().getLong() | 0x1);
+        if (constant instanceof ClassConstant)
+            {
+            ClassConstant constClass = (ClassConstant) constant;
+            if (constClass.getName().equals("True"))
+                {
+                return TRUE;
+                }
+            if (constClass.getName().equals("False"))
+                {
+                return FALSE;
+                }
+            }
+        return null;
         }
 
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new JavaLong(clazz);
+        return new BooleanHandle(clazz);
+        }
+
+
+    public static BooleanHandle TRUE;
+    public static BooleanHandle FALSE;
+
+    private static class BooleanHandle
+                extends JavaLong
+        {
+        BooleanHandle(TypeComposition clz)
+            {
+            super(clz);
+            }
+
+        BooleanHandle(TypeComposition clz, boolean f)
+            {
+            super(clz, f ? 1 : 0);
+            }
+
+        @Override
+        public String toString()
+            {
+            return m_lValue > 0 ? "true" : "false";
+            }
         }
     }

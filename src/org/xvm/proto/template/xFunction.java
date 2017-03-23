@@ -42,17 +42,23 @@ public class xFunction
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Constant constant)
+    public ObjectHandle createConstHandle(Constant constant)
         {
-        FunctionHandle hThis = (FunctionHandle) handle;
-        MethodConstant constFunction = (MethodConstant) constant; // TODO: replace with function when implemented
-        ClassConstant constClass = (ClassConstant) constFunction.getNamespace();
+        if (constant instanceof MethodConstant)
+            {
+            MethodConstant constFunction = (MethodConstant) constant; // TODO: replace with function when implemented
+            ClassConstant constClass = (ClassConstant) constFunction.getNamespace();
 
-        String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
-        TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
+            String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
+            TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
 
-        hThis.m_invoke = target.getFunctionTemplate(constFunction.getName(), "");
+            FunctionHandle handle = new FunctionHandle(f_clazzCanonical);
+            handle.m_invoke = target.getFunctionTemplate(constFunction.getName(), "");
+            return handle;
+            }
+        return null;
         }
+
 
     public static class FunctionHandle
             extends ObjectHandle

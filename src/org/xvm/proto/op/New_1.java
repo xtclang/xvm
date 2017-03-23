@@ -10,7 +10,7 @@ import org.xvm.proto.*;
  */
 public class New_1 extends OpCallable
     {
-    protected final int f_nConstructId;
+    private final int f_nConstructId;
     private final int f_nArgValue;
     private final int f_nRetValue;
 

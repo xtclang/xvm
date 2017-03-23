@@ -11,7 +11,7 @@ import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 public class Invoke_01 extends OpInvocable
     {
     private final int f_nTargetValue;
-    protected final int f_nMethodValue;
+    private final int f_nMethodValue;
     private final int f_nRetValue;
 
     public Invoke_01(int nTarget, int nMethod, int nRet)

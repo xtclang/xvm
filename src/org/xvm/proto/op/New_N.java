@@ -10,7 +10,7 @@ import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
  */
 public class New_N extends OpCallable
     {
-    protected final int f_nConstructId;
+    private final int f_nConstructId;
     private final int[] f_anArgValue;
     private final int f_nRetValue;
 

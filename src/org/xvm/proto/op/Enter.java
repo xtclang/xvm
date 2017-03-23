@@ -17,10 +17,10 @@ public class Enter extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.f_aiRegister[I_SCOPE]++;
+        int iScope = ++frame.f_aiRegister[I_SCOPE];
 
         // start where the previous scope ended
-        frame.f_anNextVar[iScope + 1] = frame.f_anNextVar[iScope];
+        frame.f_anNextVar[iScope] = frame.f_anNextVar[iScope - 1];
 
         return iPC + 1;
         }

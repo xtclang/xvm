@@ -1,7 +1,8 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.asm.ConstantPool.MethodConstant;
 import org.xvm.proto.*;
 
 /**
@@ -26,22 +27,27 @@ public class xMethod
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Constant constant)
+    public ObjectHandle createConstHandle(Constant constant)
         {
-        MethodHandle hThis = (MethodHandle) handle;
-        ConstantPool.MethodConstant constMethod = (ConstantPool.MethodConstant) constant;
-        ConstantPool.ClassConstant constClass = (ConstantPool.ClassConstant) constMethod.getNamespace();
+        if (constant instanceof MethodConstant)
+            {
+            MethodConstant constMethod = (MethodConstant) constant;
+            ClassConstant constClass = (ClassConstant) constMethod.getNamespace();
 
-        String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
-        TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
+            String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
+            TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
 
-        hThis.m_method = target.getMethodTemplate(constMethod.getName(), "");
+            MethodHandle handle = new MethodHandle(f_clazzCanonical);
+            handle.m_method = target.getMethodTemplate(constMethod.getName(), "");
+            return handle;
+            }
+        return null;
         }
 
     public static class MethodHandle
             extends ObjectHandle
         {
-        public MethodTemplate m_method;
+        protected MethodTemplate m_method;
 
         protected MethodHandle(TypeComposition clazz)
             {

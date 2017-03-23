@@ -50,7 +50,7 @@ public abstract class ObjectHandle
     public static class JavaDelegate
             extends ObjectHandle
         {
-        private Object m_oValue;
+        protected Object m_oValue;
 
         public JavaDelegate(TypeComposition clazz)
             {
@@ -68,7 +68,7 @@ public abstract class ObjectHandle
     public static class JavaLong
             extends ObjectHandle
         {
-        private long m_lValue = UNASSIGNED;
+        protected long m_lValue = UNASSIGNED;
 
         public JavaLong(TypeComposition clazz)
             {

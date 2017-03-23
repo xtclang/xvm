@@ -13,7 +13,7 @@ import org.xvm.proto.Utils;
  */
 public class Call_00 extends OpCallable
     {
-    protected final int f_nFunctionValue;
+    private final int f_nFunctionValue;
 
     public Call_00(int nFunction)
         {

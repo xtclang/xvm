@@ -1,6 +1,6 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ConstantPool.ClassConstant;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 
 /**
@@ -85,7 +85,8 @@ public class Frame
             }
         }
 
-    // find a first matching guard and unwind the scope
+    // find a first matching guard; unwind the scope and initialize the next var with the exception
+    // return the PC of the catch
     private int findGuard(ObjectHandle hException)
         {
         Guard[] aGuard = m_aGuard;
@@ -98,13 +99,16 @@ public class Frame
                 Guard guard = aGuard[iGuard];
                 for (int iCatch = 0, c = guard.f_anClassConstId.length; iCatch < c; iCatch++)
                     {
-                    TypeComposition clzCatch = resolveClassTemplate(guard.f_anClassConstId[iCatch]);
+                    TypeComposition clzCatch = resolveClass(guard.f_anClassConstId[iCatch]);
                     if (clzException.extends_(clzCatch))
                         {
-                        // unwind the scope
-                        f_aiRegister[Op.I_SCOPE] = guard.f_nScope;
+                        int nScope = guard.f_nScope - 1;
+                        f_aiRegister[Op.I_SCOPE] = nScope;
 
-                        return guard.f_anCatchAddress[iCatch];
+                        int nNextVar = f_anNextVar[nScope]++;
+                        f_ahVars[nNextVar] = hException;
+
+                        return guard.f_nStartAddress + guard.f_anCatchRelAddress[iCatch];
                         }
                     }
                 }
@@ -112,10 +116,11 @@ public class Frame
         return -1;
         }
 
-    public TypeComposition resolveClassTemplate(int nClassConstId)
+    // TODO: move to ConstPoolAdapter?
+    public TypeComposition resolveClass(int nClassConstId)
         {
-        ConstantPool.ClassConstant constClass = f_context.f_constantPool.getClassConstant(nClassConstId);
-        String sClass = ConstantPoolAdapter.getClassName((ConstantPool.ClassConstant) constClass.getNamespace());
+        ClassConstant constClass = f_context.f_constantPool.getClassConstant(nClassConstId);
+        String sClass = ConstantPoolAdapter.getClassName(constClass);
 
         // TODO: use the generic info when available
         TypeCompositionTemplate template = f_context.f_types.getTemplate(sClass);
@@ -132,15 +137,17 @@ public class Frame
 
     public static class Guard
         {
+        public final int f_nStartAddress;
         public final int f_nScope;
         public final int[] f_anClassConstId;
-        public final int[] f_anCatchAddress;
+        public final int[] f_anCatchRelAddress;
 
-        public Guard(int nScope, int[] anClassConstId, int[] anCatchAddress)
+        public Guard(int nStartAddr, int nScope, int[] anClassConstId, int[] anCatchAddress)
             {
+            f_nStartAddress = nStartAddr;
             f_nScope = nScope;
             f_anClassConstId = anClassConstId;
-            f_anCatchAddress = anCatchAddress;
+            f_anCatchRelAddress = anCatchAddress;
             }
         }
     }

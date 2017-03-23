@@ -43,8 +43,18 @@ public class ObjectHeap
             {
             for (TypeName tn : ((UnionTypeName) typeName).m_aTypeName)
                 {
+                try
+                    {
+                    String sType = tn.getSimpleName();
+                    // TODO: generic names
+                    int nClassConstId = f_constantPool.getClassConstId(sType);
+                    return resolveConstHandle(nClassConstId, nValueConstId);
+                    }
+                catch (UnsupportedOperationException e) {}
                 }
-                return null;
+
+            throw new UnsupportedOperationException(
+                    "Constant " + f_constantPool.getConstantValue(nValueConstId) + " for " + typeName);
             }
         else
             {
@@ -67,13 +77,19 @@ public class ObjectHeap
         if (handle == null)
             {
             TypeComposition typeComposition = f_types.ensureConstComposition(nClassConstId);
+
+            // TODO: BiTypeComposition (String?) may not have the template reference
+
             TypeCompositionTemplate template = typeComposition.f_template;
 
             Constant constValue = f_constantPool.getConstantValue(nValueConstId); // must exist
 
-            handle = template.createHandle(typeComposition);
-
-            template.assignConstValue(handle, constValue);
+            handle = template.createConstHandle(constValue);
+            if (handle == null)
+                {
+                throw new UnsupportedOperationException(
+                        "Constant " + constValue + " for " + template);
+                }
 
             registerConstHandle(nClassConstId, nValueConstId, handle);
             }

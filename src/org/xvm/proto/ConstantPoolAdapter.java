@@ -48,6 +48,13 @@ public class ConstantPoolAdapter
             constParent = m_constantPool.ensurePackageConstant(constParent, sPackage);
             }
 
+        for (int ofChild = sClassName.indexOf('$', ofStart); ofChild > 0;
+             ofStart = ofChild + 1, ofChild = sClassName.indexOf('$', ofStart))
+            {
+            String sClz = sClassName.substring(ofStart, ofChild);
+            constParent = m_constantPool.ensureClassConstant(constParent, sClz);
+            }
+
         ClassConstant constClass =
                 m_constantPool.ensureClassConstant(constParent, sClassName.substring(ofStart));
         m_mapClasses.put(sClassName, constClass.getPosition());

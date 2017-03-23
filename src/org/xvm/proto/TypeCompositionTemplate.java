@@ -223,12 +223,16 @@ public abstract class TypeCompositionTemplate
     // ---- OpCode support -----
 
     // create an un-initialized handle (Int i;)
-    abstract public ObjectHandle createHandle(TypeComposition clazz);
+    public ObjectHandle createHandle(TypeComposition clazz)
+        {
+        throw new UnsupportedOperationException();
+        }
 
     // assign (Int i = 5;)
-    public void assignConstValue(ObjectHandle handle, Constant constant)
+    // @return null if this type doesn't take that constant
+    public ObjectHandle createConstHandle(Constant constant)
         {
-        throw new UnsupportedOperationException("type " + constant.getType() + " for " + this);
+        return null;
         }
 
     // invokeNative with 0 arguments and 0 return values

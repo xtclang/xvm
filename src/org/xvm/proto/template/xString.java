@@ -1,7 +1,8 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ConstantPool.CharStringConstant;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.TypeComposition;
@@ -37,11 +38,10 @@ public class xString
         }
 
     @Override
-    public void assignConstValue(ObjectHandle handle, Constant constant)
+    public ObjectHandle createConstHandle(Constant constant)
         {
-        StringHandle hThis = (StringHandle) handle;
-
-        hThis.m_sValue = ((ConstantPool.CharStringConstant) constant).getValue();
+        return constant instanceof CharStringConstant ? new StringHandle(f_clazzCanonical,
+                ((CharStringConstant) constant).getValue()) : null;
         }
 
     @Override

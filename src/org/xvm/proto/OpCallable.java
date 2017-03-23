@@ -1,10 +1,12 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.asm.ConstantPool.MethodConstant;
 
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Access;
-import org.xvm.proto.template.xFunction;
+
+import org.xvm.proto.template.xFunction.FunctionHandle;
 
 /**
  * Common base for CALL_ ops.
@@ -13,21 +15,21 @@ import org.xvm.proto.template.xFunction;
  */
 public abstract class OpCallable extends Op
     {
-    protected FunctionTemplate getFunctionTemplate(Frame frame, int nFunctionValue)
+    protected FunctionTemplate getFunctionTemplate(Frame frame, int nFnValue)
         {
-        if (nFunctionValue >= 0)
+        if (nFnValue >= 0)
             {
-            xFunction.FunctionHandle hFunction = (xFunction.FunctionHandle ) frame.f_ahVars[nFunctionValue];
+            FunctionHandle hFunction = (FunctionHandle) frame.f_ahVars[nFnValue];
 
             // TODO: same as New; how to do it right?
             return (FunctionTemplate) hFunction.m_invoke;
             }
         else
             {
-            ConstantPool.MethodConstant constFunction =
-                    frame.f_context.f_constantPool.getMethodConstant(-nFunctionValue);
+            MethodConstant constFunction =
+                    frame.f_context.f_constantPool.getMethodConstant(-nFnValue);
 
-            String sClass = ConstantPoolAdapter.getClassName((ConstantPool.ClassConstant) constFunction.getNamespace());
+            String sClass = ConstantPoolAdapter.getClassName((ClassConstant) constFunction.getNamespace());
 
             TypeCompositionTemplate template = frame.f_context.f_types.getTemplate(sClass);
             // TODO parameters, returns
@@ -50,7 +52,7 @@ public abstract class OpCallable extends Op
                 {
                 ahVars[0] = constructor.getClazzTemplate().changeType(ahVars[0], Access.Private); // this:struct -> this:private
 
-                xFunction.FunctionHandle hFinally = (xFunction.FunctionHandle) ahRet[0];
+                FunctionHandle hFinally = (FunctionHandle) ahRet[0];
 
                 // get the "finally" method from the handle; TODO: how to do it right?
                 FunctionTemplate methFinally = (FunctionTemplate) hFinally.m_invoke;

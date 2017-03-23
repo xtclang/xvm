@@ -11,13 +11,15 @@ import org.xvm.proto.Op;
  */
 public class GuardStart extends Op
     {
-    final int[] f_anClassConstId;
-    final int[] f_anCatchAddress;
+    private final int[] f_anClassConstId;
+    private final int[] f_anCatchRelAddress;
+
+    private Guard m_guard; // cached struct
 
     public GuardStart(int nClassConstId, int nCatchAddress)
         {
         f_anClassConstId = new int[] {nClassConstId};
-        f_anCatchAddress = new int[] {nCatchAddress};
+        f_anCatchRelAddress = new int[] {nCatchAddress};
         }
 
     public GuardStart(int[] anClassConstId, int[] anCatch)
@@ -25,27 +27,32 @@ public class GuardStart extends Op
         assert anClassConstId.length == anCatch.length;
 
         f_anClassConstId = anClassConstId;
-        f_anCatchAddress = anCatch;
+        f_anCatchRelAddress = anCatch;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
         // ++ Enter
-        int iScope = frame.f_aiRegister[I_SCOPE]++;
+        int iScope = ++frame.f_aiRegister[I_SCOPE];
 
         frame.f_anNextVar[iScope] = frame.f_anNextVar[iScope-1];
         // --
 
-        int iGuard = frame.f_aiRegister[I_GUARD]++;
+        int iGuard = ++frame.f_aiRegister[I_GUARD];
 
         Guard[] aGuard = frame.m_aGuard;
-        if (iGuard == -1)
+        if (aGuard == null)
             {
             aGuard = frame.m_aGuard = new Frame.Guard[frame.f_function.m_cScopes];
             }
 
-        aGuard[iGuard] = new Guard(iScope, f_anClassConstId, f_anCatchAddress);
+        Guard guard = m_guard;
+        if (guard == null)
+            {
+            guard = m_guard = new Guard(iPC, iScope, f_anClassConstId, f_anCatchRelAddress);
+            }
+        aGuard[iGuard] = guard;
 
         return iPC + 1;
         }

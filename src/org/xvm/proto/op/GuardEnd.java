@@ -1,7 +1,6 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
-import org.xvm.proto.Frame.Guard;
 import org.xvm.proto.Op;
 
 /**
@@ -11,8 +10,11 @@ import org.xvm.proto.Op;
  */
 public class GuardEnd extends Op
     {
-    public GuardEnd()
+    private final int f_nRelAddr;
+
+    public GuardEnd(int iRelAddr)
         {
+        f_nRelAddr = iRelAddr;
         }
 
     @Override
@@ -24,6 +26,6 @@ public class GuardEnd extends Op
         frame.f_aiRegister[I_SCOPE]--;
         // --
 
-        return iPC + 1;
+        return iPC + f_nRelAddr;
         }
     }
