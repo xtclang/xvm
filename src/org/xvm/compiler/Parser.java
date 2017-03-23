@@ -3,6 +3,8 @@ package org.xvm.compiler;
 
 import org.xvm.compiler.Token.Id;
 
+import java.util.Map;
+
 
 /**
  * A recursive descent parser for Ecstasy source code.
@@ -61,10 +63,21 @@ public class Parser
         // during parsing
         m_fDone = true;
 
+        parseImports();
+
         // TODO
         return null;
         }
 
+    Map<String, String> parseImports()
+        {
+        // TODO
+        // while (peek(Id.IMPORT))
+            {
+
+            }
+        return null;
+        }
 
     // ----- token stream handling ---------------------------------------------
 
@@ -87,13 +100,31 @@ public class Parser
      */
     protected Token next()
         {
-        if (!m_lexer.hasNext())
+        // weed out the comments (but store off the most recently encountered doc comment in case
+        // anyone needs it later)
+        while (m_lexer.hasNext())
             {
-            // TODO log an EOF
-            throw new CompilerException("unexpected EOF");
+            m_token = m_lexer.next();
+            switch (m_token.getId())
+                {
+                case ENC_COMMENT:
+                    String sComment = (String) m_token.getValue();
+                    if (sComment.length() > 0 && sComment.startsWith("*"))
+                        {
+                        m_doc = m_token;
+                        }
+                    break;
+
+                case EOL_COMMENT:
+                    break;
+
+                default:
+                    return m_token;
+                }
             }
 
-        return m_token = m_lexer.next();
+        // TODO log an EOF?
+        throw new CompilerException("unexpected EOF");
         }
 
     /**
@@ -153,6 +184,11 @@ public class Parser
      * The current token.
      */
     private Token m_token;
+
+    /**
+     * The most recent doc comment.
+     */
+    private Token m_doc;
 
     // TODO private Scope m_scope;
 

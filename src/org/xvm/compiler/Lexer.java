@@ -3,9 +3,11 @@ package org.xvm.compiler;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+
 import java.util.Iterator;
 
 import java.util.NoSuchElementException;
+
 import java.util.function.Consumer;
 
 import org.xvm.compiler.Token.Id;
