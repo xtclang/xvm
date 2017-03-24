@@ -1,8 +1,10 @@
 package org.xvm.proto;
 
+import org.xvm.asm.ConstantPool.MethodConstant;
+
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
-import org.xvm.asm.ConstantPool.MethodConstant;
+import org.xvm.proto.template.xMethod.MethodHandle;
 
 /**
  * Common base for INVOKE_ ops.
@@ -13,20 +15,19 @@ public abstract class OpInvocable extends Op
     {
     protected MethodTemplate getMethodTemplate(Frame frame, TypeCompositionTemplate template, int nMethodValue)
         {
-        MethodTemplate method;
-
         if (nMethodValue >= 0)
             {
-            ObjectHandle hMethod = frame.f_ahVars[nMethodValue]; // xMethod instance
-            method = null; // TODO
+            MethodHandle hMethod = (MethodHandle) frame.f_ahVars[nMethodValue];
+
+            // TODO: same as Function; how to do it right?
+            return hMethod.m_method;
             }
         else
             {
             MethodConstant constMethod =
                     frame.f_context.f_constantPool.getMethodConstant(-nMethodValue);
             // TODO parameters, returns
-            method = template.getMethodTemplate(constMethod.getName(), "");
+            return template.getMethodTemplate(constMethod.getName(), "");
             }
-        return method;
         }
     }

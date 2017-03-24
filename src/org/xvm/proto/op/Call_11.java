@@ -5,7 +5,7 @@ import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 
 /**
- * CALL_11 op-code.
+ * CALL_11 rvalue-function, rvalue-param, lvalue-return
  *
  * @author gg 2017.03.08
  */

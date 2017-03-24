@@ -7,7 +7,7 @@ import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.Utils;
 
 /**
- * CALL_00 op-code.
+ * CALL_00 rvalue-function.
  *
  * @author gg 2017.03.08
  */

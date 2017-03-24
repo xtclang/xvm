@@ -47,7 +47,7 @@ public class xMethod
     public static class MethodHandle
             extends ObjectHandle
         {
-        protected MethodTemplate m_method;
+        public MethodTemplate m_method;
 
         protected MethodHandle(TypeComposition clazz)
             {

@@ -41,7 +41,7 @@ public class Set extends Op
 
         if (method == null)
             {
-            hTarget.f_clazz.f_template.setProperty(hTarget, sProperty, hArg);
+            template.setProperty(hTarget, sProperty, hArg);
             }
         else
             {

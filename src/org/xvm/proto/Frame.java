@@ -64,23 +64,25 @@ public class Frame
                 iPC = op.process(this, iPC);
                 }
 
-            switch (iPC)
+            if (iPC < 0)
                 {
-                case Op.RETURN_EXCEPTION:
-                    assert m_hException != null;
-
-                    iPC = findGuard(m_hException);
-                    if (iPC >= 0)
-                        {
-                        // go to the handler
-                        continue;
-                        }
-
-                    // not handled by this frame
-                    return m_hException;
-
-                case Op.RETURN_NORMAL:
+                if (iPC == Op.RETURN_NORMAL)
+                    {
                     return null;
+                    }
+
+                // Op.RETURN_EXCEPTION:
+                assert m_hException != null;
+
+                iPC = findGuard(m_hException);
+                if (iPC >= 0)
+                    {
+                    // handled exception; go to the handler
+                    continue;
+                    }
+
+                // not handled by this frame
+                return m_hException;
                 }
             }
         }
@@ -97,6 +99,7 @@ public class Frame
             for (int iGuard = f_aiRegister[Op.I_GUARD]; iGuard >= 0; iGuard--)
                 {
                 Guard guard = aGuard[iGuard];
+
                 for (int iCatch = 0, c = guard.f_anClassConstId.length; iCatch < c; iCatch++)
                     {
                     TypeComposition clzCatch = resolveClass(guard.f_anClassConstId[iCatch]);
@@ -104,6 +107,7 @@ public class Frame
                         {
                         int nScope = guard.f_nScope - 1;
                         f_aiRegister[Op.I_SCOPE] = nScope;
+                        f_aiRegister[Op.I_GUARD] = iGuard - 1;
 
                         int nNextVar = f_anNextVar[nScope]++;
                         f_ahVars[nNextVar] = hException;

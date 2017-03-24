@@ -4,7 +4,7 @@ import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 
 /**
- * CALL_01 op-code.
+ * CALL_01 rvalue-function, lvalue-return  ; TODO: return value can be into the next available register
  *
  * @author gg 2017.03.08
  */

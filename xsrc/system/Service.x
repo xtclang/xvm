@@ -53,7 +53,7 @@
  *   other services, and its resources can easily be reclaimed; however, since it is likely that
  *   other services still hold proxy references to the service, subsequent invocation through those
  *   proxies will result in an exception.
- * * The runtime itself may provide events to the service, enqueing them so that if the service is
+ * * The runtime itself may provide events to the service, enqueuing them so that if the service is
  *   running, the event does not interrupt the execution. These events will be automatically
  *   processed by a service when it is not busy processing, such as when the current service
  *   invocation returns, calls {@link yield}, or even potentially when another service is invoked by
@@ -117,7 +117,7 @@ interface Service(String? serviceName)
      *
      * This method is intended primarily to be used from within the service, so that the running
      * code can control the conditions on which it can be arbitrarily interleaved with other threads
-     * of execution in the event that an opportunity arrises to process requests from the service's
+     * of execution in the event that an opportunity arises to process requests from the service's
      * backlog.
      *
      * An attempt to set this from outside of the service when the service is processing will likely

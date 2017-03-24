@@ -148,6 +148,8 @@ public class xTest extends xObject
         //      Int of = s.indexOf("World");    // VAR x:Int (#2)
         //                                      // IVAR x:String @"world" (#3)
         //                                      // INVOKE_11 #1 -@"x:String#indexOf" #3 #2
+        //      Int len = s.length;             // VAR x:Int (#3)
+        //                                      // GET #1 -@"x:String#length$get" #3
         //      return of;                      // RETURN_01 #2
         //      }
         mt.m_aop = new Op[]
@@ -232,7 +234,7 @@ public class xTest extends xObject
         //          }                           // 7) EXIT
         //                                      //
         //      throwing();                     // 8) CALL_00 -@"x:Test#throwing"
-        //      return;
+        //      return;                         // 9) RETURN
         //      }
         ft.m_aop = new Op[]
             {
@@ -245,6 +247,7 @@ public class xTest extends xObject
             new Enter(),
             new X_Print(0),
             new Exit(),
+            new Call_00(-adapter.getMethodConstId("x:Test", "throwing")),
             new Return(),
             };
         ft.m_cVars = 1;

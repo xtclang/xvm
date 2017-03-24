@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * EXIT op-code.
+ * EXIT (variable scope end)
  *
  * @author gg 2017.03.08
  */

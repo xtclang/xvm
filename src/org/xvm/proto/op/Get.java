@@ -8,7 +8,7 @@ import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 /**
- * Get op-code.
+ * GET rvalue-target, CONST_PROPERTY, lvalue
  *
  * @author gg 2017.03.08
  */
@@ -38,15 +38,24 @@ public class Get extends Op
 
         if (method == null)
             {
-            frame.f_ahVars[f_nRetValue] = hTarget.f_clazz.f_template.getProperty(hTarget, sProperty);
+            frame.f_ahVars[f_nRetValue] = template.getProperty(hTarget, sProperty);
             }
         else
             {
             // almost identical to the second part of Invoke_01
             ObjectHandle[] ahRet = new ObjectHandle[1];
-            ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
+            ObjectHandle hException;
 
-            ObjectHandle hException = new Frame(frame.f_context, frame, hTarget, method, ahVars, ahRet).execute();
+            if (method.isNative())
+                {
+                hException = template.invokeNative01(frame, hTarget, method, ahRet);
+                }
+            else
+                {
+                ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
+
+                hException = new Frame(frame.f_context, frame, hTarget, method, ahVars, ahRet).execute();
+                }
 
             if (hException == null)
                 {

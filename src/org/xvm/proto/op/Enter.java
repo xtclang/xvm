@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * ENTER op-code.
+ * ENTER (variable scope begin)
  *
  * @author gg 2017.03.08
  */

@@ -117,7 +117,7 @@ public abstract class TypeCompositionTemplate
 
         m_mapProperties.put(sPropertyName, templateP);
 
-        templateP.f_propertyTypeName.ensureDependents(this);
+        templateP.f_typeName.ensureDependents(this);
 
         return templateP;
         }
@@ -363,7 +363,7 @@ public abstract class TypeCompositionTemplate
         sb.append("\nProperties:");
         m_mapProperties.values().forEach(
                 template -> sb.append("\n  ")
-                        .append(template.f_propertyTypeName)
+                        .append(template.f_typeName)
                         .append(' ').append(template.f_sPropertyName));
 
         sb.append("\nMethods:");
@@ -397,17 +397,25 @@ public abstract class TypeCompositionTemplate
 
     // -----
 
+
+    public abstract class FunctionContainer
+        {
+        public TypeCompositionTemplate getClazzTemplate()
+            {
+            return TypeCompositionTemplate.this;
+            }
+        }
+
     public abstract class MethodContainer
             extends FunctionContainer
         {
-        Map<String, MultiMethodTemplate> m_mapMultiMethods;
         }
 
     public class PropertyTemplate
             extends MethodContainer
         {
         public final String f_sPropertyName;
-        public final TypeName f_propertyTypeName;
+        public final TypeName f_typeName;
 
         private boolean m_fReadOnly = false;
         public Access m_accessGet = Access.Public;
@@ -422,7 +430,7 @@ public abstract class TypeCompositionTemplate
         public PropertyTemplate(String sName, String sType)
             {
             f_sPropertyName = sName;
-            f_propertyTypeName = TypeName.parseName(sType);
+            f_typeName = TypeName.parseName(sType);
             }
 
         public void makeReadOnly()
@@ -443,18 +451,22 @@ public abstract class TypeCompositionTemplate
             {
             m_accessSet = access;
             }
-        }
 
-    public abstract class FunctionContainer
-        {
-        Map<String, MultiFunctionTemplate> m_mapMultiFunctions; // names could be synthetic for anonymous functions
-
-        public TypeCompositionTemplate getClazzTemplate()
+        public MethodTemplate addGet()
             {
-            return TypeCompositionTemplate.this;
+            return m_templateGet = addMethod("get", VOID, new String[] {f_typeName.toString()});
+            }
+
+        public MethodTemplate addSet()
+            {
+            return m_templateSet = addMethod("set", new String[] {f_typeName.toString()}, VOID);
+            }
+
+        public MethodTemplate addMethod(String sMethodName, String[] asArgTypes, String[] asRetTypes)
+            {
+            return addMethodTemplate(f_sPropertyName + '$' + sMethodName, asArgTypes, asRetTypes);
             }
         }
-
     public abstract class InvocationTemplate
             extends FunctionContainer
         {

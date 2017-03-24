@@ -2,6 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xObject;
+import org.xvm.proto.template.xService;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -42,6 +43,7 @@ public class Container
 
         types.addTemplate(new xObject(types));
         types.addTemplate(new xException(types));
+        types.addTemplate(new xService(types));
 
         // container.m_typeSet.dumpTemplates();
         }

@@ -31,7 +31,10 @@ public class xString
 
         //     Int length.get()
 
-        addPropertyTemplate("length", "x:Int").makeReadOnly();
+        PropertyTemplate pt;
+        pt = addPropertyTemplate("length", "x:Int");
+        pt.makeReadOnly();
+        pt.addGet().markNative();
 
         addMethodTemplate("indexOf", STRING, INT).markNative();
         addMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
@@ -47,7 +50,14 @@ public class xString
     @Override
     public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
-        return null;
+        StringHandle hThis = (StringHandle) hTarget;
+        switch (method.f_sName)
+            {
+            case "length$get": // length.get()
+                ahReturn[0] = xInt64.makeHandle(hThis.m_sValue.length());
+                return null;
+            }
+        throw new IllegalStateException("Unknown method: " + method);
         }
 
     @Override

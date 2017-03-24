@@ -24,6 +24,9 @@ public class TypeSet
     // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
     private Map<Integer, TypeComposition> m_mapConstCompositions = new TreeMap<>(Integer::compare);
 
+    // missing templates
+    private Set<String> m_setMisses = new HashSet<>();
+
     TypeSet(ConstantPoolAdapter adapter)
         {
         f_constantPool = adapter;
@@ -90,14 +93,11 @@ public class TypeSet
         template.initDeclared();
         }
 
-
     public TypeCompositionTemplate ensureTemplate(String sName)
         {
         TypeCompositionTemplate template = getTemplate(sName);
         if (template == null && !m_setMisses.contains(sName))
             {
-            System.out.println(sName);
-
             String sAlias = m_mapAliases.get(sName);
             if (sAlias != null)
                 {
@@ -135,9 +135,6 @@ public class TypeSet
             }
         return template;
         }
-
-    // TODO: temporary
-    private Set<String> m_setMisses = new HashSet<>();
 
     public void addAlias(String sAlias, String sRealName)
         {
