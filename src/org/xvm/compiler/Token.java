@@ -215,6 +215,7 @@ public class Token
         NOT         ("!"            ),
         COMP_EQ     ("=="           ),
         COMP_NEQ    ("!="           ),
+        COMP_ORD    ("<=>"          ),
         COMP_LT     ("<"            ),
         COMP_LTEQ   ("<="           ),
         COMP_GT     (">"            ),
