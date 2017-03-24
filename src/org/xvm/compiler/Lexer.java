@@ -266,6 +266,7 @@ public class Lexer
                             return new Token(lInitPos, source.getPosition(), Id.SHL);
 
                         case '=':
+                            // TODO spaceship
                             return new Token(lInitPos, source.getPosition(), Id.COMP_LTEQ);
                         }
                     source.rewind();

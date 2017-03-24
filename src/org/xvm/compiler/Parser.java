@@ -63,6 +63,7 @@ public class Parser
         // during parsing
         m_fDone = true;
 
+        configureDefaults();
         parseImports();
 
         // TODO
@@ -160,6 +161,14 @@ public class Parser
 
         // TODO log an error
         throw new CompilerException("expected Token with Id=" + id);
+        }
+
+
+    // -----
+
+    void configureDefaults()
+        {
+
         }
 
 
