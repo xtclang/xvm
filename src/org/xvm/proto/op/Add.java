@@ -1,24 +1,25 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 /**
- * INVOKE_11 rvalue-target, rvalue-method, rvalue-param, lvalue-return
+ * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T
  *
  * @author gg 2017.03.08
  */
 public class Add extends OpInvocable
     {
     private final int f_nTargetValue;
-    private final int f_nMethodValue;
     private final int f_nArgValue;
     private final int f_nRetValue;
 
-    public Add(int nTarget, int nMethod, int nArg, int nRet)
+    public Add(int nTarget, int nArg, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nMethodValue = nMethod;
         f_nArgValue = nArg;
         f_nRetValue = nRet;
         }
@@ -30,23 +31,11 @@ public class Add extends OpInvocable
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        MethodTemplate method = getMethodTemplate(frame, template, f_nMethodValue);
-
-        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVars[f_nArgValue] : resolveConstArgument(frame, 0, f_nArgValue);
+        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVars[f_nArgValue] : resolveConst(frame, hTarget.f_clazz, f_nArgValue);
         ObjectHandle[] ahRet = new ObjectHandle[1];
         ObjectHandle hException;
 
-        if (method.isNative())
-            {
-            hException = template.invokeNative11(frame, hTarget, method, hArg, ahRet);
-            }
-        else
-            {
-            ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
-            ahVars[1] = hArg;
-
-            hException = new Frame(frame.f_context, frame, hTarget, method, ahVars, ahRet).execute();
-            }
+        hException = template.invokeAdd(frame, hTarget, hArg, ahRet);
 
         if (hException == null)
             {
