@@ -237,8 +237,7 @@ public abstract class TypeCompositionTemplate
 
     // invokeNative with 0 arguments and 0 return values
     // @return - an exception handle
-    public ObjectHandle invokeNative00(Frame frame, ObjectHandle hTarget,
-                                  MethodTemplate method, ObjectHandle[] ahReturn)
+    public ObjectHandle invokeNative00(Frame frame, ObjectHandle hTarget, MethodTemplate method)
         {
         // many classes don't have native methods
         throw new IllegalStateException();
@@ -256,6 +255,13 @@ public abstract class TypeCompositionTemplate
     // @return - an exception handle
     public ObjectHandle invokeNative11(Frame frame, ObjectHandle hTarget,
                                        MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
+        {
+        throw new IllegalStateException();
+        }
+
+    // Add operation
+    // @return - an exception handle
+    public ObjectHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
         throw new IllegalStateException();
         }

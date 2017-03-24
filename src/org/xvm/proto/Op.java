@@ -33,6 +33,11 @@ public abstract class Op
         return frame.f_context.f_heap.resolveConstHandle(typeName, -nValue);
         }
 
+    protected ObjectHandle resolveConst(Frame frame, TypeComposition clazz, int nValue)
+        {
+        return frame.f_context.f_heap.resolveConstHandle(clazz, -nValue);
+        }
+
     protected TypeComposition resolveClassTemplate(Frame frame, int nClassConstId)
         {
         return frame.resolveClass(nClassConstId);

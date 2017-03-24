@@ -4,7 +4,7 @@ import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 /**
- * INVOKE_11 op-code.
+ * INVOKE_11 rvalue-target, rvalue-method, rvalue-param, lvalue-return
  *
  * @author gg 2017.03.08
  */

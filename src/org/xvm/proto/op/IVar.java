@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * IVAR op-code.
+ * IVAR CONST_CLASS ; (next register is an initialized anonymous variable)
  *
  * @author gg 2017.03.08
  */

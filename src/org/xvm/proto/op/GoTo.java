@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * GOTO op-code.
+ * GOTO abs-addr
  *
  * @author gg 2017.03.08
  */

@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * RETURN_1 op-code.
+ * THROW rvalue
  *
  * @author gg 2017.03.08
  */

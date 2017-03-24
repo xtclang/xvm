@@ -84,7 +84,7 @@ public class xTest extends xObject
             new X_Print(-adapter.ensureConstantValue("### test1 ###")),
             new IVar(adapter.getClassConstId("x:String"), adapter.ensureConstantValue("Hello world!")), // #0
             new X_Print(0),
-            new Return(),
+            new Return_0(),
             };
         ft.m_cVars = 1;
         }
@@ -104,7 +104,7 @@ public class xTest extends xObject
             new Var(adapter.getClassConstId("x:Int64")), // #0
             new Call_01(-adapter.getMethodConstId("x:Test", "getIntValue"), 0),
             new X_Print(0),
-            new Return(),
+            new Return_0(),
             };
         ft.m_cVars = 1;
         }
@@ -133,7 +133,7 @@ public class xTest extends xObject
             {
             new X_Print(-adapter.ensureConstantValue("### finally ###")),
             new X_Print(0),
-            new Return(),
+            new Return_0(),
             };
         ft.m_cVars = 2;
         }
@@ -148,9 +148,10 @@ public class xTest extends xObject
         //      Int of = s.indexOf("World");    // VAR x:Int (#2)
         //                                      // IVAR x:String @"world" (#3)
         //                                      // INVOKE_11 #1 -@"x:String#indexOf" #3 #2
-        //      Int len = s.length;             // VAR x:Int (#3)
-        //                                      // GET #1 -@"x:String#length$get" #3
-        //      return of;                      // RETURN_01 #2
+        //      return of + s.length;           // VAR x:Int (#4)
+        //                                      // GET #1 -@"x:String#length" #4
+        //                                      // ADD #4 #2 #4
+        //                                      // RETURN_01 #4
         //      }
         mt.m_aop = new Op[]
             {
@@ -160,9 +161,12 @@ public class xTest extends xObject
             new Var(adapter.getClassConstId("x:Int64")), // #2
             new IVar(adapter.getClassConstId("x:String"), adapter.ensureConstantValue("world")), // #3
             new Invoke_11(1, -adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
-            new Return_1(2),
+            new Var(adapter.getClassConstId("x:Int64")), // #4
+            new Get(1, adapter.ensureConstantValue("length"), 4),
+            new Add(4, 2, 4),
+            new Return_1(4),
             };
-        mt.m_cVars = 4;
+        mt.m_cVars = 5;
         }
 
     private void add_test3(ConstantPoolAdapter adapter)
@@ -190,7 +194,7 @@ public class xTest extends xObject
             new Invoke_01(0, -adapter.getMethodConstId("x:Test", "method1"), 2),
             new X_Print(-adapter.ensureConstantValue("### test3 ###")),
             new X_Print(2),
-            new Return(),
+            new Return_0(),
             };
         ft.m_cVars = 3;
         }
@@ -248,7 +252,7 @@ public class xTest extends xObject
             new X_Print(0),
             new Exit(),
             new Call_00(-adapter.getMethodConstId("x:Test", "throwing")),
-            new Return(),
+            new Return_0(),
             };
         ft.m_cVars = 1;
         ft.m_cScopes = 2;

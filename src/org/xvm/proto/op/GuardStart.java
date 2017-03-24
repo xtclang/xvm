@@ -5,7 +5,7 @@ import org.xvm.proto.Frame.Guard;
 import org.xvm.proto.Op;
 
 /**
- * GUARD op-code.
+ * GUARD #handlers:(CONST_CLASS, rel_addr)  ; ENTER
  *
  * @author gg 2017.03.08
  */

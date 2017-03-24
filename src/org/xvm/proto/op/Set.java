@@ -8,7 +8,7 @@ import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 /**
- * Get op-code.
+ * Get rvalue-target, CONST_PROPERTY, rvalue
  *
  * @author gg 2017.03.08
  */

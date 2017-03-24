@@ -4,20 +4,22 @@ import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 /**
- * INVOKE_01 rvalue-target, rvalue-method
+ * INVOKE_11 rvalue-target, rvalue-method, rvalue-param, lvalue-return
  *
  * @author gg 2017.03.08
  */
-public class Invoke_01 extends OpInvocable
+public class Add extends OpInvocable
     {
     private final int f_nTargetValue;
     private final int f_nMethodValue;
+    private final int f_nArgValue;
     private final int f_nRetValue;
 
-    public Invoke_01(int nTarget, int nMethod, int nRet)
+    public Add(int nTarget, int nMethod, int nArg, int nRet)
         {
-        f_nMethodValue = nMethod;
         f_nTargetValue = nTarget;
+        f_nMethodValue = nMethod;
+        f_nArgValue = nArg;
         f_nRetValue = nRet;
         }
 
@@ -30,16 +32,18 @@ public class Invoke_01 extends OpInvocable
 
         MethodTemplate method = getMethodTemplate(frame, template, f_nMethodValue);
 
+        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVars[f_nArgValue] : resolveConstArgument(frame, 0, f_nArgValue);
         ObjectHandle[] ahRet = new ObjectHandle[1];
         ObjectHandle hException;
 
         if (method.isNative())
             {
-            hException = template.invokeNative01(frame, hTarget, method, ahRet);
+            hException = template.invokeNative11(frame, hTarget, method, hArg, ahRet);
             }
         else
             {
             ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
+            ahVars[1] = hArg;
 
             hException = new Frame(frame.f_context, frame, hTarget, method, ahVars, ahRet).execute();
             }
@@ -55,4 +59,5 @@ public class Invoke_01 extends OpInvocable
             return RETURN_EXCEPTION;
             }
         }
+
     }

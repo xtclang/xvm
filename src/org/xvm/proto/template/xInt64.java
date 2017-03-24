@@ -3,11 +3,8 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ConstantPool.IntConstant;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -41,6 +38,17 @@ public class xInt64
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
             (((ConstantPool.IntConstant) constant).getValue().getLong())) : null;
+        }
+
+    @Override
+    public ObjectHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+        JavaLong hThat = (JavaLong) hArg;
+
+        // TODO: check overflow?
+        ahReturn[0] = makeHandle(hThis.getValue() + hThat.getValue());
+        return null;
         }
 
     public static xInt64 INSTANCE;

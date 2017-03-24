@@ -4,7 +4,7 @@ import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 
 /**
- * NEW_N op-code.
+ * NEW_N CONST-CONSTRUCT, #params:(rvalue), lvalue-return
  *
  * @author gg 2017.03.08
  */

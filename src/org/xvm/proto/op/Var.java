@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * VAR op-code.
+ * VAR CONST_CLASS  ; (next register is an uninitialized anonymous variable)
  *
  * @author gg 2017.03.08
  */

@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * MOVE op-code.
+ * MOVE lvalue-dest, rvalue-src
  *
  * @author gg 2017.03.08
  */

@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
-import org.xvm.proto.op.Return;
+import org.xvm.proto.op.Return_0;
 import org.xvm.proto.op.Set;
 
 /**
@@ -37,7 +37,7 @@ public class xException
             {
             new Set(0, f_types.f_constantPool.ensureConstantValue("text"), 1),
             new Set(0, f_types.f_constantPool.ensureConstantValue("cause"), 2),
-            new Return(),
+            new Return_0(),
             };
         ct.m_cVars = 3;
         }

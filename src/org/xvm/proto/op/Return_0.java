@@ -4,13 +4,13 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * RETURN op-code.
+ * RETURN_0 ; (no return value)
  *
  * @author gg 2017.03.08
  */
-public class Return extends Op
+public class Return_0 extends Op
     {
-    public Return()
+    public Return_0()
         {
         }
 

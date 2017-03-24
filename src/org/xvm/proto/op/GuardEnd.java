@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * ENDGUARD op-code.
+ * ENDGUARD rel_addr
  *
  * @author gg 2017.03.08
  */

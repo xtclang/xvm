@@ -65,6 +65,13 @@ public class ObjectHeap
             }
         }
 
+    public ObjectHandle resolveConstHandle(TypeComposition clazz, int nValueConstId)
+        {
+        int nClassConstId = f_constantPool.getClassConstId(clazz.f_template.f_sName);
+
+        return resolveConstHandle(nClassConstId, nValueConstId);
+        }
+
     // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
     public ObjectHandle resolveConstHandle(int nClassConstId, int nValueConstId)
         {
