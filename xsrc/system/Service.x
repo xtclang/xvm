@@ -63,16 +63,16 @@
  *     may temporarily suppress these notifications within a {@link CriticalSection}.
  * * * {@code @soft} and {@code @weak} reference-cleared notifications.
  */
-interface Service(String? serviceName)
+interface Service()
     {
     /**
-     * The name assigned to the service. If no name is provided, the name
+     * The name assigned to the service. If this method is not overridden, the name
      * defaults to the name of the service class. This property is intended as a means to help
      * diagnose faults, and to provide runtime manageability information.
      */
     @atomic String serviceName.get()
         {
-        return super() ?: meta.class.to<String>();
+        return meta.class.to<String>();
         }
 
     /**

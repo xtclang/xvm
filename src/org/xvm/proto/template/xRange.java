@@ -18,7 +18,7 @@ public class xRange
     @Override
     public void initDeclared()
         {
-        addImplement("x:Iterable<ElementType>");
+        ensureImplement("x:Iterable<ElementType>");
 
         //    @ro Int size;
         //    Sequence<ElementType> subSequence(Int start, Int end);
@@ -28,6 +28,6 @@ public class xRange
         addPropertyTemplate("size", "x:Int");
         addMethodTemplate("subSequence", new String[]{"x:Int", "x:Int"}, THIS);
         addMethodTemplate("reify", VOID, THIS);
-        addMethodTemplate("iterator", VOID, new String[] {"x:Iterator<ElementType>"});
+        addMethodTemplate("iterator", VOID, new String[]{"x:Iterator<ElementType>"});
         }
     }

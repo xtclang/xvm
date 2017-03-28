@@ -23,10 +23,24 @@ public class xTest extends xObject
     @Override
     public void initDeclared()
         {
-        ConstantPoolAdapter adapter = f_adapter;
-
-        // TypeCompositionTemplate tStruct = f_types.addTemplate();
         addPropertyTemplate("prop1", "x:String");
+
+        addFunctionTemplate("getIntValue", VOID, INT);
+        addFunctionTemplate("getStringValue", VOID, STRING);
+        addFunctionTemplate("test1", VOID, VOID);
+        addFunctionTemplate("test2", VOID, VOID);
+        addFunctionTemplate("construct", new String[]{"x:Test", "x:String"}, new String[]{"x:Function"});
+        addFunctionTemplate("construct:finally", new String[]{"x:Test", "x:String"}, VOID);
+        addMethodTemplate("method1", VOID, INT);
+        addFunctionTemplate("test3", VOID, VOID);
+        addFunctionTemplate("throwing", VOID, INT);
+        addFunctionTemplate("test4", VOID, VOID);
+        }
+
+    @Override
+    public void initCode()
+        {
+        ConstantPoolAdapter adapter = f_adapter;
 
         add_getIntValue(adapter);
         add_getStringValue(adapter);
@@ -45,7 +59,7 @@ public class xTest extends xObject
 
     private void add_getIntValue(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ft = addFunctionTemplate("getIntValue", VOID, INT);
+        FunctionTemplate ft = getFunctionTemplate("getIntValue", VOID, INT);
         //  static Int getIntValue()
         //      {
         //      return 99;                      // RETURN_1 -@99
@@ -59,7 +73,7 @@ public class xTest extends xObject
 
     private void add_getStringValue(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ft = addFunctionTemplate("getStringValue", VOID, STRING);
+        FunctionTemplate ft = getFunctionTemplate("getStringValue", VOID, STRING);
         //  static String getStringValue()
         //      {
         //      return "Hello World!";          // RETURN_1 -@"Hello World"
@@ -73,7 +87,7 @@ public class xTest extends xObject
 
     private void add_test1(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ft = addFunctionTemplate("test1", VOID, VOID);
+        FunctionTemplate ft = getFunctionTemplate("test1", VOID, VOID);
         //  static Void test1()
         //      {
         //      String s = "Hello World!";      // IVAR x:String @"Hello World" (#0)
@@ -91,7 +105,7 @@ public class xTest extends xObject
 
     private void add_test2(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ft = addFunctionTemplate("test2", VOID, VOID);
+        FunctionTemplate ft = getFunctionTemplate("test2", VOID, VOID);
         //  static Void test2()
         //      {
         //      Int i = getIntValue();          // VAR x:Int64 (#0)
@@ -111,8 +125,8 @@ public class xTest extends xObject
 
     private void add_construct(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ct = addFunctionTemplate("construct", new String[]{"x:Test", "x:String"}, new String[]{"x:Function"});
-        FunctionTemplate ft = addFunctionTemplate("construct:finally", new String[]{"x:Test", "x:String"}, VOID);
+        FunctionTemplate ct = getFunctionTemplate("construct", new String[]{"x:Test", "x:String"}, new String[]{"x:Function"});
+        FunctionTemplate ft = getFunctionTemplate("construct:finally", new String[]{"x:Test", "x:String"}, VOID);
         // construct xTest(String s)            // #0 = this:struct, #1 = s
         //      {
         //      this.prop1 = s;                 // SET #0, @"prop1" #1
@@ -124,7 +138,7 @@ public class xTest extends xObject
         ct.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureConstantValue("### construct ###")),
-            new Set(0, adapter.ensureConstantValue("prop1"), 1),
+            new Set(0, -adapter.getPropertyConstId("x:Test", "prop1"), 1),
             new Return_1(-adapter.getMethodConstId("x:Test", "construct:finally")),
             };
         ct.m_cVars = 2;
@@ -140,7 +154,7 @@ public class xTest extends xObject
 
     private void add_method1(ConstantPoolAdapter adapter)
         {
-        MethodTemplate mt = addMethodTemplate("method1", VOID, INT);
+        MethodTemplate mt = getMethodTemplate("method1", VOID, INT);
         //  Int method1()                       // #0 = this:private
         //      {
         //      String s = getStringValue();    // VAR x:String (#1)
@@ -162,7 +176,7 @@ public class xTest extends xObject
             new IVar(adapter.getClassConstId("x:String"), adapter.ensureConstantValue("world")), // #3
             new Invoke_11(1, -adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
             new Var(adapter.getClassConstId("x:Int64")), // #4
-            new Get(1, adapter.ensureConstantValue("length"), 4),
+            new Get(1, -adapter.getPropertyConstId("x:String", "length"), 4),
             new Add(4, 2, 4),
             new Return_1(4),
             };
@@ -171,7 +185,7 @@ public class xTest extends xObject
 
     private void add_test3(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ft = addFunctionTemplate("test3", VOID, VOID);
+        FunctionTemplate ft = getFunctionTemplate("test3", VOID, VOID);
         //  static Void test3()
         //      {
         //      Test t = new Test("Hello");     // VAR x:Test (#0)
@@ -188,7 +202,7 @@ public class xTest extends xObject
             new Var(adapter.getClassConstId("x:Test")),     // #0
             new New_1(adapter.getMethodConstId("x:Test", "construct"), -adapter.ensureConstantValue("Hello"), 0),
             new Var(adapter.getClassConstId("x:String")),   // #1
-            new Get(0, adapter.ensureConstantValue("prop1"), 1),
+            new Get(0, -adapter.getPropertyConstId("x:Test", "prop1"), 1),
             new X_Print(1),
             new Var(adapter.getClassConstId("x:Int64")),    // #2
             new Invoke_01(0, -adapter.getMethodConstId("x:Test", "method1"), 2),
@@ -201,7 +215,7 @@ public class xTest extends xObject
 
     private void add_throwing(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ft = addFunctionTemplate("throwing", VOID, INT);
+        FunctionTemplate ft = getFunctionTemplate("throwing", VOID, INT);
         //  static Void throwing()
         //      {
         //      throw new Exception("bye");     // VAR x:Exception (#0)
@@ -223,7 +237,7 @@ public class xTest extends xObject
 
     private void add_test4(ConstantPoolAdapter adapter)
         {
-        FunctionTemplate ft = addFunctionTemplate("test4", VOID, VOID);
+        FunctionTemplate ft = getFunctionTemplate("test4", VOID, VOID);
         // static void test4()
         //      {
         //      try                             // 0) GUARD 1 x:Exception 5 (+5)
@@ -258,31 +272,4 @@ public class xTest extends xObject
         ft.m_cScopes = 2;
         }
 
-    ///////////////////////////////////////
-
-    public static void main(String[] asArg)
-        {
-        Container container = new Container();
-
-        xTest test = new xTest(container.f_types, container.f_constantPoolAdapter);
-
-        container.f_types.addTemplate(test);
-
-        ServiceContext context = container.createContext(test);
-
-        test.forEachFunction(function ->
-            {
-            if (function.f_sName.startsWith("test") && function.m_cArgs == 0)
-                {
-                ObjectHandle[] ahReturn = new ObjectHandle[function.m_cReturns];
-
-                ObjectHandle hException = context.createFrame(null, null,
-                        function, new ObjectHandle[function.m_cVars], ahReturn).execute();
-                if (hException != null)
-                    {
-                    System.out.println("Function " + function.f_sName + " threw unhandled " + hException);
-                    }
-                }
-            });
-        }
     }

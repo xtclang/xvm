@@ -18,7 +18,7 @@ public class xMeta
     @Override
     public void initDeclared()
         {
-        addImplement("x:Referent");
+        ensureImplement("x:Referent");
 
         //    @ro Class class;
         //    @ro Module module;

@@ -25,18 +25,25 @@ public class xException
     @Override
     public void initDeclared()
         {
-        addImplement("x:Const");
+        ensureImplement("x:Const");
 
         // @inject Iterable<StackFrame> stackTrace;
         addPropertyTemplate("text", "x:String");
         addPropertyTemplate("cause", "x:Exception");
         addPropertyTemplate("stackTrace", "x:String"); // TODO: replace "x:String" with "x:Iterable<x:Exception.StackFrame>"
 
-        FunctionTemplate ct = addFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
+        addFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
+        }
+
+    @Override
+    public void initCode()
+        {
+        FunctionTemplate ct = getFunctionTemplate("construct", null);
+
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {
-            new Set(0, f_types.f_constantPool.ensureConstantValue("text"), 1),
-            new Set(0, f_types.f_constantPool.ensureConstantValue("cause"), 2),
+            new Set(0, -f_types.f_constantPool.getPropertyConstId("x:Exception", "text"), 1),
+            new Set(0, -f_types.f_constantPool.getPropertyConstId("x:Exception", "cause"), 2),
             new Return_0(),
             };
         ct.m_cVars = 3;

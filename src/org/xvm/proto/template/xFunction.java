@@ -21,7 +21,7 @@ public class xFunction
     @Override
     public void initDeclared()
         {
-        addImplement("x:Const");
+        ensureImplement("x:Const");
 
         //    Tuple invoke(Tuple args)
         //
@@ -32,7 +32,7 @@ public class xFunction
         addPropertyTemplate("ReturnType", "x:collections.Array<x:Type>");
         addPropertyTemplate("ParamType", "x:collections.Array<x:Type>");
 
-        addMethodTemplate("invoke", new String[] {"x:Tuple"}, new String[] {"x:Tuple"});
+        addMethodTemplate("invoke", new String[]{"x:Tuple"}, new String[]{"x:Tuple"});
         }
 
     @Override

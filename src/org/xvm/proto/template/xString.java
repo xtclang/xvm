@@ -27,17 +27,24 @@ public class xString
     @Override
     public void initDeclared()
         {
-        addImplement("x:Sequence<x:Char>");
+        ensureImplement("x:Sequence<x:Char>");
 
         //     Int length.get()
 
-        PropertyTemplate pt;
-        pt = addPropertyTemplate("length", "x:Int");
-        pt.makeReadOnly();
-        pt.addGet().markNative();
+        addPropertyTemplate("length", "x:Int").makeReadOnly();
 
-        addMethodTemplate("indexOf", STRING, INT).markNative();
-        addMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
+        addMethodTemplate("indexOf", STRING, INT);
+        addMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT);
+        }
+
+    @Override
+    public void initCode()
+        {
+        super.initCode();
+
+        getPropertyTemplate("length").addGet().markNative();
+        getMethodTemplate("indexOf", STRING, INT).markNative();
+        getMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
         }
 
     @Override

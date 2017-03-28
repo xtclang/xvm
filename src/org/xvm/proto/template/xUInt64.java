@@ -19,7 +19,7 @@ public class xUInt64
     @Override
     public void initDeclared()
         {
-        addImplement("x:IntNumber");
+        ensureImplement("x:IntNumber");
 
         }
     }

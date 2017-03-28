@@ -24,7 +24,7 @@ public class xInt64
     @Override
     public void initDeclared()
         {
-        addImplement("x:IntNumber");
+        ensureImplement("x:IntNumber");
         }
 
     @Override

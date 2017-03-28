@@ -2,8 +2,6 @@ package org.xvm.proto.template;
 
 import org.xvm.proto.TypeSet;
 
-import java.lang.annotation.ElementType;
-
 /**
  * TODO:
  *
@@ -40,7 +38,7 @@ public class xInterval
         addMethodTemplate("contains", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
         addMethodTemplate("isContainedBy", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
         addMethodTemplate("overlaps", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
-        addMethodTemplate("intersection", new String[] {"x:Interval<ElementType>"}, new String[] {"x:ConditionalTuple<x:Interval<ElementType>>"});
-        addMethodTemplate("union", new String[] {"x:Interval<ElementType>"}, new String[] {"x:ConditionalTuple<x:Interval<ElementType>>"});
+        addMethodTemplate("intersection", new String[]{"x:Interval<ElementType>"}, new String[]{"x:ConditionalTuple<x:Interval<ElementType>>"});
+        addMethodTemplate("union", new String[]{"x:Interval<ElementType>"}, new String[]{"x:ConditionalTuple<x:Interval<ElementType>>"});
         }
     }

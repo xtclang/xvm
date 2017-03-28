@@ -1,7 +1,5 @@
 package org.xvm.proto.template;
 
-import org.xvm.asm.Constant;
-
 import org.xvm.proto.*;
 
 import java.util.HashMap;
@@ -65,7 +63,7 @@ public class xObject
             {
             if (!pt.isReadOnly())
                 {
-                hThis.m_mapFields.put(pt.f_sPropertyName, null);
+                hThis.m_mapFields.put(pt.f_sName, null);
                 }
             });
         return hThis;

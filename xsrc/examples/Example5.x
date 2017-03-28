@@ -253,3 +253,10 @@ if (s : iter.next())
 function Int (Int) sq = n -> n*n;
 print(sq(5));
 print((function Int (Int)) (n -> n*n) (5));
+
+service MyService
+    {
+    String prop1;
+
+    Void shutdown() {...}
+    }

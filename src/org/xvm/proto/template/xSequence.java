@@ -18,8 +18,8 @@ public class xSequence
     @Override
     public void initDeclared()
         {
-        addImplement("x:UniformIndex<x:Int, ElementType>");
-        addImplement("x:Iterable<ElementType>");
+        ensureImplement("x:UniformIndex<x:Int, ElementType>");
+        ensureImplement("x:Iterable<ElementType>");
 
         //    @ro Int size;
         //    Sequence<ElementType> subSequence(Int start, Int end);
@@ -29,6 +29,6 @@ public class xSequence
         addPropertyTemplate("size", "x:Int");
         addMethodTemplate("subSequence", new String[]{"x:Int", "x:Int"}, THIS);
         addMethodTemplate("reify", VOID, THIS);
-        addMethodTemplate("iterator", VOID, new String[] {"x:Iterator<ElementType>"});
+        addMethodTemplate("iterator", VOID, new String[]{"x:Iterator<ElementType>"});
         }
     }

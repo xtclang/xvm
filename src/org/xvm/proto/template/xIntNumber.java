@@ -19,8 +19,8 @@ public class xIntNumber
     @Override
     public void initDeclared()
         {
-        addImplement("x:Number");
-        addImplement("x:Sequential");
+        ensureImplement("x:Number");
+        ensureImplement("x:Sequential");
 
         //    @op IntNumber increment()
         //    @op IntNumber decrement()
@@ -65,7 +65,7 @@ public class xIntNumber
         addPropertyTemplate("bitCount", "this.Type").makeReadOnly();
         addMethodTemplate("reverseBits", VOID, THIS);
         addMethodTemplate("reverseBytes", VOID, THIS);
-        addMethodTemplate("to", THIS, new String[] {"x:Range<x:Int>"});
+        addMethodTemplate("to", THIS, new String[]{"x:Range<x:Int>"});
         addMethodTemplate("to", new String[]{"x:collections.Array<x:Boolean>"}, new String[]{"x:collections.Array<x:Boolean>"});
         }
     }

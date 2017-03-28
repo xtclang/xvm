@@ -50,7 +50,7 @@ public class xBit
         // addMethodTemplate("to", new String[] {"x:UInt64"}, new String[] {"x:UInt64"});
 
         addMethodTemplate("and", THIS, THIS);
-        addMethodTemplate("or",  THIS, THIS);
+        addMethodTemplate("or", THIS, THIS);
         addMethodTemplate("xor", THIS, THIS);
         addMethodTemplate("not", VOID, THIS);
         }

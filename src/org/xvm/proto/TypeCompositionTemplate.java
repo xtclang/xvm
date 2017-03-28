@@ -15,8 +15,8 @@ import java.util.function.Consumer;
 
 /**
  * TypeCompositionTemplate represents a design unit (e.g. Class, Interface, Mixin, etc) that
- *  * has a well-known name in the type system
- *  * may have a number of formal type parameters
+ *  - has a well-known name in the type system
+ *  - may have a number of formal type parameters
  *
  * @author gg 2017.02.23
  */
@@ -31,7 +31,7 @@ public abstract class TypeCompositionTemplate
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized
 
-    protected TypeCompositionTemplate m_parent;
+    protected boolean m_fResolved;
 
     protected List<TypeName> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
     protected List<String> m_listIncorporate = new LinkedList<>();
@@ -82,30 +82,18 @@ public abstract class TypeCompositionTemplate
         f_shape = shape;
         }
 
-    /**
-     * Initialize properties, methods and functions declared at the "top" layer.
-     */
-    public void initDeclared()
-        {
-        }
-
-    // set the "parent"
-    public void setParent(TypeCompositionTemplate parent)
-        {
-        m_parent = parent;
-        }
-
     // add an "implement"
-    public void addImplement(String sInterface)
+    public void ensureImplement(String sInterface)
         {
         TypeName tnInterface = TypeName.parseName(sInterface);
-        m_listImplement.add(tnInterface);
-
-        f_types.ensureTemplate(tnInterface.getSimpleName());
+        if (m_listImplement.add(tnInterface))
+            {
+            f_types.ensureTemplate(tnInterface.getSimpleName());
+            }
         }
 
     // add an "incorporate"
-    public void addIncorporate(String sInterface)
+    public void ensureIncorporate(String sInterface)
         {
         m_listIncorporate.add(sInterface);
         }
@@ -113,13 +101,18 @@ public abstract class TypeCompositionTemplate
     // add a property
     public PropertyTemplate addPropertyTemplate(String sPropertyName, String sTypeName)
         {
-        PropertyTemplate templateP = new PropertyTemplate(sPropertyName, sTypeName);
+        return m_mapProperties.computeIfAbsent(sPropertyName, sName ->
+            {
+            PropertyTemplate templateP = new PropertyTemplate(sName, sTypeName);
+            templateP.f_typeName.resolve(this);
+            return templateP;
+            });
+        }
 
-        m_mapProperties.put(sPropertyName, templateP);
-
-        templateP.f_typeName.ensureDependents(this);
-
-        return templateP;
+    public PropertyTemplate ensurePropertyTemplate(String sPropertyName, TypeName typeName)
+        {
+        return m_mapProperties.computeIfAbsent(sPropertyName,
+                sName -> new PropertyTemplate(sName, typeName));
         }
 
     public PropertyTemplate getPropertyTemplate(String sPropertyName)
@@ -135,16 +128,29 @@ public abstract class TypeCompositionTemplate
     // add a method
     public MethodTemplate addMethodTemplate(String sMethodName, String[] asArgTypes, String[] asRetTypes)
         {
-        MethodTemplate templateM = new MethodTemplate(sMethodName, asArgTypes, asRetTypes);
-
-        m_mapMultiMethods.computeIfAbsent(sMethodName, s -> new MultiMethodTemplate()).
-                add(templateM);
-
-        templateM.ensureDependents(this);
-
-        f_types.f_constantPool.registerInvocable(templateM);
+        MethodTemplate templateM = m_mapMultiMethods.computeIfAbsent(sMethodName, s -> new MultiMethodTemplate()).
+                add(new MethodTemplate(sMethodName, asArgTypes, asRetTypes));
+        templateM.resolveTypes(this);
 
         return templateM;
+        }
+
+    public MethodTemplate ensureMethodTemplate(String sMethodName, TypeName[] atArg, TypeName[] atRet)
+        {
+        return m_mapMultiMethods.computeIfAbsent(sMethodName, s -> new MultiMethodTemplate()).
+                add(new MethodTemplate(sMethodName, atArg, atRet));
+        }
+
+    public MethodTemplate addMethodTemplate(MethodTemplate templateM)
+        {
+        m_mapMultiMethods.computeIfAbsent(templateM.f_sName, s -> new MultiMethodTemplate()).
+                add(templateM);
+        return templateM;
+        }
+
+    public MethodTemplate getMethodTemplate(String sMethodName, String[] asArgTypes, String[] asRetTypes)
+        {
+        return getMethodTemplate(sMethodName, null);
         }
 
     public MethodTemplate getMethodTemplate(String sMethodName, String sSig)
@@ -171,13 +177,15 @@ public abstract class TypeCompositionTemplate
         m_mapMultiFunctions.computeIfAbsent(sFunctionName, s -> new MultiFunctionTemplate()).
                 add(templateF);
 
-        templateF.ensureDependents(this);
-
-        f_types.f_constantPool.registerInvocable(templateF);
+        templateF.resolveTypes(this);
 
         return templateF;
         }
 
+    public FunctionTemplate getFunctionTemplate(String sFunctionName, String[] asArgTypes, String[] asRetTypes)
+        {
+        return getFunctionTemplate(sFunctionName, null);
+        }
     public FunctionTemplate getFunctionTemplate(String sFunctionName, String sSig)
         {
         MultiFunctionTemplate mft = m_mapMultiFunctions.get(sFunctionName);
@@ -193,6 +201,93 @@ public abstract class TypeCompositionTemplate
             mft.m_setInvoke.forEach(consumer::accept);
             }
         }
+
+    /**
+     * Initialize properties, methods and functions declared at the "top" layer.
+     */
+    public void initDeclared()
+        {
+        }
+
+    /**
+     * Resolve the "implements", "extends", "incorporates", "delegates"
+     */
+    public void resolveDependencies()
+        {
+        if (!m_fResolved)
+            {
+            m_fResolved = true;
+
+            if (f_sSuper != null)
+                {
+                f_types.ensureTemplate(f_sSuper).resolveDependencies();
+                }
+
+            resolveImplements();
+
+            resolveExtends();
+
+            resolveDeclared();
+            }
+        }
+
+    protected void resolveImplements()
+        {
+        for (TypeName tnIface : m_listImplement)
+            {
+            TypeCompositionTemplate templateIface = f_types.getTemplate(tnIface.getSimpleName());
+
+            templateIface.forEachProperty(propIface ->
+                    ensurePropertyTemplate(propIface.f_sName, propIface.f_typeName).
+                            resolveFrom(propIface));
+
+            templateIface.forEachMethod(methodIface ->
+                {
+                if (methodIface.m_access == Access.Public)
+                    {
+                    addMethodTemplate(methodIface);
+                    }
+                });
+            }
+        }
+
+    protected void resolveExtends()
+        {
+        if (f_sSuper != null)
+            {
+            TypeCompositionTemplate templateSuper = f_types.ensureTemplate(f_sSuper);
+
+            templateSuper.forEachProperty(propSuper ->
+                    ensurePropertyTemplate(propSuper.f_sName, propSuper.f_typeName).
+                            resolveFrom(propSuper));
+
+            templateSuper.forEachMethod(methodSuper ->
+            {
+            if (methodSuper.m_access != Access.Private)
+                {
+                addMethodTemplate(methodSuper);
+                }
+            });
+            }
+        }
+
+    // declared at this level
+    protected void resolveDeclared()
+        {
+        forEachProperty(prop ->
+                f_types.f_constantPool.registerProperty(this, prop));
+
+        forEachMethod(method ->
+                f_types.f_constantPool.registerInvocable(this, method));
+
+        forEachFunction(function ->
+                f_types.f_constantPool.registerInvocable(this, function));
+        }
+
+    public void initCode()
+        {
+        }
+
 
     // produce a TypeComposition for this template by resolving the generic types
     public TypeComposition resolve(Type[] atGenericActual)
@@ -370,7 +465,7 @@ public abstract class TypeCompositionTemplate
         m_mapProperties.values().forEach(
                 template -> sb.append("\n  ")
                         .append(template.f_typeName)
-                        .append(' ').append(template.f_sPropertyName));
+                        .append(' ').append(template.f_sName));
 
         sb.append("\nMethods:");
         m_mapMultiMethods.values().forEach(
@@ -420,10 +515,11 @@ public abstract class TypeCompositionTemplate
     public class PropertyTemplate
             extends MethodContainer
         {
-        public final String f_sPropertyName;
+        public final String f_sName;
         public final TypeName f_typeName;
 
         private boolean m_fReadOnly = false;
+        private boolean m_fAtomic = false;
         public Access m_accessGet = Access.Public;
         public Access m_accessSet = Access.Public;
 
@@ -435,8 +531,13 @@ public abstract class TypeCompositionTemplate
         // construct a property template
         public PropertyTemplate(String sName, String sType)
             {
-            f_sPropertyName = sName;
-            f_typeName = TypeName.parseName(sType);
+            this(sName, TypeName.parseName(sType));
+            }
+
+        public PropertyTemplate(String sName, TypeName typeName)
+            {
+            f_sName = sName;
+            f_typeName = typeName;
             }
 
         public void makeReadOnly()
@@ -444,15 +545,28 @@ public abstract class TypeCompositionTemplate
             m_fReadOnly = true;
             m_accessSet = null;
             }
+
         public boolean isReadOnly()
             {
             return m_fReadOnly;
+            }
+
+        public void makeAtomic()
+            {
+            m_fAtomic = true;
+            m_accessSet = null;
+            }
+
+        public boolean isAtomic()
+            {
+            return m_fAtomic;
             }
 
         public void setGetAccess(Access access)
             {
             m_accessGet = access;
             }
+
         public void setSetAccess(Access access)
             {
             m_accessSet = access;
@@ -460,19 +574,50 @@ public abstract class TypeCompositionTemplate
 
         public MethodTemplate addGet()
             {
-            return m_templateGet = addMethod("get", VOID, new String[] {f_typeName.toString()});
+            MethodTemplate templateThis = addMethod("get", VOID, new String[]{f_typeName.toString()});
+            templateThis.setSuper(m_templateGet);
+            return m_templateGet = templateThis;
             }
 
         public MethodTemplate addSet()
             {
-            return m_templateSet = addMethod("set", new String[] {f_typeName.toString()}, VOID);
+            MethodTemplate templateThis = addMethod("set", new String[]{f_typeName.toString()}, VOID);
+            templateThis.setSuper(m_templateSet);
+            return m_templateSet = templateThis;
             }
 
         public MethodTemplate addMethod(String sMethodName, String[] asArgTypes, String[] asRetTypes)
             {
-            return addMethodTemplate(f_sPropertyName + '$' + sMethodName, asArgTypes, asRetTypes);
+            return addMethodTemplate(f_sName + '$' + sMethodName, asArgTypes, asRetTypes);
+            }
+
+        public void resolveFrom(PropertyTemplate that)
+            {
+            if (that.m_accessGet != Access.Private)
+                {
+                this.m_accessGet = that.m_accessGet;
+
+                // check for the "super" implementations
+                if (that.m_templateGet != null)
+                    {
+                    this.m_templateGet = addMethodTemplate(that.m_templateGet);
+                    }
+                }
+
+            if (that.m_accessSet != Access.Private)
+                {
+                this.m_accessSet = that.m_accessSet;
+
+                // check for the "super" implementations
+                if (that.m_templateSet != null)
+                    {
+                    this.m_templateSet = addMethodTemplate(that.m_templateSet);
+                    }
+                }
+
             }
         }
+
     public abstract class InvocationTemplate
             extends FunctionContainer
         {
@@ -494,36 +639,30 @@ public abstract class TypeCompositionTemplate
 
         protected InvocationTemplate(String sName, String[] asArgType, String[] asRetType)
             {
-            f_sName = sName;
-
-            TypeName[] aTypes;
-            aTypes = new TypeName[asArgType.length];
-            for (int i = 0; i < aTypes.length; i++)
-                {
-                aTypes[i] = TypeName.parseName(asArgType[i]);
-                }
-            m_argTypeName = aTypes;
-            m_cArgs = aTypes.length;
-
-            aTypes = new TypeName[asRetType.length];
-            for (int i = 0; i < aTypes.length; i++)
-                {
-                aTypes[i] = TypeName.parseName(asRetType[i]);
-                }
-            m_retTypeName = aTypes;
-            m_cReturns = aTypes.length;
+            this(sName, TypeName.parseNames(asArgType), TypeName.parseNames(asRetType));
             }
 
-        protected void ensureDependents(TypeCompositionTemplate template)
+        protected InvocationTemplate(String sName, TypeName[] atArg, TypeName[] atRet)
+            {
+            f_sName = sName;
+
+            m_argTypeName = atArg;
+            m_cArgs = atArg.length;
+
+            m_retTypeName = atRet;
+            m_cReturns = atRet.length;
+            }
+
+        protected void resolveTypes(TypeCompositionTemplate template)
             {
             for (TypeName t : m_argTypeName)
                 {
-                t.ensureDependents(template);
+                t.resolve(template);
                 }
 
             for (TypeName t : m_retTypeName)
                 {
-                t.ensureDependents(template);
+                t.resolve(template);
                 }
             }
 
@@ -553,11 +692,11 @@ public abstract class TypeCompositionTemplate
         {
         Set<T> m_setInvoke = new HashSet<>();
 
-        public void add(T template)
+        public T add(T template)
             {
             m_setInvoke.add(template);
+            return template;
             }
-
         }
     public class MultiMethodTemplate  extends MultiInvocationTemplate<MethodTemplate>
         {
@@ -570,9 +709,21 @@ public abstract class TypeCompositionTemplate
     public class MethodTemplate
             extends InvocationTemplate
         {
+        MethodTemplate m_methodSuper;
+
         MethodTemplate(String sName, String[] asArgType, String[] asRetType)
             {
             super(sName, asArgType, asRetType);
+            }
+
+        MethodTemplate(String sName, TypeName[] atArg, TypeName[] atRet)
+            {
+            super(sName, atArg, atRet);
+            }
+
+        public void setSuper(MethodTemplate methodSuper)
+            {
+            m_methodSuper = methodSuper;
             }
         }
 

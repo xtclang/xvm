@@ -26,8 +26,8 @@ public class xConst
 
         f_types.addTemplate(tctHashable);
 
-        addImplement("x:collections.Hashable");
-        addImplement("x:Orderable");
+        ensureImplement("x:collections.Hashable");
+        ensureImplement("x:Orderable");
 
         //    static Ordered compare(Const value1, Const value2)
         //
@@ -49,7 +49,7 @@ public class xConst
         // an override
         addMethodTemplate("to", STRING, STRING);
 
-        addMethodTemplate("to", new String[] {"x:collections.Array<x:Byte>"}, new String[] {"x:collections.Array<x:Byte>"});
+        addMethodTemplate("to", new String[]{"x:collections.Array<x:Byte>"}, new String[]{"x:collections.Array<x:Byte>"});
 
         // TODO: @LazyRef Int hash.get()
         }

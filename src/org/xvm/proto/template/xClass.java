@@ -44,9 +44,9 @@ public class xClass
         addPropertyTemplate("methods", "x:Map<x:String,x:MultiMethod").makeReadOnly();
         addPropertyTemplate("properties", "x:Map<x:String,x:Property").makeReadOnly();
         addPropertyTemplate("functions", "x:Map<x:String,x:MultiFunction>").makeReadOnly();
-        addMethodTemplate("implements", new String[] {"x:Class"}, BOOLEAN); // non-"virtual"
-        addMethodTemplate("extends", new String[] {"x:Class"}, BOOLEAN); // non-"virtual"
-        addMethodTemplate("incorporates", new String[] {"x:Class"}, BOOLEAN); // non-"virtual"
+        addMethodTemplate("implements", new String[]{"x:Class"}, BOOLEAN); // non-"virtual"
+        addMethodTemplate("extends", new String[]{"x:Class"}, BOOLEAN); // non-"virtual"
+        addMethodTemplate("incorporates", new String[]{"x:Class"}, BOOLEAN); // non-"virtual"
         addPropertyTemplate("isService", "x:Boolean").makeReadOnly();
         addPropertyTemplate("isConst", "x:Boolean").makeReadOnly();
         addPropertyTemplate("singleton", "x:ConditionalTuple<ClassType>").makeReadOnly();

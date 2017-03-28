@@ -19,7 +19,9 @@ public interface TypeName
 
     String getSimpleName();
 
-    void ensureDependents(TypeCompositionTemplate template);
+    // resolve the elements of the type for the specified template
+    // (some elements may stay "formal" (unresolved)
+    void resolve(TypeCompositionTemplate template);
 
     static String format(TypeName[] at)
         {
@@ -173,6 +175,17 @@ public interface TypeName
             }
         }
 
+    static TypeName[] parseNames(String[] asName)
+        {
+        TypeName[] aTypes;
+        aTypes = new TypeName[asName.length];
+        for (int i = 0; i < aTypes.length; i++)
+            {
+            aTypes[i] = TypeName.parseName(asName[i]);
+            }
+        return aTypes;
+        }
+
     // --- implementing classes ----
 
     // e.g. "x:String" or "ElementType"
@@ -193,7 +206,7 @@ public interface TypeName
             }
 
         @Override
-        public void ensureDependents(TypeCompositionTemplate template)
+        public void resolve(TypeCompositionTemplate template)
             {
             if (m_sName.equals("this.Type"))
                 {
@@ -237,11 +250,11 @@ public interface TypeName
             }
 
         @Override
-        public void ensureDependents(TypeCompositionTemplate template)
+        public void resolve(TypeCompositionTemplate template)
             {
             for (TypeName t : m_aTypeName)
                 {
-                t.ensureDependents(template);
+                t.resolve(template);
                 }
             }
 
@@ -270,13 +283,13 @@ public interface TypeName
             }
 
         @Override
-        public void ensureDependents(TypeCompositionTemplate template)
+        public void resolve(TypeCompositionTemplate template)
             {
             m_sActualName = template.f_types.replaceAlias(m_sActualName);
 
             template.f_types.ensureTemplate(m_sActualName);
 
-            super.ensureDependents(template);
+            super.resolve(template);
             }
 
         @Override

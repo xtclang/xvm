@@ -40,7 +40,7 @@ public class xOrdered
         addMethodTemplate("to", new String[]{"x:UInt"}, new String[]{"x:UInt"});
 
         addMethodTemplate("and", BOOLEAN, BOOLEAN);
-        addMethodTemplate("or",  BOOLEAN, BOOLEAN);
+        addMethodTemplate("or", BOOLEAN, BOOLEAN);
         addMethodTemplate("xor", BOOLEAN, BOOLEAN);
         addMethodTemplate("not", VOID, BOOLEAN);
         }

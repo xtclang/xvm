@@ -91,6 +91,8 @@ public class TypeSet
         f_constantPool.registerClass(template);
 
         template.initDeclared();
+        template.resolveDependencies();
+        template.initCode();
         }
 
     public TypeCompositionTemplate ensureTemplate(String sName)

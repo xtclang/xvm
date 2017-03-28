@@ -1,9 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.Op;
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
@@ -12,7 +9,7 @@ import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
  *
  * @author gg 2017.03.08
  */
-public class Get extends Op
+public class Get extends OpInvocable
     {
     private final int f_nTargetValue;
     private final int f_nPropConstId;
@@ -29,16 +26,16 @@ public class Get extends Op
     public int process(Frame frame, int iPC)
         {
         ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
-        String sProperty = frame.f_context.f_heap.getPropertyName(f_nPropConstId); // TODO: cache this
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        PropertyTemplate property = template.getPropertyTemplate(sProperty);
+        PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
+
         MethodTemplate method = property.m_templateGet;
 
         if (method == null)
             {
-            frame.f_ahVars[f_nRetValue] = template.getProperty(hTarget, sProperty);
+            frame.f_ahVars[f_nRetValue] = template.getProperty(hTarget, property.f_sName);
             }
         else
             {

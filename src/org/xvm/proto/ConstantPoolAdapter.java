@@ -9,6 +9,7 @@ import org.xvm.asm.ConstantPool.PackageConstant;
 import org.xvm.asm.ConstantPool.PropertyConstant;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
+import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -60,12 +61,24 @@ public class ConstantPoolAdapter
         m_mapClasses.put(sClassName, constClass.getPosition());
         }
 
-    public void registerInvocable(InvocationTemplate method)
+    public void registerProperty(TypeCompositionTemplate templateClazz, PropertyTemplate templateProperty)
+        {
+        String sName    = templateProperty.f_sName;
+        String sClzName = templateClazz.f_sName;
+
+        ClassConstant constClass = getClassConstant(getClassConstId(sClzName));
+        ClassConstant constType  = getClassConstant(getClassConstId("x:Object")); // TODO
+        PropertyConstant constProperty = m_constantPool.ensurePropertyConstant(constClass, constType, sName);
+
+        m_mapProperties.put(sClzName + '#' + sName, constProperty.getPosition());
+        }
+
+    public void registerInvocable(TypeCompositionTemplate templateClazz, InvocationTemplate templateMethod)
         {
         // TODO: params; returns
-        String sName = method.f_sName;
-        TypeCompositionTemplate templateClazz = method.getClazzTemplate();
+        String sName    = templateMethod.f_sName;
         String sClzName = templateClazz.f_sName;
+
         ClassConstant constClass = getClassConstant(getClassConstId(sClzName));
 
         MethodConstant constMethod = m_constantPool.ensureMethodConstant(constClass, sName, null, null, null);

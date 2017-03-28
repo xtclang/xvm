@@ -1,9 +1,6 @@
 package org.xvm.proto.template;
 
-import com.sun.xml.internal.bind.v2.model.core.Ref;
 import org.xvm.proto.TypeSet;
-
-import java.lang.annotation.ElementType;
 
 /**
  * TODO:
@@ -15,7 +12,7 @@ public class xArray
     {
     public xArray(TypeSet types)
         {
-        super(types, "x:collections.Array<ElementType>", "x.Object", Shape.Class);
+        super(types, "x:collections.Array<ElementType>", "x:Object", Shape.Class);
         }
 
     // subclassing
@@ -27,7 +24,7 @@ public class xArray
     @Override
     public void initDeclared()
         {
-        addImplement("x:Sequence<ElementType>");
+        ensureImplement("x:Sequence<ElementType>");
 
         //    construct Array(Int capacity)
         //    construct Array(Int capacity, function ElementType(Int) supply)
@@ -59,7 +56,7 @@ public class xArray
         addMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, THIS);
         addMethodTemplate("reify", VOID, THIS);
         addMethodTemplate("add", THIS, THIS);
-        addMethodTemplate("replace", new String[]{"x:Int","ElementType"}, THIS);
+        addMethodTemplate("replace", new String[]{"x:Int", "ElementType"}, THIS);
 
         addFunctionTemplate("compare", new String[] {"this.Type", "this.Type"}, new String[] {"x:Ordered"});
 

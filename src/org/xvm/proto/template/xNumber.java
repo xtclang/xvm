@@ -50,7 +50,7 @@ public class xNumber
         addMethodTemplate("div", THIS, THIS);
         addMethodTemplate("mod", THIS, THIS);
         addMethodTemplate("mod", THIS, THIS);
-        addMethodTemplate("divmod", new String[] {"this.Type", "this.Type"}, new String[] {"this.Type", "this.Type"});
+        addMethodTemplate("divmod", new String[]{"this.Type", "this.Type"}, new String[]{"this.Type", "this.Type"});
         addMethodTemplate("remainder", THIS, THIS);
         addMethodTemplate("abs", VOID, THIS);
         addMethodTemplate("neg", VOID, THIS);

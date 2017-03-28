@@ -18,7 +18,7 @@ public class xSequential
     @Override
     public void initDeclared()
         {
-        addImplement("x:Orderable");
+        ensureImplement("x:Orderable");
 
         //    conditional Sequential prev();
         //    conditional Sequential next();

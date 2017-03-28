@@ -1,9 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.Op;
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
@@ -12,7 +9,7 @@ import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
  *
  * @author gg 2017.03.08
  */
-public class Set extends Op
+public class Set extends OpInvocable
     {
     private final int f_nTargetValue;
     private final int f_nPropConstId;
@@ -29,11 +26,9 @@ public class Set extends Op
     public int process(Frame frame, int iPC)
         {
         ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
-        String sProperty = frame.f_context.f_heap.getPropertyName(f_nPropConstId); // TODO: cache this
-
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        PropertyTemplate property = template.getPropertyTemplate(sProperty);
+        PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
         MethodTemplate method = property.m_templateSet;
 
         ObjectHandle hArg = f_nValue >= 0 ? frame.f_ahVars[f_nValue] :
@@ -41,7 +36,7 @@ public class Set extends Op
 
         if (method == null)
             {
-            template.setProperty(hTarget, sProperty, hArg);
+            template.setProperty(hTarget, property.f_sName, hArg);
             }
         else
             {

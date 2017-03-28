@@ -1,5 +1,8 @@
 package org.xvm.proto.template;
 
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -42,6 +45,41 @@ public class xService
         //    Void registerShuttingDownNotification(function Void notify());
         //    Void registerUnhandledExceptionNotification(function Void notify(Exception));
 
-        addPropertyTemplate("serviceName", "x:String").makeReadOnly();
+        PropertyTemplate pt;
+
+        pt = addPropertyTemplate("serviceName", "x:String");
+        pt.makeReadOnly();
+        pt.makeAtomic();
+        }
+
+    @Override
+    public void initCode()
+        {
+        super.initCode();
+
+        getPropertyTemplate("serviceName").addGet().markNative();
+        }
+
+    @Override
+    public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
+        {
+        ServiceHandle  hThis = (ServiceHandle) hTarget;
+        switch (method.f_sName)
+            {
+            case "serviceName$get":
+                ahReturn[0] = xString.makeHandle(hThis.m_sName);
+                return null;
+            }
+        throw new IllegalStateException("Unknown method: " + method);
+        }
+
+    public static class ServiceHandle
+            extends GenericHandle
+        {
+        protected String m_sName;
+        public ServiceHandle(TypeComposition clazz)
+            {
+            super(clazz);
+            }
         }
     }

@@ -902,10 +902,11 @@ public abstract class StructureContainer
             Map<String, PropertyStructure> mapProperty = ensurePropertyMap();
             assert !mapProperty.containsKey(sName);
 
-            final ConstantPool pool = getConstantPool();
-            final Constant constthis = getIdentityConstant();
-            final ConstantPool.PropertyConstant constproperty = pool.ensurePropertyConstant(constthis, sName);
-            final PropertyStructure structproperty = new PropertyStructure(this, constproperty);
+            ConstantPool pool = getConstantPool();
+            Constant constThis = getIdentityConstant();
+            ConstantPool.ClassConstant constType = null;
+            ConstantPool.PropertyConstant constproperty = pool.ensurePropertyConstant(constThis, constType, sName);
+            PropertyStructure structproperty = new PropertyStructure(this, constproperty);
 
             mapProperty.put(sName, structproperty);
             return structproperty;

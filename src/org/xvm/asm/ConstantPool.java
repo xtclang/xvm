@@ -447,11 +447,11 @@ public class ConstantPool
         }
 
     public PropertyConstant ensurePropertyConstant(Constant constParent,
-            // TODO ClassConstant constType,
+            ClassConstant constType,
             String sName)
         {
         // TODO
-        return null;
+        return (PropertyConstant) register(new PropertyConstant(this, constParent, constType, sName));
         }
 
     /**

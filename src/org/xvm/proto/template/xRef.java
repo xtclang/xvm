@@ -18,7 +18,7 @@ public class xRef
     @Override
     public void initDeclared()
         {
-        addImplement("x:Referent");
+        ensureImplement("x:Referent");
 
         //    @ro Boolean assigned;
         //    conditional RefType peek()
