@@ -137,8 +137,6 @@ public class Lexer
             case ']':
                 return new Token(lInitPos, source.getPosition(), Id.R_SQUARE);
 
-            case ':':
-                return new Token(lInitPos, source.getPosition(), Id.COLON);
             case ';':
                 return new Token(lInitPos, source.getPosition(), Id.SEMICOLON);
             case ',':
@@ -162,8 +160,32 @@ public class Lexer
                 return new Token(lInitPos, source.getPosition(), Id.DOT);
             case '@':
                 return new Token(lInitPos, source.getPosition(), Id.AT);
+
             case '?':
+                if (source.hasNext())
+                    {
+                    switch (nextChar())
+                        {
+                        case '.':
+                            return new Token(lInitPos, source.getPosition(), Id.COND_THEN);
+
+                        case ':':
+                            return new Token(lInitPos, source.getPosition(), Id.COND_ELSE);
+                        }
+                    source.rewind();
+                    }
                 return new Token(lInitPos, source.getPosition(), Id.COND);
+
+            case ':':
+                if (source.hasNext())
+                    {
+                    if (nextChar() == '{')
+                        {
+                        // TODO - literal
+                        }
+                    source.rewind();
+                    }
+                return new Token(lInitPos, source.getPosition(), Id.COLON);
 
             case '+':
                 if (source.hasNext())
@@ -174,7 +196,7 @@ public class Lexer
                             return new Token(lInitPos, source.getPosition(), Id.INC);
 
                         case '=':
-                            return new Token(lInitPos, source.getPosition(), Id.ADD_MOV);
+                            return new Token(lInitPos, source.getPosition(), Id.ADD_ASN);
 
                         case '0': case '1': case '2': case '3': case '4':
                         case '5': case '6': case '7': case '8': case '9':
@@ -196,7 +218,7 @@ public class Lexer
                             return new Token(lInitPos, source.getPosition(), Id.DEC);
 
                         case '=':
-                            return new Token(lInitPos, source.getPosition(), Id.SUB_MOV);
+                            return new Token(lInitPos, source.getPosition(), Id.SUB_ASN);
 
                         case '0': case '1': case '2': case '3': case '4':
                         case '5': case '6': case '7': case '8': case '9':
@@ -214,7 +236,7 @@ public class Lexer
                     {
                     if (nextChar() == '=')
                         {
-                        return new Token(lInitPos, source.getPosition(), Id.MUL_MOV);
+                        return new Token(lInitPos, source.getPosition(), Id.MUL_ASN);
                         }
                     source.rewind();
                     }
@@ -232,14 +254,14 @@ public class Lexer
                             return eatEnclosedComment(lInitPos);
 
                         case '=':
-                            return new Token(lInitPos, source.getPosition(), Id.DIV_MOV);
+                            return new Token(lInitPos, source.getPosition(), Id.DIV_ASN);
 
                         case '%':
                             if (source.hasNext())
                                 {
                                 if (nextChar() == '=')
                                     {
-                                    return new Token(lInitPos, source.getPosition(), Id.DIVMOD_MOV);
+                                    return new Token(lInitPos, source.getPosition(), Id.DIVMOD_ASN);
                                     }
                                 source.rewind();
                                 }
@@ -259,14 +281,21 @@ public class Lexer
                                 {
                                 if (nextChar() == '=')
                                     {
-                                    return new Token(lInitPos, source.getPosition(), Id.SHL_MOV);
+                                    return new Token(lInitPos, source.getPosition(), Id.SHL_ASN);
                                     }
                                 source.rewind();
                                 }
                             return new Token(lInitPos, source.getPosition(), Id.SHL);
 
                         case '=':
-                            // TODO spaceship
+                            if (source.hasNext())
+                                {
+                                if (nextChar() == '>')
+                                    {
+                                    return new Token(lInitPos, source.getPosition(), Id.COMP_ORD);
+                                    }
+                                source.rewind();
+                                }
                             return new Token(lInitPos, source.getPosition(), Id.COMP_LTEQ);
                         }
                     source.rewind();
@@ -288,14 +317,14 @@ public class Lexer
                                             {
                                             if (nextChar() == '=')
                                                 {
-                                                return new Token(lInitPos, source.getPosition(), Id.USHR_MOV);
+                                                return new Token(lInitPos, source.getPosition(), Id.USHR_ASN);
                                                 }
                                             source.rewind();
                                             }
                                         return new Token(lInitPos, source.getPosition(), Id.USHR);
 
                                     case '=':
-                                        return new Token(lInitPos, source.getPosition(), Id.SHR_MOV);
+                                        return new Token(lInitPos, source.getPosition(), Id.SHR_ASN);
                                     }
                                 source.rewind();
                                 }
@@ -317,7 +346,7 @@ public class Lexer
                             return new Token(lInitPos, source.getPosition(), Id.COND_AND);
 
                         case '=':
-                            return new Token(lInitPos, source.getPosition(), Id.BIT_AND_MOV);
+                            return new Token(lInitPos, source.getPosition(), Id.BIT_AND_ASN);
                         }
                     source.rewind();
                     }
@@ -332,7 +361,7 @@ public class Lexer
                             return new Token(lInitPos, source.getPosition(), Id.COND_OR);
 
                         case '=':
-                            return new Token(lInitPos, source.getPosition(), Id.BIT_OR_MOV);
+                            return new Token(lInitPos, source.getPosition(), Id.BIT_OR_ASN);
                         }
                     source.rewind();
                     }
@@ -347,14 +376,14 @@ public class Lexer
                         }
                     source.rewind();
                     }
-                return new Token(lInitPos, source.getPosition(), Id.MOV);
+                return new Token(lInitPos, source.getPosition(), Id.ASN);
 
             case '%':
                 if (source.hasNext())
                     {
                     if (nextChar() == '=')
                         {
-                        return new Token(lInitPos, source.getPosition(), Id.MOD_MOV);
+                        return new Token(lInitPos, source.getPosition(), Id.MOD_ASN);
                         }
                     source.rewind();
                     }
@@ -376,7 +405,7 @@ public class Lexer
                     {
                     if (nextChar() == '=')
                         {
-                        return new Token(lInitPos, source.getPosition(), Id.BIT_XOR_MOV);
+                        return new Token(lInitPos, source.getPosition(), Id.BIT_XOR_ASN);
                         }
                     source.rewind();
                     }
@@ -389,6 +418,10 @@ public class Lexer
             case '5': case '6': case '7': case '8': case '9':
                 source.rewind();
                 return eatNumericLiteral();
+
+            case '\"':
+                source.rewind();
+                return eatStringLiteral();
 
             default:
                 if (!isIdentifierStart(chInit))
@@ -424,6 +457,106 @@ public class Lexer
                         : new Token(lInitPos, source.getPosition(), id); 
                 }
             }
+        }
+
+    /**
+     * Eat a string literal.
+     *
+     * @return a string literal as a token
+     */
+    protected Token eatStringLiteral()
+        {
+        final Source source = m_source;
+
+        // skip opening quote
+        final long lPosStart = source.getPosition();
+        source.next();
+
+        StringBuilder sb = new StringBuilder();
+        Appending: while (true)
+            {
+            if (source.hasNext())
+                {
+                char ch = source.next();
+                switch (ch)
+                    {
+                    case '\"':
+                        break Appending;
+
+                    case '\\':
+                        // process escaped char
+                        switch (ch = source.next())
+                            {
+                            case '\r':
+                            case '\n':
+                                // log error: newline in string
+                                source.rewind();
+                                m_errorListener.log(Severity.ERROR, STRING_NO_TERM, null,
+                                        source, lPosStart, source.getPosition());
+                                // assume it wasn't supposed to be an escape
+                                sb.append('\\');
+                                break Appending;
+
+                            case '\\':
+                                sb.append('\\');
+                                break;
+                            case '\"':
+                                sb.append('\"');
+                                break;
+                            case 'b':
+                                sb.append('\b');
+                                break;
+                            case 'f':
+                                sb.append('\f');
+                                break;
+                            case 'n':
+                                sb.append('\n');
+                                break;
+                            case 'r':
+                                sb.append('\r');
+                                break;
+                            case 't':
+                                sb.append('\t');
+                                break;
+
+                            default:
+                                // log error: bad escape
+                                long lPosEscEnd = source.getPosition();
+                                source.rewind();
+                                source.rewind();
+                                m_errorListener.log(Severity.ERROR, STRING_BAD_ESC, null,
+                                        source, source.getPosition(), lPosEscEnd);
+                                source.setPosition(lPosEscEnd);
+
+                                // assume it wasn't supposed to be an escape:
+                                // append both the escape char and the escaped char
+                                sb.append('\\')
+                                  .append(ch);
+                                break;
+                            }
+                        break;
+
+                    case '\r':
+                    case '\n':
+                        // log error: newline in string
+                        source.rewind();
+                        m_errorListener.log(Severity.ERROR, STRING_NO_TERM, null,
+                                source, lPosStart, source.getPosition());
+                        break Appending;
+
+                    default:
+                        break;
+                    }
+                }
+            else
+                {
+                // log error: unterminated string
+                m_errorListener.log(Severity.ERROR, STRING_NO_TERM, null,
+                        source, lPosStart, source.getPosition());
+                }
+            }
+
+        return new Token(lPosStart, source.getPosition(), Id.LIT_STRING, sb.toString());
         }
 
     /**
@@ -1165,7 +1298,15 @@ public class Lexer
     /**
      * Number format exception.
      */
-    public static final String ILLEGAL_NUMBER       = "LEXER-03";
+    public static final String ILLEGAL_NUMBER       = "LEXER-04";
+    /**
+     * An illegal character literal.
+     */
+    public static final String STRING_NO_TERM       = "LEXER-05";
+    /**
+     * An illegal character literal.
+     */
+    public static final String STRING_BAD_ESC       = "LEXER-06";
 
 
     // ----- data members ------------------------------------------------------

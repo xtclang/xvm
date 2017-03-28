@@ -89,6 +89,21 @@ public class Token
         return m_oValue;
         }
 
+    public Token getContextSensitiveKeyword()
+        {
+        if (m_id != Id.IDENTIFIER)
+            {
+            throw new IllegalStateException("not an identifier! (" + toString() + ")");
+            }
+
+        Id id = Id.valueByContextSensitiveText((String) getValue());
+        if (id == null)
+            {
+            throw new IllegalStateException("missing context sensitive keyword for: " + getValue());
+            }
+
+        return new Token(m_lStartPos, m_lEndPos, id);
+        }
 
     // ----- Object methods ----------------------------------------------------
 
@@ -178,6 +193,8 @@ public class Token
         DOTDOT      (".."           ),
         AT          ("@"            ),
         COND        ("?"            ),
+        COND_THEN   ("?."           ),
+        COND_ELSE   ("?:"           ),
         L_PAREN     ("("            ),
         R_PAREN     (")"            ),
         L_CURLY     ("{"            ),
@@ -197,19 +214,19 @@ public class Token
         BIT_OR      ("|"            ),
         BIT_XOR     ("^"            ),
         BIT_NOT     ("~"            ),
-        MOV         ("="            ),
-        ADD_MOV     ("+="           ),
-        SUB_MOV     ("-="           ),
-        MUL_MOV     ("*="           ),
-        DIV_MOV     ("/="           ),
-        MOD_MOV     ("%="           ),
-        DIVMOD_MOV  ("/%="          ),
-        SHL_MOV     ("<<="          ),
-        SHR_MOV     (">>="          ),
-        USHR_MOV    (">>>="         ),
-        BIT_AND_MOV ("&="           ),
-        BIT_OR_MOV  ("|="           ),
-        BIT_XOR_MOV ("^="           ),
+        ASN         ("="            ),
+        ADD_ASN     ("+="           ),
+        SUB_ASN     ("-="           ),
+        MUL_ASN     ("*="           ),
+        DIV_ASN     ("/="           ),
+        MOD_ASN     ("%="           ),
+        DIVMOD_ASN  ("/%="          ),
+        SHL_ASN     ("<<="          ),
+        SHR_ASN     (">>="          ),
+        USHR_ASN    (">>>="         ),
+        BIT_AND_ASN ("&="           ),
+        BIT_OR_ASN  ("|="           ),
+        BIT_XOR_ASN ("^="           ),
         COND_AND    ("&&"           ),
         COND_OR     ("||"           ),
         NOT         ("!"            ),
@@ -222,44 +239,51 @@ public class Token
         COMP_GTEQ   (">="           ),
         INC         ("++"           ),
         DEC         ("--"           ),
-        PUBLIC      ("public"       ),
-        PRIVATE     ("private"      ),
-        PROTECTED   ("protected"    ),
+        ALLOW       ("allow"        , true),
+        AS          ("as"           , true),
+        ASSERT      ("assert"       ),
+        AVOID       ("avoid"        , true),
+        BREAK       ("break"        ),
+        CASE        ("case"         ),
+        CATCH       ("catch"        ),
+        CLASS       ("class"        ),
+        CONST       ("const"        ),
+        CONSTRUCT   ("construct"    ),
+        CONTINUE    ("continue"     ),
+        DEFAULT     ("default"      ),
+        DELEGATES   ("delegates"    ),
+        DO          ("do"           ),
+        ELSE        ("else"         ),
+        ENUM        ("enum"         ),
+        EXTENDS     ("extends"      ),
+        FUNCTION    ("function"     ),
+        IF          ("if"           ),
+        IMMUTABLE   ("immutable"    ),
+        IMPLEMENTS  ("implements"   ),
+        IMPORT      ("import"       ),
+        INCORPORATES("incorporates" ),
+        INTERFACE   ("interface"    ),
+        INTO        ("into"         , true),
+        MIXIN       ("mixin"        ),
         MODULE      ("module"       ),
         PACKAGE     ("package"      ),
-        CLASS       ("class"        ),
-        INTERFACE   ("interface"    ),
-        TRAIT       ("trait"        ),
-        MIXIN       ("mixin"        ),
-        CONST       ("const"        ),
-        ENUM        ("enum"         ),
-        SERVICE     ("service"      ),
-        EXTENDS     ("extends"      ),
-        IMPLEMENTS  ("implements"   ),
-        INCORPORATES("incorporates" ),
-        INTO        ("into"         ),
-        IMPORT      ("import"       ),
-        EMBED       ("embed"        ),
-        THIS        ("this"         ),
-        SUPER       ("super"        ),
-        USING       ("using"        ),
-        TRY         ("try"          ),
-        CATCH       ("catch"        ),
-        THROW       ("throw"        ),
-        IF          ("if"           ),
-        ELSE        ("else"         ),
-        DO          ("do"           ),
-        WHILE       ("while"        ),
-        SWITCH      ("switch"       ),
-        CASE        ("case"         ),
-        DEFAULT     ("default"      ),
-        BREAK       ("break"        ),
-        CONTINUE    ("continue"     ),
+        PREFER      ("prefer"       , true),
+        PRIVATE     ("private"      ),
+        PROTECTED   ("protected"    ),
+        PUBLIC      ("public"       ),
         RETURN      ("return"       ),
-        FUNCTION    ("function"     ),
-        CONSTRUCT   ("construct"    ),
-        IMMUTABLE   ("immutable"    ),
+        SERVICE     ("service"      ),
+        SUPER       ("super"        ),
         STATIC      ("static"       ),
+        SWITCH      ("switch"       ),
+        THIS        ("this"         ),
+        THROW       ("throw"        ),
+        TODO        ("TODO"         ),
+        TRAIT       ("trait"        ),
+        TRY         ("try"          ),
+        TYPEDEF     ("typedef"      ),
+        USING       ("using"        ),
+        WHILE       ("while"        ),
         IDENTIFIER  (null           ),
         EOL_COMMENT (null           ),
         ENC_COMMENT (null           ),
@@ -276,9 +300,19 @@ public class Token
          */
         Id(final String sText)
             {
-            TEXT = sText;
+            this(sText, false);
             }
 
+        /**
+         * Constructor.
+         *
+         * @param sText  a textual representation of the token, or null
+         */
+        Id(final String sText, boolean fContextSensitive)
+            {
+            TEXT = sText;
+            this.ContextSensitive = fContextSensitive;
+            }
         /**
          * Look up an Id enum by its ordinal.
          *
@@ -292,7 +326,6 @@ public class Token
             }
 
         /**
-         * 
          * Look up an Id enum by its {@link #TEXT}.
          * 
          * @param sText  the textual representation of the Id
@@ -306,14 +339,32 @@ public class Token
             }
 
         /**
+         * Look up an Id enum by its {@link #TEXT}, including context-sensitive keywords.
+         *
+         * @param sText  the textual representation of the Id
+         *
+         * @return an instance of Id, or null if there is no matching
+         *         {@link #TEXT}
+         */
+        public static Id valueByContextSensitiveText(String sText)
+            {
+            return ALL_KEYWORDS.get(sText);
+            }
+
+        /**
          * All of the Format enums.
          */
         private static final Id[] IDs = Id.values();
 
         /**
-         * String representations of tokens that have constant representations.
+         * String representations of tokens that have constant representations, excluding context-
+         * sensitive keywords.
          */
         private static final Map<String, Id> KEYWORDS = new HashMap<>();
+        /**
+         * String representations of all tokens that have constant representations.
+         */
+        private static final Map<String, Id> ALL_KEYWORDS = new HashMap<>();
         static
             {
             for (Id id : IDs)
@@ -321,7 +372,11 @@ public class Token
                 String sText = id.TEXT;
                 if (sText != null)
                     {
-                    KEYWORDS.put(sText, id);
+                    ALL_KEYWORDS.put(sText, id);
+                    if (!id.ContextSensitive)
+                        {
+                        KEYWORDS.put(sText, id);
+                        }
                     }
                 }
             }
@@ -331,6 +386,12 @@ public class Token
          * textual representation; otherwise null.
          */
         final public String TEXT;
+
+        /**
+         * True if the token is context-sensitive, i.e. if it is not always a
+         * reserved word.
+         */
+        final boolean ContextSensitive;
         }
 
 

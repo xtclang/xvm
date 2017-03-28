@@ -197,37 +197,61 @@ how do you say:
 *
 --
 
-module.x
-  A
-  B
-  C
+module.x:
 
-package.x
-  P
-  D
-  Q
+    A
+    module m
+        {
+        B
+        C
+        }
 
-MyClass.x
-  X
-  Y
-  Z
+package.x:
+
+
+    P
+    package p
+        {
+        D
+        Q
+        }
+
+MyClass.x:
+
+    X
+    class c
+        {
+        Y
+        Z
+        }
 
 same as:
 module.x
-  A
-  B
-  C
-    {
-    P
-    D
-    Q
-      {
-      X
-      Y
-      Z
-      }
-    }
 
+    A
+    module m
+        {
+        B
+        C
+        { // begin package.x insertion:
+        P
+        package p
+            {
+            D
+            Q
+            { // begin MyClass.x insertion:
+            X
+            class c
+                {
+                Y
+                Z
+                }
+            } // end MyClass.x insertion:
+            }
+        } // end package.x insertion:
+        }
+
+--
 
 // what if?
 
@@ -248,3 +272,140 @@ class Employee
         }
 
     }
+
+--
+
+// ?
+
+1) ? : ternary operator
+
+2) ?. operator (with optional trailing ':')
+
+a?.b();
+if (a != null) { a.b(); }
+
+x = a?.b?.c?.d : e;
+// translates to:
+x = a != null && a.b != null && a.b.c != null ? a.b.c.d : e;
+
+3) ?: elvis operator
+  - applies to T? type (Nullable or T)
+  - if not null, then use the T value, otherwise use the following expr of type T
+
+String? s = foo();
+print(s);   => "null" or "hello"
+conditional String sc = foo();
+print(sc);   => "(false)" or "(true, 'hello')"
+
+String s2 = s ?: "hello";
+String s2 = sc ?: "hello";
+
+if (sc?)
+    {
+    String? sc3 = sc;
+    String? sc4 = (true, sc); 
+    String? sc5 = false; 
+    String? sc6 = true;
+    }
+    
+x = a.b ?: c;
+// translates to:
+x = a.b != null ? a.b : c;
+// and has to work the same as:
+x = a.b? : c;
+
+4) ? operator
+  - applies to T? type (Nullable or T)
+  - produces a "conditional T" return, i.e. produces a boolean and a T
+
+if (a?) {..}
+// translates to:
+if (a != null) {..}
+
+<T> conditional T optionalToConditional(T? value)
+    {
+    return value?  ;
+    }
+
+// composite example ..
+
+x = a?.b ?: c;
+// translates to:
+x = a != null && a.b != null ? a.b : c;
+
+
+Boolean s2 = sc ?: true;
+
+if (sc?)
+    {
+    Boolean? sc3 = sc;
+    Boolean? sc4 = (true, sc); 
+    Boolean? sc5 = false; 
+    Boolean? sc6 = true;
+    }
+
+//
+// first with string
+//
+
+// current version:
+String? foo()
+    {
+    return null;
+    return "hello";
+    }
+
+// current version:
+conditional String foo()
+    {
+    return false;
+    return true, "hello";
+    }
+
+// new version:
+String? foo()
+    {
+    return false;
+    // this has to work ...
+    return true, "hello";
+
+    // is this allowed?
+    return "hello";
+    }
+
+//
+// now with boolean
+//
+
+// current version:
+Boolean? foo()
+    {
+    return null;
+    return false;
+    return true;
+    }
+
+// current version:
+conditional Boolean foo()
+    {
+    return false;
+    return true, false;
+    return true, true;
+    }
+
+// new version:
+Boolean? foo()
+    {
+    // this would be like "conditional false"?
+    return false;
+
+    // this has to work ...
+    return true, false;
+    return true, true;
+    }
+
+
+//  "colon works"
+Int? i = conditionalfoo();
+if (Int j : i) {...}
+print(i);
