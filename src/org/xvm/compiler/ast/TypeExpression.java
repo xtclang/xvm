@@ -15,16 +15,22 @@ import java.util.List;
 public class TypeExpression
         extends Expression
     {
-    public TypeExpression(List<Token> names, List<Parameter> params)
+    public TypeExpression(Token immutable, List<Token> names, List<Parameter> params)
         {
-        this.names  = names;
-        this.params = params;
+        this.immutable = immutable;
+        this.names     = names;
+        this.params    = params;
         }
 
     @Override
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
+
+        if (immutable != null)
+            {
+            sb.append("immutable ");
+            }
 
         boolean first = true;
         for (Token name : names)
@@ -54,7 +60,7 @@ public class TypeExpression
                     {
                     sb.append(", ");
                     }
-                sb.append(param);
+                sb.append(param.toTypeParamString());
                 }
             sb.append('>');
             }
@@ -62,6 +68,7 @@ public class TypeExpression
         return sb.toString();
         }
 
+    public final Token immutable;
     public final List<Token> names;
     public final List<Parameter> params;
     }

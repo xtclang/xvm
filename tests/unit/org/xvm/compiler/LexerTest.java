@@ -97,6 +97,13 @@ public class LexerTest
         lexit(source);
         }
 
+    @Test
+    public void testStrings()
+        {
+        Source source = new Source("module Test {String s = \"hello world's!\"; Char ch = 'x';}");
+        lexit(source);
+        }
+
     static void lexit(Source source)
         {
         ErrorList errlist = new ErrorList(5);

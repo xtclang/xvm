@@ -41,9 +41,23 @@ public class ParserTest
         }
 
     @Test
-    public void testSimple()
+    public void testSimpleModule()
         {
         Source source = new Source("module Test {}");
+        parse(source);
+        }
+
+    @Test
+    public void testSimpleInterface()
+        {
+        Source source = new Source("interface SortedMap extends Map {}");
+        parse(source);
+        }
+
+    @Test
+    public void testSimpleDelegates()
+        {
+        Source source = new Source("class DependentFutureRef delegates Ref(value) {}");
         parse(source);
         }
 

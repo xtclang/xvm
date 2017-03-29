@@ -545,6 +545,7 @@ public class Lexer
                         break Appending;
 
                     default:
+                        sb.append(ch);
                         break;
                     }
                 }

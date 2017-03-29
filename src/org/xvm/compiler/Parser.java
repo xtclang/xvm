@@ -399,10 +399,11 @@ public class Parser
             }
         else
             {
-            // TODO for now, just parse "name.name.name<param extends type, param extends type>"
+            // TODO for now, just parse "immutable name.name.name<param extends type, param extends type>"
+            Token immutable = match(Id.IMMUTABLE);
             List<Token> names = parseName();
             List<Parameter> params = parseTypeParams();
-            return new TypeExpression(names, params);
+            return new TypeExpression(immutable, names, params);
             }
         }
 
@@ -425,7 +426,7 @@ public class Parser
      */
     List<Token> parseName()
         {
-        List<Token> names = null;
+        List<Token> names = new ArrayList<>();
         do
             {
             names.add(expect(Id.IDENTIFIER));
@@ -653,13 +654,14 @@ public class Parser
             return current();
             }
 
-        if (m_token.getId() == Id.IDENTIFIER && id.ContextSensitive && m_token.getValue().equals(id.TEXT))
+        final Token token = m_token;
+        if (token.getId() == Id.IDENTIFIER && id.ContextSensitive && token.getValue().equals(id.TEXT))
             {
             // advance to the next token
             next();
 
             // return the previously "current" token
-            return m_token.getContextSensitiveKeyword();
+            return token.getContextSensitiveKeyword();
             }
 
         return null;
