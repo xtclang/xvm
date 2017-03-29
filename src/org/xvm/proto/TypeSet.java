@@ -152,20 +152,15 @@ public class TypeSet
     // ----- TypeCompositions -----
 
 
-    public TypeComposition getConstComposition(int nConstId)
-        {
-        return m_mapConstCompositions.get(nConstId);
-        }
-
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
     public TypeComposition ensureConstComposition(int nClassConstId)
         {
-        TypeComposition typeComposition = getConstComposition(nClassConstId);
+        TypeComposition typeComposition = m_mapConstCompositions.get(nClassConstId);
         if (typeComposition == null)
             {
             ClassConstant classConstant = f_constantPool.getClassConstant(nClassConstId);   // must exist
 
-            // TODO: combination types (String?)
+            // TODO: combination types (String|Runnable)
             String sTemplate = ConstantPoolAdapter.getClassName(classConstant);
             TypeCompositionTemplate template = ensureTemplate(sTemplate);
 

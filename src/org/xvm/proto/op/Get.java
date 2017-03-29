@@ -40,18 +40,23 @@ public class Get extends OpInvocable
         else
             {
             // almost identical to the second part of Invoke_01
-            ObjectHandle[] ahRet = new ObjectHandle[1];
+            ObjectHandle[] ahRet;
             ObjectHandle hException;
 
             if (method.isNative())
                 {
+                ahRet = new ObjectHandle[1];
                 hException = template.invokeNative01(frame, hTarget, method, ahRet);
                 }
             else
                 {
                 ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
 
-                hException = new Frame(frame.f_context, frame, hTarget, method, ahVars, ahRet).execute();
+                Frame frameNew = new Frame(frame.f_context, frame, hTarget, method, ahVars);
+
+                hException = frameNew.execute();
+
+                ahRet = frameNew.f_ahReturns;
                 }
 
             if (hException == null)

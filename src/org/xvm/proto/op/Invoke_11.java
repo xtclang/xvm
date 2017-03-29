@@ -32,12 +32,15 @@ public class Invoke_11 extends OpInvocable
 
         MethodTemplate method = getMethodTemplate(frame, template, f_nMethodValue);
 
-        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVars[f_nArgValue] : resolveConstArgument(frame, 0, f_nArgValue);
-        ObjectHandle[] ahRet = new ObjectHandle[1];
+        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVars[f_nArgValue] :
+                resolveConst(frame, method.m_argTypeName[0], f_nArgValue);
+
+        ObjectHandle[] ahRet;
         ObjectHandle hException;
 
         if (method.isNative())
             {
+            ahRet = new ObjectHandle[1];
             hException = template.invokeNative11(frame, hTarget, method, hArg, ahRet);
             }
         else
@@ -45,7 +48,9 @@ public class Invoke_11 extends OpInvocable
             ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
             ahVars[1] = hArg;
 
-            hException = new Frame(frame.f_context, frame, hTarget, method, ahVars, ahRet).execute();
+            Frame frameNew = new Frame(frame.f_context, frame, hTarget, method, ahVars);
+            hException = frameNew.execute();
+            ahRet = frameNew.f_ahReturns;
             }
 
         if (hException == null)

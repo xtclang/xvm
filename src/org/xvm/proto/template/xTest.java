@@ -11,13 +11,11 @@ import org.xvm.proto.op.*;
  */
 public class xTest extends xObject
     {
-    private final ConstantPoolAdapter f_adapter;
+    public ConstantPoolAdapter m_adapter;
 
-    public xTest(TypeSet types, ConstantPoolAdapter adapter)
+    public xTest(TypeSet types)
         {
         super(types, "x:Test", "x:Object", Shape.Class);
-
-        f_adapter = adapter;
         }
 
     @Override
@@ -31,16 +29,17 @@ public class xTest extends xObject
         addFunctionTemplate("test2", VOID, VOID);
         addFunctionTemplate("construct", new String[]{"x:Test", "x:String"}, new String[]{"x:Function"});
         addFunctionTemplate("construct:finally", new String[]{"x:Test", "x:String"}, VOID);
-        addMethodTemplate("method1", VOID, INT);
         addFunctionTemplate("test3", VOID, VOID);
         addFunctionTemplate("throwing", VOID, INT);
         addFunctionTemplate("test4", VOID, VOID);
+
+        addMethodTemplate("method1", VOID, INT);
         }
 
     @Override
     public void initCode()
         {
-        ConstantPoolAdapter adapter = f_adapter;
+        ConstantPoolAdapter adapter = m_adapter;
 
         add_getIntValue(adapter);
         add_getStringValue(adapter);
@@ -95,7 +94,6 @@ public class xTest extends xObject
         //      }                               // RETURN
         ft.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### test1 ###")),
             new IVar(adapter.getClassConstId("x:String"), adapter.ensureConstantValue("Hello world!")), // #0
             new X_Print(0),
             new Return_0(),
@@ -114,7 +112,6 @@ public class xTest extends xObject
         //      }                               // RETURN
         ft.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### test2 ###")),
             new Var(adapter.getClassConstId("x:Int64")), // #0
             new Call_01(-adapter.getMethodConstId("x:Test", "getIntValue"), 0),
             new X_Print(0),
@@ -137,7 +134,7 @@ public class xTest extends xObject
         //      }                               // RETURN
         ct.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### construct ###")),
+            new X_Print(-adapter.ensureConstantValue("### in constructor: Test ###")),
             new Set(0, -adapter.getPropertyConstId("x:Test", "prop1"), 1),
             new Return_1(-adapter.getMethodConstId("x:Test", "construct:finally")),
             };
@@ -169,7 +166,7 @@ public class xTest extends xObject
         //      }
         mt.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### method1 ###")),
+            new X_Print(-adapter.ensureConstantValue("### in method1@Test ###")),
             new Var(adapter.getClassConstId("x:String")), // #1
             new Call_01(-adapter.getMethodConstId("x:Test", "getStringValue"), 1), // should be FunctionConstId
             new Var(adapter.getClassConstId("x:Int64")), // #2
@@ -206,7 +203,7 @@ public class xTest extends xObject
             new X_Print(1),
             new Var(adapter.getClassConstId("x:Int64")),    // #2
             new Invoke_01(0, -adapter.getMethodConstId("x:Test", "method1"), 2),
-            new X_Print(-adapter.ensureConstantValue("### test3 ###")),
+            new X_Print(-adapter.ensureConstantValue("### finished test3 ###")),
             new X_Print(2),
             new Return_0(),
             };
@@ -256,7 +253,6 @@ public class xTest extends xObject
         //      }
         ft.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### test4 ###")),
             new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+5}),
             new IVar(adapter.getClassConstId("x:Boolean"), adapter.getClassConstId("x:Boolean$True")),
             new X_Print(0),
@@ -271,5 +267,4 @@ public class xTest extends xObject
         ft.m_cVars = 1;
         ft.m_cScopes = 2;
         }
-
     }

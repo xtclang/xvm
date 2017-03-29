@@ -208,10 +208,15 @@ TODO is immutable?
 0xBE
 0xBF
 
-
-
-
-
-
-new HashMap<List<K>, Map<K, V>>
-
+pre-defined variables/constants:
+0: this
+-1: this:public
+-2: this:protected
+-3: this:private
+-4: this:target		..
+-5: this:struct
+-6: this:frame		Frame
+-7: this:service		Service + ..
+-8: this:module		Module + ..
+-9: this:type		Type
+-A: super		Function

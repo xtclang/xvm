@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.proto.TypeCompositionTemplate.Access;
 import org.xvm.proto.TypeCompositionTemplate.Shape;
 
 /**
@@ -25,6 +26,56 @@ public class TypeComposition
 
         f_template = template;
         f_atGenericActual = atnGenericActual;
+        }
+
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
+        {
+        assert handle.f_clazz == this;
+
+        Type typeCurrent = handle.m_type;
+        Type typeTarget;
+
+        switch (access)
+            {
+            case Public:
+                typeTarget = ensurePublicType();
+                if (typeCurrent == typeTarget)
+                    {
+                    return handle;
+                    }
+                break;
+
+            case Protected:
+                typeTarget = ensureProtectedType();
+                if (typeCurrent == typeTarget)
+                    {
+                    return handle;
+                    }
+                break;
+
+            case Private:
+                typeTarget = ensurePrivateType();
+                if (typeCurrent == typeTarget)
+                    {
+                    return handle;
+                    }
+                break;
+
+            case Struct:
+                typeTarget = ensureStructType();
+                if (typeCurrent == typeTarget)
+                    {
+                    return handle;
+                    }
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+
+        handle = handle.cloneHandle();
+        handle.m_type = typeTarget;
+        return handle;
         }
 
     public Type ensurePublicType()

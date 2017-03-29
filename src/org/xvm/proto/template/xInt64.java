@@ -51,6 +51,15 @@ public class xInt64
         return null;
         }
 
+    @Override
+    public ObjectHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+
+        ahReturn[0] = makeHandle(-hThis.getValue());
+        return null;
+        }
+
     public static xInt64 INSTANCE;
     public static JavaLong makeHandle(long lValue)
         {

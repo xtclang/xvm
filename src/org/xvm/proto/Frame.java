@@ -1,7 +1,9 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ConstantPool.ClassConstant;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
+import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+import org.xvm.proto.TypeCompositionTemplate.Access;
+import org.xvm.proto.template.xFunction;
 
 /**
  * A call stack frame.
@@ -15,26 +17,28 @@ public class Frame
 
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVars;       // arguments/local vars (index 0 for target:private)
-    public final ObjectHandle[] f_ahReturns;    // the return values
+    public final ObjectHandle[] f_ahReturns;    // the return value(s)
     public final Frame          f_framePrev;    // the caller's frame
     public final int[]          f_aiRegister;   // execution registers
                                                 // [0] - current scope
                                                 // [1] - current guard index (-1 if none)
     public final int[]          f_anNextVar;    // at index i, the "next available" var register for scope i
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
-    public ObjectHandle         m_hException;
+    public ObjectHandle         m_hException;   // an exception
 
     public Frame(ServiceContext context, Frame framePrev, ObjectHandle hTarget,
-                 InvocationTemplate function, ObjectHandle[] ahVars, ObjectHandle[] ahReturns)
+                 InvocationTemplate function, ObjectHandle[] ahVars)
         {
         f_context = context;
         f_framePrev = framePrev;
         f_function = function;
         f_hTarget = hTarget;
-        f_ahReturns = ahReturns;
         f_ahVars = ahVars; // [0] - target:private for methods
         f_aiRegister = new int[] {0, -1};
         f_anNextVar = new int[f_function.m_cScopes];
+
+        int c = function.m_cReturns;
+        f_ahReturns = c == 0 ? Utils.OBJECTS_NONE : new  ObjectHandle[c];
         }
 
     public ObjectHandle execute()
@@ -102,7 +106,8 @@ public class Frame
 
                 for (int iCatch = 0, c = guard.f_anClassConstId.length; iCatch < c; iCatch++)
                     {
-                    TypeComposition clzCatch = resolveClass(guard.f_anClassConstId[iCatch]);
+                    TypeComposition clzCatch = f_context.f_types.
+                            ensureConstComposition(guard.f_anClassConstId[iCatch]);
                     if (clzException.extends_(clzCatch))
                         {
                         int nScope = guard.f_nScope - 1;
@@ -120,17 +125,62 @@ public class Frame
         return -1;
         }
 
-    // TODO: move to ConstPoolAdapter?
-    public TypeComposition resolveClass(int nClassConstId)
+    // return one of the pre-defined arguments
+    public ObjectHandle getPredefinedArgument(int nArgId)
         {
-        ClassConstant constClass = f_context.f_constantPool.getClassConstant(nClassConstId);
-        String sClass = ConstantPoolAdapter.getClassName(constClass);
+        switch (nArgId)
+            {
+            case Op.A_SUPER:
+                if (f_hTarget == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return xFunction.makeHandle(((MethodTemplate) f_function).getSuper()).bind(0, f_hTarget);
 
-        // TODO: use the generic info when available
-        TypeCompositionTemplate template = f_context.f_types.getTemplate(sClass);
+            case Op.A_TARGET:
+                if (f_hTarget == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return f_hTarget;
 
-        assert template != null;
-        return template.f_clazzCanonical;
+            case Op.A_PUBLIC:
+                if (f_hTarget == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Public);
+
+            case Op.A_PROTECTED:
+                if (f_hTarget == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Protected);
+
+            case Op.A_PRIVATE:
+                if (f_hTarget == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Private);
+
+            case Op.A_STRUCT:
+                if (f_hTarget == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Struct);
+
+            case Op.A_FRAME:
+            case Op.A_SERVICE:
+            case Op.A_MODULE:
+            case Op.A_TYPE:
+                throw new UnsupportedOperationException();
+
+            default:
+                throw new IllegalStateException("Invalid argument" + nArgId);
+            }
         }
 
     @Override

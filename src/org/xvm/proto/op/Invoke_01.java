@@ -30,18 +30,21 @@ public class Invoke_01 extends OpInvocable
 
         MethodTemplate method = getMethodTemplate(frame, template, f_nMethodValue);
 
-        ObjectHandle[] ahRet = new ObjectHandle[1];
+        ObjectHandle[] ahRet;
         ObjectHandle hException;
 
         if (method.isNative())
             {
+            ahRet = new ObjectHandle[1];
             hException = template.invokeNative01(frame, hTarget, method, ahRet);
             }
         else
             {
             ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
+            Frame frameNew = new Frame(frame.f_context, frame, hTarget, method, ahVars);
 
-            hException = new Frame(frame.f_context, frame, hTarget, method, ahVars, ahRet).execute();
+            hException = frameNew.execute();
+            ahRet = frameNew.f_ahReturns;
             }
 
         if (hException == null)

@@ -32,35 +32,33 @@ public abstract class OpCallable extends Op
             String sClass = ConstantPoolAdapter.getClassName((ClassConstant) constFunction.getNamespace());
 
             TypeCompositionTemplate template = frame.f_context.f_types.getTemplate(sClass);
-            // TODO parameters, returns
-            return template.getFunctionTemplate(constFunction.getName(), "");
+
+            return template.getFunctionTemplate(constFunction);
             }
         }
 
     // call the constructor; then potentially the finalizer; change this:struct handle to this:public
     protected ObjectHandle callConstructor(Frame frame, FunctionTemplate constructor, ObjectHandle[] ahVars)
         {
-        int cReturns = constructor.m_cReturns;
-
-        ObjectHandle[] ahRet = cReturns == 0 ? Utils.OBJECTS_NONE : new ObjectHandle[cReturns];
-
-        ObjectHandle hException = new Frame(frame.f_context, frame, null, constructor, ahVars, ahRet).execute();
+        Frame frameNew = new Frame(frame.f_context, frame, null, constructor, ahVars);
+        ObjectHandle hException = frameNew.execute();
 
         if (hException == null)
             {
-            if (cReturns > 0)
+            ObjectHandle hTarget = ahVars[0];
+            if (constructor.m_cReturns > 0)
                 {
-                ahVars[0] = constructor.getClazzTemplate().changeType(ahVars[0], Access.Private); // this:struct -> this:private
+                hTarget = ahVars[0] = hTarget.f_clazz.ensureAccess(hTarget, Access.Private); // this:struct -> this:private
 
-                FunctionHandle hFinally = (FunctionHandle) ahRet[0];
+                FunctionHandle hFinally = (FunctionHandle) frameNew.f_ahReturns[0];
 
                 // get the "finally" method from the handle; TODO: how to do it right?
                 FunctionTemplate methFinally = (FunctionTemplate) hFinally.m_invoke;
 
                 // call the finally method
-                hException = new Frame(frame.f_context, frame, null, methFinally, ahVars, Utils.OBJECTS_NONE).execute();
+                hException = new Frame(frame.f_context, frame, null, methFinally, ahVars).execute();
                 }
-            ahVars[0] = constructor.getClazzTemplate().changeType(ahVars[0], Access.Public);
+            ahVars[0] = hTarget.f_clazz.ensureAccess(hTarget, Access.Public);
             }
         return hException;
         }

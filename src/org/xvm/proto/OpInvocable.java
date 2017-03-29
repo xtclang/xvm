@@ -29,7 +29,7 @@ public abstract class OpInvocable extends Op
             MethodConstant constMethod =
                     frame.f_context.f_constantPool.getMethodConstant(-nMethodValue);
             // TODO parameters, returns
-            return template.getMethodTemplate(constMethod.getName(), "");
+            return template.getMethodTemplate(constMethod);
             }
         }
 

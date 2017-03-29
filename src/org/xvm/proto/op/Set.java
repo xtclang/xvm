@@ -15,11 +15,11 @@ public class Set extends OpInvocable
     private final int f_nPropConstId;
     private final int f_nValue;
 
-    public Set(int nTarget, int nPropId, int nRet)
+    public Set(int nTarget, int nPropId, int nValue)
         {
         f_nTargetValue = nTarget;
         f_nPropConstId = nPropId;
-        f_nValue = nRet;
+        f_nValue = nValue;
         }
 
     @Override
@@ -41,10 +41,9 @@ public class Set extends OpInvocable
         else
             {
             // almost identical to the second part of Invoke_10
-            ObjectHandle[] ahRet = new ObjectHandle[1];
             ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
 
-            ObjectHandle hException = new Frame(frame.f_context, frame, hTarget, method, ahVars, ahRet).execute();
+            ObjectHandle hException = new Frame(frame.f_context, frame, hTarget, method, ahVars).execute();
 
             if (hException != null)
                 {

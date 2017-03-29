@@ -23,10 +23,24 @@ public interface TypeName
     // (some elements may stay "formal" (unresolved)
     void resolve(TypeCompositionTemplate template);
 
+    // ----- helpers -----
+
     static String format(TypeName[] at)
         {
         return at.length == 0 ? "Void" : Utils.formatArray(at, "", "", ", ");
         }
+
+    static String getFunctionSignature(String sName, String[] asArgType, String[] asRetType)
+        {
+        return format(parseNames(asRetType)) + ' ' + sName +
+                " (" + format(parseNames(asArgType)) + ')';
+        }
+
+    static String getFunctionSignature(String sName, TypeName[] tnArg, TypeName[] tnRet)
+        {
+        return format(tnRet) + ' ' + sName + " (" + format(tnArg) + ')';
+        }
+
 
     String[] NON_GENERIC = new String[0];
 

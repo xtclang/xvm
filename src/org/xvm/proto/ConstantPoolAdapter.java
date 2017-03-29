@@ -88,7 +88,14 @@ public class ConstantPoolAdapter
 
     public int getClassConstId(String sName)
         {
-        return m_mapClasses.get(sName);
+        try
+            {
+            return m_mapClasses.get(sName);
+            }
+        catch (NullPointerException e)
+            {
+            throw new IllegalArgumentException("Constant is not defined: " + sName);
+            }
         }
 
     public ClassConstant getClassConstant(int nConstId)
@@ -98,7 +105,14 @@ public class ConstantPoolAdapter
 
     public int getPropertyConstId(String sClassName, String sPropName)
         {
-        return m_mapProperties.get(sClassName + '#' + sPropName);
+        try
+            {
+            return m_mapProperties.get(sClassName + '#' + sPropName);
+            }
+        catch (NullPointerException e)
+            {
+            throw new IllegalArgumentException("Property is not defined: " + sClassName + '#' + sPropName);
+            }
         }
 
     public PropertyConstant getPropertyConstant(int nConstId)
@@ -109,7 +123,14 @@ public class ConstantPoolAdapter
     // TODO: parameters, returns
     public int getMethodConstId(String sClassName, String sMethName)
         {
-        return m_mapMethods.get(sClassName + '#' + sMethName);
+        try
+            {
+            return m_mapMethods.get(sClassName + '#' + sMethName);
+            }
+        catch (NullPointerException e)
+            {
+            throw new IllegalArgumentException("Method is not defined: " + sClassName + '#' + sMethName);
+            }
         }
 
     public MethodConstant getMethodConstant(int nConstId)

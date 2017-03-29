@@ -1,15 +1,14 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.asm.ConstantPool.MethodConstant;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 
@@ -31,6 +30,7 @@ public abstract class TypeCompositionTemplate
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized
 
+    public TypeCompositionTemplate m_templateSuper;
     protected boolean m_fResolved;
 
     protected List<TypeName> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
@@ -150,22 +150,30 @@ public abstract class TypeCompositionTemplate
 
     public MethodTemplate getMethodTemplate(String sMethodName, String[] asArgTypes, String[] asRetTypes)
         {
-        return getMethodTemplate(sMethodName, null);
+        return getMethodTemplate(sMethodName,
+                TypeName.getFunctionSignature(sMethodName, asArgTypes, asRetTypes));
         }
 
     public MethodTemplate getMethodTemplate(String sMethodName, String sSig)
         {
         MultiMethodTemplate mmt = m_mapMultiMethods.get(sMethodName);
 
-        // TODO: signature support
-        return mmt.m_setInvoke.iterator().next();
+        return mmt.m_mapMethods.get(sSig);
+        }
+
+    public MethodTemplate getMethodTemplate(MethodConstant constMethod)
+        {
+        MultiMethodTemplate mft = m_mapMultiMethods.get(constMethod.getName());
+
+        // TODO: when MethodConstant is done
+        return mft.m_mapMethods.values().iterator().next();
         }
 
     public void forEachMethod(Consumer<MethodTemplate> consumer)
         {
         for (MultiMethodTemplate mmt : m_mapMultiMethods.values())
             {
-            mmt.m_setInvoke.forEach(consumer::accept);
+            mmt.m_mapMethods.values().forEach(consumer::accept);
             }
         }
 
@@ -182,23 +190,39 @@ public abstract class TypeCompositionTemplate
         return templateF;
         }
 
+    public FunctionTemplate addFunctionTemplate(FunctionTemplate templateF)
+        {
+        m_mapMultiFunctions.computeIfAbsent(templateF.f_sName, s -> new MultiFunctionTemplate()).
+                add(templateF);
+        return templateF;
+        }
+
     public FunctionTemplate getFunctionTemplate(String sFunctionName, String[] asArgTypes, String[] asRetTypes)
         {
-        return getFunctionTemplate(sFunctionName, null);
+        return getFunctionTemplate(sFunctionName,
+                TypeName.getFunctionSignature(sFunctionName, asArgTypes, asRetTypes));
         }
+
     public FunctionTemplate getFunctionTemplate(String sFunctionName, String sSig)
         {
         MultiFunctionTemplate mft = m_mapMultiFunctions.get(sFunctionName);
 
-        // TODO: signature support
-        return mft.m_setInvoke.iterator().next();
+        return mft.m_mapFunctions.get(sSig);
+        }
+
+    public FunctionTemplate getFunctionTemplate(MethodConstant constMethod)
+        {
+        MultiFunctionTemplate mft = m_mapMultiFunctions.get(constMethod.getName());
+
+        // TODO: when MethodConstant is done
+        return mft.m_mapFunctions.values().iterator().next();
         }
 
     public void forEachFunction(Consumer<FunctionTemplate> consumer)
         {
         for (MultiFunctionTemplate mft : m_mapMultiFunctions.values())
             {
-            mft.m_setInvoke.forEach(consumer::accept);
+            mft.m_mapFunctions.values().forEach(consumer::accept);
             }
         }
 
@@ -220,7 +244,8 @@ public abstract class TypeCompositionTemplate
 
             if (f_sSuper != null)
                 {
-                f_types.ensureTemplate(f_sSuper).resolveDependencies();
+                m_templateSuper = f_types.ensureTemplate(f_sSuper);
+                m_templateSuper.resolveDependencies();
                 }
 
             resolveImplements();
@@ -253,21 +278,19 @@ public abstract class TypeCompositionTemplate
 
     protected void resolveExtends()
         {
-        if (f_sSuper != null)
+        if (m_templateSuper != null)
             {
-            TypeCompositionTemplate templateSuper = f_types.ensureTemplate(f_sSuper);
-
-            templateSuper.forEachProperty(propSuper ->
+            m_templateSuper.forEachProperty(propSuper ->
                     ensurePropertyTemplate(propSuper.f_sName, propSuper.f_typeName).
                             resolveFrom(propSuper));
 
-            templateSuper.forEachMethod(methodSuper ->
-            {
-            if (methodSuper.m_access != Access.Private)
+            m_templateSuper.forEachMethod(methodSuper ->
                 {
-                addMethodTemplate(methodSuper);
-                }
-            });
+                if (methodSuper.m_access != Access.Private)
+                    {
+                    addMethodTemplate(methodSuper);
+                    }
+                });
             }
         }
 
@@ -302,7 +325,7 @@ public abstract class TypeCompositionTemplate
                 (x) -> new TypeComposition(this, atGenericActual));
         }
 
-    public TypeComposition resolve(ConstantPool.ClassConstant classConstant)
+    public TypeComposition resolve(ClassConstant classConstant)
         {
         // TODO: awaiting support from ClassConstant
         return resolve(Utils.TYPE_NONE);
@@ -361,6 +384,12 @@ public abstract class TypeCompositionTemplate
         throw new IllegalStateException();
         }
 
+    // @return - an exception handle
+    public ObjectHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+        {
+        throw new IllegalStateException();
+        }
+
     // get a property value
     public ObjectHandle getProperty(ObjectHandle hTarget, String sName)
         {
@@ -395,7 +424,7 @@ public abstract class TypeCompositionTemplate
             return relation == Relation.EXTENDS;
             }
 
-        TypeCompositionTemplate templateSuper = f_types.getTemplate(f_sSuper);
+        TypeCompositionTemplate templateSuper = m_templateSuper;
         while (templateSuper != null)
             {
             m_mapRelations.put(that, Relation.EXTENDS);
@@ -405,18 +434,11 @@ public abstract class TypeCompositionTemplate
                 {
                 return true;
                 }
-            templateSuper = f_types.getTemplate(templateSuper.f_sSuper);
+            templateSuper = templateSuper.m_templateSuper;
             }
 
         m_mapRelations.put(that, Relation.INCOMPATIBLE);
         return false;
-        }
-
-    public ObjectHandle changeType(ObjectHandle handle, Access access)
-        {
-        handle = handle.cloneHandle();
-        handle.m_type = handle.f_clazz.ensurePublicType();
-        return handle;
         }
 
     @Override
@@ -463,34 +485,20 @@ public abstract class TypeCompositionTemplate
 
         sb.append("\nProperties:");
         m_mapProperties.values().forEach(
-                template -> sb.append("\n  ")
-                        .append(template.f_typeName)
-                        .append(' ').append(template.f_sName));
+                template -> sb.append("\n  ").append(template));
 
         sb.append("\nMethods:");
         m_mapMultiMethods.values().forEach(
-                mmt ->
+            mmt ->
                 {
-                mmt.m_setInvoke.forEach(mt ->
-                        sb.append("\n  ")
-                                .append(TypeName.format(mt.m_retTypeName))
-                                .append(' ').append(mt.f_sName)
-                                .append('(')
-                                .append(TypeName.format(mt.m_argTypeName))
-                                .append(')'));
+                mmt.m_mapMethods.values().forEach(mt -> sb.append("\n  ").append(mt));
                 });
 
         sb.append("\nFunctions:");
         m_mapMultiFunctions.values().forEach(
-                mft ->
+            mft ->
                 {
-                mft.m_setInvoke.forEach(ft ->
-                        sb.append("\n  ")
-                                .append(TypeName.format(ft.m_retTypeName))
-                                .append(' ').append(ft.f_sName)
-                                .append('(')
-                                .append(TypeName.format(ft.m_argTypeName))
-                                .append(')'));
+                mft.m_mapFunctions.values().forEach(ft -> sb.append("\n  ").append(ft));
                 });
 
         return sb.toString();
@@ -614,7 +622,14 @@ public abstract class TypeCompositionTemplate
                     this.m_templateSet = addMethodTemplate(that.m_templateSet);
                     }
                 }
+            }
 
+        @Override
+        public String toString()
+            {
+            return (m_accessGet == m_accessSet ? m_accessGet.name() :
+                    (m_accessGet.name() + "/" + m_accessSet.name())).toLowerCase()
+                + " " + f_typeName + " " + f_sName;
             }
         }
 
@@ -626,11 +641,9 @@ public abstract class TypeCompositionTemplate
         public TypeName[] m_argTypeName; // length = 0 for zero args
         public TypeName[] m_retTypeName; // length = 0 for Void return type
 
-        Access m_access;
-        boolean m_fNative;
-        Set<FunctionTemplate> m_setFunctions; // method/function level function templates (lambdas)
-
         // TODO: pointer to what XVM Structure?
+        Access m_access = Access.Public;
+        boolean m_fNative;
         public int m_cArgs; // number of args
         public int m_cReturns; // number of return values
         public int m_cVars; // max number of local vars (including "this")
@@ -680,43 +693,83 @@ public abstract class TypeCompositionTemplate
             m_fNative = true;
             }
 
+        protected void copyCodeAttributes(InvocationTemplate that)
+            {
+            m_access = that.m_access;
+            m_fNative = that.m_fNative;
+            m_cArgs = that.m_cArgs;
+            m_cReturns = that.m_cReturns;
+            m_cVars = that.m_cVars;
+            m_cScopes = that.m_cScopes;
+            m_aop = that.m_aop;
+            }
+
+        // create a new function template for a bound method
+        public FunctionTemplate bind(int iArg)
+            {
+//            int cArgs = m_cArgs;
+//            TypeName[] atArg = new TypeName[cArgs + 1];
+//            System.arraycopy(m_argTypeName, 0, atArg, 1, cArgs);
+//            atArg[0] = new TypeName.SimpleTypeName(TypeCompositionTemplate.this.f_sName);
+//
+//            FunctionTemplate function = new FunctionTemplate(f_sName, atArg, m_retTypeName);
+//            function.copyCodeAttributes(this);
+//            return function;
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        public String getSignature()
+            {
+            return TypeName.getFunctionSignature(f_sName, m_argTypeName, m_retTypeName);
+            }
+
         @Override
         public String toString()
             {
-            return getClass().getSimpleName() + " " +
-                    f_sName + " " + Utils.formatArray(m_argTypeName, "<", ">", ", ");
+            return m_access.name().toLowerCase() + ' ' + getSignature();
             }
         }
 
-    public abstract class MultiInvocationTemplate<T>
+    public class MultiMethodTemplate
         {
-        Set<T> m_setInvoke = new HashSet<>();
+        Map<String, MethodTemplate> m_mapMethods = new HashMap<>();
 
-        public T add(T template)
+        public MethodTemplate add(MethodTemplate method)
             {
-            m_setInvoke.add(template);
-            return template;
+            MethodTemplate methodSuper = m_mapMethods.put(method.getSignature(), method);
+            if (methodSuper != null)
+                {
+                method.setSuper(methodSuper);
+                }
+            return method;
             }
         }
-    public class MultiMethodTemplate  extends MultiInvocationTemplate<MethodTemplate>
-        {
-        }
 
-    public class MultiFunctionTemplate extends MultiInvocationTemplate<FunctionTemplate>
+    public class MultiFunctionTemplate
         {
+        Map<String, FunctionTemplate> m_mapFunctions = new HashMap<>();
+
+        public FunctionTemplate add(FunctionTemplate function)
+            {
+            if (m_mapFunctions.put(function.getSignature(), function) != null)
+                {
+                throw new IllegalStateException("Function already exists: " + function);
+                }
+            return function;
+            }
         }
 
     public class MethodTemplate
             extends InvocationTemplate
         {
-        MethodTemplate m_methodSuper;
+        protected MethodTemplate m_methodSuper;
 
-        MethodTemplate(String sName, String[] asArgType, String[] asRetType)
+        protected MethodTemplate(String sName, String[] asArgType, String[] asRetType)
             {
             super(sName, asArgType, asRetType);
             }
 
-        MethodTemplate(String sName, TypeName[] atArg, TypeName[] atRet)
+        protected MethodTemplate(String sName, TypeName[] atArg, TypeName[] atRet)
             {
             super(sName, atArg, atRet);
             }
@@ -725,14 +778,27 @@ public abstract class TypeCompositionTemplate
             {
             m_methodSuper = methodSuper;
             }
+
+        public MethodTemplate getSuper()
+            {
+            if (m_methodSuper != null)
+                {
+                return m_methodSuper;
+                }
+            throw new IllegalStateException(TypeCompositionTemplate.this + " - no super for method: \"" + getSignature());
+            }
         }
 
     public class FunctionTemplate
             extends InvocationTemplate
         {
-        FunctionTemplate(String sName, String[] asArgType, String[] asRetType)
+        protected FunctionTemplate(String sName, String[] asArgType, String[] asRetType)
             {
             super(sName, asArgType, asRetType);
+            }
+        protected FunctionTemplate(String sName, TypeName[] atArg, TypeName[] atRet)
+            {
+            super(sName, atArg, atRet);
             }
         }
 
@@ -741,7 +807,7 @@ public abstract class TypeCompositionTemplate
 
     public static String[] VOID = new String[0];
     public static String[] BOOLEAN = new String[]{"x:Boolean"};
-    public static String[] INT = new String[]{"x:Int"};
+    public static String[] INT = new String[]{"x:Int64"};
     public static String[] STRING = new String[]{"x:String"};
     public static String[] THIS = new String[]{"this.Type"};
     public static String[] CONDITIONAL_THIS = new String[]{"x:ConditionalTuple<this.Type>"};

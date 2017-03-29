@@ -29,8 +29,8 @@ public class xException
 
         // @inject Iterable<StackFrame> stackTrace;
         addPropertyTemplate("text", "x:String");
-        addPropertyTemplate("cause", "x:Exception");
-        addPropertyTemplate("stackTrace", "x:String"); // TODO: replace "x:String" with "x:Iterable<x:Exception.StackFrame>"
+        addPropertyTemplate("cause", "this.Type");
+        addPropertyTemplate("stackTrace", "x:String"); // TODO: replace "x:String" with "x:Iterable<this.Type.StackFrame>"
 
         addFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
         }
@@ -38,7 +38,7 @@ public class xException
     @Override
     public void initCode()
         {
-        FunctionTemplate ct = getFunctionTemplate("construct", null);
+        FunctionTemplate ct = getFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
 
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {

@@ -29,10 +29,9 @@ public class ServiceContext
         f_constantPool = container.f_constantPoolAdapter;
         }
 
-    public Frame createFrame(ObjectHandle hTarget, Frame framePrev, InvocationTemplate template,
-                             ObjectHandle[] ahVars, ObjectHandle[] ahReturn)
+    public Frame createFrame(ObjectHandle hTarget, Frame framePrev, InvocationTemplate template, ObjectHandle[] ahVars)
         {
-        return new Frame(this, framePrev, hTarget, template, ahVars, ahReturn);
+        return new Frame(this, framePrev, hTarget, template, ahVars);
         }
 
     }

@@ -101,7 +101,7 @@ public abstract class ObjectHandle
         }
 
 
-    // ----- REMOVE STUFF BELOW ----
+    // ----- DEFERRED ----
 
     public static long createHandle(int nTypeId, int nIdentityId, boolean fMutable)
         {

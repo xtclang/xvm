@@ -4,23 +4,20 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 /**
- * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T
+ * NEG rvalue-target, lvalue-return   ; -T -> T
  *
  * @author gg 2017.03.08
  */
-public class Add extends OpInvocable
+public class Neg extends OpInvocable
     {
     private final int f_nTargetValue;
-    private final int f_nArgValue;
     private final int f_nRetValue;
 
-    public Add(int nTarget, int nArg, int nRet)
+    public Neg(int nTarget, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nArgValue = nArg;
         f_nRetValue = nRet;
         }
 
@@ -28,12 +25,11 @@ public class Add extends OpInvocable
     public int process(Frame frame, int iPC)
         {
         ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
-        ObjectHandle hArg = frame.f_ahVars[f_nArgValue];
         ObjectHandle[] ahRet = new ObjectHandle[1];
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        ObjectHandle hException = template.invokeAdd(frame, hTarget, hArg, ahRet);
+        ObjectHandle hException = template.invokeNeg(frame, hTarget, ahRet);
 
         if (hException == null)
             {

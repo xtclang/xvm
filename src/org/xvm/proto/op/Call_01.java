@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
+import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 /**
  * CALL_01 rvalue-function, lvalue-return  ; TODO: return value can be into the next available register
@@ -22,16 +23,33 @@ public class Call_01 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
+        Frame frameNew;
 
-        ObjectHandle[] ahVars = new ObjectHandle[function.m_cVars];
-        ObjectHandle[] ahRet = new ObjectHandle[1];
+        if (f_nFunctionValue == A_SUPER)
+            {
+            ObjectHandle hThis = frame.f_ahVars[0];
+            MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
-        ObjectHandle hException = new Frame(frame.f_context, frame, null, function, ahVars, ahRet).execute();
+            ObjectHandle[] ahVars = new ObjectHandle[methodSuper.m_cVars];
+
+            ahVars[0] = hThis;
+
+            frameNew = new Frame(frame.f_context, frame, hThis, methodSuper, ahVars);
+            }
+        else
+            {
+            FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
+
+            ObjectHandle[] ahVars = new ObjectHandle[function.m_cVars];
+
+            frameNew = new Frame(frame.f_context, frame, null, function, ahVars);
+            }
+
+        ObjectHandle hException = frameNew.execute();
 
         if (hException == null)
             {
-            frame.f_ahVars[f_nRetValue] = ahRet[0];
+            frame.f_ahVars[f_nRetValue] = frameNew.f_ahReturns[0];
             return iPC + 1;
             }
         else

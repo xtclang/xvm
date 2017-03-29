@@ -1,6 +1,7 @@
 package org.xvm.proto;
 
 import org.xvm.proto.template.xTest;
+import org.xvm.proto.template.xTest2;
 
 /**
  * TODO:
@@ -13,9 +14,13 @@ public class TestDriver
         {
         Container container = new Container();
 
-        xTest test = new xTest(container.f_types, container.f_constantPoolAdapter);
-
+        xTest test = new xTest(container.f_types);
+        test.m_adapter = container.f_constantPoolAdapter;
         container.f_types.addTemplate(test);
+
+        xTest2 test2 = new xTest2(container.f_types);
+        test2.m_adapter = container.f_constantPoolAdapter;
+        container.f_types.addTemplate(test2);
 
         ServiceContext context = container.createContext(test);
 
@@ -23,21 +28,21 @@ public class TestDriver
             {
             if (function.f_sName.startsWith("test") && function.m_cArgs == 0)
                 {
-                ObjectHandle[] ahReturn = new ObjectHandle[function.m_cReturns];
-
                 try
                     {
+                    System.out.println("### Running " + function + " ###");
+
                     ObjectHandle hException = context.createFrame(null, null,
-                            function, new ObjectHandle[function.m_cVars], ahReturn).execute();
+                            function, new ObjectHandle[function.m_cVars]).execute();
                     if (hException != null)
                         {
-                        System.err.println("Function " + function.f_sName + " threw unhandled " + hException);
+                        System.out.println("Function " + function.f_sName + " threw unhandled " + hException);
                         }
                     }
                 catch (Exception e)
                     {
-                    System.err.println("Failed to execute " + function);
-                    e.printStackTrace();
+                    System.out.println("Failed to execute " + function);
+                    e.printStackTrace(System.out);
                     }
                 }
             });

@@ -52,9 +52,8 @@ public class xFunction
             String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
             TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
 
-            FunctionHandle handle = new FunctionHandle(f_clazzCanonical);
-            handle.m_invoke = target.getFunctionTemplate(constFunction.getName(), "");
-            return handle;
+            return new FunctionHandle(f_clazzCanonical,
+                    target.getFunctionTemplate(constFunction));
             }
         return null;
         }
@@ -65,9 +64,19 @@ public class xFunction
         {
         public InvocationTemplate m_invoke;
 
-        public FunctionHandle(TypeComposition clazz)
+        protected FunctionHandle(TypeComposition clazz)
             {
             super(clazz);
+            }
+        protected FunctionHandle(TypeComposition clazz, InvocationTemplate function)
+            {
+            super(clazz);
+
+            m_invoke = function;
+            }
+        public FunctionHandle bind(int iArg, ObjectHandle hArg)
+            {
+            throw new UnsupportedOperationException();
             }
 
         @Override
@@ -75,5 +84,11 @@ public class xFunction
             {
             return super.toString() + m_invoke;
             }
+        }
+
+    public static xFunction INSTANCE;
+    public static FunctionHandle makeHandle(InvocationTemplate function)
+        {
+        return new FunctionHandle(INSTANCE.f_clazzCanonical, function);
         }
     }
