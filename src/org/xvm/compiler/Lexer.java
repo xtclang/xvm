@@ -427,6 +427,10 @@ public class Lexer
                 source.rewind();
                 return eatNumericLiteral();
 
+            case '\'':
+                source.rewind();
+                return eatCharLiteral();
+
             case '\"':
                 source.rewind();
                 return eatStringLiteral();
@@ -464,6 +468,126 @@ public class Lexer
                         : new Token(lInitPos, source.getPosition(), id); 
                 }
             }
+        }
+
+    /**
+     * Eat a character literal.
+     *
+     * @return a character literal as a token
+     */
+    protected Token eatCharLiteral()
+        {
+        final Source source = m_source;
+
+        // skip opening quote
+        final long lPosStart = source.getPosition();
+        source.next();
+        final long lPosChar = source.getPosition();
+
+        char    ch   = '?';
+        boolean term = false;
+        if (source.hasNext())
+            {
+            switch (ch = source.next())
+                {
+                case '\'':
+                    if (source.hasNext())
+                        {
+                        if (source.next() == '\'')
+                            {
+                            // assume the previous one should have been escaped
+                            source.rewind();
+                            log(Severity.ERROR, CHAR_BAD_ESC, null,
+                                    lPosChar, source.getPosition());
+                            }
+                        else
+                            {
+                            // assume the encountered quote that we thought was supposed to be
+                            // the character value was instead supposed to be closing quote
+                            source.rewind();
+                            source.rewind();
+                            log(Severity.ERROR, CHAR_NO_CHAR, null,
+                                    lPosChar, lPosChar);
+                            }
+                        }
+                    break;
+
+                case '\\':
+                    // process escaped char
+                    switch (ch = source.next())
+                        {
+                        case '\r':
+                        case '\n':
+                            // log error: newline in string
+                            source.rewind();
+                            log(Severity.ERROR, CHAR_NO_TERM, null,
+                                    lPosStart, source.getPosition());
+                            // assume it wasn't supposed to be an escape
+                            ch = '\\';
+                            break;
+
+                        case '\\':
+                        case '\'':
+                        case '\"':
+                            break;
+                        
+                        case 'b':
+                            ch = '\b';
+                            break;
+                        case 'f':
+                            ch = '\f';
+                            break;
+                        case 'n':
+                            ch = '\n';
+                            break;
+                        case 'r':
+                            ch = '\r';
+                            break;
+                        case 't':
+                            ch = '\t';
+                            break;
+
+                        default:
+                            // log error: bad escape
+                            log(Severity.ERROR, CHAR_BAD_ESC, null,
+                                    lPosChar, source.getPosition());
+                            break;
+                        }
+                    break;
+
+                case '\r':
+                case '\n':
+                    // log error: newline in string
+                    source.rewind();
+                    log(Severity.ERROR, CHAR_NO_TERM, null,
+                            lPosStart, source.getPosition());
+                    break;
+
+                default:
+                    break;
+                }
+
+            if (source.hasNext())
+                {
+                if (source.next() == '\'')
+                    {
+                    term = true;
+                    }
+                else
+                    {
+                    source.rewind();
+                    }
+                }
+            }
+
+        if (!term)
+            {
+            // log error: unterminated string
+            log(Severity.ERROR, CHAR_NO_TERM, null,
+                    lPosStart, source.getPosition());
+            }
+
+        return new Token(lPosStart, source.getPosition(), Id.LIT_CHAR, new Character(ch));
         }
 
     /**
@@ -506,6 +630,9 @@ public class Lexer
 
                             case '\\':
                                 sb.append('\\');
+                                break;
+                            case '\'':
+                                sb.append('\'');
                                 break;
                             case '\"':
                                 sb.append('\"');
@@ -1337,13 +1464,25 @@ public class Lexer
      */
     public static final String ILLEGAL_NUMBER       = "LEXER-04";
     /**
-     * An illegal character literal.
+     * An illegal character literal, missing closing quote.
      */
-    public static final String STRING_NO_TERM       = "LEXER-05";
+    public static final String CHAR_NO_TERM         = "LEXER-05";
     /**
-     * An illegal character literal.
+     * An illegally escaped character literal.
      */
-    public static final String STRING_BAD_ESC       = "LEXER-06";
+    public static final String CHAR_BAD_ESC         = "LEXER-06";
+    /**
+     * An illegal character literal missing the character.
+     */
+    public static final String CHAR_NO_CHAR         = "LEXER-07";
+    /**
+     * An illegal character string literal.
+     */
+    public static final String STRING_NO_TERM       = "LEXER-08";
+    /**
+     * An illegal character string literal.
+     */
+    public static final String STRING_BAD_ESC       = "LEXER-08";
 
 
     // ----- data members ------------------------------------------------------

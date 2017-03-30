@@ -82,13 +82,13 @@ import static org.xvm.util.Handy.indentLines;
  */
 public class CommandLine
     {
-    protected String[]              args            = null;
-    protected List<File>            sources         = new ArrayList<>();
-    protected Options               opts            = new Options();
-    protected List<String>          deferred        = new ArrayList<>();
-    protected boolean               error           = false;
-    protected Map<File, DirNode>    modules         = new ListMap<>();
-    protected Map<String, DirNode>  modulesByName   = new HashMap<>();
+    protected String[]          args            = null;
+    protected List<File>        sources         = new ArrayList<>();
+    protected Options           opts            = new Options();
+    protected List<String>      deferred        = new ArrayList<>();
+    protected boolean           error           = false;
+    protected Map<File, Node>   modules         = new ListMap<>();
+    protected Map<String, Node> modulesByName   = new HashMap<>();
 
     public static void main(String[] args)
             throws Exception
@@ -112,7 +112,7 @@ public class CommandLine
         cmd.arrangeSourceByName();
         cmd.checkTerminalFailure();
 
-        // TODO
+        // TODO check syntax, resolve dependencies, produce file structure
         cmd.dump();
         }
 
@@ -445,7 +445,7 @@ public class CommandLine
                 Token                    category = typeStmt.category;
                 if (opts.verbose)
                     {
-                    out("xtc: Contains " + category.getId().TEXT + " " + typeStmt.name.getValue());
+                    out("xtc: Contains " + category.getId().TEXT + " " + typeStmt.getName());
                     out();
                     }
                 return category.getId() == Token.Id.MODULE;
@@ -465,7 +465,7 @@ public class CommandLine
      *
      * @return a node iff there is anything "there" to compile, otherwise null
      */
-    protected DirNode buildTree(File file)
+    protected Node buildTree(File file)
         {
         DirNode node = new DirNode();
         if (file.isDirectory())
@@ -480,18 +480,24 @@ public class CommandLine
                 node.pkgNode = new FileNode(filePkg);
                 }
             }
-        else
+        else if (file.getName().equalsIgnoreCase("module.x"))
             {
             // this is the module root
             node.filePkg = file;
             node.fileDir = file.getParentFile();
+            node.pkgNode = new FileNode(file);
+            }
+        else
+            {
+            // this is the entire module
+            return new FileNode(file);
             }
 
         NextChild: for (File child : node.fileDir.listFiles())
             {
             if (child.isDirectory())
                 {
-                DirNode nodeChild = buildTree(child);
+                DirNode nodeChild = (DirNode) buildTree(child);
                 if (nodeChild != null)
                     {
                     nodeChild.parent = node;
@@ -538,7 +544,7 @@ public class CommandLine
      */
     protected void parseSource()
         {
-        for (DirNode module : modules.values())
+        for (Node module : modules.values())
             {
             module.parse();
             }
@@ -549,7 +555,7 @@ public class CommandLine
      */
     protected void arrangeSourceByName()
         {
-        for (DirNode module : modules.values())
+        for (Node module : modules.values())
             {
             module.registerNames();
             String name = module.name();
@@ -574,20 +580,16 @@ public class CommandLine
         if (modulesByName.isEmpty())
             {
             out("xtc: dump modules:");
-            for (Map.Entry<File, DirNode> entry : modules.entrySet())
+            for (Map.Entry<File, Node> entry : modules.entrySet())
                 {
-                out();
-                out("module file: " + entry.getKey());
                 out(entry.getValue());
                 }
             }
         else
             {
             out("xtc: dump modules by name:");
-            for (Map.Entry<String, DirNode> entry : modulesByName.entrySet())
+            for (Map.Entry<String, Node> entry : modulesByName.entrySet())
                 {
-                out();
-                out("module " + entry.getKey() + ":");
                 out(entry.getValue());
                 }
             }
@@ -598,7 +600,7 @@ public class CommandLine
      */
     protected void checkCompilerErrors()
         {
-        for (DirNode node : modules.values())
+        for (Node node : modules.values())
             {
             node.checkErrors();
             }
@@ -684,6 +686,7 @@ public class CommandLine
                 if (pkgNode == null)
                     {
                     // provide a default implementation
+                    assert parent != null;
                     pkgNode = new FileNode("package " + fileDir.getName() + "{}");
                     }
                 pkgNode.parse();
@@ -712,16 +715,21 @@ public class CommandLine
 
             if (progress == Progress.PARSED)
                 {
+                if (pkgNode != null)
+                    {
+                    pkgNode.registerNames();
+                    }
+
                 for (FileNode clz : sources.values())
                     {
-                    registerName(clz.name(), clz);
                     clz.registerNames();
+                    registerName(clz.name(), clz);
                     }
 
                 for (DirNode pkg : packages)
                     {
-                    registerName(pkg.name(), pkg);
                     pkg.registerNames();
+                    registerName(pkg.name(), pkg);
                     }
 
                 progress = Progress.NAMED;
@@ -817,49 +825,20 @@ public class CommandLine
         @Override
         public String toString()
             {
+            boolean fUseNames = progress.ordinal() >= Progress.NAMED.ordinal();
+
             StringBuilder sb = new StringBuilder();
-            if (parent != null)
-                {
-                sb.append(fileDir.getName())
-                  .append(": ");
-                }
-            sb.append(filePkg == null ? "(no package.x)" : filePkg.getName());
+            sb.append(fUseNames ? name() : fileDir.getName())
+              .append(": ")
+              .append(filePkg == null ? "(no package.x)" : filePkg.getName());
 
             for (Map.Entry<File, FileNode> entry : sources.entrySet())
                 {
-                File        file = entry.getKey();
-                sb.append("\n |- " + file.getName());
-
+                File     file = entry.getKey();
                 FileNode node = entry.getValue();
-                if (node != null)
-                    {
-                    ErrorList errs = node.errs;
-                    if (node.stmt != null || errs.getSeverity() != Severity.NONE)
-                        {
-                        sb.append(" (");
-                        if (node.stmt == null)
-                            {
-                            sb.append("not ");
-                            }
-                        sb.append("parsed");
 
-                        if (errs.getSeverity() != Severity.NONE)
-                            {
-                            sb.append("; ")
-                              .append(errs.getErrors().size())
-                              .append(" items logged, severity=")
-                              .append(errs.getSeverity().name());
-
-                            if (errs.getSeriousErrorCount() > 0)
-                                {
-                                sb.append(", ")
-                                  .append(errs.getSeriousErrorCount())
-                                  .append(" serious");
-                                }
-                            }
-                        sb.append(')');
-                        }
-                    }
+                sb.append("\n |- ")
+                  .append(node == null ? file.getName() : node);
                 }
 
             for (int i = 0, c = packages.size(); i < c; ++i)
@@ -957,17 +936,15 @@ public class CommandLine
                 // this can only happen if the errors were ignored
                 if (stmt != null)
                     {
-                    return;
-                    }
-
-                if (stmt instanceof TypeDeclarationStatement)
-                    {
-                    type = (TypeDeclarationStatement) stmt;
-                    }
-                else
-                    {
-                    List<Statement> list = ((BlockStatement) stmt).statements;
-                    type = (TypeDeclarationStatement) list.get(list.size() - 1);
+                    if (stmt instanceof TypeDeclarationStatement)
+                        {
+                        type = (TypeDeclarationStatement) stmt;
+                        }
+                    else
+                        {
+                        List<Statement> list = ((BlockStatement) stmt).statements;
+                        type = (TypeDeclarationStatement) list.get(list.size() - 1);
+                        }
                     }
 
                 progress = Progress.NAMED;
@@ -980,7 +957,7 @@ public class CommandLine
         @Override
         public String name()
             {
-            return type == null ? file.getName() : (String) type.name.getValue();
+            return type == null ? file.getName() : (String) type.getName();
             }
 
         @Override
@@ -1004,6 +981,45 @@ public class CommandLine
                 error |= errs.getSeverity().ordinal() >= opts.badEnoughToQuit().ordinal();
                 errs.clear();
                 }
+            }
+
+        @Override
+        public String toString()
+            {
+            boolean fUseNames = progress.ordinal() >= Progress.NAMED.ordinal();
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(fUseNames ? name() : file.getName());
+            boolean fAppend = false;
+
+            if (progress.ordinal() >= Progress.PARSED.ordinal() && stmt == null)
+                {
+                sb.append(" (not parsed");
+                fAppend = true;
+                }
+
+            if (errs.getSeverity() != Severity.NONE)
+                {
+                sb.append(fAppend ? "; " : " (")
+                  .append(errs.getErrors().size())
+                  .append(" items logged, severity=")
+                  .append(errs.getSeverity().name());
+
+                if (errs.getSeriousErrorCount() > 0)
+                    {
+                    sb.append(", ")
+                      .append(errs.getSeriousErrorCount())
+                      .append(" serious");
+                    }
+                fAppend = true;
+                }
+
+            if (fAppend)
+                {
+                sb.append(')');
+                }
+
+            return sb.toString();
             }
         }
 

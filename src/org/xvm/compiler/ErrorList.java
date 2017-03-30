@@ -248,22 +248,27 @@ public class ErrorList
         public String toString()
             {
             StringBuilder sb = new StringBuilder();
-            sb.append('[')
-              .append(getLine())
+            sb.append("[")
+              .append(getLine() + 1)
               .append(':')
-              .append(getOffset())
-              .append("..")
-              .append(getEndLine())
-              .append(':')
-              .append(getEndOffset())
-              .append(']')
+              .append(getOffset() + 1);
+
+            if (getEndLine() != getLine() || getEndOffset() != getOffset())
+                {
+                sb.append("..")
+                  .append(getEndLine() + 1)
+                  .append(':')
+                  .append(getEndOffset() + 1);
+                }
+
+            sb.append("] ")
               .append(getMessage());
 
             if (m_source != null && m_lPosStart != m_lPosEnd)
                 {
-                sb.append(" (")
+                sb.append(" (\"")
                   .append(m_source.toString(m_lPosStart, m_lPosEnd))
-                  .append(')');
+                  .append("\")");
                 }
 
             return sb.toString();

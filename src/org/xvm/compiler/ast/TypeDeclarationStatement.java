@@ -38,6 +38,22 @@ public class TypeDeclarationStatement
         this.doc               = doc;
         }
 
+    public String getName()
+        {
+        String sName = (String) name.getValue();
+        if (category.getId() == Token.Id.MODULE)
+            {
+            StringBuilder sb = new StringBuilder(sName);
+            for (Token suffix : qualifier)
+                {
+                sb.append('.')
+                  .append(suffix.getValue());
+                }
+            return sb.toString();
+            }
+        return sName;
+        }
+
     @Override
     public String toString()
         {
