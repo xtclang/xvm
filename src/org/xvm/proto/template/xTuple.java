@@ -38,15 +38,15 @@ public class xTuple
         //    Tuple<ElementTypes> ensurePersistent();
         //    Tuple<ElementTypes> ensureConst();
 
-        addPropertyTemplate("size", "x:Int").makeReadOnly();
-        addMethodTemplate("get", INT, new String[]{"x:Type"}); // not quite right
-        addMethodTemplate("set", new String[]{"x:Int", "x:Type"}, VOID); // not quite right
-        addMethodTemplate("elementAt", INT, new String[]{"x:Ref<x:Type>"}); // not quite right
-        addMethodTemplate("add", new String[]{"x:Tuple"}, new String[]{"x:Tuple"}); // non "virtual"
-        addMethodTemplate("replace", new String[]{"x:Int", "x:Type"}, THIS); // not quite right
-        addMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, new String[]{"x:Tuple"}); // non "virtual"
-        addMethodTemplate("remove", INT, new String[]{"x:Tuple"}); // non "virtual"
-        addMethodTemplate("remove", new String[]{"x:Range<x:Int>"}, new String[]{"x:Tuple"}); // non "virtual"
+        ensurePropertyTemplate("size", "x:Int").makeReadOnly();
+        ensureMethodTemplate("get", INT, new String[]{"x:Type"}); // not quite right
+        ensureMethodTemplate("set", new String[]{"x:Int", "x:Type"}, VOID); // not quite right
+        ensureMethodTemplate("elementAt", INT, new String[]{"x:Ref<x:Type>"}); // not quite right
+        ensureMethodTemplate("add", new String[]{"x:Tuple"}, new String[]{"x:Tuple"}); // non "virtual"
+        ensureMethodTemplate("replace", new String[]{"x:Int", "x:Type"}, THIS); // not quite right
+        ensureMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, new String[]{"x:Tuple"}); // non "virtual"
+        ensureMethodTemplate("remove", INT, new String[]{"x:Tuple"}); // non "virtual"
+        ensureMethodTemplate("remove", new String[]{"x:Range<x:Int>"}, new String[]{"x:Tuple"}); // non "virtual"
 
         }
     }

@@ -41,22 +41,22 @@ public class xNumber
         //    Number atMost(Number n)
         //    Number atLeast(Number n)
 
-        addPropertyTemplate("bitLength", "x:Int").makeReadOnly();
-        addPropertyTemplate("byteLength", "x:Int").makeReadOnly(); // TODO: get
+        ensurePropertyTemplate("bitLength", "x:Int").makeReadOnly();
+        ensurePropertyTemplate("byteLength", "x:Int").makeReadOnly(); // TODO: get
 
-        addMethodTemplate("add", THIS, THIS);
-        addMethodTemplate("sub", THIS, THIS);
-        addMethodTemplate("mul", THIS, THIS);
-        addMethodTemplate("div", THIS, THIS);
-        addMethodTemplate("mod", THIS, THIS);
-        addMethodTemplate("mod", THIS, THIS);
-        addMethodTemplate("divmod", new String[]{"this.Type", "this.Type"}, new String[]{"this.Type", "this.Type"});
-        addMethodTemplate("remainder", THIS, THIS);
-        addMethodTemplate("abs", VOID, THIS);
-        addMethodTemplate("neg", VOID, THIS);
-        addMethodTemplate("power", THIS, THIS);
-        addMethodTemplate("atMost", THIS, THIS);
-        addMethodTemplate("atLeast", THIS, THIS);
+        ensureMethodTemplate("add", THIS, THIS);
+        ensureMethodTemplate("sub", THIS, THIS);
+        ensureMethodTemplate("mul", THIS, THIS);
+        ensureMethodTemplate("div", THIS, THIS);
+        ensureMethodTemplate("mod", THIS, THIS);
+        ensureMethodTemplate("mod", THIS, THIS);
+        ensureMethodTemplate("divmod", new String[]{"this.Type", "this.Type"}, new String[]{"this.Type", "this.Type"});
+        ensureMethodTemplate("remainder", THIS, THIS);
+        ensureMethodTemplate("abs", VOID, THIS);
+        ensureMethodTemplate("neg", VOID, THIS);
+        ensureMethodTemplate("power", THIS, THIS);
+        ensureMethodTemplate("atMost", THIS, THIS);
+        ensureMethodTemplate("atLeast", THIS, THIS);
 
         // TODO conversions
         }

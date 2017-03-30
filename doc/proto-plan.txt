@@ -1,5 +1,7 @@
-- Service
 - super() method call
+        Issue with "construct super" return
+
+- Service
 - Array
 - Multi:
     -- new

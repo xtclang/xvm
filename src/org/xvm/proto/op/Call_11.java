@@ -30,11 +30,11 @@ public class Call_11 extends OpCallable
 
         if (f_nFunctionValue == A_SUPER)
             {
-            ObjectHandle hThis = frame.f_ahVars[0];
             MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
             ObjectHandle[] ahVars = new ObjectHandle[methodSuper.m_cVars];
 
+            ObjectHandle hThis = frame.f_ahVars[0];
             ahVars[0] = hThis;
             ahVars[1] = f_nArgValue >= 0 ? frame.f_ahVars[f_nArgValue] :
                     resolveConst(frame, methodSuper.m_argTypeName[0], f_nArgValue);

@@ -13,23 +13,23 @@ public class xMeta
     public xMeta(TypeSet types)
         {
         super(types, "x:Meta", "x:Object", Shape.Interface);
+
+        addImplement("x:Referent");
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:Referent");
-
         //    @ro Class class;
         //    @ro Module module;
         //    @ro Struct struct;
         //    Boolean immutable;
         //    @ro Int byteLength;
 
-        addPropertyTemplate("class", "x:Class").makeReadOnly();
-        addPropertyTemplate("module", "x:Module").makeReadOnly();
-        addPropertyTemplate("struct", "x:Struct").makeReadOnly();
-        addPropertyTemplate("immutable", "x:Boolean"); // an override of the @ro of the super
-        addPropertyTemplate("byteLength", "x:Int");
+        ensurePropertyTemplate("class", "x:Class").makeReadOnly();
+        ensurePropertyTemplate("module", "x:Module").makeReadOnly();
+        ensurePropertyTemplate("struct", "x:Struct").makeReadOnly();
+        ensurePropertyTemplate("immutable", "x:Boolean"); // an override of the @ro of the super
+        ensurePropertyTemplate("byteLength", "x:Int");
         }
     }

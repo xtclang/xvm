@@ -23,7 +23,7 @@ public class xMethod
     public void initDeclared()
         {
         // todo
-        addPropertyTemplate("name", "x:String");
+        ensurePropertyTemplate("name", "x:String");
         }
 
     @Override

@@ -14,14 +14,14 @@ public class xIntNumber
     public xIntNumber(TypeSet types)
         {
         super(types, "x:IntNumber", "x:Object", Shape.Interface);
+
+        addImplement("x:Number");
+        addImplement("x:Sequential");
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:Number");
-        ensureImplement("x:Sequential");
-
         //    @op IntNumber increment()
         //    @op IntNumber decrement()
         //    @op IntNumber and(IntNumber that);
@@ -44,28 +44,28 @@ public class xIntNumber
         //    Range<IntNumber> to(IntNumber that);
         //    Boolean[] to<Boolean[]>()
 
-        addMethodTemplate("nextValue", VOID, THIS);
-        addMethodTemplate("prevValue", VOID, THIS);
-        addMethodTemplate("next", VOID, CONDITIONAL_THIS);
-        addMethodTemplate("prev", VOID, CONDITIONAL_THIS);
-        addMethodTemplate("and", THIS, THIS);
-        addMethodTemplate("or", THIS, THIS);
-        addMethodTemplate("xor", THIS, THIS);
-        addMethodTemplate("not", VOID, THIS);
-        addMethodTemplate("shiftLeft", THIS, THIS);
-        addMethodTemplate("shiftRight", THIS, THIS);
-        addMethodTemplate("shiftAllRight", THIS, THIS);
-        addMethodTemplate("rotateLeft", THIS, THIS);
-        addMethodTemplate("rotateRight", THIS, THIS);
-        addMethodTemplate("truncate", THIS, THIS);
-        addPropertyTemplate("leftmostBit", "this.Type").makeReadOnly();
-        addPropertyTemplate("rightmostBit", "this.Type").makeReadOnly();
-        addPropertyTemplate("leadingZeroCount", "this.Type").makeReadOnly();
-        addPropertyTemplate("trailingZeroCount", "this.Type").makeReadOnly();
-        addPropertyTemplate("bitCount", "this.Type").makeReadOnly();
-        addMethodTemplate("reverseBits", VOID, THIS);
-        addMethodTemplate("reverseBytes", VOID, THIS);
-        addMethodTemplate("to", THIS, new String[]{"x:Range<x:Int>"});
-        addMethodTemplate("to", new String[]{"x:collections.Array<x:Boolean>"}, new String[]{"x:collections.Array<x:Boolean>"});
+        ensureMethodTemplate("nextValue", VOID, THIS);
+        ensureMethodTemplate("prevValue", VOID, THIS);
+        ensureMethodTemplate("next", VOID, CONDITIONAL_THIS);
+        ensureMethodTemplate("prev", VOID, CONDITIONAL_THIS);
+        ensureMethodTemplate("and", THIS, THIS);
+        ensureMethodTemplate("or", THIS, THIS);
+        ensureMethodTemplate("xor", THIS, THIS);
+        ensureMethodTemplate("not", VOID, THIS);
+        ensureMethodTemplate("shiftLeft", THIS, THIS);
+        ensureMethodTemplate("shiftRight", THIS, THIS);
+        ensureMethodTemplate("shiftAllRight", THIS, THIS);
+        ensureMethodTemplate("rotateLeft", THIS, THIS);
+        ensureMethodTemplate("rotateRight", THIS, THIS);
+        ensureMethodTemplate("truncate", THIS, THIS);
+        ensurePropertyTemplate("leftmostBit", "this.Type").makeReadOnly();
+        ensurePropertyTemplate("rightmostBit", "this.Type").makeReadOnly();
+        ensurePropertyTemplate("leadingZeroCount", "this.Type").makeReadOnly();
+        ensurePropertyTemplate("trailingZeroCount", "this.Type").makeReadOnly();
+        ensurePropertyTemplate("bitCount", "this.Type").makeReadOnly();
+        ensureMethodTemplate("reverseBits", VOID, THIS);
+        ensureMethodTemplate("reverseBytes", VOID, THIS);
+        ensureMethodTemplate("to", THIS, new String[]{"x:Range<x:Int>"});
+        ensureMethodTemplate("to", new String[]{"x:collections.Array<x:Boolean>"}, new String[]{"x:collections.Array<x:Boolean>"});
         }
     }

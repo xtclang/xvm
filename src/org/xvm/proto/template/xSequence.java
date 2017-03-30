@@ -12,23 +12,23 @@ public class xSequence
     {
     public xSequence(TypeSet types)
         {
-        super(types, "x:Sequence<ElementType>", "x:Object", Shape.Interface);
+        super(types, "x:collections.Sequence<ElementType>", "x:Object", Shape.Interface);
+
+        addImplement("x:UniformIndex<x:Int, ElementType>");
+        addImplement("x:Iterable<ElementType>");
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:UniformIndex<x:Int, ElementType>");
-        ensureImplement("x:Iterable<ElementType>");
-
         //    @ro Int size;
         //    Sequence<ElementType> subSequence(Int start, Int end);
         //    Sequence<ElementType> reify();
         //    Iterator<ElementType> iterator()
 
-        addPropertyTemplate("size", "x:Int");
-        addMethodTemplate("subSequence", new String[]{"x:Int", "x:Int"}, THIS);
-        addMethodTemplate("reify", VOID, THIS);
-        addMethodTemplate("iterator", VOID, new String[]{"x:Iterator<ElementType>"});
+        ensurePropertyTemplate("size", "x:Int");
+        ensureMethodTemplate("subSequence", new String[]{"x:Int", "x:Int"}, THIS);
+        ensureMethodTemplate("reify", VOID, THIS);
+        ensureMethodTemplate("iterator", VOID, new String[]{"x:Iterator<ElementType>"});
         }
     }

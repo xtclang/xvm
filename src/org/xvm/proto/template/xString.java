@@ -21,30 +21,24 @@ public class xString
         {
         super(types, "x:String", "x:Object", Shape.Const);
 
+        addImplement("x:collections.Sequence<x:Char>");
+
         INSTANCE = this;
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:Sequence<x:Char>");
-
         //     Int length.get()
 
-        addPropertyTemplate("length", "x:Int").makeReadOnly();
+        PropertyTemplate pt;
 
-        addMethodTemplate("indexOf", STRING, INT);
-        addMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT);
-        }
+        pt = ensurePropertyTemplate("length", "x:Int");
+        pt.makeReadOnly();
+        pt.addGet().markNative();
 
-    @Override
-    public void initCode()
-        {
-        super.initCode();
-
-        getPropertyTemplate("length").addGet().markNative();
-        getMethodTemplate("indexOf", STRING, INT).markNative();
-        getMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
+        ensureMethodTemplate("indexOf", STRING, INT).markNative();
+        ensureMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
         }
 
     @Override

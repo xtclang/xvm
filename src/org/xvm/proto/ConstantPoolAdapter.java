@@ -13,6 +13,7 @@ import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A temporary intermediary between the RT and the ConstantPool
@@ -30,7 +31,7 @@ public class ConstantPoolAdapter
     private Map<String, Integer> m_mapProperties = new HashMap<>();
 
     // the method template fully qualified name (x:collections.Map#get[KeyType]) -> the corresponding MethodConstant id
-    private Map<String, Integer> m_mapMethods = new HashMap<>();
+    private Map<String, Integer> m_mapMethods = new TreeMap<>();
 
     public void registerClass(TypeCompositionTemplate template)
         {

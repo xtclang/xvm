@@ -47,17 +47,10 @@ public class xService
 
         PropertyTemplate pt;
 
-        pt = addPropertyTemplate("serviceName", "x:String");
+        pt = ensurePropertyTemplate("serviceName", "x:String");
         pt.makeReadOnly();
         pt.makeAtomic();
-        }
-
-    @Override
-    public void initCode()
-        {
-        super.initCode();
-
-        getPropertyTemplate("serviceName").addGet().markNative();
+        pt.addGet().markNative();
         }
 
     @Override

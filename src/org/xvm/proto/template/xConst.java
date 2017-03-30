@@ -13,22 +13,14 @@ public class xConst
     public xConst(TypeSet types)
         {
         super(types, "x:Const", "x:Object", Shape.Interface);
+
+        addImplement("x:collections.Hashable");
+        addImplement("x:Orderable");
         }
 
     @Override
     public void initDeclared()
         {
-        // in-place generation of Hashable
-        xObject tctHashable = new xObject(f_types, "x:collections.Hashable", "x:Object", Shape.Interface);
-
-        // @ro Int hash;
-        tctHashable.addPropertyTemplate("hash", "x:Int").makeReadOnly();
-
-        f_types.addTemplate(tctHashable);
-
-        ensureImplement("x:collections.Hashable");
-        ensureImplement("x:Orderable");
-
         //    static Ordered compare(Const value1, Const value2)
         //
         //    static Boolean equals(Const value1, Const value2)
@@ -47,9 +39,9 @@ public class xConst
         addFunctionTemplate("equals", new String[]{"x:Const", "x:Const"}, new String[] {"x:Boolean"});
 
         // an override
-        addMethodTemplate("to", STRING, STRING);
+        ensureMethodTemplate("to", STRING, STRING);
 
-        addMethodTemplate("to", new String[]{"x:collections.Array<x:Byte>"}, new String[]{"x:collections.Array<x:Byte>"});
+        ensureMethodTemplate("to", new String[]{"x:collections.Array<x:Byte>"}, new String[]{"x:collections.Array<x:Byte>"});
 
         // TODO: @LazyRef Int hash.get()
         }

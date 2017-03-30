@@ -13,13 +13,13 @@ public class xRef
     public xRef(TypeSet types)
         {
         super(types, "x:Ref<RefType>", "x:Object", Shape.Interface);
+
+        addImplement("x:Referent");
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:Referent");
-
         //    @ro Boolean assigned;
         //    conditional RefType peek()
         //    RefType get();
@@ -30,14 +30,14 @@ public class xRef
         //    @ro Int byteLength;
         //    @ro Boolean selfContained;
 
-        addPropertyTemplate("assigned", "x:Boolean").makeReadOnly();
-        addMethodTemplate("peek", VOID, new String[]{"x:ConditionalTuple<RefType>"});
-        addMethodTemplate("get", VOID, new String[]{"RefType"});
-        addMethodTemplate("set", new String[]{"RefType"}, VOID);
-        addPropertyTemplate("ActualType", "x:Type").makeReadOnly();
-        addPropertyTemplate("name", "x:String|x:Nullable").makeReadOnly();
-        addPropertyTemplate("byteLength", "x:Int").makeReadOnly();
-        addPropertyTemplate("selfContained", "x:Boolean").makeReadOnly();
+        ensurePropertyTemplate("assigned", "x:Boolean").makeReadOnly();
+        ensureMethodTemplate("peek", VOID, new String[]{"x:ConditionalTuple<RefType>"});
+        ensureMethodTemplate("get", VOID, new String[]{"RefType"});
+        ensureMethodTemplate("set", new String[]{"RefType"}, VOID);
+        ensurePropertyTemplate("ActualType", "x:Type").makeReadOnly();
+        ensurePropertyTemplate("name", "x:String|x:Nullable").makeReadOnly();
+        ensurePropertyTemplate("byteLength", "x:Int").makeReadOnly();
+        ensurePropertyTemplate("selfContained", "x:Boolean").makeReadOnly();
 
         addFunctionTemplate("equals", new String[] {"x:Ref", "x:Ref"}, BOOLEAN);
         }

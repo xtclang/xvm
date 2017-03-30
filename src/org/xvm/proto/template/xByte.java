@@ -41,20 +41,20 @@ public class xByte
         //    @op Byte xor(Byte that)
         //    @op Byte not()
 
-        PropertyTemplate ptLiteral = addPropertyTemplate("literal", "x:IntLiteral");
+        PropertyTemplate ptLiteral = ensurePropertyTemplate("literal", "x:IntLiteral");
         ptLiteral.setGetAccess(Access.Private);
         ptLiteral.setSetAccess(Access.Private);
 
-        addMethodTemplate("to", new String[]{"x:IntLiteral"}, new String[]{"x:IntLiteral"});
-        addMethodTemplate("to", BOOLEAN, BOOLEAN);
-        addMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
-        addMethodTemplate("to", INT, INT);
+        ensureMethodTemplate("to", new String[]{"x:IntLiteral"}, new String[]{"x:IntLiteral"});
+        ensureMethodTemplate("to", BOOLEAN, BOOLEAN);
+        ensureMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
+        ensureMethodTemplate("to", INT, INT);
         // addMethodTemplate("to", new String[] {"x:UInt64"}, new String[] {"x:UInt64"});
 
-        addMethodTemplate("and", THIS, THIS);
-        addMethodTemplate("or", THIS, THIS);
-        addMethodTemplate("xor", THIS, THIS);
-        addMethodTemplate("not", VOID, THIS);
+        ensureMethodTemplate("and", THIS, THIS);
+        ensureMethodTemplate("or", THIS, THIS);
+        ensureMethodTemplate("xor", THIS, THIS);
+        ensureMethodTemplate("not", VOID, THIS);
         }
 
     @Override

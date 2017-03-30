@@ -23,7 +23,7 @@ public class xTestService extends xObject
         {
         ConstantPoolAdapter adapter = f_adapter;
 
-        addPropertyTemplate("prop1", "x:String");
+        ensurePropertyTemplate("prop1", "x:String");
 
         }
     }

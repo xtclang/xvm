@@ -16,23 +16,23 @@ public class xFunction
     public xFunction(TypeSet types)
         {
         super(types, "x:Function", "x:Object", Shape.Interface);
+
+        addImplement("x:Const");
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:Const");
-
         //    Tuple invoke(Tuple args)
         //
         //    Type[] ReturnType;
         //
         //    Type[] ParamType;
 
-        addPropertyTemplate("ReturnType", "x:collections.Array<x:Type>");
-        addPropertyTemplate("ParamType", "x:collections.Array<x:Type>");
+        ensurePropertyTemplate("ReturnType", "x:collections.Array<x:Type>");
+        ensurePropertyTemplate("ParamType", "x:collections.Array<x:Type>");
 
-        addMethodTemplate("invoke", new String[]{"x:Tuple"}, new String[]{"x:Tuple"});
+        ensureMethodTemplate("invoke", new String[]{"x:Tuple"}, new String[]{"x:Tuple"});
         }
 
     @Override
