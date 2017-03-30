@@ -33,12 +33,12 @@ public interface TypeName
     static String getFunctionSignature(String sName, String[] asArgType, String[] asRetType)
         {
         return format(parseNames(asRetType)) + ' ' + sName +
-                " (" + format(parseNames(asArgType)) + ')';
+                "(" + format(parseNames(asArgType)) + ')';
         }
 
     static String getFunctionSignature(String sName, TypeName[] tnArg, TypeName[] tnRet)
         {
-        return format(tnRet) + ' ' + sName + " (" + format(tnArg) + ')';
+        return format(tnRet) + ' ' + sName + "(" + format(tnArg) + ')';
         }
 
 

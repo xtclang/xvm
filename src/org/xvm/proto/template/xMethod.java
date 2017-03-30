@@ -11,7 +11,7 @@ import org.xvm.proto.*;
  * @author gg 2017.02.27
  */
 public class xMethod
-        extends xObject
+        extends TypeCompositionTemplate
     {
     public xMethod(TypeSet types)
         {

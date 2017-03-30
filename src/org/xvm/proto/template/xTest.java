@@ -11,11 +11,13 @@ import org.xvm.proto.op.*;
  */
 public class xTest extends xObject
     {
-    public ConstantPoolAdapter adapter;
+    private final ConstantPoolAdapter adapter;
 
     public xTest(TypeSet types)
         {
         super(types, "x:Test", "x:Object", Shape.Class);
+
+        adapter = types.f_constantPool;
         }
 
     @Override
@@ -59,7 +61,7 @@ public class xTest extends xObject
         //      }
         ft.m_aop = new Op[]
             {
-            new Return_1(-adapter.ensureConstantValue(99)),
+            new Return_1(-adapter.ensureConstantValueId(99)),
             };
         ft.m_cVars = 1;
         }
@@ -73,7 +75,7 @@ public class xTest extends xObject
         //      }
         ft.m_aop = new Op[]
             {
-            new Return_1(-adapter.ensureConstantValue("Hello world!")),
+            new Return_1(-adapter.ensureConstantValueId("Hello world!")),
             };
         ft.m_cVars = 0;
         }
@@ -88,7 +90,7 @@ public class xTest extends xObject
         //      }                               // RETURN
         ft.m_aop = new Op[]
             {
-            new IVar(this.adapter.getClassConstId("x:String"), adapter.ensureConstantValue("Hello world!")), // #0
+            new IVar(this.adapter.getClassConstId("x:String"), adapter.ensureConstantValueId("Hello world!")), // #0
             new X_Print(0),
             new Return_0(),
             };
@@ -128,15 +130,15 @@ public class xTest extends xObject
         //      }                               // RETURN
         ct.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### in constructor: Test ###")),
-            new Set(0, -adapter.getPropertyConstId("x:Test", "prop1"), 1),
+            new X_Print(-adapter.ensureConstantValueId("# in constructor: Test #")),
+            new Set(0, adapter.getPropertyConstId("x:Test", "prop1"), 1),
             new Return_1(-adapter.getMethodConstId("x:Test", "construct:finally")),
             };
         ct.m_cVars = 2;
 
         ft.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### finally ###")),
+            new X_Print(-adapter.ensureConstantValueId("# finally #")),
             new X_Print(0),
             new Return_0(),
             };
@@ -160,14 +162,14 @@ public class xTest extends xObject
         //      }
         mt.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### in method1@Test ###")),
+            new X_Print(-adapter.ensureConstantValueId("# in method1@Test #")),
             new Var(this.adapter.getClassConstId("x:String")), // #1
             new Call_01(-adapter.getMethodConstId("x:Test", "getStringValue"), 1), // should be FunctionConstId
             new Var(this.adapter.getClassConstId("x:Int64")), // #2
-            new IVar(this.adapter.getClassConstId("x:String"), adapter.ensureConstantValue("world")), // #3
+            new IVar(this.adapter.getClassConstId("x:String"), adapter.ensureConstantValueId("world")), // #3
             new Invoke_11(1, -adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
             new Var(this.adapter.getClassConstId("x:Int64")), // #4
-            new Get(1, -adapter.getPropertyConstId("x:String", "length"), 4),
+            new Get(1, adapter.getPropertyConstId("x:String", "length"), 4),
             new Add(4, 2, 4),
             new Return_1(4),
             };
@@ -191,14 +193,14 @@ public class xTest extends xObject
         ft.m_aop = new Op[]
             {
             new Var(this.adapter.getClassConstId("x:Test")),     // #0
-            new New_1(this.adapter.getMethodConstId("x:Test", "construct"), -adapter.ensureConstantValue("Hello"), 0),
+            new New_1(this.adapter.getMethodConstId("x:Test", "construct"), -adapter.ensureConstantValueId("Hello"), 0),
             new Var(this.adapter.getClassConstId("x:String")),   // #1
-            new Get(0, -adapter.getPropertyConstId("x:Test", "prop1"), 1),
+            new Get(0, adapter.getPropertyConstId("x:Test", "prop1"), 1),
             new X_Print(1),
             new Var(this.adapter.getClassConstId("x:Int64")),    // #2
             new Invoke_01(0, -adapter.getMethodConstId("x:Test", "method1"), 2),
             new X_Print(2),
-            new X_Print(-adapter.ensureConstantValue("### finished test3 ###")),
+            new X_Print(-adapter.ensureConstantValueId("# finished test3 #")),
             new Return_0(),
             };
         ft.m_cVars = 3;
@@ -218,7 +220,7 @@ public class xTest extends xObject
             new Var(this.adapter.getClassConstId("x:Exception")),
             new New_N(this.adapter.getMethodConstId("x:Exception", "construct"), new int[]
                     {
-                    -adapter.ensureConstantValue("bye"),
+                    -adapter.ensureConstantValueId("bye"),
                     -adapter.getClassConstId("x:Nullable$Null"),
                     }, 0),
             new Throw(0),

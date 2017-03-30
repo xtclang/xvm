@@ -12,11 +12,13 @@ import org.xvm.proto.op.*;
  */
 public class xTest2 extends xObject
     {
-    public ConstantPoolAdapter adapter;
+    private final ConstantPoolAdapter adapter;
 
     public xTest2(TypeSet types)
         {
         super(types, "x:Test2", "x:Test", Shape.Class);
+
+        adapter = types.f_constantPool;
         }
 
     @Override
@@ -32,9 +34,6 @@ public class xTest2 extends xObject
         add_construct();
         add_method1();
         add_test21();
-
-        System.out.println("### Initialized ###");
-        System.out.println(getDescription());
         }
 
     private void add_construct()
@@ -49,10 +48,10 @@ public class xTest2 extends xObject
         //      }                               // RETURN_0
         ct.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### in constructor: Test2 ###")),
+            new X_Print(-adapter.ensureConstantValueId("# in constructor: Test2 #")),
             new Var(adapter.getClassConstId("x:Int64")), // #2
-            new Get(1, -adapter.getPropertyConstId("x:String", "length"), 2),
-            new Set(0, -adapter.getPropertyConstId("x:Test2", "prop2"), 2),
+            new Get(1, adapter.getPropertyConstId("x:String", "length"), 2),
+            new Set(0, adapter.getPropertyConstId("x:Test2", "prop2"), 2),
             new Call_N0(-adapter.getMethodConstId("x:Test", "construct"), new int[] {0, 1}),
             new Return_0(),
             };
@@ -71,7 +70,7 @@ public class xTest2 extends xObject
         //      }
         mt.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureConstantValue("### in method1@Test2 ###")),
+            new X_Print(-adapter.ensureConstantValueId("# in method1@Test2 #")),
             new Var(adapter.getClassConstId("x:Int64")), // #1
             new Call_01(Op.A_SUPER, 1),
             new Neg(1, 1),
@@ -97,14 +96,13 @@ public class xTest2 extends xObject
         ft.m_aop = new Op[]
             {
             new Var(this.adapter.getClassConstId("x:Test")),     // #0
-            new New_1(this.adapter.getMethodConstId("x:Test2", "construct"), -adapter.ensureConstantValue("Goodbye"), 0),
+            new New_1(this.adapter.getMethodConstId("x:Test2", "construct"), -adapter.ensureConstantValueId("Goodbye"), 0),
             new Var(this.adapter.getClassConstId("x:String")),   // #1
-            new Get(0, -adapter.getPropertyConstId("x:Test", "prop1"), 1),
+            new Get(0, adapter.getPropertyConstId("x:Test", "prop1"), 1),
             new X_Print(1),
             new Var(this.adapter.getClassConstId("x:Int64")),    // #2
             new Invoke_01(0, -adapter.getMethodConstId("x:Test", "method1"), 2),
             new X_Print(2),
-            new X_Print(-adapter.ensureConstantValue("### finished test21 ###")),
             new Return_0(),
             };
         ft.m_cVars = 3;
