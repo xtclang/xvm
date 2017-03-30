@@ -13,6 +13,8 @@ public class xArray
     public xArray(TypeSet types)
         {
         super(types, "x:collections.Array<ElementType>", "x:Object", Shape.Class);
+
+        addImplement("x:collections.Sequence<ElementType>");
         }
 
     // subclassing
@@ -24,8 +26,6 @@ public class xArray
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:Sequence<ElementType>");
-
         //    construct Array(Int capacity)
         //    construct Array(Int capacity, function ElementType(Int) supply)
         //
@@ -46,21 +46,21 @@ public class xArray
         // TODO construct
         // TODO initialization?
 
-        PropertyTemplate ptCap = addPropertyTemplate("capacity", "x:Int");
+        PropertyTemplate ptCap = ensurePropertyTemplate("capacity", "x:Int");
         ptCap.setSetAccess(Access.Private);
 
-        PropertyTemplate ptLen = addPropertyTemplate("size", "x:Int");
+        PropertyTemplate ptLen = ensurePropertyTemplate("size", "x:Int");
         ptLen.setSetAccess(Access.Private);
 
-        addMethodTemplate("elementAt", INT, new String[]{"x:Ref<ElementType>"});
-        addMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, THIS);
-        addMethodTemplate("reify", VOID, THIS);
-        addMethodTemplate("add", THIS, THIS);
-        addMethodTemplate("replace", new String[]{"x:Int", "ElementType"}, THIS);
+        ensureMethodTemplate("elementAt", INT, new String[]{"x:Ref<ElementType>"});
+        ensureMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, THIS);
+        ensureMethodTemplate("reify", VOID, THIS);
+        ensureMethodTemplate("add", THIS, THIS);
+        ensureMethodTemplate("replace", new String[]{"x:Int", "ElementType"}, THIS);
 
         addFunctionTemplate("compare", new String[] {"this.Type", "this.Type"}, new String[] {"x:Ordered"});
 
-        PropertyTemplate ptHead = addPropertyTemplate("head", "x:Ref<ElementType>");
+        PropertyTemplate ptHead = ensurePropertyTemplate("head", "x:Ref<ElementType>");
         ptHead.setGetAccess(Access.Private);
         ptHead.setSetAccess(Access.Private);
 

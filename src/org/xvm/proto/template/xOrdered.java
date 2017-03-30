@@ -34,14 +34,14 @@ public class xOrdered
         //    @op Boolean xor(Boolean that);
         //    @op Boolean not();
 
-        addMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
-        addMethodTemplate("to", new String[]{"x:Byte"}, new String[]{"x:Byte"});
-        addMethodTemplate("to", new String[]{"x:Int"}, new String[]{"x:Int"});
-        addMethodTemplate("to", new String[]{"x:UInt"}, new String[]{"x:UInt"});
+        ensureMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
+        ensureMethodTemplate("to", new String[]{"x:Byte"}, new String[]{"x:Byte"});
+        ensureMethodTemplate("to", new String[]{"x:Int"}, new String[]{"x:Int"});
+        ensureMethodTemplate("to", new String[]{"x:UInt"}, new String[]{"x:UInt"});
 
-        addMethodTemplate("and", BOOLEAN, BOOLEAN);
-        addMethodTemplate("or", BOOLEAN, BOOLEAN);
-        addMethodTemplate("xor", BOOLEAN, BOOLEAN);
-        addMethodTemplate("not", VOID, BOOLEAN);
+        ensureMethodTemplate("and", BOOLEAN, BOOLEAN);
+        ensureMethodTemplate("or", BOOLEAN, BOOLEAN);
+        ensureMethodTemplate("xor", BOOLEAN, BOOLEAN);
+        ensureMethodTemplate("not", VOID, BOOLEAN);
         }
     }

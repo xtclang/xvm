@@ -18,13 +18,14 @@ public class xInt64
         {
         super(types, "x:Int64", "x:Object", Shape.Const);
 
+        addImplement("x:IntNumber");
+
         INSTANCE = this;
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:IntNumber");
         }
 
     @Override

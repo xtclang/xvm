@@ -31,6 +31,6 @@ public class xReferent
         //    @ro Boolean isConst;
         //    @ro Boolean immutable;
 
-        addPropertyTemplate("ActualType", "x:Type").makeReadOnly();
+        ensurePropertyTemplate("ActualType", "x:Type").makeReadOnly();
         }
     }

@@ -22,8 +22,8 @@ public class xOrderable
         //    Orderable minOf(Orderable that)
         //    Orderable maxOf(Orderable that)
 
-        addMethodTemplate("to", THIS, new String[]{"x:Interval<x:Orderable>"});
-        addMethodTemplate("minOf", THIS, THIS);
-        addMethodTemplate("maxOf", THIS, THIS);
+        ensureMethodTemplate("to", THIS, new String[]{"x:Interval<x:Orderable>"});
+        ensureMethodTemplate("minOf", THIS, THIS);
+        ensureMethodTemplate("maxOf", THIS, THIS);
         }
     }

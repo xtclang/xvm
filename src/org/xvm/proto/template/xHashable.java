@@ -2,24 +2,23 @@ package org.xvm.proto.template;
 
 import org.xvm.proto.TypeSet;
 
-
 /**
  * TODO:
  *
  * @author gg 2017.02.27
  */
-public class xUInt64
+public class xHashable
         extends xObject
     {
-    public xUInt64(TypeSet types)
+    public xHashable(TypeSet types)
         {
-        super(types, "x:UInt64", "x:Object", Shape.Const);
-
-        addImplement("x:IntNumber");
+        super(types, "x:collections.Hashable", "x:Object", Shape.Interface);
         }
 
     @Override
     public void initDeclared()
         {
+        // @ro Int hash;
+        ensurePropertyTemplate("hash", "x:Int").makeReadOnly();
         }
     }

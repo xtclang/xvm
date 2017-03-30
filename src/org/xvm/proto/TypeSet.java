@@ -80,6 +80,7 @@ public class TypeSet
         {
         return m_mapTemplates.containsKey(sName);
         }
+
     public void addTemplate(TypeCompositionTemplate template)
         {
         String sName = template.f_sName;
@@ -90,9 +91,8 @@ public class TypeSet
 
         f_constantPool.registerClass(template);
 
-        template.initDeclared();
         template.resolveDependencies();
-        template.initCode();
+        template.initDeclared();
         }
 
     public TypeCompositionTemplate ensureTemplate(String sName)

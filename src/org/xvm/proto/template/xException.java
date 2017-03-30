@@ -19,26 +19,20 @@ public class xException
         {
         super(types, "x:Exception", "x:Object", Shape.Const);
 
+        addImplement("x:Const");
+
         INSTANCE = this;
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:Const");
-
         // @inject Iterable<StackFrame> stackTrace;
-        addPropertyTemplate("text", "x:String");
-        addPropertyTemplate("cause", "this.Type");
-        addPropertyTemplate("stackTrace", "x:String"); // TODO: replace "x:String" with "x:Iterable<this.Type.StackFrame>"
+        ensurePropertyTemplate("text", "x:String");
+        ensurePropertyTemplate("cause", "this.Type");
+        ensurePropertyTemplate("stackTrace", "x:String"); // TODO: replace "x:String" with "x:Iterable<this.Type.StackFrame>"
 
-        addFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
-        }
-
-    @Override
-    public void initCode()
-        {
-        FunctionTemplate ct = getFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
+        FunctionTemplate ct = addFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
 
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {

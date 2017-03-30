@@ -30,15 +30,15 @@ public class xInterval
         //    conditional Interval<ElementType> intersection(Interval<ElementType> that)
         //    conditional Interval<ElementType> union(Interval<ElementType> that)
 
-        addPropertyTemplate("lowerBound", "ElementType");
-        addPropertyTemplate("upperBound", "ElementType");
-        addPropertyTemplate("reversed", "x:Boolean");
+        ensurePropertyTemplate("lowerBound", "ElementType");
+        ensurePropertyTemplate("upperBound", "ElementType");
+        ensurePropertyTemplate("reversed", "x:Boolean");
 
-        addMethodTemplate("contains", new String[]{"ElementType"}, BOOLEAN);
-        addMethodTemplate("contains", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
-        addMethodTemplate("isContainedBy", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
-        addMethodTemplate("overlaps", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
-        addMethodTemplate("intersection", new String[]{"x:Interval<ElementType>"}, new String[]{"x:ConditionalTuple<x:Interval<ElementType>>"});
-        addMethodTemplate("union", new String[]{"x:Interval<ElementType>"}, new String[]{"x:ConditionalTuple<x:Interval<ElementType>>"});
+        ensureMethodTemplate("contains", new String[]{"ElementType"}, BOOLEAN);
+        ensureMethodTemplate("contains", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
+        ensureMethodTemplate("isContainedBy", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
+        ensureMethodTemplate("overlaps", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
+        ensureMethodTemplate("intersection", new String[]{"x:Interval<ElementType>"}, new String[]{"x:ConditionalTuple<x:Interval<ElementType>>"});
+        ensureMethodTemplate("union", new String[]{"x:Interval<ElementType>"}, new String[]{"x:ConditionalTuple<x:Interval<ElementType>>"});
         }
     }

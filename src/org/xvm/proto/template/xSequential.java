@@ -13,21 +13,21 @@ public class xSequential
     public xSequential(TypeSet types)
         {
         super(types, "x:Sequential", "x:Object", Shape.Interface);
+
+        addImplement("x:Orderable");
         }
 
     @Override
     public void initDeclared()
         {
-        ensureImplement("x:Orderable");
-
         //    conditional Sequential prev();
         //    conditional Sequential next();
         //    Sequential prevValue()
         //    Sequential nextValue();
 
-        addMethodTemplate("next", VOID, CONDITIONAL_THIS);
-        addMethodTemplate("prev", VOID, CONDITIONAL_THIS);
-        addMethodTemplate("nextValue", VOID, THIS);
-        addMethodTemplate("prevValue", VOID, THIS);
+        ensureMethodTemplate("next", VOID, CONDITIONAL_THIS);
+        ensureMethodTemplate("prev", VOID, CONDITIONAL_THIS);
+        ensureMethodTemplate("nextValue", VOID, THIS);
+        ensureMethodTemplate("prevValue", VOID, THIS);
         }
     }

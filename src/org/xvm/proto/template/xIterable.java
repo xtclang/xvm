@@ -23,8 +23,8 @@ public class xIterable
         //    Iterator<ElementType> iterator(function Boolean (ElementType) match)
         //    Void forEach(function Void(ElementType) process)
 
-        addMethodTemplate("iterator", VOID, new String[]{"x:Iterator<ElementType>"});
-        addMethodTemplate("iterator", new String[]{"x:Function"}, new String[]{"x:Iterator<ElementType>"}); // not quite right
-        addMethodTemplate("forEach", new String[]{"x:Function"}, VOID); // not quite right
+        ensureMethodTemplate("iterator", VOID, new String[]{"x:Iterator<ElementType>"});
+        ensureMethodTemplate("iterator", new String[]{"x:Function"}, new String[]{"x:Iterator<ElementType>"}); // not quite right
+        ensureMethodTemplate("forEach", new String[]{"x:Function"}, VOID); // not quite right
         }
     }

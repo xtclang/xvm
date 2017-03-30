@@ -23,8 +23,8 @@ public class xUniformIndex
         //    @op Void set(IndexType index, ElementType value)
         //    @op Ref<ElementType> elementAt(IndexType index)
 
-        addMethodTemplate("get", new String[]{"IndexType"}, new String[]{"ElementType"});
-        addMethodTemplate("set", new String[]{"IndexType", "ElementType"}, VOID);
-        addMethodTemplate("elementAt", new String[]{"IndexType"}, new String[]{"x:Ref<ElementType>"});
+        ensureMethodTemplate("get", new String[]{"IndexType"}, new String[]{"ElementType"});
+        ensureMethodTemplate("set", new String[]{"IndexType", "ElementType"}, VOID);
+        ensureMethodTemplate("elementAt", new String[]{"IndexType"}, new String[]{"x:Ref<ElementType>"});
         }
     }

@@ -15,16 +15,23 @@ public class TestDriver
         Container container = new Container();
 
         xTest test = new xTest(container.f_types);
-        test.m_adapter = container.f_constantPoolAdapter;
+        test.adapter = container.f_constantPoolAdapter;
         container.f_types.addTemplate(test);
 
         xTest2 test2 = new xTest2(container.f_types);
-        test2.m_adapter = container.f_constantPoolAdapter;
+        test2.adapter = container.f_constantPoolAdapter;
         container.f_types.addTemplate(test2);
 
         ServiceContext context = container.createContext(test);
 
-        test.forEachFunction(function ->
+        runTests(test, context);
+        runTests(test2, context);
+        }
+
+    protected static void runTests(TypeCompositionTemplate template, ServiceContext context)
+        {
+        System.out.println("### Running tests for " + template + " ###");
+        template.forEachFunction(function ->
             {
             if (function.f_sName.startsWith("test") && function.m_cArgs == 0)
                 {

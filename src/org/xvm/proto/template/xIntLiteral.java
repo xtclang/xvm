@@ -51,10 +51,10 @@ public class xIntLiteral
         //    @auto Dec64 to<Dec64>()
         //    @auto Dec128 to<Dec128>()
 
-        addPropertyTemplate("radix", "x:Int");
+        ensurePropertyTemplate("radix", "x:Int");
         // TODO the rest
 
-        addMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
+        ensureMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
         // TODO conversions
         }
     }

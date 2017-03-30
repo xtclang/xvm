@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.Utils;
+import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 /**
  * CALL_00 rvalue-function.
@@ -23,11 +23,29 @@ public class Call_00 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
+        Frame frameNew;
 
-        ObjectHandle[] ahVars = new ObjectHandle[function.m_cVars];
+        if (f_nFunctionValue == A_SUPER)
+            {
+            ObjectHandle hThis = frame.f_ahVars[0];
+            MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
-        ObjectHandle hException = new Frame(frame.f_context, frame, null, function, ahVars).execute();
+            ObjectHandle[] ahVars = new ObjectHandle[methodSuper.m_cVars];
+
+            ahVars[0] = hThis;
+
+            frameNew = new Frame(frame.f_context, frame, hThis, methodSuper, ahVars);
+            }
+        else
+            {
+            FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
+
+            ObjectHandle[] ahVars = new ObjectHandle[function.m_cVars];
+
+            frameNew = new Frame(frame.f_context, frame, null, function, ahVars);
+            }
+
+        ObjectHandle hException = frameNew.execute();
 
         if (hException == null)
             {

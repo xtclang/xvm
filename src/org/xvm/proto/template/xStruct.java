@@ -22,8 +22,8 @@ public class xStruct
         //    Ref[] to<Ref[]>();
         //    @op Ref elementFor(String name)
 
-        addMethodTemplate("to", new String[]{"x:Tuple"}, new String[]{"x:Tuple"});
-        addMethodTemplate("to", new String[]{"x:collections.Array<x:Ref>"}, new String[]{"x:collections.Array<x:Ref>"});
-        addMethodTemplate("elementFor", STRING, new String[]{"x:Ref"});
+        ensureMethodTemplate("to", new String[]{"x:Tuple"}, new String[]{"x:Tuple"});
+        ensureMethodTemplate("to", new String[]{"x:collections.Array<x:Ref>"}, new String[]{"x:collections.Array<x:Ref>"});
+        ensureMethodTemplate("elementFor", STRING, new String[]{"x:Ref"});
         }
     }

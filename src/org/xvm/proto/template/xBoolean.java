@@ -50,15 +50,15 @@ public class xBoolean
         //    @op Boolean xor(Boolean that);
         //    @op Boolean not();
 
-        addMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
-        addMethodTemplate("to", new String[]{"x:Byte"}, new String[]{"x:Byte"});
-        addMethodTemplate("to", INT, INT);
+        ensureMethodTemplate("to", new String[]{"x:Bit"}, new String[]{"x:Bit"});
+        ensureMethodTemplate("to", new String[]{"x:Byte"}, new String[]{"x:Byte"});
+        ensureMethodTemplate("to", INT, INT);
         // addMethodTemplate("to", new String[]{"x:UInt64"}, new String[]{"x:UInt64"});
 
-        addMethodTemplate("and", THIS, THIS);
-        addMethodTemplate("or", THIS, THIS);
-        addMethodTemplate("xor", THIS, THIS);
-        addMethodTemplate("not", VOID, THIS);
+        ensureMethodTemplate("and", THIS, THIS);
+        ensureMethodTemplate("or", THIS, THIS);
+        ensureMethodTemplate("xor", THIS, THIS);
+        ensureMethodTemplate("not", VOID, THIS);
         }
 
     @Override

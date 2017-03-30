@@ -11,7 +11,7 @@ import org.xvm.proto.op.*;
  */
 public class xTest extends xObject
     {
-    public ConstantPoolAdapter m_adapter;
+    public ConstantPoolAdapter adapter;
 
     public xTest(TypeSet types)
         {
@@ -21,7 +21,7 @@ public class xTest extends xObject
     @Override
     public void initDeclared()
         {
-        addPropertyTemplate("prop1", "x:String");
+        ensurePropertyTemplate("prop1", "x:String");
 
         addFunctionTemplate("getIntValue", VOID, INT);
         addFunctionTemplate("getStringValue", VOID, STRING);
@@ -33,30 +33,24 @@ public class xTest extends xObject
         addFunctionTemplate("throwing", VOID, INT);
         addFunctionTemplate("test4", VOID, VOID);
 
-        addMethodTemplate("method1", VOID, INT);
+        ensureMethodTemplate("method1", VOID, INT);
+
+        add_getIntValue();
+        add_getStringValue();
+
+        add_test1();
+        add_test2();
+
+        add_construct();
+        add_method1();
+
+        add_test3();
+
+        add_throwing();
+        add_test4();
         }
 
-    @Override
-    public void initCode()
-        {
-        ConstantPoolAdapter adapter = m_adapter;
-
-        add_getIntValue(adapter);
-        add_getStringValue(adapter);
-
-        add_test1(adapter);
-        add_test2(adapter);
-
-        add_construct(adapter);
-        add_method1(adapter);
-
-        add_test3(adapter);
-
-        add_throwing(adapter);
-        add_test4(adapter);
-        }
-
-    private void add_getIntValue(ConstantPoolAdapter adapter)
+    private void add_getIntValue()
         {
         FunctionTemplate ft = getFunctionTemplate("getIntValue", VOID, INT);
         //  static Int getIntValue()
@@ -70,7 +64,7 @@ public class xTest extends xObject
         ft.m_cVars = 1;
         }
 
-    private void add_getStringValue(ConstantPoolAdapter adapter)
+    private void add_getStringValue()
         {
         FunctionTemplate ft = getFunctionTemplate("getStringValue", VOID, STRING);
         //  static String getStringValue()
@@ -84,7 +78,7 @@ public class xTest extends xObject
         ft.m_cVars = 0;
         }
 
-    private void add_test1(ConstantPoolAdapter adapter)
+    private void add_test1()
         {
         FunctionTemplate ft = getFunctionTemplate("test1", VOID, VOID);
         //  static Void test1()
@@ -94,14 +88,14 @@ public class xTest extends xObject
         //      }                               // RETURN
         ft.m_aop = new Op[]
             {
-            new IVar(adapter.getClassConstId("x:String"), adapter.ensureConstantValue("Hello world!")), // #0
+            new IVar(this.adapter.getClassConstId("x:String"), adapter.ensureConstantValue("Hello world!")), // #0
             new X_Print(0),
             new Return_0(),
             };
         ft.m_cVars = 1;
         }
 
-    private void add_test2(ConstantPoolAdapter adapter)
+    private void add_test2()
         {
         FunctionTemplate ft = getFunctionTemplate("test2", VOID, VOID);
         //  static Void test2()
@@ -112,7 +106,7 @@ public class xTest extends xObject
         //      }                               // RETURN
         ft.m_aop = new Op[]
             {
-            new Var(adapter.getClassConstId("x:Int64")), // #0
+            new Var(this.adapter.getClassConstId("x:Int64")), // #0
             new Call_01(-adapter.getMethodConstId("x:Test", "getIntValue"), 0),
             new X_Print(0),
             new Return_0(),
@@ -120,7 +114,7 @@ public class xTest extends xObject
         ft.m_cVars = 1;
         }
 
-    private void add_construct(ConstantPoolAdapter adapter)
+    private void add_construct()
         {
         FunctionTemplate ct = getFunctionTemplate("construct", new String[]{"x:Test", "x:String"}, new String[]{"x:Function"});
         FunctionTemplate ft = getFunctionTemplate("construct:finally", new String[]{"x:Test", "x:String"}, VOID);
@@ -149,7 +143,7 @@ public class xTest extends xObject
         ft.m_cVars = 2;
         }
 
-    private void add_method1(ConstantPoolAdapter adapter)
+    private void add_method1()
         {
         MethodTemplate mt = getMethodTemplate("method1", VOID, INT);
         //  Int method1()                       // #0 = this:private
@@ -167,12 +161,12 @@ public class xTest extends xObject
         mt.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureConstantValue("### in method1@Test ###")),
-            new Var(adapter.getClassConstId("x:String")), // #1
+            new Var(this.adapter.getClassConstId("x:String")), // #1
             new Call_01(-adapter.getMethodConstId("x:Test", "getStringValue"), 1), // should be FunctionConstId
-            new Var(adapter.getClassConstId("x:Int64")), // #2
-            new IVar(adapter.getClassConstId("x:String"), adapter.ensureConstantValue("world")), // #3
+            new Var(this.adapter.getClassConstId("x:Int64")), // #2
+            new IVar(this.adapter.getClassConstId("x:String"), adapter.ensureConstantValue("world")), // #3
             new Invoke_11(1, -adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
-            new Var(adapter.getClassConstId("x:Int64")), // #4
+            new Var(this.adapter.getClassConstId("x:Int64")), // #4
             new Get(1, -adapter.getPropertyConstId("x:String", "length"), 4),
             new Add(4, 2, 4),
             new Return_1(4),
@@ -180,7 +174,7 @@ public class xTest extends xObject
         mt.m_cVars = 5;
         }
 
-    private void add_test3(ConstantPoolAdapter adapter)
+    private void add_test3()
         {
         FunctionTemplate ft = getFunctionTemplate("test3", VOID, VOID);
         //  static Void test3()
@@ -196,21 +190,21 @@ public class xTest extends xObject
         //      }                               // RETURN
         ft.m_aop = new Op[]
             {
-            new Var(adapter.getClassConstId("x:Test")),     // #0
-            new New_1(adapter.getMethodConstId("x:Test", "construct"), -adapter.ensureConstantValue("Hello"), 0),
-            new Var(adapter.getClassConstId("x:String")),   // #1
+            new Var(this.adapter.getClassConstId("x:Test")),     // #0
+            new New_1(this.adapter.getMethodConstId("x:Test", "construct"), -adapter.ensureConstantValue("Hello"), 0),
+            new Var(this.adapter.getClassConstId("x:String")),   // #1
             new Get(0, -adapter.getPropertyConstId("x:Test", "prop1"), 1),
             new X_Print(1),
-            new Var(adapter.getClassConstId("x:Int64")),    // #2
+            new Var(this.adapter.getClassConstId("x:Int64")),    // #2
             new Invoke_01(0, -adapter.getMethodConstId("x:Test", "method1"), 2),
-            new X_Print(-adapter.ensureConstantValue("### finished test3 ###")),
             new X_Print(2),
+            new X_Print(-adapter.ensureConstantValue("### finished test3 ###")),
             new Return_0(),
             };
         ft.m_cVars = 3;
         }
 
-    private void add_throwing(ConstantPoolAdapter adapter)
+    private void add_throwing()
         {
         FunctionTemplate ft = getFunctionTemplate("throwing", VOID, INT);
         //  static Void throwing()
@@ -221,8 +215,8 @@ public class xTest extends xObject
         //      }
         ft.m_aop = new Op[]
             {
-            new Var(adapter.getClassConstId("x:Exception")),
-            new New_N(adapter.getMethodConstId("x:Exception", "construct"), new int[]
+            new Var(this.adapter.getClassConstId("x:Exception")),
+            new New_N(this.adapter.getMethodConstId("x:Exception", "construct"), new int[]
                     {
                     -adapter.ensureConstantValue("bye"),
                     -adapter.getClassConstId("x:Nullable$Null"),
@@ -232,7 +226,7 @@ public class xTest extends xObject
         ft.m_cVars = 1;
         }
 
-    private void add_test4(ConstantPoolAdapter adapter)
+    private void add_test4()
         {
         FunctionTemplate ft = getFunctionTemplate("test4", VOID, VOID);
         // static void test4()
@@ -254,7 +248,7 @@ public class xTest extends xObject
         ft.m_aop = new Op[]
             {
             new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+5}),
-            new IVar(adapter.getClassConstId("x:Boolean"), adapter.getClassConstId("x:Boolean$True")),
+            new IVar(this.adapter.getClassConstId("x:Boolean"), adapter.getClassConstId("x:Boolean$True")),
             new X_Print(0),
             new Call_00(-adapter.getMethodConstId("x:Test", "throwing")),
             new GuardEnd(+4),

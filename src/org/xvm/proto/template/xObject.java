@@ -34,16 +34,16 @@ public class xObject
         // (Object) to<(Object)>()
         // @auto function Object() to<function Object()>()
 
-        PropertyTemplate propMeta = addPropertyTemplate("meta", "x:Meta");
+        PropertyTemplate propMeta = ensurePropertyTemplate("meta", "x:Meta");
         propMeta.setGetAccess(Access.Protected);
         propMeta.setSetAccess(Access.Protected);
 
         addFunctionTemplate("equals", new String[]{"x:Object", "x:Object"}, VOID);
 
-        addMethodTemplate("to", STRING, STRING);
-        addMethodTemplate("to", new String[]{"x:collections.Array<x:String>"}, new String[]{"x:collections.Array<x:String>"});
-        addMethodTemplate("to", new String[]{"x:Tuple<x:Object>"}, new String[]{"x:Tuple<x:Object>"});
-        addMethodTemplate("to", new String[]{"x:Function"}, new String[]{"x:Function"});
+        ensureMethodTemplate("to", STRING, STRING);
+        ensureMethodTemplate("to", new String[]{"x:collections.Array<x:String>"}, new String[]{"x:collections.Array<x:String>"});
+        ensureMethodTemplate("to", new String[]{"x:Tuple<x:Object>"}, new String[]{"x:Tuple<x:Object>"});
+        ensureMethodTemplate("to", new String[]{"x:Function"}, new String[]{"x:Function"});
         }
 
     @Override
