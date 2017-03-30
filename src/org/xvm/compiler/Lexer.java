@@ -147,6 +147,14 @@ public class Lexer
                     switch (nextChar())
                         {
                         case '.':
+                            if (source.hasNext())
+                                {
+                                if (nextChar() == '.')
+                                    {
+                                    return new Token(lInitPos, source.getPosition(), Id.ELLIPSIS);
+                                    }
+                                source.rewind();
+                                }
                             return new Token(lInitPos, source.getPosition(), Id.DOTDOT);
 
                         case '0': case '1': case '2': case '3': case '4':
@@ -426,9 +434,8 @@ public class Lexer
             default:
                 if (!isIdentifierStart(chInit))
                     {
-                    m_errorListener.log(Severity.ERROR, ILLEGAL_CHAR,
-                            new Object[] {quotedChar(chInit)},
-                            source, lInitPos, source.getPosition());
+                    log(Severity.ERROR, ILLEGAL_CHAR, new Object[]{quotedChar(chInit)},
+                            lInitPos, source.getPosition());
                     }
                 // fall through
             case 'A':case 'B':case 'C':case 'D':case 'E':case 'F':case 'G':
@@ -491,8 +498,8 @@ public class Lexer
                             case '\n':
                                 // log error: newline in string
                                 source.rewind();
-                                m_errorListener.log(Severity.ERROR, STRING_NO_TERM, null,
-                                        source, lPosStart, source.getPosition());
+                                log(Severity.ERROR, STRING_NO_TERM, null,
+                                        lPosStart, source.getPosition());
                                 // assume it wasn't supposed to be an escape
                                 sb.append('\\');
                                 break Appending;
@@ -524,8 +531,8 @@ public class Lexer
                                 long lPosEscEnd = source.getPosition();
                                 source.rewind();
                                 source.rewind();
-                                m_errorListener.log(Severity.ERROR, STRING_BAD_ESC, null,
-                                        source, source.getPosition(), lPosEscEnd);
+                                log(Severity.ERROR, STRING_BAD_ESC, null,
+                                        source.getPosition(), lPosEscEnd);
                                 source.setPosition(lPosEscEnd);
 
                                 // assume it wasn't supposed to be an escape:
@@ -540,8 +547,8 @@ public class Lexer
                     case '\n':
                         // log error: newline in string
                         source.rewind();
-                        m_errorListener.log(Severity.ERROR, STRING_NO_TERM, null,
-                                source, lPosStart, source.getPosition());
+                        log(Severity.ERROR, STRING_NO_TERM, null,
+                                lPosStart, source.getPosition());
                         break Appending;
 
                     default:
@@ -552,8 +559,8 @@ public class Lexer
             else
                 {
                 // log error: unterminated string
-                m_errorListener.log(Severity.ERROR, STRING_NO_TERM, null,
-                        source, lPosStart, source.getPosition());
+                log(Severity.ERROR, STRING_NO_TERM, null,
+                        lPosStart, source.getPosition());
                 }
             }
 
@@ -583,13 +590,24 @@ public class Lexer
             {
             if (source.next() == '.')
                 {
+                // could be ".."
+                if (source.hasNext())
+                    {
+                    if (source.next() == '.')
+                        {
+                        source.rewind();
+                        source.rewind();
+                        return new Token(lPosStart, source.getPosition(), Id.LIT_INT, piWhole);
+                        }
+                    }
+
                 piFraction = eatDigits(false, mantissaRadix, results);
                 fractionalDigits = results[0];
 
                 if (fractionalDigits == 0)
                     {
-                    m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                            source, lPosStart, source.getPosition());
+                    log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                            lPosStart, source.getPosition());
                     }
                 }
             else
@@ -621,8 +639,8 @@ public class Lexer
                     source.rewind();
                     if (isIdentifierPart(ch))
                         {
-                        m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                                source, source.getPosition(), lEndPos);
+                        log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                source.getPosition(), lEndPos);
                         }
                     break;
                 }
@@ -661,8 +679,8 @@ public class Lexer
                 long lExp = piExp.getLong();
                 if (lExp > 6144 || lExp < (1-6144))
                     {
-                    m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                            source, lPosStart, lPosEnd);
+                    log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                            lPosStart, lPosEnd);
                     }
                 else
                     {
@@ -773,8 +791,8 @@ public class Lexer
                             {
                             if (!fError)
                                 {
-                                m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                                        source, lPos, source.getPosition());
+                                log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                        lPos, source.getPosition());
                                 fError = true;
                                 }
                             }
@@ -788,8 +806,8 @@ public class Lexer
                         {
                         if (!fError)
                             {
-                            m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                                    source, lPos, source.getPosition());
+                            log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                    lPos, source.getPosition());
                             fError = true;
                             }
                         // while an error was encountered, it was at least a digit, so continue
@@ -803,8 +821,8 @@ public class Lexer
                         {
                         if (!fError)
                             {
-                            m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                                    source, lPos, source.getPosition());
+                            log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                    lPos, source.getPosition());
                             fError = true;
                             }
                         // while an error was encountered, it was at least a digit, so continue
@@ -820,8 +838,8 @@ public class Lexer
                     if (cDigits == 0 && !fError)
                         {
                         // it's an error to start the sequence of digits with an underscore
-                        m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                                source, lPos, source.getPosition());
+                        log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                lPos, source.getPosition());
                         fError = true;
                         }
                     continue Parsing;
@@ -849,8 +867,8 @@ public class Lexer
 
         if (!fError && cDigits == 0)
             {
-            m_errorListener.log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                    source, lPosStart, source.getPosition());
+            log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                    lPosStart, source.getPosition());
             }
 
         if (digitCount != null && digitCount.length > 0)
@@ -917,8 +935,8 @@ public class Lexer
             }
 
         // missing the enclosing "*/"
-        m_errorListener.log(Severity.ERROR, EXPECTED_ENDCOMMENT, null,
-                source, lPosTextStart, source.getPosition());
+        log(Severity.ERROR, EXPECTED_ENDCOMMENT, null,
+                lPosTextStart, source.getPosition());
 
         // just pretend that the rest of the file was all one big comment
         return new Token(lPosTokenStart, source.getPosition(), Id.ENC_COMMENT,
@@ -944,8 +962,8 @@ public class Lexer
             final long lStartPos = m_source.getPosition();
             m_source.setPosition(lPos);
 
-            m_errorListener.log(Severity.ERROR, UNEXPECTED_EOF, null,
-                    m_source, lStartPos, m_source.getPosition());
+            log(Severity.ERROR, UNEXPECTED_EOF, null,
+                    lStartPos, m_source.getPosition());
             }
 
         return ch;
@@ -964,14 +982,32 @@ public class Lexer
             }
         catch (NoSuchElementException e)
             {
-            m_errorListener.log(Severity.ERROR, sError, null,
-                    m_source, m_source.getPosition(), m_source.getPosition());
+            log(Severity.ERROR, sError, null,
+                    m_source.getPosition(), m_source.getPosition());
             }
 
         // already logged an error; just pretend we hit a closing brace (since all roads should have
         // gone there)
         return '}';
         }
+
+    /**
+     * Log an error.
+     *
+     * @param severity
+     * @param sCode
+     * @param aoParam
+     * @param lPosStart
+     * @param lPosEnd
+     */
+    protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd)
+        {
+        if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd))
+            {
+            throw new CompilerException("error list is full: " + m_errorListener);
+            }
+        }
+
 
     // ----- helper methods ----------------------------------------------------
 

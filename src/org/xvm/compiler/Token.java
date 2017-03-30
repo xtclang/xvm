@@ -191,6 +191,7 @@ public class Token
         COMMA       (","            ),
         DOT         ("."            ),
         DOTDOT      (".."           ),
+        ELLIPSIS    ("..."          ),
         AT          ("@"            ),
         COND        ("?"            ),
         COND_THEN   ("?."           ),

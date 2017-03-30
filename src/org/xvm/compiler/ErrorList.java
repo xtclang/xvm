@@ -90,6 +90,16 @@ public class ErrorList
         return m_list;
         }
 
+    /**
+     * Clear the list of errors, resetting the error collection state.
+     */
+    public void clear()
+        {
+        m_list.clear();
+        m_cErrors  = 0;
+        m_severity = Severity.NONE;
+        }
+
 
     // ----- inner class: ErrorInfo --------------------------------------------
 

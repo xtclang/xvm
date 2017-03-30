@@ -1,8 +1,13 @@
 package org.xvm.compiler;
 
 
+import org.xvm.compiler.ast.BlockStatement;
+import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.TypeDeclarationStatement;
+
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,70 +18,114 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.xvm.util.Handy.indentLines;
 
 
 /**
  * This is the command-line harness for the prototype Ecstasy compiler.
  *
- * Find the root of the module containing the code in the current directory, and compile it, placing
+ * <p/>Find the root of the module containing the code in the current directory, and compile it, placing
  * the result in the default location:
  *
- *   xtc
+ * <p/>{@code  xtc}
  *
- * Compile the specified module, placing the result in the default location:
+ * <p/>Compile the specified module, placing the result in the default location:
  *
- *   xtc ./path/to/module.x
+ * <p/>{@code  xtc ./path/to/module.x}
  *
- * Compile just the specified file, or the minimum number of files necessary to compile the
+ * <p/>Compile just the specified file, or the minimum number of files necessary to compile the
  * specified file:
  *
- *   xtc MyClass.x
+ * <p/>{@code  xtc MyClass.x}
  *
- * The default location for the resulting {@code .xtc} file is based on the project structure
+ * <p/>The default location for the resulting {@code .xtc} file is based on the project structure
  * containing the module. The default location is determined by following these steps, and selecting
  * the first one that fits:
- * # If the module is located in a directory with a writable sibling directory named "target", and
+ * <ul>
+ * <li>If the module is located in a directory with a writable sibling directory named "target", and
  *   the result of the compilation is a module file, then the resulting module will be stored in the
- *   "target" directory.
- * # If the module is located in a directory with a writable sibling directory named "build", and
+ *   "target" directory.</li>
+ * <li>If the module is located in a directory with a writable sibling directory named "build", and
  *   the result of the compilation is a module or package or class file, then the resulting module,
- *   package, or class file will be stored in the "build" directory.
- * # If the module is located in a directory with a writable sibling directory named "classes", and
+ *   package, or class file will be stored in the "build" directory.</li>
+ * <li>If the module is located in a directory with a writable sibling directory named "classes", and
  *   the result of the compilation is a package or class file, then the resulting package or class
- *   file will be stored in the "classes" directory.
- * # Otherwise, the {@code .xtc} file will be placed in the directory containing the module root.
+ *   file will be stored in the "classes" directory.</li>
+ * <li>Otherwise, the {@code .xtc} file will be placed in the directory containing the module root.</li>
+ * </ul>
  *
- * The location of the resulting {@code .xtc} file can be specified by using the {@code -D} option;
+ * <p/>The location of the resulting {@code .xtc} file can be specified by using the {@code -D} option;
  * for example:
  *
- *   xtc -D ~/modules/
+ * <p/>{@code  xtc -D ~/modules/}
  *
- * In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime repository,
+ * <p/>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime repository,
  * it is possible to provide a search path for modules that will be used by the compiler:
  *
- *   xtc -M ~/modules/:../build/
+ * <p/>{@code  xtc -M ~/modules/:../build/}
  *
- * Other command line options:
- * * {@code -nosrc} - do not include source code in the compiled module
- * * {@code -nodbg} - do not include debugging information in the compiled module
- * * {@code -nodoc} - do not include documentation in the compiled module
- * * {@code -strict} - convert warnings to errors
- * * {@code -nowarn} - suppress warnings
- * * {@code -verbose} - provide information about the work being done by the compilation process
+ * <p/>Other command line options:
+ * <ul>
+ * <li>{@code -nosrc} - do not include source code in the compiled module</li>
+ * <li>{@code -nodbg} - do not include debugging information in the compiled module</li>
+ * <li>{@code -nodoc} - do not include documentation in the compiled module</li>
+ * <li>{@code -strict} - convert warnings to errors</li>
+ * <li>{@code -nowarn} - suppress warnings</li>
+ * <li>{@code -verbose} - provide information about the work being done by the compilation process</li>
+ * </ul>
  *
  * @author cp 2017.03.23
  */
 public class CommandLine
     {
+    protected String[]              args            = null;
+    protected List<File>            sources         = new ArrayList<>();
+    protected Options               opts            = new Options();
+    protected List<String>          deferred        = new ArrayList<>();
+    protected boolean               error           = false;
+    protected Map<File, DirNode>    modules         = new ListMap<>();
+    protected Map<String, DirNode>  modulesByName   = new HashMap<>();
+
     public static void main(String[] args)
             throws Exception
         {
-        List<File>   sources  = new ArrayList<>();
-        Options      opts     = new Options();
-        List<String> deferred = new ArrayList<>();
-        boolean      error    = false;
+        // parse all the command line arguments, etc.
+        CommandLine cmd = new CommandLine();
+        cmd.parseArgs(args);
+        cmd.checkTerminalFailure();
+        cmd.showCompilerOptions();
+
+        // what are the modules that need to be compiled?
+        cmd.selectCompileTargets();
+        cmd.checkTerminalFailure();
+
+        // parse the modules
+        cmd.parseSource();
+        cmd.checkTerminalFailure();
+        cmd.checkCompilerErrors();
+
+        // assign names
+        cmd.arrangeSourceByName();
+        cmd.checkTerminalFailure();
+
+        // TODO
+        cmd.dump();
+        }
+
+    /**
+     * Parse and store off the command line arguments.
+     *
+     * @param args  the arguments from the command line, in the format passed to a "main" method
+     */
+    protected void parseArgs(String[] args)
+        {
+        assert this.args == null;
+        this.args = args;
+
         if (args != null)
             {
             String sContinued = null;
@@ -94,7 +143,18 @@ public class CommandLine
                             {
                             s = s.substring(2);
                             }
-                        List<File> list = resolvePath(s);
+
+                        List<File> list;
+                        try
+                            {
+                            list = resolvePath(s);
+                            }
+                        catch (IOException e)
+                            {
+                            deferred.add("xtc: Exception resolving path \"" + s + "\": " + e);
+                            continue;
+                            }
+
                         if (list.isEmpty())
                             {
                             deferred.add("xtc: could not resolve: \"" + s + "\"");
@@ -131,7 +191,17 @@ public class CommandLine
                             }
                         for (String sPath : Handy.parseDelimitedString(s, File.pathSeparatorChar))
                             {
-                            List<File> files = resolvePath(sPath);
+                            List<File> files;
+                            try
+                                {
+                                files = resolvePath(sPath);
+                                }
+                            catch (IOException e)
+                                {
+                                deferred.add("xtc: Exception resolving path \"" + sPath + "\": " + e);
+                                continue;
+                                }
+
                             if (files.isEmpty())
                                 {
                                 deferred.add("xtc: could not resolve: \"" + sPath + "\"");
@@ -202,7 +272,17 @@ public class CommandLine
                         }
                     else
                         {
-                        List<File> files = resolvePath(s);
+                        List<File> files;
+                        try
+                            {
+                            files = resolvePath(s);
+                            }
+                        catch (IOException e)
+                            {
+                            deferred.add("xtc: Exception resolving path \"" + s + "\": " + e);
+                            continue;
+                            }
+
                         for (File file : files)
                             {
                             // this is expected to be the name of a file to compile
@@ -226,30 +306,17 @@ public class CommandLine
                     }
                 }
             }
+        }
 
-        // show accumulated errors/warnings
-        if (error || (!deferred.isEmpty() && (opts.verbose
-                || opts.strictLevel == Options.Strictness.Normal
-                || opts.strictLevel == Options.Strictness.Stickler)))
-            {
-            for (String s : deferred)
-                {
-                out(s);
-                }
-            }
-
-        if (error || (!deferred.isEmpty() && opts.strictLevel == Options.Strictness.Stickler))
-            {
-            out("xtc: Terminating.");
-            System.exit(1);
-            return;
-            }
-
-        // show compiler options
+    /**
+     * If the options suggest the display of the parsed compiler options, then display them.
+     */
+    protected void showCompilerOptions()
+        {
         if (opts.verbose)
             {
             out("xtc: Compiler options:");
-            out(Handy.indentLines(opts.toString(), "   : "));
+            out(indentLines(opts.toString(), "   : "));
             out();
 
             if (!sources.isEmpty())
@@ -264,6 +331,684 @@ public class CommandLine
                 }
             }
         }
+
+    /**
+     * Select the modules to compile.
+     */
+    protected void selectCompileTargets()
+        {
+        if (sources.isEmpty())
+            {
+            sources.add(new File("module.x"));
+            }
+        for (File file : sources)
+            {
+            File moduleFile = findModule(file);
+            if (moduleFile != null && !modules.containsKey(moduleFile))
+                {
+                modules.put(moduleFile, buildTree(moduleFile));
+                }
+            }
+        if (modules.isEmpty())
+            {
+            deferred.add("xtc: No module found to compile.");
+            error = true;
+            }
+        }
+
+    /**
+     * Find the module to compile.
+     *
+     * @param file  the file or directory to examine
+     *
+     * @return the file containing the module, or null
+     */
+    protected File findModule(File file)
+        {
+        if (file.isFile())
+            {
+            // just in case the file is relative to some working
+            // directory, resolve its location
+            file = file.getAbsoluteFile();
+
+            if (isModule(file))
+                {
+                return file;
+                }
+
+            file = file.getParentFile();
+            }
+
+        // we're going to have to walk up the directory tree, so
+        // the entire path needs to be resolved
+        file = file.getAbsoluteFile();
+
+        while (file != null && file.isDirectory())
+            {
+            File moduleFile = new File(file, "module.x");
+            if (moduleFile.exists() && moduleFile.isFile())
+                {
+                if (isModule(moduleFile))
+                    {
+                    return moduleFile;
+                    }
+                }
+
+            file = file.getParentFile();
+            }
+
+        return null;
+        }
+
+    /**
+     * Check if the specified file contains a module.
+     *
+     * @param file  the file (NOT a directory) to examine
+     *
+     * @return true iff the file declares a module
+     */
+    protected boolean isModule(File file)
+        {
+        assert file.isFile() && file.canRead();
+        if (opts.verbose)
+            {
+            out("xtc: Parsing file: " + file);
+            }
+
+        Statement stmt = null;
+        try
+            {
+            Source    source  = new Source(file);
+            ErrorList errlist = new ErrorList(100);
+            Parser    parser  = new Parser(source, errlist);
+            stmt = parser.parseCompilationUnit();
+            }
+        catch (CompilerException e)
+            {
+            deferred.add("xtc: An exception occurred parsing \"" + file + "\": " + e);
+            }
+        catch (IOException e)
+            {
+            deferred.add("xtc: An exception occurred reading \"" + file + "\": " + e);
+            }
+
+        if (stmt != null)
+            {
+            if (stmt instanceof BlockStatement)
+                {
+                List<Statement> list = ((BlockStatement) stmt).statements;
+                stmt = list.get(list.size() - 1);
+                }
+            if (stmt instanceof TypeDeclarationStatement)
+                {
+                TypeDeclarationStatement typeStmt = (TypeDeclarationStatement) stmt;
+                Token                    category = typeStmt.category;
+                if (opts.verbose)
+                    {
+                    out("xtc: Contains " + category.getId().TEXT + " " + typeStmt.name.getValue());
+                    out();
+                    }
+                return category.getId() == Token.Id.MODULE;
+                }
+
+            deferred.add("xtc: File \"" + file + "\" did not contain a type definition.");
+            }
+
+        return false;
+        }
+
+    /**
+     * Build a tree of files that need to be compiled in order to compile
+     * a module.
+     *
+     * @param file  a module file, or a directory that is part of a module
+     *
+     * @return a node iff there is anything "there" to compile, otherwise null
+     */
+    protected DirNode buildTree(File file)
+        {
+        DirNode node = new DirNode();
+        if (file.isDirectory())
+            {
+            // we're parsing a sub-directory looking for source files
+            // (and sub-directories)
+            node.fileDir = file;
+            File filePkg = new File(file, "package.x");
+            if (filePkg.exists() && filePkg.isFile())
+                {
+                node.filePkg = filePkg;
+                node.pkgNode = new FileNode(filePkg);
+                }
+            }
+        else
+            {
+            // this is the module root
+            node.filePkg = file;
+            node.fileDir = file.getParentFile();
+            }
+
+        NextChild: for (File child : node.fileDir.listFiles())
+            {
+            if (child.isDirectory())
+                {
+                DirNode nodeChild = buildTree(child);
+                if (nodeChild != null)
+                    {
+                    nodeChild.parent = node;
+                    node.packages.add(nodeChild);
+                    }
+                }
+            else
+                {
+                if (node.filePkg != null && child.equals(node.filePkg))
+                    {
+                    // this is the module.x or package.x file
+                    continue;
+                    }
+
+                String sChild = child.getName();
+                if (!sChild.endsWith(".x"))
+                    {
+                    continue;
+                    }
+
+                if (sChild.equalsIgnoreCase("module.x") || sChild.equalsIgnoreCase("package.x"))
+                    {
+                    deferred.add("xtc: Illegal file encountered: " + child);
+                    switch (opts.strictLevel)
+                        {
+                        case Normal:
+                        case Stickler:
+                            error = true;
+                        }
+                    continue;
+                    }
+
+                // it's a source file
+                FileNode cmp = new FileNode(child);
+                node.sources.put(child, cmp);
+                }
+            }
+
+        return node.filePkg == null && node.sources.isEmpty() && node.packages.isEmpty() ? null : node;
+        }
+
+    /**
+     * Parse all of the source code that needs to be compiled.
+     */
+    protected void parseSource()
+        {
+        for (DirNode module : modules.values())
+            {
+            module.parse();
+            }
+        }
+
+    /**
+     * Parse all of the source code that needs to be compiled.
+     */
+    protected void arrangeSourceByName()
+        {
+        for (DirNode module : modules.values())
+            {
+            module.registerNames();
+            String name = module.name();
+            if (modulesByName.containsKey(name))
+                {
+                deferred.add("xtc: Duplicate module: \"" + name + "\"");
+                error = true;
+                }
+            else
+                {
+                modulesByName.put(name, module);
+                }
+            }
+        }
+
+    /**
+     * see where we're at
+     */
+    public void dump()
+        {
+        out();
+        if (modulesByName.isEmpty())
+            {
+            out("xtc: dump modules:");
+            for (Map.Entry<File, DirNode> entry : modules.entrySet())
+                {
+                out();
+                out("module file: " + entry.getKey());
+                out(entry.getValue());
+                }
+            }
+        else
+            {
+            out("xtc: dump modules by name:");
+            for (Map.Entry<String, DirNode> entry : modulesByName.entrySet())
+                {
+                out();
+                out("module " + entry.getKey() + ":");
+                out(entry.getValue());
+                }
+            }
+        }
+
+    /**
+     * Scan all the ErrorLists for errors.
+     */
+    protected void checkCompilerErrors()
+        {
+        for (DirNode node : modules.values())
+            {
+            node.checkErrors();
+            }
+        checkTerminalFailure();
+        }
+
+    /**
+     * Print any accrued errors (subject to the options specified), and exit the command line
+     * process if necessary.
+     */
+    protected void checkTerminalFailure()
+        {
+        // show accumulated errors/warnings
+        if (error || (!deferred.isEmpty() && (opts.verbose
+                || opts.strictLevel == Options.Strictness.Normal
+                || opts.strictLevel == Options.Strictness.Stickler)))
+            {
+            for (String s : deferred)
+                {
+                out(s);
+                }
+            }
+
+        // determine if the errors are bad enough to quit
+        if (error || (!deferred.isEmpty() && opts.strictLevel == Options.Strictness.Stickler))
+            {
+            out("xtc: Terminating.");
+            System.exit(1);
+            throw new IllegalStateException();
+            }
+
+        // reset error conditions
+        error = false;
+        deferred.clear();
+        }
+
+
+    // ----- inner class: Progress -----------------------------------------------------------------
+
+    enum Progress {INIT, PARSED, NAMED, SYNTAX_CHECKED, RESOLVED, COMPILED}
+
+
+    // ----- inner class: Node ---------------------------------------------------------------------
+
+    /**
+     * Shared interface for module/package and class nodes.
+     */
+    interface Node
+        {
+        void parse();
+        public void registerNames();
+        String name();
+        String descriptiveName();
+        void checkErrors();
+        }
+
+
+    // ----- inner class: DirNode ------------------------------------------------------------------
+
+    /**
+     * Represents a module or package to compile.
+     */
+    public class DirNode
+            implements Node
+        {
+        public Progress                 progress    = Progress.INIT;
+        public DirNode                  parent;
+        public File                     fileDir;
+        public File                     filePkg;
+        public FileNode                 pkgNode;
+        public ListMap<File, FileNode>  sources     = new ListMap<>();
+        public List<DirNode>            packages    = new ArrayList<>();
+        public Map<String, Node>        children    = new HashMap<>();
+
+        /**
+         * Parse this node and all nodes it contains.
+         */
+        @Override
+        public void parse()
+            {
+            if (progress == Progress.INIT)
+                {
+                if (pkgNode == null)
+                    {
+                    // provide a default implementation
+                    pkgNode = new FileNode("package " + fileDir.getName() + "{}");
+                    }
+                pkgNode.parse();
+
+                for (FileNode cmpFile : sources.values())
+                    {
+                    cmpFile.parse();
+                    }
+
+                for (DirNode child : packages)
+                    {
+                    child.parse();
+                    }
+
+                progress = Progress.PARSED;
+                }
+            }
+
+        /**
+         * Go through all the packages and types in this package and register their names.
+         */
+        @Override
+        public void registerNames()
+            {
+            assert progress.ordinal() >= Progress.PARSED.ordinal();
+
+            if (progress == Progress.PARSED)
+                {
+                for (FileNode clz : sources.values())
+                    {
+                    registerName(clz.name(), clz);
+                    clz.registerNames();
+                    }
+
+                for (DirNode pkg : packages)
+                    {
+                    registerName(pkg.name(), pkg);
+                    pkg.registerNames();
+                    }
+
+                progress = Progress.NAMED;
+                }
+            }
+
+        /**
+         * Register a node under a specified name.
+         *
+         * @param name  a name that must not conflict with any other child's name; if null, the
+         *              request is ignored because it is assumed that an error has already been
+         *              raised
+         * @param node  the child node to register with the specified name
+         */
+        public void registerName(String name, Node node)
+            {
+            if (name != null)
+                {
+                if (children.containsKey(name))
+                    {
+                    deferred.add("xtc: Duplicate name \"" + name + "\" detected in " + descriptiveName());
+                    error = true;
+                    }
+                else
+                    {
+                    children.put(name, node);
+                    }
+                }
+            }
+
+        /**
+         * @return the simple package name, or if this is a module, the fully qualified module name
+         */
+        @Override
+        public String name()
+            {
+            assert progress.ordinal() >= Progress.NAMED.ordinal();
+
+            String sName = null;
+            if (pkgNode != null)
+                {
+                sName = pkgNode.name();
+                }
+            if (sName == null && parent != null)
+                {
+                sName = fileDir.getName();
+                }
+            return sName;
+            }
+
+        @Override
+        public String descriptiveName()
+            {
+            if (parent == null)
+                {
+                return "module " + name();
+                }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("package ")
+              .append(name());
+
+            DirNode node = parent;
+            while (node.parent != null)
+                {
+                sb.insert(8, node.name() + '.');
+                node = node.parent;
+                }
+
+            sb.append(node);
+            return sb.toString();
+            }
+
+        @Override
+        public void checkErrors()
+            {
+            if (pkgNode != null)
+                {
+                pkgNode.checkErrors();
+                }
+
+            for (FileNode cmpFile : sources.values())
+                {
+                cmpFile.checkErrors();
+                }
+
+            for (DirNode child : packages)
+                {
+                child.checkErrors();
+                }
+            }
+
+        @Override
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+            if (parent != null)
+                {
+                sb.append(fileDir.getName())
+                  .append(": ");
+                }
+            sb.append(filePkg == null ? "(no package.x)" : filePkg.getName());
+
+            for (Map.Entry<File, FileNode> entry : sources.entrySet())
+                {
+                File        file = entry.getKey();
+                sb.append("\n |- " + file.getName());
+
+                FileNode node = entry.getValue();
+                if (node != null)
+                    {
+                    ErrorList errs = node.errs;
+                    if (node.stmt != null || errs.getSeverity() != Severity.NONE)
+                        {
+                        sb.append(" (");
+                        if (node.stmt == null)
+                            {
+                            sb.append("not ");
+                            }
+                        sb.append("parsed");
+
+                        if (errs.getSeverity() != Severity.NONE)
+                            {
+                            sb.append("; ")
+                              .append(errs.getErrors().size())
+                              .append(" items logged, severity=")
+                              .append(errs.getSeverity().name());
+
+                            if (errs.getSeriousErrorCount() > 0)
+                                {
+                                sb.append(", ")
+                                  .append(errs.getSeriousErrorCount())
+                                  .append(" serious");
+                                }
+                            }
+                        sb.append(')');
+                        }
+                    }
+                }
+
+            for (int i = 0, c = packages.size(); i < c; ++i)
+                {
+                DirNode pkg = packages.get(i);
+                sb.append("\n |- ")
+                  .append(indentLines(pkg.toString(), (i == c - 1 ? "    " : " |  ")).substring(4));
+                }
+
+            return sb.toString();
+            }
+        }
+
+
+    // ----- inner class: FileNode -----------------------------------------------------------------
+
+    /**
+     * Represents a file to compile.
+     */
+    public class FileNode
+            implements Node
+        {
+        public Progress  progress = Progress.INIT;
+        public File      file;
+        public Source    source;
+        public ErrorList errs = new ErrorList(100);
+        public Statement stmt;
+        public TypeDeclarationStatement type;
+
+        /**
+         * Construct a FileNode.
+         *
+         * @param file  the source file containing the code
+         */
+        public FileNode(File file)
+            {
+            this.file   = file;
+            try
+                {
+                source = new Source(file);
+                }
+            catch (IOException e)
+                {
+                deferred.add("xtc: Failure reading: " + file);
+                error = true;
+                }
+            }
+
+        /**
+         * Construct a FileNode from the code that would have been in a file.
+         *
+         * @param code  the source code
+         */
+        public FileNode(String code)
+            {
+            this.source = new Source(code);
+            }
+
+        /**
+         * Try to parse the source file if it hasn't already been parsed.
+         *
+         * @return the top level statement
+         */
+        @Override
+        public void parse()
+            {
+            if (progress == Progress.INIT)
+                {
+                try
+                    {
+                    stmt = new Parser(source, errs).parseCompilationUnit();
+                    }
+                catch (CompilerException e)
+                    {
+                    if (errs.getSeriousErrorCount() == 0)
+                        {
+                        errs.log(Severity.FATAL, Parser.FATAL_ERROR, null,
+                                source, source.getPosition(), source.getPosition());
+                        }
+                    }
+                progress = Progress.PARSED;
+                }
+            }
+
+        /**
+         * Go through all the packages and types in this package and register their names.
+         */
+        @Override
+        public void registerNames()
+            {
+            assert progress.ordinal() >= Progress.PARSED.ordinal();
+
+            if (progress == Progress.PARSED)
+                {
+                // this can only happen if the errors were ignored
+                if (stmt != null)
+                    {
+                    return;
+                    }
+
+                if (stmt instanceof TypeDeclarationStatement)
+                    {
+                    type = (TypeDeclarationStatement) stmt;
+                    }
+                else
+                    {
+                    List<Statement> list = ((BlockStatement) stmt).statements;
+                    type = (TypeDeclarationStatement) list.get(list.size() - 1);
+                    }
+
+                progress = Progress.NAMED;
+                }
+            }
+
+        /**
+         * @return the simple name
+         */
+        @Override
+        public String name()
+            {
+            return type == null ? file.getName() : (String) type.name.getValue();
+            }
+
+        @Override
+        public String descriptiveName()
+            {
+            return type == null ? file.getAbsolutePath() : (type.category.getId().TEXT + ' ' + name());
+            }
+
+        @Override
+        public void checkErrors()
+            {
+            if (!errs.getErrors().isEmpty() && errs.getSeverity().ordinal() >= opts.badEnoughToPrint().ordinal())
+                {
+                out("xtc: Errors in " + descriptiveName());
+                int i = 0;
+                for (ErrorList.ErrorInfo err : errs.getErrors())
+                    {
+                    out(" [" + (i++) + "] " + err);
+                    }
+
+                error |= errs.getSeverity().ordinal() >= opts.badEnoughToQuit().ordinal();
+                errs.clear();
+                }
+            }
+        }
+
+
+    // ----- inner class: Options ------------------------------------------------------------------
 
     /**
      * Represents the command-line options.
@@ -282,12 +1027,36 @@ public class CommandLine
         List<File> modulePath = new ArrayList<>();
         Map<String, String> customCfg = new ListMap<>();
 
+        Severity badEnoughToPrint()
+            {
+            if (verbose)
+                {
+                return Severity.INFO;
+                }
+            switch (strictLevel)
+                {
+                case None:
+                case Suppressed:
+                    return Severity.ERROR;
+
+                default:
+                case Normal:
+                case Stickler:
+                    return Severity.WARNING;
+                }
+            }
+
+        Severity badEnoughToQuit()
+            {
+            return strictLevel == Strictness.Stickler ? Severity.WARNING : Severity.ERROR;
+            }
+
         @Override
         public String toString()
             {
             StringBuilder sb = new StringBuilder();
             sb.append("destination=")
-              .append(destination==null ? "(default)" : destination)
+              .append(destination == null ? "(default)" : destination)
               .append("\nverbose=")
               .append(verbose)
               .append("\nincludeSrc=")
@@ -344,19 +1113,30 @@ public class CommandLine
             }
         }
 
+
+    // ----- static helpers ------------------------------------------------------------------------
+
+    /**
+     * Print a blank line to the terminal.
+     */
     public static final void out()
         {
         out("");
         }
 
+    /**
+     * Print the String value of some object to the terminal.
+     */
     public static final void out(Object o)
         {
         System.out.println(o);
         }
 
     /**
+     * Resolve the specified "path string" into a list of files.
      *
-     * @param sPath   the path to resolve
+     * @param sPath   the path to resolve, which may be a file or directory name, and may include
+     *                wildcards, etc.
      *
      * @return a list of File objects
      *
@@ -386,32 +1166,5 @@ public class CommandLine
             }
 
         return files;
-        }
-
-    public static File findModule(File file)
-            throws IOException
-        {
-        if (file.isFile())
-            {
-            Source    source  = new Source(file);
-            ErrorList errlist = new ErrorList(100);
-            Parser    parser  = new Parser(source, errlist);
-            // TODO parse the file
-
-            file = file.getParentFile();
-            if (file == null)
-                {
-                return null;
-                }
-            }
-
-        if (file.isDirectory())
-            {
-            // TODO does it contain module.x? if so, return module.x file
-            // TODO otherwise loop getting parent
-
-            }
-
-        return null;
         }
     }

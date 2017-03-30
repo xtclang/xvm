@@ -65,17 +65,25 @@ public class Parser
             // prime the token stream
             next();
 
-            List<Statement> list = parseImportsAndTypedefs();
+            try
+                {
+                List<Statement> list = parseImportsAndTypedefs();
 
-            Statement toptype = parseTypeDeclarationStatement();
-            if (list == null)
-                {
-                m_root = toptype;
+                Statement toptype = parseTypeDeclarationStatement();
+                if (list == null)
+                    {
+                    m_root = toptype;
+                    }
+                else
+                    {
+                    list.add(toptype);
+                    m_root = new BlockStatement(list);
+                    }
                 }
-            else
+            catch (UnsupportedOperationException e)
                 {
-                list.add(toptype);
-                m_root = new BlockStatement(list);
+                // temporary exception handling while compiler is being built
+                throw new CompilerException(e);
                 }
             }
 
@@ -117,7 +125,7 @@ public class Parser
             }
         catch (CompilerException e)
             {
-            if (!eof())
+            if (recoverable())
                 {
                 skipToNextStatement();
                 }
@@ -166,8 +174,6 @@ public class Parser
     TypedefStatement parseTypedef()
         {
         expect(Id.TYPEDEF);
-
-        // TODO handle the case in which a "function" puts the name BEFORE the param list
 
         TypeExpression type = parseTypeExpression();
 
@@ -394,6 +400,8 @@ public class Parser
         {
         if (match(Id.FUNCTION) != null)
             {
+            // TODO handle the case in which a "function" puts the name BEFORE the param list
+
             // TODO
             throw new UnsupportedOperationException("parse function");
             }
@@ -633,8 +641,7 @@ public class Parser
             return m_token;
             }
 
-        m_errorListener.log(Severity.ERROR, UNEXPECTED_EOF, null,
-                m_source, m_source.getPosition(), m_source.getPosition());
+        log(Severity.ERROR, UNEXPECTED_EOF, null, m_source.getPosition(), m_source.getPosition());
         throw new CompilerException("unexpected EOF");
         }
 
@@ -684,8 +691,7 @@ public class Parser
             return current();
             }
 
-        m_errorListener.log(Severity.ERROR, EXPECTED_TOKEN, null,
-                m_source, m_token.getStartPosition(), m_token.getEndPosition());
+        log(Severity.ERROR, EXPECTED_TOKEN, null, m_token.getStartPosition(), m_token.getEndPosition());
         throw new CompilerException("expected token: " + id + " (found: " + token + ")");
         }
 
@@ -708,17 +714,47 @@ public class Parser
         return doc;
         }
 
+    /**
+     * Log an error.
+     *
+     * @param severity
+     * @param sCode
+     * @param aoParam
+     * @param lPosStart
+     * @param lPosEnd
+     */
+    protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd)
+        {
+        if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd))
+            {
+            m_fAvoidRecovery = true;
+            throw new CompilerException("error list is full: " + m_errorListener);
+            }
+        }
+
+    /**
+     * @return true iff it's ok to try to recover from a parsing error
+     */
+    protected boolean recoverable()
+        {
+        return !eof() && !m_fAvoidRecovery;
+        }
+
 
     // ----- constants ---------------------------------------------------------
 
     /**
+     * Unknown fatal error.
+     */
+    public static final String FATAL_ERROR    = "PARSER-01";
+    /**
      * Unexpected End-Of-File (token exhaustion).
      */
-    public static final String UNEXPECTED_EOF = "PARSER-01";
+    public static final String UNEXPECTED_EOF = "PARSER-02";
     /**
      * Expected a particular token.
      */
-    public static final String EXPECTED_TOKEN = "PARSER-02";
+    public static final String EXPECTED_TOKEN = "PARSER-03";
 
 
     // ----- data members ------------------------------------------------------
@@ -758,4 +794,6 @@ public class Parser
      * True once parsing has occurred.
      */
     private boolean m_fDone;
+
+    private boolean m_fAvoidRecovery;
     }

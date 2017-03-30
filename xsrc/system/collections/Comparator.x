@@ -1,4 +1,4 @@
-s/**
+/**
  * A Comparator is a const object that knows how to compare any two objects of a particular type for
  * ordering purposes.
  *
