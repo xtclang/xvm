@@ -1,6 +1,10 @@
 package org.xvm.compiler;
 
 
+import org.xvm.asm.FileStructure;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.PackageStructure;
+import org.xvm.asm.StructureContainer;
 import org.xvm.compiler.ast.BlockStatement;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.TypeDeclarationStatement;
@@ -106,14 +110,27 @@ public class CommandLine
         // parse the modules
         cmd.parseSource();
         cmd.checkTerminalFailure();
-        cmd.checkCompilerErrors();
 
         // assign names
         cmd.arrangeSourceByName();
         cmd.checkTerminalFailure();
 
-        // TODO check syntax, resolve dependencies, produce file structure
-        cmd.dump();
+        // syntax check
+        cmd.checkSyntax();
+        cmd.checkTerminalFailure();
+
+        // dependency resolution
+        cmd.resolveDependencies();
+        cmd.checkTerminalFailure();
+
+        // write out the results
+        cmd.produceModules();
+        cmd.checkTerminalFailure();
+
+        if (cmd.opts.verbose)
+            {
+            cmd.dump();
+            }
         }
 
     /**
@@ -354,6 +371,12 @@ public class CommandLine
             deferred.add("xtc: No module found to compile.");
             error = true;
             }
+        else if (modules.size() > 1 && opts.destination != null && !opts.destination.isDirectory())
+            {
+            // -D option can't be just a single file if there is more than one module to compile
+            deferred.add("xtc: Multiple modules found to compile, but output destination is a single file.");
+            error = true;
+            }
         }
 
     /**
@@ -547,6 +570,7 @@ public class CommandLine
         for (Node module : modules.values())
             {
             module.parse();
+            module.checkErrors();
             }
         }
 
@@ -563,11 +587,79 @@ public class CommandLine
                 {
                 deferred.add("xtc: Duplicate module: \"" + name + "\"");
                 error = true;
+                continue;
                 }
-            else
+
+            modulesByName.put(name, module);
+
+            // create a module/package/class structure for each dir/file node in the "module tree"
+            FileStructure struct = new FileStructure(module.name(), null, null);
+            module.assignStructure((ModuleStructure) struct.getTopmostStructure());
+            }
+        }
+
+    protected void checkSyntax()
+        {
+        for (Node module : modules.values())
+            {
+            module.checkSyntax();
+            module.checkErrors();
+            }
+        }
+
+    protected void resolveDependencies()
+        {
+        for (Node module : modules.values())
+            {
+            module.resolveDependencies();
+            module.checkErrors();
+            }
+        }
+
+    protected void produceModules()
+        {
+        for (Node module : modules.values())
+            {
+            // figure out where to put the resulting module
+            File file = opts.destination;
+            if (file == null)
                 {
-                modulesByName.put(name, module);
+                file = module.getFile();
+                if (file.isFile())
+                    {
+                    file = file.getParentFile();
+                    }
                 }
+
+            // at this point, we either have a directory or a file to put it in; resolve that to
+            // an actual compiled module file name
+            if (file.isDirectory())
+                {
+                String sName = module.name();
+                int    ofDot = sName.indexOf('.');
+                if (ofDot > 0)
+                    {
+                    sName = sName.substring(0, ofDot);
+                    }
+                file = new File(file, sName + ".xtc");
+                }
+
+            FileStructure struct = module.getStructure().getFileStructure();
+
+            // TODO - build the module
+
+            try
+                {
+                struct.writeTo(file);
+                }
+            catch (IOException e)
+                {
+                deferred.add("xtc: Exception (" + e
+                        + ") occurred while attempting to write module file \""
+                        + file.getAbsolutePath() + "\"");
+                error = true;
+                }
+            module.checkErrors();
             }
         }
 
@@ -590,21 +682,17 @@ public class CommandLine
             out("xtc: dump modules by name:");
             for (Map.Entry<String, Node> entry : modulesByName.entrySet())
                 {
-                out(entry.getValue());
+                Node node = entry.getValue();
+                out(node);
+
+                StructureContainer struct = node.getStructure();
+                if (struct != null)
+                    {
+                    out();
+                    out(struct.getFileStructure());
+                    }
                 }
             }
-        }
-
-    /**
-     * Scan all the ErrorLists for errors.
-     */
-    protected void checkCompilerErrors()
-        {
-        for (Node node : modules.values())
-            {
-            node.checkErrors();
-            }
-        checkTerminalFailure();
         }
 
     /**
@@ -650,10 +738,15 @@ public class CommandLine
      */
     interface Node
         {
+        File getFile();
         void parse();
         public void registerNames();
         String name();
         String descriptiveName();
+        void assignStructure(StructureContainer struct);
+        StructureContainer getStructure();
+        void checkSyntax();
+        void resolveDependencies();
         void checkErrors();
         }
 
@@ -674,6 +767,12 @@ public class CommandLine
         public ListMap<File, FileNode>  sources     = new ListMap<>();
         public List<DirNode>            packages    = new ArrayList<>();
         public Map<String, Node>        children    = new HashMap<>();
+
+        @Override
+        public File getFile()
+            {
+            return fileDir;
+            }
 
         /**
          * Parse this node and all nodes it contains.
@@ -804,6 +903,77 @@ public class CommandLine
             }
 
         @Override
+        public void assignStructure(StructureContainer struct)
+            {
+            if (pkgNode == null)
+                {
+                deferred.add("xtc: no package node for " + descriptiveName());
+                error = true;
+                }
+            else
+                {
+                StructureContainer.PackageContainer thisPkg = (StructureContainer.PackageContainer) struct;
+
+                pkgNode.assignStructure(struct);
+
+                for (FileNode clzNode : sources.values())
+                    {
+                    clzNode.assignStructure(thisPkg.ensureClass(clzNode.name()));
+                    }
+
+                for (DirNode nestedPkgNode : packages)
+                    {
+                    // create and assign the package structure
+                    nestedPkgNode.assignStructure(thisPkg.ensurePackage(nestedPkgNode.name()));
+                    }
+                }
+            }
+
+        @Override
+        public StructureContainer getStructure()
+            {
+            return pkgNode == null ? null : pkgNode.getStructure();
+            }
+
+        @Override
+        public void checkSyntax()
+            {
+            if (pkgNode != null)
+                {
+                pkgNode.checkSyntax();
+                }
+
+            for (FileNode cmpFile : sources.values())
+                {
+                cmpFile.checkSyntax();
+                }
+
+            for (DirNode child : packages)
+                {
+                child.checkSyntax();
+                }
+            }
+
+        @Override
+        public void resolveDependencies()
+            {
+            if (pkgNode != null)
+                {
+                pkgNode.resolveDependencies();
+                }
+
+            for (FileNode cmpFile : sources.values())
+                {
+                cmpFile.resolveDependencies();
+                }
+
+            for (DirNode child : packages)
+                {
+                child.resolveDependencies();
+                }
+            }
+
+        @Override
         public void checkErrors()
             {
             if (pkgNode != null)
@@ -887,6 +1057,12 @@ public class CommandLine
                 }
             }
 
+        @Override
+        public File getFile()
+            {
+            return file;
+            }
+
         /**
          * Construct a FileNode from the code that would have been in a file.
          *
@@ -909,10 +1085,6 @@ public class CommandLine
                 {
                 try
                     {
-                    if (file != null && file.getName().indexOf("Property") >= 0)
-                        {
-                        int i = 0;
-                        }
                     stmt = new Parser(source, errs).parseCompilationUnit();
                     }
                 catch (CompilerException e)
@@ -968,6 +1140,30 @@ public class CommandLine
         public String descriptiveName()
             {
             return type == null ? file.getAbsolutePath() : (type.category.getId().TEXT + ' ' + name());
+            }
+
+        @Override
+        public void assignStructure(StructureContainer struct)
+            {
+            type.setStructure(struct);
+            }
+
+        @Override
+        public StructureContainer getStructure()
+            {
+            return type.getStructure();
+            }
+
+        @Override
+        public void checkSyntax()
+            {
+            // TODO
+            }
+
+        @Override
+        public void resolveDependencies()
+            {
+            // TODO
             }
 
         @Override

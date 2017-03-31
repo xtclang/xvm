@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.StructureContainer;
 import org.xvm.compiler.Token;
 
 import java.util.List;
@@ -168,6 +169,16 @@ public class TypeDeclarationStatement
         return sb.toString();
         }
 
+    public StructureContainer getStructure()
+        {
+        return struct;
+        }
+
+    public void setStructure(StructureContainer struct)
+        {
+        this.struct = struct;
+        }
+
     public final List<Token>       modifiers;
     public final List<Annotation>  annotations;
     public final Token             category;
@@ -178,4 +189,6 @@ public class TypeDeclarationStatement
     public final List<Composition> composition;
     public final BlockStatement    body;
     public final Token             doc;
+
+    StructureContainer struct;
     }

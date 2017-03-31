@@ -933,7 +933,7 @@ public abstract class StructureContainer
      * An XVM structure that can contain PackageStructure objects, in addition
      * to ClassStructure, PropertyStructure, and MethodStructure objects.
      */
-    protected abstract static class PackageContainer
+    public abstract static class PackageContainer
             extends ClassContainer
         {
         // ----- constructors ----------------------------------------------
