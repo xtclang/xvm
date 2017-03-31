@@ -45,7 +45,7 @@
  *   its Enum values are instances of the class of Enumeration values (or a subclass thereof), and
  *   no class can extend the class of any Enum.
  */
-@auto mixin Enumeration<EnumType implements Enum>
+@auto mixin Enumeration<EnumType extends Enum>
         into Class<EnumType>
     {
     /**

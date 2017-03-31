@@ -71,23 +71,23 @@ interface Function<ReturnTypes extends Tuple<ReturnTypes...>, ParamTypes extends
             {
             }
         }
-    }
 
-/**
- * TODO
- */
-interface Parameter<ParamType>
-    {
-    @ro Int ordinal;
-    conditional String name();
-    conditional ParamType defaultValue();
-    }
+    /**
+     * TODO move to own file?
+     */
+    interface Parameter<ParamType>
+        {
+        @ro Int ordinal;
+        conditional String name();
+        conditional ParamType defaultValue();
+        }
 
-/**
- * TODO
- */
-interface Return<ReturnType>
-    {
-    @ro Int ordinal;
-    conditional String name();
+    /**
+     * TODO move to own file?
+     */
+    interface Return<ReturnType>
+        {
+        @ro Int ordinal;
+        conditional String name();
+        }
     }

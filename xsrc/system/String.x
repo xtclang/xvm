@@ -111,4 +111,5 @@ const String
             this.offset = offset;
             this.length = length;
             }
+        }
     }

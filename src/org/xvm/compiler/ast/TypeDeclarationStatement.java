@@ -18,8 +18,9 @@ public class TypeDeclarationStatement
         extends Statement
     {
     public TypeDeclarationStatement(List<Token>       modifiers,
-                                    Token             category,         
-                                    Token             name,             
+                                    List<Annotation>  annotations,
+                                    Token             category,
+                                    Token             name,
                                     List<Token>       qualifier,        
                                     List<Parameter>   typeParams,       
                                     List<Parameter>   constructorParams,
@@ -27,10 +28,11 @@ public class TypeDeclarationStatement
                                     BlockStatement    body,
                                     Token             doc)
         {
-        this.modifiers         = modifiers;         
-        this.category          = category;                 
-        this.name              = name;                     
-        this.qualifier         = qualifier;                
+        this.modifiers         = modifiers;
+        this.annotations       = annotations;
+        this.category          = category;
+        this.name              = name;
+        this.qualifier         = qualifier;
         this.typeParams        = typeParams;               
         this.constructorParams = constructorParams;        
         this.composition       = composition;              
@@ -74,6 +76,15 @@ public class TypeDeclarationStatement
             for (Token token : modifiers)
                 {
                 sb.append(token.getId().TEXT)
+                  .append(' ');
+                }
+            }
+
+        if (annotations != null)
+            {
+            for (Annotation annotation : annotations)
+                {
+                sb.append(annotation)
                   .append(' ');
                 }
             }
@@ -158,6 +169,7 @@ public class TypeDeclarationStatement
         }
 
     public final List<Token>       modifiers;
+    public final List<Annotation>  annotations;
     public final Token             category;
     public final Token             name;
     public final List<Token>       qualifier;

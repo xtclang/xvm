@@ -210,26 +210,41 @@ public class Parser
                     modifiers.add(current());
                     break;
 
-                case PACKAGE:
-                case CLASS:
-                case INTERFACE:
-                case SERVICE:
-                case CONST:
-                case ENUM:
-                case TRAIT:
-                case MIXIN:
-                    category = current();
-                    break ParsingPreamble;
-
                 default:
-                    category = expect(Id.MODULE);
                     break ParsingPreamble;
                 }
             }
 
-        // TODO consider using parseName instead
+        // one or more annotations
+        List<Annotation> annotations = null;
+        while (peek().getId() == Id.AT)
+            {
+            if (annotations == null)
+                {
+                annotations = new ArrayList<>();
+                }
+            annotations.add(parseAnnotation());
+            }
 
-        // type name
+        // category
+        switch (peek().getId())
+            {
+            case PACKAGE:
+            case CLASS:
+            case INTERFACE:
+            case SERVICE:
+            case CONST:
+            case ENUM:
+            case TRAIT:
+            case MIXIN:
+                category = current();
+                break;
+
+            default:
+                category = expect(Id.MODULE);
+            }
+
+        // type name TODO:could use parseQualifiedName
         Token name = expect(Id.IDENTIFIER);
 
         // module name is dot-delimited
@@ -344,7 +359,7 @@ public class Parser
             expect(Id.SEMICOLON);
             }
 
-        return new TypeDeclarationStatement(modifiers, category, name,
+        return new TypeDeclarationStatement(modifiers, annotations, category, name,
                 qualifier, typeParams, constructorParams, composition, body, takeDoc());
         }
 
@@ -373,7 +388,7 @@ public class Parser
             {
             case IDENTIFIER:
                 // TODO this is just a place-holder, because lots of expressions start with a name
-                return new NameExpression(parseName());
+                return new NameExpression(parseQualifiedName());
 
             case LIT_CHAR:
             case LIT_STRING:
@@ -398,21 +413,178 @@ public class Parser
      */
     TypeExpression parseTypeExpression()
         {
-        if (match(Id.FUNCTION) != null)
-            {
-            // TODO handle the case in which a "function" puts the name BEFORE the param list
+        return parseUnionedTypeExpression();
+        }
 
-            // TODO
-            throw new UnsupportedOperationException("parse function");
-            }
-        else
+    /**
+     * Parse a type expression of the form "Type + Type".
+     *
+     * @return a type expression
+     */
+    TypeExpression parseUnionedTypeExpression()
+        {
+        TypeExpression expr = parseIntersectingTypeExpression();
+        Token operator = match(Id.ADD);
+        if (operator != null)
             {
-            // TODO for now, just parse "immutable name.name.name<param extends type, param extends type>"
-            Token immutable = match(Id.IMMUTABLE);
-            List<Token> names = parseName();
-            List<Parameter> params = parseTypeParams();
-            return new TypeExpression(immutable, names, params);
+            expr = new BiTypeExpression(expr, operator, parseIntersectingTypeExpression());
             }
+        return expr;
+        }
+
+    /**
+     * Parse a type expression of the form "Type | Type", otherwise .
+     *
+     * @return a type expression
+     */
+    TypeExpression parseIntersectingTypeExpression()
+        {
+        TypeExpression expr = parseNonBiTypeExpression();
+        Token operator = match(Id.BIT_OR);
+        if (operator != null)
+            {
+            expr = new BiTypeExpression(expr, operator, parseNonBiTypeExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse any type expression that does NOT look like "Type + Type" or "Type | Type".
+     *
+     * @return a type expression
+     */
+    TypeExpression parseNonBiTypeExpression()
+        {
+        TypeExpression type;
+        switch (peek().getId())
+            {
+            case L_PAREN:
+                expect(Id.L_PAREN);
+                type = parseTypeExpression();
+                expect(Id.R_PAREN);
+                break;
+
+            case AT:
+                type = parseAnnotatedTypeExpression();
+                break;
+
+            case FUNCTION:
+                type = parseFunctionTypeExpression();
+                break;
+
+            case IMMUTABLE:
+            default:
+                type = parseNamedTypeExpression();
+                break;
+            }
+
+        ParseSuffixes: while (true)
+            {
+            switch (peek().getId())
+                {
+                case L_SQUARE:
+                    // TODO could be an integer index e.g. ReturnValues[0]
+                    expect(Id.R_SQUARE);
+                    type = new ArrayTypeExpression(type);
+                    break;
+
+                case COND:
+                    type = new NullableTypeExpression(type);
+                    break;
+
+                case ELLIPSIS:
+                    type = new SequenceTypeExpression(type);
+                    break;
+
+                default:
+                    break ParseSuffixes;
+                }
+            }
+
+        return type;
+        }
+
+    AnnotatedTypeExpression parseAnnotatedTypeExpression()
+        {
+        Annotation annotation = parseAnnotation();
+        TypeExpression type = parseTypeExpression();
+
+        return new AnnotatedTypeExpression(annotation, type);
+        }
+
+    FunctionTypeExpression parseFunctionTypeExpression()
+        {
+        Token function = expect(Id.FUNCTION);
+
+        // return values
+        List<TypeExpression> listReturn = new ArrayList<>();
+        if (match(Id.L_PAREN) != null)
+            {
+            boolean fFirst = true;
+            while (match(Id.R_PAREN) == null)
+                {
+                if (fFirst)
+                    {
+                    fFirst = false;
+                    }
+                else
+                    {
+                    expect(Id.COMMA);
+                    }
+
+                listReturn.add(parseTypeExpression());
+                }
+            }
+
+        // name optionally comes before or after the parameters
+        Token name = match(Id.IDENTIFIER);
+
+        // parameters
+        List<Parameter> listParam = new ArrayList<>();
+        expect(Id.L_PAREN);
+
+        boolean fFirst = true;
+        while (match(Id.R_PAREN) == null)
+            {
+            if (fFirst)
+                {
+                fFirst = false;
+                }
+            else
+                {
+                expect(Id.COMMA);
+                }
+
+            TypeExpression type = parseTypeExpression();
+            Token          arg  = expect(Id.IDENTIFIER);
+            Expression     dft  = null;
+            if (match(Id.ASN) != null)
+                {
+                dft = parseExpression();
+                }
+            listParam.add(new Parameter(type, arg, dft));
+            }
+
+        if (name == null)
+            {
+            name = expect(Id.IDENTIFIER);
+            }
+
+        return new FunctionTypeExpression(function, name, listReturn, listParam);
+        }
+
+    /**
+     * Type expression in the form:
+     * "immutable name.name.name<param extends type, param extends type>"
+     *
+     * @return a NamedTypeExpression
+     */
+    NamedTypeExpression parseNamedTypeExpression()
+        {
+        Token immutable = match(Id.IMMUTABLE);
+        List<Token> names = parseQualifiedName();
+        List<Parameter> params = parseTypeParams();
+        return new NamedTypeExpression(immutable, names, params);
         }
 
     TodoExpression parseTodoExpression()
@@ -432,7 +604,7 @@ public class Parser
      *
      * @return a list of zero or more identifier tokens
      */
-    List<Token> parseName()
+    List<Token> parseQualifiedName()
         {
         List<Token> names = new ArrayList<>();
         do
@@ -444,9 +616,9 @@ public class Parser
         }
 
     /**
-     * If the next token is a &quot;&lt;&quot;, then parse a list of type params.
+     * If the next token is a &quot;&lt;&quot;, then parse a list of type args.
      *
-     * @return a list of zero or more type params, or null if there were no angle brackets
+     * @return a list of zero or more type args, or null if there were no angle brackets
      */
     List<Parameter> parseTypeParams()
         {
@@ -478,6 +650,33 @@ public class Parser
         return typeParams;
         }
 
+    Annotation parseAnnotation()
+        {
+        expect(Id.AT);
+        NamedTypeExpression type = parseNamedTypeExpression();
+
+        List<Expression> args = null;
+        if (match(Id.L_PAREN) != null)
+            {
+            args = new ArrayList<>();
+            boolean fFirst = true;
+            while (match(Id.R_PAREN) == null)
+                {
+                if (fFirst)
+                    {
+                    fFirst = false;
+                    }
+                else
+                    {
+                    expect(Id.COMMA);
+                    }
+
+                args.add(parseExpression());
+                }
+            }
+
+        return new Annotation(type, args);
+        }
     /**
      * Attempt to get out of whatever parsing mess we got ourselves into by
      * figuring out where the current statement ends, and starting anew from
