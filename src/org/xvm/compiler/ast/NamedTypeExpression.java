@@ -14,7 +14,7 @@ import java.util.List;
 public class NamedTypeExpression
         extends TypeExpression
     {
-    public NamedTypeExpression(Token immutable, List<Token> names, List<Parameter> params)
+    public NamedTypeExpression(Token immutable, List<Token> names, List<TypeExpression> params)
         {
         this.immutable = immutable;
         this.names     = names;
@@ -49,7 +49,7 @@ public class NamedTypeExpression
             {
             sb.append('<');
             first = true;
-            for (Parameter param : params)
+            for (TypeExpression type : params)
                 {
                 if (first)
                     {
@@ -59,7 +59,7 @@ public class NamedTypeExpression
                     {
                     sb.append(", ");
                     }
-                sb.append(param.toTypeParamString());
+                sb.append(type);
                 }
             sb.append('>');
             }
@@ -69,5 +69,5 @@ public class NamedTypeExpression
 
     public final Token immutable;
     public final List<Token> names;
-    public final List<Parameter> params;
+    public final List<TypeExpression> params;
     }

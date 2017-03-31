@@ -105,6 +105,66 @@ public class Token
         return new Token(m_lStartPos, m_lEndPos, id);
         }
 
+    /**
+     * Allow a token to be "peeled off" the front of this token, if possible.
+     *
+     * @param id  the token to peel off of this token
+     *
+     * @return the new token
+     */
+    public Token peel(Id id, Source source)
+        {
+        if (id == Id.COMP_GT)
+            {
+            Id newId;
+            switch (m_id)
+                {
+                default:
+                    return null;
+
+                case USHR_ASN:
+                    newId = Id.SHR_ASN;
+                    break;
+
+                case USHR:
+                    newId = Id.SHR;
+                    break;
+
+                case SHR_ASN:
+                    newId = Id.COMP_GTEQ;
+                    break;
+
+                case SHR:
+                    newId = Id.COMP_GT;
+                    break;
+
+                case COMP_GTEQ:
+                    newId = Id.ASN;
+                    break;
+                }
+
+            // get the location of "this" token
+            long start  = m_lStartPos;
+            long end    = m_lEndPos;
+
+            // get the location of the end of the new peeled token / start of this token (adjusted)
+            long current = source.getPosition();
+            source.setPosition(start);
+            source.next();
+            long middle = source.getPosition();
+            source.setPosition(current);
+
+            // adjust this token
+            m_lStartPos = middle;
+            m_id        = newId;
+
+            // return the new token
+            return new Token(start, middle, id);
+            }
+
+        return null;
+        }
+
     // ----- Object methods ----------------------------------------------------
 
     @Override

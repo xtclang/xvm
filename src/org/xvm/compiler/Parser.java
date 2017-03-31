@@ -261,7 +261,7 @@ public class Parser
         // TODO package import module version-info (allow / avoid / prefer)
 
         // optional type parameters
-        List<Parameter> typeParams = parseTypeParams();
+        List<Parameter> typeParams = parseFormalTypeParams();
 
         List<Parameter> constructorParams = null;
         if (match(Id.L_PAREN) != null)
@@ -483,16 +483,19 @@ public class Parser
             switch (peek().getId())
                 {
                 case L_SQUARE:
+                    expect(Id.L_SQUARE);
                     // TODO could be an integer index e.g. ReturnValues[0]
                     expect(Id.R_SQUARE);
                     type = new ArrayTypeExpression(type);
                     break;
 
                 case COND:
+                    expect(Id.COND);
                     type = new NullableTypeExpression(type);
                     break;
 
                 case ELLIPSIS:
+                    expect(Id.ELLIPSIS);
                     type = new SequenceTypeExpression(type);
                     break;
 
@@ -583,7 +586,7 @@ public class Parser
         {
         Token immutable = match(Id.IMMUTABLE);
         List<Token> names = parseQualifiedName();
-        List<Parameter> params = parseTypeParams();
+        List<TypeExpression> params = parseFormalTypeArgs();          // TODO
         return new NamedTypeExpression(immutable, names, params);
         }
 
@@ -620,7 +623,36 @@ public class Parser
      *
      * @return a list of zero or more type args, or null if there were no angle brackets
      */
-    List<Parameter> parseTypeParams()
+    List<TypeExpression> parseFormalTypeArgs()
+        {
+        List<TypeExpression> typeParams = null;
+        if (match(Id.COMP_LT) != null)
+            {
+            typeParams = new ArrayList<>();
+            boolean first = true;
+            while (match(Id.COMP_GT) == null)
+                {
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    expect(Id.COMMA);
+                    }
+
+                typeParams.add(parseTypeExpression());
+                }
+            }
+        return typeParams;
+        }
+
+    /**
+     * If the next token is a &quot;&lt;&quot;, then parse a list of formal type parameters.
+     *
+     * @return a list of zero or more type parameters, or null if there were no angle brackets
+     */
+    List<Parameter> parseFormalTypeParams()
         {
         List<Parameter> typeParams = null;
         if (match(Id.COMP_LT) != null)
@@ -870,7 +902,7 @@ public class Parser
             return token.getContextSensitiveKeyword();
             }
 
-        return null;
+        return token.peel(id, m_source);
         }
 
     /**
@@ -884,10 +916,10 @@ public class Parser
      */
     protected Token expect(Token.Id id)
         {
-        final Token token = m_token;
-        if (token.getId() == id)
+        final Token token = match(id);
+        if (token != null)
             {
-            return current();
+            return token;
             }
 
         log(Severity.ERROR, EXPECTED_TOKEN, null, m_token.getStartPosition(), m_token.getEndPosition());

@@ -909,6 +909,10 @@ public class CommandLine
                 {
                 try
                     {
+                    if (file != null && file.getName().indexOf("Property") >= 0)
+                        {
+                        int i = 0;
+                        }
                     stmt = new Parser(source, errs).parseCompilationUnit();
                     }
                 catch (CompilerException e)

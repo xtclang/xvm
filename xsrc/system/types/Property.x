@@ -2,7 +2,7 @@
  * A Property represents a property of a particular class or type. A property has a type, a name,
  * and a value. At runtime, a property is itself of type {@code Ref}.
  */
-const Property<TargetType, PropertyType>(Method<TargetType, <Ref<PropertyType>>, Void> method)
+const Property<TargetType, PropertyType>(Method<TargetType, Tuple<Ref<PropertyType>>, Void> method)
     {
     /**
      * The property's name.

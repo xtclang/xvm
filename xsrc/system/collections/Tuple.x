@@ -20,7 +20,7 @@
  * the developer; rather, it is a data type provided by the runtime, and whose type safety is
  * explicitly supported by both the compiler and the runtime.
  */
-interface Tuple<ElementTypes...>
+interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
         extends FixedSizeAble
         extends PersistentAble
         extends ConstAble
