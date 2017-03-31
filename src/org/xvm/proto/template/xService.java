@@ -1,9 +1,6 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
 
 /**
  * TODO:
@@ -16,6 +13,12 @@ public class xService
     public xService(TypeSet types)
         {
         super(types, "x:Service", "x:Object", Shape.Interface);
+        }
+
+    // subclassing
+    protected xService(TypeSet types, String sName, String sSuper, Shape shape)
+        {
+        super(types, sName, sSuper, shape);
         }
 
     @Override
@@ -51,6 +54,21 @@ public class xService
         pt.makeReadOnly();
         pt.makeAtomic();
         pt.addGet().markNative();
+        }
+
+    @Override
+    public ObjectHandle createHandle(TypeComposition clazz)
+        {
+        return new ServiceHandle(clazz);
+        }
+
+    @Override
+    public ObjectHandle createStruct(Frame frame)
+        {
+
+        ServiceHandle hService = new ServiceHandle(f_clazzCanonical);
+        hService.createFields();
+        return hService;
         }
 
     @Override

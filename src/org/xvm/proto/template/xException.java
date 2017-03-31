@@ -1,9 +1,6 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.Op;
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
 import org.xvm.proto.op.Return_0;
 import org.xvm.proto.op.Set;
 
@@ -36,8 +33,8 @@ public class xException
 
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {
-            new Set(0, -f_types.f_constantPool.getPropertyConstId("x:Exception", "text"), 1),
-            new Set(0, -f_types.f_constantPool.getPropertyConstId("x:Exception", "cause"), 2),
+            new Set(0, f_types.f_constantPool.getPropertyConstId("x:Exception", "text"), 1),
+            new Set(0, f_types.f_constantPool.getPropertyConstId("x:Exception", "cause"), 2),
             new Return_0(),
             };
         ct.m_cVars = 3;
@@ -50,7 +47,6 @@ public class xException
         handle.m_mapFields.put("cause", xString.makeHandle(frame.toString()));
         return handle;
         }
-
 
     public static xException INSTANCE;
     }

@@ -28,7 +28,7 @@ public class Set extends OpInvocable
         ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
+        PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
         MethodTemplate method = property.m_templateSet;
 
         ObjectHandle hArg = f_nValue >= 0 ? frame.f_ahVars[f_nValue] :

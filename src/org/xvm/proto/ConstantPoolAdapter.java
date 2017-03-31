@@ -31,7 +31,7 @@ public class ConstantPoolAdapter
     private Map<String, Integer> m_mapProperties = new HashMap<>();
 
     // the method template fully qualified name (x:collections.Map#get[KeyType]) -> the corresponding MethodConstant id
-    private Map<String, Integer> m_mapMethods = new TreeMap<>();
+    private Map<String, Integer> m_mapMethods = new HashMap<>();
 
     public void registerClass(TypeCompositionTemplate template)
         {
@@ -145,7 +145,7 @@ public class ConstantPoolAdapter
         }
 
     // FOR SIMULATION ONLY
-    public int ensureConstantValue(Object oValue)
+    public int ensureConstantValueId(Object oValue)
         {
         Constant constant;
         if (oValue instanceof Integer || oValue instanceof Long)

@@ -47,8 +47,18 @@ public class xInt64
         JavaLong hThis = (JavaLong) hTarget;
         JavaLong hThat = (JavaLong) hArg;
 
-        // TODO: check overflow?
+        // TODO: check overflow
         ahReturn[0] = makeHandle(hThis.getValue() + hThat.getValue());
+        return null;
+        }
+
+    @Override
+    public ObjectHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+
+        // TODO: check overflow
+        ahReturn[0] = makeHandle(hThis.getValue() + 1);
         return null;
         }
 

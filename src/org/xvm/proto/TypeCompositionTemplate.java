@@ -365,6 +365,14 @@ public abstract class TypeCompositionTemplate
         throw new IllegalStateException();
         }
 
+    // Increment operation
+    // @return - an exception handle
+    public ObjectHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+        {
+        throw new IllegalStateException();
+        }
+
+    // Neg operation
     // @return - an exception handle
     public ObjectHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
@@ -507,7 +515,6 @@ public abstract class TypeCompositionTemplate
         public final String f_sName;
         public final TypeName f_typeName;
 
-        private boolean m_fReadOnly = false;
         private boolean m_fAtomic = false;
         public Access m_accessGet = Access.Public;
         public Access m_accessSet = Access.Public;
@@ -531,13 +538,12 @@ public abstract class TypeCompositionTemplate
 
         public void makeReadOnly()
             {
-            m_fReadOnly = true;
             m_accessSet = null;
             }
 
         public boolean isReadOnly()
             {
-            return m_fReadOnly;
+            return m_accessSet == null;
             }
 
         public void makeAtomic()
@@ -608,9 +614,26 @@ public abstract class TypeCompositionTemplate
         @Override
         public String toString()
             {
-            return (m_accessGet == m_accessSet ? m_accessGet.name() :
-                    (m_accessGet.name() + "/" + m_accessSet.name())).toLowerCase()
-                + " " + f_typeName + " " + f_sName;
+            StringBuilder sb = new StringBuilder();
+            if (isAtomic())
+                {
+                sb.append("@atomic ");
+                }
+            if (isReadOnly())
+                {
+                sb.append("@ro ").append(m_accessGet.name().toLowerCase());
+                }
+            else if (m_accessGet == m_accessSet)
+                {
+                sb.append(m_accessGet.name().toLowerCase());
+                }
+            else
+                {
+                sb.append(m_accessGet.name().toLowerCase()).append('/')
+                  .append(m_accessSet.name().toLowerCase());
+                }
+            sb.append(' ').append(f_typeName).append(' ').append(f_sName);
+            return sb.toString();
             }
         }
 
@@ -707,7 +730,13 @@ public abstract class TypeCompositionTemplate
         @Override
         public String toString()
             {
-            return m_access.name().toLowerCase() + ' ' + getSignature();
+            StringBuilder sb = new StringBuilder();
+            if (isNative())
+                {
+                sb.append("native ");
+                }
+            sb.append(m_access.name().toLowerCase()).append(' ').append(getSignature());
+            return sb.toString();
             }
         }
 
@@ -770,11 +799,12 @@ public abstract class TypeCompositionTemplate
 
         public MethodTemplate getSuper()
             {
-            if (m_methodSuper != null)
+            if (m_methodSuper == null)
                 {
-                return m_methodSuper;
+                throw new IllegalStateException(
+                        TypeCompositionTemplate.this + " - no super for method: \"" + getSignature());
                 }
-            throw new IllegalStateException(TypeCompositionTemplate.this + " - no super for method: \"" + getSignature());
+            return m_methodSuper;
             }
         }
 
@@ -791,8 +821,8 @@ public abstract class TypeCompositionTemplate
             }
         }
 
-    public static enum Shape {Class, Interface, Trait, Mixin, Const, Service, Enum}
-    public static enum Access {Public, Protected, Private, Struct}
+    public enum Shape {Class, Interface, Trait, Mixin, Const, Service, Enum}
+    public enum Access {Public, Protected, Private, Struct}
 
     public static String[] VOID = new String[0];
     public static String[] BOOLEAN = new String[]{"x:Boolean"};

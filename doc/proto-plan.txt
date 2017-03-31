@@ -1,4 +1,4 @@
-- super() method call
++ super() method call
         Issue with "construct super" return
 
 - Service

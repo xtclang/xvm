@@ -172,10 +172,14 @@ public class Frame
                     }
                 return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Struct);
 
+            case Op.A_TYPE:
+                if (f_hTarget == null)
+                    {
+                    throw new IllegalStateException();
+                    }
             case Op.A_FRAME:
             case Op.A_SERVICE:
             case Op.A_MODULE:
-            case Op.A_TYPE:
                 throw new UnsupportedOperationException();
 
             default:

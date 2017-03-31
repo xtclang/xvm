@@ -1,5 +1,6 @@
 package org.xvm.proto.template;
 
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -8,19 +9,13 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xArray
-        extends xObject
+        extends TypeCompositionTemplate
     {
     public xArray(TypeSet types)
         {
         super(types, "x:collections.Array<ElementType>", "x:Object", Shape.Class);
 
         addImplement("x:collections.Sequence<ElementType>");
-        }
-
-    // subclassing
-    protected xArray(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
         }
 
     @Override

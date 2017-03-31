@@ -1,5 +1,6 @@
 package org.xvm.proto.template;
 
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -8,7 +9,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xType
-        extends xObject
+        extends TypeCompositionTemplate
     {
     public xType(TypeSet types)
         {

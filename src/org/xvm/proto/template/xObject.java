@@ -40,10 +40,10 @@ public class xObject
 
         addFunctionTemplate("equals", new String[]{"x:Object", "x:Object"}, VOID);
 
-        ensureMethodTemplate("to", STRING, STRING);
-        ensureMethodTemplate("to", new String[]{"x:collections.Array<x:String>"}, new String[]{"x:collections.Array<x:String>"});
-        ensureMethodTemplate("to", new String[]{"x:Tuple<x:Object>"}, new String[]{"x:Tuple<x:Object>"});
-        ensureMethodTemplate("to", new String[]{"x:Function"}, new String[]{"x:Function"});
+        ensureMethodTemplate("to", VOID, STRING);
+        ensureMethodTemplate("to", VOID, new String[]{"x:collections.Array<x:String>"});
+        ensureMethodTemplate("to", VOID, new String[]{"x:Tuple<x:Object>"});
+        ensureMethodTemplate("to", VOID, new String[]{"x:Function"});
         }
 
     @Override
@@ -56,16 +56,11 @@ public class xObject
     public ObjectHandle createStruct(Frame frame)
         {
         assert f_asFormalType.length == 0;
+        assert f_shape == Shape.Class || f_shape == Shape.Const;
 
-        GenericHandle hThis = new GenericHandle(f_clazzCanonical, f_clazzCanonical.ensureStructType());
-
-        forEachProperty(pt ->
-            {
-            if (!pt.isReadOnly())
-                {
-                hThis.m_mapFields.put(pt.f_sName, null);
-                }
-            });
+        GenericHandle hThis = new GenericHandle(f_clazzCanonical,
+                f_clazzCanonical.ensureStructType());
+        hThis.createFields();
         return hThis;
         }
 
@@ -106,6 +101,16 @@ public class xObject
             super(clazz, type);
             }
 
+        public void createFields()
+            {
+            f_clazz.f_template.forEachProperty(pt ->
+                {
+                if (!pt.isReadOnly())
+                    {
+                    m_mapFields.put(pt.f_sName, null);
+                    }
+                });
+            }
         @Override
         public String toString()
             {
