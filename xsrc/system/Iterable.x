@@ -31,11 +31,11 @@ interface Iterable<ElementType>
                     {
                     if (match(value))
                         {
-                        return (true, value);
+                        return true, value;
                         }
                     }
 
-                return (false);
+                return false;
                 }
             }
         }

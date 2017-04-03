@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Op;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.op.*;
 
@@ -10,7 +11,7 @@ import org.xvm.proto.op.*;
  *
  * @author gg 2017.03.15
  */
-public class xTest2 extends xObject
+public class xTest2 extends TypeCompositionTemplate
     {
     private final ConstantPoolAdapter adapter;
 

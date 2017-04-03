@@ -49,7 +49,7 @@ public class Container
         }
 
     // TODO: for xService only
-    public ServiceContext createContext(xObject xo)
+    public ServiceContext createContext(xService service)
         {
         ServiceContext ctx = new ServiceContext(this);
         m_setServices.add(ctx);

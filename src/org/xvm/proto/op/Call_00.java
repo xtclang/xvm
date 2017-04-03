@@ -5,6 +5,8 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+import org.xvm.proto.Utils;
+import org.xvm.proto.template.xFunction.FunctionHandle;
 
 /**
  * CALL_00 rvalue-function.
@@ -23,29 +25,28 @@ public class Call_00 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        Frame frameNew;
+        ObjectHandle hException;
 
         if (f_nFunctionValue == A_SUPER)
             {
-            ObjectHandle hThis = frame.f_ahVars[0];
-            MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
+            Frame frameNew = createSuperCall(frame, Utils.ARGS_NONE);
 
-            ObjectHandle[] ahVars = new ObjectHandle[methodSuper.m_cVars];
+            hException = frameNew.execute();
+            }
+        else if (f_nFunctionValue >= 0)
+            {
+            FunctionHandle hFunction = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
 
-            ahVars[0] = hThis;
-
-            frameNew = new Frame(frame.f_context, frame, hThis, methodSuper, ahVars);
+            hException = hFunction.invoke(frame, Utils.OBJECTS_NONE, Utils.OBJECTS_NONE);
             }
         else
             {
-            FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
+            FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
 
             ObjectHandle[] ahVars = new ObjectHandle[function.m_cVars];
 
-            frameNew = new Frame(frame.f_context, frame, null, function, ahVars);
+            hException = frame.f_context.createFrame(frame, function, null, ahVars).execute();
             }
-
-        ObjectHandle hException = frameNew.execute();
 
         if (hException == null)
             {

@@ -25,7 +25,7 @@ public class X_Print extends Op
 
         if (nValue >= 0)
             {
-            ObjectHandle handle = frame.f_ahVars[nValue];
+            ObjectHandle handle = frame.f_ahVar[nValue];
 
             System.out.println(handle);
             }

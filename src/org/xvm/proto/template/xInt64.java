@@ -14,6 +14,8 @@ import org.xvm.proto.ObjectHandle.JavaLong;
 public class xInt64
         extends TypeCompositionTemplate
     {
+    public static xInt64 INSTANCE;
+
     public xInt64(TypeSet types)
         {
         super(types, "x:Int64", "x:Object", Shape.Const);
@@ -71,7 +73,6 @@ public class xInt64
         return null;
         }
 
-    public static xInt64 INSTANCE;
     public static JavaLong makeHandle(long lValue)
         {
         return new JavaLong(INSTANCE.f_clazzCanonical, lValue);

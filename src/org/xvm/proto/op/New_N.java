@@ -24,7 +24,7 @@ public class New_N extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        FunctionTemplate constructor = getFunctionTemplate(frame, -f_nConstructId);
+        FunctionTemplate constructor = getFunctionTemplate(frame, f_nConstructId);
 
         TypeCompositionTemplate template = constructor.getClazzTemplate();
 
@@ -37,15 +37,15 @@ public class New_N extends OpCallable
             {
             int nArg = f_anArgValue[i];
 
-            ahVars[i + 1] = nArg >= 0 ? frame.f_ahVars[nArg] :
-                    resolveConst(frame, constructor.m_argTypeName[i + 1], nArg);
+            ahVars[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] :
+                    Utils.resolveConst(frame, constructor.m_argTypeName[i + 1], nArg);
             }
 
         ObjectHandle hException = callConstructor(frame, constructor, ahVars);
 
         if (hException == null)
             {
-            frame.f_ahVars[f_nRetValue] = hNew;
+            frame.f_ahVar[f_nRetValue] = hNew;
             return iPC + 1;
             }
         else

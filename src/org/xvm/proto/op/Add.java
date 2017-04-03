@@ -4,7 +4,6 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 /**
  * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T
@@ -27,8 +26,8 @@ public class Add extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
-        ObjectHandle hArg = frame.f_ahVars[f_nArgValue];
+        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
+        ObjectHandle hArg = frame.f_ahVar[f_nArgValue];
         ObjectHandle[] ahRet = new ObjectHandle[1];
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
@@ -37,7 +36,7 @@ public class Add extends OpInvocable
 
         if (hException == null)
             {
-            frame.f_ahVars[f_nRetValue] = ahRet[0];
+            frame.f_ahVar[f_nRetValue] = ahRet[0];
             return iPC + 1;
             }
         else

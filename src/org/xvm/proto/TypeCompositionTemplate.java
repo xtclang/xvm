@@ -4,6 +4,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool.ClassConstant;
 import org.xvm.asm.ConstantPool.MethodConstant;
 
+import org.xvm.proto.ObjectHandle.GenericHandle;
+import org.xvm.util.ListMap;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -36,7 +39,8 @@ public abstract class TypeCompositionTemplate
     protected List<TypeName> m_listImplement = new LinkedList<>(); // used as "extends " for interfaces
     protected List<String> m_listIncorporate = new LinkedList<>();
 
-    protected Map<String, PropertyTemplate> m_mapProperties = new TreeMap<>();
+    // manual ordering of properties is kind of useful in the output
+    protected Map<String, PropertyTemplate> m_mapProperties = new ListMap<>();
     protected Map<String, MultiMethodTemplate> m_mapMultiMethods = new TreeMap<>();
 
     protected Map<String, MultiFunctionTemplate> m_mapMultiFunctions = new TreeMap<>(); // class level child functions
@@ -306,6 +310,7 @@ public abstract class TypeCompositionTemplate
                 (x) -> new TypeComposition(this, atGenericActual));
         }
 
+    // produce a TypeComposition based on the specified ClassConstant
     public TypeComposition resolve(ClassConstant classConstant)
         {
         // TODO: awaiting support from ClassConstant
@@ -324,7 +329,7 @@ public abstract class TypeCompositionTemplate
     // create an un-initialized handle (Int i;)
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        throw new UnsupportedOperationException();
+        return new GenericHandle(clazz);
         }
 
     // assign (Int i = 5;)
@@ -382,19 +387,37 @@ public abstract class TypeCompositionTemplate
     // get a property value
     public ObjectHandle getProperty(ObjectHandle hTarget, String sName)
         {
-        throw new IllegalStateException();
+        GenericHandle hThis = (GenericHandle) hTarget;
+        ObjectHandle  hProp = hThis.m_mapFields.get(sName);
+        if (hProp == null)
+            {
+            throw new IllegalStateException((hThis.m_mapFields.containsKey(sName) ?
+                    "Un-initialized property " : "Invalid property ") + sName);
+            }
+        return hProp;
         }
 
     // set a property value
     public void setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
         {
-        throw new IllegalStateException();
+        // TODO: check the access rights
+        GenericHandle hThis = (GenericHandle) hTarget;
+
+        assert hThis.m_mapFields.containsKey(sName);
+
+        hThis.m_mapFields.put(sName, hValue);
         }
 
     // return a handle with this:struct access
     public ObjectHandle createStruct(Frame frame)
         {
-        throw new IllegalStateException();
+        assert f_asFormalType.length == 0;
+        assert f_shape == Shape.Class || f_shape == Shape.Const;
+
+        GenericHandle hThis = new GenericHandle(f_clazzCanonical,
+                f_clazzCanonical.ensureStructType());
+        hThis.createFields();
+        return hThis;
         }
 
     // does this template extend that?
@@ -549,7 +572,6 @@ public abstract class TypeCompositionTemplate
         public void makeAtomic()
             {
             m_fAtomic = true;
-            m_accessSet = null;
             }
 
         public boolean isAtomic()

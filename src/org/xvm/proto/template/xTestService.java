@@ -1,6 +1,9 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.proto.ConstantPoolAdapter;
+import org.xvm.proto.Op;
+import org.xvm.proto.TypeSet;
+
 import org.xvm.proto.op.*;
 
 /**

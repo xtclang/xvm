@@ -25,14 +25,14 @@ public class Set extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
+        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
         PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
         MethodTemplate method = property.m_templateSet;
 
-        ObjectHandle hArg = f_nValue >= 0 ? frame.f_ahVars[f_nValue] :
-                resolveConst(frame, method.m_argTypeName[0], -f_nValue);
+        ObjectHandle hArg = f_nValue >= 0 ? frame.f_ahVar[f_nValue] :
+                Utils.resolveConst(frame, method.m_argTypeName[0], -f_nValue);
 
         if (method == null)
             {
@@ -43,7 +43,7 @@ public class Set extends OpInvocable
             // almost identical to the second part of Invoke_10
             ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
 
-            ObjectHandle hException = new Frame(frame.f_context, frame, hTarget, method, ahVars).execute();
+            ObjectHandle hException = frame.f_context.createFrame(frame, method, hTarget, ahVars).execute();
 
             if (hException != null)
                 {

@@ -15,22 +15,14 @@ import org.xvm.proto.template.xMethod.MethodHandle;
  */
 public abstract class OpInvocable extends Op
     {
-    protected MethodTemplate getMethodTemplate(Frame frame, TypeCompositionTemplate template, int nMethodValue)
+    protected MethodTemplate getMethodTemplate(Frame frame, TypeCompositionTemplate template, int nMethodConstId)
         {
-        if (nMethodValue >= 0)
-            {
-            MethodHandle hMethod = (MethodHandle) frame.f_ahVars[nMethodValue];
+        assert(nMethodConstId >= 0);
 
-            // TODO: same as Function; how to do it right?
-            return hMethod.m_method;
-            }
-        else
-            {
-            MethodConstant constMethod =
-                    frame.f_context.f_constantPool.getMethodConstant(-nMethodValue);
-            // TODO parameters, returns
-            return template.getMethodTemplate(constMethod);
-            }
+        MethodConstant constMethod =
+                frame.f_context.f_constantPool.getMethodConstant(nMethodConstId);
+        // TODO parameters, returns
+        return template.getMethodTemplate(constMethod);
         }
 
     protected PropertyTemplate getPropertyTemplate(Frame frame, TypeCompositionTemplate template, int nPropValue)

@@ -102,22 +102,22 @@ TODO DUP
 0x5E CALL_TN        rvalue-function, rvalue-params-tuple, #returns:(lvalue)
 0x5F CALL_TT        rvalue-function, rvalue-params-tuple, lvalue-return-tuple
 
-0x60 INVOKE_00        rvalue-target, rvalue-method
-0x61 INVOKE_01        rvalue-target, rvalue-method, lvalue-return
-0x62 INVOKE_0N        rvalue-target, rvalue-method, #returns:(lvalue)
-0x63 INVOKE_0T        rvalue-target, rvalue-method, lvalue-return-tuple
-0x64 INVOKE_10        rvalue-target, rvalue-method, rvalue-param
-0x65 INVOKE_11        rvalue-target, rvalue-method, rvalue-param, lvalue-return
-0x66 INVOKE_1N        rvalue-target, rvalue-method, rvalue-param, #returns:(lvalue)
-0x67 INVOKE_1T        rvalue-target, rvalue-method, rvalue-param, lvalue-return-tuple
-0x68 INVOKE_N0        rvalue-target, rvalue-method, #params:(rvalue)
-0x69 INVOKE_N1        rvalue-target, rvalue-method, #params:(rvalue), lvalue-return
-0x6A INVOKE_NN        rvalue-target, rvalue-method, #params:(rvalue), #returns:(lvalue)
-0x6B INVOKE_NT        rvalue-target, rvalue-method, #params:(rvalue), lvalue-return-tuple
-0x6C INVOKE_T0        rvalue-target, rvalue-method, rvalue-params-tuple
-0x6D INVOKE_T1        rvalue-target, rvalue-method, rvalue-params-tuple, lvalue-return
-0x6E INVOKE_TN        rvalue-target, rvalue-method, rvalue-params-tuple, #returns:(lvalue)
-0x6F INVOKE_TT        rvalue-target, rvalue-method, rvalue-params-tuple, lvalue-return-tuple
+0x60 INVOKE_00      rvalue-target, CONST-METHOD
+0x61 INVOKE_01      rvalue-target, CONST-METHOD, lvalue-return
+0x62 INVOKE_0N      rvalue-target, CONST-METHOD, #returns:(lvalue)
+0x63 INVOKE_0T      rvalue-target, CONST-METHOD, lvalue-return-tuple
+0x64 INVOKE_10      rvalue-target, CONST-METHOD, rvalue-param
+0x65 INVOKE_11      rvalue-target, CONST-METHOD, rvalue-param, lvalue-return
+0x66 INVOKE_1N      rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
+0x67 INVOKE_1T      rvalue-target, CONST-METHOD, rvalue-param, lvalue-return-tuple
+0x68 INVOKE_N0      rvalue-target, CONST-METHOD, #params:(rvalue)
+0x69 INVOKE_N1      rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return
+0x6A INVOKE_NN      rvalue-target, CONST-METHOD, #params:(rvalue), #returns:(lvalue)
+0x6B INVOKE_NT      rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return-tuple
+0x6C INVOKE_T0      rvalue-target, CONST-METHOD, rvalue-params-tuple
+0x6D INVOKE_T1      rvalue-target, CONST-METHOD, rvalue-params-tuple, lvalue-return
+0x6E INVOKE_TN      rvalue-target, CONST-METHOD, rvalue-params-tuple, #returns:(lvalue)
+0x6F INVOKE_TT      rvalue-target, CONST-METHOD, rvalue-params-tuple, lvalue-return-tuple
 
 0x70 ADD        rvalue-target, rvalue-second, lvalue-return                                ; T + T -> T
 0x71 SUB        rvalue-target, rvalue-second, lvalue-return                                ; T - T -> T
