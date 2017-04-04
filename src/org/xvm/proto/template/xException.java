@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.proto.*;
+import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.op.Return_0;
 import org.xvm.proto.op.Set;
 
@@ -10,8 +11,10 @@ import org.xvm.proto.op.Set;
  * @author gg 2017.02.27
  */
 public class xException
-        extends xObject
+        extends TypeCompositionTemplate
     {
+    public static xException INSTANCE;
+
     public xException(TypeSet types)
         {
         super(types, "x:Exception", "x:Object", Shape.Const);
@@ -44,9 +47,7 @@ public class xException
     public ObjectHandle createStruct(Frame frame)
         {
         GenericHandle handle = (GenericHandle) super.createStruct(frame);
-        handle.m_mapFields.put("cause", xString.makeHandle(frame.toString()));
+        setProperty(handle, "stackTrace", xString.makeHandle(frame.getStackTrace()));
         return handle;
         }
-
-    public static xException INSTANCE;
     }

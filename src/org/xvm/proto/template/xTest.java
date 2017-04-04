@@ -9,7 +9,7 @@ import org.xvm.proto.op.*;
  *
  * @author gg 2017.03.15
  */
-public class xTest extends xObject
+public class xTest extends TypeCompositionTemplate
     {
     private final ConstantPoolAdapter adapter;
 
@@ -32,7 +32,7 @@ public class xTest extends xObject
         addFunctionTemplate("construct", new String[]{"x:Test", "x:String"}, new String[]{"x:Function"});
         addFunctionTemplate("construct:finally", new String[]{"x:Test", "x:String"}, VOID);
         addFunctionTemplate("test3", VOID, VOID);
-        addFunctionTemplate("throwing", VOID, INT);
+        addFunctionTemplate("throwing", STRING, VOID);
         addFunctionTemplate("test4", VOID, VOID);
 
         ensureMethodTemplate("method1", VOID, INT);
@@ -208,24 +208,21 @@ public class xTest extends xObject
 
     private void add_throwing()
         {
-        FunctionTemplate ft = getFunctionTemplate("throwing", VOID, INT);
-        //  static Void throwing()
+        FunctionTemplate ft = getFunctionTemplate("throwing", STRING, VOID);
+        //  static Void throwing(String s)  // #0 = s
         //      {
-        //      throw new Exception("bye");     // VAR x:Exception (#0)
-        //                                      // NEW_N @"#x:Exception:construct" 2 -@"bye" -@"x:Nullable.Null" #0
-        //                                      // THROW #0
+        //      throw new Exception(s);     // VAR x:Exception (#1)
+        //                                  // NEW_N @"#x:Exception:construct" 2 0 -@"x:Nullable.Null" #1
+        //                                  // THROW #1
         //      }
         ft.m_aop = new Op[]
             {
-            new Var(this.adapter.getClassConstId("x:Exception")),
-            new New_N(this.adapter.getMethodConstId("x:Exception", "construct"), new int[]
-                    {
-                    -adapter.ensureConstantValueId("bye"),
-                    -adapter.getClassConstId("x:Nullable$Null"),
-                    }, 0),
-            new Throw(0),
+            new Var(this.adapter.getClassConstId("x:Exception")), // #1
+            new New_N(this.adapter.getMethodConstId("x:Exception", "construct"),
+                        new int[]{0, -adapter.getClassConstId("x:Nullable$Null")}, 1),
+            new Throw(1),
             };
-        ft.m_cVars = 1;
+        ft.m_cVars = 2;
         }
 
     private void add_test4()
@@ -237,14 +234,14 @@ public class xTest extends xObject
         //          {                           //
         //          Boolean f = true;           // 1) IVAR x:Boolean -@"Boolean$True"
         //          print f;                    // 2) print 0
-        //          throwing();                 // 3) CALL_00 -@"x:Test#throwing"
+        //          throwing("handled");        // 3) CALL_10 -@"x:Test#throwing" -@"handled"
         //          }                           // 4) ENDGUARD 8 (+4)
         //      catch (Exception e)             // 5) ENTER ; #0 = e
         //          {                           //
         //          print e;                    // 6) print 0
         //          }                           // 7) EXIT
         //                                      //
-        //      throwing();                     // 8) CALL_00 -@"x:Test#throwing"
+        //      throwing("unhandled");          // 8) CALL_00 -@"x:Test#throwing"
         //      return;                         // 9) RETURN
         //      }
         ft.m_aop = new Op[]
@@ -252,12 +249,12 @@ public class xTest extends xObject
             new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+5}),
             new IVar(this.adapter.getClassConstId("x:Boolean"), adapter.getClassConstId("x:Boolean$True")),
             new X_Print(0),
-            new Call_00(-adapter.getMethodConstId("x:Test", "throwing")),
+            new Call_10(-adapter.getMethodConstId("x:Test", "throwing"), -adapter.ensureConstantValueId("handled")),
             new GuardEnd(+4),
             new Enter(),
             new X_Print(0),
             new Exit(),
-            new Call_00(-adapter.getMethodConstId("x:Test", "throwing")),
+            new Call_10(-adapter.getMethodConstId("x:Test", "throwing"), -adapter.ensureConstantValueId("unhandled")),
             new Return_0(),
             };
         ft.m_cVars = 1;

@@ -2,6 +2,8 @@
         Issue with "construct super" return
 
 - Service
+        cleanup an un-referenced service (phantom refs)
+
 - Array
 - Multi:
     -- new

@@ -25,7 +25,7 @@ public class IVar extends Op
         int iScope   = frame.f_aiRegister[I_SCOPE];
         int nNextVar = frame.f_anNextVar[iScope];
 
-        frame.f_ahVars[nNextVar] =
+        frame.f_ahVar[nNextVar] =
                 frame.f_context.f_heap.resolveConstHandle(f_nClassConstId, f_nValueConstId); // TODO: cache this
 
         frame.f_anNextVar[iScope] = nNextVar + 1;

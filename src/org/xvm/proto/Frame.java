@@ -16,8 +16,8 @@ public class Frame
     public final TypeCompositionTemplate.InvocationTemplate f_function;
 
     public final ObjectHandle   f_hTarget;      // target
-    public final ObjectHandle[] f_ahVars;       // arguments/local vars (index 0 for target:private)
-    public final ObjectHandle[] f_ahReturns;    // the return value(s)
+    public final ObjectHandle[] f_ahVar;        // arguments/local vars (index 0 for target:private)
+    public final ObjectHandle[] f_ahReturn;     // the return value(s)
     public final Frame          f_framePrev;    // the caller's frame
     public final int[]          f_aiRegister;   // execution registers
                                                 // [0] - current scope
@@ -26,19 +26,19 @@ public class Frame
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
     public ObjectHandle         m_hException;   // an exception
 
-    public Frame(ServiceContext context, Frame framePrev, ObjectHandle hTarget,
-                 InvocationTemplate function, ObjectHandle[] ahVars)
+    public Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
+                 ObjectHandle hTarget, ObjectHandle[] ahVars)
         {
         f_context = context;
         f_framePrev = framePrev;
         f_function = function;
         f_hTarget = hTarget;
-        f_ahVars = ahVars; // [0] - target:private for methods
+        f_ahVar = ahVars; // [0] - target:private for methods
         f_aiRegister = new int[] {0, -1};
         f_anNextVar = new int[f_function.m_cScopes];
 
         int c = function.m_cReturns;
-        f_ahReturns = c == 0 ? Utils.OBJECTS_NONE : new  ObjectHandle[c];
+        f_ahReturn = c == 0 ? Utils.OBJECTS_NONE : new  ObjectHandle[c];
         }
 
     public ObjectHandle execute()
@@ -51,7 +51,7 @@ public class Frame
             }
         else  // #0 - this:private
             {
-            f_ahVars[0]    = f_hTarget; // TODO: replace with this:private
+            f_ahVar[0]    = f_hTarget; // TODO: replace with this:private
             f_anNextVar[0] = 1 + f_function.m_cArgs;
             }
 
@@ -115,7 +115,7 @@ public class Frame
                         f_aiRegister[Op.I_GUARD] = iGuard - 1;
 
                         int nNextVar = f_anNextVar[nScope]++;
-                        f_ahVars[nNextVar] = hException;
+                        f_ahVar[nNextVar] = hException;
 
                         return guard.f_nStartAddress + guard.f_anCatchRelAddress[iCatch];
                         }
@@ -185,6 +185,25 @@ public class Frame
             default:
                 throw new IllegalStateException("Invalid argument" + nArgId);
             }
+        }
+
+    // temporary
+    public String getStackTrace()
+        {
+        StringBuilder sb = new StringBuilder();
+        Frame frame = this;
+        do
+            {
+            sb.append("\n  - ")
+              .append(frame);
+
+            frame = frame.f_framePrev;
+            }
+        while (frame != null);
+
+        sb.append('\n');
+
+        return sb.toString();
         }
 
     @Override

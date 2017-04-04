@@ -23,7 +23,7 @@ public class Var extends Op
         int iScope = frame.f_aiRegister[I_SCOPE];
         int nNextVar = frame.f_anNextVar[iScope];
 
-        frame.f_ahVars[nNextVar] = frame.f_context.f_heap.ensureHandle(f_nClassConst); // TODO: cache this
+        frame.f_ahVar[nNextVar] = frame.f_context.f_heap.ensureHandle(f_nClassConst); // TODO: cache this
 
         frame.f_anNextVar[iScope] = nNextVar+1;
         return iPC + 1;

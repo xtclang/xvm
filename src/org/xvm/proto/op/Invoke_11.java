@@ -11,14 +11,14 @@ import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 public class Invoke_11 extends OpInvocable
     {
     private final int f_nTargetValue;
-    private final int f_nMethodValue;
+    private final int f_nMethodId;
     private final int f_nArgValue;
     private final int f_nRetValue;
 
-    public Invoke_11(int nTarget, int nMethod, int nArg, int nRet)
+    public Invoke_11(int nTarget, int nMethodId, int nArg, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nMethodValue = nMethod;
+        f_nMethodId = nMethodId;
         f_nArgValue = nArg;
         f_nRetValue = nRet;
         }
@@ -26,36 +26,36 @@ public class Invoke_11 extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
+        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        MethodTemplate method = getMethodTemplate(frame, template, f_nMethodValue);
+        MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
 
-        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVars[f_nArgValue] :
-                resolveConst(frame, method.m_argTypeName[0], f_nArgValue);
+        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
+                Utils.resolveConst(frame, method.m_argTypeName[0], f_nArgValue);
 
-        ObjectHandle[] ahRet;
+        ObjectHandle[] ahReturn;
         ObjectHandle hException;
 
         if (method.isNative())
             {
-            ahRet = new ObjectHandle[1];
-            hException = template.invokeNative11(frame, hTarget, method, hArg, ahRet);
+            ahReturn = new ObjectHandle[1];
+            hException = template.invokeNative11(frame, hTarget, method, hArg, ahReturn);
             }
         else
             {
             ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
             ahVars[1] = hArg;
 
-            Frame frameNew = new Frame(frame.f_context, frame, hTarget, method, ahVars);
+            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVars);
             hException = frameNew.execute();
-            ahRet = frameNew.f_ahReturns;
+            ahReturn = frameNew.f_ahReturn;
             }
 
         if (hException == null)
             {
-            frame.f_ahVars[f_nRetValue] = ahRet[0];
+            frame.f_ahVar[f_nRetValue] = ahReturn[0];
             return iPC + 1;
             }
         else

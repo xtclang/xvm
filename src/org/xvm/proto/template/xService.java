@@ -1,6 +1,14 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.GenericHandle;
+import org.xvm.proto.ServiceDaemon;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
+
+import org.xvm.proto.template.xFunction.FunctionHandle;
 
 /**
  * TODO:
@@ -8,7 +16,7 @@ import org.xvm.proto.*;
  * @author gg 2017.02.27
  */
 public class xService
-        extends xObject
+        extends TypeCompositionTemplate
     {
     public xService(TypeSet types)
         {
@@ -51,9 +59,7 @@ public class xService
         PropertyTemplate pt;
 
         pt = ensurePropertyTemplate("serviceName", "x:String");
-        pt.makeReadOnly();
         pt.makeAtomic();
-        pt.addGet().markNative();
         }
 
     @Override
@@ -65,29 +71,30 @@ public class xService
     @Override
     public ObjectHandle createStruct(Frame frame)
         {
-
         ServiceHandle hService = new ServiceHandle(f_clazzCanonical);
         hService.createFields();
+        setProperty(hService, "serviceName",
+                xString.makeHandle(getClass().getSimpleName()));
         return hService;
+        }
+
+    public ObjectHandle invokeAsync(Frame frame, ObjectHandle[] ahVars, FunctionHandle hFunction)
+        {
+        throw new UnsupportedOperationException("TODO");
         }
 
     @Override
     public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
-        ServiceHandle  hThis = (ServiceHandle) hTarget;
-        switch (method.f_sName)
-            {
-            case "serviceName$get":
-                ahReturn[0] = xString.makeHandle(hThis.m_sName);
-                return null;
-            }
+        ServiceHandle hThis = (ServiceHandle) hTarget;
+
         throw new IllegalStateException("Unknown method: " + method);
         }
 
     public static class ServiceHandle
             extends GenericHandle
         {
-        protected String m_sName;
+        protected ServiceDaemon m_daemon;
         public ServiceHandle(TypeComposition clazz)
             {
             super(clazz);

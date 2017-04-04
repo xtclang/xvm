@@ -1,10 +1,9 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.OpCallable;
+import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+
+import org.xvm.proto.template.xFunction.FunctionHandle;
 
 /**
  * CALL_N1 rvalue-function, #params:(rvalue) lvalue-return
@@ -27,49 +26,38 @@ public class Call_N1 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        Frame frameNew;
+        ObjectHandle hException;
+        ObjectHandle[] ahReturn;
 
         if (f_nFunctionValue == A_SUPER)
             {
-            MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
+            Frame frameNew = createSuperCall(frame, f_anArgValue);
 
-            ObjectHandle[] ahVars = new ObjectHandle[methodSuper.m_cVars];
+            ahReturn   = frameNew.f_ahReturn;
+            hException = frameNew.execute();
+            }
+        else if (f_nFunctionValue >= 0)
+            {
+            FunctionHandle function = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
 
-            ObjectHandle hThis = frame.f_ahVars[0];
-
-            ahVars[0] = hThis;
-            for (int i = 0, c = f_anArgValue.length; i < c; i++)
-                {
-                int nArg = f_anArgValue[i];
-
-                ahVars[i + 1] = nArg >= 0 ? frame.f_ahVars[nArg] :
-                        resolveConst(frame, methodSuper.m_argTypeName[i + 1], nArg);
-                }
-
-            frameNew = new Frame(frame.f_context, frame, hThis, methodSuper, ahVars);
+            hException = function.invoke(frame, frame.f_ahVar,
+                    f_anArgValue, ahReturn = new ObjectHandle[1]);
             }
         else
             {
             FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
 
-            ObjectHandle[] ahVars = new ObjectHandle[function.m_cVars];
+            ObjectHandle[] ahVar = Utils.resolveArguments(frame, function, frame.f_ahVar, f_anArgValue);
 
-            for (int i = 0, c = f_anArgValue.length; i < c; i++)
-                {
-                int nArg = f_anArgValue[i];
+            Frame frameNew = frame.f_context.createFrame(frame, function, null, ahVar);
 
-                ahVars[i] = nArg >= 0 ? frame.f_ahVars[nArg] :
-                        resolveConst(frame, function.m_argTypeName[i], nArg);
-                }
-
-            frameNew = new Frame(frame.f_context, frame, null, function, ahVars);
+            ahReturn   = frameNew.f_ahReturn;
+            hException = frameNew.execute();
             }
-
-        ObjectHandle hException = frameNew.execute();
 
         if (hException == null)
             {
-            frame.f_ahVars[f_nRetValue] = frameNew.f_ahReturns[0];
+            frame.f_ahVar[f_nRetValue] = ahReturn[0];
             return iPC + 1;
             }
         else

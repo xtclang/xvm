@@ -25,7 +25,7 @@ public class Get extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
+        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
@@ -35,7 +35,7 @@ public class Get extends OpInvocable
 
         if (method == null)
             {
-            frame.f_ahVars[f_nRetValue] = template.getProperty(hTarget, property.f_sName);
+            frame.f_ahVar[f_nRetValue] = template.getProperty(hTarget, property.f_sName);
             }
         else
             {
@@ -52,16 +52,16 @@ public class Get extends OpInvocable
                 {
                 ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
 
-                Frame frameNew = new Frame(frame.f_context, frame, hTarget, method, ahVars);
+                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVars);
 
                 hException = frameNew.execute();
 
-                ahRet = frameNew.f_ahReturns;
+                ahRet = frameNew.f_ahReturn;
                 }
 
             if (hException == null)
                 {
-                frame.f_ahVars[f_nRetValue] = ahRet[0];
+                frame.f_ahVar[f_nRetValue] = ahRet[0];
                 }
             else
                 {

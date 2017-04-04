@@ -17,6 +17,8 @@ import org.xvm.proto.TypeSet;
 public class xString
         extends TypeCompositionTemplate
     {
+    public static xString INSTANCE;
+
     public xString(TypeSet types)
         {
         super(types, "x:String", "x:Object", Shape.Const);
@@ -110,7 +112,6 @@ public class xString
         private final static String UNASSIGNED = "\0UNASSIGNED\0";
         }
 
-    public static xString INSTANCE;
     public static StringHandle makeHandle(String sValue)
         {
         return new StringHandle(INSTANCE.f_clazzCanonical, sValue);

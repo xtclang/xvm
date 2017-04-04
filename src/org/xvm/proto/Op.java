@@ -1,8 +1,6 @@
 package org.xvm.proto;
 
 
-import com.sun.xml.internal.bind.v2.model.core.ID;
-
 /**
  * The ops.
  *
@@ -33,28 +31,6 @@ public abstract class Op
     public static final int RETURN_NORMAL = -1;
     public static final int RETURN_EXCEPTION = -2;
 
-    // below methods are non static for future caching purposes
-
-    protected ObjectHandle resolveConstReturn(Frame frame, int nReturn, int nConstValueId)
-        {
-        return resolveConst(frame, frame.f_function.m_retTypeName[nReturn], nConstValueId);
-        }
-
-    protected ObjectHandle resolveConst(Frame frame, TypeName typeName, int nConstValueId)
-        {
-        assert nConstValueId < 0;
-
-        return nConstValueId < -MAX_CONST_ID ? frame.getPredefinedArgument(nConstValueId) :
-            frame.f_context.f_heap.resolveConstHandle(typeName, -nConstValueId);
-        }
-
-    protected ObjectHandle resolveConst(Frame frame, TypeComposition clazz, int nConstValueId)
-        {
-        assert nConstValueId < 0;
-
-        return nConstValueId < -MAX_CONST_ID ? frame.getPredefinedArgument(nConstValueId) :
-            frame.f_context.f_heap.resolveConstHandle(clazz, -nConstValueId);
-        }
 
     // returns a positive iPC or a negative RETURN_*
     public abstract int process(Frame frame, int iPC);

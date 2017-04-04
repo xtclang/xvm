@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
+import org.xvm.proto.Utils;
 
 /**
  * RETURN_1 rvalue
@@ -20,8 +21,8 @@ public class Return_1 extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        frame.f_ahReturns[0] = f_nValue >= 0 ? frame.f_ahVars[f_nValue] :
-                resolveConstReturn(frame, 0, f_nValue);
+        frame.f_ahReturn[0] = f_nValue >= 0 ? frame.f_ahVar[f_nValue] :
+                Utils.resolveConstReturn(frame, 0, f_nValue);
 
         return RETURN_NORMAL;
         }

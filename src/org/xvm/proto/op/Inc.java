@@ -22,7 +22,7 @@ public class Inc extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVars[f_nTargetValue];
+        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
         ObjectHandle[] ahRet = new ObjectHandle[1];
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
@@ -31,7 +31,7 @@ public class Inc extends OpInvocable
 
         if (hException == null)
             {
-            frame.f_ahVars[f_nTargetValue] = ahRet[0];
+            frame.f_ahVar[f_nTargetValue] = ahRet[0];
             return iPC + 1;
             }
         else

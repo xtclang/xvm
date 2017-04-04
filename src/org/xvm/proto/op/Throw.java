@@ -21,7 +21,7 @@ public class Throw extends Op
     public int process(Frame frame, int iPC)
         {
         // there are no "const" exceptions
-        frame.m_hException = frame.f_ahVars[f_nValue];
+        frame.m_hException = frame.f_ahVar[f_nValue];
 
         return RETURN_EXCEPTION;
         }

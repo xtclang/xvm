@@ -22,7 +22,7 @@ public class Move extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        frame.f_ahVars[f_nToValue] = frame.f_ahVars[f_nFromValue];
+        frame.f_ahVar[f_nToValue] = frame.f_ahVar[f_nFromValue];
 
         return iPC + 1;
         }

@@ -24,7 +24,7 @@ public class TestDriver
         xTestService testService = new xTestService(container.f_types);
         container.f_types.addTemplate(testService);
 
-        ServiceContext context = container.createContext(test);
+        ServiceContext context = container.createContext(null);
 
         runTests(test, context);
         runTests(test2, context);
@@ -42,8 +42,8 @@ public class TestDriver
                     {
                     System.out.println("\n### Calling " + function + " ###");
 
-                    ObjectHandle hException = context.createFrame(null, null,
-                            function, new ObjectHandle[function.m_cVars]).execute();
+                    ObjectHandle hException = context.createFrame(null, function, null,
+                            new ObjectHandle[function.m_cVars]).execute();
                     if (hException != null)
                         {
                         System.out.println("Function " + function.f_sName + " threw unhandled " + hException);

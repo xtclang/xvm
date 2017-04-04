@@ -1,6 +1,6 @@
 package org.xvm.proto;
 
-import sun.util.resources.lv.CalendarData_lv;
+import org.xvm.util.ListMap;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,6 +45,39 @@ public abstract class ObjectHandle
     public String toString()
         {
         return "(" + f_clazz + ") ";
+        }
+
+    public static class GenericHandle
+            extends ObjectHandle
+        {
+        // keyed by the property name
+        protected Map<String, ObjectHandle> m_mapFields = new ListMap<>();
+
+        public GenericHandle(TypeComposition clazz)
+            {
+            super(clazz);
+            }
+
+        public GenericHandle(TypeComposition clazz, Type type)
+            {
+            super(clazz, type);
+            }
+
+        public void createFields()
+            {
+            f_clazz.f_template.forEachProperty(pt ->
+                {
+                if (!pt.isReadOnly())
+                    {
+                    m_mapFields.put(pt.f_sName, null);
+                    }
+                });
+            }
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_mapFields;
+            }
         }
 
     public static class JavaDelegate
@@ -191,4 +224,5 @@ public abstract class ObjectHandle
 
     // bits 32-63: identity id
     private final static long MASK_IDENTITY   = 0xFFFF_FFFF_0000_0000L;
+
     }
