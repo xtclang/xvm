@@ -66,7 +66,7 @@ public class ParserTest
         ErrorList errlist = new ErrorList(5);
         Parser parser = new Parser(source, errlist);
 
-        Statement stmt = parser.parseCompilationUnit();
+        Statement stmt = parser.parseSource();
         out(stmt);
 
         out("error list (" + errlist.getSeriousErrorCount()

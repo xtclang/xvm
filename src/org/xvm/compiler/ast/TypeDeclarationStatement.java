@@ -22,7 +22,7 @@ public class TypeDeclarationStatement
                                     List<Annotation>  annotations,
                                     Token             category,
                                     Token             name,
-                                    List<Token>       qualifier,        
+                                    List<Token>       qualified,
                                     List<Parameter>   typeParams,       
                                     List<Parameter>   constructorParams,
                                     List<Composition> composition,      
@@ -33,7 +33,7 @@ public class TypeDeclarationStatement
         this.annotations       = annotations;
         this.category          = category;
         this.name              = name;
-        this.qualifier         = qualifier;
+        this.qualified         = qualified;
         this.typeParams        = typeParams;               
         this.constructorParams = constructorParams;        
         this.composition       = composition;              
@@ -43,18 +43,20 @@ public class TypeDeclarationStatement
 
     public String getName()
         {
-        String sName = (String) name.getValue();
         if (category.getId() == Token.Id.MODULE)
             {
-            StringBuilder sb = new StringBuilder(sName);
-            for (Token suffix : qualifier)
+            StringBuilder sb = new StringBuilder();
+            for (Token suffix : qualified)
                 {
                 sb.append('.')
                   .append(suffix.getValue());
                 }
-            return sb.toString();
+            return sb.substring(1).toString();
             }
-        return sName;
+        else
+            {
+            return (String) name.getValue();
+            }
         }
 
     @Override
@@ -91,15 +93,26 @@ public class TypeDeclarationStatement
             }
 
         sb.append(category.getId().TEXT)
-          .append(' ')
-          .append(name.getValue());
+          .append(' ');
 
-        if (qualifier != null)
+        if (qualified == null)
             {
-            for (Token token : qualifier)
+            sb.append(name.getValue());
+            }
+        else
+            {
+            boolean first = true;
+            for (Token token : qualified)
                 {
-                sb.append('.')
-                  .append(token.getValue());
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append('.');
+                    }
+                sb.append(token.getValue());
                 }
             }
 
@@ -183,7 +196,7 @@ public class TypeDeclarationStatement
     public final List<Annotation>  annotations;
     public final Token             category;
     public final Token             name;
-    public final List<Token>       qualifier;
+    public final List<Token>       qualified;
     public final List<Parameter>   typeParams;
     public final List<Parameter>   constructorParams;
     public final List<Composition> composition;

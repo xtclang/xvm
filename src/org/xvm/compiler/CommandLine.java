@@ -3,7 +3,6 @@ package org.xvm.compiler;
 
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.PackageStructure;
 import org.xvm.asm.StructureContainer;
 import org.xvm.compiler.ast.BlockStatement;
 import org.xvm.compiler.ast.Statement;
@@ -444,7 +443,7 @@ public class CommandLine
             Source    source  = new Source(file);
             ErrorList errlist = new ErrorList(100);
             Parser    parser  = new Parser(source, errlist);
-            stmt = parser.parseCompilationUnit();
+            stmt = parser.parseSource();
             }
         catch (CompilerException e)
             {
@@ -685,6 +684,13 @@ public class CommandLine
                 Node node = entry.getValue();
                 out(node);
 
+                TypeDeclarationStatement type = node.getType();
+                if (type != null)
+                    {
+                    out();
+                    out(type);
+                    }
+
                 StructureContainer struct = node.getStructure();
                 if (struct != null)
                     {
@@ -743,6 +749,7 @@ public class CommandLine
         public void registerNames();
         String name();
         String descriptiveName();
+        TypeDeclarationStatement getType();
         void assignStructure(StructureContainer struct);
         StructureContainer getStructure();
         void checkSyntax();
@@ -900,6 +907,12 @@ public class CommandLine
 
             sb.append(node);
             return sb.toString();
+            }
+
+        @Override
+        public TypeDeclarationStatement getType()
+            {
+            return pkgNode == null ? null : pkgNode.getType();
             }
 
         @Override
@@ -1085,7 +1098,7 @@ public class CommandLine
                 {
                 try
                     {
-                    stmt = new Parser(source, errs).parseCompilationUnit();
+                    stmt = new Parser(source, errs).parseSource();
                     }
                 catch (CompilerException e)
                     {
@@ -1140,6 +1153,12 @@ public class CommandLine
         public String descriptiveName()
             {
             return type == null ? file.getAbsolutePath() : (type.category.getId().TEXT + ' ' + name());
+            }
+
+        @Override
+        public TypeDeclarationStatement getType()
+            {
+            return type;
             }
 
         @Override

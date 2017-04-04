@@ -126,6 +126,22 @@ public class PackedInteger
         }
 
     /**
+     * Helper to grab the value as an int, with a range check to be safe.
+     *
+     * @return the value as a 32-bit signed int
+     */
+    public int getInt()
+        {
+        long n = getLong();
+        if (n < Integer.MIN_VALUE || n > Integer.MAX_VALUE)
+            {
+            throw new IllegalStateException("too big!");
+            }
+
+        return (int) n;
+        }
+
+    /**
      * Obtain the <tt>long</tt> value of the PackedInteger. If the PackedInteger
      * is "big", i.e. if the {@link #isBig} method returns <tt>true</tt>, then
      * this method will throw an IllegalStateException, because the value cannot

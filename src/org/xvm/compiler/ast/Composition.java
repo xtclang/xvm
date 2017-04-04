@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.compiler.Token;
+
+import java.util.List;
+
 /**
  * A composition step.
  *
@@ -19,10 +23,10 @@ public abstract class Composition
     public static class Extends
             extends Composition
         {
-        public Extends(TypeExpression type, Expression constructor)
+        public Extends(TypeExpression type, List<Expression> args)
             {
             super(type);
-            this.constructor = constructor;
+            this.args = args;
             }
 
         @Override
@@ -33,26 +37,38 @@ public abstract class Composition
             sb.append("extends ")
               .append(type);
 
-            if (constructor != null)
+            if (args != null)
                 {
-                sb.append('(')
-                  .append(constructor)      // TODO not sure how this will work
-                  .append(')');
+                sb.append('(');
+                boolean first = true;
+                for (Expression arg : args)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(arg);
+                    }
+                  sb.append(')');
                 }
 
             return sb.toString();
             }
 
-        public final Expression constructor;
+        public final List<Expression> args;
         }
 
     public static class Incorporates
             extends Composition
         {
-        public Incorporates(TypeExpression type, Expression constructor)
+        public Incorporates(TypeExpression type, List<Expression> args)
             {
             super(type);
-            this.constructor = constructor;
+            this.args = args;
             }
 
         @Override
@@ -63,17 +79,29 @@ public abstract class Composition
             sb.append("incorporates ")
                     .append(type);
 
-            if (constructor != null)
+            if (args != null)
                 {
-                sb.append('(')
-                        .append(constructor)      // TODO not sure how this will work
-                        .append(')');
+                sb.append('(');
+                boolean first = true;
+                for (Expression arg : args)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(arg);
+                    }
+                sb.append(')');
                 }
 
             return sb.toString();
             }
 
-        public final Expression constructor;
+        public final List<Expression> args;
         }
 
     public static class Implements
@@ -122,6 +150,47 @@ public abstract class Composition
             {
             return "into " + type;
             }
+        }
+
+    public static class Import
+            extends Composition
+        {
+        public Import(NamedTypeExpression type, List<VersionOverride> vers)
+            {
+            super(type);
+            this.vers = vers;
+            }
+
+        @Override
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+
+            sb.append("import ")
+                    .append(type);
+
+            if (vers != null)
+                {
+                boolean first = true;
+                for (VersionOverride ver : vers)
+                    {
+                    if (first)
+                        {
+                        sb.append(' ');
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append("\n        ");
+                        }
+                    sb.append(ver);
+                    }
+                }
+
+            return sb.toString();
+            }
+
+        public final List<VersionOverride> vers;
         }
 
     public final TypeExpression type;

@@ -59,14 +59,14 @@ module ecstasy.xtclang.org
          * if any.
          */
         @inject Iterable<StackFrame>[] stackTraces;
-        };
+        }
 
     /**
      * A TimeoutException is raised by the runtime in response to a thread-of-execution exceeding a
      * timeout (wall clock time) limitation within which it was running.
      */
     const TimeoutException(Timeout timeout, String? text, Exception? cause)
-            extends Exception(text, cause);
+            extends Exception(text, cause)
         {
         }
 

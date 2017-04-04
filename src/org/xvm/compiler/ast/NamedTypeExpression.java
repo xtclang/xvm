@@ -16,9 +16,9 @@ public class NamedTypeExpression
     {
     public NamedTypeExpression(Token immutable, List<Token> names, List<TypeExpression> params)
         {
-        this.immutable = immutable;
-        this.names     = names;
-        this.params    = params;
+        this.immutable  = immutable;
+        this.names      = names;
+        this.paramTypes = params;
         }
 
     @Override
@@ -45,11 +45,11 @@ public class NamedTypeExpression
             sb.append(name.getValue());
             }
 
-        if (params != null)
+        if (paramTypes != null)
             {
             sb.append('<');
             first = true;
-            for (TypeExpression type : params)
+            for (TypeExpression type : paramTypes)
                 {
                 if (first)
                     {
@@ -69,5 +69,5 @@ public class NamedTypeExpression
 
     public final Token immutable;
     public final List<Token> names;
-    public final List<TypeExpression> params;
+    public final List<TypeExpression> paramTypes;
     }

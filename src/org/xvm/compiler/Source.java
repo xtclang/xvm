@@ -444,6 +444,16 @@ public class Source
         return sb.toString();
         }
 
+    /**
+     * Obtain the underlying data that the source represents.
+     *
+     * @return the whole of the unprocessed source, as a String
+     */
+    public String toRawString()
+        {
+        return new String(m_ach);
+        }
+
     // ----- data members ------------------------------------------------------
 
     /**

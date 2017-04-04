@@ -27,10 +27,45 @@ public class BlockStatement
 
         StringBuilder sb = new StringBuilder();
         sb.append('{');
-        for (Statement statement : statements)
+
+        int firstNonEnum = 0;
+        if (statements.get(0) instanceof EnumDeclaration)
+            {
+            boolean multiline = false;
+            for (int i = 0, c = statements.size(); i < c; ++i)
+                {
+                Statement stmt = statements.get(i);
+                if (stmt instanceof EnumDeclaration)
+                    {
+                    EnumDeclaration enumStmt = (EnumDeclaration) stmt;
+                    multiline |= enumStmt.doc != null || enumStmt.body != null;
+                    ++firstNonEnum;
+                    }
+                }
+
+            String sBetweenEnums = multiline ? ",\n" : ", ";
+            for (int i = 0; i < firstNonEnum; ++i)
+                {
+                if (i == 0)
+                    {
+                    sb.append('\n');
+                    }
+                else
+                    {
+                    sb.append(sBetweenEnums);
+                    }
+                sb.append(statements.get(i));
+                }
+            if (firstNonEnum < statements.size())
+                {
+                sb.append(';');
+                }
+            }
+
+        for (int i = firstNonEnum, c = statements.size(); i < c; ++i)
             {
             sb.append('\n')
-              .append(statement);
+              .append(statements.get(i));
             }
         sb.append("\n}");
 
