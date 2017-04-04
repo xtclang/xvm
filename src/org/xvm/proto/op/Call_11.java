@@ -3,7 +3,6 @@ package org.xvm.proto.op;
 import org.xvm.proto.*;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 

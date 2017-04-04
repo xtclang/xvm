@@ -14,10 +14,10 @@ public class Invoke_01 extends OpInvocable
     private final int f_nMethodId;
     private final int f_nRetValue;
 
-    public Invoke_01(int nTarget, int nMethod, int nRet)
+    public Invoke_01(int nTarget, int nMethodId, int nRet)
         {
-        f_nMethodId = nMethod;
         f_nTargetValue = nTarget;
+        f_nMethodId = nMethodId;
         f_nRetValue = nRet;
         }
 

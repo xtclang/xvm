@@ -4,8 +4,8 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.Utils;
+
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
 /**

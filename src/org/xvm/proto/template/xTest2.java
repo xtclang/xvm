@@ -31,10 +31,12 @@ public class xTest2 extends TypeCompositionTemplate
 
         ensureMethodTemplate("method1", VOID, INT);
         addFunctionTemplate("test21", VOID, VOID);
+        addFunctionTemplate("test22", VOID, VOID);
 
         add_construct();
         add_method1();
         add_test21();
+        add_test22();
         }
 
     private void add_construct()
@@ -103,6 +105,33 @@ public class xTest2 extends TypeCompositionTemplate
             new X_Print(1),
             new Var(this.adapter.getClassConstId("x:Int64")),    // #2
             new Invoke_01(0, -adapter.getMethodConstId("x:Test", "method1"), 2),
+            new X_Print(2),
+            new Return_0(),
+            };
+        ft.m_cVars = 3;
+        }
+
+    private void add_test22()
+        {
+        FunctionTemplate ft = getFunctionTemplate("test22", VOID, VOID);
+        //  static Void test3()
+        //      {
+        //      Test t = new Test2("ABC");      // VAR x:Test (#0)
+        //                                      // NEW_1 @"x:Test2#construct" -@"Goodbye" #0
+        //      Function f = t.method1;         // VAR x:Function  (#1)
+        //                                      // MBIND #0 -@"x:Test#method1" #1
+        //      print f();                      // VAR x:Int #2
+        //                                      // CALL_01 #1 #2
+        //                                      // PRINT #2
+        //      }                               // RETURN
+        ft.m_aop = new Op[]
+            {
+            new Var(this.adapter.getClassConstId("x:Test")),     // #0
+            new New_1(this.adapter.getMethodConstId("x:Test2", "construct"), -adapter.ensureConstantValueId("ABC"), 0),
+            new Var(this.adapter.getClassConstId("x:Function")),   // #1
+            new MBind(0, -adapter.getMethodConstId("x:Test", "method1"), 1),
+            new Var(this.adapter.getClassConstId("x:Int64")),    // #2
+            new Call_01(1, 2),
             new X_Print(2),
             new Return_0(),
             };

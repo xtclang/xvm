@@ -36,13 +36,13 @@ public class xFunction
         ensurePropertyTemplate("ReturnType", "x:collections.Array<x:Type>");
         ensurePropertyTemplate("ParamType", "x:collections.Array<x:Type>");
 
-        ensureMethodTemplate("invoke", new String[]{"x:Tuple"}, new String[]{"x:Tuple"}).markNative();
+        ensureMethodTemplate("invoke", new String[]{"x:Tuple"}, new String[]{"x:Tuple"});
         }
 
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new FunctionHandle(clazz);
+        return new DelegatingHandle(clazz, null);
         }
 
     @Override
@@ -62,30 +62,19 @@ public class xFunction
         return null;
         }
 
-    @Override
-    public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget,
-                                       MethodTemplate method, ObjectHandle[] ahReturn)
-        {
-        FunctionHandle function = (FunctionHandle) hTarget;
-
-        return function.invoke(frame, Utils.OBJECTS_NONE, ahReturn);
-        }
-
     public static class FunctionHandle
             extends ObjectHandle
         {
-        public InvocationTemplate m_invoke;
+        protected InvocationTemplate m_invoke;
 
-        protected FunctionHandle(TypeComposition clazz)
-            {
-            super(clazz);
-            }
         protected FunctionHandle(TypeComposition clazz, InvocationTemplate function)
             {
             super(clazz);
 
             m_invoke = function;
             }
+
+        // ----- FunctionHandle interface -----
 
         public ObjectHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
             {
@@ -121,6 +110,8 @@ public class xFunction
                 ahVar = ahArg;
                 }
 
+            addBoundArguments(ahVar);
+
             Frame frameNew = frame.f_context.createFrame(frame, m_invoke, null, ahVar);
 
             ObjectHandle hException = frameNew.execute();
@@ -145,7 +136,11 @@ public class xFunction
 
         public FunctionHandle bind(int iArg, ObjectHandle hArg)
             {
-            throw new UnsupportedOperationException();
+            return new BoundHandle(f_clazz, this, iArg, hArg);
+            }
+
+        protected void addBoundArguments(ObjectHandle[] ahVar)
+            {
             }
 
         @Override
@@ -155,12 +150,71 @@ public class xFunction
             }
         }
 
-    public static class BoundHandle
+    public static class DelegatingHandle
             extends FunctionHandle
         {
-        protected BoundHandle(FunctionHandle handleBase, int iArg, ObjectHandle hArg)
+        protected FunctionHandle m_hDelegate;
+
+        protected DelegatingHandle(TypeComposition clazz, FunctionHandle hDelegate)
             {
-            super(handleBase.f_clazz);
+            super(clazz, hDelegate == null ? null : hDelegate.m_invoke);
+
+            m_hDelegate = hDelegate;
+            }
+
+        @Override
+        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
+            {
+            return m_hDelegate.invoke(frame, ahVar, anArg, ahReturn);
+            }
+
+        @Override
+        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+            {
+            return m_hDelegate.invoke(frame, ahArg, ahReturn);
+            }
+
+        @Override
+        protected void addBoundArguments(ObjectHandle[] ahVar)
+            {
+            m_hDelegate.addBoundArguments(ahVar);
+            }
+
+        @Override
+        public String toString()
+            {
+            return getClass().getSimpleName() + " -> " + m_hDelegate;
+            }
+        }
+
+
+    // partially bound function
+    public static class BoundHandle
+            extends DelegatingHandle
+        {
+        protected int m_iArg; // the bound argument index
+        protected ObjectHandle m_hArg;
+
+        protected BoundHandle(TypeComposition clazz, FunctionHandle handleBase,
+                              int iArg, ObjectHandle hArg)
+            {
+            super(clazz, handleBase);
+
+            m_iArg = iArg;
+            m_hArg = hArg;
+            }
+
+        @Override
+        protected void addBoundArguments(ObjectHandle[] ahVar)
+            {
+            super.addBoundArguments(ahVar);
+
+            int cMove = m_invoke.m_cArgs - (m_iArg + 1); // number of args to move to the right
+            if (cMove > 0)
+                {
+                System.arraycopy(ahVar, m_iArg, ahVar, m_iArg + 1, cMove);
+                }
+            ahVar[m_iArg] = m_hArg;
             }
         }
 

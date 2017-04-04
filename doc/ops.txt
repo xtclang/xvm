@@ -76,7 +76,7 @@ TODO DUP
 0x45 LPROP         CONST_PROPERTY                                                                ; next register represents the Property ref for the specified local property (target=this)
 0x46 CPROP        rvalue-target, CONST_PROPERTY                                                ; next register represents the @ro Property ref for the specified property
 0x47 __RSVD47
-0x48 MBIND        rvalue-target, rvalue-method, lvalue-fn-result
+0x48 MBIND        rvalue-target, CONST-METHOD, lvalue-fn-result
 0x49 FBIND        rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
 0x4A FBINDN        rvalue-fn, #params:(CONST_STRING, rvalue-param), lvalue-fn-result        ; TODO is this something that could be deferred or eliminated???
 0x4B __RSVD4B
