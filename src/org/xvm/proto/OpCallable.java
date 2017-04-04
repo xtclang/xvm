@@ -9,6 +9,7 @@ import org.xvm.proto.TypeCompositionTemplate.Access;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xService;
+import org.xvm.proto.template.xService.ServiceHandle;
 
 /**
  * Common base for CALL_ ops.
@@ -37,67 +38,76 @@ public abstract class OpCallable extends Op
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
-        ObjectHandle[] ahVars = new ObjectHandle[methodSuper.m_cVars];
+        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
 
         ObjectHandle hThis = frame.f_ahVar[0];
 
-        ahVars[0] = hThis;
-        ahVars[1] = nArgValue >= 0 ? frame.f_ahVar[nArgValue] :
+        ahVar[0] = hThis;
+        ahVar[1] = nArgValue >= 0 ? frame.f_ahVar[nArgValue] :
                 Utils.resolveConst(frame, methodSuper.m_argTypeName[1], nArgValue);
 
-        return frame.f_context.createFrame(frame, methodSuper, hThis, ahVars);
+        return frame.f_context.createFrame(frame, methodSuper, hThis, ahVar);
         }
 
     protected Frame createSuperCall(Frame frame, int[] anArgValue)
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
-        ObjectHandle[] ahVars = new ObjectHandle[methodSuper.m_cVars];
+        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
 
         ObjectHandle hThis = frame.f_ahVar[0];
 
-        ahVars[0] = hThis;
+        ahVar[0] = hThis;
 
         for (int i = 0, c = anArgValue.length; i < c; i++)
             {
             int nArg = anArgValue[i];
 
-            ahVars[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] :
+            ahVar[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] :
                     Utils.resolveConst(frame, methodSuper.m_argTypeName[i + 1], nArg);
             }
 
-        return frame.f_context.createFrame(frame, methodSuper, hThis, ahVars);
+        return frame.f_context.createFrame(frame, methodSuper, hThis, ahVar);
         }
 
     // call the constructor; then potentially the finalizer; change this:struct handle to this:public
-    protected ObjectHandle callConstructor(Frame frame, FunctionTemplate constructor, ObjectHandle[] ahVars)
+    protected ObjectHandle callConstructor(Frame frame, FunctionTemplate constructor, ObjectHandle[] ahVar)
         {
-        Frame frameNew = frame.f_context.createFrame(frame, constructor, null, ahVars);
+        Frame frameNew = frame.f_context.createFrame(frame, constructor, null, ahVar);
 
         ObjectHandle hException = frameNew.execute();
 
         if (hException == null)
             {
-            ObjectHandle hTarget = ahVars[0];
+            ObjectHandle hTarget = ahVar[0];
+
+            TypeComposition clazzTarget = hTarget.f_clazz;
+            TypeCompositionTemplate template = clazzTarget.f_template;
+
+            if (template.isService())
+                {
+                ServiceHandle hService = hTarget.as(ServiceHandle.class);
+                ((xService) template).start(hService);
+                }
+
             if (constructor.m_cReturns > 0)
                 {
-                TypeComposition clazzTarget = hTarget.f_clazz;
-                hTarget = ahVars[0] = clazzTarget.ensureAccess(hTarget, Access.Private); // this:struct -> this:private
+                hTarget = ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Private); // this:struct -> this:private
 
-                FunctionHandle hFinally = (FunctionHandle) frameNew.f_ahReturn[0];
+                FunctionHandle hFinally = frameNew.f_ahReturn[0].as(FunctionHandle.class);
 
-                if (clazzTarget.isService())
+                if (template.isService())
                     {
-                    ((xService) clazzTarget.f_template).invokeAsync(frame, ahVars, hFinally);
+                    ((xService) template).invokeAsync(frame, hFinally, ahVar, Utils.OBJECTS_NONE);
 
                     // create a FutureRef
-                    ahVars[0] = clazzTarget.ensureAccess(hTarget, Access.Public);
+                    ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Public);
                     }
                 else
                     {
-                    hException = hFinally.invoke(frame, ahVars, Utils.OBJECTS_NONE);
+                    hException = hFinally.invoke(frame, ahVar, Utils.OBJECTS_NONE);
 
-                    ahVars[0] = clazzTarget.ensureAccess(hTarget, Access.Public);
+                    ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Public);
                     }
                 }
             }

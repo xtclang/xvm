@@ -13,7 +13,7 @@ import org.xvm.proto.template.xFunction;
 public class Frame
     {
     public final ServiceContext f_context;
-    public final TypeCompositionTemplate.InvocationTemplate f_function;
+    public final InvocationTemplate f_function;
 
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVar;        // arguments/local vars (index 0 for target:private)
@@ -27,13 +27,13 @@ public class Frame
     public ObjectHandle         m_hException;   // an exception
 
     public Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
-                 ObjectHandle hTarget, ObjectHandle[] ahVars)
+                 ObjectHandle hTarget, ObjectHandle[] ahVar)
         {
         f_context = context;
         f_framePrev = framePrev;
         f_function = function;
         f_hTarget = hTarget;
-        f_ahVar = ahVars; // [0] - target:private for methods
+        f_ahVar = ahVar; // [0] - target:private for methods
         f_aiRegister = new int[] {0, -1};
         f_anNextVar = new int[f_function.m_cScopes];
 
@@ -51,7 +51,7 @@ public class Frame
             }
         else  // #0 - this:private
             {
-            f_ahVar[0]    = f_hTarget; // TODO: replace with this:private
+            f_ahVar[0]     = f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Private);
             f_anNextVar[0] = 1 + f_function.m_cArgs;
             }
 

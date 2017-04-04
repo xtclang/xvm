@@ -387,7 +387,7 @@ public abstract class TypeCompositionTemplate
     // get a property value
     public ObjectHandle getProperty(ObjectHandle hTarget, String sName)
         {
-        GenericHandle hThis = (GenericHandle) hTarget;
+        GenericHandle hThis = hTarget.as(GenericHandle.class);
         ObjectHandle  hProp = hThis.m_mapFields.get(sName);
         if (hProp == null)
             {
@@ -401,7 +401,7 @@ public abstract class TypeCompositionTemplate
     public void setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
         {
         // TODO: check the access rights
-        GenericHandle hThis = (GenericHandle) hTarget;
+        GenericHandle hThis = hTarget.as(GenericHandle.class);
 
         assert hThis.m_mapFields.containsKey(sName);
 
@@ -451,6 +451,11 @@ public abstract class TypeCompositionTemplate
 
         m_mapRelations.put(that, Relation.INCOMPATIBLE);
         return false;
+        }
+
+    public boolean isService()
+        {
+        return f_shape == Shape.Service;
         }
 
     @Override

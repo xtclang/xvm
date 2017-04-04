@@ -53,7 +53,7 @@ public class xString
     @Override
     public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
-        StringHandle hThis = (StringHandle) hTarget;
+        StringHandle hThis = hTarget.as(StringHandle.class);
         switch (method.f_sName)
             {
             case "length$get": // length.get()
@@ -66,13 +66,13 @@ public class xString
     @Override
     public ObjectHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
-        StringHandle hThis = (StringHandle) hTarget;
+        StringHandle hThis = hTarget.as(StringHandle.class);
         switch (method.f_sName)
             {
             case "indexOf": // indexOf(String)
-                if (hArg instanceof StringHandle)
+                if (hArg.isAssignableTo(StringHandle.class))
                     {
-                    int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
+                    int nOf = hThis.m_sValue.indexOf(hArg.as(StringHandle.class).m_sValue);
 
                     ahReturn[0] = xInt64.makeHandle(nOf);
                     return null;
@@ -101,6 +101,11 @@ public class xString
             super(clazz);
 
             m_sValue = sValue;
+            }
+
+        public String getValue()
+            {
+            return m_sValue;
             }
 
         @Override

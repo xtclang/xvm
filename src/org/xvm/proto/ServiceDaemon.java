@@ -16,24 +16,28 @@ public class ServiceDaemon
     {
     protected String m_sName;
 
+    protected final ServiceContext f_context;
+
     protected Thread m_thread;
 
     protected final Queue<Invocation> f_queue = new ConcurrentLinkedQueue<>();
 
     protected final Notifier f_notifier = new SimpleNotifier();
 
-    private volatile State m_state;
+    private volatile State m_state = State.Initial;
 
-    enum State {Initial, Starting, Running, Stopping, Stopped};
+    private final static ThreadLocal<ServiceContext> f_tloContext = new ThreadLocal<>();
+
+    enum State {Initial, Starting, Running, Stopping, Stopped;};
 
     /**
     * Create a ServiceDaemon with the specified name.
     */
-    public ServiceDaemon(String sName)
+    public ServiceDaemon(String sName, ServiceContext context)
         {
         m_sName = sName;
+        f_context = context;
         }
-
     /**
     * Start the ServiceDaemon.
     */
@@ -47,16 +51,8 @@ public class ServiceDaemon
         setState(State.Starting);
 
         Thread thread = m_thread = new Thread(this, m_sName);
+        thread.setDaemon(true);
         thread.start();
-
-        try
-            {
-            wait();
-            }
-        catch (InterruptedException e)
-            {
-            throw new RuntimeException("Failed to start " + this, e);
-            }
         }
 
     // ----- Runnable interface -----
@@ -64,6 +60,8 @@ public class ServiceDaemon
     @Override
     public void run()
         {
+        f_tloContext.set(f_context);
+
         setState(State.Running);
 
         synchronized (this)
@@ -103,6 +101,8 @@ public class ServiceDaemon
         m_thread = null;
 
         setState(State.Stopped);
+
+        f_tloContext.set(null);
         }
 
 
@@ -168,6 +168,11 @@ public class ServiceDaemon
         {
         return "ServiceDaemon{Thread=\"" + getThread() + '\"'
             + ", State=" + m_state.name() + '}';
+        }
+
+    public static ServiceContext getCurrentContext()
+        {
+        return f_tloContext.get();
         }
 
 

@@ -218,8 +218,33 @@ public class xFunction
             }
         }
 
+    public static class AsyncHandle
+            extends FunctionHandle
+        {
+        protected AsyncHandle(TypeComposition clazz, InvocationTemplate function)
+            {
+            super(clazz, function);
+            }
+
+        // ----- FunctionHandle interface -----
+
+        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+            {
+            throw new UnsupportedOperationException();
+            }
+        }
+
     public static FunctionHandle makeHandle(InvocationTemplate function)
         {
-        return new FunctionHandle(INSTANCE.f_clazzCanonical, function);
+        TypeCompositionTemplate template = function.getClazzTemplate();
+        return template.isService() ?
+            new AsyncHandle(INSTANCE.f_clazzCanonical, function) :
+            new FunctionHandle(INSTANCE.f_clazzCanonical, function);
         }
     }

@@ -16,15 +16,14 @@ public class Container
     {
     final public TypeSet f_types;
     final public ConstantPoolAdapter f_constantPoolAdapter;
-    final public ObjectHeap f_heap;
-    ServiceContext m_service;
+    final public ObjectHeap f_heapGlobal;
     Set<ServiceContext> m_setServices = new HashSet<>();
 
     public Container()
         {
         f_constantPoolAdapter = new ConstantPoolAdapter();
         f_types = new TypeSet(f_constantPoolAdapter);
-        f_heap = new ObjectHeap(f_constantPoolAdapter, f_types);
+        f_heapGlobal = new ObjectHeap(f_constantPoolAdapter, f_types);
 
         init();
         }
@@ -48,8 +47,7 @@ public class Container
         // container.m_typeSet.dumpTemplates();
         }
 
-    // TODO: for xService only
-    public ServiceContext createContext(xService service)
+    public ServiceContext createContext()
         {
         ServiceContext ctx = new ServiceContext(this);
         m_setServices.add(ctx);

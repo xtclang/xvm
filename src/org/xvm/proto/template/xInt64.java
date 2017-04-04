@@ -46,8 +46,8 @@ public class xInt64
     @Override
     public ObjectHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
-        JavaLong hThat = (JavaLong) hArg;
+        JavaLong hThis = hTarget.as(JavaLong.class);
+        JavaLong hThat = hArg.as(JavaLong.class);
 
         // TODO: check overflow
         ahReturn[0] = makeHandle(hThis.getValue() + hThat.getValue());
@@ -57,7 +57,7 @@ public class xInt64
     @Override
     public ObjectHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
+        JavaLong hThis = hTarget.as(JavaLong.class);
 
         // TODO: check overflow
         ahReturn[0] = makeHandle(hThis.getValue() + 1);
@@ -67,7 +67,7 @@ public class xInt64
     @Override
     public ObjectHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
+        JavaLong hThis = hTarget.as(JavaLong.class);
 
         ahReturn[0] = makeHandle(-hThis.getValue());
         return null;

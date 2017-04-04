@@ -2,6 +2,9 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.xService;
 
 /**
  * INVOKE_01 rvalue-target, rvalue-method
@@ -30,26 +33,31 @@ public class Invoke_01 extends OpInvocable
 
         MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
 
-        ObjectHandle[] ahRet;
+        ObjectHandle[] ahReturn;
         ObjectHandle hException;
 
         if (method.isNative())
             {
-            ahRet = new ObjectHandle[1];
-            hException = template.invokeNative01(frame, hTarget, method, ahRet);
+            ahReturn = new ObjectHandle[1];
+            hException = template.invokeNative01(frame, hTarget, method, ahReturn);
+            }
+        else if (template.isService())
+            {
+            hException = xFunction.makeHandle(method).
+                    invoke(frame, new ObjectHandle[]{hTarget}, ahReturn = new ObjectHandle[1]);
             }
         else
             {
-            ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
-            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVars);
+            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
 
+            ahReturn = frameNew.f_ahReturn;
             hException = frameNew.execute();
-            ahRet = frameNew.f_ahReturn;
             }
 
         if (hException == null)
             {
-            frame.f_ahVar[f_nRetValue] = ahRet[0];
+            frame.f_ahVar[f_nRetValue] = ahReturn[0];
             return iPC + 1;
             }
         else

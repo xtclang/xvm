@@ -1,8 +1,5 @@
 package org.xvm.proto;
 
-import java.util.Queue;
-import java.util.Stack;
-
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 
 /**
@@ -14,23 +11,34 @@ public class ServiceContext
     {
     public final Container f_container;
     public final TypeSet f_types;
-    public final ObjectHeap f_heap;
+    public final ObjectHeap f_heapGlobal;
     public final ConstantPoolAdapter f_constantPool;
 
-    ServiceDaemon m_daemon;
-    Frame m_frameCurrent;
+    public ServiceDaemon m_daemon;
+    public Frame m_frameCurrent;
 
-    public ServiceContext(Container container)
+    ServiceContext(Container container)
         {
         f_container = container;
-        f_heap = container.f_heap;
+        f_heapGlobal = container.f_heapGlobal;
         f_types = container.f_types;
         f_constantPool = container.f_constantPoolAdapter;
         }
 
     public Frame createFrame(Frame framePrev, InvocationTemplate template,
-                             ObjectHandle hTarget, ObjectHandle[] ahVars)
+                             ObjectHandle hTarget, ObjectHandle[] ahVar)
         {
-        return new Frame(this, framePrev, template, hTarget, ahVars);
+        return new Frame(this, framePrev, template, hTarget, ahVar);
+        }
+
+    public void startServiceDaemon(String sName)
+        {
+        ServiceDaemon daemon = m_daemon = new ServiceDaemon(sName, this);
+        daemon.start();
+        }
+
+    public static ServiceContext getCurrentContext()
+        {
+        return ServiceDaemon.getCurrentContext();
         }
     }

@@ -1,5 +1,5 @@
 + super() method call
-        Issue with "construct super" return
+        Issue with "construct super" return - see OpCallable.callConstructor()
 
 - Service
         cleanup an un-referenced service (phantom refs)

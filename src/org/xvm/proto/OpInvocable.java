@@ -29,7 +29,7 @@ public abstract class OpInvocable extends Op
         {
         if (nPropValue >= 0)
             {
-            // PropertyHandle hProperty = (PropertyHandle) frame.f_ahVars[nPropValue];
+            // PropertyHandle hProperty = (PropertyHandle) frame.f_ahVar[nPropValue];
 
             // TODO:
             return null;

@@ -31,12 +31,12 @@ public class New_1 extends OpCallable
         ObjectHandle hNew = template.createStruct(frame);
 
         // call the constructor with this:struct and arg
-        ObjectHandle[] ahVars = new ObjectHandle[constructor.m_cVars];
-        ahVars[0] = hNew;
-        ahVars[1] = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
+        ObjectHandle[] ahVar = new ObjectHandle[constructor.m_cVars];
+        ahVar[0] = hNew;
+        ahVar[1] = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
                 Utils.resolveConst(frame, constructor.m_argTypeName[1], f_nArgValue);
 
-        ObjectHandle hException = callConstructor(frame, constructor, ahVars);
+        ObjectHandle hException = callConstructor(frame, constructor, ahVar);
 
         if (hException == null)
             {

@@ -2,7 +2,6 @@ package org.xvm.proto;
 
 import org.xvm.util.ListMap;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -39,6 +38,16 @@ public abstract class ObjectHandle
             {
             throw new IllegalStateException();
             }
+        }
+
+    public <T extends ObjectHandle> boolean isAssignableTo(Class<T> clz)
+        {
+        return clz.isAssignableFrom(getClass());
+        }
+
+    public <T extends ObjectHandle> T as(Class<T> clz)
+        {
+        return (T) this;
         }
 
     @Override
@@ -83,7 +92,7 @@ public abstract class ObjectHandle
     public static class JavaDelegate
             extends ObjectHandle
         {
-        protected Object m_oValue;
+        protected Object m_oDelegate;
 
         public JavaDelegate(TypeComposition clazz)
             {
@@ -93,7 +102,7 @@ public abstract class ObjectHandle
         @Override
         public String toString()
             {
-            return super.toString() + m_oValue;
+            return super.toString() + m_oDelegate;
             }
         }
 
