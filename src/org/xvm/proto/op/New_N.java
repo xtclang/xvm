@@ -31,17 +31,17 @@ public class New_N extends OpCallable
         ObjectHandle hNew = template.createStruct(frame);
 
         // call the constructor with this:struct and args
-        ObjectHandle[] ahVars = new ObjectHandle[constructor.m_cVars];
-        ahVars[0] = hNew;
+        ObjectHandle[] ahVar = new ObjectHandle[constructor.m_cVars];
+        ahVar[0] = hNew;
         for (int i = 0, c = f_anArgValue.length; i < c; i++)
             {
             int nArg = f_anArgValue[i];
 
-            ahVars[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] :
+            ahVar[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] :
                     Utils.resolveConst(frame, constructor.m_argTypeName[i + 1], nArg);
             }
 
-        ObjectHandle hException = callConstructor(frame, constructor, ahVars);
+        ObjectHandle hException = callConstructor(frame, constructor, ahVar);
 
         if (hException == null)
             {

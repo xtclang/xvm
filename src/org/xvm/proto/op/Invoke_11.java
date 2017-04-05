@@ -2,6 +2,8 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.*;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xService;
 
 /**
  * INVOKE_11 rvalue-target, rvalue-method, rvalue-param, lvalue-return
@@ -43,14 +45,23 @@ public class Invoke_11 extends OpInvocable
             ahReturn = new ObjectHandle[1];
             hException = template.invokeNative11(frame, hTarget, method, hArg, ahReturn);
             }
+        else if (template.isService())
+            {
+            ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hArg};
+            ahReturn = new ObjectHandle[1];
+
+            hException = ((xService) template).invokeAsync(frame, xFunction.makeHandle(method),
+                    ahArg, ahReturn);
+            }
         else
             {
-            ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
-            ahVars[1] = hArg;
+            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+            ahVar[1] = hArg;
 
-            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVars);
-            hException = frameNew.execute();
+            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+
             ahReturn = frameNew.f_ahReturn;
+            hException = frameNew.execute();
             }
 
         if (hException == null)

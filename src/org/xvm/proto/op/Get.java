@@ -50,9 +50,9 @@ public class Get extends OpInvocable
                 }
             else
                 {
-                ObjectHandle[] ahVars = new ObjectHandle[method.m_cVars];
+                ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVars);
+                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
 
                 hException = frameNew.execute();
 

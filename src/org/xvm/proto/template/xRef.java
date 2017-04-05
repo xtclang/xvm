@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
@@ -41,5 +43,30 @@ public class xRef
         ensurePropertyTemplate("selfContained", "x:Boolean").makeReadOnly();
 
         addFunctionTemplate("equals", new String[] {"x:Ref", "x:Ref"}, BOOLEAN);
+        }
+
+    // a reference
+    public static class RefHandle
+            extends ObjectHandle
+        {
+        protected ObjectHandle m_hDelegate;
+
+        public RefHandle(TypeComposition clazz)
+            {
+            super(clazz);
+            }
+
+        public RefHandle(TypeComposition clazz, ObjectHandle handle)
+            {
+            super(clazz);
+
+            m_hDelegate = handle;
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_hDelegate;
+            }
         }
     }

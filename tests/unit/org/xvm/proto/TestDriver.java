@@ -24,7 +24,7 @@ public class TestDriver
         xTestService testService = new xTestService(container.f_types);
         container.f_types.addTemplate(testService);
 
-        ServiceContext context = container.createContext(null);
+        ServiceContext context = container.createContext();
 
         runTests(test, context);
         runTests(test2, context);

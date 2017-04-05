@@ -37,7 +37,7 @@ public class Call_N0 extends OpCallable
             }
         else if (f_nFunctionValue >= 0)
             {
-            FunctionHandle function = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
+            FunctionHandle function = frame.f_ahVar[f_nFunctionValue].as(FunctionHandle.class);
 
             hException = function.invoke(frame, frame.f_ahVar, f_anArgValue, Utils.OBJECTS_NONE);
             }

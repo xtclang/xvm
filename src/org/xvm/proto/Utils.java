@@ -105,7 +105,7 @@ public abstract class Utils
         assert nConstValueId < 0;
 
         return nConstValueId < -Op.MAX_CONST_ID ? frame.getPredefinedArgument(nConstValueId) :
-            frame.f_context.f_heap.resolveConstHandle(typeName, -nConstValueId);
+            frame.f_context.f_heapGlobal.resolveConstHandle(typeName, -nConstValueId);
         }
 
     public static ObjectHandle resolveConst(Frame frame, TypeComposition clazz, int nConstValueId)
@@ -113,7 +113,7 @@ public abstract class Utils
         assert nConstValueId < 0;
 
         return nConstValueId < -Op.MAX_CONST_ID ? frame.getPredefinedArgument(nConstValueId) :
-            frame.f_context.f_heap.resolveConstHandle(clazz, -nConstValueId);
+            frame.f_context.f_heapGlobal.resolveConstHandle(clazz, -nConstValueId);
         }
 
     public static ObjectHandle[] resolveArguments(Frame frame, InvocationTemplate function,

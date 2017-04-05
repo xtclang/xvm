@@ -35,7 +35,7 @@ public class Call_00 extends OpCallable
             }
         else if (f_nFunctionValue >= 0)
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
+            FunctionHandle hFunction = frame.f_ahVar[f_nFunctionValue].as(FunctionHandle.class);
 
             hException = hFunction.invoke(frame, Utils.OBJECTS_NONE, Utils.OBJECTS_NONE);
             }
@@ -43,9 +43,9 @@ public class Call_00 extends OpCallable
             {
             FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
 
-            ObjectHandle[] ahVars = new ObjectHandle[function.m_cVars];
+            ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
 
-            hException = frame.f_context.createFrame(frame, function, null, ahVars).execute();
+            hException = frame.f_context.createFrame(frame, function, null, ahVar).execute();
             }
 
         if (hException == null)

@@ -1,14 +1,13 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.GenericHandle;
-import org.xvm.proto.ServiceDaemon;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.xFutureRef.FutureHandle;
+import org.xvm.proto.template.xString.StringHandle;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * TODO:
@@ -71,14 +70,23 @@ public class xService
     @Override
     public ObjectHandle createStruct(Frame frame)
         {
-        ServiceHandle hService = new ServiceHandle(f_clazzCanonical);
+        ServiceContext context = frame.f_context.f_container.createContext();
+        ServiceHandle hService = new ServiceHandle(f_clazzCanonical, context);
+
         hService.createFields();
+
         setProperty(hService, "serviceName",
                 xString.makeHandle(getClass().getSimpleName()));
         return hService;
         }
 
-    public ObjectHandle invokeAsync(Frame frame, ObjectHandle[] ahVars, FunctionHandle hFunction)
+    public void start(ServiceHandle hService)
+        {
+        StringHandle hName = getProperty(hService, "serviceName").as(StringHandle.class);
+        hService.m_context.startServiceDaemon(hName.getValue());
+        }
+
+    public ObjectHandle invokeAsync(Frame frame, FunctionHandle hFunction, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
         {
         throw new UnsupportedOperationException("TODO");
         }
@@ -86,7 +94,7 @@ public class xService
     @Override
     public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
-        ServiceHandle hThis = (ServiceHandle) hTarget;
+        ServiceHandle hThis = hTarget.as(ServiceHandle.class);
 
         throw new IllegalStateException("Unknown method: " + method);
         }
@@ -94,10 +102,65 @@ public class xService
     public static class ServiceHandle
             extends GenericHandle
         {
-        protected ServiceDaemon m_daemon;
+        protected ServiceContext m_context;
         public ServiceHandle(TypeComposition clazz)
             {
             super(clazz);
+            }
+        public ServiceHandle(TypeComposition clazz, ServiceContext context)
+            {
+            super(clazz);
+
+            m_context = context;
+            }
+        }
+
+    // a dynamic proxy handle automatically convertible to a FutureHandle or a "real" handle
+    public static class ProxyHandle
+            extends ObjectHandle
+        {
+        protected CompletableFuture<ObjectHandle> m_future;
+        protected ServiceHandle m_hService;
+
+        public ProxyHandle(TypeComposition clazz, CompletableFuture<ObjectHandle> future, ServiceHandle hService)
+            {
+            super(clazz);
+
+            m_future = future;
+            m_hService = hService;
+            }
+
+        @Override
+        public <T extends ObjectHandle> boolean isAssignableTo(Class<T> clz)
+            {
+            if (clz == FutureHandle.class)
+                {
+                return true;
+                }
+            return get().isAssignableTo(clz);
+            }
+
+        @Override
+        public <T extends ObjectHandle> T as(Class<T> clz)
+            {
+            if (clz == FutureHandle.class)
+                {
+                return (T) xFutureRef.INSTANCE.makeHandle(m_future);
+                }
+            return get().as(clz);
+            }
+
+        protected ObjectHandle get()
+            {
+            try
+                {
+                return m_future.get();
+                }
+            catch (Exception e )
+                {
+                // pass it onto the service handle
+                throw new UnsupportedOperationException();
+                }
             }
         }
     }

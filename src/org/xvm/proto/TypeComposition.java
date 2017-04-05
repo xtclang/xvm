@@ -131,11 +131,6 @@ public class TypeComposition
         return false;
         }
 
-    public boolean isService()
-        {
-        return f_template.f_shape == Shape.Service;
-        }
-
     @Override
     public String toString()
         {
