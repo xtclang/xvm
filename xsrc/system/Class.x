@@ -46,7 +46,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * A class is of a given category of Ecstasy language structures. These categories are not
      * entirely discrete; an Enum, for example, is a Const.
      */
-    enum Category {Module, Package, Class, Const, Enum, Service, Mixin, Trait, Interface};
+    enum Category {Module, Package, Class, Const, Enum, Service, Mixin, Trait, Interface}
 
     /**
      * A class contains other named child structures.
@@ -81,7 +81,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      *   "extends" another interface.
      * * Incorporates - a class _incorporates_ a trait or mixin.
      */
-    enum Action {Extends, Implements, Incorporates};
+    enum Action {Extends, Implements, Incorporates}
 
     /**
      * A Composition represents a single step in a compositional recipe. A class is composed as a
@@ -206,7 +206,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Determine if the class is a singleton, and obtain the singleton instance.
      */
-    @lazy conditional PublicType singleton.calc();
+    @lazy conditional PublicType singleton;
 
     // ----- calculated properties -----------------------------------------------------------------
 
@@ -487,7 +487,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * compile-time type of the returned class is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    Class narrow(TypeParameter... params);
+    Class narrow(TypeParameter... params)
         {
         // first, verify that there is something that is being modified
         Map<String, TypeParameter> mapParams = paramsByName;

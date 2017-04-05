@@ -307,6 +307,7 @@ public class Token
         CASE        ("case"         ),
         CATCH       ("catch"        ),
         CLASS       ("class"        ),
+        CONDITIONAL ("conditional"  ),
         CONST       ("const"        ),
         CONSTRUCT   ("construct"    ),
         CONTINUE    ("continue"     ),

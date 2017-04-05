@@ -9,12 +9,12 @@ interface Meta
     /**
      * The class represents the type composition of the object.
      */
-    @ro Class class;
+    @ro Class class_;
 
     /**
      * The containing module.
      */
-    @ro Module module;
+    @ro Module module_;
 
     /**
      * The read-only struct for this object. Each property that has space allocated for
@@ -27,7 +27,7 @@ interface Meta
      * make a mutable object immutable; once the object is immutable, it cannot be made mutable.
      */
     @override
-    Boolean immutable;
+    Boolean immutable_;
 
     /**
      * The actual amount of memory used by this object, including the object's header (if any) and

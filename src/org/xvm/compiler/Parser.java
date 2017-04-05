@@ -210,9 +210,7 @@ public class Parser
 
         TypeExpression type = parseTypeExpression();
 
-        Token simpleName = type instanceof FunctionTypeExpression
-                ? ((FunctionTypeExpression) type).name
-                : expect(Id.IDENTIFIER);
+        Token simpleName = expect(Id.IDENTIFIER);
 
         expect(Id.SEMICOLON);
 
@@ -497,7 +495,7 @@ public class Parser
                     // typecomp starts with annotations/modifiers
                     List<Token>      modifiers   = null;
                     List<Annotation> annotations = null;
-                    List[] twolists = parseModifiers();
+                    List[] twolists = parseModifiers(true);
                     if (twolists != null)
                         {
                         // note to self: this language needs multiple return values
@@ -525,12 +523,39 @@ public class Parser
                             break;
 
                         case L_PAREN:
+                            {
+                            // it's a property or a method, but the property type is parenthesized
+                            // or the method return types are parenthesized, which means we have to
+                            // either find a list of types inside the parenthesis, or we have to go
+                            // past the name and find a '<' or '(' to know it's a method
+                            Mark pos = mark();
+
+                            // assume it's a method
+                            List<TypeExpression> returns = parseReturnList();
+                            Token                name    = match(Id.IDENTIFIER);
+                            if (name != null && (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN))
+                                {
+                                stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
+                                        null, returns, name);
+                                }
+                            else
+                                {
+                                // unfortunately, it wasn't a method, so we need to rewind and
+                                // reparse as a property
+                                restore(pos);
+                                TypeExpression type = parseTypeExpression();
+                                name = expect(Id.IDENTIFIER);
+                                stmt = parsePropertyDeclarationFinish(doc, modifiers, annotations, type, name);
+                                }
+                            }
+                            break;
+
                         case COMP_LT:
                             {
                             // it's definitely a method
-                            List<Token>          typeVars = parseTypeVariableList(false);
+                            List<Token>          typeVars = parseTypeVariableList(true);
                             List<TypeExpression> returns  = parseReturnList();
-                            Token                name     = match(Id.IDENTIFIER);
+                            Token                name     = expect(Id.IDENTIFIER);
                             stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
                                     typeVars, returns, name);
                             }
@@ -539,7 +564,7 @@ public class Parser
                         case CONSTRUCT:
                             {
                             Token keyword = expect(Id.CONSTRUCT);
-                            Token name    = match(Id.IDENTIFIER);
+                            Token name    = expect(Id.IDENTIFIER);
                             stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
                                     null, null, name);
                             }
@@ -551,9 +576,10 @@ public class Parser
                             TypeExpression type = parseTypeExpression();
                             Token name = match(Id.IDENTIFIER);
 
-                            if (peek().getId() == Id.L_PAREN)
+                            if (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
                                 {
-                                // parenthesis means parameters, means it's a method
+                                // '<' indicates redundant return type list
+                                // '(' indicates parameters
                                 stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
                                         null, Collections.singletonList(type), name);
                                 }
@@ -595,10 +621,11 @@ public class Parser
     MethodDeclarationStatement parseMethodDeclarationAfterName(Token doc, List<Token> modifiers,
             List<Annotation> annotations, List<Token> typeVars, List<TypeExpression> returns, Token name)
         {
+        List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
         List<Parameter> params = parseParameterList(true);
         BlockStatement  body   = match(Id.SEMICOLON) == null ? parseBlockStatement() : null;
         return new MethodDeclarationStatement(modifiers, annotations, typeVars, returns, name,
-                params, body, doc);
+                redundantReturns, params, body, doc);
         }
 
     /**
@@ -630,7 +657,7 @@ public class Parser
             Token           methodName = expect(Id.IDENTIFIER);
             List<Parameter> params     = parseParameterList(true);
             MethodDeclarationStatement method = new MethodDeclarationStatement(null, null, null, null,
-                    methodName, params, parseBlockStatement(), null);
+                    methodName, null, params, parseBlockStatement(), null);
             body = new BlockStatement(Collections.singletonList(method));
             }
         else if (match(Id.L_CURLY) != null)
@@ -844,7 +871,7 @@ public class Parser
         Token operator = match(Id.ADD);
         if (operator != null)
             {
-            expr = new BiTypeExpression(expr, operator, parseIntersectingTypeExpression());
+            expr = new BiTypeExpression(expr, operator, parseUnionedTypeExpression());
             }
         return expr;
         }
@@ -863,7 +890,7 @@ public class Parser
         Token operator = match(Id.BIT_OR);
         if (operator != null)
             {
-            expr = new BiTypeExpression(expr, operator, parseNonBiTypeExpression());
+            expr = new BiTypeExpression(expr, operator, parseIntersectingTypeExpression());
             }
         return expr;
         }
@@ -895,7 +922,11 @@ public class Parser
                 type = parseFunctionTypeExpression();
                 break;
 
+            case CONDITIONAL:
             case IMMUTABLE:
+                type = new DecoratedTypeExpression(current(), parseNonBiTypeExpression());
+                break;
+
             default:
                 type = parseNamedTypeExpression();
                 break;
@@ -968,17 +999,19 @@ public class Parser
         List<TypeExpression> listReturn = parseReturnList();
 
         // see if the parameters preced the name
-        List<Parameter> listParam = parseParameterList(false);
-
-        // name optionally comes before or after the parameters
-        Token name = match(Id.IDENTIFIER);
+        List<TypeExpression> listParam = parseParameterTypeList(false);
 
         if (listParam == null)
             {
-            listParam = parseParameterList(true);
+            // name optionally comes before or after the parameters
+            Token name = expect(Id.IDENTIFIER);
+            listParam = parseParameterTypeList(true);
+
+            // pretend the name is the next token (as if we didn't eat it
+            putback(name);
             }
 
-        return new FunctionTypeExpression(function, name, listReturn, listParam);
+        return new FunctionTypeExpression(function, listReturn, listParam);
         }
 
     /**
@@ -1337,6 +1370,36 @@ public class Parser
         }
 
     /**
+     * TODO
+     *
+     * @param required
+     * @return
+     */
+    List<TypeExpression> parseParameterTypeList(boolean required)
+        {
+        List<TypeExpression> types = null;
+        if (match(Id.L_PAREN, required) != null)
+            {
+            types = new ArrayList<>();
+            boolean first = true;
+            while (match(Id.R_PAREN) == null)
+                {
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    expect(Id.COMMA);
+                    }
+
+                types.add(parseTypeExpression());
+                }
+            }
+        return types;
+        }
+
+    /**
      * Parse an argument list.
      *
      * <p/><code><pre>
@@ -1663,7 +1726,7 @@ public class Parser
 
     protected Token peek()
         {
-        return m_token;
+        return m_tokenPutback == null ? m_token : m_tokenPutback;
         }
 
     /**
@@ -1673,7 +1736,7 @@ public class Parser
      */
     protected Token current()
         {
-        final Token token = m_token;
+        final Token token = peek();
         next();
         return token;
         }
@@ -1685,6 +1748,12 @@ public class Parser
      */
     protected Token next()
         {
+        if (m_tokenPutback != null)
+            {
+            m_tokenPutback = null;
+            return m_token;
+            }
+
         // weed out the comments (but store off the most recently encountered doc comment in case
         // anyone needs it later)
         while (m_lexer.hasNext())
@@ -1719,6 +1788,41 @@ public class Parser
         throw new CompilerException("unexpected EOF");
         }
 
+    protected void putback(Token token)
+        {
+        assert m_tokenPutback == null;
+        m_tokenPutback = token;
+        }
+
+    private class Mark
+        {
+        long    pos;
+        Token   token;
+        Token   putback;
+        Token   doc;
+        boolean norec;
+        }
+
+    protected Mark mark()
+        {
+        Mark mark = new Mark();
+        mark.pos     = m_source.getPosition();
+        mark.token   = m_token;
+        mark.putback = m_tokenPutback;
+        mark.doc     = m_doc;
+        mark.norec   = m_fAvoidRecovery;
+        return mark;
+        }
+
+    protected void restore(Mark mark)
+        {
+        m_source.setPosition(mark.pos);
+        m_token            = mark.token;
+        m_tokenPutback     = mark.putback;
+        m_doc              = mark.doc;
+        m_fAvoidRecovery   = mark.norec;
+        }
+
     /**
      * Look for a token that matches the specified ID. The behavior of what to do if there is no
      * match is based on the "required" flag.
@@ -1745,7 +1849,7 @@ public class Parser
      */
     protected Token match(Token.Id id)
         {
-        if (m_token.getId() == id)
+        if (peek().getId() == id)
             {
             return current();
             }
@@ -1868,6 +1972,11 @@ public class Parser
      * The lexical analyzer.
      */
     private final Lexer m_lexer;
+
+    /**
+     * The "put back" token.
+     */
+    private Token m_tokenPutback;
 
     /**
      * The current token.

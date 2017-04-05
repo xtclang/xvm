@@ -13,7 +13,7 @@ const Comparator<DataType>
      * @throws UnsupportedOperationException if the Comparator does not support comparison of the
      *         {@code DataType} for the purpose of determining equality
      */
-    @ro function Boolean (DataType v1, DataType v2) compareForEquality.get()
+    @ro function Boolean (DataType, DataType) compareForEquality.get()
         {
         return (v1, v2) -> compareForOrder(v1, v2) == Equal;
         }
@@ -25,5 +25,5 @@ const Comparator<DataType>
      * @throws UnsupportedOperationException if the Comparator does not support comparison of the
      *         {@code DataType} for the purpose of determining order
      */
-    @ro function Ordered (DataType v1, DataType v2) compareForOrder;
+    @ro function Ordered (DataType, DataType) compareForOrder;
     }

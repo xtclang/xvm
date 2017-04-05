@@ -23,6 +23,7 @@ public class MethodDeclarationStatement
                                       List<Token> typeVars,
                                       List<TypeExpression> returns,
                                       Token name,
+                                      List<TypeExpression> redundant,
                                       List<Parameter> params,
                                       BlockStatement body,
                                       Token doc)
@@ -32,6 +33,7 @@ public class MethodDeclarationStatement
         this.typeVars    = typeVars;
         this.returns     = returns;
         this.name        = name;
+        this.redundant   = redundant;
         this.params      = params;
         this.body        = body;
         this.doc         = doc;
@@ -119,6 +121,25 @@ public class MethodDeclarationStatement
 
         sb.append(name.getValue());
 
+        if (redundant != null)
+            {
+            sb.append('<');
+            boolean first = true;
+            for (TypeExpression type : redundant)
+                {
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(type);
+                }
+            sb.append('>');
+            }
+
         if (params != null)
             {
             sb.append('(');
@@ -175,6 +196,7 @@ public class MethodDeclarationStatement
     public final List<Token>          typeVars;
     public final List<TypeExpression> returns;
     public final Token                name;
+    public final List<TypeExpression> redundant;
     public final List<Parameter>      params;
     public final BlockStatement       body;
     public final Token                doc;

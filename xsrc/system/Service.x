@@ -84,7 +84,7 @@ interface Service()
      * * Terminated indicates that the service terminated as a result of either a shutdown or kill
      *   request.
      */
-    enum StatusIndicator {Idle, Busy, ShuttingDown, Terminated};
+    enum StatusIndicator {Idle, Busy, ShuttingDown, Terminated}
 
     /**
      * Determine if the service is still running.
@@ -110,7 +110,7 @@ interface Service()
      *   deadlock situations, which will result in a DeadlockException. Note that runtime events can
      *   still be processed (e.g. by calling {@link yield}) even when reentrancy is Forbidden.
      */
-    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden};
+    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
 
     /**
      * The re-entrancy setting for this service.

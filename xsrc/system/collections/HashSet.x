@@ -7,7 +7,7 @@ class HashSet<ElementType>
 
     private class Entry<ElementType>(ElementType value, Entry? next);
 
-    private Array<Entry<ElementType>?> buckets = ...; // TODO
+    private Array<Entry<ElementType>?> buckets; // TODO
 
     public/private Int size;
 

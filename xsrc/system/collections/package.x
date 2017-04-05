@@ -15,7 +15,7 @@ package collections
      */
     interface VariablyMutable
         {
-        enum MutabilityConstraint {Mutable, FixedSize, Persistent, Constant};
+        enum MutabilityConstraint {Mutable, FixedSize, Persistent, Constant}
 
         /**
          * The MutabilityConstraint of the data structure.

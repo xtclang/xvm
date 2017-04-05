@@ -10,7 +10,7 @@ mixin WatchRef<RefType>
     /**
      * Construct a watchable reference.
      */
-    construct()
+    construct WatchRef()
         {
         }
 
@@ -18,7 +18,7 @@ mixin WatchRef<RefType>
      * Construct a watchable reference that invokes the specified notification when the value of the
      * reference changes.
      */
-    construct(function Void () | function Void (RefType) notify)
+    construct WatchRef(function Void () | function Void (RefType) notify)
         {
         notifies.add(normalize(notify));
         }

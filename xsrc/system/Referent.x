@@ -45,17 +45,17 @@ interface Referent
     /**
      * Determine if the class of the referent implements the specified interface.
      */
-    Boolean implements(Class interface);
+    Boolean implements_(Class interface_);
 
     /**
      * Determine if the class of the referent extends (or is) the specified class.
      */
-    Boolean extends(Class class);
+    Boolean extends_(Class class_);
 
     /**
      * Determine if the class of the referent incorporates the specified trait or mixin.
      */
-    Boolean incorporates(Class traitOrMixin);
+    Boolean incorporates_(Class traitOrMixin);
 
     /**
      * Determine if the referent is a service.
@@ -70,5 +70,5 @@ interface Referent
     /**
      * Determine if the referent is immutable.
      */
-    @ro Boolean immutable;
+    @ro Boolean immutable_;
     }

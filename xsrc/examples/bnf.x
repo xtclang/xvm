@@ -234,7 +234,7 @@ PropertyDeclarationFinish
 #
 
 MethodDeclaration
-    MethodModifiers-opt TypeVariableList-opt NamePrecursor Name ParameterList MethodDeclarationFinish
+    MethodModifiers-opt TypeVariableList-opt NamePrecursor Name RedundantReturnSpecifier ParameterList MethodDeclarationFinish
 
 MethodModifiers
     MethodModifier
@@ -258,12 +258,15 @@ SingleReturnList
 MultiReturnList
     "(" Returns ")"
 
+RedundantReturnSpecifier
+    "<" Returns ">"
+
 Returns
     Return
     Returns "," Return
 
 Return
-    TypeExpression Name-opt
+    TypeExpression Name-opt                           // TODO name???
 
 MethodDeclarationFinish
     ;
@@ -359,12 +362,14 @@ NonBiTypeExpression
     NonBiTypeExpression "?"
     NonBiTypeExpression "[" "]"
     NonBiTypeExpression "..."
+    "conditional" NonBiTypeExpression
+    "immutable" NonBiTypeExpression
 
 AnnotatedTypeExpression
     Annotation TypeExpression
 
 NamedTypeExpression
-    "immutable"-opt QualifiedName TypeParameterTypeList-opt
+    QualifiedName TypeParameterTypeList-opt
 
 FunctionTypeExpression
     "function" ReturnList FunctionTypeFinish

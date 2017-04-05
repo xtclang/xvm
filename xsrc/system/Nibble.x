@@ -6,10 +6,10 @@ const Nibble
         this.bits = bits;
         }
 
-    construct Bit(TODO Int n)
+    construct Bit(Int n)
         {
         assert:always n >= 0 && n <= 0xF;
-        this. = ;
+        // TODO this. = ;
         }
 
     private Bit[] bits;

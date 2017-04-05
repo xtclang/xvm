@@ -618,7 +618,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Set<Entry<KeyType, ValueType>> remove(Entry<KeyType, ValueType>> entry)
+        Set<Entry<KeyType, ValueType>> remove(Entry<KeyType, ValueType> entry)
             {
             // value is an Entry; remove the requested entry from the map only if the specified
             // entry's key/value pair exists in the map
@@ -631,7 +631,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Set<Entry<KeyType, ValueType>> removeIf(function Boolean (Entry<KeyType, ValueType>>) shouldRemove)
+        Set<Entry<KeyType, ValueType>> removeIf(function Boolean (Entry<KeyType, ValueType>) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
             Set<KeyType> newKeys = oldKeys.removeIf(key ->

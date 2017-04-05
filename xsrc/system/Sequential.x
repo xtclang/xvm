@@ -35,7 +35,7 @@ interface Sequential
      *
      * @exception BoundsException  if there is no next value
      */
-    Sequential nextValue();
+    Sequential nextValue()
         {
         if (Sequential value : next())
             {

@@ -14,12 +14,11 @@ import java.util.List;
 public class FunctionTypeExpression
         extends TypeExpression
     {
-    public FunctionTypeExpression(Token function, Token name, List<TypeExpression> returnValues, List<Parameter> params)
+    public FunctionTypeExpression(Token function, List<TypeExpression> returnValues, List<TypeExpression> params)
         {
         this.function     = function;
-        this.name         = name;
         this.returnValues = returnValues;
-        this.params       = params;
+        this.paramTypes   = params;
         }
 
     @Override
@@ -57,7 +56,7 @@ public class FunctionTypeExpression
         sb.append(" (");
 
         boolean first = true;
-        for (Parameter param : params)
+        for (TypeExpression type : paramTypes)
             {
             if (first)
                 {
@@ -67,17 +66,15 @@ public class FunctionTypeExpression
                 {
                 sb.append(", ");
                 }
-            sb.append(param.toTypeParamString());
+            sb.append(type);
             }
 
-        sb.append(") ")
-          .append(name.getValue());
+        sb.append(')');
 
         return sb.toString();
         }
 
     public final Token function;
-    public final Token name;
     public final List<TypeExpression> returnValues;
-    public final List<Parameter> params;
+    public final List<TypeExpression> paramTypes;
     }

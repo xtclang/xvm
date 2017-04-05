@@ -35,7 +35,7 @@ const String
         {
         }
 
-    Sequence<Char>
+    // TODO Sequence<Char>
 
     Int length.get()
         {

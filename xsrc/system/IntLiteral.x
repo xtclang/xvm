@@ -233,7 +233,7 @@ const IntLiteral(String text)
      * Convert the number to a signed 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int16 to<Int16>();
+    @auto Int16 to<Int16>()
         {
         return to<VarInt>().to<Int16>();
         }
@@ -242,7 +242,7 @@ const IntLiteral(String text)
      * Convert the number to a signed 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int32 to<Int32>();
+    @auto Int32 to<Int32>()
         {
         return to<VarInt>().to<Int32>();
         }
@@ -251,7 +251,7 @@ const IntLiteral(String text)
      * Convert the number to a signed 64-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int64 to<Int64>();
+    @auto Int64 to<Int64>()
         {
         return to<VarInt>().to<Int64>();
         }
@@ -260,7 +260,7 @@ const IntLiteral(String text)
      * Convert the number to a signed 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int128 to<Int128>();
+    @auto Int128 to<Int128>()
         {
         return to<VarInt>().to<Int128>();
         }
@@ -283,7 +283,7 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt16 to<UInt16>();
+    @auto UInt16 to<UInt16>()
         {
         return to<VarUInt>().to<UInt16>();
         }
@@ -292,7 +292,7 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt32 to<UInt32>();
+    @auto UInt32 to<UInt32>()
         {
         return to<VarUInt>().to<UInt32>();
         }
@@ -301,7 +301,7 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 64-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt64 to<UInt64>();
+    @auto UInt64 to<UInt64>()
         {
         return to<VarUInt>().to<UInt64>();
         }
@@ -310,7 +310,7 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt128 to<UInt128>();
+    @auto UInt128 to<UInt128>()
         {
         return to<VarInt>().to<UInt128>();
         }

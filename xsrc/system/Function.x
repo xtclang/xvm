@@ -67,7 +67,7 @@ interface Function<ReturnTypes extends Tuple<ReturnTypes...>, ParamTypes extends
     private class PartiallyBound<ReturnTypes extends Tuple<ReturnTypes...>, ParamTypes extends Tuple<ParamTypes...>>
             implements Function<ReturnTypes, ParamTypes>
         {
-        construct(Function fn, Map<Parameter, Object> params)
+        construct PartiallyBound(Function fn, Map<Parameter, Object> params)
             {
             }
         }

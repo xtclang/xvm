@@ -3,7 +3,7 @@
  */
 const Interval<ElementType extends Orderable>
     {
-    construct(ElementType first, ElementType last)
+    construct Interval(ElementType first, ElementType last)
         {
         if (first > last)
             {

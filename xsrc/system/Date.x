@@ -4,12 +4,12 @@
 const Date(Int year, Int month, Int day)
     {
     @ro dayOfYear;
-    enum DayOfWeek(Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday);
+    enum DayOfWeek {Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday}
 
 
-    Time add(Duration);
-    Duration sub(Time);
-    Time sub(Duration);
+    Time add(Duration duration);
+    Duration sub(Time time);
+    Time sub(Duration duration);
 
     DateTime to<DateTime>()
         {

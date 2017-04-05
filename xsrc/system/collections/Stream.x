@@ -538,9 +538,9 @@ interface Stream<ElementType>
          *         {@code accumulate}, and {@code combine} functions assuming that
          *         the ResultType is the same as the AccumulationType
          */
-        <ElementType, AccumulationType, ResultType>
-        static Collector<ElementType, ResultType, ResultType> of(
-                Supplier supply, Accumulator accumulate, Combiner combine)
+        static <ElementType, AccumulationType, ResultType>
+                Collector<ElementType, ResultType, ResultType> of(
+                        Supplier supply, Accumulator accumulate, Combiner combine)
             {
             return new SimpleCollector<ElementType, AccumulationType, ResultType>(
                     supply, accumulate, combine, result -> result);
@@ -558,9 +558,9 @@ interface Stream<ElementType>
          * @return a new {@code Collector} described by the given {@code supply},
          *         {@code accumulate}, {@code combine} and {@code finish} functions
          */
-        <ElementType, AccumulationType, ResultType>
-        static Collector<ElementType, AccumulationType, ResultType> of(
-                Supplier supply, Accumulator accumulate, Combiner combine, Finisher finish)
+        static <ElementType, AccumulationType, ResultType>
+                Collector<ElementType, AccumulationType, ResultType> of(
+                        Supplier supply, Accumulator accumulate, Combiner combine, Finisher finish)
             {
             return new SimpleCollector<ElementType, AccumulationType, ResultType>(
                     supply, accumulate, combine, finish);

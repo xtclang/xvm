@@ -54,7 +54,7 @@ mixin FutureRef<RefType>
      * * Error: The future completed because the operation threw an exception (which may indicate
      *   that the operation timed out).
      */
-    enum Completion {Pending, Result, Error};
+    enum Completion {Pending, Result, Error}
 
     /**
      * Tracks whether and how the future has completed.
@@ -320,7 +320,7 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> FutureRef.Type<NewType> createContinuation(function <NewType> (RefType) async)
+    <NewType> FutureRef.Type<NewType> createContinuation(function NewType (RefType) async)
         {
         return chain(new ContinuationStep<NewType, RefType>(async));
         }
@@ -674,7 +674,7 @@ mixin FutureRef<RefType>
     static class OrStep<RefType>
             extends DependentFuture<RefType, RefType>
         {
-        construct (FutureRef.Type<RefType> other)
+        construct OrStep(FutureRef.Type<RefType> other)
             {
             }
         finally
@@ -692,7 +692,7 @@ mixin FutureRef<RefType>
     static class AndStep<RefType, InputType, Input2Type>
             extends DependentFuture<RefType, InputType>
         {
-        construct (FutureRef.Type<Input2Type> other, function RefType (InputType, Input2Type) combine)
+        construct AndStep(FutureRef.Type<Input2Type> other, function RefType (InputType, Input2Type) combine)
             {
             }
         finally
