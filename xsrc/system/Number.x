@@ -67,6 +67,7 @@ interface Number
      * Division and Modulo: Divide this number by another number, and return both the
      * quotient and the modulo.
      */
+    // TODO @op() (Number /*quotient*/, Number /*modulo*/) divmod(Number n)
     @op (Number quotient, Number modulo) divmod(Number n)
         {
         return (this / n, this % n);
@@ -99,7 +100,7 @@ interface Number
         Number n = -this;
         assert:always n.sign != Negative;
         return n;
-        };
+        }
 
     /**
      * Calculate the negative of this number.
@@ -121,7 +122,7 @@ interface Number
     /**
      * Obtain the number as an array of nibbles.
      */
-    Nibble[] to<Nibble[]>();
+    Nibble[] to<Nibble[]>()
         {
         // make sure the bit length is at least 8, and also a power-of-two
         assert:always Number.this.bitLength == (Number.this.bitLength & ~0x7).leftmostBit;
@@ -149,7 +150,7 @@ interface Number
     /**
      * Obtain the number as an array of bytes.
      */
-    Byte[] to<Byte[]>();
+    Byte[] to<Byte[]>()
         {
         // make sure the bit length is at least 8, and also a power-of-two
         assert:always bitLength == (bitLength & ~0x7).leftmostBit;
@@ -193,7 +194,7 @@ interface Number
      * Convert the number to a signed 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    Int16 to<Int16>();
+    Int16 to<Int16>()
         {
         return to<VarInt>().to<Int16>();
         }
@@ -202,7 +203,7 @@ interface Number
      * Convert the number to a signed 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    Int32 to<Int32>();
+    Int32 to<Int32>()
         {
         return to<VarInt>().to<Int32>();
         }
@@ -211,7 +212,7 @@ interface Number
      * Convert the number to a signed 64-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    Int64 to<Int64>();
+    Int64 to<Int64>()
         {
         return to<VarInt>().to<Int64>();
         }
@@ -220,7 +221,7 @@ interface Number
      * Convert the number to a signed 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    Int128 to<Int128>();
+    Int128 to<Int128>()
         {
         return to<VarInt>().to<Int128>();
         }
@@ -243,7 +244,7 @@ interface Number
      * Convert the number to a unsigned 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    UInt16 to<UInt16>();
+    UInt16 to<UInt16>()
         {
         return to<VarUInt>().to<UInt16>();
         }
@@ -252,7 +253,7 @@ interface Number
      * Convert the number to a unsigned 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    UInt32 to<UInt32>();
+    UInt32 to<UInt32>()
         {
         return to<VarUInt>().to<UInt32>();
         }
@@ -261,7 +262,7 @@ interface Number
      * Convert the number to a unsigned 64-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    UInt64 to<UInt64>();
+    UInt64 to<UInt64>()
         {
         return to<VarUInt>().to<UInt64>();
         }
@@ -270,7 +271,7 @@ interface Number
      * Convert the number to a unsigned 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    UInt128 to<UInt128>();
+    UInt128 to<UInt128>()
         {
         return to<VarInt>().to<UInt128>();
         }
