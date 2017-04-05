@@ -45,6 +45,18 @@ public class Token
         m_oValue    = oValue;
         }
 
+    /**
+     * Record whitespace information onto the token.
+     *
+     * @param fWhitespaceBefore
+     * @param fWhitespaceAfter
+     */
+    public void noteWhitespace(boolean fWhitespaceBefore, boolean fWhitespaceAfter)
+        {
+        m_fLeadingWhitespace  = fWhitespaceBefore;
+        m_fTrailingWhitespace = fWhitespaceAfter;
+        }
+
 
     // ----- accessors ---------------------------------------------------------
 
@@ -66,6 +78,26 @@ public class Token
     public long getEndPosition()
         {
         return m_lEndPos;
+        }
+
+    /**
+     * Determine if this token follows whitespace in the source.
+     *
+     * @return true iff this token follows whitespace
+     */
+    public boolean hasLeadingWhitespace()
+        {
+        return m_fLeadingWhitespace;
+        }
+
+    /**
+     * Determine if this token precedes whitespace in the source.
+     *
+     * @return true iff this token is followed by whitespace
+     */
+    public boolean hasTrailingWhitespace()
+        {
+        return m_fTrailingWhitespace;
         }
 
     /**
@@ -317,6 +349,7 @@ public class Token
         ELSE        ("else"         ),
         ENUM        ("enum"         ),
         EXTENDS     ("extends"      ),
+        FINALLY     ("finally"      ),
         FUNCTION    ("function"     ),
         IF          ("if"           ),
         IMMUTABLE   ("immutable"    ),
@@ -477,4 +510,14 @@ public class Token
      * Value of the Token (if it is a literal).
      */
     private Object m_oValue;
+
+    /**
+     * Each token konws if it follows whitespace.
+     */
+    private boolean m_fLeadingWhitespace;
+
+    /**
+     * Each token konws if it has whitespace following.
+     */
+    private boolean m_fTrailingWhitespace;
     }

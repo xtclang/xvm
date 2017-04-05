@@ -67,8 +67,10 @@ public class Lexer
     @Override
     public Token next()
         {
+        boolean fWhitespaceBefore = m_fWhitespace;
         final Token token = eatToken();
-        eatWhitespace();
+        boolean fWhitespaceAfter = eatWhitespace();
+        token.noteWhitespace(fWhitespaceBefore, fWhitespaceAfter);
         return token;
         }
 
@@ -86,7 +88,7 @@ public class Lexer
         final Source source = m_source;
         while (source.hasNext())
             {
-            consumer.accept(eatToken());
+            consumer.accept(next());
             eatWhitespace();
             }
         }
@@ -98,18 +100,25 @@ public class Lexer
      * Eat the characters defined as whitespace, which include line terminators
      * and the file terminator. Whitespace does not include comments.
      */
-    protected void eatWhitespace()
+    protected boolean eatWhitespace()
         {
+        boolean fWhitespace = false;
         final Source source = m_source;
         while (source.hasNext())
             {
-            if (!isWhitespace(nextChar()))
+            if (isWhitespace(nextChar()))
+                {
+                fWhitespace = true;
+                }
+            else
                 {
                 // put back the non-whitespace character
                 source.rewind();
                 break;
                 }
             }
+        m_fWhitespace = fWhitespace;
+        return fWhitespace;
         }
 
     /**
@@ -1071,6 +1080,34 @@ public class Lexer
         }
 
     /**
+     * Obtain a cookie that represents the lexer's current location.
+     *
+     * @return a position cookie
+     */
+    public long getPosition()
+        {
+        // this adds a bit of information to the source's position info
+        long lPos = m_source.getPosition();
+        assert (lPos & (1L << 63)) == 0L;
+        if (m_fWhitespace)
+            {
+            lPos |= (1L << 63);
+            }
+        return lPos;
+        }
+
+    /**
+     * Using a previously returned position cookie, restore that state of the lexer.
+     *
+     * @param lPos  a previously returned position cookie
+     */
+    public void setPosition(long lPos)
+        {
+        m_fWhitespace = (lPos & (1L << 63)) != 0L;
+        m_source.setPosition(lPos & ~(1L << 63));
+        }
+
+    /**
      * Get the next character of source code, but do some additional checks
      * on the character to make sure it's legal, such as checking for an illegal
      * SUB character.
@@ -1496,4 +1533,9 @@ public class Lexer
      * The ErrorListener to report errors to.
      */
     private ErrorListener m_errorListener;
+
+    /**
+     * Keeps track of whether whitespace was encountered.
+     */
+    private boolean m_fWhitespace;
     }

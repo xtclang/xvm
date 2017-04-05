@@ -56,7 +56,7 @@ const Char
         return codepoint.to<Int>();
         }
 
-    @auto to<String>()
+    @auto String to<String>()
         {
         // TODO
         }

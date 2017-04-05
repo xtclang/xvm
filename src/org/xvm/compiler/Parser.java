@@ -536,7 +536,7 @@ public class Parser
                             if (name != null && (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN))
                                 {
                                 stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
-                                        null, returns, name);
+                                        null, returns, null, name);
                                 }
                             else
                                 {
@@ -557,7 +557,7 @@ public class Parser
                             List<TypeExpression> returns  = parseReturnList();
                             Token                name     = expect(Id.IDENTIFIER);
                             stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
-                                    typeVars, returns, name);
+                                    typeVars, returns, null, name);
                             }
                             break;
 
@@ -565,8 +565,8 @@ public class Parser
                             {
                             Token keyword = expect(Id.CONSTRUCT);
                             Token name    = expect(Id.IDENTIFIER);
-                            stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
-                                    null, null, name);
+                            stmt = parseMethodDeclarationAfterName(doc, modifiers,
+                                    annotations, null, null, keyword, name);
                             }
                             break;
 
@@ -574,14 +574,14 @@ public class Parser
                             {
                             // it's a constant, property, or method
                             TypeExpression type = parseTypeExpression();
-                            Token name = match(Id.IDENTIFIER);
+                            Token          name = expect(Id.IDENTIFIER);
 
                             if (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
                                 {
                                 // '<' indicates redundant return type list
                                 // '(' indicates parameters
                                 stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
-                                        null, Collections.singletonList(type), name);
+                                        null, Collections.singletonList(type), null, name);
                                 }
                             else if (peek().getId() == Id.ASN && modifiers != null
                                     && modifiers.size() == 1 && modifiers.get(0).getId() == Id.STATIC)
@@ -619,13 +619,19 @@ public class Parser
      * @return a MethodDeclarationStatement
      */
     MethodDeclarationStatement parseMethodDeclarationAfterName(Token doc, List<Token> modifiers,
-            List<Annotation> annotations, List<Token> typeVars, List<TypeExpression> returns, Token name)
+            List<Annotation> annotations, List<Token> typeVars, List<TypeExpression> returns,
+            Token keyword, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
-        List<Parameter> params = parseParameterList(true);
-        BlockStatement  body   = match(Id.SEMICOLON) == null ? parseBlockStatement() : null;
+        List<Parameter> params      = parseParameterList(true);
+        BlockStatement  body        = match(Id.SEMICOLON) == null ? parseBlockStatement() : null;
+        BlockStatement  stmtFinally = null;
+        if (body != null && keyword != null && match(Id.FINALLY) != null)
+            {
+            stmtFinally = parseBlockStatement();
+            }
         return new MethodDeclarationStatement(modifiers, annotations, typeVars, returns, name,
-                redundantReturns, params, body, doc);
+                redundantReturns, params, body, stmtFinally, doc);
         }
 
     /**
@@ -657,7 +663,7 @@ public class Parser
             Token           methodName = expect(Id.IDENTIFIER);
             List<Parameter> params     = parseParameterList(true);
             MethodDeclarationStatement method = new MethodDeclarationStatement(null, null, null, null,
-                    methodName, null, params, parseBlockStatement(), null);
+                    methodName, null, params, parseBlockStatement(), null, null);
             body = new BlockStatement(Collections.singletonList(method));
             }
         else if (match(Id.L_CURLY) != null)
@@ -1184,8 +1190,15 @@ public class Parser
             }
 
         NamedTypeExpression type = parseNamedTypeExpression();
+        List<Expression>    args = null;
 
-        List<Expression> args = parseArgumentList(false);
+        // a trailing argument list is only assumed to be part of the annotation if there is
+        // no whitespace separating the annotation from the arguments
+        Token token = peek();
+        if (token != null && token.getId() == Id.L_PAREN && !token.hasLeadingWhitespace())
+            {
+            args = parseArgumentList(false);
+            }
 
         return new Annotation(type, args);
         }
@@ -1806,7 +1819,7 @@ public class Parser
     protected Mark mark()
         {
         Mark mark = new Mark();
-        mark.pos     = m_source.getPosition();
+        mark.pos     = m_lexer.getPosition();
         mark.token   = m_token;
         mark.putback = m_tokenPutback;
         mark.doc     = m_doc;
@@ -1816,11 +1829,11 @@ public class Parser
 
     protected void restore(Mark mark)
         {
-        m_source.setPosition(mark.pos);
-        m_token            = mark.token;
-        m_tokenPutback     = mark.putback;
-        m_doc              = mark.doc;
-        m_fAvoidRecovery   = mark.norec;
+        m_lexer.setPosition(mark.pos);
+        m_token           = mark.token;
+        m_tokenPutback    = mark.putback;
+        m_doc             = mark.doc;
+        m_fAvoidRecovery  = mark.norec;
         }
 
     /**
@@ -1886,6 +1899,8 @@ public class Parser
 
         log(Severity.ERROR, EXPECTED_TOKEN, new Token.Id[] {id, m_token.getId()},
                 m_token.getStartPosition(), m_token.getEndPosition());
+
+        // TODO remove this so there can be more than one error reported
         throw new CompilerException("expected token: " + id + " (found: " + token + ")");
         }
 

@@ -26,17 +26,19 @@ public class MethodDeclarationStatement
                                       List<TypeExpression> redundant,
                                       List<Parameter> params,
                                       BlockStatement body,
+                                      BlockStatement continuation,
                                       Token doc)
         {
-        this.modifiers   = modifiers;
-        this.annotations = annotations;
-        this.typeVars    = typeVars;
-        this.returns     = returns;
-        this.name        = name;
-        this.redundant   = redundant;
-        this.params      = params;
-        this.body        = body;
-        this.doc         = doc;
+        this.modifiers    = modifiers;
+        this.annotations  = annotations;
+        this.typeVars     = typeVars;
+        this.returns      = returns;
+        this.name         = name;
+        this.redundant    = redundant;
+        this.params       = params;
+        this.body         = body;
+        this.continuation = continuation;
+        this.doc          = doc;
         }
 
     @Override
@@ -176,6 +178,22 @@ public class MethodDeclarationStatement
                 sb.append(' ')
                   .append(sBody);
                 }
+            
+            if (continuation != null)
+                {
+                String sFinally = continuation.toString();
+                sb.append("\nfinally");
+                if (sFinally.indexOf('\n') >= 0)
+                    {
+                    sb.append('\n')
+                      .append(indentLines(sFinally, "    "));
+                    }
+                else
+                    {
+                    sb.append(' ')
+                      .append(sFinally);
+                    }
+                }
             }
 
         return sb.toString();
@@ -199,6 +217,7 @@ public class MethodDeclarationStatement
     public final List<TypeExpression> redundant;
     public final List<Parameter>      params;
     public final BlockStatement       body;
+    public final BlockStatement       continuation;
     public final Token                doc;
 
     StructureContainer struct;

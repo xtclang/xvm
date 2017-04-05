@@ -464,10 +464,11 @@ class ExtHashMap<KeyType, ValueType>
      *
      * @param capacity  the number of entries to be able to manage efficiently
      *
-     * @return return the suggested number of buckets to achieve the specified capacity, and the
+     * @return the suggested number of buckets to achieve the specified capacity, and the
      *         suggested grow and shrink thresholds
      */
-    protected static (Int bucketCount, Int growAt, Int shrinkAt) calcBucketCount(Int capacity)
+    protected static (@Desc("bucketCount") Int, @Desc("growAt") Int, @Desc("shrinkAt") Int)
+            calcBucketCount(Int capacity)
         {
         assert capacity >= 0;
 
