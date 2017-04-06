@@ -1,8 +1,14 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 
+import org.xvm.proto.ServiceContext;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xString.StringHandle;
@@ -83,16 +89,33 @@ public class xService
     public void start(ServiceHandle hService)
         {
         StringHandle hName = getProperty(hService, "serviceName").as(StringHandle.class);
-        hService.m_context.startServiceDaemon(hName.getValue());
+        hService.m_context.start(hService, hName.getValue());
         }
 
-    public ObjectHandle invokeAsync(Frame frame, FunctionHandle hFunction, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+    // return an exception
+    public ExceptionHandle invokeAsync(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
+                                    ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
         {
-        throw new UnsupportedOperationException("TODO");
+        // TODO: validate that all the arguments are immutable or ImmutableAble
+
+        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendRequest(
+                hService.m_context, hFunction, ahArg, ahReturn.length);
+
+        for (int i = 0, c = ahReturn.length; i < c; i++)
+            {
+            final int iRet = i;
+
+            CompletableFuture<ObjectHandle> cfReturn =
+                    cfResult.thenApply(ahResult -> ahReturn[iRet] = ahResult[iRet]);
+
+            ahReturn[i] = new ProxyHandle(hService, cfReturn);
+            }
+
+        return null;
         }
 
     @Override
-    public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
         ServiceHandle hThis = hTarget.as(ServiceHandle.class);
 
@@ -119,15 +142,16 @@ public class xService
     public static class ProxyHandle
             extends ObjectHandle
         {
-        protected CompletableFuture<ObjectHandle> m_future;
         protected ServiceHandle m_hService;
+        protected CompletableFuture<ObjectHandle> m_future;
 
-        public ProxyHandle(TypeComposition clazz, CompletableFuture<ObjectHandle> future, ServiceHandle hService)
+        public ProxyHandle(ServiceHandle hService, CompletableFuture<ObjectHandle> future)
             {
-            super(clazz);
+            // TODO: actually, the ProxyHandle has nothing to do with the xService template
+            super(hService.f_clazz);
 
-            m_future = future;
             m_hService = hService;
+            m_future = future;
             }
 
         @Override
@@ -145,7 +169,7 @@ public class xService
             {
             if (clz == FutureHandle.class)
                 {
-                return (T) xFutureRef.INSTANCE.makeHandle(m_future);
+                return (T) xFutureRef.INSTANCE.makeHandle(m_hService, m_future);
                 }
             return get().as(clz);
             }
@@ -154,6 +178,11 @@ public class xService
             {
             try
                 {
+                // TODO: use the timeout defined on the service
+                while (!m_future.isDone())
+                    {
+                    m_hService.m_context.yield();
+                    }
                 return m_future.get();
                 }
             catch (Exception e )

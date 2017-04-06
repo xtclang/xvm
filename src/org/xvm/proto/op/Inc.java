@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
 
@@ -27,7 +28,7 @@ public class Inc extends OpInvocable
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        ObjectHandle hException = template.invokeInc(frame, hTarget, ahRet);
+        ExceptionHandle hException = template.invokeInc(frame, hTarget, ahRet);
 
         if (hException == null)
             {

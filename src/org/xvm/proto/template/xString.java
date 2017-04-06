@@ -5,6 +5,7 @@ import org.xvm.asm.ConstantPool.CharStringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
@@ -51,7 +52,7 @@ public class xString
         }
 
     @Override
-    public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
         StringHandle hThis = hTarget.as(StringHandle.class);
         switch (method.f_sName)
@@ -64,7 +65,7 @@ public class xString
         }
 
     @Override
-    public ObjectHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
         StringHandle hThis = hTarget.as(StringHandle.class);
         switch (method.f_sName)

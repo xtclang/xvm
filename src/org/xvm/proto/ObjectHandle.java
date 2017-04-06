@@ -64,12 +64,14 @@ public abstract class ObjectHandle
 
         public GenericHandle(TypeComposition clazz)
             {
-            super(clazz);
+            this(clazz, clazz.ensurePublicType());
             }
 
         public GenericHandle(TypeComposition clazz, Type type)
             {
             super(clazz, type);
+
+            createFields();
             }
 
         public void createFields()
@@ -86,6 +88,31 @@ public abstract class ObjectHandle
         public String toString()
             {
             return super.toString() + m_mapFields;
+            }
+        }
+
+    public static class ExceptionHandle
+            extends GenericHandle
+        {
+        protected Throwable m_exception;
+
+        public ExceptionHandle(TypeComposition clazz, boolean fInitialize)
+            {
+            super(clazz);
+
+            if (fInitialize)
+                {
+                m_exception = new WrapperException();
+                }
+            }
+
+        public class WrapperException
+                extends Exception
+            {
+            public ExceptionHandle getExceptionHandle()
+                {
+                return ExceptionHandle.this;
+                }
             }
         }
 
@@ -233,5 +260,4 @@ public abstract class ObjectHandle
 
     // bits 32-63: identity id
     private final static long MASK_IDENTITY   = 0xFFFF_FFFF_0000_0000L;
-
     }

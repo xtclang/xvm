@@ -5,6 +5,8 @@ import org.xvm.asm.ConstantPool.ClassConstant;
 import org.xvm.asm.ConstantPool.MethodConstant;
 
 import org.xvm.proto.ObjectHandle.GenericHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
+
 import org.xvm.util.ListMap;
 
 import java.util.Arrays;
@@ -340,46 +342,40 @@ public abstract class TypeCompositionTemplate
         }
 
     // invokeNative with 0 arguments and 0 return values
-    // @return - an exception handle
-    public ObjectHandle invokeNative00(Frame frame, ObjectHandle hTarget, MethodTemplate method)
+    public ExceptionHandle invokeNative00(Frame frame, ObjectHandle hTarget, MethodTemplate method)
         {
         // many classes don't have native methods
         throw new IllegalStateException();
         }
 
     // invokeNative with 0 arguments and 1 return value
-    // @return - an exception handle
-    public ObjectHandle invokeNative01(Frame frame, ObjectHandle hTarget,
+    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget,
                                   MethodTemplate method, ObjectHandle[] ahReturn)
         {
         throw new IllegalStateException();
         }
 
     // invokeNative with 1 argument and 1 return value
-    // @return - an exception handle
-    public ObjectHandle invokeNative11(Frame frame, ObjectHandle hTarget,
+    public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget,
                                        MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
         throw new IllegalStateException();
         }
 
     // Add operation
-    // @return - an exception handle
-    public ObjectHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
         throw new IllegalStateException();
         }
 
     // Increment operation
-    // @return - an exception handle
-    public ObjectHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
         throw new IllegalStateException();
         }
 
     // Neg operation
-    // @return - an exception handle
-    public ObjectHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
         throw new IllegalStateException();
         }
@@ -414,10 +410,8 @@ public abstract class TypeCompositionTemplate
         assert f_asFormalType.length == 0;
         assert f_shape == Shape.Class || f_shape == Shape.Const;
 
-        GenericHandle hThis = new GenericHandle(f_clazzCanonical,
+        return new GenericHandle(f_clazzCanonical,
                 f_clazzCanonical.ensureStructType());
-        hThis.createFields();
-        return hThis;
         }
 
     // does this template extend that?

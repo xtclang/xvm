@@ -25,6 +25,7 @@ public class TestDriver
         container.f_types.addTemplate(testService);
 
         ServiceContext context = container.createContext();
+        context.start(null, "TestDriver");
 
         runTests(test, context);
         runTests(test2, context);
@@ -42,7 +43,7 @@ public class TestDriver
                     {
                     System.out.println("\n### Calling " + function + " ###");
 
-                    ObjectHandle hException = context.createFrame(null, function, null,
+                    ObjectHandle.ExceptionHandle hException = context.createFrame(null, function, null,
                             new ObjectHandle[function.m_cVars]).execute();
                     if (hException != null)
                         {

@@ -3,6 +3,8 @@ package org.xvm.proto;
 import org.xvm.util.Notifier;
 import org.xvm.util.SimpleNotifier;
 
+import org.xvm.proto.ServiceContext.Message;
+
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -20,7 +22,7 @@ public class ServiceDaemon
 
     protected Thread m_thread;
 
-    protected final Queue<Invocation> f_queue = new ConcurrentLinkedQueue<>();
+    protected final Queue<Message> f_queue = new ConcurrentLinkedQueue<>();
 
     protected final Notifier f_notifier = new SimpleNotifier();
 
@@ -70,25 +72,26 @@ public class ServiceDaemon
             }
 
         Notifier notifier = f_notifier;
-        Queue<Invocation> queue = f_queue;
+        Queue<Message> queue = f_queue;
         try
             {
             while (m_state == State.Running)
                 {
                 notifier.await(1000);
 
-                Invocation call = queue.poll();
-                while (call != null)
+                Message message = queue.poll();
+                while (message != null)
                     {
                     try
                         {
-                        process(call);
+                        message.process(f_context);
                         }
                     catch (Throwable e)
                         {
                         // TODO
+                        e.printStackTrace(System.out);
                         }
-                    call = queue.poll();
+                    message = queue.poll();
                     }
                 }
             }
@@ -105,15 +108,28 @@ public class ServiceDaemon
         f_tloContext.set(null);
         }
 
-
-    protected void process(Invocation call)
+    public void dispatch(long cMillis)
         {
+        try
+            {
+            f_notifier.await(cMillis);
 
+            Message msg = f_queue.poll();
+            if (msg != null)
+                {
+                msg.process(f_context);
+                }
+            }
+        catch (Throwable e)
+            {
+            // TODO
+            throw new RuntimeException(e);
+            }
         }
 
     // ----- InterService Communications -----
 
-    public void add(Invocation call)
+    public void add(Message call)
         {
         f_queue.add(call);
         f_notifier.signal();
@@ -173,14 +189,5 @@ public class ServiceDaemon
     public static ServiceContext getCurrentContext()
         {
         return f_tloContext.get();
-        }
-
-
-    /**
-     * Represents a call from one service onto another.
-     */
-    public static class Invocation
-        {
-
         }
     }

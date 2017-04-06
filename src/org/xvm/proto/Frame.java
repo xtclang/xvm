@@ -3,7 +3,10 @@ package org.xvm.proto;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Access;
+
 import org.xvm.proto.template.xFunction;
+
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 /**
  * A call stack frame.
@@ -24,7 +27,7 @@ public class Frame
                                                 // [1] - current guard index (-1 if none)
     public final int[]          f_anNextVar;    // at index i, the "next available" var register for scope i
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
-    public ObjectHandle         m_hException;   // an exception
+    public ExceptionHandle      m_hException;   // an exception
 
     public Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
                  ObjectHandle hTarget, ObjectHandle[] ahVar)
@@ -41,7 +44,7 @@ public class Frame
         f_ahReturn = c == 0 ? Utils.OBJECTS_NONE : new  ObjectHandle[c];
         }
 
-    public ObjectHandle execute()
+    public ExceptionHandle execute()
         {
         Op[] abOps = f_function.m_aop;
 
@@ -93,7 +96,7 @@ public class Frame
 
     // find a first matching guard; unwind the scope and initialize the next var with the exception
     // return the PC of the catch
-    private int findGuard(ObjectHandle hException)
+    private int findGuard(ExceptionHandle hException)
         {
         Guard[] aGuard = m_aGuard;
         if (aGuard != null)

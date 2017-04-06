@@ -1,6 +1,10 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
@@ -41,7 +45,7 @@ public class Get extends OpInvocable
             {
             // almost identical to the second part of Invoke_01
             ObjectHandle[] ahRet;
-            ObjectHandle hException;
+            ExceptionHandle hException;
 
             if (method.isNative())
                 {

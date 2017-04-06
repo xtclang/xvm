@@ -1,9 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
+import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -40,6 +38,7 @@ public class xFutureRef
     public static class FutureHandle
             extends ObjectHandle
         {
+        protected ServiceHandle m_hService;
         protected CompletableFuture<ObjectHandle> m_future;
 
         public FutureHandle(TypeComposition clazz)
@@ -47,10 +46,11 @@ public class xFutureRef
             super(clazz);
             }
 
-        public FutureHandle(TypeComposition clazz, CompletableFuture<ObjectHandle> future)
+        public FutureHandle(TypeComposition clazz, ServiceHandle hService, CompletableFuture<ObjectHandle> future)
             {
             super(clazz);
 
+            m_hService = hService;
             m_future = future;
             }
 
@@ -58,6 +58,11 @@ public class xFutureRef
             {
             try
                 {
+                // TODO: use the timeout defined on the service
+                while (!m_future.isDone())
+                    {
+                    m_hService.m_context.yield();
+                    }
                 return m_future.get();
                 }
             catch (Exception e )
@@ -74,9 +79,9 @@ public class xFutureRef
             }
         }
 
-    public FutureHandle makeHandle(CompletableFuture<ObjectHandle> future)
+    public FutureHandle makeHandle(ServiceHandle hService, CompletableFuture<ObjectHandle> future)
         {
-        return new FutureHandle(INSTANCE.f_clazzCanonical, future);
+        return new FutureHandle(INSTANCE.f_clazzCanonical, hService, future);
         }
 
     }

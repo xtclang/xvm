@@ -1,7 +1,12 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpCallable;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
+import org.xvm.proto.Utils;
 
 /**
  * NEW_N CONST-CONSTRUCT, #params:(rvalue), lvalue-return
@@ -41,7 +46,7 @@ public class New_N extends OpCallable
                     Utils.resolveConst(frame, constructor.m_argTypeName[i + 1], nArg);
             }
 
-        ObjectHandle hException = callConstructor(frame, constructor, ahVar);
+        ExceptionHandle hException = callConstructor(frame, constructor, ahVar);
 
         if (hException == null)
             {

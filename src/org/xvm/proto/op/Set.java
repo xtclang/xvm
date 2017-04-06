@@ -1,8 +1,13 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
+import org.xvm.proto.Utils;
 
 /**
  * Get rvalue-target, CONST_PROPERTY, rvalue
@@ -43,7 +48,7 @@ public class Set extends OpInvocable
             // almost identical to the second part of Invoke_10
             ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-            ObjectHandle hException = frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
+            ExceptionHandle hException = frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
 
             if (hException != null)
                 {

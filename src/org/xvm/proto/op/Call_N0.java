@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.Utils;
@@ -27,7 +28,7 @@ public class Call_N0 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hException;
+        ExceptionHandle hException;
 
         if (f_nFunctionValue == A_SUPER)
             {

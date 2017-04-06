@@ -254,9 +254,44 @@ function Int (Int) sq = n -> n*n;
 print(sq(5));
 print((function Int (Int)) (n -> n*n) (5));
 
-service MyService
-    {
-    String prop1;
+Int[] ai = new Int[5](1);
 
-    Void shutdown() {...}
+X  x = new X();
+X? a = foo();
+// assign a to x (if a isn't null)
+x = a;    // compiler error
+x = a?;
+
+
+class T { void foo(); }
+T? x = ...
+
+Boolean b = @auto(x?);
+x?.foo();
+
+conditional T y = @auto(x?);
+
+y?.foo();
+
+
+for (x : y)
+a?[1];
+
+Object p;
+
+Person p = new Person();
+Child c = p.new Child();
+
+
+// java
+if (o1 .instanceof (Person))
+if (o .? Person)
+    {
+    Person p = (Person) o;
+    }
+
+// .x
+if (o.?(Person))
+    {
+    p = o2.as(Something).foo().as(Person).doSomePersonThing().doSomeOtherThing().etc();
     }
