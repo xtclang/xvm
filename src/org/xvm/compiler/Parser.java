@@ -1197,7 +1197,7 @@ public class Parser
         Token token = peek();
         if (token != null && token.getId() == Id.L_PAREN && !token.hasLeadingWhitespace())
             {
-            args = parseArgumentList(false);
+            args = parseArgumentList(true);
             }
 
         return new Annotation(type, args);

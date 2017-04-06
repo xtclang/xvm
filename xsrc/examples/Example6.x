@@ -409,3 +409,77 @@ Boolean? foo()
 Int? i = conditionalfoo();
 if (Int j : i) {...}
 print(i);
+
+// ---- operator / parsing precedence
+
+x = a ? b : c
+x = a ?: b
+x = a?.b : c
+
+// x = (a != null)
+x = a?;          // x is a boolean .. how to make x the value of a?
+
+// if (a != null) x = a;
+if (x : a?) {}  // ugly but true
+x = a?[1];      // funny but true
+x = a ?: x;     // true; short for:
+x = a? ? a : x;
+
+a?.b : d ?: c ? d : e
+
+// TODO ?=
+x ?= a;
+
+// TODO ..
+
+
+// ----- cast
+
+// C style
+y = (Type) x;
+
+// how about ...
+y = x.@(Type);  // cast
+y = x.?(Type);  // instanceof?
+
+y = x.as(Type);
+
+
+//
+
+x = a?.b : d
+
+if (a != null)
+    {
+    x = a.b;
+    }
+else
+    {
+    x = d;
+    }
+
+x = a?.b?.c : d
+
+if (a != null)
+    {
+    tmp = a.b;
+    if (tmp != null)
+        {
+        x = tmp.c;
+        }
+    }
+... else // for BOTH ifs
+    {
+    x = d;
+    }
+
+x = a?.b?.c : d : e     // compiler error!!!
+
+x = a ? b ? c : d : e;
+x = a ? b :
+
+// multi-line character string
+
+String s = {""
+            ""
+            ""}

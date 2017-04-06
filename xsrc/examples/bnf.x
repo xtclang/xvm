@@ -29,7 +29,7 @@ Annotations
     Annotations Annotation
 
 Annotation
-    "@" NamedTypeExpression ArgumentList-opt
+    "@" NoWhitespace NamedTypeExpression NoWhitespace ArgumentList-opt
 
 ParameterList
     "(" Parameters ")"
@@ -51,8 +51,17 @@ Arguments
     Argument
     Arguments "," Argument
 
-Argument                                        // TODO this does not support named arguments
+Argument
+    NamedArgument-opt ArgumentExpression
+
+# note: the "?" argument allows functions to specify arguments that they are NOT binding
+ArgumentExpression
+    "?"
     Expression
+
+# note: not currently implemented // TODO
+NamedArgument
+    Name "="
 
 TypeParameterList
     "<" TypeParameters ">"
@@ -309,7 +318,29 @@ TypeDefStatement
     "typedef" TypeExpression Name ";"
 
 AssignmentStatement
-    // TODO
+    Assignable AssignmentOperator Expression ";"
+
+# Assignable turns out to be just an Expression that meets certain requirements, i.e. one that ends
+# with a Name or an ArrayIndex
+Assignable
+    Name
+    Expression "." Name
+    Expression ArrayIndex
+
+AssignmentOperator
+    "="
+    "*="
+    "/="
+    "%="
+    "+="
+    "-="
+    "<<="
+    ">>="
+    ">>>="
+    "&="
+    "^="
+    "|="
+    "?="
 
 VariableDeclarationStatement
     TypeExpression Name VariableDeclarationFinish-opt
@@ -324,20 +355,291 @@ ExpressionStatement
     Expression ";"
 
 ReturnStatement
-    "return" TupleExpression-opt ";"
+    "return" TupleLiteral-opt ";"
     "return" ExpressionList-opt ";"
 
 #
 # expressions
 #
 
-TupleExpression
-    "Tuple:(" ExpressionList-opt ")"
+#   Operator        Description             Level   Associativity
+#   --------------  ----------------------  -----   -------------
+#   ++              post-increment            1     left to right
+#   --              post-decrement
+#   ()              invoke a method
+#   []              access array element
+#   ?               conditional
+#   .               access object member
+#   .new            postfix object creation
+#   .as             postfix type assertion
+#   .instanceof     postfix type comparison
+#
+#   ++              pre-increment             2     right to left
+#   --              pre-decrement
+#   +               unary plus
+#   -               unary minus
+#   !               logical NOT
+#   ~               bitwise NOT
+#   &               reference-of
+#   new             object creation
+#
+#   *               multiplicative            3     left to right
+#   /
+#   %
+#
+#   + -             additive                  4     left to right
+#   +               string concatenation
+#
+#   << >>           shift                     5     left to right
+#   >>>
+#
+#   ..              range/interval            6     left to right
+#
+#   <  <=           relational                7     left to right
+#   >  >=
+#   <=>             order
+#   instanceof      type comparison
+#   as              type assertion
+#
+#   ==              equality                  8     left to right
+#   !=
+#
+#   &               bitwise AND               9     left to right
+#   ^               bitwise XOR              10     left to right
+#   |               bitwise OR               11     left to right
+#   &&              conditional AND          12     left to right
+#   ||              conditional OR           13     left to right
+#   ?:              conditional elvis        14     right to left
+#   ? :             conditional ternary      15     right to left
+#   :               conditional ELSE         16     right to left
+
+Expression
+    TernaryExpression
+    TernaryExpression ":" Expression
+
+TernaryExpression
+    ElvisExpression
+    ElvisExpression Whitespace "?" TernaryExpression ":" TernaryExpression
+
+ElvisExpression
+    OrExpression
+    OrExpression ?: ElvisExpression
+
+OrExpression
+    AndExpression
+    OrExpression || AndExpression
+
+AndExpression
+    BitOrExpression
+    AndExpression && BitOrExpression
+
+BitOrExpression
+    BitXorExpression
+    BitOrExpression | BitXorExpression
+
+BitXorExpression
+    AndExpression
+    BitXorExpression ^ AndExpression
+
+BitAndExpression
+    EqualityExpression
+    BitAndExpression & EqualityExpression
+
+EqualityExpression
+    RelationalExpression
+    EqualityExpression "==" RelationalExpression
+    EqualityExpression "!=" RelationalExpression
+
+RelationalExpression
+    RangeExpression
+    RelationalExpression "<" RangeExpression
+    RelationalExpression ">" RangeExpression
+    RelationalExpression "<=" RangeExpression
+    RelationalExpression ">=" RangeExpression
+    RelationalExpression "<=>" RangeExpression
+    RelationalExpression "instanceof" TypeExpression
+    RelationalExpression "as" TypeExpression
+
+RangeExpression
+    ShiftExpression
+    ShiftExpression ".." ShiftExpression
+
+ShiftExpression
+    AdditiveExpression
+    ShiftExpression "<<" AdditiveExpression
+    ShiftExpression ">>" AdditiveExpression
+    ShiftExpression ">>>" AdditiveExpression
+
+AdditiveExpression
+    MultiplicativeExpression
+    AdditiveExpression "+" MultiplicativeExpression
+    AdditiveExpression "-" MultiplicativeExpression
+
+MultiplicativeExpression
+    PrefixExpression
+    MultiplicativeExpression "*" PrefixExpression
+    MultiplicativeExpression "/" PrefixExpression
+    MultiplicativeExpression "%" PrefixExpression
+    MultiplicativeExpression "/%" PrefixExpression
+
+PrefixExpression
+    PostfixExpression
+    "++" PrefixExpression
+    "--" PrefixExpression
+    "+" PrefixExpression
+    "-" PrefixExpression
+    "!" PrefixExpression
+    "~" PrefixExpression
+    "&" PrefixExpression
+    "new" TypeExpression ArgumentList
+
+PostfixExpression
+    PrimaryExpression
+    PostfixExpression "++"
+    PostfixExpression "--"
+    PostfixExpression ArgumentList
+    PostfixExpression ArrayDims
+    PostfixExpression ArrayIndex
+    PostfixExpression NoWhitespace "?"
+    PostfixExpression "." Name
+    PostfixExpression ".new" ArgumentList
+    PostfixExpression ".instanceof" "(" TypeExpression ")"
+    PostfixExpression ".as" "(" TypeExpression ")"
+
+# Note: A parenthesized Expression, a TupleLiteral, and a LambdaExpression share a parse path
+PrimaryExpression
+    Name
+    Literal
+    LambdaExpression
+    "(" Expression ")"
+    "TODO" TodoMessage-opt
+
+Literal
+    IntLiteral
+    FPDecimalLiteral
+    FPBinaryLiteral
+    CharLiteral
+    StringLiteral
+    BinaryLiteral
+    TupleLiteral
+    ListLiteral
+    MapLiteral
+    FreeformLiteral
+    CustomLiteral
+
+# Whitespace allowed
+BinaryLiteral
+    "Binary:{" Nibbles-opt "}"
+
+Nibbles
+    Nibble
+    Nibbles Nibble
+
+Nibble: one of ...
+    "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "A" "a" "B" "b" "C" "c" "D" "d" "E" "e" "F" "f"
+
+TupleLiteral
     "(" ExpressionList "," Expression ")"
+    "Tuple:(" ExpressionList-opt ")"
+    "Tuple:{" ExpressionList-opt "}"
+
+ListLiteral
+    "{" ExpressionList-opt "}"
+    "List:{" ExpressionList-opt "}"
+
+MapLiteral
+    "Map:{" Entries-opt "}"
+
+Entries
+    Entry
+    Entries "," Entry
+
+Entry
+    Expression "=" Expression
+
+# (deferred idea)
+#
+#        U+2550
+# U+2554 ╔═════╗ U+2557
+# U+2551 ║     ║ U+2551
+# U+255A ╚═════╝ U+255D
+#        U+2550
+#
+#
+#        U+2500
+# U+256D ╭─────╮ U+256E
+# U+2502 │     │ U+2502
+# U+2570 ╰─────╯ U+256F
+#        U+2500
+#
+FreeformLiteral
+    ╔═════════════════════╗
+    ║This could be any    ║
+    ║freeform text that   ║
+    ║could be inside of an║
+    ║Ecstasy source file  ║
+    ╚═════════════════════╝
+
+CustomLiteral
+    Class NoWhitespace ":" NoWhitespace StringLiteral
+    Class NoWhitespace ":{" FreeformLiteral "}"
 
 ExpressionList
     Expression
     ExpressionList "," Expression
+
+TodoMessage
+    "(" Expression ")"
+
+ArrayDims
+    ArrayDim
+    ArrayDims ArrayDim
+
+ArrayDim
+    "[" DimIndicators-opt "]"
+
+DimIndicators
+    DimIndicator
+    DimIndicators "," DimIndicator
+
+DimIndicator
+    "?"
+
+ArrayIndex
+    "[" ExpressionList "]"
+
+LambdaExpression
+    LambdaInputs "->" LambdaBody
+
+LambdaInputs
+    LambdaParameterName
+    LambdaInferredList
+    LambdaParameterList
+
+LambdaInferredList
+    "(" LambdaParameterNames ")"
+
+LambdaParameterNames
+    LambdaParameterName
+    LambdaParameterNames "," LambdaParameterName
+
+LambdaParameterList
+    "(" LambdaParameters ")"
+
+LambdaParameters
+    LambdaParameter
+    LambdaParameters "," LambdaParameter
+
+LambdaParameter
+    TypeExpression LambdaParameterName
+
+LambdaParameterName
+    _
+    Name
+
+LambdaBody
+    Expression
+    StatementBlock
 
 #
 # types
@@ -360,7 +662,7 @@ NonBiTypeExpression
     NamedTypeExpression
     FunctionTypeExpression
     NonBiTypeExpression "?"
-    NonBiTypeExpression "[" "]"
+    NonBiTypeExpression ArrayDim
     NonBiTypeExpression "..."
     "conditional" NonBiTypeExpression
     "immutable" NonBiTypeExpression
