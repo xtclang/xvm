@@ -5,6 +5,8 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
 
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
+
 /**
  * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T
  *
@@ -32,7 +34,7 @@ public class Add extends OpInvocable
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        ObjectHandle hException = template.invokeAdd(frame, hTarget, hArg, ahRet);
+        ExceptionHandle hException = template.invokeAdd(frame, hTarget, hArg, ahRet);
 
         if (hException == null)
             {

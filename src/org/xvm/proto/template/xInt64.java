@@ -3,8 +3,13 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ConstantPool.IntConstant;
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -44,7 +49,7 @@ public class xInt64
         }
 
     @Override
-    public ObjectHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
         JavaLong hThis = hTarget.as(JavaLong.class);
         JavaLong hThat = hArg.as(JavaLong.class);
@@ -55,7 +60,7 @@ public class xInt64
         }
 
     @Override
-    public ObjectHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
         JavaLong hThis = hTarget.as(JavaLong.class);
 
@@ -65,7 +70,7 @@ public class xInt64
         }
 
     @Override
-    public ObjectHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
         JavaLong hThis = hTarget.as(JavaLong.class);
 

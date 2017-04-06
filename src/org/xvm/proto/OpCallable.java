@@ -3,6 +3,7 @@ package org.xvm.proto;
 import org.xvm.asm.ConstantPool.ClassConstant;
 import org.xvm.asm.ConstantPool.MethodConstant;
 
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Access;
@@ -71,11 +72,11 @@ public abstract class OpCallable extends Op
         }
 
     // call the constructor; then potentially the finalizer; change this:struct handle to this:public
-    protected ObjectHandle callConstructor(Frame frame, FunctionTemplate constructor, ObjectHandle[] ahVar)
+    protected ExceptionHandle callConstructor(Frame frame, FunctionTemplate constructor, ObjectHandle[] ahVar)
         {
         Frame frameNew = frame.f_context.createFrame(frame, constructor, null, ahVar);
 
-        ObjectHandle hException = frameNew.execute();
+        ExceptionHandle hException = frameNew.execute();
 
         if (hException == null)
             {
@@ -83,10 +84,11 @@ public abstract class OpCallable extends Op
 
             TypeComposition clazzTarget = hTarget.f_clazz;
             TypeCompositionTemplate template = clazzTarget.f_template;
+            ServiceHandle hService = null;
 
             if (template.isService())
                 {
-                ServiceHandle hService = hTarget.as(ServiceHandle.class);
+                hService = hTarget.as(ServiceHandle.class);
                 ((xService) template).start(hService);
                 }
 
@@ -96,9 +98,9 @@ public abstract class OpCallable extends Op
 
                 FunctionHandle hFinally = frameNew.f_ahReturn[0].as(FunctionHandle.class);
 
-                if (template.isService())
+                if (hService != null)
                     {
-                    ((xService) template).invokeAsync(frame, hFinally, ahVar, Utils.OBJECTS_NONE);
+                    ((xService) template).invokeAsync(frame, hService, hFinally, ahVar, Utils.OBJECTS_NONE);
 
                     // create a FutureRef
                     ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Public);

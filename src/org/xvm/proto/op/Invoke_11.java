@@ -1,7 +1,12 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+import org.xvm.proto.Utils;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService;
 
@@ -38,7 +43,7 @@ public class Invoke_11 extends OpInvocable
                 Utils.resolveConst(frame, method.m_argTypeName[0], f_nArgValue);
 
         ObjectHandle[] ahReturn;
-        ObjectHandle hException;
+        ExceptionHandle hException;
 
         if (method.isNative())
             {
@@ -47,11 +52,8 @@ public class Invoke_11 extends OpInvocable
             }
         else if (template.isService())
             {
-            ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hArg};
-            ahReturn = new ObjectHandle[1];
-
-            hException = ((xService) template).invokeAsync(frame, xFunction.makeHandle(method),
-                    ahArg, ahReturn);
+            hException = xFunction.makeAsyncHandle(method).
+                    invoke(frame, new ObjectHandle[]{hTarget, hArg}, ahReturn = new ObjectHandle[1]);
             }
         else
             {

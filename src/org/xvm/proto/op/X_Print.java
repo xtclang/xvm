@@ -4,6 +4,8 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 
+import java.util.Date;
+
 /**
  * Debugging only.
  *
@@ -23,15 +25,17 @@ public class X_Print extends Op
         {
         int nValue = f_nValue;
 
+        String sPrefix = new Date().toString() + " " + frame.f_context.toString() + ": ";
         if (nValue >= 0)
             {
-            ObjectHandle handle = frame.f_ahVar[nValue];
+            ObjectHandle handle = frame.f_ahVar[nValue].as(ObjectHandle.class);
 
-            System.out.println(handle);
+            System.out.println(sPrefix + handle);
             }
         else
             {
-            System.out.println(frame.f_context.f_constantPool.getConstantValue(-nValue).getValueString());
+            System.out.println(sPrefix +
+                    frame.f_context.f_constantPool.getConstantValue(-nValue).getValueString());
             }
 
         return iPC + 1;

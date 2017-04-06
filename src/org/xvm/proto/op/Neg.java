@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
 
@@ -29,7 +30,7 @@ public class Neg extends OpInvocable
 
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        ObjectHandle hException = template.invokeNeg(frame, hTarget, ahRet);
+        ExceptionHandle hException = template.invokeNeg(frame, hTarget, ahRet);
 
         if (hException == null)
             {

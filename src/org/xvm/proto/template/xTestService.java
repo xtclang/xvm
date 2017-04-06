@@ -52,6 +52,7 @@ public class xTestService extends xService
         //      }
         mtIncrement.m_aop = new Op[]
             {
+            new X_Print(-adapter.ensureConstantValueId("# in increment@TestService #")),
             new Var(adapter.getClassConstId("x:Int64")), // (#1)
             new Get(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
             new IVar(adapter.getClassConstId("x:Int64"), adapter.ensureConstantValueId(1)), // (#2)

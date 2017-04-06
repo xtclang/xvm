@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 /**
  * THROW rvalue
@@ -21,7 +22,7 @@ public class Throw extends Op
     public int process(Frame frame, int iPC)
         {
         // there are no "const" exceptions
-        frame.m_hException = frame.f_ahVar[f_nValue];
+        frame.m_hException = (ExceptionHandle) frame.f_ahVar[f_nValue];
 
         return RETURN_EXCEPTION;
         }

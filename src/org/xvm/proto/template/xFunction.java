@@ -3,6 +3,9 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool.ClassConstant;
 import org.xvm.asm.ConstantPool.MethodConstant;
+
+import org.xvm.proto.template.xService.ServiceHandle;
+
 import org.xvm.proto.*;
 
 /**
@@ -76,12 +79,19 @@ public class xFunction
 
         // ----- FunctionHandle interface -----
 
-        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
+        // return an exception
+        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
             {
             return invoke(frame, Utils.resolveArguments(frame, m_invoke, ahVar, anArg), ahReturn);
             }
 
-        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+        // return an exception
+        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+            {
+            return execute(frame.f_context, frame, null, prepareVars(ahArg), ahReturn);
+            }
+
+        public ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
             {
             int cArgs = ahArg.length;
             int cVars = m_invoke.m_cVars;
@@ -111,10 +121,15 @@ public class xFunction
                 }
 
             addBoundArguments(ahVar);
+            return ahVar;
+            }
 
-            Frame frameNew = frame.f_context.createFrame(frame, m_invoke, null, ahVar);
+        public ExceptionHandle execute(ServiceContext context, Frame frame, ObjectHandle hTarget,
+                                    ObjectHandle[] ahVar, ObjectHandle[] ahReturn)
+            {
+            Frame frameNew = context.createFrame(frame, m_invoke, hTarget, ahVar);
 
-            ObjectHandle hException = frameNew.execute();
+            ExceptionHandle hException = frameNew.execute();
 
             int cReturns = ahReturn.length;
             assert cReturns <= m_invoke.m_cReturns;
@@ -163,13 +178,13 @@ public class xFunction
             }
 
         @Override
-        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
             {
             return m_hDelegate.invoke(frame, ahVar, anArg, ahReturn);
             }
 
         @Override
-        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
             return m_hDelegate.invoke(frame, ahArg, ahReturn);
             }
@@ -195,10 +210,10 @@ public class xFunction
         protected int m_iArg; // the bound argument index
         protected ObjectHandle m_hArg;
 
-        protected BoundHandle(TypeComposition clazz, FunctionHandle handleBase,
+        protected BoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
                               int iArg, ObjectHandle hArg)
             {
-            super(clazz, handleBase);
+            super(clazz, hDelegate);
 
             m_iArg = iArg;
             m_hArg = hArg;
@@ -228,23 +243,35 @@ public class xFunction
 
         // ----- FunctionHandle interface -----
 
-        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
-            {
-            throw new UnsupportedOperationException();
-            }
-
         @Override
-        public ObjectHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
-            throw new UnsupportedOperationException();
+            if (m_invoke.isNative())
+                {
+                return super.invoke(frame, ahArg, ahReturn);
+                }
+
+            ServiceHandle hService = ahArg[0].as(ServiceHandle.class);
+
+            if (frame.f_context == hService.m_context)
+                {
+                return super.invoke(frame, ahArg, ahReturn);
+                }
+
+            xService service = (xService) m_invoke.getClazzTemplate();
+            return service.invokeAsync(frame, hService, this, ahArg, ahReturn);
             }
+        }
+
+    public static AsyncHandle makeAsyncHandle(InvocationTemplate function)
+        {
+        assert function.getClazzTemplate().isService();
+
+        return new AsyncHandle(INSTANCE.f_clazzCanonical, function);
         }
 
     public static FunctionHandle makeHandle(InvocationTemplate function)
         {
-        TypeCompositionTemplate template = function.getClazzTemplate();
-        return template.isService() ?
-            new AsyncHandle(INSTANCE.f_clazzCanonical, function) :
-            new FunctionHandle(INSTANCE.f_clazzCanonical, function);
+        return new FunctionHandle(INSTANCE.f_clazzCanonical, function);
         }
     }
