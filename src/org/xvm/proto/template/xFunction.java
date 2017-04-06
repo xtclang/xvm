@@ -251,7 +251,15 @@ public class xFunction
                 return super.invoke(frame, ahArg, ahReturn);
                 }
 
-            ServiceHandle hService = ahArg[0].as(ServiceHandle.class);
+            ServiceHandle hService;
+            try
+                {
+                hService = ahArg[0].as(ServiceHandle.class);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return e.getExceptionHandle();
+                }
 
             if (frame.f_context == hService.m_context)
                 {

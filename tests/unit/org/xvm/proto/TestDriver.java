@@ -27,8 +27,8 @@ public class TestDriver
         ServiceContext context = container.createContext();
         context.start(null, "TestDriver");
 
-        runTests(test, context);
-        runTests(test2, context);
+//        runTests(test, context);
+//        runTests(test2, context);
         runTests(testService, context);
         }
 

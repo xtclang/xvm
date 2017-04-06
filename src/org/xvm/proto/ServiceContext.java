@@ -44,13 +44,14 @@ public class ServiceContext
         return new Frame(this, framePrev, template, hTarget, ahVar);
         }
 
-    public void start(ServiceHandle hService, String sName)
+    public ExceptionHandle start(ServiceHandle hService, String sName)
         {
         m_hService = hService;
 
         // TODO: we need to be able to share native threads across services
         ServiceDaemon daemon = m_daemon = new ServiceDaemon(sName, this);
         daemon.start();
+        return null;
         }
 
     // wait for any messages coming in
@@ -135,6 +136,7 @@ public class ServiceContext
         @Override
         public void process(ServiceContext context)
             {
+// try {System.out.println(this + " completing");Thread.sleep(10000);}catch (Throwable e) {}
             if (f_hException == null)
                 {
                 f_future.complete(f_ahReturn);

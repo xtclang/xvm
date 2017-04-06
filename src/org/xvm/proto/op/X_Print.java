@@ -28,9 +28,16 @@ public class X_Print extends Op
         String sPrefix = new Date().toString() + " " + frame.f_context.toString() + ": ";
         if (nValue >= 0)
             {
-            ObjectHandle handle = frame.f_ahVar[nValue].as(ObjectHandle.class);
+            try
+                {
+                ObjectHandle handle = frame.f_ahVar[nValue].as(ObjectHandle.class);
 
-            System.out.println(sPrefix + handle);
+                System.out.println(sPrefix + handle);
+                }
+            catch (ObjectHandle.ExceptionHandle.WrapperException e)
+                {
+                System.out.println(sPrefix  + " exception " + e.getExceptionHandle());
+                }
             }
         else
             {

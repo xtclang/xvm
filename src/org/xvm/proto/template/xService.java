@@ -86,10 +86,20 @@ public class xService
         return hService;
         }
 
-    public void start(ServiceHandle hService)
+    public ExceptionHandle start(ServiceHandle hService)
         {
-        StringHandle hName = getProperty(hService, "serviceName").as(StringHandle.class);
-        hService.m_context.start(hService, hName.getValue());
+        ObjectHandle[] ahRet = new ObjectHandle[1];
+        getProperty(hService, "serviceName", ahRet);
+
+        try
+            {
+            StringHandle hName = ahRet[0].as(StringHandle.class);
+            return hService.m_context.start(hService, hName.getValue());
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
         }
 
     // return an exception
@@ -117,7 +127,15 @@ public class xService
     @Override
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
-        ServiceHandle hThis = hTarget.as(ServiceHandle.class);
+        ServiceHandle hThis;
+        try
+            {
+            hThis = hTarget.as(ServiceHandle.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
 
         throw new IllegalStateException("Unknown method: " + method);
         }
@@ -166,6 +184,7 @@ public class xService
 
         @Override
         public <T extends ObjectHandle> T as(Class<T> clz)
+                throws ExceptionHandle.WrapperException
             {
             if (clz == FutureHandle.class)
                 {

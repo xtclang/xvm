@@ -381,27 +381,47 @@ public abstract class TypeCompositionTemplate
         }
 
     // get a property value
-    public ObjectHandle getProperty(ObjectHandle hTarget, String sName)
+    public ExceptionHandle getProperty(ObjectHandle hTarget, String sName, ObjectHandle[] ahRet)
         {
-        GenericHandle hThis = hTarget.as(GenericHandle.class);
-        ObjectHandle  hProp = hThis.m_mapFields.get(sName);
+        GenericHandle hThis;
+        try
+            {
+            hThis = hTarget.as(GenericHandle.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
+
+        ObjectHandle hProp = hThis.m_mapFields.get(sName);
         if (hProp == null)
             {
             throw new IllegalStateException((hThis.m_mapFields.containsKey(sName) ?
                     "Un-initialized property " : "Invalid property ") + sName);
             }
-        return hProp;
+        ahRet[0] = hProp;
+        return null;
         }
 
     // set a property value
-    public void setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
+    public ExceptionHandle setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
         {
         // TODO: check the access rights
-        GenericHandle hThis = hTarget.as(GenericHandle.class);
+        GenericHandle hThis;
+        try
+            {
+            hThis = hTarget.as(GenericHandle.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
 
         assert hThis.m_mapFields.containsKey(sName);
 
         hThis.m_mapFields.put(sName, hValue);
+
+        return null;
         }
 
     // return a handle with this:struct access

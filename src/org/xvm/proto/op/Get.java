@@ -37,42 +37,37 @@ public class Get extends OpInvocable
 
         MethodTemplate method = property.m_templateGet;
 
+        ObjectHandle[] ahRet;
+        ExceptionHandle hException;
+
         if (method == null)
             {
-            frame.f_ahVar[f_nRetValue] = template.getProperty(hTarget, property.f_sName);
+            hException = template.getProperty(hTarget, property.f_sName, ahRet = new ObjectHandle[1]);
+            }
+        else if (method.isNative())
+            {
+            hException = template.invokeNative01(frame, hTarget, method, ahRet = new ObjectHandle[1]);
             }
         else
             {
-            // almost identical to the second part of Invoke_01
-            ObjectHandle[] ahRet;
-            ExceptionHandle hException;
+            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-            if (method.isNative())
-                {
-                ahRet = new ObjectHandle[1];
-                hException = template.invokeNative01(frame, hTarget, method, ahRet);
-                }
-            else
-                {
-                ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
 
-                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+            hException = frameNew.execute();
 
-                hException = frameNew.execute();
-
-                ahRet = frameNew.f_ahReturn;
-                }
-
-            if (hException == null)
-                {
-                frame.f_ahVar[f_nRetValue] = ahRet[0];
-                }
-            else
-                {
-                frame.m_hException = hException;
-                return RETURN_EXCEPTION;
-                }
+            ahRet = frameNew.f_ahReturn;
             }
-        return iPC + 1;
+
+        if (hException == null)
+            {
+            frame.f_ahVar[f_nRetValue] = ahRet[0];
+            return iPC + 1;
+            }
+        else
+            {
+            frame.m_hException = hException;
+            return RETURN_EXCEPTION;
+            }
         }
     }

@@ -54,7 +54,16 @@ public class xString
     @Override
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
-        StringHandle hThis = hTarget.as(StringHandle.class);
+        StringHandle hThis;
+        try
+            {
+            hThis = hTarget.as(StringHandle.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
+
         switch (method.f_sName)
             {
             case "length$get": // length.get()
@@ -67,19 +76,36 @@ public class xString
     @Override
     public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
-        StringHandle hThis = hTarget.as(StringHandle.class);
+        StringHandle hThis;
+        try
+            {
+            hThis = hTarget.as(StringHandle.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
+
         switch (method.f_sName)
             {
             case "indexOf": // indexOf(String)
                 if (hArg.isAssignableTo(StringHandle.class))
                     {
-                    int nOf = hThis.m_sValue.indexOf(hArg.as(StringHandle.class).m_sValue);
-
-                    ahReturn[0] = xInt64.makeHandle(nOf);
-                    return null;
+                    try
+                        {
+                        int nOf = hThis.m_sValue.indexOf(hArg.as(StringHandle.class).m_sValue);
+                        ahReturn[0] = xInt64.makeHandle(nOf);
+                        return null;
+                        }
+                    catch (ExceptionHandle.WrapperException e)
+                        {
+                        return e.getExceptionHandle();
+                        }
                     }
+
+            default:
+                throw new IllegalStateException("Unknown method: " + method);
             }
-        throw new IllegalStateException("Unknown method: " + method);
         }
 
     @Override

@@ -42,10 +42,17 @@ public class Call_11 extends OpCallable
             }
         else if (f_nFunctionValue >= 0)
             {
-            FunctionHandle function = frame.f_ahVar[f_nFunctionValue].as(FunctionHandle.class);
+            ahReturn = new ObjectHandle[1];
+            try
+                {
+                FunctionHandle function = frame.f_ahVar[f_nFunctionValue].as(FunctionHandle.class);
 
-            hException = function.invoke(frame, frame.f_ahVar,
-                    new int[] {f_nArgValue}, ahReturn = new ObjectHandle[1]);
+                hException = function.invoke(frame, frame.f_ahVar, new int[]{f_nArgValue}, ahReturn);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                hException = e.getExceptionHandle();
+                }
             }
         else
             {
