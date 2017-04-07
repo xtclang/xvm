@@ -821,18 +821,525 @@ public class Parser
      * Parse any expression.
      *
      * <p/><code><pre>
+     * Expression
+     *     TernaryExpression
+     *     TernaryExpression ":" Expression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseExpression()
         {
-        // TODO for now, just parse a name or a literal
+        Expression expr = parseTernaryExpression();
+        if (peek().getId() == Id.COLON)
+            {
+            expr = new BiExpression(expr, current(), parseExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a ternary expression, which is the "a ? b : c" expression.
+     *
+     * <p/><code><pre>
+     * TernaryExpression
+     *     ElvisExpression
+     *     ElvisExpression Whitespace "?" TernaryExpression ":" TernaryExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseTernaryExpression()
+        {
+        Expression expr = parseElvisExpression();
+        if (peek().getId() == Id.COND && peek().hasLeadingWhitespace())
+            {
+            expect(Id.COND);
+            Expression exprThen = parseTernaryExpression();
+            expect(Id.COLON);
+            Expression exprElse = parseTernaryExpression();
+            expr = new TernaryExpression(expr, exprThen, exprElse);
+            }
+        return expr;
+        }
+
+    /**
+     * Parse an "elvis" expression, which is of the form "a ?: b".
+     *
+     * <p/><code><pre>
+     * ElvisExpression
+     *     OrExpression
+     *     OrExpression ?: ElvisExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseElvisExpression()
+        {
+        Expression expr = parseOrExpression();
+        if (peek().getId() == Id.COND_ELSE)
+            {
+            expr = new BiExpression(expr, current(), parseElvisExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a logical "or" expression.
+     *
+     * <p/><code><pre>
+     * OrExpression
+     *     AndExpression
+     *     OrExpression || AndExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseOrExpression()
+        {
+        Expression expr = parseAndExpression();
+        while (peek().getId() == Id.COND_OR)
+            {
+            expr = new BiExpression(expr, current(), parseAndExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a logical "and" expression.
+     *
+     * <p/><code><pre>
+     * AndExpression
+     *     BitOrExpression
+     *     AndExpression && BitOrExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseAndExpression()
+        {
+        Expression expr = parseBitOrExpression();
+        while (peek().getId() == Id.COND_AND)
+            {
+            expr = new BiExpression(expr, current(), parseBitOrExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a bitwise "or" expression.
+     *
+     * <p/><code><pre>
+     * BitOrExpression
+     *     BitXorExpression
+     *     BitOrExpression | BitXorExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseBitOrExpression()
+        {
+        Expression expr = parseBitXorExpression();
+        while (peek().getId() == Id.BIT_OR)
+            {
+            expr = new BiExpression(expr, current(), parseBitXorExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a bitwise "xor" expression.
+     *
+     * <p/><code><pre>
+     * BitXorExpression
+     *     BitAndExpression
+     *     BitXorExpression ^ BitAndExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseBitXorExpression()
+        {
+        Expression expr = parseBitAndExpression();
+        while (peek().getId() == Id.BIT_XOR)
+            {
+            expr = new BiExpression(expr, current(), parseBitAndExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a bitwise "and" expression.
+     *
+     * <p/><code><pre>
+     * BitAndExpression
+     *     EqualityExpression
+     *     BitAndExpression & EqualityExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseBitAndExpression()
+        {
+        Expression expr = parseEqualityExpression();
+        while (peek().getId() == Id.BIT_AND)
+            {
+            expr = new BiExpression(expr, current(), parseEqualityExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse an equality/inequality expression.
+     *
+     * <p/><code><pre>
+     * EqualityExpression
+     *     RelationalExpression
+     *     EqualityExpression "==" RelationalExpression
+     *     EqualityExpression "!=" RelationalExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseEqualityExpression()
+        {
+        Expression expr = parseRelationalExpression();
+        while (peek().getId() == Id.COMP_EQ || peek().getId() == Id.COMP_NEQ)
+            {
+            expr = new BiExpression(expr, current(), parseRelationalExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a relational expression.
+     *
+     * <p/><code><pre>
+     * RelationalExpression
+     *     RangeExpression
+     *     RelationalExpression "<" RangeExpression
+     *     RelationalExpression ">" RangeExpression
+     *     RelationalExpression "<=" RangeExpression
+     *     RelationalExpression ">=" RangeExpression
+     *     RelationalExpression "<=>" RangeExpression
+     *     RelationalExpression "instanceof" TypeExpression
+     *     RelationalExpression "as" TypeExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseRelationalExpression()
+        {
+        Expression expr = parseRangeExpression();
+        while (true)
+            {
+            switch (peek().getId())
+                {
+                case COMP_LT:
+                case COMP_GT:
+                case COMP_LTEQ:
+                case COMP_GTEQ:
+                case COMP_ORD:
+                    expr = new BiExpression(expr, current(), parseRangeExpression());
+                    break;
+
+                case INSTANCEOF:
+                case AS:
+                    expr = new BiExpression(expr, current(), parseTypeExpression());
+                    break;
+
+                default:
+                    return expr;
+                }
+            }
+        }
+
+    /**
+     * Parse a range or interval expression.
+     *
+     * <p/><code><pre>
+     * RangeExpression
+     *     ShiftExpression
+     *     RangeExpression ".." ShiftExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseRangeExpression()
+        {
+        Expression expr = parseShiftExpression();
+        while (peek().getId() == Id.DOTDOT)
+            {
+            expr = new BiExpression(expr, current(), parseShiftExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a bitwise shift expression.
+     *
+     * <p/><code><pre>
+     * ShiftExpression
+     *     AdditiveExpression
+     *     ShiftExpression "<<" AdditiveExpression
+     *     ShiftExpression ">>" AdditiveExpression
+     *     ShiftExpression ">>>" AdditiveExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseShiftExpression()
+        {
+        Expression expr = parseAdditiveExpression();
+        while (true)
+            {
+            switch (peek().getId())
+                {
+                case SHL:
+                case SHR:
+                case USHR:
+                    expr = new BiExpression(expr, current(), parseRangeExpression());
+                    break;
+
+                default:
+                    return expr;
+                }
+            }
+        }
+
+    /**
+     * Parse an addition or substraction expression.
+     *
+     * <p/><code><pre>
+     * AdditiveExpression
+     *     MultiplicativeExpression
+     *     AdditiveExpression "+" MultiplicativeExpression
+     *     AdditiveExpression "-" MultiplicativeExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseAdditiveExpression()
+        {
+        Expression expr = parseMultiplicativeExpression();
+        while (peek().getId() == Id.ADD || peek().getId() == Id.SUB)
+            {
+            expr = new BiExpression(expr, current(), parseMultiplicativeExpression());
+            }
+        return expr;
+        }
+
+    /**
+     * Parse a multiplication / division / modulo expression.
+     *
+     * <p/><code><pre>
+     * MultiplicativeExpression
+     *     PrefixExpression
+     *     MultiplicativeExpression "*" PrefixExpression
+     *     MultiplicativeExpression "/" PrefixExpression
+     *     MultiplicativeExpression "%" PrefixExpression
+     *     MultiplicativeExpression "/%" PrefixExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseMultiplicativeExpression()
+        {
+        Expression expr = parsePrefixExpression();
+        while (true)
+            {
+            switch (peek().getId())
+                {
+                case MUL:
+                case DIV:
+                case MOD:
+                case DIVMOD:
+                    expr = new BiExpression(expr, current(), parsePrefixExpression());
+                    break;
+
+                default:
+                    return expr;
+                }
+            }
+        }
+
+    /**
+     * Parse a prefix expression.
+     *
+     * <p/><code><pre>
+     * PrefixExpression
+     *     PostfixExpression
+     *     "++" PrefixExpression
+     *     "--" PrefixExpression
+     *     "+" PrefixExpression
+     *     "-" PrefixExpression
+     *     "!" PrefixExpression
+     *     "~" PrefixExpression
+     *     "&" PrefixExpression
+     *     "new" TypeExpression ArgumentList
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parsePrefixExpression()
+        {
         switch (peek().getId())
             {
+            case INC:
+            case DEC:
+            case ADD:
+            case SUB:
+            case NOT:
+            case BIT_NOT:
+            case BIT_AND:
+                return new PrefixExpression(current(), parsePrefixExpression());
+
+            case NEW:
+                return new NewExpression(current(), parseTypeExpression(), parseArgumentList(true));
+
+            default:
+                return parsePostfixExpression();
+            }
+        }
+
+    /**
+     * Parse a prefix expression.
+     *
+     * <p/><code><pre>
+     * PostfixExpression
+     *     PrimaryExpression
+     *     PostfixExpression "++"
+     *     PostfixExpression "--"
+     *     PostfixExpression ArgumentList
+     *     PostfixExpression ArrayDims
+     *     PostfixExpression ArrayIndex
+     *     PostfixExpression NoWhitespace "?"
+     *     PostfixExpression "." Name
+     *     PostfixExpression ".new" ArgumentList
+     *     PostfixExpression ".instanceof" "(" TypeExpression ")"
+     *     PostfixExpression ".as" "(" TypeExpression ")"
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parsePostfixExpression()
+        {
+        Expression expr = parsePrimaryExpression();
+        while (true)
+            {
+            switch (peek().getId())
+                {
+                case COND:
+                    if (peek().hasLeadingWhitespace())
+                        {
+                        // the trailing "?" operator MUST NOT have whitespace before it, otherwise
+                        // it indicates a ternary operator
+                        return expr;
+                        }
+                    // fall through;
+                case INC:
+                case DEC:
+                    expr = new PostfixExpression(expr, current());
+                    break;
+
+                case DOT:
+                    {
+                    Token dot  = current();
+                    switch (peek().getId())
+                        {
+                        case NEW:
+                            {
+                            // TODO
+                            }
+
+                        case INSTANCEOF:
+                        case AS:
+                            {
+                            // TODO
+                            }
+
+                        case IDENTIFIER:
+                            // TODO - could be a problem here if we're actually in a TypeExpression and we encounter a "<"
+                            break;
+
+                        default:
+                            expect(Id.IDENTIFIER);
+                            skipToNextStatement();
+                            return expr;
+                        }
+                    }
+
+                case L_PAREN:
+                    // ArgumentList
+                    // TODO
+                    break;
+
+                case L_SQUARE:
+                    // ArrayDims
+                    // ArrayIndex
+                    // TODO
+                    break;
+
+                default:
+                    return expr;
+                }
+            }
+        }
+
+    /**
+     * Parse a primary expression.
+     *
+     * <p/><code><pre>
+     * # Note: A parenthesized Expression, a TupleLiteral, and a LambdaExpression share a parse path
+     * PrimaryExpression
+     *     Name
+     *     Literal
+     *     LambdaExpression
+     *     "(" Expression ")"
+     *     "TODO" TodoMessage-opt
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parsePrimaryExpression()
+        {
+        switch (peek().getId())
+            {
+            default:
             case IDENTIFIER:
-                // TODO this is just a place-holder, because lots of expressions start with a name
-                return new NameExpression(parseQualifiedName());
+                // TODO it could be a literal if identifier is followed by ":", e.g. "Tuple:(...)"
+                return new NameExpression(expect(Id.IDENTIFIER));
+
+            case L_PAREN:
+                {
+                /// this could be a tuple literal, a parenthesized expression, or a lambda
+                // expression's parameter list
+                expect(Id.L_PAREN);
+                Expression expr = parseExpression();
+                switch (peek().getId())
+                    {
+                    case COMMA:
+                        // expression list indicates tuple literal or lambda expression
+                        // inferred-type parameter list; the remainder of the list needs to be
+                        // parsed to see if it's followed by a lambda operator
+                        // TODO
+
+                    case R_PAREN:
+                        // this is either a parenthesized expression or a single parameter for a
+                        // lambda (it's not a tuple literal)
+                        // TODO
+
+                    case IDENTIFIER:
+                        // it has to be a lambda, because we just parse an expression (which must
+                        // have been a parameter type) and now we have the parameter name
+                        // TODO
+
+                    default:
+                        expect(Id.R_PAREN);
+                        skipToNextStatement();
+                        return expr;
+                    }
+                }
 
             case LIT_CHAR:
             case LIT_STRING:
@@ -841,12 +1348,10 @@ public class Parser
             case LIT_BIN:
                 return new LiteralExpression(current());
 
+            // TODO other literals
+
             case TODO:
                 return parseTodoExpression();
-
-            default:
-                // TODO
-                throw new UnsupportedOperationException("parse expr");
             }
         }
 
@@ -1197,7 +1702,7 @@ public class Parser
         Token token = peek();
         if (token != null && token.getId() == Id.L_PAREN && !token.hasLeadingWhitespace())
             {
-            args = parseArgumentList(false);
+            args = parseArgumentList(true);
             }
 
         return new Annotation(type, args);
