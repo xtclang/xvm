@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.proto.*;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.op.Return_0;
 import org.xvm.proto.op.Set;
 
@@ -45,15 +46,25 @@ public class xException
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new ObjectHandle.ExceptionHandle(f_clazzCanonical, false);
+        return new ExceptionHandle(f_clazzCanonical, false);
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame)
+    public ObjectHandle createStruct()
         {
-        ObjectHandle.ExceptionHandle handle = new ObjectHandle.ExceptionHandle(f_clazzCanonical, true);
-        setProperty(handle, "stackTrace", xString.makeHandle(frame.getStackTrace()));
-        return handle;
+        return makeHandle(null);
         }
 
+    public static ExceptionHandle makeHandle(ExceptionHandle hCause)
+        {
+        ExceptionHandle hException = new ExceptionHandle(INSTANCE.f_clazzCanonical, true);
+
+        ServiceContext context = ServiceContext.getCurrentContext();
+        Frame frame = context.getCurrentFrame();
+
+        INSTANCE.setProperty(hException, "stackTrace", xString.makeHandle(frame.getStackTrace()));
+        INSTANCE.setProperty(hException, "cause", hCause);
+
+        return hException;
+        }
     }

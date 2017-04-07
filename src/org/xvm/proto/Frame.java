@@ -38,14 +38,18 @@ public class Frame
         f_hTarget = hTarget;
         f_ahVar = ahVar; // [0] - target:private for methods
         f_aiRegister = new int[] {0, -1};
-        f_anNextVar = new int[f_function.m_cScopes];
 
-        int c = function.m_cReturns;
-        f_ahReturn = c == 0 ? Utils.OBJECTS_NONE : new  ObjectHandle[c];
+        int cScopes = function == null ? 1 : function.m_cScopes;
+        f_anNextVar = new int[cScopes];
+
+        int cReturns = function == null ? 0 : function.m_cReturns;
+        f_ahReturn = cReturns == 0 ? Utils.OBJECTS_NONE : new  ObjectHandle[cReturns];
         }
 
     public ExceptionHandle execute()
         {
+        f_context.m_frameCurrent = this;
+
         Op[] abOps = f_function.m_aop;
 
         if (f_hTarget == null)
@@ -75,6 +79,7 @@ public class Frame
                 {
                 if (iPC == Op.RETURN_NORMAL)
                     {
+                    f_context.m_frameCurrent = f_framePrev;
                     return null;
                     }
 
@@ -89,6 +94,7 @@ public class Frame
                     }
 
                 // not handled by this frame
+                f_context.m_frameCurrent = f_framePrev;
                 return m_hException;
                 }
             }

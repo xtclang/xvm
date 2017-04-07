@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xTest;
 import org.xvm.proto.template.xTest2;
 import org.xvm.proto.template.xTestService;
@@ -24,39 +25,30 @@ public class TestDriver
         xTestService testService = new xTestService(container.f_types);
         container.f_types.addTemplate(testService);
 
-        ServiceContext context = container.createContext();
-        context.start(null, "TestDriver");
-
-//        runTests(test, context);
-//        runTests(test2, context);
-        runTests(testService, context);
+//        runTests(test, container);
+//        runTests(test2, container);
+        runTests(testService, container);
         }
 
-    protected static void runTests(TypeCompositionTemplate template, ServiceContext context)
+    protected static void runTests(xService service, Container container)
         {
-        System.out.println("\n\n##### Running tests for " + template + " #####");
-        template.forEachFunction(function ->
-            {
-            if (function.f_sName.startsWith("test") && function.m_cArgs == 0)
-                {
-                try
-                    {
-                    System.out.println("\n### Calling " + function + " ###");
+        System.out.println("\n\n##### Running tests for " + service + " #####");
 
-                    ObjectHandle.ExceptionHandle hException = context.createFrame(null, function, null,
-                            new ObjectHandle[function.m_cVars]).execute();
-                    if (hException != null)
-                        {
-                        System.out.println("Function " + function.f_sName + " threw unhandled " + hException);
-                        }
-                    }
-                catch (Exception e)
-                    {
-                    System.out.println("Failed to execute " + function);
-                    e.printStackTrace(System.out);
-                    }
+        xService.ServiceHandle hService = container.startService(service, null);
+
+        service.forEachMethod(method ->
+            {
+            if (method.f_sName.startsWith("test") && method.m_cArgs == 0)
+                {
+                container.runMethod(hService, method.f_sName, Utils.OBJECTS_NONE);
                 }
             });
+
+        try
+            {
+            Thread.sleep(10000);
+            }
+        catch (InterruptedException e) {}
         }
 
     }

@@ -20,8 +20,9 @@ public class ServiceContext
     public final ObjectHeap f_heapGlobal;
     public final ConstantPoolAdapter f_constantPool;
 
-    private ServiceHandle m_hService;
-    private ServiceDaemon m_daemon;
+    protected ServiceHandle m_hService;
+    protected ServiceDaemon m_daemon;
+
     public Frame m_frameCurrent;
 
     ServiceContext(Container container)
@@ -30,6 +31,16 @@ public class ServiceContext
         f_heapGlobal = container.f_heapGlobal;
         f_types = container.f_types;
         f_constantPool = container.f_constantPoolAdapter;
+        }
+
+    public Frame getCurrentFrame()
+        {
+        return m_frameCurrent;
+        }
+
+    public static ServiceContext getCurrentContext()
+        {
+        return ServiceDaemon.s_tloContext.get();
         }
 
     @Override
@@ -51,6 +62,12 @@ public class ServiceContext
         // TODO: we need to be able to share native threads across services
         ServiceDaemon daemon = m_daemon = new ServiceDaemon(sName, this);
         daemon.start();
+
+        while (!daemon.isStarted())
+            {
+            // TODO: timeout
+            yield();
+            }
         return null;
         }
 
@@ -109,7 +126,7 @@ public class ServiceContext
             {
             ObjectHandle[] ahReturn = f_cReturns == 0 ? Utils.OBJECTS_NONE : new ObjectHandle[f_cReturns];
 
-            ExceptionHandle hException = f_hFunction.execute(context, null,
+            ExceptionHandle hException = f_hFunction.invoke(context, null,
                     f_ahArg[0], f_hFunction.prepareVars(f_ahArg), ahReturn);
 
             context.sendResponse(f_contextCaller, hException, ahReturn, f_future);

@@ -19,9 +19,12 @@ public interface TypeName
 
     String getSimpleName();
 
-    // resolve the elements of the type for the specified template
+    // load the dependant classes of the type for the specified template
     // (some elements may stay "formal" (unresolved)
-    void resolve(TypeCompositionTemplate template);
+    void resolveDependencies(TypeCompositionTemplate template);
+
+    // return a resolved Type based on the actual types
+    Type resolveFormalTypes(TypeComposition clz);
 
     // ----- helpers -----
 
@@ -207,6 +210,7 @@ public interface TypeName
         {
         String m_sName; // must be one of the actual types
         boolean m_fActual;
+        TypeCompositionTemplate m_template; // cached template
 
         SimpleTypeName(String sName)
             {
@@ -220,19 +224,31 @@ public interface TypeName
             }
 
         @Override
-        public void resolve(TypeCompositionTemplate template)
+        public void resolveDependencies(TypeCompositionTemplate template)
             {
             if (m_sName.equals("this.Type"))
                 {
+                m_template = template;
                 m_fActual = true;
                 }
             else if (!Arrays.asList(template.f_asFormalType).contains(m_sName))
                 {
                 m_sName = template.f_types.replaceAlias(m_sName);
 
-                template.f_types.ensureTemplate(m_sName);
+                m_template = template.f_types.ensureTemplate(m_sName);
                 m_fActual = true;
                 }
+            }
+
+        @Override
+        public Type resolveFormalTypes(TypeComposition clz)
+            {
+            if (isResolved())
+                {
+                return m_template.f_clazzCanonical.ensurePublicType();
+                }
+
+            return clz.resolveFormalType(m_sName);
             }
 
         @Override
@@ -250,11 +266,11 @@ public interface TypeName
 
     abstract class CompositeTypeName implements TypeName
         {
-        List<TypeName> m_aTypeName = new LinkedList<>();
+        List<TypeName> m_listTypeName = new LinkedList<>();
 
         public void add(TypeName typeName)
             {
-            m_aTypeName.add(typeName);
+            m_listTypeName.add(typeName);
             }
 
         @Override
@@ -264,18 +280,18 @@ public interface TypeName
             }
 
         @Override
-        public void resolve(TypeCompositionTemplate template)
+        public void resolveDependencies(TypeCompositionTemplate template)
             {
-            for (TypeName t : m_aTypeName)
+            for (TypeName t : m_listTypeName)
                 {
-                t.resolve(template);
+                t.resolveDependencies(template);
                 }
             }
 
         @Override
         public boolean isResolved()
             {
-            for (TypeName t : m_aTypeName)
+            for (TypeName t : m_listTypeName)
                 {
                 if (!t.isResolved())
                     {
@@ -290,6 +306,7 @@ public interface TypeName
     class GenericTypeName extends CompositeTypeName
         {
         String m_sActualName; // globally known type composition name (e.g. x:Boolean or x:annotation.AtomicRef)
+        TypeCompositionTemplate m_template; // cached template
 
         public GenericTypeName(String sName)
             {
@@ -297,13 +314,25 @@ public interface TypeName
             }
 
         @Override
-        public void resolve(TypeCompositionTemplate template)
+        public void resolveDependencies(TypeCompositionTemplate template)
             {
             m_sActualName = template.f_types.replaceAlias(m_sActualName);
 
-            template.f_types.ensureTemplate(m_sActualName);
+            m_template = template.f_types.ensureTemplate(m_sActualName);
 
-            super.resolve(template);
+            super.resolveDependencies(template);
+            }
+
+        @Override
+        public Type resolveFormalTypes(TypeComposition clz)
+            {
+            Type[] aType = new Type[m_listTypeName.size()];
+            int i = 0;
+            for (TypeName tn : m_listTypeName)
+                {
+                aType[i++] = tn.resolveFormalTypes(clz);
+                }
+            return m_template.resolve(aType).ensurePublicType();
             }
 
         @Override
@@ -315,7 +344,7 @@ public interface TypeName
         @Override
         public String toString()
             {
-            return m_sActualName + Utils.formatArray(m_aTypeName.toArray(), "<", ">", ", ");
+            return m_sActualName + Utils.formatArray(m_listTypeName.toArray(), "<", ">", ", ");
             }
         }
 
@@ -327,9 +356,16 @@ public interface TypeName
             }
 
         @Override
+        public Type resolveFormalTypes(TypeComposition clz)
+            {
+            throw new UnsupportedOperationException("TODO: create a union clazz");
+            }
+
+
+        @Override
         public String toString()
             {
-            return Utils.formatArray(m_aTypeName.toArray(), "", "", " | ");
+            return Utils.formatArray(m_listTypeName.toArray(), "", "", " | ");
             }
         }
 
@@ -341,9 +377,15 @@ public interface TypeName
             }
 
         @Override
+        public Type resolveFormalTypes(TypeComposition clz)
+            {
+            throw new UnsupportedOperationException("TODO: create an intersection clazz");
+            }
+
+        @Override
         public String toString()
             {
-            return Utils.formatArray(m_aTypeName.toArray(), "", "", " + ");
+            return Utils.formatArray(m_listTypeName.toArray(), "", "", " + ");
             }
         }
 

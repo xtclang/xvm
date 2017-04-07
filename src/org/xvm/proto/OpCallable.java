@@ -88,15 +88,8 @@ public abstract class OpCallable extends Op
 
             if (template.isService())
                 {
-                try
-                    {
-                    hService = hTarget.as(ServiceHandle.class);
-                    ((xService) template).start(hService);
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return e.getExceptionHandle();
-                    }
+                hService = (ServiceHandle) ahVar[0]; // it has just been constructed; don't call "as"
+                ((xService) template).start(hService);
                 }
 
             if (constructor.m_cReturns > 0)
@@ -115,7 +108,7 @@ public abstract class OpCallable extends Op
 
                 if (hService == null)
                     {
-                    hException = hFinally.invoke(frame, ahVar, Utils.OBJECTS_NONE);
+                    hException = hFinally.call(frame, ahVar, Utils.OBJECTS_NONE);
                     }
                 else
                     {

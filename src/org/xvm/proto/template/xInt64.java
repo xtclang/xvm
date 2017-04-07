@@ -49,7 +49,8 @@ public class xInt64
         }
 
     @Override
-    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget,
+                                     ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
         JavaLong hThis;
         JavaLong hThat;

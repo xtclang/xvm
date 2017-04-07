@@ -1,19 +1,15 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.GenericHandle;
-
-import org.xvm.proto.ServiceContext;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xString.StringHandle;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * TODO:
@@ -74,32 +70,36 @@ public class xService
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame)
+    public ObjectHandle createStruct()
         {
-        ServiceContext context = frame.f_context.f_container.createContext();
+        return createService(null);
+        }
+
+    public ServiceHandle createService(String sName)
+        {
+        ServiceContext contextCurr = ServiceContext.getCurrentContext();
+
+        ServiceContext context = contextCurr.f_container.createContext();
         ServiceHandle hService = new ServiceHandle(f_clazzCanonical, context);
 
         hService.createFields();
 
-        setProperty(hService, "serviceName",
-                xString.makeHandle(getClass().getSimpleName()));
+        if (sName == null)
+            {
+            sName = getClass().getSimpleName();
+            }
+
+        setProperty(hService, "serviceName", xString.makeHandle(sName));
         return hService;
         }
 
     public ExceptionHandle start(ServiceHandle hService)
         {
-        ObjectHandle[] ahRet = new ObjectHandle[1];
-        getProperty(hService, "serviceName", ahRet);
+        ObjectHandle[] ahName = new ObjectHandle[1];
+        getProperty(hService, "serviceName", ahName);
 
-        try
-            {
-            StringHandle hName = ahRet[0].as(StringHandle.class);
-            return hService.m_context.start(hService, hName.getValue());
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return e.getExceptionHandle();
-            }
+        StringHandle hName = (StringHandle) ahName[0];
+        return hService.m_context.start(hService, hName.getValue());
         }
 
     // return an exception
@@ -111,6 +111,9 @@ public class xService
         CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendRequest(
                 hService.m_context, hFunction, ahArg, ahReturn.length);
 
+        InvocationTemplate function = hFunction.m_invoke;
+        TypeComposition clzService = hService.f_clazz;
+
         for (int i = 0, c = ahReturn.length; i < c; i++)
             {
             final int iRet = i;
@@ -118,7 +121,7 @@ public class xService
             CompletableFuture<ObjectHandle> cfReturn =
                     cfResult.thenApply(ahResult -> ahReturn[iRet] = ahResult[iRet]);
 
-            ahReturn[i] = new ProxyHandle(hService, cfReturn);
+            ahReturn[i] = new ProxyHandle(function.getReturnType(i, clzService), cfReturn);
             }
 
         return null;
@@ -143,7 +146,8 @@ public class xService
     public static class ServiceHandle
             extends GenericHandle
         {
-        protected ServiceContext m_context;
+        public ServiceContext m_context;
+
         public ServiceHandle(TypeComposition clazz)
             {
             super(clazz);
@@ -160,20 +164,20 @@ public class xService
     public static class ProxyHandle
             extends ObjectHandle
         {
-        protected ServiceHandle m_hService;
+        protected Type m_type;
         protected CompletableFuture<ObjectHandle> m_future;
 
-        public ProxyHandle(ServiceHandle hService, CompletableFuture<ObjectHandle> future)
+        public ProxyHandle(Type type, CompletableFuture<ObjectHandle> future)
             {
-            // TODO: actually, the ProxyHandle has nothing to do with the xService template
-            super(hService.f_clazz);
+            super(null, type);
 
-            m_hService = hService;
+            m_type = type;
             m_future = future;
             }
 
         @Override
         public <T extends ObjectHandle> boolean isAssignableTo(Class<T> clz)
+                throws ExceptionHandle.WrapperException
             {
             if (clz == FutureHandle.class)
                 {
@@ -188,26 +192,35 @@ public class xService
             {
             if (clz == FutureHandle.class)
                 {
-                return (T) xFutureRef.INSTANCE.makeHandle(m_hService, m_future);
+                return (T) xFutureRef.INSTANCE.makeHandle(m_type, m_future);
                 }
             return get().as(clz);
             }
 
         protected ObjectHandle get()
+                throws ExceptionHandle.WrapperException
             {
             try
                 {
                 // TODO: use the timeout defined on the service
                 while (!m_future.isDone())
                     {
-                    m_hService.m_context.yield();
+                    ServiceContext.getCurrentContext().yield();
                     }
                 return m_future.get();
                 }
-            catch (Exception e )
+            catch (InterruptedException e)
                 {
-                // pass it onto the service handle
-                throw new UnsupportedOperationException();
+                throw new UnsupportedOperationException("TODO");
+                }
+            catch (ExecutionException e)
+                {
+                Throwable eOrig = e.getCause();
+                if (eOrig instanceof ExceptionHandle.WrapperException)
+                    {
+                    throw (ExceptionHandle.WrapperException) eOrig;
+                    }
+                throw new UnsupportedOperationException(e);
                 }
             }
         }
