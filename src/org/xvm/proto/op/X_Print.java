@@ -36,7 +36,8 @@ public class X_Print extends Op
                 }
             catch (ObjectHandle.ExceptionHandle.WrapperException e)
                 {
-                System.out.println(sPrefix  + " exception " + e.getExceptionHandle());
+                frame.m_hException = e.getExceptionHandle();
+                return RETURN_EXCEPTION;
                 }
             }
         else

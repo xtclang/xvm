@@ -8,7 +8,6 @@ import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.Utils;
 import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xService;
 
 /**
  * INVOKE_11 rvalue-target, rvalue-method, rvalue-param, lvalue-return
@@ -53,7 +52,7 @@ public class Invoke_11 extends OpInvocable
         else if (template.isService())
             {
             hException = xFunction.makeAsyncHandle(method).
-                    invoke(frame, new ObjectHandle[]{hTarget, hArg}, ahReturn = new ObjectHandle[1]);
+                    call(frame, new ObjectHandle[]{hTarget, hArg}, ahReturn = new ObjectHandle[1]);
             }
         else
             {

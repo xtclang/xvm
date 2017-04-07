@@ -37,7 +37,7 @@ public class Set extends OpInvocable
         MethodTemplate method = property.m_templateSet;
 
         ObjectHandle hArg = f_nValue >= 0 ? frame.f_ahVar[f_nValue] :
-                Utils.resolveConst(frame, method.m_argTypeName[0], -f_nValue);
+                Utils.resolveConst(frame, property.f_typeName, f_nValue);
 
         ExceptionHandle hException;
         if (method == null)
