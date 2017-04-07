@@ -438,8 +438,8 @@ BitOrExpression
     BitOrExpression | BitXorExpression
 
 BitXorExpression
-    AndExpression
-    BitXorExpression ^ AndExpression
+    BitAndExpression
+    BitXorExpression ^ BitAndExpression
 
 BitAndExpression
     EqualityExpression
@@ -462,7 +462,7 @@ RelationalExpression
 
 RangeExpression
     ShiftExpression
-    ShiftExpression ".." ShiftExpression
+    RangeExpression ".." ShiftExpression
 
 ShiftExpression
     AdditiveExpression
@@ -558,6 +558,12 @@ Entry
     Expression "=" Expression
 
 # (deferred idea)
+#   ╔═════════════════════╗
+#   ║This could be any    ║
+#   ║freeform text that   ║
+#   ║could be inside of an║
+#   ║Ecstasy source file  ║
+#   ╚═════════════════════╝
 #
 #        U+2550
 # U+2554 ╔═════╗ U+2557
@@ -573,12 +579,101 @@ Entry
 #        U+2500
 #
 FreeformLiteral
-    ╔═════════════════════╗
-    ║This could be any    ║
-    ║freeform text that   ║
-    ║could be inside of an║
-    ║Ecstasy source file  ║
-    ╚═════════════════════╝
+    FreeformTop FreeformLines FreeformBottom
+
+FreeformTop
+    Whitespace-opt FreeformUpperLeft FreeformHorizontals FreeformUpperRight Whitespace-opt LineTerminator
+
+FreeformLines
+    FreeformLine
+    FreeformLines FreeformLine
+
+FreeformLine
+    Whitespace-opt FreeformVertical FreeformChars FreeformVertical Whitespace-opt LineTerminator
+
+FreeformChars
+    FreeformChar
+    FreeformChars FreeformChars
+
+FreeformChar
+    InputCharacter except FreeFormReserved or LineTerminator
+
+FreeformBottom
+    Whitespace-opt FreeformLowerLeft FreeformHorizontals FreeformLowerRight
+
+FreeFormReserved
+    FreeformUpperLeft
+    FreeformUpperRight
+    FreeformLowerLeft
+    FreeformLowerRight
+    FreeformHorizontal
+    FreeformVertical
+
+FreeformUpperLeft
+    U+250C  ┌
+    U+250D  ┍
+    U+250E  ┎
+    U+250F  ┏
+    U+2552  ╒
+    U+2553  ╓
+    U+2554  ╔
+    U+256D  ╭
+
+FreeformUpperRight
+    U+2510  ┐
+    U+2511  ┑
+    U+2512  ┒
+    U+2513  ┓
+    U+2555  ╕
+    U+2556  ╖
+    U+2557  ╗
+    U+256E  ╮
+
+FreeformLowerLeft
+    U+2514  └
+    U+2515  ┕
+    U+2516  ┖
+    U+2517  ┗
+    U+2558  ╘
+    U+2559  ╙
+    U+255A  ╚
+    U+2570  ╰
+
+FreeformLowerRight
+    U+2518  ┘
+    U+2519  ┙
+    U+251A  ┚
+    U+251B  ┛
+    U+255B  ╛
+    U+255C  ╜
+    U+255D  ╝
+    U+256F  ╯
+
+FreeformHorizontals
+    FreeformHorizontal
+    FreeformHorizontals FreeformHorizontal
+
+FreeformHorizontal
+    U+2500  ─
+    U+2501  ━
+    U+2504  ┄
+    U+2505  ┅
+    U+2508  ┈
+    U+2509  ┉
+    U+254C  ╌
+    U+254D  ╍
+    U+2550  ═
+
+FreeformVertical
+    U+2502  │
+    U+2503  ┃
+    U+2506  ┆
+    U+2507  ┇
+    U+250A  ┊
+    U+250B  ┋
+    U+254E  ╎
+    U+254F  ╏
+    U+2551  ║
 
 CustomLiteral
     Class NoWhitespace ":" NoWhitespace StringLiteral

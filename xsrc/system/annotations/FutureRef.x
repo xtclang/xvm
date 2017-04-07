@@ -281,7 +281,7 @@ mixin FutureRef<RefType>
      *   returned from the function.
      */
     <NewType> FutureRef.Type<NewType> and(FutureRef.Type other,
-            function FutureRef.Type<NewType> (RefType, other.RefType) combine = v1, v2 -> (v1, v2))
+            function FutureRef.Type<NewType> (RefType, other.RefType) combine = (v1, v2) -> (v1, v2))
         {
         return chain(new AndStep<NewType, RefType, other.RefType>(other, combine));
         }
