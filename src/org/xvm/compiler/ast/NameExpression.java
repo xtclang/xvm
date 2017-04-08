@@ -3,7 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -17,12 +17,19 @@ public class NameExpression
     {
     public NameExpression(Token name)
         {
-        this(Arrays.asList(new Token[]{name}));
+        names = new ArrayList<>(3);
+        names.add(name);
         }
 
     public NameExpression(List<Token> names)
         {
         this.names = names;
+        }
+
+    @Override
+    public TypeExpression toTypeExpression()
+        {
+        return new NamedTypeExpression(null, names, null);
         }
 
     @Override

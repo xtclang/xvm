@@ -9,6 +9,18 @@ public abstract class Expression
     {
     // TODO first & last tokens?
 
+    public TypeExpression toTypeExpression()
+        {
+        if (this instanceof TypeExpression)
+            {
+            return (TypeExpression) this;
+            }
+        else
+            {
+            return new BadTypeExpression(this);
+            }
+        }
+
     @Override
     public abstract String toString();
     }

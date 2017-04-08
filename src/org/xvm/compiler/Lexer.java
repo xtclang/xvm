@@ -183,8 +183,8 @@ public class Lexer
                     {
                     switch (nextChar())
                         {
-                        case '.':
-                            return new Token(lInitPos, source.getPosition(), Id.COND_THEN);
+                        case '=':
+                            return new Token(lInitPos, source.getPosition(), Id.COND_ASN);
 
                         case ':':
                             return new Token(lInitPos, source.getPosition(), Id.COND_ELSE);
@@ -233,6 +233,9 @@ public class Lexer
                         {
                         case '-':
                             return new Token(lInitPos, source.getPosition(), Id.DEC);
+
+                        case '>':
+                            return new Token(lInitPos, source.getPosition(), Id.LAMBDA);
 
                         case '=':
                             return new Token(lInitPos, source.getPosition(), Id.SUB_ASN);

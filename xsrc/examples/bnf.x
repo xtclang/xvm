@@ -506,13 +506,80 @@ PostfixExpression
     PostfixExpression ".instanceof" "(" TypeExpression ")"
     PostfixExpression ".as" "(" TypeExpression ")"
 
+ArrayDims
+    ArrayDim
+    ArrayDims ArrayDim
+
+ArrayDim
+    "[" DimIndicators-opt "]"
+
+DimIndicators
+    DimIndicator
+    DimIndicators "," DimIndicator
+
+DimIndicator
+    "?"
+
+ArrayIndex
+    "[" ExpressionList "]"
+
+ExpressionList
+    Expression
+    ExpressionList "," Expression
+
+
 # Note: A parenthesized Expression, a TupleLiteral, and a LambdaExpression share a parse path
+# Note: The use of QualifiedName instead of a simple Name here (which would be logical and even
+#       expected since PostfixExpression takes care of the ".Name.Name" etc. suffix parsing) is
+#       used to capture the case where the expression is a type expression containing type
+#       parameters, and which the opening '<' of the type parameters would be parsed by the
+#       RelationalExpression rule if we miss handling it here. Unfortunately, that means that the
+#       TypeParameterList is parsed speculatively if the '<' opening token is encountered after
+#       a name, because it could (might/will occasionally) still be a "less than sign" and not a
+#       parametized type.
 PrimaryExpression
-    Name
-    Literal
-    LambdaExpression
     "(" Expression ")"
+    QualifiedNameName TypeParameterTypeList-opt
+    LambdaExpression
+    "_"
     "TODO" TodoMessage-opt
+    Literal
+
+LambdaExpression
+    LambdaInputs "->" LambdaBody
+
+LambdaInputs
+    LambdaParameterName
+    LambdaInferredList
+    LambdaParameterList
+
+LambdaInferredList
+    "(" LambdaParameterNames ")"
+
+LambdaParameterNames
+    LambdaParameterName
+    LambdaParameterNames "," LambdaParameterName
+
+LambdaParameterList
+    "(" LambdaParameters ")"
+
+LambdaParameters
+    LambdaParameter
+    LambdaParameters "," LambdaParameter
+
+LambdaParameter
+    TypeExpression LambdaParameterName
+
+LambdaParameterName
+    _
+    Name
+
+LambdaBody
+    Expression
+    StatementBlock
+
+TodoMessage
+    "(" Expression ")"
 
 Literal
     IntLiteral
@@ -557,6 +624,10 @@ Entries
 Entry
     Expression "=" Expression
 
+CustomLiteral
+    TypeExpression NoWhitespace ":{" Expression "}"
+
+
 # (deferred idea)
 #   ╔═════════════════════╗
 #   ║This could be any    ║
@@ -582,7 +653,7 @@ FreeformLiteral
     FreeformTop FreeformLines FreeformBottom
 
 FreeformTop
-    Whitespace-opt FreeformUpperLeft FreeformHorizontals FreeformUpperRight Whitespace-opt LineTerminator
+    Whitespace-opt FreeformUpperLeft NoWhitespace FreeformHorizontals NoWhitespace FreeformUpperRight Whitespace-opt LineTerminator
 
 FreeformLines
     FreeformLine
@@ -599,7 +670,7 @@ FreeformChar
     InputCharacter except FreeFormReserved or LineTerminator
 
 FreeformBottom
-    Whitespace-opt FreeformLowerLeft FreeformHorizontals FreeformLowerRight
+    Whitespace-opt FreeformLowerLeft NoWhitespace FreeformHorizontals NoWhitespace FreeformLowerRight
 
 FreeFormReserved
     FreeformUpperLeft
@@ -651,7 +722,7 @@ FreeformLowerRight
 
 FreeformHorizontals
     FreeformHorizontal
-    FreeformHorizontals FreeformHorizontal
+    FreeformHorizontals NoWhitespace FreeformHorizontal
 
 FreeformHorizontal
     U+2500  ─
@@ -674,67 +745,6 @@ FreeformVertical
     U+254E  ╎
     U+254F  ╏
     U+2551  ║
-
-CustomLiteral
-    Class NoWhitespace ":" NoWhitespace StringLiteral
-    Class NoWhitespace ":{" FreeformLiteral "}"
-
-ExpressionList
-    Expression
-    ExpressionList "," Expression
-
-TodoMessage
-    "(" Expression ")"
-
-ArrayDims
-    ArrayDim
-    ArrayDims ArrayDim
-
-ArrayDim
-    "[" DimIndicators-opt "]"
-
-DimIndicators
-    DimIndicator
-    DimIndicators "," DimIndicator
-
-DimIndicator
-    "?"
-
-ArrayIndex
-    "[" ExpressionList "]"
-
-LambdaExpression
-    LambdaInputs "->" LambdaBody
-
-LambdaInputs
-    LambdaParameterName
-    LambdaInferredList
-    LambdaParameterList
-
-LambdaInferredList
-    "(" LambdaParameterNames ")"
-
-LambdaParameterNames
-    LambdaParameterName
-    LambdaParameterNames "," LambdaParameterName
-
-LambdaParameterList
-    "(" LambdaParameters ")"
-
-LambdaParameters
-    LambdaParameter
-    LambdaParameters "," LambdaParameter
-
-LambdaParameter
-    TypeExpression LambdaParameterName
-
-LambdaParameterName
-    _
-    Name
-
-LambdaBody
-    Expression
-    StatementBlock
 
 #
 # types

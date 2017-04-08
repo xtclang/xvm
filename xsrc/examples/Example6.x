@@ -483,3 +483,55 @@ x = a ? b :
 String s = {""
             ""
             ""}
+
+// lambda problem
+
+x.y(foo(3+z(name.name((somename.secondname<
+                      ^^       ^^         ^
+                      12       34         5
+
+// 1. i know it's an expression, but i don't know what kind, e.g.
+// (4)
+
+// 2. it's an identifier. that could mean anything. type. prop. method. function. var. etc.
+
+// 3. dot tells me it's a qualified name or a prop or a method or ...
+
+// 4. ok what is it?
+
+// 5. now what? it could be "less than", or i could be parsing a generic type expression
+
+// it COULD be a less-than expression
+x.y(foo(3+z(name.name((somename<name, name> othername)))));
+
+// it COULD be a generic type, e.g. in a lambda
+x.y(foo(3+z(name.name((somename.secondname<Int,String> x, Boolean y) -> ...
+
+
+//
+
+class Parent
+    {
+    class Child {} // not static
+    }
+
+c = new Parent.Child(); // compiler error!
+p = Parent.new();
+c = p.new Child();
+c = new p.Child(); //?
+
+
+// parsing generics again
+
+name.name< ... >
+// has to be some number of types
+// 0: immediate ">"
+// 1: a type, followed by ">"
+// n: comma delimited types, followed by ">"
+// so we're looking for ">"
+// types can't contain {}
+// types can't contain ()
+// types CAN contain <>
+// types CAN contain []
+
+
