@@ -1249,6 +1249,8 @@ public class Parser
                         {
                         case NEW:
                             {
+                            Token keyword = expect(Id.NEW);
+                            parseArgumentList(true);
                             // TODO
                             }
 
@@ -1259,10 +1261,18 @@ public class Parser
                             }
 
                         case IDENTIFIER:
-                            // TODO - could be a problem here if we're actually in a TypeExpression and we encounter a "<"
+                            if (expr instanceof NameExpression)
+                                {
+                                ((NameExpression) expr).names.add(expect(Id.IDENTIFIER));
+                                }
+                            else
+                                {
+                                // TODO narrow
+                                }
                             break;
 
                         default:
+                            // unexpected token, so pretend we were looking for a name
                             expect(Id.IDENTIFIER);
                             skipToNextStatement();
                             return expr;
@@ -1280,6 +1290,12 @@ public class Parser
                     // TODO
                     break;
 
+                case COMP_LT:
+                    {
+                    // this is
+                    }
+                    // TODO name.name<
+
                 default:
                     return expr;
                 }
@@ -1289,12 +1305,24 @@ public class Parser
     /**
      * Parse a primary expression.
      *
+     * <ul><li>
+     * Note: A parenthesized Expression, a TupleLiteral, and a LambdaExpression share a parse path
+     * </li><li>
+     * Note: The use of QualifiedName instead of a simple Name here (which would be logical and even
+     *       expected since PostfixExpression takes care of the ".Name.Name" etc. suffix parsing) is
+     *       used to capture the case where the expression is a type expression containing type
+     *       parameters, and which the opening '<' of the type parameters would be parsed by the
+     *       RelationalExpression rule if we miss handling it here. Unfortunately, that means that the
+     *       TypeParameterList is parsed speculatively if the '<' opening token is encountered after
+     *       a name, because it could (might/will occasionally) still be a "less than sign" and not a
+     *       parametized type.
+     * </li></ul>
      * <p/><code><pre>
-     * # Note: A parenthesized Expression, a TupleLiteral, and a LambdaExpression share a parse path
      * PrimaryExpression
-     *     Name
+     *     QualifiedNameName TypeParameterTypeList-opt
      *     Literal
      *     LambdaExpression
+     *     "_"
      *     "(" Expression ")"
      *     "TODO" TodoMessage-opt
      * </pre></code>
@@ -1305,10 +1333,62 @@ public class Parser
         {
         switch (peek().getId())
             {
+            case IGNORED:
+                return new IgnoredNameExpression(current());
+
             default:
             case IDENTIFIER:
-                // TODO it could be a literal if identifier is followed by ":", e.g. "Tuple:(...)"
-                return new NameExpression(expect(Id.IDENTIFIER));
+                {
+                NameExpression exprName = new NameExpression(expect(Id.IDENTIFIER));
+                Token dot;
+                while ((dot = match(Id.DOT)) != null)
+                    {
+                    Token name = match(Id.IDENTIFIER);
+                    if (name == null)
+                        {
+                        putback(dot);
+                        return exprName;
+                        }
+                    else
+                        {
+                        exprName.names.add(name);
+                        }
+                    }
+
+                // test to see if there is a type parameter list (implying the expression is a type)
+                Expression expr = exprName;
+                if (peek().getId() == Id.COMP_LT)
+                    {
+                    try (SafeLookAhead attempt = new SafeLookAhead())
+                        {
+                        List<TypeExpression> params = parseTypeParameterTypeList(true);
+                        if (attempt.isClean())
+                            {
+                            attempt.keepResults();
+                            expr = new NamedTypeExpression(null, exprName.names, params);
+                            }
+                        }
+                    }
+
+                //test to see if this is a tuple literal of the form "Tuple:(", or some other
+                // type literal of the form "type:{"
+                Token colon = match(Id.COLON);
+                if (colon != null)
+                    {
+                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace() &&
+                            (peek().getId() == Id.L_CURLY ||
+                            (peek().getId() == Id.L_PAREN && expr.toString().equals("Tuple"))))
+                        {
+                        expr = parseCustomLiteral(expr.toTypeExpression());
+                        }
+                    else
+                        {
+                        putback(colon);
+                        }
+                    }
+
+                return expr;
+                }
 
             case L_PAREN:
                 {
@@ -1322,17 +1402,53 @@ public class Parser
                         // expression list indicates tuple literal or lambda expression
                         // inferred-type parameter list; the remainder of the list needs to be
                         // parsed to see if it's followed by a lambda operator
-                        // TODO
+                        List<Expression> exprs = new ArrayList<>();
+                        exprs.add(expr);
+                        while (match(Id.COMMA) != null)
+                            {
+                            exprs.add(parseExpression());
+                            }
+                        expect(Id.R_PAREN);
+
+                        if (peek().getId() == Id.LAMBDA)
+                            {
+                            return new ImplicitLambdaExpression(exprs, expect(Id.LAMBDA), parseLambdaBody());
+                            }
+
+                        // it's a Tuple literal
+                        return new TupleExpression(exprs);
 
                     case R_PAREN:
                         // this is either a parenthesized expression or a single parameter for a
                         // lambda (it's not a tuple literal)
-                        // TODO
+                        expect(Id.R_PAREN);
+                        if (peek().getId() == Id.LAMBDA)
+                            {
+                            return new ImplicitLambdaExpression(Collections.EMPTY_LIST,
+                                    expect(Id.LAMBDA), parseLambdaBody());
+                            }
+                        else
+                            {
+                            // just a parenthesized expression
+                            return expr;
+                            }
 
                     case IDENTIFIER:
                         // it has to be a lambda, because we just parse an expression (which must
                         // have been a parameter type) and now we have the parameter name
-                        // TODO
+                        {
+                        List<Parameter> params = new ArrayList<>();
+                        params.add(new Parameter(expr.toTypeExpression(), expect(Id.IDENTIFIER)));
+                        while (match(Id.COMMA) != null)
+                            {
+                            TypeExpression type  = parseTypeExpression();
+                            Token          name  = expect(Id.IDENTIFIER);
+                            params.add(new Parameter(type, name));
+                            }
+                        expect(Id.R_PAREN);
+
+                        return new ExplicitLambdaExpression(params, expect(Id.LAMBDA), parseLambdaBody());
+                        }
 
                     default:
                         expect(Id.R_PAREN);
@@ -1341,6 +1457,9 @@ public class Parser
                     }
                 }
 
+            case L_CURLY:
+                return parseCustomLiteral(null);
+
             case LIT_CHAR:
             case LIT_STRING:
             case LIT_INT:
@@ -1348,11 +1467,148 @@ public class Parser
             case LIT_BIN:
                 return new LiteralExpression(current());
 
-            // TODO other literals
-
             case TODO:
                 return parseTodoExpression();
             }
+        }
+
+    /**
+     * Parse a Lambda body and turn it into a BlockStatement if necessary.
+     *
+     * @return a BlockStatement representing the body of the lambda
+     */
+    BlockStatement parseLambdaBody()
+        {
+        Token firstToken = peek();
+        if (firstToken.getId() == Id.L_CURLY)
+            {
+            return parseBlockStatement();
+            }
+
+        Token fakeReturn = new Token(firstToken.getStartPosition(), firstToken.getStartPosition(), Id.RETURN);
+        ReturnStatement stmt = new ReturnStatement(fakeReturn, parseExpression());
+        return new BlockStatement(Collections.singletonList(stmt));
+        }
+
+    /**
+     * TODO no pun intended
+     *
+     * <p/><code><pre>
+     * </pre></code>
+
+     * @return a TodoExpression
+     */
+    TodoExpression parseTodoExpression()
+        {
+        expect(Id.TODO);
+        Expression message = null;
+        if (match(Id.L_PAREN) != null)
+            {
+            message = parseExpression();
+            expect(Id.R_PAREN);
+            }
+        return new TodoExpression(message);
+        }
+
+    /**
+     * Parse a complex literal.
+     *
+     * <p/><code><pre>
+     * # Whitespace allowed
+     * BinaryLiteral
+     *     "Binary:{" Nibbles-opt "}"
+     *
+     * Nibbles
+     *     Nibble
+     *     Nibbles Nibble
+     *
+     * Nibble: one of ...
+     *     "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "A" "a" "B" "b" "C" "c" "D" "d" "E" "e" "F" "f"
+     *
+     * TupleLiteral
+     *     "(" ExpressionList "," Expression ")"
+     *     "Tuple:(" ExpressionList-opt ")"
+     *     "Tuple:{" ExpressionList-opt "}"
+     *
+     * ListLiteral
+     *     "{" ExpressionList-opt "}"
+     *     "List:{" ExpressionList-opt "}"
+     *
+     * MapLiteral
+     *     "Map:{" Entries-opt "}"
+     *
+     * Entries
+     *     Entry
+     *     Entries "," Entry
+     *
+     * Entry
+     *     Expression "=" Expression
+     *
+     * CustomLiteral
+     *     TypeExpression NoWhitespace ":{" Expression "}"
+     * </pre></code>
+     *
+     * @return
+     */
+    Expression parseCustomLiteral(TypeExpression exprType)
+        {
+        switch (exprType == null ? "List" : exprType.toString())
+            {
+            case "Binary":
+                {
+                // TODO
+                throw new UnsupportedOperationException("binary literal");
+                }
+
+            case "List":
+                {
+                expect(Id.L_CURLY);
+                List<Expression> exprs = null;
+                while (match(Id.R_CURLY) == null)
+                    {
+                    if (exprs == null)
+                        {
+                        exprs = new ArrayList<>();
+                        }
+                    else
+                        {
+                        expect(Id.COMMA);
+                        }
+                    exprs.add(parseExpression());
+                    }
+                return new ListExpression(exprs);
+                }
+
+            case "Map":
+                {
+                // TODO
+                throw new UnsupportedOperationException("list literal");
+                }
+
+            case "Tuple":
+                {
+                Token.Id close = Id.R_PAREN;
+                if (match(Id.L_PAREN) == null)
+                    {
+                    expect(Id.L_CURLY);
+                    close = Id.R_CURLY;
+                    }
+
+                List<Expression> exprs = null;
+                while (match(close) == null)
+                    {
+                    if (exprs == null)
+                        {
+                        exprs = new ArrayList<>();
+                        }
+                    exprs.add(parseExpression());
+                    }
+                return new TupleExpression(exprs);
+                }
+            }
+
+        // TODO
+        throw new UnsupportedOperationException("custom type literal for type: " + exprType);
         }
 
     /**
@@ -1540,26 +1796,6 @@ public class Parser
         List<Token> names = parseQualifiedName();
         List<TypeExpression> params = parseTypeParameterTypeList(false);
         return new NamedTypeExpression(immutable, names, params);
-        }
-
-    /**
-     * TODO no pun intended
-     *
-     * <p/><code><pre>
-     * </pre></code>
-
-     * @return a TodoExpression
-     */
-    TodoExpression parseTodoExpression()
-        {
-        expect(Id.TODO);
-        Expression message = null;
-        if (match(Id.L_PAREN) != null)
-            {
-            message = parseExpression();
-            expect(Id.R_PAREN);
-            }
-        return new TodoExpression(message);
         }
 
     /**
@@ -2440,11 +2676,67 @@ public class Parser
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd)
         {
-        if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd))
+        if (m_lookAhead != null)
+            {
+            m_lookAhead.log(severity, sCode, aoParam, lPosStart, lPosEnd);
+            }
+        else if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd))
             {
             m_fAvoidRecovery = true;
             throw new CompilerException("error list is full: " + m_errorListener);
             }
+        }
+
+    public class SafeLookAhead
+            implements AutoCloseable
+        {
+        public SafeLookAhead()
+            {
+            m_oldLookAhead = m_lookAhead;
+            m_lookAhead    = this;
+            m_mark         = mark();
+            }
+
+        public void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd)
+            {
+            if (severity.ordinal() >= Severity.ERROR.ordinal())
+                {
+                m_err = new ErrorList.ErrorInfo(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+                m_fKeepResults = false;
+                throw new CompilerException("err=" + m_err);
+                }
+            }
+
+        public boolean isClean()
+            {
+            return m_err == null;
+            }
+
+        public void keepResults()
+            {
+            m_fKeepResults = true;
+            }
+
+        @Override
+        public void close()
+            {
+            assert m_lookAhead == this;
+            m_lookAhead = m_oldLookAhead;
+
+            if (m_fKeepResults)
+                {
+                assert m_err == null;
+                }
+            else
+                {
+                restore(m_mark);
+                }
+            }
+
+        SafeLookAhead       m_oldLookAhead;
+        Mark                m_mark;
+        ErrorList.ErrorInfo m_err;
+        boolean             m_fKeepResults;
         }
 
     /**
@@ -2452,7 +2744,7 @@ public class Parser
      */
     protected boolean recoverable()
         {
-        return !eof() && !m_fAvoidRecovery;
+        return !eof() && !m_fAvoidRecovery && m_lookAhead == null;
         }
 
 
@@ -2520,4 +2812,6 @@ public class Parser
     private boolean m_fDone;
 
     private boolean m_fAvoidRecovery;
+
+    private SafeLookAhead m_lookAhead;
     }
