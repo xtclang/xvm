@@ -38,7 +38,7 @@ public class xFutureRef
     public static class FutureHandle
             extends ObjectHandle
         {
-        protected ServiceHandle m_hService;
+        protected Type m_typeReferent;
         protected CompletableFuture<ObjectHandle> m_future;
 
         public FutureHandle(TypeComposition clazz)
@@ -46,11 +46,11 @@ public class xFutureRef
             super(clazz);
             }
 
-        public FutureHandle(TypeComposition clazz, ServiceHandle hService, CompletableFuture<ObjectHandle> future)
+        public FutureHandle(TypeComposition clazz, Type typeReferent, CompletableFuture<ObjectHandle> future)
             {
             super(clazz);
 
-            m_hService = hService;
+            m_typeReferent = typeReferent;
             m_future = future;
             }
 
@@ -61,7 +61,7 @@ public class xFutureRef
                 // TODO: use the timeout defined on the service
                 while (!m_future.isDone())
                     {
-                    m_hService.m_context.yield();
+                    ServiceContext.getCurrentContext().yield();
                     }
                 return m_future.get();
                 }
@@ -79,9 +79,9 @@ public class xFutureRef
             }
         }
 
-    public FutureHandle makeHandle(ServiceHandle hService, CompletableFuture<ObjectHandle> future)
+    public FutureHandle makeHandle(Type type, CompletableFuture<ObjectHandle> future)
         {
-        return new FutureHandle(INSTANCE.f_clazzCanonical, hService, future);
+        return new FutureHandle(INSTANCE.f_clazzCanonical, type, future);
         }
 
     }

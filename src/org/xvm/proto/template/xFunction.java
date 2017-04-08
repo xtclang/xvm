@@ -80,15 +80,15 @@ public class xFunction
         // ----- FunctionHandle interface -----
 
         // return an exception
-        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle call(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
             {
-            return invoke(frame, Utils.resolveArguments(frame, m_invoke, ahVar, anArg), ahReturn);
+            return call(frame, Utils.resolveArguments(frame, m_invoke, ahVar, anArg), ahReturn);
             }
 
         // return an exception
-        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
-            return execute(frame.f_context, frame, null, prepareVars(ahArg), ahReturn);
+            return invoke(frame.f_context, frame, null, prepareVars(ahArg), ahReturn);
             }
 
         public ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
@@ -124,8 +124,9 @@ public class xFunction
             return ahVar;
             }
 
-        public ExceptionHandle execute(ServiceContext context, Frame frame, ObjectHandle hTarget,
-                                    ObjectHandle[] ahVar, ObjectHandle[] ahReturn)
+        // frame could be null
+        public ExceptionHandle invoke(ServiceContext context, Frame frame, ObjectHandle hTarget,
+                                      ObjectHandle[] ahVar, ObjectHandle[] ahReturn)
             {
             Frame frameNew = context.createFrame(frame, m_invoke, hTarget, ahVar);
 
@@ -178,15 +179,15 @@ public class xFunction
             }
 
         @Override
-        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle call(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
             {
-            return m_hDelegate.invoke(frame, ahVar, anArg, ahReturn);
+            return m_hDelegate.call(frame, ahVar, anArg, ahReturn);
             }
 
         @Override
-        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
-            return m_hDelegate.invoke(frame, ahArg, ahReturn);
+            return m_hDelegate.call(frame, ahArg, ahReturn);
             }
 
         @Override
@@ -244,18 +245,22 @@ public class xFunction
         // ----- FunctionHandle interface -----
 
         @Override
-        public ExceptionHandle invoke(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
-            if (m_invoke.isNative())
+            ServiceHandle hService;
+            try
                 {
-                return super.invoke(frame, ahArg, ahReturn);
+                hService = ahArg[0].as(ServiceHandle.class);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return e.getExceptionHandle();
                 }
 
-            ServiceHandle hService = ahArg[0].as(ServiceHandle.class);
-
-            if (frame.f_context == hService.m_context)
+            // native method on the service means "execute on the caller's thread"
+            if (m_invoke.isNative() || frame.f_context == hService.m_context)
                 {
-                return super.invoke(frame, ahArg, ahReturn);
+                return invoke(frame.f_context, frame, hService, prepareVars(ahArg), ahReturn);
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();

@@ -1,8 +1,9 @@
 + super() method call
         Issue with "construct super" return - see OpCallable.callConstructor()
 
-- Service
-        cleanup an un-referenced service (phantom refs)
++ Service
+        - catch exception from "as()"
+        - cleanup an un-referenced service (phantom refs)
 
 - Array
 - Multi:
@@ -11,7 +12,4 @@
     -- invoke
     -- return
 - Generic types
-
-
-////// service
 

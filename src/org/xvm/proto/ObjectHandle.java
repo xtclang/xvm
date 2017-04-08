@@ -41,11 +41,13 @@ public abstract class ObjectHandle
         }
 
     public <T extends ObjectHandle> boolean isAssignableTo(Class<T> clz)
+                throws ExceptionHandle.WrapperException
         {
         return clz.isAssignableFrom(getClass());
         }
 
     public <T extends ObjectHandle> T as(Class<T> clz)
+            throws ExceptionHandle.WrapperException
         {
         return (T) this;
         }

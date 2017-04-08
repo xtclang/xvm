@@ -28,7 +28,7 @@ public class ServiceDaemon
 
     private volatile State m_state = State.Initial;
 
-    private final static ThreadLocal<ServiceContext> f_tloContext = new ThreadLocal<>();
+    final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
 
     enum State {Initial, Starting, Running, Stopping, Stopped;};
 
@@ -62,7 +62,7 @@ public class ServiceDaemon
     @Override
     public void run()
         {
-        f_tloContext.set(f_context);
+        s_tloContext.set(f_context);
 
         setState(State.Running);
 
@@ -89,6 +89,7 @@ public class ServiceDaemon
                     catch (Throwable e)
                         {
                         // TODO
+                        System.out.println(f_context + " threw unhandled exception: ");
                         e.printStackTrace(System.out);
                         }
                     message = queue.poll();
@@ -105,7 +106,7 @@ public class ServiceDaemon
 
         setState(State.Stopped);
 
-        f_tloContext.set(null);
+        s_tloContext.set(null);
         }
 
     public void dispatch(long cMillis)
@@ -134,7 +135,6 @@ public class ServiceDaemon
         f_queue.add(call);
         f_notifier.signal();
         }
-
 
     // ----- Service interface -----
 
@@ -171,6 +171,11 @@ public class ServiceDaemon
         return Thread.currentThread() == getThread();
         }
 
+    public boolean isStarted()
+        {
+        return m_state.ordinal() >= State.Running.ordinal();
+        }
+
     protected synchronized void setState(State state)
         {
         if (state.ordinal() > m_state.ordinal())
@@ -184,10 +189,5 @@ public class ServiceDaemon
         {
         return "ServiceDaemon{Thread=\"" + getThread() + '\"'
             + ", State=" + m_state.name() + '}';
-        }
-
-    public static ServiceContext getCurrentContext()
-        {
-        return f_tloContext.get();
         }
     }

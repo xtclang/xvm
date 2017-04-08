@@ -3,6 +3,8 @@ package org.xvm.proto;
 import org.xvm.proto.TypeCompositionTemplate.Access;
 import org.xvm.proto.TypeCompositionTemplate.Shape;
 
+import java.util.Arrays;
+
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String>)
  *
@@ -129,6 +131,21 @@ public class TypeComposition
             }
 
         return false;
+        }
+
+    public Type resolveFormalType(String sFormalName)
+        {
+        TypeCompositionTemplate template = f_template;
+        String[] asFormalName = template.f_asFormalType;
+
+        for (int i = 0, c = asFormalName.length; i < c; i++)
+            {
+            if (asFormalName[i].equals(sFormalName))
+                {
+                return f_atGenericActual[i];
+                }
+            }
+        throw new IllegalArgumentException("Invalid formal name: " + sFormalName);
         }
 
     @Override

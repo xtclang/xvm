@@ -8,13 +8,27 @@ package org.xvm.util;
 public class SimpleNotifier
         implements Notifier
     {
+    private boolean m_fSignaled;
+
     @Override
     public void await(long cMillis)
             throws InterruptedException
         {
         synchronized (this)
             {
-            wait(cMillis);
+            if (m_fSignaled)
+                {
+                m_fSignaled = false;
+                }
+            else
+                {
+                wait(cMillis);
+
+                if (m_fSignaled)
+                    {
+                    m_fSignaled = false;
+                    }
+                }
             }
         }
 
@@ -23,6 +37,7 @@ public class SimpleNotifier
         {
         synchronized (this)
             {
+            m_fSignaled = true;
             notify();
             }
         }

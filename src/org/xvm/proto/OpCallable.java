@@ -88,29 +88,35 @@ public abstract class OpCallable extends Op
 
             if (template.isService())
                 {
-                hService = hTarget.as(ServiceHandle.class);
+                hService = (ServiceHandle) ahVar[0]; // it has just been constructed; don't call "as"
                 ((xService) template).start(hService);
                 }
 
             if (constructor.m_cReturns > 0)
                 {
+                FunctionHandle hFinally;
+                try
+                    {
+                    hFinally = frameNew.f_ahReturn[0].as(FunctionHandle.class);
+                    }
+                catch (ExceptionHandle.WrapperException e )
+                    {
+                    return e.getExceptionHandle();
+                    }
+
                 hTarget = ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Private); // this:struct -> this:private
 
-                FunctionHandle hFinally = frameNew.f_ahReturn[0].as(FunctionHandle.class);
-
-                if (hService != null)
+                if (hService == null)
                     {
-                    ((xService) template).invokeAsync(frame, hService, hFinally, ahVar, Utils.OBJECTS_NONE);
-
-                    // create a FutureRef
-                    ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Public);
+                    hException = hFinally.call(frame, ahVar, Utils.OBJECTS_NONE);
                     }
                 else
                     {
-                    hException = hFinally.invoke(frame, ahVar, Utils.OBJECTS_NONE);
-
-                    ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Public);
+                    hException = ((xService) template).
+                            invokeAsync(frame, hService, hFinally, ahVar, Utils.OBJECTS_NONE);
                     }
+
+                ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Public);
                 }
             }
         return hException;

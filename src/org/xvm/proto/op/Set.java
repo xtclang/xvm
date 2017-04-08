@@ -37,25 +37,29 @@ public class Set extends OpInvocable
         MethodTemplate method = property.m_templateSet;
 
         ObjectHandle hArg = f_nValue >= 0 ? frame.f_ahVar[f_nValue] :
-                Utils.resolveConst(frame, method.m_argTypeName[0], -f_nValue);
+                Utils.resolveConst(frame, property.f_typeName, f_nValue);
 
+        ExceptionHandle hException;
         if (method == null)
             {
-            template.setProperty(hTarget, property.f_sName, hArg);
+            hException = template.setProperty(hTarget, property.f_sName, hArg);
             }
         else
             {
             // almost identical to the second part of Invoke_10
             ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-            ExceptionHandle hException = frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
-
-            if (hException != null)
-                {
-                frame.m_hException = hException;
-                return RETURN_EXCEPTION;
-                }
+            hException = frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
             }
-        return iPC + 1;
+
+        if (hException == null)
+            {
+            return iPC + 1;
+            }
+        else
+            {
+            frame.m_hException = hException;
+            return RETURN_EXCEPTION;
+            }
         }
     }

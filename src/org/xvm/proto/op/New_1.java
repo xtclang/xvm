@@ -33,7 +33,7 @@ public class New_1 extends OpCallable
 
         TypeCompositionTemplate template = constructor.getClazzTemplate();
 
-        ObjectHandle hNew = template.createStruct(frame);
+        ObjectHandle hNew = template.createStruct();
 
         // call the constructor with this:struct and arg
         ObjectHandle[] ahVar = new ObjectHandle[constructor.m_cVars];

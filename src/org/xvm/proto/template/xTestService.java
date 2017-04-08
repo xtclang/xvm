@@ -62,26 +62,44 @@ public class xTestService extends xService
             };
         mtIncrement.m_cVars = 3;
 
-        FunctionTemplate ftTest = addFunctionTemplate("test", VOID, VOID);
-        // static Void test()
+        MethodTemplate mtThrowing = ensureMethodTemplate("throwing", VOID, INT);
+        //  Int throwing()  // #0 = this:private
         //      {
-        //      TestService svc = new TestService(48);  // VAR x:TestService (#0)
-        //                                              // NEW_1 @"x:TestService#construct", -@48, 0
+        //      throw new Exception("test");    // VAR x:Exception (#1)
+        //                                      // NEW_N @"#x:Exception:construct" 2 -@"test" -@"x:Nullable.Null" #1
+        //                                      // THROW #1
+        //      }
+        mtThrowing.m_aop = new Op[]
+            {
+            new Var(this.adapter.getClassConstId("x:Exception")), // #1
+            new New_N(this.adapter.getMethodConstId("x:Exception", "construct"),
+                        new int[]{-adapter.ensureConstantValueId("test"),
+                                  -adapter.getClassConstId("x:Nullable$Null")}, 1),
+            new Throw(1),
+            };
+        mtThrowing.m_cVars = 2;
+
+        MethodTemplate mtTest = ensureMethodTemplate("test", VOID, VOID);
+        // Void test() // #0 = this:private
+        //      {
         //      int i = svc.increment();                // VAR x:Int64 (#1)
         //                                              // INVOKE_01 @"x:TestService#increment", 1
         //      print i;                                // PRINT 1
+        //      i = svc.increment();                    // INVOKE_01 @"x:TestService#increment", 1
+        //      print i;                                // PRINT 1
         //      return;                                 // RETURN_0
         //      }
-        ftTest.m_aop = new Op[]
+        mtTest.m_aop = new Op[]
             {
-            new Var(adapter.getClassConstId("x:TestService")),  // #0
-            new New_1(adapter.getMethodConstId("x:TestService", "construct"), -adapter.ensureConstantValueId(48), 0),
             new X_Print(0),
+new Set(0, adapter.getPropertyConstId("x:TestService", "counter"), -adapter.ensureConstantValueId(42)),
             new Var(adapter.getClassConstId("x:Int64")),        // #1
             new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "increment"), 1),
             new X_Print(1),
+            new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
+            new X_Print(1),
             new Return_0(),
             };
-        ftTest.m_cVars = 2;
+        mtTest.m_cVars = 2;
         }
     }

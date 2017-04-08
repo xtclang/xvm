@@ -49,10 +49,20 @@ public class xInt64
         }
 
     @Override
-    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget,
+                                     ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
-        JavaLong hThis = hTarget.as(JavaLong.class);
-        JavaLong hThat = hArg.as(JavaLong.class);
+        JavaLong hThis;
+        JavaLong hThat;
+        try
+            {
+            hThis = hTarget.as(JavaLong.class);
+            hThat = hArg.as(JavaLong.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
 
         // TODO: check overflow
         ahReturn[0] = makeHandle(hThis.getValue() + hThat.getValue());
@@ -62,7 +72,15 @@ public class xInt64
     @Override
     public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
-        JavaLong hThis = hTarget.as(JavaLong.class);
+        JavaLong hThis;
+        try
+            {
+            hThis = hTarget.as(JavaLong.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
 
         // TODO: check overflow
         ahReturn[0] = makeHandle(hThis.getValue() + 1);
@@ -72,7 +90,15 @@ public class xInt64
     @Override
     public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
         {
-        JavaLong hThis = hTarget.as(JavaLong.class);
+        JavaLong hThis;
+        try
+            {
+            hThis = hTarget.as(JavaLong.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
 
         ahReturn[0] = makeHandle(-hThis.getValue());
         return null;

@@ -104,7 +104,7 @@ public abstract class TypeCompositionTemplate
     public PropertyTemplate ensurePropertyTemplate(String sPropertyName, String sTypeName)
         {
         PropertyTemplate propThis = new PropertyTemplate(sPropertyName, sTypeName);
-        propThis.f_typeName.resolve(this);
+        propThis.f_typeName.resolveDependencies(this);
 
         return addPropertyTemplate(sPropertyName, propThis);
         }
@@ -381,31 +381,51 @@ public abstract class TypeCompositionTemplate
         }
 
     // get a property value
-    public ObjectHandle getProperty(ObjectHandle hTarget, String sName)
+    public ExceptionHandle getProperty(ObjectHandle hTarget, String sName, ObjectHandle[] ahRet)
         {
-        GenericHandle hThis = hTarget.as(GenericHandle.class);
-        ObjectHandle  hProp = hThis.m_mapFields.get(sName);
+        GenericHandle hThis;
+        try
+            {
+            hThis = hTarget.as(GenericHandle.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
+
+        ObjectHandle hProp = hThis.m_mapFields.get(sName);
         if (hProp == null)
             {
             throw new IllegalStateException((hThis.m_mapFields.containsKey(sName) ?
                     "Un-initialized property " : "Invalid property ") + sName);
             }
-        return hProp;
+        ahRet[0] = hProp;
+        return null;
         }
 
     // set a property value
-    public void setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
+    public ExceptionHandle setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
         {
         // TODO: check the access rights
-        GenericHandle hThis = hTarget.as(GenericHandle.class);
+        GenericHandle hThis;
+        try
+            {
+            hThis = hTarget.as(GenericHandle.class);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
 
         assert hThis.m_mapFields.containsKey(sName);
 
         hThis.m_mapFields.put(sName, hValue);
+
+        return null;
         }
 
     // return a handle with this:struct access
-    public ObjectHandle createStruct(Frame frame)
+    public ObjectHandle createStruct()
         {
         assert f_asFormalType.length == 0;
         assert f_shape == Shape.Class || f_shape == Shape.Const;
@@ -695,13 +715,19 @@ public abstract class TypeCompositionTemplate
             {
             for (TypeName t : m_argTypeName)
                 {
-                t.resolve(template);
+                t.resolveDependencies(template);
                 }
 
             for (TypeName t : m_retTypeName)
                 {
-                t.resolve(template);
+                t.resolveDependencies(template);
                 }
+            }
+
+        // get the type of the returned value in the context of the specified parent class
+        public Type getReturnType(int iRet, TypeComposition clzParent)
+            {
+            return m_retTypeName[iRet].resolveFormalTypes(clzParent);
             }
 
         public void setAccess(Access access)

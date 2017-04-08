@@ -41,7 +41,7 @@ public class ObjectHeap
 
         if (typeName instanceof UnionTypeName)
             {
-            for (TypeName tn : ((UnionTypeName) typeName).m_aTypeName)
+            for (TypeName tn : ((UnionTypeName) typeName).m_listTypeName)
                 {
                 try
                     {

@@ -11,7 +11,7 @@ import org.xvm.proto.op.*;
  *
  * @author gg 2017.03.15
  */
-public class xTest2 extends TypeCompositionTemplate
+public class xTest2 extends xService
     {
     private final ConstantPoolAdapter adapter;
 
