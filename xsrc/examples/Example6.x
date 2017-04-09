@@ -535,3 +535,16 @@ name.name< ... >
 // types CAN contain []
 
 
+// type conditional
+
+//
+Boolean b = x instanceof (T);
+
+// conditional T
+Boolean b = x.instanceof(T);
+Int i = x.instanceof(T).foo() : 4;
+
+// or perhaps ..
+// PostfixExpression ".instanceof" "(" TypeExpression ")" "?"-opt
+Int i = x.instanceof(T)?.foo() : 4;
+

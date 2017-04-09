@@ -34,9 +34,28 @@ module MyApp.xqiz.it
                 {
                 // this.s = s;
                 }
-            String s;
-            }
+            String s = ╔═════════════════════╗
+                       ║This could be any    ║
+                       ║freeform text that   ║
+                       ║could be inside of an║
+                       ║Ecstasy source file  ║
+                       ╚═════════════════════╝;
+            Map<Int, String> map = Map:{0="zero", 1="one", 2="two"};
+            List<String> list = {"hello", "world", "!"};
+            //List<Dec> list = {1.0, 2.0, 3.0};
 
+            Binary b1 = Binary:{"abcdef"};
+            Binary b2 = Binary:{
+                ╔═════════════════════╗
+                ║ 9149AF2aCF75b3B8E123║
+                ║ 0f9149AcF2CF73BE123 ║
+                ╚═════════════════════╝};
+
+            Int result1 = a();
+            Int result2 = a(1);
+            Int result3 = a("test", "args");
+            Int result = a.b.c().d.e(1).f("test", "args");
+            }
         class SuperMap<KeyType, ValueType>
             implements Map<KeyType, ValueType>
             {

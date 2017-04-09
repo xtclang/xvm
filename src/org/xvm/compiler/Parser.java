@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static org.xvm.util.Handy.hexitValue;
+import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.parseDelimitedString;
 
 
@@ -311,7 +313,7 @@ public class Parser
 
         // sequence of compositions
         List<Composition> composition = new ArrayList<>();
-        ParsingComposition: while (true)
+        while (true)
             {
             if (match(Id.EXTENDS) != null)
                 {
@@ -1043,8 +1045,8 @@ public class Parser
                     expr = new BiExpression(expr, current(), parseRangeExpression());
                     break;
 
-                case INSTANCEOF:
                 case AS:
+                case INSTANCEOF:
                     expr = new BiExpression(expr, current(), parseTypeExpression());
                     break;
 
@@ -1176,7 +1178,7 @@ public class Parser
      *     "!" PrefixExpression
      *     "~" PrefixExpression
      *     "&" PrefixExpression
-     *     "new" TypeExpression ArgumentList
+     *     "new" TypeExpression ArgumentList-opt
      * </pre></code>
      *
      * @return an expression
@@ -1195,7 +1197,7 @@ public class Parser
                 return new PrefixExpression(current(), parsePrefixExpression());
 
             case NEW:
-                return new NewExpression(current(), parseTypeExpression(), parseArgumentList(true));
+                return new NewExpression(current(), parseTypeExpression(), parseArgumentList(false));
 
             default:
                 return parsePostfixExpression();
@@ -1215,9 +1217,30 @@ public class Parser
      *     PostfixExpression ArrayIndex
      *     PostfixExpression NoWhitespace "?"
      *     PostfixExpression "." Name
-     *     PostfixExpression ".new" ArgumentList
+     *     PostfixExpression ".new" ArgumentList-opt
      *     PostfixExpression ".instanceof" "(" TypeExpression ")"
      *     PostfixExpression ".as" "(" TypeExpression ")"
+     *
+     * ArrayDims
+     *     ArrayDim
+     *     ArrayDims ArrayDim
+     *
+     * ArrayDim
+     *     "[" DimIndicators-opt "]"
+     *
+     * DimIndicators
+     *     DimIndicator
+     *     DimIndicators "," DimIndicator
+     *
+     * DimIndicator
+     *     "?"
+     *
+     * ArrayIndex
+     *     "[" ExpressionList "]"
+     *
+     * ExpressionList
+     *     Expression
+     *     ExpressionList "," Expression
      * </pre></code>
      *
      * @return an expression
@@ -1244,20 +1267,24 @@ public class Parser
 
                 case DOT:
                     {
-                    Token dot  = current();
+                    expect(Id.DOT);
                     switch (peek().getId())
                         {
                         case NEW:
                             {
                             Token keyword = expect(Id.NEW);
-                            parseArgumentList(true);
-                            // TODO
+                            expr = new NewExpression(expr, keyword, parseTypeExpression(), parseArgumentList(false));
+                            break;
                             }
 
-                        case INSTANCEOF:
                         case AS:
+                        case INSTANCEOF:
                             {
-                            // TODO
+                            Token keyword = current();
+                            expect(Id.L_PAREN);
+                            expr = new BiExpression(expr, keyword, parseTypeExpression());
+                            expect(Id.R_PAREN);
+                            break;
                             }
 
                         case IDENTIFIER:
@@ -1267,7 +1294,7 @@ public class Parser
                                 }
                             else
                                 {
-                                // TODO narrow
+                                expr = new DotNameExpression(expr, expect(Id.IDENTIFIER));
                                 }
                             break;
 
@@ -1277,24 +1304,45 @@ public class Parser
                             skipToNextStatement();
                             return expr;
                         }
+                    break;
                     }
 
                 case L_PAREN:
                     // ArgumentList
-                    // TODO
+                    expr = new InvocationExpression(expr, parseArgumentList(true));
                     break;
 
                 case L_SQUARE:
+                    {
                     // ArrayDims
                     // ArrayIndex
-                    // TODO
+                    expect(Id.L_SQUARE);
+                    if (match(Id.R_SQUARE) != null)
+                        {
+                        // "SomeClass[]"
+                        expr = new ArrayTypeExpression(expr.toTypeExpression(), 0);
+                        }
+                    else if (match(Id.COND) != null)
+                        {
+                        // "SomeClass[?,?]"
+                        int cExplicitDims = 1;
+                        while (match(Id.R_SQUARE) == null)
+                            {
+                            expect(Id.COMMA);
+                            expect(Id.COND);
+                            ++cExplicitDims;
+                            }
+                        expr = new ArrayTypeExpression(expr.toTypeExpression(), cExplicitDims);
+                        }
+                    else
+                        {
+                        // "someArray[3]"
+                        List<Expression> indexes = parseExpressionList();
+                        expect(Id.R_SQUARE);
+                        expr = new ArrayAccessExpression(expr, indexes);
+                        }
                     break;
-
-                case COMP_LT:
-                    {
-                    // this is
                     }
-                    // TODO name.name<
 
                 default:
                     return expr;
@@ -1324,7 +1372,7 @@ public class Parser
      *     LambdaExpression
      *     "_"
      *     "(" Expression ")"
-     *     "TODO" TodoMessage-opt
+     *     "T0D0" TodoMessage-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
      * </pre></code>
      *
      * @return an expression
@@ -1491,11 +1539,15 @@ public class Parser
         }
 
     /**
-     * TODO no pun intended
+     * Parse a "to-do" expression.
      *
      * <p/><code><pre>
+     * "T0D0" TodoMessage-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
+     *
+     * TodoMessage
+     *     "(" Expression ")"
      * </pre></code>
-
+     *
      * @return a TodoExpression
      */
     TodoExpression parseTodoExpression()
@@ -1556,8 +1608,54 @@ public class Parser
             {
             case "Binary":
                 {
-                // TODO
-                throw new UnsupportedOperationException("binary literal");
+                // special note: at this point, the current token (already parsed) is the opening
+                // curly bracket, so the lexer has already eaten any whitespace after that, and is
+                // ready to eat the hex contents of the literal itself; unfortunately, this means
+                // that we know the explicit details about how both the current/next token handling
+                // works on the parser, and to some extent how the lexer works as well, but it is
+                // context-sensitive parsing in the first place, which is already the bane of
+                // parsing purists everywhere
+                m_lexer.expectHex();
+                long lPosStart = m_source.getPosition();
+
+                expect(Id.L_CURLY);
+                StringBuilder sb = new StringBuilder();
+                Token literal;
+                while ((literal = match(Id.LIT_STRING)) != null)
+                    {
+                    for (char ch : ((String) literal.getValue()).toCharArray())
+                        {
+                        if (isHexit(ch))
+                            {
+                            sb.append(ch);
+                            }
+                        else if (!Lexer.isWhitespace(ch))
+                            {
+                            log(Severity.ERROR, BAD_HEX_LITERAL, null,
+                                    literal.getStartPosition(), literal.getEndPosition());
+                            }
+                        }
+                    }
+                long lPosEnd = m_source.getPosition();
+                expect(Id.R_CURLY);
+
+                int    cch  = sb.length();
+                int    ofch = 0;
+                int    cb   = (cch + 1) / 2;
+                int    ofb  = 0;
+                byte[] ab   = new byte[cb];
+                if ((cch & 0x1) != 0)
+                    {
+                    // odd number of characters means that the first nibble is a pre-pended zero
+                    ab[ofb++] = (byte) hexitValue(sb.charAt(ofch++));
+                    }
+                while (ofb < cb)
+                    {
+                    ab[ofb++] = (byte) ((hexitValue(sb.charAt(ofch++)) << 4)
+                                       + hexitValue(sb.charAt(ofch++)));
+                    }
+
+                return new BinaryExpression(ab, lPosStart, lPosEnd);
                 }
 
             case "List":
@@ -1581,8 +1679,25 @@ public class Parser
 
             case "Map":
                 {
-                // TODO
-                throw new UnsupportedOperationException("list literal");
+                expect(Id.L_CURLY);
+                List<Expression> keys   = null;
+                List<Expression> values = null;
+                while (match(Id.R_CURLY) == null)
+                    {
+                    if (keys == null)
+                        {
+                        keys   = new ArrayList<>();
+                        values = new ArrayList<>();
+                        }
+                    else
+                        {
+                        expect(Id.COMMA);
+                        }
+                    keys.add(parseExpression());
+                    expect(Id.ASN);
+                    values.add(parseExpression());
+                    }
+                return new MapExpression(keys, values);
                 }
 
             case "Tuple":
@@ -1605,16 +1720,26 @@ public class Parser
                     }
                 return new TupleExpression(exprs);
                 }
-            }
 
-        // TODO
-        throw new UnsupportedOperationException("custom type literal for type: " + exprType);
+            default:
+                {
+                Token      open  = expect(Id.L_CURLY);
+                Expression expr  = parseExpression();
+                Token      close = expect(Id.R_CURLY);
+                // custom type parsing is not supported in the prototype compiler
+                log(Severity.ERROR, BAD_CUSTOM, new Object[] {exprType, expr},
+                        open.getStartPosition(), close.getEndPosition());
+                return expr;
+                }
+            }
         }
 
     /**
      * Parse a type expression.
      *
      * <p/><code><pre>
+     * TypeExpression
+     *     UnionedTypeExpression
      * </pre></code>
      *
      * @return a TypeExpression
@@ -1628,6 +1753,9 @@ public class Parser
      * Parse a type expression of the form "Type + Type".
      *
      * <p/><code><pre>
+     * UnionedTypeExpression
+     *     IntersectingTypeExpression
+     *     UnionedTypeExpression + IntersectingTypeExpression
      * </pre></code>
      *
      * @return a type expression
@@ -1635,10 +1763,9 @@ public class Parser
     TypeExpression parseUnionedTypeExpression()
         {
         TypeExpression expr = parseIntersectingTypeExpression();
-        Token operator = match(Id.ADD);
-        if (operator != null)
+        while (peek().getId() == Id.ADD)
             {
-            expr = new BiTypeExpression(expr, operator, parseUnionedTypeExpression());
+            expr = new BiTypeExpression(expr, expect(Id.ADD), parseIntersectingTypeExpression());
             }
         return expr;
         }
@@ -1647,6 +1774,9 @@ public class Parser
      * Parse a type expression of the form "Type | Type", otherwise .
      *
      * <p/><code><pre>
+     * IntersectingTypeExpression
+     *     NonBiTypeExpression
+     *     IntersectingTypeExpression | NonBiTypeExpression
      * </pre></code>
      *
      * @return a type expression
@@ -1654,10 +1784,9 @@ public class Parser
     TypeExpression parseIntersectingTypeExpression()
         {
         TypeExpression expr = parseNonBiTypeExpression();
-        Token operator = match(Id.BIT_OR);
-        if (operator != null)
+        while (peek().getId() == Id.BIT_OR)
             {
-            expr = new BiTypeExpression(expr, operator, parseIntersectingTypeExpression());
+            expr = new BiTypeExpression(expr, expect(Id.BIT_OR), parseNonBiTypeExpression());
             }
         return expr;
         }
@@ -1666,6 +1795,29 @@ public class Parser
      * Parse any type expression that does NOT look like "Type + Type" or "Type | Type".
      *
      * <p/><code><pre>
+     * NonBiTypeExpression
+     *     "(" TypeExpression ")"
+     *     AnnotatedTypeExpression
+     *     NamedTypeExpression
+     *     FunctionTypeExpression
+     *     NonBiTypeExpression "?"
+     *     NonBiTypeExpression ArrayDim
+     *     NonBiTypeExpression "..."
+     *     "conditional" NonBiTypeExpression
+     *     "immutable" NonBiTypeExpression
+     *
+     * NamedTypeExpression
+     *     QualifiedName TypeParameterTypeList-opt
+     *
+     * ArrayDim
+     *     "[" DimIndicators-opt "]"
+     *
+     * DimIndicators
+     *     DimIndicator
+     *     DimIndicators "," DimIndicator
+     *
+     * DimIndicator
+     *     "?"
      * </pre></code>
      *
      * @return a type expression
@@ -1699,15 +1851,23 @@ public class Parser
                 break;
             }
 
-        ParseSuffixes: while (true)
+        while (true)
             {
             switch (peek().getId())
                 {
                 case L_SQUARE:
                     expect(Id.L_SQUARE);
-                    // TODO could be an integer index e.g. ReturnValues[0]
-                    expect(Id.R_SQUARE);
-                    type = new ArrayTypeExpression(type);
+                    int cExplicitDims = 0;
+                    while (match(Id.R_SQUARE) == null)
+                        {
+                        if (cExplicitDims > 0)
+                            {
+                            expect(Id.COMMA);
+                            }
+                        expect(Id.COND);
+                        ++cExplicitDims;
+                        }
+                    type = new ArrayTypeExpression(type, cExplicitDims);
                     break;
 
                 case COND:
@@ -1721,17 +1881,17 @@ public class Parser
                     break;
 
                 default:
-                    break ParseSuffixes;
+                    return type;
                 }
             }
-
-        return type;
         }
 
     /**
-     * TODO
+     * Parse a type expression that is preceded by an annotation.
      *
      * <p/><code><pre>
+     * AnnotatedTypeExpression
+     *     Annotation TypeExpression
      * </pre></code>
      *
      * @return
@@ -1752,8 +1912,8 @@ public class Parser
      *     "function" ReturnList FunctionTypeFinish
      *
      * FunctionTypeFinish
-     *     Name ParameterList
-     *     ParameterList Name
+     *     Name ParameterTypeList
+     *     ParameterTypeList Name
      * </pre></code>
      *
      * @return a FunctionTypeExpression
@@ -1765,7 +1925,7 @@ public class Parser
         // return values
         List<TypeExpression> listReturn = parseReturnList();
 
-        // see if the parameters preced the name
+        // see if the parameters precede the name
         List<TypeExpression> listParam = parseParameterTypeList(false);
 
         if (listParam == null)
@@ -1782,10 +1942,13 @@ public class Parser
         }
 
     /**
-     * Type expression in the form:
-     * "immutable name.name.name<param extends type, param extends type>"
+     * Parse a type expression in the form:
+     *
+     *   "immutable name.name.name<param, param>"
      *
      * <p/><code><pre>
+     * NamedTypeExpression
+     *     QualifiedName TypeParameterTypeList-opt
      * </pre></code>
      *
      * @return a NamedTypeExpression
@@ -1997,38 +2160,8 @@ public class Parser
         }
 
     /**
-     * TODO
-     *
-     * @param required  true iff the angle brackets are required
-     *
-     * @return a list of zero or more types, or null if there were no angle brackets
-     */
-    List<TypeExpression> parseTypeParameterTypeList(boolean required)
-        {
-        List<TypeExpression> types = null;
-        if (match(Id.COMP_LT, required) != null)
-            {
-            types = new ArrayList<>();
-            boolean first = true;
-            while (match(Id.COMP_GT) == null)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    expect(Id.COMMA);
-                    }
-
-                types.add(parseTypeExpression());
-                }
-            }
-        return types;
-        }
-
-    /**
-     * If the next token is a &quot;&lt;&quot;, then parse a list of type variables.
+     * If the next token is a &quot;&lt;&quot;, then parse a list of type variables. These aren't
+     * expressions; they are just variable names.
      *
      * <p/><code><pre>
      * TypeVariableList
@@ -2069,6 +2202,64 @@ public class Parser
             }
         return names;
         }
+
+    /**
+     * For a parameterized type, parse the list of the types of its type parameters. For example,
+     * for {@code Map<String, Int>}, this would parse the "{@code <String, Int>}" portion and
+     * produce a list of two types: {@code String, Int}.
+     *
+     * <p/><code><pre>
+     * TypeParameterTypeList
+     *     "<" TypeParameterTypes ">"
+     *
+     * TypeParameterTypes
+     *     TypeParameterType
+     *     TypeParameterTypes "," TypeParameterType
+     *
+     * TypeParameterType
+     *     TypeExpression
+     * </pre></code>
+     *
+     * @param required  true iff the angle brackets are required
+     *
+     * @return a list of zero or more types, or null if there were no angle brackets
+     */
+    List<TypeExpression> parseTypeParameterTypeList(boolean required)
+        {
+        List<TypeExpression> types = null;
+        if (match(Id.COMP_LT, required) != null)
+            {
+            if (peek().getId() != Id.COMP_GT)
+                {
+                types = parseTypeExpressionList();
+                }
+            expect(Id.COMP_GT);
+            }
+        return types;
+        }
+
+    /**
+     * Parse a list of type expressions.
+     *
+     * <p/><code><pre>
+     * TypeExpressionList
+     *     TypeExpression
+     *     TypeExpressionList "," TypeExpression
+     * </pre></code>
+     *
+     * @return a list of type expressions
+     */
+    List<TypeExpression> parseTypeExpressionList()
+        {
+        List<TypeExpression> types = new ArrayList<>();
+        types.add(parseTypeExpression());
+        while (match(Id.COMMA) != null)
+            {
+            types.add(parseTypeExpression());
+            }
+        return types;
+        }
+
 
     /**
      * Parse a sequence of parameters, starting with the opening parenthesis.
@@ -2124,7 +2315,12 @@ public class Parser
         }
 
     /**
-     * TODO
+     * Parse a list of parameter types (without parameter names).
+     *
+     * <p/><code><pre>
+     * ParameterTypeList
+     *     "(" TypeExpressionList-opt ")"
+     * </pre></code>
      *
      * @param required
      * @return
@@ -2134,21 +2330,10 @@ public class Parser
         List<TypeExpression> types = null;
         if (match(Id.L_PAREN, required) != null)
             {
-            types = new ArrayList<>();
-            boolean first = true;
-            while (match(Id.R_PAREN) == null)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    expect(Id.COMMA);
-                    }
-
-                types.add(parseTypeExpression());
-                }
+            types = peek().getId() == Id.R_PAREN
+                    ? Collections.EMPTY_LIST
+                    : parseTypeExpressionList();
+            expect(Id.R_PAREN);
             }
         return types;
         }
@@ -2165,7 +2350,15 @@ public class Parser
      *     Arguments "," Argument
      *
      * Argument
+     *     NamedArgument-opt ArgumentExpression
+     *
+     * # note: the "?" argument allows functions to specify arguments that they are NOT binding
+     * ArgumentExpression
+     *     "?"
      *     Expression
+     *
+     * NamedArgument
+     *     Name "="
      * </pre></code>
      *
      *
@@ -2191,6 +2384,22 @@ public class Parser
                     expect(Id.COMMA);
                     }
 
+                // special case where the parameter names are being specified with the arguments
+                if (peek().getId() == Id.IDENTIFIER)
+                    {
+                    Token name = expect(Id.IDENTIFIER);
+                    if (match(Id.ASN) == null)
+                        {
+                        // oops, it wasn't a "name=value" argument
+                        putback(name);
+                        }
+                    else
+                        {
+                        args.add(new NamedExpression(name, parseExpression()));
+                        continue;
+                        }
+                    }
+
                 args.add(parseExpression());
                 }
             }
@@ -2200,47 +2409,29 @@ public class Parser
     /**
      * Parse a declared list of return types.
      *
+     * <p/><code><pre>
      * ReturnList
      *     SingleReturnList
      *     MultiReturnList
      *
      * SingleReturnList
-     *     Type
+     *     TypeExpression
      *
      * MultiReturnList
-     *     "(" Returns ")"
-     *
-     * Returns
-     *     Return
-     *     Returns "," Return
-     *
-     * Return
-     *     Type Name-opt
+     *     "(" TypeExpressionList ")"
+     * </pre></code>
      */
     List<TypeExpression> parseReturnList()
         {
-        // return values
-        List<TypeExpression> listReturn = new ArrayList<>();
+        List<TypeExpression> listReturn;
         if (match(Id.L_PAREN) == null)
             {
-            listReturn.add(parseTypeExpression());
+            listReturn = Collections.singletonList(parseTypeExpression());
             }
         else
             {
-            boolean fFirst = true;
-            while (match(Id.R_PAREN) == null)
-                {
-                if (fFirst)
-                    {
-                    fFirst = false;
-                    }
-                else
-                    {
-                    expect(Id.COMMA);
-                    }
-
-                listReturn.add(parseTypeExpression());
-                }
+            listReturn = parseTypeExpressionList();
+            expect(Id.R_PAREN);
             }
         return listReturn;
         }
@@ -2766,6 +2957,14 @@ public class Parser
      * Bad version value.
      */
     public static final String BAD_VERSION    = "PARSER-04";
+    /**
+     * Bad hex value.
+     */
+    public static final String BAD_HEX_LITERAL= "PARSER-05";
+    /**
+     * Unsupported custom literal.
+     */
+    public static final String BAD_CUSTOM     = "PARSER-06";
 
 
     // ----- data members ------------------------------------------------------

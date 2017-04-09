@@ -38,14 +38,18 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * value, then the compile-time type of the returned value is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @op ElementTypes[index] getElement(Int index);
+    @op Object getElement(Int index);
 
     /**
      * Modify the value in the specified element in the tuple.
      *
+     * If the compile-time type of this tuple is known, and if the index is a compile-time constant
+     * value, then the compile-time type of the parameter is known and checked by the compiler;
+     * otherwise, a type mismatch will raise a runtime type assertion.
+     *
      * This operation will throw an exception if the tuple is either persistent or {@code const}.
      */
-    @op Void setElement(Int index, ElementTypes[index] newValue);
+    @op Void setElement(Int index, Object newValue);
 
     /**
      * Obtain the Ref for the specified element.
@@ -54,7 +58,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * value, then the compile-time type of the returned Ref is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @op Ref<ElementTypes[index]> elementAt(Int index);
+    @op Ref<Object> elementAt(Int index);
 
     // ----- tuple manipulations -------------------------------------------------------------------
 
@@ -79,7 +83,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * tuple is returned; otherwise, a new tuple with the change is returned, and this tuple is left
      * unchanged.
      */
-    Tuple<ElementTypes> replace(Int index, ElementTypes[index] value);
+    Tuple<ElementTypes> replace(Int index, Object value);
 
     /**
      * Obtain a portion of the tuple as a tuple.
@@ -102,9 +106,9 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
      * tuple.
      *
-     * If the compile-time types of both _this_ tuple and _that_ tuple are known, then the
-     * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
-     * compile-time type is required to regain the compile-time type.
+     * If the compile-time type of this tuple is known, and if the index is a compile-time constant
+     * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
+     * to a compile-time type is required to regain the compile-time type.
      */
     Tuple remove(Int index);
 

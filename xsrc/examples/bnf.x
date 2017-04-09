@@ -77,14 +77,11 @@ TypeParameterConstraint
     "extends" TypeExpression
 
 TypeParameterTypeList
-    "<" TypeParameterTypes ">"
+    "<" TypeExpressionList ">"
 
-TypeParameterTypes
-    TypeParameterType
-    TypeParameterTypes "," TypeParameterType
-
-TypeParameterType
+TypeExpressionList
     TypeExpression
+    TypeExpressionList "," TypeExpression
 
 TypeVariableList
     "<" TypeVariables ">"
@@ -265,17 +262,10 @@ SingleReturnList
     TypeExpression
 
 MultiReturnList
-    "(" Returns ")"
+    "(" TypeExpressionList ")"
 
 RedundantReturnSpecifier
-    "<" Returns ">"
-
-Returns
-    Return
-    Returns "," Return
-
-Return
-    TypeExpression Name-opt                           // TODO name???
+    "<" TypeExpressionList ">"
 
 MethodDeclarationFinish
     ;
@@ -318,7 +308,15 @@ TypeDefStatement
     "typedef" TypeExpression Name ";"
 
 AssignmentStatement
-    Assignable AssignmentOperator Expression ";"
+    Assignee AssignmentOperator Expression ";"
+
+Assignee
+    Assignable
+    "(" AssignableList ")"
+
+AssignableList
+    Assignable
+    AssignableList "," Assignable
 
 # Assignable turns out to be just an Expression that meets certain requirements, i.e. one that ends
 # with a Name or an ArrayIndex
@@ -355,8 +353,11 @@ ExpressionStatement
     Expression ";"
 
 ReturnStatement
-    "return" TupleLiteral-opt ";"
-    "return" ExpressionList-opt ";"
+    "return" ReturnValue-opt ";"
+
+ReturnValue
+    TupleLiteral
+    ExpressionList
 
 #
 # expressions
@@ -457,8 +458,8 @@ RelationalExpression
     RelationalExpression "<=" RangeExpression
     RelationalExpression ">=" RangeExpression
     RelationalExpression "<=>" RangeExpression
-    RelationalExpression "instanceof" TypeExpression
     RelationalExpression "as" TypeExpression
+    RelationalExpression "instanceof" TypeExpression
 
 RangeExpression
     ShiftExpression
@@ -491,7 +492,7 @@ PrefixExpression
     "!" PrefixExpression
     "~" PrefixExpression
     "&" PrefixExpression
-    "new" TypeExpression ArgumentList
+    "new" TypeExpression ArgumentList-opt
 
 PostfixExpression
     PrimaryExpression
@@ -502,9 +503,9 @@ PostfixExpression
     PostfixExpression ArrayIndex
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." Name
-    PostfixExpression ".new" ArgumentList
-    PostfixExpression ".instanceof" "(" TypeExpression ")"
+    PostfixExpression ".new" TypeExpression ArgumentList-opt
     PostfixExpression ".as" "(" TypeExpression ")"
+    PostfixExpression ".instanceof" "(" TypeExpression ")"
 
 ArrayDims
     ArrayDim
@@ -591,12 +592,20 @@ Literal
     TupleLiteral
     ListLiteral
     MapLiteral
-    FreeformLiteral
     CustomLiteral
 
-# Whitespace allowed
+StringLiteral
+    "\"" CharacterString-opt "\""
+    FreeformLiteral
+
+# all BinaryLiteral contents must be whitespace or nibbles
 BinaryLiteral
-    "Binary:{" Nibbles-opt "}"
+    "Binary:{" AcceptableBinaryContent "}"
+
+AcceptableBinaryContent
+    StringLiteral
+    FreeformLiteral
+    Nibbles
 
 Nibbles
     Nibble
@@ -755,11 +764,11 @@ TypeExpression
 
 UnionedTypeExpression
     IntersectingTypeExpression
-    IntersectingTypeExpression + IntersectingTypeExpression
+    UnionedTypeExpression + IntersectingTypeExpression
 
 IntersectingTypeExpression
     NonBiTypeExpression
-    NonBiTypeExpression | NonBiTypeExpression
+    IntersectingTypeExpression | NonBiTypeExpression
 
 NonBiTypeExpression
     "(" TypeExpression ")"
@@ -782,5 +791,8 @@ FunctionTypeExpression
     "function" ReturnList FunctionTypeFinish
 
 FunctionTypeFinish
-    Name ParameterList
-    ParameterList Name
+    Name ParameterTypeList
+    ParameterTypeList Name
+
+ParameterTypeList
+    "(" TypeExpressionList-opt ")"

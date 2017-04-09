@@ -9,9 +9,10 @@ package org.xvm.compiler.ast;
 public class ArrayTypeExpression
         extends TypeExpression
     {
-    public ArrayTypeExpression(TypeExpression type)
+    public ArrayTypeExpression(TypeExpression type, int dims)
         {
-        this.type       = type;
+        this.type = type;
+        this.dims = dims;
         }
 
     @Override
@@ -20,10 +21,22 @@ public class ArrayTypeExpression
         StringBuilder sb = new StringBuilder();
 
         sb.append(type)
-          .append("[]");
+          .append('[');
+
+        for (int i = 0; i < dims; ++i)
+            {
+            if (i > 0)
+                {
+                sb.append(',');
+                }
+            sb.append('?');
+            }
+
+          sb.append(']');
 
         return sb.toString();
         }
 
     public final TypeExpression type;
+    public final int dims;
     }

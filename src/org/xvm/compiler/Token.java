@@ -121,6 +121,11 @@ public class Token
         return m_oValue;
         }
 
+    /**
+     * If the token is an identifier that is also a context sensitive keyword, obtain that keyword.
+     *
+     * @return a keyword token that represents the same text as this identifier token
+     */
     public Token convertToKeyword()
         {
         if (m_id != Id.IDENTIFIER)
@@ -194,6 +199,18 @@ public class Token
             }
 
         return null;
+        }
+
+    /**
+     * Obtain the actual string of characters from the source code for this token.
+     *
+     * @param source  the source code
+     *
+     * @return the string of characters corresponding to this token, extracted from the source
+     */
+    public String getString(Source source)
+        {
+        return source.toString(m_lStartPos, m_lEndPos);
         }
 
     // ----- Object methods ----------------------------------------------------
@@ -334,7 +351,7 @@ public class Token
         LAMBDA      ("->"           ),
         IGNORED     ("_"            ),
         ALLOW       ("allow"        , true),
-        AS          ("as"           , true),
+        AS          ("as"           ),
         ASSERT      ("assert"       ),
         AVOID       ("avoid"        , true),
         BREAK       ("break"        ),
@@ -352,6 +369,7 @@ public class Token
         ENUM        ("enum"         ),
         EXTENDS     ("extends"      ),
         FINALLY     ("finally"      ),
+        FOR         ("for"          ),
         FUNCTION    ("function"     ),
         IF          ("if"           ),
         IMMUTABLE   ("immutable"    ),

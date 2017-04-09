@@ -14,16 +14,43 @@ import java.util.List;
 public class NewExpression
         extends PrefixExpression
     {
+    /**
+     * Prefix "new"
+     *
+     * @param operator
+     * @param expr
+     * @param args
+     */
     public NewExpression(Token operator, Expression expr, List<Expression> args)
         {
+        this(null, operator, expr, args);
+        }
+
+    /**
+     * Postfix ".new"
+     *
+     * @param parent
+     * @param operator
+     * @param expr
+     * @param args
+     */
+    public NewExpression(Expression parent, Token operator, Expression expr, List<Expression> args)
+        {
         super(operator, expr);
-        this.args = args;
+        this.parent = parent;
+        this.args   = args;
         }
 
     @Override
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
+
+        if (parent != null)
+            {
+            sb.append(parent)
+              .append('.');
+            }
 
         sb.append(operator.getId().TEXT)
           .append(' ')
@@ -48,5 +75,6 @@ public class NewExpression
         return sb.toString();
         }
 
+    public final Expression parent;
     public final List<Expression> args;
     }
