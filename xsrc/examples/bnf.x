@@ -59,7 +59,6 @@ ArgumentExpression
     "?"
     Expression
 
-# note: not currently implemented // TODO
 NamedArgument
     Name "="
 
@@ -282,6 +281,38 @@ ConstantDeclaration
 # statements
 #
 
+# note: not explicitly spelling out the grammar necessary to avoid the dangling "else" problem, but
+#       the approach is identical to C/Java in that the parser greedily looks for an else, causing
+#       the else to be associated with the inner-most "if" that is in the parse stack
+# note: no "empty statement"
+Statement
+    TypeComposition
+    PropertyDeclarationStatement
+    MethodDeclaration
+    StatementBlock
+    PropertyDeclarationStatement
+	VariableDeclarationStatement
+	AssignmentStatement
+	ExpressionStatement
+    LabeledStatement
+    AssertStatement
+    "break" Name-opt ";"
+    "continue" Name-opt ";"
+    "do" StatementBlock "while" "(" ConditionalDeclaration-opt Expression ")" ";"
+    ForStatement
+    IfStatement
+	ImportStatement
+	ReturnStatement
+    SwitchStatement
+    "throw" Expression ";"
+    TryStatement
+	TypeDefStatement
+    "using" ResourceDeclaration StatementBlock
+    "while" "(" ConditionalDeclaration-opt Expression ")" StatementBlock
+
+PropertyDeclarationStatement
+    "static" TypeExpression Name PropertyDeclarationFinish-opt
+
 StatementBlock
     "{" Statements "}"
 
@@ -289,30 +320,18 @@ Statements
     Statement
     Statements Statement
 
-Statement
-    StatementBlock
-	ImportStatement
-	TypeDefStatement
-	AssignmentStatement
-	VariableDeclarationStatement
-	ExpressionStatement
-	ReturnStatement
+VariableDeclarationStatement
+    TypeExpression Name VariableDeclarationFinish-opt
 
-ImportStatement
-    "import" QualifiedName ImportAlias-opt ";"
-
-ImportAlias
-    "as" Name
-
-TypeDefStatement
-    "typedef" TypeExpression Name ";"
+VariableDeclarationFinish
+    "=" Expression ";"
 
 AssignmentStatement
     Assignee AssignmentOperator Expression ";"
 
 Assignee
     Assignable
-    "(" AssignableList ")"
+    "(" AssignableList "," Assignable ")"
 
 AssignableList
     Assignable
@@ -340,17 +359,44 @@ AssignmentOperator
     "|="
     "?="
 
-VariableDeclarationStatement
-    TypeExpression Name VariableDeclarationFinish-opt
-
-VariableDeclarationFinish
-    "=" Expression ";"
-
-PropertyDeclarationStatement
-    "static" TypeExpression Name PropertyDeclarationFinish-opt
-
 ExpressionStatement
     Expression ";"
+
+LabeledStatement
+    Name ":" Statement
+
+AssertStatement
+    AssertInstruction expression ";"
+
+AssertInstruction
+    "assert"
+    "assert:once"
+    "assert:test"
+    "assert:debug"
+
+ForStatement
+    "for" "(" ForCondition ")" StatementBlock
+
+ForCondition
+    TypeDeclarationList ";" Expression ";" ExpressionList
+    TypeExpression-opt Name ":" Expression
+
+TypeDeclarationList
+
+IfStatement
+    "if" "(" ConditionalDeclaration-opt Expression ")" StatementBlock ElseStatement-opt
+
+ConditionalDeclaration
+    TypeExpression-opt Name ":"
+
+ElseStatement
+    "else" StatementBlock
+
+ImportStatement
+    "import" QualifiedName ImportAlias-opt ";"
+
+ImportAlias
+    "as" Name
 
 ReturnStatement
     "return" ReturnValue-opt ";"
@@ -358,6 +404,45 @@ ReturnStatement
 ReturnValue
     TupleLiteral
     ExpressionList
+
+SwitchStatement
+    switch "(" Expression ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+
+SwitchBlocks
+    SwitchBlock
+    SwitchBlocks SwitchBlock
+
+SwitchBlock
+    SwitchLabels Statements
+
+SwitchLabels
+    SwitchLabel
+    SwitchLabels SwitchLabel
+
+# expression must be a "constant expression", i.e. compiler has to be able to determine the value
+SwitchLabel
+    "case" Expression ":"
+    "default" ":"
+
+TryStatement
+    "try" ResourceDeclaration-opt StatementBlock TryFinish
+
+ResourceDeclaration
+    "(" TypeDeclarationList ")"
+
+TryFinish
+    Catches
+    Catches-opt "finally" StatementBlock
+
+Catches
+    Catch
+    Catches Catch
+
+Catch
+    "catch" "(" TypeExpression Name ")" StatementBlock
+
+TypeDefStatement
+    "typedef" TypeExpression Name ";"
 
 #
 # expressions
@@ -492,7 +577,14 @@ PrefixExpression
     "!" PrefixExpression
     "~" PrefixExpression
     "&" PrefixExpression
-    "new" TypeExpression ArgumentList-opt
+    "new" TypeExpression NewFinish
+
+NewFinish
+     ArgumentList-opt
+     AnonClassBody-opt
+
+AnonClassBody
+    "{" TypeCompositionComponents "}"
 
 PostfixExpression
     PrimaryExpression
@@ -616,15 +708,15 @@ Nibble: one of ...
 
 TupleLiteral
     "(" ExpressionList "," Expression ")"
-    "Tuple:(" ExpressionList-opt ")"
-    "Tuple:{" ExpressionList-opt "}"
+    "Tuple" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":(" ExpressionList-opt ")"
+    "Tuple" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":{" ExpressionList-opt "}"
 
 ListLiteral
     "{" ExpressionList-opt "}"
-    "List:{" ExpressionList-opt "}"
+    "List" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":{" ExpressionList-opt "}"
 
 MapLiteral
-    "Map:{" Entries-opt "}"
+    "Map" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":{" Entries-opt "}"
 
 Entries
     Entry

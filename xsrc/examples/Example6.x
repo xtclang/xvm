@@ -548,3 +548,48 @@ Int i = x.instanceof(T).foo() : 4;
 // PostfixExpression ".instanceof" "(" TypeExpression ")" "?"-opt
 Int i = x.instanceof(T)?.foo() : 4;
 
+// inside a method
+
+Void foo()
+    {
+    // i can declare an interface (it's private)
+    interface Whatever {...}
+
+    // i can declare a class (it's private)
+    class SomeTest {...}
+
+    // it could be static (no parent ref)
+    static class MyClass {...}
+
+    // what about methods?
+    Void foo2() {...}
+
+    // here's a function
+    static Void foo3() {...}
+
+    // here's a property
+    static Int i;
+
+    // i guess there is no such thing as a "named constant" .. that would just be some variable
+    // that never gets changed, i.e. is "effectively final"
+    }
+
+// other valid uses of "static"
+
+// singletons: only consts and services are allowed
+static const CharPageLookupTables {...}
+static service MyRegistryService {...}
+
+class Parent
+    {
+    // like Java, a static child class is one that does not have a ref to its parent;  however,
+    // unlike Java, you can NOT just new it .. you have to parent.new it because new is virtual for
+    // child classes
+    static class Child {..}
+
+    // functions at the class level
+    static Int max(Int n1, Int n2) { return n1 >= n2 ? n1 : n2; }
+
+    // constants at the class level
+    static Dec PI = 3.14;
+    }
