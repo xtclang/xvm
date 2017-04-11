@@ -36,8 +36,8 @@ public class xConst
         //
         //    @lazy Int hash.get()
 
-        addFunctionTemplate("compare", new String[]{"x:Const", "x:Const"}, new String[] {"x:Ordered"});
-        addFunctionTemplate("equals", new String[]{"x:Const", "x:Const"}, new String[] {"x:Boolean"});
+        ensureFunctionTemplate("compare", new String[]{"x:Const", "x:Const"}, new String[]{"x:Ordered"});
+        ensureFunctionTemplate("equals", new String[]{"x:Const", "x:Const"}, new String[]{"x:Boolean"});
 
         // an override
         ensureMethodTemplate("to", STRING, STRING);

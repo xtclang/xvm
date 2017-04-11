@@ -79,13 +79,13 @@ public class xFunction
 
         // ----- FunctionHandle interface -----
 
-        // return an exception
+        // this method doesn't have to be overridden
+        // it simply collects ths specified arguments off the frame's vars
         public ExceptionHandle call(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
             {
             return call(frame, Utils.resolveArguments(frame, m_invoke, ahVar, anArg), ahReturn);
             }
 
-        // return an exception
         public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
             return invoke(frame.f_context, frame, null, prepareVars(ahArg), ahReturn);
@@ -120,7 +120,6 @@ public class xFunction
                 ahVar = ahArg;
                 }
 
-            addBoundArguments(ahVar);
             return ahVar;
             }
 
@@ -128,6 +127,11 @@ public class xFunction
         public ExceptionHandle invoke(ServiceContext context, Frame frame, ObjectHandle hTarget,
                                       ObjectHandle[] ahVar, ObjectHandle[] ahReturn)
             {
+            if (hTarget == null && m_invoke instanceof MethodTemplate)
+                {
+                hTarget = ahVar[0];
+                }
+
             Frame frameNew = context.createFrame(frame, m_invoke, hTarget, ahVar);
 
             ExceptionHandle hException = frameNew.execute();
@@ -179,12 +183,6 @@ public class xFunction
             }
 
         @Override
-        public ExceptionHandle call(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
-            {
-            return m_hDelegate.call(frame, ahVar, anArg, ahReturn);
-            }
-
-        @Override
         public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
             return m_hDelegate.call(frame, ahArg, ahReturn);
@@ -218,6 +216,16 @@ public class xFunction
 
             m_iArg = iArg;
             m_hArg = hArg;
+            }
+
+        @Override
+        public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+            {
+            ObjectHandle[] ahVar = prepareVars(ahArg);
+
+            addBoundArguments(ahVar);
+
+            return invoke(frame.f_context, frame, null, ahVar, ahReturn);
             }
 
         @Override

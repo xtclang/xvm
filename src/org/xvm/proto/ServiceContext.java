@@ -55,12 +55,14 @@ public class ServiceContext
         return new Frame(this, framePrev, template, hTarget, ahVar);
         }
 
-    public ExceptionHandle start(ServiceHandle hService, String sName)
+    public ExceptionHandle start(ServiceHandle hService, String sServiceName)
         {
         m_hService = hService;
 
+        String sThreadName = f_container.m_constModule.getQualifiedName() + ":" + sServiceName;
+
         // TODO: we need to be able to share native threads across services
-        ServiceDaemon daemon = m_daemon = new ServiceDaemon(sName, this);
+        ServiceDaemon daemon = m_daemon = new ServiceDaemon(sThreadName, this);
         daemon.start();
 
         while (!daemon.isStarted())
@@ -71,12 +73,20 @@ public class ServiceContext
         return null;
         }
 
+    // ----- x:Service methods -----
+
     // wait for any messages coming in
     public void yield()
         {
         m_daemon.dispatch(100l);
         }
 
+    public boolean isContended()
+        {
+        return m_daemon.isContended();
+        }
+    //
+    // send and asynchronous "call" message
     public CompletableFuture<ObjectHandle[]> sendRequest(ServiceContext context, FunctionHandle hFunction,
                                                  ObjectHandle[] ahArg, int cReturns)
         {
@@ -87,6 +97,7 @@ public class ServiceContext
         return future;
         }
 
+    // return an asynchronous call result
     public void sendResponse(ServiceContext context, ExceptionHandle hException, ObjectHandle[] ahReturn,
                              CompletableFuture<ObjectHandle[]> future)
         {

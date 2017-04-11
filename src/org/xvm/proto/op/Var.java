@@ -28,5 +28,4 @@ public class Var extends Op
         frame.f_anNextVar[iScope] = nNextVar+1;
         return iPC + 1;
         }
-
     }

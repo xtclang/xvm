@@ -189,7 +189,7 @@ public abstract class TypeCompositionTemplate
         }
 
     // add a function
-    public FunctionTemplate addFunctionTemplate(String sFunctionName, String[] asArgTypes, String[] asRetTypes)
+    public FunctionTemplate ensureFunctionTemplate(String sFunctionName, String[] asArgTypes, String[] asRetTypes)
         {
         FunctionTemplate templateF = new FunctionTemplate(sFunctionName, asArgTypes, asRetTypes);
 
@@ -201,7 +201,7 @@ public abstract class TypeCompositionTemplate
         return templateF;
         }
 
-    public FunctionTemplate addFunctionTemplate(FunctionTemplate templateF)
+    public FunctionTemplate ensureFunctionTemplate(FunctionTemplate templateF)
         {
         m_mapMultiFunctions.computeIfAbsent(templateF.f_sName, s -> new MultiFunctionTemplate()).
                 add(templateF);
@@ -358,6 +358,13 @@ public abstract class TypeCompositionTemplate
     // invokeNative with 1 argument and 1 return value
     public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget,
                                        MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
+        {
+        throw new IllegalStateException();
+        }
+
+    // invokeNative with 1 argument and 0 return value
+    public ExceptionHandle invokeNative10(Frame frame, ObjectHandle hTarget,
+                                       MethodTemplate method, ObjectHandle hArg)
         {
         throw new IllegalStateException();
         }

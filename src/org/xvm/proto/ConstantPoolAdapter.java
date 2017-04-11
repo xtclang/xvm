@@ -145,7 +145,12 @@ public class ConstantPoolAdapter
         }
 
     // FOR SIMULATION ONLY
-    public int ensureConstantValueId(Object oValue)
+    public ModuleConstant ensureModuleConstant(String sModule)
+        {
+        return m_constantPool.ensureModuleConstant(sModule);
+        }
+
+    public int ensureValueConstantId(Object oValue)
         {
         Constant constant;
         if (oValue instanceof Integer || oValue instanceof Long)

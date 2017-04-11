@@ -53,7 +53,7 @@ public class xArray
         ensureMethodTemplate("add", THIS, THIS);
         ensureMethodTemplate("replace", new String[]{"x:Int", "ElementType"}, THIS);
 
-        addFunctionTemplate("compare", new String[] {"this.Type", "this.Type"}, new String[] {"x:Ordered"});
+        ensureFunctionTemplate("compare", new String[]{"this.Type", "this.Type"}, new String[]{"x:Ordered"});
 
         PropertyTemplate ptHead = ensurePropertyTemplate("head", "x:Ref<ElementType>");
         ptHead.setGetAccess(Access.Private);

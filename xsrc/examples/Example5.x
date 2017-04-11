@@ -111,6 +111,7 @@ Stage<InType, OutType> implements Stream
             {
             if (!evaluate(op, this)
             }
+        }
 
     conditional (ResultType) evaluate(TerminalOp<OutType, ResultType> op, InType el)
         {
@@ -295,3 +296,28 @@ if (o.?(Person))
     {
     p = o2.as(Something).foo().as(Person).doSomePersonThing().doSomeOtherThing().etc();
     }
+
+label1:
+   while (Person p : listP)
+        {
+        int i = label1.counter;
+        boolean f = label1.first;
+        }
+
+   function Int() foo = ...;
+
+label2:
+   switch (foo())
+        {
+        case 1:
+        case 2:
+
+        default:
+            int n = label2.value;
+        }
+
+label3:
+    if (foo() > 5)
+        {
+
+        }

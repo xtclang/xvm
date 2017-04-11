@@ -32,7 +32,7 @@ public class xException
         ensurePropertyTemplate("cause", "this.Type");
         ensurePropertyTemplate("stackTrace", "x:String"); // TODO: replace "x:String" with "x:Iterable<this.Type.StackFrame>"
 
-        FunctionTemplate ct = addFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
+        FunctionTemplate ct = ensureFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
 
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {
@@ -46,18 +46,20 @@ public class xException
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new ExceptionHandle(f_clazzCanonical, false);
+        return new ExceptionHandle(f_clazzCanonical, false, null);
         }
 
     @Override
     public ObjectHandle createStruct()
         {
-        return makeHandle(null);
+        return makeHandle(null, null);
         }
 
-    public static ExceptionHandle makeHandle(ExceptionHandle hCause)
+    public static ExceptionHandle makeHandle(ExceptionHandle hCause, Throwable eCause)
         {
-        ExceptionHandle hException = new ExceptionHandle(INSTANCE.f_clazzCanonical, true);
+        ExceptionHandle hException = eCause == null ?
+                new ExceptionHandle(INSTANCE.f_clazzCanonical, true, null) :
+                new ExceptionHandle(INSTANCE.f_clazzCanonical, true, eCause);
 
         ServiceContext context = ServiceContext.getCurrentContext();
         Frame frame = context.getCurrentFrame();

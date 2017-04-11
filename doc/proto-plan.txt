@@ -2,8 +2,8 @@
         Issue with "construct super" return - see OpCallable.callConstructor()
 
 + Service
-        - catch exception from "as()"
         - cleanup an un-referenced service (phantom refs)
+        - container terminates when all services are stopped
 
 - Array
 - Multi:

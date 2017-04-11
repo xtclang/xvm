@@ -1,11 +1,16 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ConstantPool.ModuleConstant;
+
+import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
+
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.xModule;
+import org.xvm.proto.template.xModule.ModuleHandle;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xService;
-import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -20,7 +25,10 @@ public class Container
     final public TypeSet f_types;
     final public ConstantPoolAdapter f_constantPoolAdapter;
     final public ObjectHeap f_heapGlobal;
-    final public ServiceContext f_contextZero;
+    final public ServiceContext f_contextMain; // the service context for the container itself
+
+    protected ModuleConstant m_constModule;
+
     Set<ServiceContext> m_setServices = new HashSet<>();
 
     public Container()
@@ -28,14 +36,12 @@ public class Container
         f_constantPoolAdapter = new ConstantPoolAdapter();
         f_types = new TypeSet(f_constantPoolAdapter);
         f_heapGlobal = new ObjectHeap(f_constantPoolAdapter, f_types);
+        f_contextMain = new ServiceContext(this);
 
-        f_contextZero = new ContextZero(this);
-        f_contextZero.start(null, "main");
-
-        init();
+        initTypes();
         }
 
-    protected void init()
+    protected void initTypes()
         {
         TypeSet types = f_types;
 
@@ -61,109 +67,51 @@ public class Container
         return ctx;
         }
 
-    public ServiceHandle startService(xService service, String sName)
+    public void start(ModuleConstant constModule)
         {
-        ContextZero.StartService msg = new ContextZero.StartService();
-        msg.service = service;
-        msg.sName = sName;
-
-        f_contextZero.m_daemon.add(msg);
-        synchronized (msg)
+        if (m_constModule != null)
             {
-            try
+            throw new IllegalStateException("Already started");
+            }
+
+        m_constModule = constModule;
+
+        try
+            {
+            String sModule = m_constModule.getQualifiedName();
+            xModule module = (xModule) f_types.ensureTemplate(sModule);
+
+            InvocationTemplate mtRun = module.getMethodTemplate("run", xModule.VOID, xModule.VOID);
+            if (mtRun == null)
                 {
-                while (msg.hService == null)
-                    {
-                    msg.wait(1000);
-                    }
-                }
-            catch (InterruptedException e)
-                {
-                throw new RuntimeException(e);
+                throw new IllegalArgumentException("Missing run() method for " + m_constModule);
                 }
 
+            ModuleHandle hModule = (ModuleHandle) module.createConstHandle(m_constModule);
+            FunctionHandle hFunction = xFunction.makeHandle(mtRun);
+
+            // TODO: create a service handle for "main" service
+            f_contextMain.start(null, "main");
+
+            f_contextMain.sendRequest(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
+                .whenComplete((ah, x) ->
+                {
+                if (x != null)
+                    {
+                    System.out.println("Unhandled exception " + x);
+                    System.out.println(((ObjectHandle.ExceptionHandle.WrapperException) x).getExceptionHandle().toString());
+                    }
+                });
             }
-        return msg.hService;
+        catch (Exception e)
+            {
+            throw new RuntimeException("failed to run: " + m_constModule, e);
+            }
         }
 
-    public void runMethod(ServiceHandle hService, String sMethodSig, ObjectHandle[] ahArg)
+    public boolean isRunning()
         {
-        ContextZero.RunMethod msg = new ContextZero.RunMethod();
-        msg.hService = hService;
-        msg.sMethodSig = sMethodSig;
-        msg.ahArg = ahArg;
-
-        f_contextZero.m_daemon.add(msg);
-        }
-
-    public static class ContextZero
-            extends ServiceContext
-        {
-        protected ContextZero(Container container)
-            {
-            super(container);
-            }
-
-        protected static class StartService
-                implements Message
-            {
-            protected xService service;
-            protected String sName;
-            protected volatile ServiceHandle hService;
-
-            @Override
-            public void process(ServiceContext context)
-                {
-                ServiceHandle handle = service.createService(sName);
-                service.start(handle);
-
-                synchronized (this)
-                    {
-                    hService = handle;
-                    notify();
-                    }
-                }
-            }
-
-        protected static class RunMethod
-                implements Message
-            {
-            protected ServiceHandle hService;
-            protected String sMethodSig;
-            protected ObjectHandle[] ahArg;
-
-            @Override
-            public void process(ServiceContext context)
-                {
-                TypeCompositionTemplate template = hService.f_clazz.f_template;
-
-                int nMethodId = context.f_constantPool.getMethodConstId(template.f_sName, sMethodSig);
-
-                ConstantPool.MethodConstant constMethod = context.f_constantPool.getMethodConstant(nMethodId);
-
-                TypeCompositionTemplate.MethodTemplate method = template.getMethodTemplate(constMethod);
-
-                try
-                    {
-                    System.out.println("\n### Calling " + method + " ###");
-
-                    Frame frame = context.createFrame(null, null, hService, new ObjectHandle[method.m_cVars]);
-
-                    ObjectHandle.ExceptionHandle hException = xFunction.makeAsyncHandle(method).
-                            call(frame, new ObjectHandle[]{hService}, Utils.OBJECTS_NONE);
-
-                    if (hException != null)
-                        {
-                        System.out.println("Function " + method + " threw unhandled " + hException);
-                        }
-                    }
-                catch (Exception e)
-                    {
-                    System.out.println("Failed to execute " + method);
-                    e.printStackTrace(System.out);
-                    }
-
-                }
-            }
+        // TODO: consider all services
+        return f_contextMain.isContended();
         }
     }

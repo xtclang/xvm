@@ -4,6 +4,7 @@ import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Access;
 
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -72,7 +73,15 @@ public class Frame
                 }
             else
                 {
-                iPC = op.process(this, iPC);
+                try
+                    {
+                    iPC = op.process(this, iPC);
+                    }
+                catch (RuntimeException e)
+                    {
+                    System.out.println("!!! frame " + this);
+                    throw e;
+                    }
                 }
 
             if (iPC < 0)
@@ -90,6 +99,7 @@ public class Frame
                 if (iPC >= 0)
                     {
                     // handled exception; go to the handler
+                    m_hException = null;
                     continue;
                     }
 

@@ -42,7 +42,7 @@ public class xRef
         ensurePropertyTemplate("byteLength", "x:Int").makeReadOnly();
         ensurePropertyTemplate("selfContained", "x:Boolean").makeReadOnly();
 
-        addFunctionTemplate("equals", new String[] {"x:Ref", "x:Ref"}, BOOLEAN);
+        ensureFunctionTemplate("equals", new String[]{"x:Ref", "x:Ref"}, BOOLEAN);
         }
 
     // a reference

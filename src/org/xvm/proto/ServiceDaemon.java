@@ -28,6 +28,8 @@ public class ServiceDaemon
 
     private volatile State m_state = State.Initial;
 
+    private volatile boolean m_fWaiting = false;
+
     final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
 
     enum State {Initial, Starting, Running, Stopping, Stopped;};
@@ -77,7 +79,9 @@ public class ServiceDaemon
             {
             while (m_state == State.Running)
                 {
+                m_fWaiting = true;
                 notifier.await(1000);
+                m_fWaiting = false;
 
                 Message message = queue.poll();
                 while (message != null)
@@ -107,6 +111,13 @@ public class ServiceDaemon
         setState(State.Stopped);
 
         s_tloContext.set(null);
+        }
+
+    // ----- x:Service methods -----
+
+    public boolean isContended()
+        {
+        return !f_queue.isEmpty() || !m_fWaiting;
         }
 
     public void dispatch(long cMillis)

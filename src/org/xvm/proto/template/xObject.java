@@ -36,7 +36,7 @@ public class xObject
         propMeta.setGetAccess(Access.Protected);
         propMeta.setSetAccess(Access.Protected);
 
-        addFunctionTemplate("equals", new String[]{"x:Object", "x:Object"}, VOID);
+        ensureFunctionTemplate("equals", new String[]{"x:Object", "x:Object"}, VOID);
 
         ensureMethodTemplate("to", VOID, STRING);
         ensureMethodTemplate("to", VOID, new String[]{"x:collections.Array<x:String>"});

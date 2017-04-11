@@ -98,19 +98,30 @@ public abstract class ObjectHandle
         {
         protected Throwable m_exception;
 
-        public ExceptionHandle(TypeComposition clazz, boolean fInitialize)
+        public ExceptionHandle(TypeComposition clazz, boolean fInitialize, Throwable eCause)
             {
             super(clazz);
 
             if (fInitialize)
                 {
-                m_exception = new WrapperException();
+                m_exception = eCause == null ?
+                        new WrapperException() : new WrapperException(eCause);;
                 }
             }
 
         public class WrapperException
                 extends Exception
             {
+            public WrapperException()
+                {
+                super();
+                }
+
+            public WrapperException(Throwable cause)
+                {
+                super(cause);
+                }
+
             public ExceptionHandle getExceptionHandle()
                 {
                 return ExceptionHandle.this;
