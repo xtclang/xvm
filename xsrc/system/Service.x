@@ -72,7 +72,7 @@ interface Service()
      */
     @atomic String serviceName.get()
         {
-        return meta.class.to<String>();
+        return meta.class_.to<String>();
         }
 
     /**

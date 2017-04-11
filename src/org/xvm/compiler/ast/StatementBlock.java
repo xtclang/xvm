@@ -9,10 +9,10 @@ import java.util.List;
  *
  * @author cp 2017.03.28
  */
-public class BlockStatement
+public class StatementBlock
         extends Statement
     {
-    public BlockStatement(List<Statement> statements)
+    public StatementBlock(List<Statement> statements)
         {
         this.statements = statements;
         }

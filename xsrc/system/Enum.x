@@ -12,8 +12,8 @@ interface Enum
      */
     @ro Enumeration enumeration.get()
         {
-        Class+Enumeration clz = (Class+Enumeration) meta.class;
-        if (clz.parent instanceof Class+Enumeration && clz.extends(clz.parent))
+        Class+Enumeration clz = meta.class_.as(Class+Enumeration);
+        if (clz.parent.instanceof(Class+Enumeration) && clz.extends_(clz.parent))
             {
             clz = clz.parent;
             }
@@ -30,7 +30,7 @@ interface Enum
      */
     @ro String name.get()
         {
-        return meta.class.name;
+        return meta.class_.name;
         }
 
     /**

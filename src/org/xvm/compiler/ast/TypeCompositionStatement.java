@@ -15,19 +15,19 @@ import static org.xvm.util.Handy.indentLines;
  *
  * @author cp 2017.03.28
  */
-public class TypeDeclarationStatement
+public class TypeCompositionStatement
         extends Statement
     {
-    public TypeDeclarationStatement(List<Token>       modifiers,
-                                    List<Annotation>  annotations,
-                                    Token             category,
-                                    Token             name,
-                                    List<Token>       qualified,
-                                    List<Parameter>   typeParams,       
-                                    List<Parameter>   constructorParams,
-                                    List<Composition> composition,      
-                                    BlockStatement    body,
-                                    Token             doc)
+    public TypeCompositionStatement(List<Token> modifiers,
+                                    List<Annotation> annotations,
+                                    Token category,
+                                    Token name,
+                                    List<Token> qualified,
+                                    List<Parameter> typeParams,
+                                    List<Parameter> constructorParams,
+                                    List<Composition> composition,
+                                    StatementBlock body,
+                                    Token doc)
         {
         this.modifiers         = modifiers;
         this.annotations       = annotations;
@@ -200,7 +200,7 @@ public class TypeDeclarationStatement
     public final List<Parameter>   typeParams;
     public final List<Parameter>   constructorParams;
     public final List<Composition> composition;
-    public final BlockStatement    body;
+    public final StatementBlock body;
     public final Token             doc;
 
     StructureContainer struct;

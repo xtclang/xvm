@@ -593,3 +593,7 @@ class Parent
     // constants at the class level
     static Dec PI = 3.14;
     }
+
+// type literals
+
+foo(List<Person>:{foo1(), b, c});

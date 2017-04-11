@@ -11,14 +11,27 @@ public class ExpressionStatement
     {
     public ExpressionStatement(Expression expr)
         {
+        this(expr, true);
+        }
+
+    public ExpressionStatement(Expression expr, boolean standalone)
+        {
         this.expr = expr;
+        this.term = standalone;
         }
 
     @Override
     public String toString()
         {
-        return expr.toString() + ';';
+        StringBuilder sb = new StringBuilder();
+        sb.append(expr);
+        if (term)
+            {
+            sb.append(';');
+            }
+        return sb.toString();
         }
 
     public final Expression expr;
+    public final boolean    term;
     }

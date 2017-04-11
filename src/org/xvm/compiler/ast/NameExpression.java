@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import org.xvm.compiler.Token;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -17,19 +18,34 @@ public class NameExpression
     {
     public NameExpression(Token name)
         {
-        names = new ArrayList<>(3);
-        names.add(name);
+        names = Collections.singletonList(name);
         }
 
-    public NameExpression(List<Token> names)
+    public NameExpression(List<Token> names, List<TypeExpression> params)
         {
         this.names = names;
+        }
+
+    public boolean isSpecial()
+        {
+        for (Token name : names)
+            {
+            if (name.isSpecial())
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     @Override
     public TypeExpression toTypeExpression()
         {
-        return new NamedTypeExpression(null, names, null);
+        // TODO "this:type"
+        // TODO "this.ChildClass"?
+        return isSpecial()
+                ? new BadTypeExpression(this)
+                : new NamedTypeExpression(null, names, null);
         }
 
     @Override

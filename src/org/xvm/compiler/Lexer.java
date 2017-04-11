@@ -142,19 +142,7 @@ public class Lexer
 
         if (m_fHexMode)
             {
-            if (chInit == '\"')
-                {
-                m_fHexMode = false;
-                source.rewind();
-                return eatStringLiteral();
-                }
-            else if (isFreeformUpperLeft(chInit))
-                {
-                m_fHexMode = false;
-                source.rewind();
-                return eatFreeformLiteral();
-                }
-            else if (isHexit(chInit))
+            if (isHexit(chInit))
                 {
                 StringBuilder sb = new StringBuilder();
                 char ch = chInit;
@@ -177,10 +165,8 @@ public class Lexer
                     }
                 return new Token(lInitPos, source.getPosition(), Id.LIT_STRING, sb.toString());
                 }
-            else
-                {
-                m_fHexMode = false;
-                }
+
+            m_fHexMode = false;
             }
 
         switch (chInit)
@@ -246,14 +232,6 @@ public class Lexer
                 return new Token(lInitPos, source.getPosition(), Id.COND);
 
             case ':':
-                if (source.hasNext())
-                    {
-                    if (nextChar() == '{')
-                        {
-                        // TODO - literal
-                        }
-                    source.rewind();
-                    }
                 return new Token(lInitPos, source.getPosition(), Id.COLON);
 
             case '+':
@@ -267,12 +245,13 @@ public class Lexer
                         case '=':
                             return new Token(lInitPos, source.getPosition(), Id.ADD_ASN);
 
-                        case '0': case '1': case '2': case '3': case '4':
-                        case '5': case '6': case '7': case '8': case '9':
-                        case '.':
-                            source.rewind();
-                            source.rewind();
-                            return eatNumericLiteral();
+// TODO get rid of this; add unary +/-
+//                        case '0': case '1': case '2': case '3': case '4':
+//                        case '5': case '6': case '7': case '8': case '9':
+//                        case '.':
+//                            source.rewind();
+//                            source.rewind();
+//                            return eatNumericLiteral();
                         }
                     source.rewind();
                     }
@@ -292,12 +271,13 @@ public class Lexer
                         case '=':
                             return new Token(lInitPos, source.getPosition(), Id.SUB_ASN);
 
-                        case '0': case '1': case '2': case '3': case '4':
-                        case '5': case '6': case '7': case '8': case '9':
-                        case '.':
-                            source.rewind();
-                            source.rewind();
-                            return eatNumericLiteral();
+// TODO get rid of this; add unary +/-
+//                        case '0': case '1': case '2': case '3': case '4':
+//                        case '5': case '6': case '7': case '8': case '9':
+//                        case '.':
+//                            source.rewind();
+//                            source.rewind();
+//                            return eatNumericLiteral();
                         }
                     source.rewind();
                     }
@@ -536,10 +516,55 @@ public class Lexer
                         }
                     }
 
-                String s = source.toString(lInitPos, source.getPosition());
-                Id id = Id.valueByText(s);
+                String name = source.toString(lInitPos, source.getPosition());
+                if (name.equals("this") && source.hasNext())
+                    {
+                    long lPos = source.getPosition();
+                    if (source.next() == ':')
+                        {
+                        // check for a legal suffix, e.g. "this:private"
+                        while (source.hasNext())
+                            {
+                            if (!isIdentifierPart(nextChar()))
+                                {
+                                source.rewind();
+                                break;
+                                }
+                            }
+
+                        String full = source.toString(lInitPos, source.getPosition());
+                        if (Id.valueByContextSensitiveText(full) != null)
+                            {
+                            name = full;
+                            }
+                        else
+                            {
+                            // false alarm; back up and just take "this"
+                            source.setPosition(lPos);
+                            }
+                        }
+                    else
+                        {
+                        source.rewind();
+                        }
+                    }
+                else if (name.equals(Id.TODO.TEXT) && source.hasNext())
+                    {
+                    char chNext = source.next();
+                    source.rewind();
+
+                    if (chNext != '(')
+                        {
+                        // parse the to-do statement in the same manner as a single line comment
+                        Token comment = eatSingleLineComment(lInitPos);
+                        return new Token(comment.getStartPosition(), comment.getEndPosition(),
+                                Id.TODO, comment.getValue());
+                        }
+                    }
+
+                Id id = Id.valueByText(name);
                 return id == null
-                        ? new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, s)
+                        ? new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, name)
                         : new Token(lInitPos, source.getPosition(), id); 
                 }
             }

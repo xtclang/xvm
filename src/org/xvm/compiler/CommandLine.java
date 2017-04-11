@@ -4,9 +4,9 @@ package org.xvm.compiler;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.StructureContainer;
-import org.xvm.compiler.ast.BlockStatement;
+import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.Statement;
-import org.xvm.compiler.ast.TypeDeclarationStatement;
+import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
@@ -456,14 +456,14 @@ public class CommandLine
 
         if (stmt != null)
             {
-            if (stmt instanceof BlockStatement)
+            if (stmt instanceof StatementBlock)
                 {
-                List<Statement> list = ((BlockStatement) stmt).statements;
+                List<Statement> list = ((StatementBlock) stmt).statements;
                 stmt = list.get(list.size() - 1);
                 }
-            if (stmt instanceof TypeDeclarationStatement)
+            if (stmt instanceof TypeCompositionStatement)
                 {
-                TypeDeclarationStatement typeStmt = (TypeDeclarationStatement) stmt;
+                TypeCompositionStatement typeStmt = (TypeCompositionStatement) stmt;
                 Token                    category = typeStmt.category;
                 if (opts.verbose)
                     {
@@ -684,7 +684,7 @@ public class CommandLine
                 Node node = entry.getValue();
                 out(node);
 
-                TypeDeclarationStatement type = node.getType();
+                TypeCompositionStatement type = node.getType();
                 if (type != null)
                     {
                     out();
@@ -749,7 +749,7 @@ public class CommandLine
         public void registerNames();
         String name();
         String descriptiveName();
-        TypeDeclarationStatement getType();
+        TypeCompositionStatement getType();
         void assignStructure(StructureContainer struct);
         StructureContainer getStructure();
         void checkSyntax();
@@ -910,7 +910,7 @@ public class CommandLine
             }
 
         @Override
-        public TypeDeclarationStatement getType()
+        public TypeCompositionStatement getType()
             {
             return pkgNode == null ? null : pkgNode.getType();
             }
@@ -1049,7 +1049,7 @@ public class CommandLine
         public Source    source;
         public ErrorList errs = new ErrorList(100);
         public Statement stmt;
-        public TypeDeclarationStatement type;
+        public TypeCompositionStatement type;
 
         /**
          * Construct a FileNode.
@@ -1125,14 +1125,14 @@ public class CommandLine
                 // this can only happen if the errors were ignored
                 if (stmt != null)
                     {
-                    if (stmt instanceof TypeDeclarationStatement)
+                    if (stmt instanceof TypeCompositionStatement)
                         {
-                        type = (TypeDeclarationStatement) stmt;
+                        type = (TypeCompositionStatement) stmt;
                         }
                     else
                         {
-                        List<Statement> list = ((BlockStatement) stmt).statements;
-                        type = (TypeDeclarationStatement) list.get(list.size() - 1);
+                        List<Statement> list = ((StatementBlock) stmt).statements;
+                        type = (TypeCompositionStatement) list.get(list.size() - 1);
                         }
                     }
 
@@ -1156,7 +1156,7 @@ public class CommandLine
             }
 
         @Override
-        public TypeDeclarationStatement getType()
+        public TypeCompositionStatement getType()
             {
             return type;
             }

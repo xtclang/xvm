@@ -12,8 +12,9 @@ import java.util.List;
 public class TupleExpression
         extends Expression
     {
-    public TupleExpression(List<Expression> exprs)
+    public TupleExpression(TypeExpression type, List<Expression> exprs)
         {
+        this.type  = type;
         this.exprs = exprs;
         }
 
@@ -43,5 +44,6 @@ public class TupleExpression
         return sb.toString();
         }
 
+    public final TypeExpression   type;
     public final List<Expression> exprs;
     }

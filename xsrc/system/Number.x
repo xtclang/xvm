@@ -141,9 +141,9 @@ interface Number
                 // the least significant (rightmost) bit, while nibble 0 is the leftmost nibble
                 Bit[] bits = Number.this.to<Bit[]>();
                 Int   of   = bit.length - index * 4 -  1;
-                return new Nibble(new Bit[] {bits[of], bits[of-1], bits[of-2], bits[of-3]});
+                return new Nibble({bits[of], bits[of-1], bits[of-2], bits[of-3]}.as(Bit[]));
                 }
-            }
+            };
         }
 
     /**
@@ -169,10 +169,10 @@ interface Number
                 // the least significant (rightmost) bit, while byte 0 is the leftmost byte
                 Bit[] bits = Number.this.to<Bit[]>();
                 Int   of   = bit.length - index * 8 -  1;
-                return new Byte(new Bit[] {bits[of], bits[of-1], bits[of-2], bits[of-3],
-                         bits[of-4], bits[of-5], bits[of-6], bits[of-7]});
+                return new Byte({bits[of], bits[of-1], bits[of-2], bits[of-3],
+                         bits[of-4], bits[of-5], bits[of-6], bits[of-7]}.as(Bit[]));
                 }
-            }
+            };
         }
 
     /**

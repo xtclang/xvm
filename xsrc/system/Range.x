@@ -36,7 +36,7 @@
 
                     return true, value;
                     }
-                }
+                };
             }
         else
             {
@@ -60,7 +60,7 @@
 
                     return true, value;
                     }
-                }
+                };
             }
         }
 
@@ -75,7 +75,7 @@
                 process(value);
                 value = value.prevValue();
                 }
-            while (value >= lowerBound)
+            while (value >= lowerBound);
             }
         else
             {
@@ -85,7 +85,7 @@
                 process(value);
                 value = value.nextValue();
                 }
-            while (value <= upperBound)
+            while (value <= upperBound);
             }
         }
 

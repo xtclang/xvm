@@ -50,6 +50,10 @@ module MyApp.xqiz.it
                 ║ 9149AF2aCF75b3B8E123║
                 ║ 0f9149AcF2CF73BE123 ║
                 ╚═════════════════════╝};
+            Binary b3 = Binary:{
+                 9149AF2aCF75b3B8E123
+                 a0f9149AcF2CF73BE123
+                };
 
             Int result1 = a();
             Int result2 = a(1);

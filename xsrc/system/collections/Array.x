@@ -63,10 +63,10 @@ class Array<ElementType>
             throw new IllegalArrayIndex(index, 0, length);
             }
 
-        Element element = (Element) head;
+        Element element = head as Element;
         while (index-- > 0)
             {
-            element = (Element) element.next;
+            element = element.next as Element;
             }
 
         return element;
@@ -111,7 +111,7 @@ class Array<ElementType>
     @Override
     Array.Type<ElementType> ensureMutable()
         {
-        return
+        return TODO
         }
 
     /**

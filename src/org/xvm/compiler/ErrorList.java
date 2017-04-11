@@ -1,8 +1,10 @@
 package org.xvm.compiler;
 
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ResourceBundle;
 
 import org.xvm.util.Severity;
 
@@ -161,7 +163,8 @@ public class ErrorList
          */
         public String getMessage()
             {
-            // TODO - need to look up and format message correctly; this is just temporary
+            return MessageFormat.format(RESOURCES.getString(getCode()), getParams());
+            /*
             StringBuilder sb = new StringBuilder(getCode());
             Object[] aoParam = getParams();
             if (aoParam != null)
@@ -194,6 +197,7 @@ public class ErrorList
                 }
 
             return sb.toString();
+            */
             }
 
         /**
@@ -284,6 +288,8 @@ public class ErrorList
 
 
     // ----- data members ------------------------------------------------------
+
+    public static final ResourceBundle RESOURCES = ResourceBundle.getBundle("compiler");
 
     /**
      * Maximum number of serious errors to tolerate before abandoning the

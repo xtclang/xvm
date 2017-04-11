@@ -9,7 +9,7 @@ const Char
 
     construct Char(Byte b)
         {
-        assert:always codepoint <= 0x7F
+        assert codepoint <= 0x7F;
         construct(b.to<UInt32>());
         }
 

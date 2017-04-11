@@ -5,7 +5,7 @@ const VarInt
     {
     construct VarInt(Bit[] bits)
         {
-        assert:always bits.length >= 8 && bits.length.bitCount = 1;
+        assert:always bits.length >= 8 && bits.length.bitCount == 1;
         bits = bits;
         }
 
@@ -18,7 +18,7 @@ const VarInt
             }
         
         // any other bits set is positive
-        if (Bit bit : iterator((bit) -> return bit == 1))
+        if (Bit bit : iterator((bit) -> bit == 1))
             {
             return Positive;
             }
@@ -42,6 +42,9 @@ const VarInt
         // use the bits "as is" for zero, positive numbers, and 
         Bit[] bits = this.bits;
         if (sign == Negative)
-        return new VarUInt(sign == Negative ? this.twosComplement : this.to<Bit[]>);
+            {
+            TODO not sure what the code was planning to do here
+            }
+        return new VarUInt(sign == Negative ? this.twosComplement : this.to<Bit[]>());
         }
     }

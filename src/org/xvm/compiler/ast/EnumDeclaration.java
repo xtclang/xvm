@@ -18,7 +18,7 @@ public class EnumDeclaration
         extends Statement
     {
     public EnumDeclaration(List<Annotation> annotations, Token name, List<TypeExpression> typeParams,
-                           List<Expression> args, BlockStatement body, Token doc)
+                           List<Expression> args, StatementBlock body, Token doc)
         {
         this.annotations = annotations;
         this.name        = name;
@@ -105,6 +105,6 @@ public class EnumDeclaration
     public final Token name;
     public final List<TypeExpression> typeParams;
     public final List<Expression> args;
-    public final BlockStatement body;
+    public final StatementBlock body;
     public final Token doc;
     }

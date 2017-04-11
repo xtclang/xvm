@@ -15,7 +15,7 @@ Modifiers
     Modifiers Modifier
 
 Modifier
-     "static"
+    "static"
     AccessModifier
     Annotation
 
@@ -97,7 +97,7 @@ TypeVariable
 #
 
 CompilationUnit
-	AliasStatements-opt TypeDeclaration
+	AliasStatements-opt TypeCompositionStatement
 
 AliasStatements
 	AliasStatement
@@ -111,7 +111,7 @@ AliasStatement
 # type compositions
 #
 
-TypeComposition
+TypeCompositionStatement
     Modifiers-opt Category QualifiedName TypeParameterList-opt ParameterList-opt Compositions-opt TypeCompositionBody
 
 Category
@@ -204,9 +204,9 @@ TypeCompositionComponents
 TypeCompositionComponent
     TypdefStatement
     ImportStatement
-    TypeComposition
+    TypeCompositionStatement
     PropertyDeclaration
-    MethodDeclaration
+    MethodDeclarationStatement
     ConstantDeclaration
 
 #
@@ -238,7 +238,7 @@ PropertyDeclarationFinish
 # methods
 #
 
-MethodDeclaration
+MethodDeclarationStatement
     MethodModifiers-opt TypeVariableList-opt NamePrecursor Name RedundantReturnSpecifier ParameterList MethodDeclarationFinish
 
 MethodModifiers
@@ -286,14 +286,13 @@ ConstantDeclaration
 #       the else to be associated with the inner-most "if" that is in the parse stack
 # note: no "empty statement"
 Statement
-    TypeComposition
+    TypeCompositionStatement
     PropertyDeclarationStatement
-    MethodDeclaration
+    MethodDeclarationStatement
     StatementBlock
-    PropertyDeclarationStatement
-	VariableDeclarationStatement
-	AssignmentStatement
-	ExpressionStatement
+	VariableDeclaration ";"
+	Assignment ";"
+	Expression ";"
     LabeledStatement
     AssertStatement
     "break" Name-opt ";"
@@ -308,7 +307,7 @@ Statement
     TryStatement
 	TypeDefStatement
     "using" ResourceDeclaration StatementBlock
-    "while" "(" ConditionalDeclaration-opt Expression ")" StatementBlock
+    "while" "(" ConditionalDeclaration-opt Expression ")" StatementBlock       // TODO multiple cond
 
 PropertyDeclarationStatement
     "static" TypeExpression Name PropertyDeclarationFinish-opt
@@ -320,14 +319,22 @@ Statements
     Statement
     Statements Statement
 
-VariableDeclarationStatement
-    TypeExpression Name VariableDeclarationFinish-opt
+VariableDeclaration
+    TypeExpression Name VariableInitializerFinish-opt
+    "(" MultipleOptionalDeclaration "," SingleOptionalDeclaration ")" VariableInitializerFinish
 
-VariableDeclarationFinish
-    "=" Expression ";"
+MultipleOptionalDeclaration
+    SingleOptionalDeclaration
+    MultipleOptionalDeclaration "," SingleOptionalDeclaration
 
-AssignmentStatement
-    Assignee AssignmentOperator Expression ";"
+SingleOptionalDeclaration
+    TypeExpression-opt Assignable
+
+VariableInitializerFinish
+    "=" Expression
+
+Assignment
+    Assignee AssignmentOperator Expression
 
 Assignee
     Assignable
@@ -359,29 +366,47 @@ AssignmentOperator
     "|="
     "?="
 
-ExpressionStatement
-    Expression ";"
-
 LabeledStatement
     Name ":" Statement
 
 AssertStatement
-    AssertInstruction expression ";"
+    AssertInstruction Assertion-opt ";"
 
 AssertInstruction
     "assert"
     "assert:once"
     "assert:test"
     "assert:debug"
+    "assert:always"
+
+Assertion
+    ConditionalDeclaration-opt Expression
 
 ForStatement
     "for" "(" ForCondition ")" StatementBlock
 
 ForCondition
-    TypeDeclarationList ";" Expression ";" ExpressionList
-    TypeExpression-opt Name ":" Expression
+    VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
+    ConditionalDeclarationList
 
-TypeDeclarationList
+ConditionalDeclarationList
+    ConditionalDeclaration Expression
+    ConditionalDeclarationList "," ConditionalDeclaration Expression
+
+VariableInitializationList
+    VariableInitializer
+    VariableInitializationList "," VariableInitializer
+
+VariableInitializer
+    TypeExpression-opt Name VariableInitializerFinish
+
+VariableModificationList
+    VariableModification
+    VariableModificationList "," VariableModification
+
+VariableModification
+    Assignment
+    Expression
 
 IfStatement
     "if" "(" ConditionalDeclaration-opt Expression ")" StatementBlock ElseStatement-opt
@@ -390,6 +415,7 @@ ConditionalDeclaration
     TypeExpression-opt Name ":"
 
 ElseStatement
+    "else" IfStatement
     "else" StatementBlock
 
 ImportStatement
@@ -406,7 +432,11 @@ ReturnValue
     ExpressionList
 
 SwitchStatement
-    switch "(" Expression ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+    switch "(" SwitchCondition ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+
+SwitchCondition
+    VariableInitializer
+    Expression
 
 SwitchBlocks
     SwitchBlock
@@ -419,16 +449,17 @@ SwitchLabels
     SwitchLabel
     SwitchLabels SwitchLabel
 
-# expression must be a "constant expression", i.e. compiler has to be able to determine the value
+# 1) expression must be a "constant expression", i.e. compiler has to be able to determine the value
+# 2) parse for TernaryExpression; cannot parse for Exception, because it has a possible trailing ':'
 SwitchLabel
-    "case" Expression ":"
+    "case" TernaryExpression ":"
     "default" ":"
 
 TryStatement
     "try" ResourceDeclaration-opt StatementBlock TryFinish
 
 ResourceDeclaration
-    "(" TypeDeclarationList ")"
+    "(" VariableInitializationList ")"
 
 TryFinish
     Catches
@@ -505,7 +536,7 @@ Expression
 
 TernaryExpression
     ElvisExpression
-    ElvisExpression Whitespace "?" TernaryExpression ":" TernaryExpression
+    ElvisExpression Whitespace "?" ElvisExpression ":" TernaryExpression
 
 ElvisExpression
     OrExpression
@@ -577,7 +608,6 @@ PrefixExpression
     "!" PrefixExpression
     "~" PrefixExpression
     "&" PrefixExpression
-    "new" TypeExpression NewFinish
 
 NewFinish
      ArgumentList-opt
@@ -586,6 +616,8 @@ NewFinish
 AnonClassBody
     "{" TypeCompositionComponents "}"
 
+# see comment on primary expression to understand why type parameter list needs to be parsed as part
+# of name
 PostfixExpression
     PrimaryExpression
     PostfixExpression "++"
@@ -594,7 +626,7 @@ PostfixExpression
     PostfixExpression ArrayDims
     PostfixExpression ArrayIndex
     PostfixExpression NoWhitespace "?"
-    PostfixExpression "." Name
+    PostfixExpression "." Name TypeParameterTypeList-opt
     PostfixExpression ".new" TypeExpression ArgumentList-opt
     PostfixExpression ".as" "(" TypeExpression ")"
     PostfixExpression ".instanceof" "(" TypeExpression ")"
@@ -632,10 +664,12 @@ ExpressionList
 #       parametized type.
 PrimaryExpression
     "(" Expression ")"
-    QualifiedNameName TypeParameterTypeList-opt
+    "new" TypeExpression NewFinish
+    "construct" QualifiedName
+    QualifiedName TypeParameterTypeList-opt
     LambdaExpression
     "_"
-    "TODO" TodoMessage-opt
+    "TODO" TodoFinish-opt
     Literal
 
 LambdaExpression
@@ -668,10 +702,11 @@ LambdaParameterName
     Name
 
 LambdaBody
-    Expression
+    ElvisExpression
     StatementBlock
 
-TodoMessage
+TodoFinish
+    InputCharacter-not-"(" InputCharacters LineTerminator
     "(" Expression ")"
 
 Literal
@@ -867,11 +902,13 @@ NonBiTypeExpression
     AnnotatedTypeExpression
     NamedTypeExpression
     FunctionTypeExpression
-    NonBiTypeExpression "?"
+    NonBiTypeExpression NoWhitespace "?"
     NonBiTypeExpression ArrayDim
+    NonBiTypeExpression ArrayIndex
     NonBiTypeExpression "..."
     "conditional" NonBiTypeExpression
     "immutable" NonBiTypeExpression
+    "TODO" TodoFinish-opt
 
 AnnotatedTypeExpression
     Annotation TypeExpression

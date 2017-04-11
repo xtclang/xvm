@@ -16,7 +16,7 @@ public class IgnoredNameExpression
     {
     public IgnoredNameExpression(Token name)
         {
-        super(Collections.singletonList(name));
+        super(name);
         }
 
     @Override

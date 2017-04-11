@@ -35,7 +35,7 @@ class Object
     String to<String>()
         {
         // the Object's rudimentary to<String> shows class information only
-        return meta.class.to<String>();
+        return meta.class_.to<String>();
         }
 
     /**
@@ -43,7 +43,7 @@ class Object
      */
     Object[] to<Object[]>()
         {
-        return new this:type[] {this};
+        return {this}.as(this:type[]);
         }
 
     /**
@@ -60,7 +60,7 @@ class Object
      */
     @auto function Object() to<function Object()>()
         {
-        return () -> return this;
+        return () -> this;
         }
     }
 

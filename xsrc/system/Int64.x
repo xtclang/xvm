@@ -7,7 +7,7 @@ const Int64
     {
     construct Int64(Bit[] bits)
         {
-        assert:always bits.
+        assert bits.size == 64;
         this.bits = bits;
         }
 
@@ -48,7 +48,7 @@ const Int64
      */
     static IntLiteral maxvalue =  0x7FFFFFFFFFFFFFFF;
 
-    @ro UInt64 magnitude
+    @ro UInt64 magnitude.get()
         {
         return to<Int128>().abs().to<UInt64>();
         }

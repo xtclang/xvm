@@ -113,19 +113,21 @@
      */
     @lazy Map<String, EnumType> byName.calc()
         {
-        assert !(parent instanceof Class+Enumeration && this.extends(parent));
+        assert !(parent.instanceof(Class+Enumeration) && this.extends_(parent));
 
         // the Enumeration class contains singleton Enum class/values; collect those values into a
         // Map keyed by name
-        ListMap<String, EnumType> map = new ListMap<>()
+        ListMap<String, EnumType> map = new ListMap();
         for (Class clz : classes.values)
             {
-            if (clz.extends(this) && clz.isConst && clz instanceof Class<EnumType>
-                    && (EnumType instance : clz.singleton))
+            if (clz.extends_(this) && clz.isConst && clz instanceof Class<EnumType>)
                 {
-                assert instance.ordinal == map.size;
-                assert !map.contains(clz.name);
-                map.put(clz.name, instance);
+                if (EnumType instance : clz.singleton)
+                    {
+                    assert instance.ordinal == map.size;
+                    assert !map.contains(clz.name);
+                    map.put(clz.name, instance);
+                    }
                 }
             }
 

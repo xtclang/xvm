@@ -63,7 +63,7 @@ const Interval<ElementType extends Orderable>
      */
     Boolean overlaps(Interval<ElementType> that)
         {
-        return this.upperBound >= that.lowerBound) && this.lowerBound <= that.upperBound;
+        return this.upperBound >= that.lowerBound && this.lowerBound <= that.upperBound;
         }
 
     /**

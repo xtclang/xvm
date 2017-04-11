@@ -4,6 +4,7 @@ package org.xvm.compiler;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.*;
 
+import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import java.util.ArrayList;
@@ -79,7 +80,7 @@ public class Parser
                 {
                 List<Statement> list = parseAliasStatements();
 
-                Statement toptype = parseTypeDeclarationStatement();
+                Statement toptype = parseTypeCompositionStatement();
                 if (list == null)
                     {
                     m_root = toptype;
@@ -87,7 +88,7 @@ public class Parser
                 else
                     {
                     list.add(toptype);
-                    m_root = new BlockStatement(list);
+                    m_root = new StatementBlock(list);
                     }
                 }
             catch (UnsupportedOperationException e)
@@ -257,7 +258,7 @@ public class Parser
      *
      * @return a TypeDeclaration
      */
-    TypeDeclarationStatement parseTypeDeclarationStatement()
+    TypeCompositionStatement parseTypeCompositionStatement()
         {
         Token doc = takeDoc();
 
@@ -278,7 +279,7 @@ public class Parser
     /**
      * (This is just a continuation of the above method.)
      */
-    TypeDeclarationStatement parseTypeDeclarationStatementAfterModifiers
+    TypeCompositionStatement parseTypeDeclarationStatementAfterModifiers
             (Token doc, List<Token> modifiers, List<Annotation> annotations)
         {
         // category & name
@@ -369,7 +370,7 @@ public class Parser
             }
 
         // TypeCompositionBody
-        BlockStatement body = null;
+        StatementBlock body = null;
         if (peek().getId() == Id.L_CURLY)
             {
             body = parseTypeCompositionBody(category);
@@ -379,11 +380,12 @@ public class Parser
             expect(Id.SEMICOLON);
             }
 
-        return new TypeDeclarationStatement(modifiers, annotations, category, name,
+        return new TypeCompositionStatement(modifiers, annotations, category, name,
                 qualified, typeParams, constructorParams, composition, body, doc);
         }
 
     /**
+     * Parse the body of a type composition, including support for enum bodies.
      *
      * <p/><code><pre>
      * EnumList
@@ -399,7 +401,7 @@ public class Parser
      *
      * @return
      */
-    BlockStatement parseTypeCompositionBody(Token category)
+    StatementBlock parseTypeCompositionBody(Token category)
         {
         List<Statement> stmts = new ArrayList<>();
         expect(Id.L_CURLY);
@@ -434,7 +436,7 @@ public class Parser
                 // argument list
                 List<Expression> args = parseArgumentList(false);
 
-                BlockStatement body = null;
+                StatementBlock body = null;
                 if (match(Id.L_CURLY) != null)
                     {
                     body = parseTypeCompositionComponents(new ArrayList<>());
@@ -470,9 +472,9 @@ public class Parser
      *     ConstantDeclaration
      * </pre></code>
      *
-     * @return a BlockStatement
+     * @return a StatementBlock
      */
-    BlockStatement parseTypeCompositionComponents(List<Statement> stmts)
+    StatementBlock parseTypeCompositionComponents(List<Statement> stmts)
         {
         while (match(Id.R_CURLY) == null)
             {
@@ -488,127 +490,439 @@ public class Parser
                     break;
 
                 default:
-                    {
-                    Token doc = takeDoc();
-
-                    // constant starts with "static" (a modifier)
-                    // method starts with annotations/modifiers
-                    // property starts with annotations/modifiers
-                    // typecomp starts with annotations/modifiers
-                    List<Token>      modifiers   = null;
-                    List<Annotation> annotations = null;
-                    List[] twolists = parseModifiers(true);
-                    if (twolists != null)
-                        {
-                        // note to self: this language needs multiple return values
-                        modifiers   = twolists[0];
-                        annotations = twolists[1];
-                        }
-
-                    // both constant and property have a TypeExpression next
-                    // method has "TypeVariableList-opt ReturnList" next (so "<" is a give-away)
-                    // - ReturnList could be either a TypeExpression or a "(", so "(" is a give-away
-                    // typecomp has a category keyword next
-                    switch (peek().getId())
-                        {
-                        case MODULE:
-                        case PACKAGE:
-                        case CLASS:
-                        case INTERFACE:
-                        case SERVICE:
-                        case CONST:
-                        case ENUM:
-                        case TRAIT:
-                        case MIXIN:
-                            // it's definitely a type composition
-                            stmt = parseTypeDeclarationStatementAfterModifiers(doc, modifiers, annotations);
-                            break;
-
-                        case L_PAREN:
-                            {
-                            // it's a property or a method, but the property type is parenthesized
-                            // or the method return types are parenthesized, which means we have to
-                            // either find a list of types inside the parenthesis, or we have to go
-                            // past the name and find a '<' or '(' to know it's a method
-                            Mark pos = mark();
-
-                            // assume it's a method
-                            List<TypeExpression> returns = parseReturnList();
-                            Token                name    = match(Id.IDENTIFIER);
-                            if (name != null && (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN))
-                                {
-                                stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
-                                        null, returns, null, name);
-                                }
-                            else
-                                {
-                                // unfortunately, it wasn't a method, so we need to rewind and
-                                // reparse as a property
-                                restore(pos);
-                                TypeExpression type = parseTypeExpression();
-                                name = expect(Id.IDENTIFIER);
-                                stmt = parsePropertyDeclarationFinish(doc, modifiers, annotations, type, name);
-                                }
-                            }
-                            break;
-
-                        case COMP_LT:
-                            {
-                            // it's definitely a method
-                            List<Token>          typeVars = parseTypeVariableList(true);
-                            List<TypeExpression> returns  = parseReturnList();
-                            Token                name     = expect(Id.IDENTIFIER);
-                            stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
-                                    typeVars, returns, null, name);
-                            }
-                            break;
-
-                        case CONSTRUCT:
-                            {
-                            Token keyword = expect(Id.CONSTRUCT);
-                            Token name    = expect(Id.IDENTIFIER);
-                            stmt = parseMethodDeclarationAfterName(doc, modifiers,
-                                    annotations, null, null, keyword, name);
-                            }
-                            break;
-
-                        default:
-                            {
-                            // it's a constant, property, or method
-                            TypeExpression type = parseTypeExpression();
-                            Token          name = expect(Id.IDENTIFIER);
-
-                            if (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
-                                {
-                                // '<' indicates redundant return type list
-                                // '(' indicates parameters
-                                stmt = parseMethodDeclarationAfterName(doc, modifiers, annotations,
-                                        null, Collections.singletonList(type), null, name);
-                                }
-                            else if (peek().getId() == Id.ASN && modifiers != null
-                                    && modifiers.size() == 1 && modifiers.get(0).getId() == Id.STATIC)
-                                {
-                                // "static" modifier and "=" means it's a constant
-                                expect(Id.ASN);
-                                Expression value = parseExpression();
-                                expect(Id.SEMICOLON);
-                                stmt = new ConstantDeclaration(modifiers.get(0), type, name, value, doc);
-                                }
-                            else
-                                {
-                                // it's a property
-                                stmt = parsePropertyDeclarationFinish(doc, modifiers, annotations, type, name);
-                                }
-                            }
-                        }
-                    }
+                    stmt = parseTypeCompositionComponent(false);
+                    break;
                 }
             stmts.add(stmt);
             }
 
-        return new BlockStatement(stmts);
+        return new StatementBlock(stmts);
         }
 
+    /**
+     * Parse the components of a type composition.
+     *
+     * <p/><code><pre>
+     * TypeCompositionComponent
+     *     [..]
+     *     TypeComposition
+     *     PropertyDeclaration
+     *     MethodDeclaration
+     *     ConstantDeclaration
+     * </pre></code>
+     *
+     * And if other statements are allowed:
+     *
+     * <p/><code><pre>
+     * VariableDeclarationStatement
+     *     TypeExpression Name VariableInitializerFinish-opt ";"
+     *
+     * AssignmentStatement
+     *     Assignee AssignmentOperator Expression ";"
+     *
+     * Assignee
+     *     Assignable
+     *     "(" AssignableList "," Assignable ")"
+     *
+     * AssignableList
+     *     Assignable
+     *     AssignableList "," Assignable
+     *
+     * # Assignable turns out to be just an Expression that meets certain requirements, i.e. one that ends
+     * # with a Name or an ArrayIndex
+     * Assignable
+     *     Name
+     *     Expression "." Name
+     *     Expression ArrayIndex
+     *
+     * ExpressionStatement
+     *     Expression ";"
+     * </pre></code>
+     *
+     * @param fInMethod  pass true to allow parsing of an expression statement, a variable
+     *                   declaration statement (almost the same syntax as a property), or an
+     *                   assignment statement
+     *
+     * @return a StatementBlock
+     */
+    Statement parseTypeCompositionComponent(boolean fInMethod)
+        {
+        Token doc = takeDoc();
+
+        // constant starts with "static" (a modifier)
+        // method starts with annotations/modifiers
+        // property starts with annotations/modifiers
+        // typecomp starts with annotations/modifiers
+        List<Token>      modifiers   = null;
+        List<Annotation> annotations = null;
+        List[] twolists = parseModifiers(true);
+        if (twolists != null)
+            {
+            // note to self: this language needs multiple return values
+            modifiers   = twolists[0];
+            annotations = twolists[1];
+            }
+
+        // both constant and property have a TypeExpression next
+        // method has "TypeVariableList-opt ReturnList" next (so "<" is a give-away)
+        // - ReturnList could be either a TypeExpression or a "(", so "(" is a give-away
+        // typecomp has a category keyword next
+        switch (peek().getId())
+            {
+            case MODULE:
+            case PACKAGE:
+                if (fInMethod)
+                    {
+                    log(Severity.ERROR, NO_TOP_LEVEL, null, peek().getStartPosition(), peek().getEndPosition());
+                    throw new CompilerException("module or package in a method");
+                    }
+                // fall through
+            case CLASS:
+            case INTERFACE:
+            case SERVICE:
+            case CONST:
+            case ENUM:
+            case TRAIT:
+            case MIXIN:
+                // it's definitely a type composition
+                return parseTypeDeclarationStatementAfterModifiers(doc, modifiers, annotations);
+
+            case L_PAREN:
+                {
+                // it's a property or a method, but the property type is parenthesized (odd!) or
+                // the method return types are parenthesized (multi-return), which means we have to
+                // either find a list of types inside the parenthesis, or we have to go
+                // past the name and find a '<' or '(' to know it's a method. additionally, if
+                // we're inside a method, it could be a multi-assignment (tuple result), a
+                // variable declaration starting with a parenthesized type (odd!), or just an
+                // expression. start by assuming it's just a list of expressions (we can always
+                // change them into types later), and switch to a statement mode the first time
+                // that we find something that could be a type declaration (i.e. some instance of
+                // "expression expression" instead of "expression ,")
+                List<TypeExpression> returns = null;
+
+                if (fInMethod && modifiers == null && annotations == null)
+                    {
+                    Mark             mark  = mark();
+                    List<Expression> exprs = new ArrayList<>();
+                    List<Statement>  stmts = null;
+
+                    // eliminate the possibility of a multi-assignment first, because it is the most
+                    // insanely complicated possibility
+                    Token start = expect(Id.L_PAREN);
+                    ParseList: while (true)
+                        {
+                        Expression expr = parseExpression();
+                        exprs.add(expr);
+
+                        if (peek().getId() != Id.COMMA && peek().getId() != Id.R_PAREN)
+                            {
+                            // so there appears to be a second expression to parse, which indicates
+                            // that the first one had to be a type
+                            if (stmts == null)
+                                {
+                                // build a statements list to match the expressions list (except for
+                                // the lastest expression)
+                                stmts = new ArrayList<>();
+                                for (int i = 0, c = exprs.size() - 1; i < c; ++i)
+                                    {
+                                    stmts.add(new ExpressionStatement(exprs.get(i), false));
+                                    }
+                                }
+
+                            // create a statement that represents a variable declaration
+                            stmts.add(new VariableDeclarationStatement(expr.toTypeExpression(),
+                                    expect(Id.IDENTIFIER), null, null, false));
+                            }
+                        else
+                            {
+                            // this one was just an expression, but previous ones were more than
+                            // that (i.e. at least one created a statement), so we need to keep the
+                            // list of statements in sync with the list of expressions (these will
+                            // eventually all be used as "l-values" for an assignment)
+                            if (stmts != null)
+                                {
+                                stmts.add(new ExpressionStatement(expr, false));
+                                }
+                            }
+
+                        // check if we're all done with the list
+                        if (match(Id.R_PAREN) != null)
+                            {
+                            break ParseList;
+                            }
+
+                        expect(Id.COMMA);
+                        }
+
+                    // peek ahead to see if this is an multi-assignment that we didn't see coming
+                    if (peek().getId() == Id.ASN && stmts == null)
+                        {
+                        // even though there were no new variable declarations, it does appear to
+                        // be a multi-declaration/assignment
+                        stmts = new ArrayList<>();
+                        for (Expression expr : exprs)
+                            {
+                            stmts.add(new ExpressionStatement(expr, false));
+                            }
+                        }
+
+                    // at this point, if there are statements, then it has to be a
+                    // multi-declaration/assignment
+                    if (stmts != null)
+                        {
+                        if (stmts.size() <= 1)
+                            {
+                            log(Severity.ERROR, NOT_MULTI_ASN, null, start.getStartPosition(), peek().getEndPosition());
+                            throw new CompilerException("multi assignment has only " + stmts.size() + " l-values");
+                            }
+
+                        expect(Id.ASN);
+                        Expression value = parseExpression();
+                        expect(Id.SEMICOLON);
+                        return new MultipleDeclarationStatement(stmts, value);
+                        }
+
+                    // at this point, all we encountered was a list of expressions inside of
+                    // parenthesis:
+                    // - if there were multiple expressions, then it has to be either a method
+                    //   declaration or an expression statement (for example, a tuple literal)
+                    // - if there was only one expression, then it could be an expression statement,
+                    //   a type expression for a property or variable declaration (or even a method
+                    //   declaration); regardless, it has to be reparsed as a single exception from
+                    //   the beginning, because there must have been a reason to have the
+                    //   parenthesis there in the first place
+                    if (exprs.size() == 1)
+                        {
+                        restore(mark);
+                        exprs.set(0, parseExpression());
+                        }
+
+                    // the method/property/variable declaration statement will have a "name" next;
+                    // otherwise, we were wrong, and this was just an expression statement
+                    if (peek().getId() == Id.IDENTIFIER)
+                        {
+                        // the expressions should have been parsed as types
+                        returns = new ArrayList<>();
+                        for (int i = 0, c = exprs.size(); i < c; ++i)
+                            {
+                            returns.add(exprs.get(i).toTypeExpression());
+                            }
+                        }
+                    else
+                        {
+                        // the entire thing should have been parsed as an expression statement
+                        Expression expr;
+                        if (exprs.size() == 1)
+                            {
+                            expr = exprs.get(0);
+                            }
+                        else
+                            {
+                            restore(mark);
+                            expr = parseExpression();
+                            }
+                        expect(Id.SEMICOLON);
+                        return new ExpressionStatement(expr);
+                        }
+                    }
+
+                // there are two possible paths: parseTypeExpression on the whole thing (because
+                // it's the type of a property) or call parseTypeExpression on each item in the
+                // parenthesized list (because it's the return types from a method)
+
+                // assume it's a method
+                if (returns == null || returns.size() > 0)
+                    {
+                    if (returns == null)
+                        {
+                        // look for multiple return types
+                        try (SafeLookAhead attempt = new SafeLookAhead())
+                            {
+                            returns = parseReturnList();
+                            if (attempt.isClean() && returns != null && returns.size() > 1)
+                                {
+                                attempt.keepResults();
+                                }
+                            else
+                                {
+                                // we struck out
+                                returns = null;
+                                }
+                            }
+                        catch (CompilerException e) {}
+                        }
+
+                    if (returns != null)
+                        {
+                        return parseMethodDeclarationAfterName(doc, modifiers, annotations,
+                                null, returns, null, expect(Id.IDENTIFIER));
+                        }
+                    }
+
+                // if it wasn't a method, reparse as a property
+                assert returns == null || returns.size() == 1;
+                TypeExpression type = returns == null ? parseTypeExpression() : returns.get(0);
+                Token          name = expect(Id.IDENTIFIER);
+
+                // if we're in a method and there is no modifier (i.e. static), then this is a
+                // local variable declaration
+                if (fInMethod && modifiers == null)
+                    {
+                    return parseVariableDeclarationAfterName(annotations, type, name);
+                    }
+
+                return parsePropertyDeclarationFinish(doc, modifiers, annotations, type, name);
+                }
+
+            case COMP_LT:
+                {
+                // it's definitely a method or a function
+                List<Token>          typeVars = parseTypeVariableList(true);
+                List<TypeExpression> returns  = parseReturnList();
+                Token                name     = expect(Id.IDENTIFIER);
+                return parseMethodDeclarationAfterName(doc, modifiers, annotations, typeVars, returns, null, name);
+                }
+
+            case CONSTRUCT:
+                {
+                if (fInMethod)
+                    {
+                    // it is a method invocation
+                    Statement stmt = new ExpressionStatement(parseExpression());
+                    expect(Id.SEMICOLON);
+                    return stmt;
+                    }
+
+                Token keyword = expect(Id.CONSTRUCT);
+                Token name    = expect(Id.IDENTIFIER);
+                return parseMethodDeclarationAfterName(doc, modifiers, annotations, null, null, keyword, name);
+                }
+
+            default:
+                {
+                TypeExpression type;
+                if (fInMethod && modifiers == null && annotations == null)
+                    {
+                    Expression expr = parseExpression();
+
+                    Statement stmt = parsePossibleExpressionOrAssignmentStatement(expr);
+                    if (stmt != null)
+                        {
+                        return stmt;
+                        }
+                    
+                    type = expr.toTypeExpression();
+                    }
+                else
+                    {
+                    type = parseTypeExpression();
+                    }
+
+                // it's a constant, property, or method
+                Token name = expect(Id.IDENTIFIER);
+                if (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
+                    {
+                    // '<' indicates redundant return type list
+                    // '(' indicates parameters
+                    return parseMethodDeclarationAfterName(doc, modifiers, annotations,
+                            null, Collections.singletonList(type), null, name);
+                    }
+                else if (!fInMethod && peek().getId() == Id.ASN && modifiers != null
+                        && modifiers.size() == 1 && modifiers.get(0).getId() == Id.STATIC)
+                    {
+                    // "static" modifier and "=" means it's a constant
+                    expect(Id.ASN);
+                    Expression value = parseExpression();
+                    expect(Id.SEMICOLON);
+                    return new ConstantDeclaration(modifiers.get(0), type, name, value, doc);
+                    }
+                else
+                    {
+                    if (fInMethod && modifiers == null)
+                        {
+                        return parseVariableDeclarationAfterName(annotations, type, name);
+                        }
+
+                    // it's a property
+                    return parsePropertyDeclarationFinish(doc, modifiers, annotations, type, name);
+                    }
+                }
+            }
+        }
+
+    /**
+     * Given the specified expression and the current point in the parsing stream, generate a
+     * statement if the expression is supposed to be an expression statement, or if we're in the
+     * middle of an assignment statement.
+     * 
+     * @param expr  an expression that was parsed at the beginning of a statement
+     *              
+     * @return a expression statement, an assignment statement, or null
+     */
+    Statement parsePossibleExpressionOrAssignmentStatement(Expression expr)
+        {
+        switch (peek().getId())
+            {
+            case SEMICOLON:
+                expect(Id.SEMICOLON);
+                return new ExpressionStatement(expr);
+
+            case ASN:
+            case COND_ASN:
+            case ADD_ASN:
+            case SUB_ASN:
+            case MUL_ASN:
+            case DIV_ASN:
+            case MOD_ASN:
+            case DIVMOD_ASN:
+            case SHL_ASN:
+            case SHR_ASN:
+            case USHR_ASN:
+            case BIT_AND_ASN:
+            case BIT_OR_ASN:
+            case BIT_XOR_ASN:
+                {
+                AssignmentStatement stmt = new AssignmentStatement(expr, current(), parseExpression());
+                expect(Id.SEMICOLON);
+                return stmt;
+                }
+            }
+        
+        return null;
+        }
+
+    /**
+     * Finish the parsing of a variable declaration statement, starting right after the name.
+     * 
+     * @param annotations  list of annotations or null
+     * @param type         the type of the variable
+     * @param name         the name of the variable
+     * 
+     * @return a VariableDeclarationStatement
+     */
+    Statement parseVariableDeclarationAfterName(
+            List<Annotation> annotations, TypeExpression type, Token name)
+        {
+        Expression value = null;
+        if (match(Id.ASN) != null)
+            {
+            value = parseExpression();
+            }
+        expect(Id.SEMICOLON);
+
+        // apply any annotations to the variable type
+        if (annotations != null)
+            {
+            for (Annotation annotation : annotations)
+                {
+                type = new AnnotatedTypeExpression(annotation, type);
+                }
+            }
+
+        return new VariableDeclarationStatement(type, name, value);
+        }
+    
     /**
      * <p/><code><pre>
      * ParameterList MethodDeclarationFinish
@@ -625,13 +939,16 @@ public class Parser
             Token keyword, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
-        List<Parameter> params      = parseParameterList(true);
-        BlockStatement  body        = match(Id.SEMICOLON) == null ? parseBlockStatement() : null;
-        BlockStatement  stmtFinally = null;
+        List<Parameter>      params           = parseParameterList(true);
+        StatementBlock       body             = match(Id.SEMICOLON) == null ? parseStatementBlock() : null;
+        StatementBlock       stmtFinally      = null;
+
+        // check for "constructor finally" block
         if (body != null && keyword != null && match(Id.FINALLY) != null)
             {
-            stmtFinally = parseBlockStatement();
+            stmtFinally = parseStatementBlock();
             }
+
         return new MethodDeclarationStatement(modifiers, annotations, typeVars, returns, name,
                 redundantReturns, params, body, stmtFinally, doc);
         }
@@ -646,13 +963,13 @@ public class Parser
      *     TypeCompositionBody
      * </pre></code>
      *
-     * @return a BlockStatement
+     * @return a StatementBlock
      */
     PropertyDeclarationStatement parsePropertyDeclarationFinish(Token doc, List<Token> modifiers,
             List<Annotation> annotations, TypeExpression type, Token name)
         {
         Expression     value = null;
-        BlockStatement body  = null;
+        StatementBlock body  = null;
         if (match(Id.ASN) != null)
             {
             // "=" Expression ";"
@@ -665,12 +982,13 @@ public class Parser
             Token           methodName = expect(Id.IDENTIFIER);
             List<Parameter> params     = parseParameterList(true);
             MethodDeclarationStatement method = new MethodDeclarationStatement(null, null, null, null,
-                    methodName, null, params, parseBlockStatement(), null, null);
-            body = new BlockStatement(Collections.singletonList(method));
+                    methodName, null, params, parseStatementBlock(), null, null);
+            body = new StatementBlock(Collections.singletonList(method));
             }
-        else if (match(Id.L_CURLY) != null)
+        else if (peek().getId() == Id.L_CURLY)
             {
-            body = parseBlockStatementRemainder(new ArrayList<>());
+            // pretend we're parsing a class (use the property name token as the basis)
+            body = parseTypeCompositionBody(new Token(name.getStartPosition(), name.getEndPosition(), Id.CLASS));
             }
         else
             {
@@ -686,9 +1004,9 @@ public class Parser
      * <p/><code><pre>
      * </pre></code>
      *
-     * @return a BlockStatement
+     * @return a StatementBlock
      */
-    BlockStatement parseBlockStatement()
+    StatementBlock parseStatementBlock()
         {
         expect(Id.L_CURLY);
         return parseBlockStatementRemainder(new ArrayList<Statement>());
@@ -699,16 +1017,14 @@ public class Parser
      *
      * @return a list of Statements
      */
-    BlockStatement parseBlockStatementRemainder(List<Statement> stmts)
+    StatementBlock parseBlockStatementRemainder(List<Statement> stmts)
         {
-        // TODO temporarily skip processing inside the statement blocks
-//        while (match(Id.R_CURLY) == null)
-//            {
-//            stmts.add(parseStatement());
-//            }
-        skipEnclosed(Id.L_CURLY);
+        while (match(Id.R_CURLY) == null)
+            {
+            stmts.add(parseStatement());
+            }
 
-        return new BlockStatement(stmts);
+        return new StatementBlock(stmts);
         }
 
     /**
@@ -716,50 +1032,409 @@ public class Parser
      *
      * <p/><code><pre>
      * Statement
-     *     TODO
+     *     TypeComposition
+     *     PropertyDeclarationStatement
+     *     MethodDeclaration
+     *     StatementBlock
+     *     VariableDeclarationStatement
+     *     AssignmentStatement
+     *     ExpressionStatement
+     *     LabeledStatement
+     *     AssertStatement
+     *     "break" Name-opt ";"
+     *     "continue" Name-opt ";"
+     *     "do" StatementBlock "while" "(" ConditionalDeclaration-opt Expression ")" ";"
+     *     ForStatement
+     *     IfStatement
+     *     ImportStatement
+     *     ReturnStatement
+     *     SwitchStatement
+     *     "throw" Expression ";"
+     *     TryStatement
+     *     TypeDefStatement
+     *     "using" ResourceDeclaration StatementBlock
+     *     "while" "(" ConditionalDeclaration-opt Expression ")" StatementBlock
+     *
+     * PropertyDeclarationStatement
+     *     "static" TypeExpression Name PropertyDeclarationFinish-opt
+     *
+     * StatementBlock
+     *     "{" Statements "}"
+     *
+     * VariableDeclarationStatement
+     *     TypeExpression Name VariableInitializerFinish-opt ";"
+     *
+     * AssignmentStatement
+     *     Assignee AssignmentOperator Expression ";"
+     *
+     * Assignee
+     *     Assignable
+     *     "(" AssignableList "," Assignable ")"
+     *
+     * AssignableList
+     *     Assignable
+     *     AssignableList "," Assignable
+     *
+     * # Assignable turns out to be just an Expression that meets certain requirements, i.e. one that ends
+     * # with a Name or an ArrayIndex
+     * Assignable
+     *     Name
+     *     Expression "." Name
+     *     Expression ArrayIndex
+     *
+     * ExpressionStatement
+     *     Expression ";"
+     *
+     * LabeledStatement
+     *     Name ":" Statement
+     *
+     * AssertStatement
+     *     AssertInstruction expression ";"
+     *
+     * AssertInstruction
+     *     "assert"
+     *     "assert:once"
+     *     "assert:test"
+     *     "assert:debug"
+     *
+     * ForStatement
+     *     "for" "(" ForCondition ")" StatementBlock
+     *
+     * IfStatement
+     *     "if" "(" ConditionalDeclaration-opt Expression ")" StatementBlock ElseStatement-opt
+     *
+     * ImportStatement
+     *     "import" QualifiedName ImportAlias-opt ";"
+     *
+     * ReturnStatement
+     *     "return" ReturnValue-opt ";"
+     *
+     * SwitchStatement
+     *     switch "(" Expression ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+     *
+     * TryStatement
+     *     "try" ResourceDeclaration-opt StatementBlock TryFinish
+     *
+     * TypeDefStatement
+     *     "typedef" TypeExpression Name ";"
      * </pre></code>
      *
-     * @return
+     * @return a statement
      */
     Statement parseStatement()
         {
         switch (peek().getId())
             {
+            case SEMICOLON:
+                next();
+                log(Severity.ERROR, NO_EMPTY_STMT, null, peek().getStartPosition(), peek().getEndPosition());
+                return new StatementBlock(null);
+
+            case L_CURLY:
+                return parseStatementBlock();
+
+            case ASSERT:
+                return parseAssertStatement();
+
+            case BREAK:
+            case CONTINUE:
+                {
+                Token keyword = current();
+                Token name    = match(Id.IDENTIFIER);
+                expect(Id.SEMICOLON);
+                return new ShortCircuitStatement(keyword, name);
+                }
+
+            case DO:
+                return parseDoStatement();
+
+            case FOR:
+                return parseForStatement();
+
+            case IF:
+                return parseIfStatement();
+
+            case IMPORT:
+                return parseImportStatement();
+
             case RETURN:
                 return parseReturnStatement();
 
-            case STATIC:
+            case SWITCH:
+                return parseSwitchStatement();
+
+            case THROW:
                 {
-                // property declaration statement
-                Token modifier = expect(Id.STATIC);
-                TypeExpression type = parseTypeExpression();
-                Token name = expect(Id.IDENTIFIER);
-                // TODO the "property declaration finish" portion
-                return null;
+                ThrowStatement stmt = new ThrowStatement(expect(Id.THROW), parseExpression());
+                expect(Id.SEMICOLON);
+                return stmt;
                 }
 
-            default:
-                Expression expr = parseExpression();
-                if (expr instanceof TypeExpression)
+            case TRY:
+                return parseTryStatement();
+
+            case TYPEDEF:
+                return parseTypeDefStatement();
+
+            case USING:
+                return parseUsingStatement();
+
+            case WHILE:
+                return parseWhileStatement();
+
+            case CLASS:
+            case INTERFACE:
+            case SERVICE:
+            case CONST:
+            case ENUM:
+            case TRAIT:
+            case MIXIN:
+                // this is obviously a TypeComposition
+                return parseTypeCompositionStatement();
+
+            case IDENTIFIER:
+                {
+                // check if it is a LabeledStatement
+                Token name = expect(Id.IDENTIFIER);
+                if (match(Id.COLON) != null)
                     {
-                    // variable declaration statement
-                    Token name = expect(Id.IDENTIFIER);
-                    Expression value = match(Id.ASN) == null ? null : parseExpression();
-                    return new VariableDeclarationStatement((TypeExpression) expr, name, value);
+                    return new LabeledStatement(name, parseStatement());
                     }
                 else
                     {
-                    // expression statement
-                    expect(Id.SEMICOLON);
-                    return new ExpressionStatement(expr);
+                    putback(name);
                     }
+                }
+                // fall through
+            default:
+                return parseTypeCompositionComponent(true);
             }
         }
 
     /**
-     * Parse a return statement
+     * Parse an "assert" statement.
      *
      * <p/><code><pre>
+     * AssertStatement
+     *     AssertInstruction expression ";"
+     *
+     * AssertInstruction
+     *     "assert"
+     *     "assert:once"
+     *     "assert:test"
+     *     "assert:debug"
+     * </pre></code>
+     *
+     * @return an "assert" statement
+     */
+    Statement parseAssertStatement()
+        {
+        Token keyword = expect(Id.ASSERT);
+        Token suffix = null;
+        if (match(Id.COLON) != null)
+            {
+            suffix = expect(Id.IDENTIFIER);
+            switch ((String) suffix.getValue())
+                {
+                case "once":
+                case "test":
+                case "debug":
+                case "always":
+                    break;
+
+                default:
+                    log(Severity.ERROR, BAD_ASSERT, new Object[] {suffix},
+                            suffix.getStartPosition(), suffix.getEndPosition());
+                    suffix = null;
+                }
+            }
+
+        Statement cond = null;
+        if (peek().getId() != Id.SEMICOLON)
+            {
+            cond = parseConditionalDeclaration(false);
+            }
+
+        expect(Id.SEMICOLON);
+        return new AssertStatement(keyword, suffix, cond);
+        }
+
+    /**
+     * Parse a "do" statement.
+     *
+     * <p/><code><pre>
+     * DoStatement
+     *     "do" StatementBlock "while" "(" ConditionalDeclaration-opt Expression ")" ";"
+     * </pre></code>
+     *
+     * @return a "do" statement
+     */
+    Statement parseDoStatement()
+        {
+        Token keyword = expect(Id.DO);
+        StatementBlock block = parseStatementBlock();
+        expect(Id.WHILE);
+        expect(Id.L_PAREN);
+        Statement cond = parseConditionalDeclaration(false);
+        expect(Id.R_PAREN);
+        expect(Id.SEMICOLON);
+        return new WhileStatement(keyword, cond, block);
+        }
+
+    /**
+     * Parse a "for" statement.
+     *
+     * <p/><code><pre>
+     * ForStatement
+     *     "for" "(" ForCondition ")" StatementBlock
+     *
+     * ForCondition
+     *     VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
+     *     ConditionalDeclarationList
+     *
+     * ConditionalDeclarationList
+     *     ConditionalDeclaration Expression
+     *     ConditionalDeclarationList "," ConditionalDeclaration Expression
+     *
+     * VariableInitializationList
+     *     VariableInitializer
+     *     VariableInitializationList "," VariableInitializer
+     *
+     * VariableInitializer
+     *     TypeExpression-opt Name VariableInitializerFinish
+     *
+     * VariableModificationList
+     *     VariableModification
+     *     VariableModificationList "," VariableModification
+     *
+     * VariableModification
+     *     Assignment
+     *     Expression
+     * </pre></code>
+     *
+     * @return a for statement
+     */
+    Statement parseForStatement()
+        {
+        Token keyword = expect(Id.FOR);
+        expect(Id.L_PAREN);
+        
+        // figure out if we're parsing for the conditional declaration or the three-part "for"
+        List<Statement> init = null;
+        if (peek().getId() != Id.SEMICOLON)
+            {
+            init = new ArrayList<>();
+            do
+                {
+                init.add(parseConditionalDeclaration(true));
+                }
+            while (match(Id.COMMA) != null);
+
+            // TODO all need to be of the same type: all conditional, or none conditional
+            if (match(Id.R_PAREN) != null)
+                {
+                // this is the "for (var : iterable) {...}" style
+                return new ForStatement2(keyword, init, parseStatementBlock());
+                }
+            }
+        else
+            {
+            init = Collections.EMPTY_LIST;
+            }
+        
+        // parse the second part
+        expect(Id.SEMICOLON);
+        Expression expr = (peek().getId() == Id.SEMICOLON) ? null : parseExpression();
+        expect(Id.SEMICOLON);
+
+        // parse the third part
+        List<Statement> update = new ArrayList<>();
+        while (peek().getId() != Id.R_PAREN)
+            {
+            if (!update.isEmpty())
+                {
+                expect(Id.COMMA);
+                }
+
+            Expression exprUpdate = parseExpression();
+            switch (peek().getId())
+                {
+                case R_PAREN:
+                case COMMA:
+                    update.add(new ExpressionStatement(exprUpdate, false));
+                    break;
+                
+                case COND_ASN:
+                case ADD_ASN:
+                case SUB_ASN:
+                case MUL_ASN:
+                case DIV_ASN:
+                case MOD_ASN:
+                case DIVMOD_ASN:
+                case SHL_ASN:
+                case SHR_ASN:
+                case USHR_ASN:
+                case BIT_AND_ASN:
+                case BIT_OR_ASN:
+                case BIT_XOR_ASN:
+                    update.add(new AssignmentStatement(exprUpdate, current(), parseExpression(), false));
+                    break;
+
+                default:
+                    update.add(new AssignmentStatement(exprUpdate, expect(Id.ASN), parseExpression(), false));
+                    break;
+                }
+            }
+
+        expect(Id.R_PAREN);
+        return new ForStatement(keyword, init, expr, update, parseStatementBlock());
+        }
+
+    /**
+     * Parse an "if" statement.
+     *
+     * <p/><code><pre>
+     * IfStatement
+     *     "if" "(" ConditionalDeclaration-opt Expression ")" StatementBlock ElseStatement-opt
+     *
+     * ConditionalDeclaration
+     *     TypeExpression-opt Name ":"
+     *
+     * ElseStatement
+     *     "else" StatementBlock
+     * </pre></code>
+     *
+     * @return an "if" statement
+     */
+    Statement parseIfStatement()
+        {
+        Token keyword = expect(Id.IF);
+        expect(Id.L_PAREN);
+        Statement cond = parseConditionalDeclaration(false);
+        expect(Id.R_PAREN);
+        StatementBlock block = parseStatementBlock();
+
+        if (match(Id.ELSE) == null)
+            {
+            return new IfStatement(keyword, cond, block);
+            }
+        else
+            {
+            Statement stmtElse = peek().getId() == Id.IF ? parseIfStatement() : parseStatementBlock();
+            return new IfStatement(keyword, cond, block, stmtElse);
+            }
+        }
+
+    /**
+     * Parse a return statement.
+     *
+     * <p/><code><pre>
+     * ReturnStatement
+     *     "return" ReturnValue-opt ";"
+     *
+     * ReturnValue
+     *     TupleLiteral
+     *     ExpressionList
      * </pre></code>
      *
      * @return a return statement
@@ -767,37 +1442,314 @@ public class Parser
     ReturnStatement parseReturnStatement()
         {
         Token keyword = expect(Id.RETURN);
-        switch (peek().getId())
+        if (match(Id.SEMICOLON) != null)
             {
-            case SEMICOLON:
-                expect(Id.SEMICOLON);
-                return new ReturnStatement(keyword);
+            return new ReturnStatement(keyword);
+            }
 
-            case L_PAREN:
-                {
-                expect(Id.L_PAREN);
-                // this is either a tuple of multiple values or a single expression
-                List<Expression> exprs = parseExpressionList();
-                expect(Id.R_PAREN);
-                expect(Id.SEMICOLON);
-                return new ReturnStatement(keyword, exprs);
-                }
+        // note: it is possible that the expression list is parenthesized, in which case it will be
+        //       parsed as a single expression (a tuple literal), and the compiler will have to
+        //       it out later
+        List<Expression> exprs = parseExpressionList();
+        expect(Id.SEMICOLON);
+        return new ReturnStatement(keyword, exprs);
+        }
 
-            case IDENTIFIER:
-                if (peek().getValue().equals("Tuple"))
-                    {
-                    // literal tuple
-                    // TODO
-                    }
-                // fall through
-            default:
+    /**
+     * Parse a "switch" statement.
+     *
+     * <p/><code><pre>
+     * SwitchStatement
+     *     switch "(" SwitchCondition ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+     *
+     * SwitchCondition
+     *     VariableInitializer
+     *     Expression
+     *
+     * SwitchBlocks
+     *     SwitchBlock
+     *     SwitchBlocks SwitchBlock
+     *
+     * SwitchBlock
+     *     SwitchLabels Statements
+     *
+     * SwitchLabels
+     *     SwitchLabel
+     *     SwitchLabels SwitchLabel
+     *
+     * # expression must be a "constant expression", i.e. compiler has to be able to determine the value
+     * SwitchLabel
+     *     "case" Expression ":"
+     *     "default" ":"
+     * </pre></code>
+     *
+     * @return a switch statement
+     */
+    Statement parseSwitchStatement()
+        {
+        Token keyword = expect(Id.SWITCH);
+        expect(Id.L_PAREN);
+        // while the switch does not allow a conditional declaration, it does allow all of the
+        // other capabilities expressed in a conditional declaration
+        Statement cond = parseConditionalDeclaration(true);
+        if (cond instanceof VariableDeclarationStatement && ((VariableDeclarationStatement) cond).cond)
+            {
+            log(Severity.ERROR, NO_CONDITIONAL, null, keyword.getStartPosition(), peek().getEndPosition());
+            throw new CompilerException("conditional is not allowed");
+            }
+        expect(Id.R_PAREN);
+
+        expect(Id.L_CURLY);
+        List<Statement> stmts = new ArrayList<>();
+        while (true)
+            {
+            switch (peek().getId())
                 {
-                // expression list
-                List<Expression> exprs = parseExpressionList();
-                expect(Id.SEMICOLON);
-                return new ReturnStatement(keyword, exprs);
+                case CASE:
+                    stmts.add(new CaseStatement(current(), parseTernaryExpression()));
+                    expect(Id.COLON);
+                    break;
+
+                case DEFAULT:
+                    stmts.add(new CaseStatement(current(), null));
+                    expect(Id.COLON);
+                    break;
+
+                default:
+                    if (stmts.isEmpty())
+                        {
+                        log(Severity.ERROR, MISSING_CASE, null, peek().getStartPosition(), peek().getEndPosition());
+                        throw new CompilerException("switch must start with a case");
+                        }
+                    stmts.add(parseStatement());
+                    break;
+
+                case R_CURLY:
+                    expect(Id.R_CURLY);
+                    return new SwitchStatement(keyword, cond, new StatementBlock(stmts));
                 }
             }
+        }
+
+    /**
+     * Parse a "try" statement.
+     *
+     * <p/><code><pre>
+     * TryStatement
+     *     "try" ResourceDeclaration-opt StatementBlock TryFinish
+     *
+     * ResourceDeclaration
+     *     "(" VariableInitializationList ")"
+     *
+     * TryFinish
+     *     Catches
+     *     Catches-opt "finally" StatementBlock
+     *
+     * Catches
+     *     Catch
+     *     Catches Catch
+     *
+     * Catch
+     *     "catch" "(" TypeExpression Name ")" StatementBlock
+     * </pre></code>
+     *
+     * @return a "try" statement
+     */
+    Statement parseTryStatement()
+        {
+        Token keyword = expect(Id.TRY);
+        List<Statement> resources = null;
+        if (match(Id.L_PAREN) != null)
+            {
+            resources = parseVariableInitializationList(true);
+            expect(Id.R_PAREN);
+            }
+
+        StatementBlock block = parseStatementBlock();
+
+        List<CatchStatement> catches = new ArrayList<>();
+        while (match(Id.CATCH) != null)
+            {
+            expect(Id.L_PAREN);
+            VariableDeclarationStatement var = new VariableDeclarationStatement(
+                    parseTypeExpression(), expect(Id.IDENTIFIER), null, null, false);
+            expect(Id.R_PAREN);
+            catches.add(new CatchStatement(var, parseStatementBlock()));
+            }
+
+        StatementBlock catchall = null;
+        if (match(Id.FINALLY) != null)
+            {
+            catchall = parseStatementBlock();
+            }
+
+        return new TryStatement(keyword, resources, block, catches, catchall);
+        }
+
+    /**
+     * Parse a "using" statement.
+     *
+     * <p/><code><pre>
+     * UsingStatement
+     *     "using" ResourceDeclaration StatementBlock
+     *
+     * ResourceDeclaration
+     *     "(" VariableInitializationList ")"
+     * </pre></code>
+     *
+     * @return a "using" statement
+     */
+    Statement parseUsingStatement()
+        {
+        Token keyword = expect(Id.USING);
+        expect(Id.L_PAREN);
+        List<Statement> resources = parseVariableInitializationList(true);
+        expect(Id.R_PAREN);
+        return new TryStatement(keyword, resources, parseStatementBlock(), null, null);
+        }
+
+    /**
+     * Parse a "while" statement.
+     *
+     * <p/><code><pre>
+     * WhileStatement
+     *     "while" "(" ConditionalDeclaration-opt Expression ")" StatementBlock
+     * </pre></code>
+     *
+     * @return a "while" statement
+     */
+    Statement parseWhileStatement()
+        {
+        Token keyword = expect(Id.WHILE);
+        expect(Id.L_PAREN);
+        Statement cond = parseConditionalDeclaration(false);
+        expect(Id.R_PAREN);
+        StatementBlock block = parseStatementBlock();
+        return new WhileStatement(keyword, cond, block);
+        }
+
+    /**
+     * Parse a variable initializer:
+     *
+     * <p/><code><pre>
+     * VariableInitializationList
+     *     VariableInitializer
+     *     VariableInitializationList "," VariableInitializer
+     *
+     * VariableInitializer
+     *     TypeExpression-opt Name VariableInitializerFinish
+     *
+     * VariableInitializerFinish
+     *     "=" Expression
+     * </pre></code>
+     *
+     * @param required  true iff at least one VariableInitializer is required
+     *
+     * @return a statement representing the variable initializer
+     */
+    List<Statement> parseVariableInitializationList(boolean required)
+        {
+        if (!required)
+            {
+            switch (peek().getId())
+                {
+                case COMMA:
+                case SEMICOLON:
+                case R_PAREN:
+                    return null;
+                }
+            }
+
+        List<Statement> list = new ArrayList<>();
+        list.add(parseVariableInitializer());
+        while (match(Id.COMMA) != null)
+            {
+            list.add(parseVariableInitializer());
+            }
+
+        return list;
+        }
+
+    /**
+     * Parse a variable initializer:
+     *
+     * <p/><code><pre>
+     * VariableInitializer
+     *     TypeExpression-opt Name VariableInitializerFinish
+     *
+     * VariableInitializerFinish
+     *     "=" Expression
+     * </pre></code>
+     *
+     * @return a statement representing the variable initializer
+     */
+    Statement parseVariableInitializer()
+        {
+        Expression expr = parseExpression();
+        if (peek().getId() == Id.ASN)
+            {
+            return new AssignmentStatement(expr, current(), parseExpression(), false);
+            }
+
+        TypeExpression type = expr.toTypeExpression();
+        Token name = expect(Id.IDENTIFIER);
+        return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression(), false);
+        }
+
+    /**
+     * Parse a ConditionalDeclaration, followed by an expression; use VariableDeclarationStatement
+     * or AssignmentStatement to represent the conditional declaration and assignment.
+     * <p/>
+     * If it turns out that there isn't a ConditionalDeclaration, then parse what is found as a
+     * VariableDeclarationStatement, an AssignmentStatement, or an ExpressionStatement, based on
+     * what is found.
+     *
+     * <p/><code><pre>
+     * ConditionalDeclaration
+     *     TypeExpression-opt Name ":"
+     * </pre></code>
+     *
+     * @param fAllowAsn  allow assignment operator
+     *
+     * @return
+     */
+    Statement parseConditionalDeclaration(boolean fAllowAsn)
+        {
+        Expression expr = parseExpression();
+        switch (peek().getId())
+            {
+            case ASN:
+                if (!fAllowAsn)
+                    {
+                    log(Severity.ERROR, NO_ASSIGNMENT, null, peek().getStartPosition(), peek().getEndPosition());
+                    throw new CompilerException("assignment disallowed");
+                    }
+            case COLON:
+                // it's an assignment or conditional expression, but it doesn't declare a new var
+                return new AssignmentStatement(expr, current(), parseExpression(), false);
+
+            case COMMA:
+            case SEMICOLON:
+            case R_PAREN:
+                // definitely stop if there is ',', ';', or ')'
+                // it's not a conditional declaration; it's just an expression
+                return new ExpressionStatement(expr, false);
+
+            default:
+                break;
+            }
+
+        TypeExpression type = expr.toTypeExpression();
+        Token name = expect(Id.IDENTIFIER);
+
+        // could be either ':' or '='
+        Token op = fAllowAsn ? match(Id.ASN) : null;
+        if (op == null)
+            {
+            op = expect(Id.COLON);
+            }
+
+        return new VariableDeclarationStatement(type, name, op, parseExpression(), false);
         }
 
     /**
@@ -842,11 +1794,11 @@ public class Parser
 
     /**
      * Parse a ternary expression, which is the "a ? b : c" expression.
-     *
+s     *
      * <p/><code><pre>
      * TernaryExpression
      *     ElvisExpression
-     *     ElvisExpression Whitespace "?" TernaryExpression ":" TernaryExpression
+     *     ElvisExpression Whitespace "?" ElvisExpression ":" TernaryExpression
      * </pre></code>
      *
      * @return an expression
@@ -857,7 +1809,7 @@ public class Parser
         if (peek().getId() == Id.COND && peek().hasLeadingWhitespace())
             {
             expect(Id.COND);
-            Expression exprThen = parseTernaryExpression();
+            Expression exprThen = parseElvisExpression();
             expect(Id.COLON);
             Expression exprElse = parseTernaryExpression();
             expr = new TernaryExpression(expr, exprThen, exprElse);
@@ -1178,7 +2130,6 @@ public class Parser
      *     "!" PrefixExpression
      *     "~" PrefixExpression
      *     "&" PrefixExpression
-     *     "new" TypeExpression ArgumentList-opt
      * </pre></code>
      *
      * @return an expression
@@ -1195,10 +2146,6 @@ public class Parser
             case BIT_NOT:
             case BIT_AND:
                 return new PrefixExpression(current(), parsePrefixExpression());
-
-            case NEW:
-                // TODO AnonClassBody-opt
-                return new NewExpression(current(), parseTypeExpression(), parseArgumentList(false));
 
             default:
                 return parsePostfixExpression();
@@ -1289,15 +2236,28 @@ public class Parser
                             }
 
                         case IDENTIFIER:
-                            if (expr instanceof NameExpression)
+                            {
+                            Token                name   = expect(Id.IDENTIFIER);
+                            List<TypeExpression> params = null;
+                            if (peek().getId() == Id.COMP_LT)
                                 {
-                                ((NameExpression) expr).names.add(expect(Id.IDENTIFIER));
+                                try (SafeLookAhead attempt = new SafeLookAhead())
+                                    {
+                                    params = parseTypeParameterTypeList(true);
+                                    if (attempt.isClean())
+                                        {
+                                        attempt.keepResults();
+                                        }
+                                    else
+                                        {
+                                        params = null;
+                                        }
+                                    }
+                                catch (CompilerException e) {}
                                 }
-                            else
-                                {
-                                expr = new DotNameExpression(expr, expect(Id.IDENTIFIER));
-                                }
+                            expr = new DotNameExpression(expr, name, params);
                             break;
+                            }
 
                         default:
                             // unexpected token, so pretend we were looking for a name
@@ -1368,9 +2328,12 @@ public class Parser
      * </li></ul>
      * <p/><code><pre>
      * PrimaryExpression
+     *     "new" TypeExpression ArgumentList-opt
+     *     "construct" QualifiedName
      *     QualifiedNameName TypeParameterTypeList-opt
      *     Literal
      *     LambdaExpression
+     *     construct
      *     "_"
      *     "(" Expression ")"
      *     "T0D0" TodoMessage-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
@@ -1385,10 +2348,47 @@ public class Parser
             case IGNORED:
                 return new IgnoredNameExpression(current());
 
+            case NEW:
+                {
+                Token            keyword = expect(Id.NEW);
+                TypeExpression   type    = parseTypeExpression();
+                List<Expression> args    = parseArgumentList(false);
+                StatementBlock   body    = null;
+                if (peek().getId() == Id.L_CURLY)
+                    {
+                    body = parseTypeCompositionBody(keyword);
+                    }
+                return new NewExpression(keyword, type, args, body);
+                }
+
+            case CONSTRUCT:
+                {
+                Token keyword = expect(Id.CONSTRUCT);
+                if (peek().getId() == Id.L_PAREN)
+                    {
+                    return new NameExpression(keyword);
+                    }
+
+                List<Token> qname = parseQualifiedName();
+                qname.add(keyword);
+                return new NameExpression(qname, null);
+                }
+
             default:
             case IDENTIFIER:
                 {
-                NameExpression exprName = new NameExpression(expect(Id.IDENTIFIER));
+                List<Token> names = new ArrayList<>(3);
+                names.add(expect(Id.IDENTIFIER));
+
+                // test for single-param implicit lambda
+                if (peek().getId() == Id.LAMBDA)
+                    {
+                    return new ImplicitLambdaExpression(
+                            Collections.singletonList(new NameExpression(names, null)),
+                            expect(Id.LAMBDA), parseLambdaBody());
+                    }
+
+                // parse qualified name
                 Token dot;
                 while ((dot = match(Id.DOT)) != null)
                     {
@@ -1396,39 +2396,43 @@ public class Parser
                     if (name == null)
                         {
                         putback(dot);
-                        return exprName;
+                        return new NameExpression(names, null);
                         }
                     else
                         {
-                        exprName.names.add(name);
+                        names.add(name);
                         }
                     }
 
                 // test to see if there is a type parameter list (implying the expression is a type)
-                Expression expr = exprName;
+                List<TypeExpression> params = null;
                 if (peek().getId() == Id.COMP_LT)
                     {
                     try (SafeLookAhead attempt = new SafeLookAhead())
                         {
-                        List<TypeExpression> params = parseTypeParameterTypeList(true);
+                        params = parseTypeParameterTypeList(true);
                         if (attempt.isClean())
                             {
                             attempt.keepResults();
-                            expr = new NamedTypeExpression(null, exprName.names, params);
+                            }
+                        else
+                            {
+                            params = null;
                             }
                         }
+                    catch (CompilerException e) {}
                     }
 
-                //test to see if this is a tuple literal of the form "Tuple:(", or some other
+                // test to see if this is a tuple literal of the form "Tuple:(", or some other
                 // type literal of the form "type:{"
                 Token colon = match(Id.COLON);
                 if (colon != null)
                     {
                     if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace() &&
                             (peek().getId() == Id.L_CURLY ||
-                            (peek().getId() == Id.L_PAREN && expr.toString().equals("Tuple"))))
+                            (peek().getId() == Id.L_PAREN && names.size() == 1 && names.get(0).getValue().equals("Tuple"))))
                         {
-                        expr = parseCustomLiteral(expr.toTypeExpression());
+                        return parseCustomLiteral(new NamedTypeExpression(null, names, params));
                         }
                     else
                         {
@@ -1436,7 +2440,7 @@ public class Parser
                         }
                     }
 
-                return expr;
+                return new NameExpression(names, params);
                 }
 
             case L_PAREN:
@@ -1444,6 +2448,13 @@ public class Parser
                 /// this could be a tuple literal, a parenthesized expression, or a lambda
                 // expression's parameter list
                 expect(Id.L_PAREN);
+                if (match(Id.R_PAREN) != null)
+                    {
+                    // Void lambda
+                    return new ExplicitLambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
+                            parseLambdaBody());
+                    }
+
                 Expression expr = parseExpression();
                 switch (peek().getId())
                     {
@@ -1465,7 +2476,7 @@ public class Parser
                             }
 
                         // it's a Tuple literal
-                        return new TupleExpression(exprs);
+                        return new TupleExpression(null, exprs);
 
                     case R_PAREN:
                         // this is either a parenthesized expression or a single parameter for a
@@ -1518,34 +2529,40 @@ public class Parser
 
             case TODO:
                 return parseTodoExpression();
+
+            case FUNCTION:
+            case IMMUTABLE:
+            case AT:
+                return parseTypeExpression();
             }
         }
 
     /**
-     * Parse a Lambda body and turn it into a BlockStatement if necessary.
+     * Parse a Lambda body and turn it into a StatementBlock if necessary.
      *
-     * @return a BlockStatement representing the body of the lambda
+     * @return a StatementBlock representing the body of the lambda
      */
-    BlockStatement parseLambdaBody()
+    StatementBlock parseLambdaBody()
         {
         Token firstToken = peek();
         if (firstToken.getId() == Id.L_CURLY)
             {
-            return parseBlockStatement();
+            return parseStatementBlock();
             }
 
         Token fakeReturn = new Token(firstToken.getStartPosition(), firstToken.getStartPosition(), Id.RETURN);
-        ReturnStatement stmt = new ReturnStatement(fakeReturn, parseExpression());
-        return new BlockStatement(Collections.singletonList(stmt));
+        ReturnStatement stmt = new ReturnStatement(fakeReturn, parseElvisExpression());
+        return new StatementBlock(Collections.singletonList(stmt));
         }
 
     /**
      * Parse a "to-do" expression.
      *
      * <p/><code><pre>
-     * "T0D0" TodoMessage-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
+     * "T0D0" TodoFinish-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
      *
-     * TodoMessage
+     * TodoFinish
+     *     InputCharacter-not-"(" InputCharacters LineTerminator
      *     "(" Expression ")"
      * </pre></code>
      *
@@ -1553,14 +2570,26 @@ public class Parser
      */
     TodoExpression parseTodoExpression()
         {
-        expect(Id.TODO);
+        Token     keyword  = expect(Id.TODO);
+        String    sText    = (String) keyword.getValue();
         Expression message = null;
-        if (match(Id.L_PAREN) != null)
+        if (sText == null)
             {
-            message = parseExpression();
-            expect(Id.R_PAREN);
+            if (match(Id.L_PAREN) != null)
+                {
+                message = parseExpression();
+                expect(Id.R_PAREN);
+                }
             }
-        return new TodoExpression(message);
+        else
+            {
+            message = new LiteralExpression(keyword);
+
+            // unfortunately, we have to pretend that the "end of line" T0D0 is followed by a
+            // semicolon
+            putback(new Token(keyword.getEndPosition(), keyword.getEndPosition(), Id.SEMICOLON));
+            }
+        return new TodoExpression(keyword, message);
         }
 
     /**
@@ -1603,11 +2632,24 @@ public class Parser
      *
      * @return
      */
-    Expression parseCustomLiteral(TypeExpression exprType)
+    Expression parseCustomLiteral(TypeExpression type)
         {
-        // TODO TypeParameterTypeList-opt
+        String sType;
+        if (type == null)
+            {
+            sType = "List";
+            }
+        else
+            {
+            sType = type.toString();
+            int of = sType.indexOf('<');
+            if (of >= 0)
+                {
+                sType = sType.substring(0, of);
+                }
+            }
 
-        switch (exprType == null ? "List" : exprType.toString())
+        switch (sType)
             {
             case "Binary":
                 {
@@ -1634,7 +2676,7 @@ public class Parser
                             }
                         else if (!Lexer.isWhitespace(ch))
                             {
-                            log(Severity.ERROR, BAD_HEX_LITERAL, null,
+                            log(Severity.ERROR, BAD_HEX_LITERAL, new Object[] {Handy.quotedChar(ch)},
                                     literal.getStartPosition(), literal.getEndPosition());
                             }
                         }
@@ -1677,7 +2719,7 @@ public class Parser
                         }
                     exprs.add(parseExpression());
                     }
-                return new ListExpression(exprs);
+                return new ListExpression(type, exprs);
                 }
 
             case "Map":
@@ -1700,7 +2742,7 @@ public class Parser
                     expect(Id.ASN);
                     values.add(parseExpression());
                     }
-                return new MapExpression(keys, values);
+                return new MapExpression(type, keys, values);
                 }
 
             case "Tuple":
@@ -1719,9 +2761,13 @@ public class Parser
                         {
                         exprs = new ArrayList<>();
                         }
+                    else
+                        {
+                        expect(Id.COMMA);
+                        }
                     exprs.add(parseExpression());
                     }
-                return new TupleExpression(exprs);
+                return new TupleExpression(type, exprs);
                 }
 
             default:
@@ -1730,7 +2776,7 @@ public class Parser
                 Expression expr  = parseExpression();
                 Token      close = expect(Id.R_CURLY);
                 // custom type parsing is not supported in the prototype compiler
-                log(Severity.ERROR, BAD_CUSTOM, new Object[] {exprType, expr},
+                log(Severity.ERROR, BAD_CUSTOM, new Object[] {type, expr},
                         open.getStartPosition(), close.getEndPosition());
                 return expr;
                 }
@@ -1805,9 +2851,11 @@ public class Parser
      *     FunctionTypeExpression
      *     NonBiTypeExpression "?"
      *     NonBiTypeExpression ArrayDim
+     *     NonBiTypeExpression ArrayIndex
      *     NonBiTypeExpression "..."
      *     "conditional" NonBiTypeExpression
      *     "immutable" NonBiTypeExpression
+     *     "T0D0" TodoFinish-opt
      *
      * NamedTypeExpression
      *     QualifiedName TypeParameterTypeList-opt
@@ -1821,6 +2869,13 @@ public class Parser
      *
      * DimIndicator
      *     "?"
+     *
+     * ArrayIndex
+     *     "[" ExpressionList "]"
+     *
+     * ExpressionList
+     *     Expression
+     *     ExpressionList "," Expression
      * </pre></code>
      *
      * @return a type expression
@@ -1849,6 +2904,10 @@ public class Parser
                 type = new DecoratedTypeExpression(current(), parseNonBiTypeExpression());
                 break;
 
+            case TODO:
+                type = parseTodoExpression();
+                break;
+
             default:
                 type = parseNamedTypeExpression();
                 break;
@@ -1861,21 +2920,39 @@ public class Parser
                 case L_SQUARE:
                     expect(Id.L_SQUARE);
                     int cExplicitDims = 0;
+                    List dimExprs = new ArrayList<>(3);
                     while (match(Id.R_SQUARE) == null)
                         {
                         if (cExplicitDims > 0)
                             {
                             expect(Id.COMMA);
                             }
-                        expect(Id.COND);
+                        if (match(Id.COND) == null)
+                            {
+                            if (dimExprs.size() != cExplicitDims)
+                                {
+                                // TODO log error
+                                throw new CompilerException("illegal dims");
+                                }
+                            dimExprs.add(parseExpression());
+                            }
                         ++cExplicitDims;
                         }
-                    type = new ArrayTypeExpression(type, cExplicitDims);
+                    type = dimExprs.isEmpty()
+                            ? new ArrayTypeExpression(type, cExplicitDims)
+                            : new ArrayTypeExpression(type, dimExprs);
                     break;
 
                 case COND:
-                    expect(Id.COND);
-                    type = new NullableTypeExpression(type);
+                    if (!peek().hasLeadingWhitespace())
+                        {
+                        expect(Id.COND);
+                        type = new NullableTypeExpression(type);
+                        }
+                    else
+                        {
+                        return type;
+                        }
                     break;
 
                 case ELLIPSIS:
@@ -2947,27 +4024,55 @@ public class Parser
     /**
      * Unknown fatal error.
      */
-    public static final String FATAL_ERROR    = "PARSER-01";
+    public static final String FATAL_ERROR      = "PARSER-01";
     /**
      * Unexpected End-Of-File (token exhaustion).
      */
-    public static final String UNEXPECTED_EOF = "PARSER-02";
+    public static final String UNEXPECTED_EOF   = "PARSER-02";
     /**
      * Expected a particular token.
      */
-    public static final String EXPECTED_TOKEN = "PARSER-03";
+    public static final String EXPECTED_TOKEN   = "PARSER-03";
     /**
      * Bad version value.
      */
-    public static final String BAD_VERSION    = "PARSER-04";
+    public static final String BAD_VERSION      = "PARSER-04";
     /**
      * Bad hex value.
      */
-    public static final String BAD_HEX_LITERAL= "PARSER-05";
+    public static final String BAD_HEX_LITERAL  = "PARSER-05";
     /**
      * Unsupported custom literal.
      */
-    public static final String BAD_CUSTOM     = "PARSER-06";
+    public static final String BAD_CUSTOM       = "PARSER-06";
+    /**
+     * Cannot have module or package in a method.
+     */
+    public static final String NO_TOP_LEVEL     = "PARSER-07";
+    /**
+     * Multiple assignment list required.
+     */
+    public static final String NOT_MULTI_ASN    = "PARSER-08";
+    /**
+     * Empty statement is illegal.
+     */
+    public static final String NO_EMPTY_STMT    = "PARSER-09";
+    /**
+     * Illegal assert designation.
+     */
+    public static final String BAD_ASSERT       = "PARSER-10";
+    /**
+     * Conditional not allowed in a switch statement.
+     */
+    public static final String NO_CONDITIONAL   = "PARSER-11";
+    /**
+     * Case statement required first in a switch.
+     */
+    public static final String MISSING_CASE     = "PARSER-12";
+    /**
+     * Assignment not allowed.
+     */
+    public static final String NO_ASSIGNMENT    = "PARSER-13";
 
 
     // ----- data members ------------------------------------------------------
@@ -3013,7 +4118,13 @@ public class Parser
      */
     private boolean m_fDone;
 
+    /**
+     * Disable parsing recovery.
+     */
     private boolean m_fAvoidRecovery;
 
+    /**
+     * Object supporting unpredictable amount of look-ahead.
+     */
     private SafeLookAhead m_lookAhead;
     }

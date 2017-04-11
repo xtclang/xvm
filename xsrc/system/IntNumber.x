@@ -184,6 +184,6 @@ interface IntNumber
                 {
                 return IntNumber.this.to<Bit[]>()[index].to<Boolean>();
                 }
-            }
+            };
         }
     }

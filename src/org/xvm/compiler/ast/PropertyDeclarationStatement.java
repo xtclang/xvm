@@ -23,7 +23,7 @@ public class PropertyDeclarationStatement
                                         TypeExpression   type,
                                         Token            name,
                                         Expression       value,
-                                        BlockStatement   body,
+                                        StatementBlock body,
                                         Token            doc)
         {
         this.modifiers   = modifiers;
@@ -115,7 +115,7 @@ public class PropertyDeclarationStatement
     public final TypeExpression   type;
     public final Token            name;
     public final Expression       value;
-    public final BlockStatement   body;
+    public final StatementBlock body;
     public final Token            doc;
 
     StructureContainer struct;

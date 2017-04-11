@@ -21,9 +21,12 @@ public class NewExpression
      * @param expr
      * @param args
      */
-    public NewExpression(Token operator, Expression expr, List<Expression> args)
+    public NewExpression(Token operator, Expression expr, List<Expression> args, StatementBlock body)
         {
-        this(null, operator, expr, args);
+        super(operator, expr);
+        this.parent = null;
+        this.args   = args;
+        this.body   = body;
         }
 
     /**
@@ -39,6 +42,7 @@ public class NewExpression
         super(operator, expr);
         this.parent = parent;
         this.args   = args;
+        this.body   = null;
         }
 
     @Override
@@ -75,6 +79,7 @@ public class NewExpression
         return sb.toString();
         }
 
-    public final Expression parent;
+    public final Expression       parent;
     public final List<Expression> args;
+    public final StatementBlock   body;
     }

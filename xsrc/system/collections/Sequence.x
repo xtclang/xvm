@@ -70,7 +70,7 @@ interface Sequence<ElementType>
                     }
                 return false;
                 }
-            }
+            };
         }
 
     /**

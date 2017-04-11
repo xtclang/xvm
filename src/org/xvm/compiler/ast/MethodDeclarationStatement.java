@@ -25,8 +25,8 @@ public class MethodDeclarationStatement
                                       Token name,
                                       List<TypeExpression> redundant,
                                       List<Parameter> params,
-                                      BlockStatement body,
-                                      BlockStatement continuation,
+                                      StatementBlock body,
+                                      StatementBlock continuation,
                                       Token doc)
         {
         this.modifiers    = modifiers;
@@ -216,8 +216,8 @@ public class MethodDeclarationStatement
     public final Token                name;
     public final List<TypeExpression> redundant;
     public final List<Parameter>      params;
-    public final BlockStatement       body;
-    public final BlockStatement       continuation;
+    public final StatementBlock body;
+    public final StatementBlock continuation;
     public final Token                doc;
 
     StructureContainer struct;

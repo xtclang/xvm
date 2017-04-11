@@ -199,7 +199,12 @@ interface Map<KeyType, ValueType>
      */
     ValueType? getOrNull(KeyType key)
         {
-        return (ValueType value : get(key)) ? value : null;
+        if (ValueType value : get(key))
+            {
+            return value;
+            }
+
+        return null;
         }
 
     /**
@@ -216,7 +221,12 @@ interface Map<KeyType, ValueType>
      */
     ValueType getOrDefault(KeyType key, function ValueType () compute)
         {
-        return (ValueType value : get(key)) ? value : compute();
+        if (ValueType value : get(key))
+            {
+            return value;
+            }
+
+        return compute();
         }
 
     /**
@@ -343,9 +353,12 @@ interface Map<KeyType, ValueType>
      */
     conditional Map<KeyType, ValueType> replace(KeyType key, ValueType valueOld, ValueType valueNew)
         {
-        if ((ValueType valueCur : get(key)) && valueOld == valueCur)
+        if (ValueType valueCur : get(key))
             {
-            return true, put(key, valueNew);
+            if (valueOld == valueCur)
+                {
+                return true, put(key, valueNew);
+                }
             }
 
         return false;
@@ -363,9 +376,12 @@ interface Map<KeyType, ValueType>
      */
     conditional Map<KeyType, ValueType> remove(KeyType key, ValueType value)
         {
-        if ((ValueType valueOld : get(key)) && value == valueOld)
+        if (ValueType valueOld : get(key))
             {
-            return remove(key);
+            if (value == valueOld)
+                {
+                return true, remove(key);
+                }
             }
 
         return false;
@@ -504,7 +520,14 @@ interface Map<KeyType, ValueType>
 
         for (Map.Entry<MapType.KeyType, MapType.ValueType> entry : map1)
             {
-            if (!(MapType.ValueType value : map2.get(entry.key) && entry.value == value))
+            if (MapType.ValueType value : map2.get(entry.key))
+                {
+                if (entry.value != value)
+                    {
+                    return false;
+                    }
+                }
+            else
                 {
                 return false;
                 }
@@ -680,7 +703,7 @@ interface Map<KeyType, ValueType>
         @Override
         Boolean exists.get()
             {
-            return Map.this.get(key)
+            return Map.this.get(key);
             }
 
         @Override

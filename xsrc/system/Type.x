@@ -57,7 +57,7 @@ class Type<DataType>
      */
     @lazy Map<String, MultiMethod> allMethodsByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, Method> map = new ListMap();
         for (Method method : allMethods)
@@ -80,7 +80,7 @@ class Type<DataType>
      */
     @lazy Property[] properties.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         Property[] list = new Property[];
         for (Method method : allMethods)
@@ -96,7 +96,7 @@ class Type<DataType>
 
     @lazy Map<String, Property> propertiesByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         Map<String, Property> map = new ListMap<>();
         for (Property prop : properties)
@@ -125,7 +125,7 @@ class Type<DataType>
 
     @lazy Map<String, MultiMethod> methodsByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, Method> map = new ListMap();
         for (Method method : methods)
@@ -241,7 +241,7 @@ class Type<DataType>
     DataType cast(Object o)
         {
         assert isInstance(o);
-        return (DataType) o;
+        return o.as(DataType);
         }
 
     // ----- dynamic type manipulation -------------------------------------------------------------
@@ -285,7 +285,7 @@ class Type<DataType>
     @Override
     immutable Type<DataType> ensureConst()
         {
-        return this instanceof immutable
+        return this instanceof immutable Object
                 ? this
                 : new Type<DataType>(allMethods, explicitlyImmutable).makeConst();
         }
@@ -294,7 +294,7 @@ class Type<DataType>
     immutable Type<DataType> makeConst()
         {
         allMethods = allMethods.makeConst();
-        meta.immutable = true;
+        meta.immutable_ = true;
         return this;
         }
     }

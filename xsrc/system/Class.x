@@ -215,7 +215,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @lazy Map<String, TypeParameter> typeParamsByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, TypeParameter> map = new ListMap();
         for (TypeParameter param : typeParams)
@@ -361,7 +361,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @lazy Map<String, NamedChild> childrenByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, NamedChild> map = new ListMap();
         map.putAll(classesByName);
@@ -384,13 +384,13 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @lazy Map<String, Class> classesByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, Class> map = new ListMap();
         for (Class class_ : classes)
             {
-            assert !map.contains(class.name);
-            map.put(class.name, class);
+            assert !map.contains(class_.name);
+            map.put(class_.name, class_);
             }
 
         return map.makeConst();
@@ -401,7 +401,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @lazy Map<String, Property> propertiesByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, Property> map = new ListMap();
         for (Property property : properties)
@@ -418,7 +418,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @lazy Map<String, MultiMethod> methodsByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, Method> map = new ListMap();
         for (Method method : methods)
@@ -442,7 +442,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @lazy Map<String, MultiFunction> functionsByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, Function> map = new ListMap();
         for (Function function_ : functions)
@@ -466,7 +466,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     @lazy Map<String, Literal> literalsByName.calc()
         {
-        assert meta.immutable;
+        assert meta.immutable_;
 
         ListMap<String, Literal> map = new ListMap();
         for (Literal literal : literals)
@@ -516,7 +516,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
             {
             for (Class mixin_ : this:module.autoMixins)
                 {
-                if (!that.incorporates(mixin_) && that.PublicType.isAssignableTo(mixin_.appliesTo))
+                if (!that.incorporates_(mixin_) && that.PublicType.isAssignableTo(mixin_.appliesTo))
                     {
                     that = that.incorporate(mixin_);
                     break;

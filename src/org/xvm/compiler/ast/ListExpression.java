@@ -13,8 +13,9 @@ import java.util.List;
 public class ListExpression
         extends Expression
     {
-    public ListExpression(List<Expression> exprs)
+    public ListExpression(TypeExpression type, List<Expression> exprs)
         {
+        this.type  = type;
         this.exprs = exprs;
         }
 
@@ -44,5 +45,6 @@ public class ListExpression
         return sb.toString();
         }
 
+    public final TypeExpression   type;
     public final List<Expression> exprs;
     }

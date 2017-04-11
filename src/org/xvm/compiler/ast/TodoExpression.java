@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.compiler.Token;
+
 /**
  * A to-do expression raises an exception indicating missing functionality,
  * with an optional message.
@@ -8,10 +10,11 @@ package org.xvm.compiler.ast;
  * @author cp 2017.03.28
  */
 public class TodoExpression
-        extends Expression
+        extends TypeExpression
     {
-    public TodoExpression(Expression message)
+    public TodoExpression(Token keyword, Expression message)
         {
+        this.keyword = keyword;
         this.message = message;
         }
 
@@ -22,5 +25,6 @@ public class TodoExpression
         return message == null ? s : (s + '(' + message + ')');
         }
 
+    public final Token      keyword;
     public final Expression message;
     }

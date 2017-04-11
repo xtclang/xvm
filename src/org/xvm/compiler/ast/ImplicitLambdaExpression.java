@@ -15,7 +15,7 @@ import java.util.List;
 public class ImplicitLambdaExpression
         extends Expression
     {
-    public ImplicitLambdaExpression(List<Expression> params, Token operator, BlockStatement body)
+    public ImplicitLambdaExpression(List<Expression> params, Token operator, StatementBlock body)
         {
         this.params   = params;
         this.operator = operator;
@@ -53,5 +53,5 @@ public class ImplicitLambdaExpression
 
     public final List<Expression> params;
     public final Token            operator;
-    public final BlockStatement   body;
+    public final StatementBlock body;
     }

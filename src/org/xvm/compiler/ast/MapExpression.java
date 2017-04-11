@@ -13,8 +13,9 @@ import java.util.List;
 public class MapExpression
         extends Expression
     {
-    public MapExpression(List<Expression> keys, List<Expression> values)
+    public MapExpression(TypeExpression type, List<Expression> keys, List<Expression> values)
         {
+        this.type   = type;
         this.keys   = keys;
         this.values = values;
         }
@@ -44,6 +45,7 @@ public class MapExpression
         return sb.toString();
         }
 
+    public final TypeExpression   type;
     public final List<Expression> keys;
     public final List<Expression> values;
     }

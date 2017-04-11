@@ -36,7 +36,7 @@ const Method<TargetType,
                 {
                 if (getter.ReturnTypes.size == 1 && getter.ParamTypes.size == 0)
                     {
-                    return new Property<ReturnTypes[0]>(name);
+                    return new Property /* TODO <ReturnTypes[0]> */ (name);
                     }
                 }
 
@@ -154,7 +154,8 @@ const Method<TargetType,
      */
     Function<ReturnTypes, ParamTypes> bindTarget(TargetType target)
         {
-        TODO this can not be abstract .. maybe "&target.getFunction(this)" or something like that?
+        // this can not be abstract .. maybe "&target.getFunction(this)" or something like that?
+        TODO;
         }
 
     /**

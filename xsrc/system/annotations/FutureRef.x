@@ -258,7 +258,7 @@ mixin FutureRef<RefType>
     FutureRef.Type<RefType> orAny(FutureRef.Type<RefType> ... others)
         {
         FutureRef.Type<RefType> result = this;
-        others.forEach(other -> result = result.or(other));
+        others.forEach(other -> {result = result.or(other);});
         return result;
         }
 
@@ -647,7 +647,7 @@ mixin FutureRef<RefType>
                 {
                 try
                     {
-                    notify(input, e)
+                    notify(input, e);
                     }
                 catch (Exception e2)
                     {
@@ -702,7 +702,7 @@ mixin FutureRef<RefType>
 
         public/private function FutureRef.Type<NewType> (RefType, other.RefType) combine;
 
-        private conditional InputType  input1 = false;
+        private conditional InputType  input1 = false;      // REVIEW
         private conditional Input2Type input2 = false;
 
         /**
@@ -721,7 +721,7 @@ mixin FutureRef<RefType>
                     }
                 else
                     {
-                    input1 = true, (InputType) input;
+                    input1 = (true, input as InputType);
                     if (input2)
                         {
                         bothParentsCompleted();
@@ -745,7 +745,7 @@ mixin FutureRef<RefType>
                     }
                 else
                     {
-                    input2 = true, (Input2Type) input;
+                    input2 = (true, input as Input2Type);
                     if (input1)
                         {
                         bothParentsCompleted();

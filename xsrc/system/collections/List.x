@@ -180,7 +180,7 @@ interface List<ElementType>
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to delete multiple elements efficiently
         List<ElementType> result = this;
-        Int index = range.lowerBound
+        Int index = range.lowerBound;
         Int count = range.upperBound - index + 1;
         while (count-- > 0)
             {

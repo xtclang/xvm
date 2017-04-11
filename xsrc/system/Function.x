@@ -45,7 +45,7 @@ interface Function<ReturnTypes extends Tuple<ReturnTypes...>, ParamTypes extends
             {
 
             }
-        return new PartiallyBound()
+        return new PartiallyBound();
         }
 
     /**

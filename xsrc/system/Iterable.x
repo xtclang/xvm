@@ -37,6 +37,6 @@ interface Iterable<ElementType>
 
                 return false;
                 }
-            }
+            };
         }
     }
