@@ -3,7 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -14,12 +17,20 @@ import java.util.List;
 public class ExplicitLambdaExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public ExplicitLambdaExpression(List<Parameter> params, Token operator, StatementBlock body)
         {
         this.params   = params;
         this.operator = operator;
         this.body     = body;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -50,7 +61,20 @@ public class ExplicitLambdaExpression
         return sb.toString();
         }
 
-    public final List<Parameter> params;
-    public final Token           operator;
-    public final StatementBlock body;
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("params", params);
+        map.put("operator", operator);
+        map.put("body", body);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected List<Parameter> params;
+    protected Token           operator;
+    protected StatementBlock  body;
     }

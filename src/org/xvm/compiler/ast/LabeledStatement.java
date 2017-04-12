@@ -2,6 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.compiler.Token;
+import org.xvm.util.ListMap;
+
+import java.util.Map;
 
 
 /**
@@ -12,11 +15,19 @@ import org.xvm.compiler.Token;
 public class LabeledStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public LabeledStatement(Token label, Statement stmt)
         {
         this.label = label;
         this.stmt  = stmt;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -24,6 +35,23 @@ public class LabeledStatement
         return label.getValue() + ": " + stmt;
         }
 
-    public final Token label;
-    public final Statement stmt;
+    @Override
+    public String getDumpDesc()
+        {
+        return label.getValue() + ":";
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("stmt", stmt);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token     label;
+    protected Statement stmt;
     }

@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
+import java.util.Map;
+
 
 /**
  * A variable declaration statement specifies a type and a simply name for a variable, with an
@@ -15,6 +19,8 @@ import org.xvm.compiler.Token;
 public class VariableDeclarationStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public VariableDeclarationStatement(TypeExpression type, Token name, Expression value)
         {
         this(type, name, null, value, true);
@@ -28,6 +34,17 @@ public class VariableDeclarationStatement
         this.cond  = op != null && op.getId() == Token.Id.COLON;
         this.term  = standalone;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    public boolean isConditional()
+        {
+        return cond;
+        }
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -54,9 +71,27 @@ public class VariableDeclarationStatement
         return sb.toString();
         }
 
-    public final TypeExpression type;
-    public final Token name;
-    public final Expression value;
-    public final boolean cond;
-    public final boolean term;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("type", type);
+        map.put("value", value);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected TypeExpression type;
+    protected Token          name;
+    protected Expression     value;
+    protected boolean        cond;
+    protected boolean        term;
     }

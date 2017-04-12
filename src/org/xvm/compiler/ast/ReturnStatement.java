@@ -3,8 +3,11 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -15,6 +18,8 @@ import java.util.List;
 public class ReturnStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public ReturnStatement(Token keyword)
         {
         this(keyword, (List) null);
@@ -30,6 +35,12 @@ public class ReturnStatement
         this.keyword = keyword;
         this.exprs   = exprs;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -69,6 +80,23 @@ public class ReturnStatement
         return sb.toString();
         }
 
-    public final Token keyword;
-    public final List<Expression> exprs;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("exprs", exprs);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token keyword;
+    protected List<Expression> exprs;
     }

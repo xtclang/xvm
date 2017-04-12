@@ -12,11 +12,19 @@ import org.xvm.compiler.Token;
 public class ShortCircuitStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public ShortCircuitStatement(Token keyword, Token name)
         {
         this.keyword = keyword;
         this.name    = name;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -35,6 +43,15 @@ public class ShortCircuitStatement
         return sb.toString();
         }
 
-    public final Token keyword;
-    public final Token name;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token keyword;
+    protected Token name;
     }

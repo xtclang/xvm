@@ -14,11 +14,19 @@ import java.util.List;
 public class ImportStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public ImportStatement(Token alias, List<Token> qualifiedName)
         {
         this.alias         = alias;
         this.qualifiedName = qualifiedName;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -50,6 +58,9 @@ public class ImportStatement
         return sb.toString();
         }
 
-    public final Token alias;
-    public final List<Token> qualifiedName;
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token       alias;
+    protected List<Token> qualifiedName;
     }

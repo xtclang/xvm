@@ -1,7 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -13,11 +16,19 @@ import java.util.List;
 public class ListExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public ListExpression(TypeExpression type, List<Expression> exprs)
         {
         this.type  = type;
         this.exprs = exprs;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -45,6 +56,24 @@ public class ListExpression
         return sb.toString();
         }
 
-    public final TypeExpression   type;
-    public final List<Expression> exprs;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("type", type);
+        map.put("exprs", exprs);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected TypeExpression   type;
+    protected List<Expression> exprs;
     }

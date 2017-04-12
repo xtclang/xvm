@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import java.util.Map;
+
 import static org.xvm.util.Handy.appendString;
 
 
@@ -14,12 +16,20 @@ import static org.xvm.util.Handy.appendString;
 public class ConstantDeclaration
         extends VariableDeclarationStatement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public ConstantDeclaration(Token keyword, TypeExpression type, Token name, Expression value, Token doc)
         {
         super(type, name, value);
         this.keyword = keyword;
         this.doc     = doc;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -42,6 +52,17 @@ public class ConstantDeclaration
         return sb.toString();
         }
 
-    public final Token keyword;
-    public final Token doc;
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        Map<String, Object> map = super.getDumpChildren();
+        map.put("keyword", keyword);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token keyword;
+    protected Token doc;
     }

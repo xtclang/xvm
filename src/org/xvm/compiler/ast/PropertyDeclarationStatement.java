@@ -2,9 +2,13 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.StructureContainer;
+
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
@@ -18,6 +22,8 @@ import static org.xvm.util.Handy.indentLines;
 public class PropertyDeclarationStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public PropertyDeclarationStatement(List<Token>      modifiers,
                                         List<Annotation> annotations,
                                         TypeExpression   type,
@@ -35,20 +41,25 @@ public class PropertyDeclarationStatement
         this.doc         = doc;
         }
 
-    @Override
-    public String toString()
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    public StructureContainer getStructure()
+        {
+        return struct;
+        }
+
+    public void setStructure(StructureContainer struct)
+        {
+        this.struct = struct;
+        }
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
+
+    public String toSignatureString()
         {
         StringBuilder sb = new StringBuilder();
-
-        if (doc != null)
-            {
-            String sDoc = String.valueOf(doc.getValue());
-            if (sDoc.length() > 100)
-                {
-                sDoc = sDoc.substring(0, 97) + "...";
-                }
-            appendString(sb.append("/*"), sDoc).append("*/\n");
-            }
 
         if (modifiers != null)
             {
@@ -71,6 +82,26 @@ public class PropertyDeclarationStatement
         sb.append(type)
           .append(' ')
           .append(name.getValue());
+
+        return sb.toString();
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        if (doc != null)
+            {
+            String sDoc = String.valueOf(doc.getValue());
+            if (sDoc.length() > 100)
+                {
+                sDoc = sDoc.substring(0, 97) + "...";
+                }
+            appendString(sb.append("/*"), sDoc).append("*/\n");
+            }
+
+        sb.append(toSignatureString());
 
         if (value != null)
             {
@@ -100,23 +131,32 @@ public class PropertyDeclarationStatement
         return sb.toString();
         }
 
-    public StructureContainer getStructure()
+    @Override
+    public String getDumpDesc()
         {
-        return struct;
+        return toSignatureString();
         }
 
-    public void setStructure(StructureContainer struct)
+    @Override
+    public Map<String, Object> getDumpChildren()
         {
-        this.struct = struct;
+        ListMap<String, Object> map = new ListMap();
+        map.put("annotations", annotations);
+        map.put("type", type);
+        map.put("value", value);
+        map.put("body", body);
+        return map;
         }
 
-    public final List<Token>      modifiers;
-    public final List<Annotation> annotations;
-    public final TypeExpression   type;
-    public final Token            name;
-    public final Expression       value;
-    public final StatementBlock body;
-    public final Token            doc;
 
-    StructureContainer struct;
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected List<Token>        modifiers;
+    protected List<Annotation>   annotations;
+    protected TypeExpression     type;
+    protected Token              name;
+    protected Expression         value;
+    protected StatementBlock     body;
+    protected Token              doc;
+    protected StructureContainer struct;
     }

@@ -1,7 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -14,11 +17,19 @@ import java.util.List;
 public class InvocationExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public InvocationExpression(Expression expr, List<Expression> args)
         {
         this.expr = expr;
         this.args = args;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -45,6 +56,24 @@ public class InvocationExpression
         return sb.toString();
         }
 
-    public final Expression       expr;
-    public final List<Expression> args;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("expr", expr);
+        map.put("args", args);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Expression       expr;
+    protected List<Expression> args;
     }

@@ -6,9 +6,11 @@ package org.xvm.compiler.ast;
  * @author cp 2017.03.28
  */
 public abstract class Expression
+        extends AstNode
     {
-    // TODO first & last tokens?
-
+    /**
+     * @return this expression, converted to a type expression
+     */
     public TypeExpression toTypeExpression()
         {
         if (this instanceof TypeExpression)

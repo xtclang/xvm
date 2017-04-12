@@ -1,7 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -12,10 +15,23 @@ import java.util.List;
 public class StatementBlock
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public StatementBlock(List<Statement> statements)
         {
         this.statements = statements;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    public List<Statement> getStatements()
+        {
+        return statements;
+        }
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -72,5 +88,16 @@ public class StatementBlock
         return sb.toString();
         }
 
-    public final List<Statement> statements;
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("statements", statements);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected List<Statement> statements;
     }

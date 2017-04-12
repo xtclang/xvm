@@ -458,13 +458,13 @@ public class CommandLine
             {
             if (stmt instanceof StatementBlock)
                 {
-                List<Statement> list = ((StatementBlock) stmt).statements;
+                List<Statement> list = ((StatementBlock) stmt).getStatements();
                 stmt = list.get(list.size() - 1);
                 }
             if (stmt instanceof TypeCompositionStatement)
                 {
                 TypeCompositionStatement typeStmt = (TypeCompositionStatement) stmt;
-                Token                    category = typeStmt.category;
+                Token                    category = typeStmt.getCategory();
                 if (opts.verbose)
                     {
                     out("xtc: Contains " + category.getId().TEXT + " " + typeStmt.getName());
@@ -689,6 +689,9 @@ public class CommandLine
                     {
                     out();
                     out(type);
+
+                    out();
+                    type.dump();
                     }
 
                 StructureContainer struct = node.getStructure();
@@ -1131,7 +1134,7 @@ public class CommandLine
                         }
                     else
                         {
-                        List<Statement> list = ((StatementBlock) stmt).statements;
+                        List<Statement> list = ((StatementBlock) stmt).getStatements();
                         type = (TypeCompositionStatement) list.get(list.size() - 1);
                         }
                     }
@@ -1152,7 +1155,7 @@ public class CommandLine
         @Override
         public String descriptiveName()
             {
-            return type == null ? file.getAbsolutePath() : (type.category.getId().TEXT + ' ' + name());
+            return type == null ? file.getAbsolutePath() : (type.getCategory().getId().TEXT + ' ' + name());
             }
 
         @Override

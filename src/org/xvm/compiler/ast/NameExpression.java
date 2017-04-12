@@ -3,19 +3,21 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 
 /**
- * A name expression specifies a name.
+ * A name expression specifies a name. This handles both a simple name, a qualified name, and a name
+ * with type parameters.
  *
  * @author cp 2017.03.28
  */
 public class NameExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public NameExpression(Token name)
         {
         names = Collections.singletonList(name);
@@ -25,6 +27,9 @@ public class NameExpression
         {
         this.names = names;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
 
     public boolean isSpecial()
         {
@@ -48,6 +53,9 @@ public class NameExpression
                 : new NamedTypeExpression(null, names, null);
         }
 
+
+    // ----- debugging assistance ------------------------------------------------------------------
+
     @Override
     public String toString()
         {
@@ -68,5 +76,14 @@ public class NameExpression
         return sb.toString();
         }
 
-    public final List<Token> names;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected List<Token> names;
     }

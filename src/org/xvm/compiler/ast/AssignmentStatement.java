@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
+import java.util.Map;
+
 
 /**
  * An assignment statement specifies an l-value, an assignment operator, and an r-value.
@@ -14,6 +18,8 @@ import org.xvm.compiler.Token;
 public class AssignmentStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public AssignmentStatement(Expression lvalue, Token op, Expression rvalue)
         {
         this(lvalue, op, rvalue, true);
@@ -27,6 +33,17 @@ public class AssignmentStatement
         this.cond   = op.getId() == Token.Id.COLON;
         this.term   = standalone;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    public boolean isConditional()
+        {
+        return op.getId() == Token.Id.COND;
+        }
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -46,9 +63,28 @@ public class AssignmentStatement
         return sb.toString();
         }
 
-    public final Expression lvalue;
-    public final Token      op;
-    public final Expression rvalue;
-    public final boolean    cond;
-    public final boolean    term;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("lvalue", lvalue);
+        map.put("op", op);
+        map.put("rvalue", rvalue);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Expression lvalue;
+    protected Token      op;
+    protected Expression rvalue;
+    protected boolean    cond;
+    protected boolean    term;
     }

@@ -1,26 +1,36 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-import org.xvm.util.Handy;
+import org.xvm.util.ListMap;
 
+import java.util.Map;
+
+import static org.xvm.util.Handy.byteArrayToHexDump;
 import static org.xvm.util.Handy.byteArrayToHexString;
 
 
 /**
- * A literal expression specifies a literal value.
+ * A binary expression specifies a literal binary value. As in, bytes.
  *
  * @author cp 2017.03.28
  */
 public class BinaryExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public BinaryExpression(byte[] bytes, long startPos, long endPos)
         {
         this.bytes    = bytes;
         this.startPos = startPos;
         this.endPos   = endPos;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -43,7 +53,18 @@ public class BinaryExpression
         return sb.toString();
         }
 
-    public final byte[] bytes;
-    public final long startPos;
-    public final long endPos;
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("bytes", byteArrayToHexDump(bytes, 64));
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected byte[] bytes;
+    protected long   startPos;
+    protected long   endPos;
     }

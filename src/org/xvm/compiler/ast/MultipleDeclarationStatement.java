@@ -1,7 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -13,11 +16,19 @@ import java.util.List;
 public class MultipleDeclarationStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public MultipleDeclarationStatement(List<Statement> lvalues, Expression rvalue)
         {
         this.lvalues = lvalues;
         this.rvalue  = rvalue;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -48,6 +59,24 @@ public class MultipleDeclarationStatement
         return sb.toString();
         }
 
-    public final List<Statement> lvalues;
-    public final Expression      rvalue;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("lvalues", lvalues);
+        map.put("rvalue", rvalue);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected List<Statement> lvalues;
+    protected Expression      rvalue;
     }

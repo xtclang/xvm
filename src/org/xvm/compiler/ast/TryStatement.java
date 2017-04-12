@@ -2,9 +2,11 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.compiler.Token;
+import org.xvm.util.ListMap;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -17,6 +19,8 @@ import static org.xvm.util.Handy.indentLines;
 public class TryStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public TryStatement(Token keyword, List<Statement> resources, StatementBlock block, List<CatchStatement> catches, StatementBlock catchall)
         {
         this.keyword   = keyword;
@@ -25,6 +29,12 @@ public class TryStatement
         this.catches   = catches == null ? Collections.EMPTY_LIST : catches;
         this.catchall  = catchall;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -70,9 +80,29 @@ public class TryStatement
         return sb.toString();
         }
 
-    public final Token                keyword;
-    public final List<Statement>      resources;
-    public final StatementBlock       block;
-    public final List<CatchStatement> catches;
-    public final StatementBlock       catchall;
+    @Override
+    public String getDumpDesc()
+        {
+        return keyword.getId().TEXT;
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("resources", resources);
+        map.put("block", block);
+        map.put("catches", catches);
+        map.put("catchall", catchall);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token                keyword;
+    protected List<Statement>      resources;
+    protected StatementBlock       block;
+    protected List<CatchStatement> catches;
+    protected StatementBlock       catchall;
     }

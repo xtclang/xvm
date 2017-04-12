@@ -574,7 +574,6 @@ public class Parser
                 if (fInMethod)
                     {
                     log(Severity.ERROR, NO_TOP_LEVEL, null, peek().getStartPosition(), peek().getEndPosition());
-                    throw new CompilerException("module or package in a method");
                     }
                 // fall through
             case CLASS:
@@ -1324,13 +1323,29 @@ public class Parser
         if (peek().getId() != Id.SEMICOLON)
             {
             init = new ArrayList<>();
+            int cConds = 0;
             do
                 {
-                init.add(parseConditionalDeclaration(true));
+                long      lPos = peek().getStartPosition();
+                Statement stmt = parseConditionalDeclaration(true);
+                init.add(stmt);
+
+                if (stmt instanceof AssignmentStatement
+                            && ((AssignmentStatement) stmt).isConditional() ||
+                    stmt instanceof VariableDeclarationStatement
+                            && ((VariableDeclarationStatement) stmt).isConditional())
+                    {
+                    ++cConds;
+                    }
+
+                // all need to be of the same type: all conditional, or none conditional
+                if (cConds != 0 && cConds != init.size())
+                    {
+                    log(Severity.ERROR, ALL_OR_NO_CONDS, null, lPos, peek().getStartPosition());
+                    }
                 }
             while (match(Id.COMMA) != null);
 
-            // TODO all need to be of the same type: all conditional, or none conditional
             if (match(Id.R_PAREN) != null)
                 {
                 // this is the "for (var : iterable) {...}" style
@@ -1492,7 +1507,7 @@ public class Parser
         // while the switch does not allow a conditional declaration, it does allow all of the
         // other capabilities expressed in a conditional declaration
         Statement cond = parseConditionalDeclaration(true);
-        if (cond instanceof VariableDeclarationStatement && ((VariableDeclarationStatement) cond).cond)
+        if (cond instanceof VariableDeclarationStatement && ((VariableDeclarationStatement) cond).isConditional())
             {
             log(Severity.ERROR, NO_CONDITIONAL, null, keyword.getStartPosition(), peek().getEndPosition());
             throw new CompilerException("conditional is not allowed");
@@ -1724,6 +1739,7 @@ public class Parser
                     log(Severity.ERROR, NO_ASSIGNMENT, null, peek().getStartPosition(), peek().getEndPosition());
                     throw new CompilerException("assignment disallowed");
                     }
+                // fall through
             case COLON:
                 // it's an assignment or conditional expression, but it doesn't declare a new var
                 return new AssignmentStatement(expr, current(), parseExpression(), false);
@@ -2927,16 +2943,18 @@ s     *
                             {
                             expect(Id.COMMA);
                             }
+                        Token dim = peek();
+
                         if (match(Id.COND) == null)
                             {
-                            if (dimExprs.size() != cExplicitDims)
-                                {
-                                // TODO log error
-                                throw new CompilerException("illegal dims");
-                                }
                             dimExprs.add(parseExpression());
                             }
                         ++cExplicitDims;
+
+                        if (!dimExprs.isEmpty() && dimExprs.size() != cExplicitDims)
+                            {
+                            log(Severity.ERROR, ALL_OR_NO_DIMS, null, dim.getStartPosition(), dim.getEndPosition());
+                            }
                         }
                     type = dimExprs.isEmpty()
                             ? new ArrayTypeExpression(type, cExplicitDims)
@@ -4073,6 +4091,16 @@ s     *
      * Assignment not allowed.
      */
     public static final String NO_ASSIGNMENT    = "PARSER-13";
+    /**
+     * Multi-conditional for loop requires all statements be conditional, otherwise no conditionals
+     * are allowed.
+     */
+    public static final String ALL_OR_NO_CONDS  = "PARSER-14";
+    /**
+     * All array dimensions need to be blank or '?', or all need to be expressions; no mixing and
+     * matching.
+     */
+    public static final String ALL_OR_NO_DIMS   = "PARSER-15";
 
 
     // ----- data members ------------------------------------------------------

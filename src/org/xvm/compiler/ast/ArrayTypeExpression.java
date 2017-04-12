@@ -1,16 +1,24 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
+
 
 /**
- * An array type expression is a type expression followed by an array indicator.
+ * An array type expression is a type expression followed by an array indicator. Because an array
+ * type can be used to (e.g.) "new" an array, it also has to support actual index extents, in
+ * addition to just supporting the number of dimensions.
  *
  * @author cp 2017.03.31
  */
 public class ArrayTypeExpression
         extends TypeExpression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public ArrayTypeExpression(TypeExpression type, int dims)
         {
         this.type    = type;
@@ -24,6 +32,12 @@ public class ArrayTypeExpression
         this.dims    = indexes.size();
         this.indexes = null;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -55,7 +69,26 @@ public class ArrayTypeExpression
         return sb.toString();
         }
 
-    public final TypeExpression   type;
-    public final int              dims;
-    public final List<Expression> indexes;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("type", type);
+        map.put("dims", dims);
+        map.put("indexes", indexes);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected TypeExpression   type;
+    protected int              dims;
+    protected List<Expression> indexes;
     }

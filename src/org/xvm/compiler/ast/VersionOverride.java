@@ -10,7 +10,10 @@ import org.xvm.compiler.Token;
  * @author cp 2017.04.03
  */
 public class VersionOverride
+        extends AstNode
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a default version requirement.
      *
@@ -33,21 +36,36 @@ public class VersionOverride
         this.version = version;
         }
 
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
+
     @Override
     public String toString()
         {
         return verb == null ? version.toString() : (verb.getId().TEXT + ' ' + version);
         }
 
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
     /**
      * A token representing "allow", "avoid", or "prefer".
      *
      * Note: may be null.
      */
-    public final Token verb;
+    protected Token verb;
 
     /**
      * The version id.
      */
-    public final Version version;
+    protected Version version;
     }

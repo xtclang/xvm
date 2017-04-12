@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
+import java.util.Map;
+
 import static org.xvm.util.Handy.indentLines;
 
 
@@ -14,6 +18,8 @@ import static org.xvm.util.Handy.indentLines;
 public class IfStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public IfStatement(Token keyword, Statement cond, StatementBlock block)
         {
         this(keyword, cond, block, null);
@@ -26,6 +32,12 @@ public class IfStatement
         this.stmtThen = stmtThen;
         this.stmtElse = stmtElse;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -54,8 +66,21 @@ public class IfStatement
         return sb.toString();
         }
 
-    public final Token     keyword;
-    public final Statement cond;
-    public final Statement stmtThen;
-    public final Statement stmtElse;
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("cond", cond);
+        map.put("then", stmtThen);
+        map.put("else", stmtElse);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token     keyword;
+    protected Statement cond;
+    protected Statement stmtThen;
+    protected Statement stmtElse;
     }

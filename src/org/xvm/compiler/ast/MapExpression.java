@@ -1,24 +1,35 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
- * A list expression is an expression containing some number (0 or more) expressions of some common
- * type.
+ * A map expression is an expression containing some number (0 or more) entries, each of which has
+ * a key and a value.
  *
  * @author cp 2017.04.07
  */
 public class MapExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public MapExpression(TypeExpression type, List<Expression> keys, List<Expression> values)
         {
         this.type   = type;
         this.keys   = keys;
         this.values = values;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -45,7 +56,26 @@ public class MapExpression
         return sb.toString();
         }
 
-    public final TypeExpression   type;
-    public final List<Expression> keys;
-    public final List<Expression> values;
+    @Override
+    public String getDumpDesc()
+        {
+        return "size=" + keys.size();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("type", type);
+        map.put("keys", keys);
+        map.put("values", values);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected TypeExpression   type;
+    protected List<Expression> keys;
+    protected List<Expression> values;
     }

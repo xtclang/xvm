@@ -3,14 +3,21 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
+import java.util.Map;
+
 
 /**
- * A type parameter with an optional type type.
+ * A parameter type and name, with an optional default value.
  *
  * @author cp 2017.03.28
  */
 public class Parameter
+        extends AstNode
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public Parameter(TypeExpression type, Token name)
         {
         this (type, name, null);
@@ -22,6 +29,12 @@ public class Parameter
         this.name  = name;
         this.value = value;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -46,7 +59,25 @@ public class Parameter
         return type == null ? s : (s + " extends " + type);
         }
 
-    public final TypeExpression type;
-    public final Token name;
-    public final Expression value;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("type", type);
+        map.put("value", value);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected TypeExpression type;
+    protected Token name;
+    protected Expression value;
     }

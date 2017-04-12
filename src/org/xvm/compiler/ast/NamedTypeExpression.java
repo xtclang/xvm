@@ -3,7 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -14,12 +17,20 @@ import java.util.List;
 public class NamedTypeExpression
         extends TypeExpression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public NamedTypeExpression(Token immutable, List<Token> names, List<TypeExpression> params)
         {
         this.immutable  = immutable;
         this.names      = names;
         this.paramTypes = params;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -67,7 +78,24 @@ public class NamedTypeExpression
         return sb.toString();
         }
 
-    public final Token immutable;
-    public final List<Token> names;
-    public final List<TypeExpression> paramTypes;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("paramTypes", paramTypes);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token immutable;
+    protected List<Token> names;
+    protected List<TypeExpression> paramTypes;
     }

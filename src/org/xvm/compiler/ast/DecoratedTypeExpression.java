@@ -3,6 +3,11 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
+import java.util.Map;
+
+
 /**
  * A decorated type expression is a type expression preceded by a keyword that adjusts the meaning
  * of the type expression.
@@ -12,11 +17,19 @@ import org.xvm.compiler.Token;
 public class DecoratedTypeExpression
         extends TypeExpression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public DecoratedTypeExpression(Token keyword, TypeExpression type)
         {
         this.keyword = keyword;
         this.type    = type;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -29,6 +42,24 @@ public class DecoratedTypeExpression
         return sb.toString();
         }
 
-    public final Token          keyword;
-    public final TypeExpression type;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("keyword", keyword);
+        map.put("type", type);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token          keyword;
+    protected TypeExpression type;
     }

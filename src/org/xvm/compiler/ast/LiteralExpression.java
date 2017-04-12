@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.compiler.Token;
+
 import org.xvm.util.Handy;
 
 
@@ -13,10 +14,18 @@ import org.xvm.util.Handy;
 public class LiteralExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public LiteralExpression(Token literal)
         {
         this.literal = literal;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -30,9 +39,19 @@ public class LiteralExpression
                  return Handy.quotedString(String.valueOf(literal.getValue()));
 
             default:
-                throw new UnsupportedOperationException("TODO");
+                // TODO
+                return "LiteralExpression.toString() not implemented for " + literal.getId();
             }
         }
 
-    public final Token literal;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token literal;
     }

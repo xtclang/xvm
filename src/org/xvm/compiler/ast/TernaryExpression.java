@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
+import java.util.Map;
+
 /**
  * A ternary expression is the "a ? b : c" expression.
  *
@@ -9,12 +13,20 @@ package org.xvm.compiler.ast;
 public class TernaryExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public TernaryExpression(Expression expr, Expression exprThen, Expression exprElse)
         {
         this.expr     = expr;
         this.exprThen = exprThen;
         this.exprElse = exprElse;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -30,7 +42,20 @@ public class TernaryExpression
         return sb.toString();
         }
 
-    public final Expression expr;
-    public final Expression exprThen;
-    public final Expression exprElse;
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("expr", expr);
+        map.put("exprThen", exprThen);
+        map.put("exprElse", exprElse);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Expression expr;
+    protected Expression exprThen;
+    protected Expression exprElse;
     }

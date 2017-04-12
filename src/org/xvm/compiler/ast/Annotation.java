@@ -1,7 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -10,12 +13,21 @@ import java.util.List;
  * @author cp 2017.03.31
  */
 public class Annotation
+        extends AstNode
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public Annotation(NamedTypeExpression type, List<Expression> args)
         {
         this.type = type;
         this.args = args;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -49,6 +61,24 @@ public class Annotation
         return sb.toString();
         }
 
-    public final NamedTypeExpression type;
-    public final List<Expression> args;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("type", type);
+        map.put("args", args);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected NamedTypeExpression type;
+    protected List<Expression> args;
     }

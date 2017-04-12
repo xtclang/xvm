@@ -3,23 +3,34 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
- * A type expression specifies a named type with optional parameters.
+ * A type expression for a function. This corresponds to the "function" keyword.
  *
  * @author cp 2017.03.31
  */
 public class FunctionTypeExpression
         extends TypeExpression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public FunctionTypeExpression(Token function, List<TypeExpression> returnValues, List<TypeExpression> params)
         {
         this.function     = function;
         this.returnValues = returnValues;
         this.paramTypes   = params;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -74,7 +85,25 @@ public class FunctionTypeExpression
         return sb.toString();
         }
 
-    public final Token function;
-    public final List<TypeExpression> returnValues;
-    public final List<TypeExpression> paramTypes;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("returnValues", returnValues);
+        map.put("paramTypes", paramTypes);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token                function;
+    protected List<TypeExpression> returnValues;
+    protected List<TypeExpression> paramTypes;
     }

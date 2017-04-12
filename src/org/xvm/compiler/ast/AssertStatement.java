@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
+import java.util.Map;
+
 
 /**
  * An assert statement.
@@ -12,12 +16,20 @@ import org.xvm.compiler.Token;
 public class AssertStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public AssertStatement(Token keyword, Token suffix, Statement stmt)
         {
         this.keyword = keyword;
         this.suffix  = suffix;
         this.stmt    = stmt;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -40,7 +52,26 @@ public class AssertStatement
         return sb.toString();
         }
 
-    public final Token keyword;
-    public final Token suffix;
-    public final Statement stmt;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("keyword", keyword);
+        map.put("suffix", suffix);
+        map.put("stmt", stmt);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Token keyword;
+    protected Token suffix;
+    protected Statement stmt;
     }

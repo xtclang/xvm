@@ -3,7 +3,11 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.Handy;
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -14,6 +18,8 @@ import java.util.List;
 public class NewExpression
         extends PrefixExpression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Prefix "new"
      *
@@ -45,8 +51,13 @@ public class NewExpression
         this.body   = null;
         }
 
-    @Override
-    public String toString()
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
+
+    public String toSignatureString()
         {
         StringBuilder sb = new StringBuilder();
 
@@ -79,7 +90,42 @@ public class NewExpression
         return sb.toString();
         }
 
-    public final Expression       parent;
-    public final List<Expression> args;
-    public final StatementBlock   body;
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(toSignatureString());
+
+        if (body != null)
+            {
+            sb.append('\n')
+              .append(Handy.indentLines(body.toString(), "        "));
+            }
+
+        return sb.toString();
+        }
+
+    @Override
+    public String getDumpDesc()
+        {
+        return toSignatureString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("parent", parent);
+        map.put("args", args);
+        map.put("body", body);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Expression       parent;
+    protected List<Expression> args;
+    protected StatementBlock   body;
     }

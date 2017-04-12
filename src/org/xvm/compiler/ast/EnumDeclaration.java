@@ -3,7 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
@@ -17,6 +20,8 @@ import static org.xvm.util.Handy.indentLines;
 public class EnumDeclaration
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public EnumDeclaration(List<Annotation> annotations, Token name, List<TypeExpression> typeParams,
                            List<Expression> args, StatementBlock body, Token doc)
         {
@@ -27,6 +32,12 @@ public class EnumDeclaration
         this.body        = body;
         this.doc         = doc;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -101,10 +112,25 @@ public class EnumDeclaration
         return sb.toString();
         }
 
-    public final List<Annotation> annotations;
-    public final Token name;
-    public final List<TypeExpression> typeParams;
-    public final List<Expression> args;
-    public final StatementBlock body;
-    public final Token doc;
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("annotations", annotations);
+        map.put("name", name);
+        map.put("typeParams", typeParams);
+        map.put("args", args);
+        map.put("body", body);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected List<Annotation> annotations;
+    protected Token name;
+    protected List<TypeExpression> typeParams;
+    protected List<Expression> args;
+    protected StatementBlock body;
+    protected Token doc;
     }

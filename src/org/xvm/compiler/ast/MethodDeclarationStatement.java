@@ -2,9 +2,13 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.StructureContainer;
+
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
@@ -18,6 +22,8 @@ import static org.xvm.util.Handy.indentLines;
 public class MethodDeclarationStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public MethodDeclarationStatement(List<Token> modifiers,
                                       List<Annotation> annotations,
                                       List<Token> typeVars,
@@ -41,27 +47,32 @@ public class MethodDeclarationStatement
         this.doc          = doc;
         }
 
-    @Override
-    public String toString()
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    public StructureContainer getStructure()
+        {
+        return struct;
+        }
+
+    public void setStructure(StructureContainer struct)
+        {
+        this.struct = struct;
+        }
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
+
+    public String toSignatureString()
         {
         StringBuilder sb = new StringBuilder();
-
-        if (doc != null)
-            {
-            String sDoc = String.valueOf(doc.getValue());
-            if (sDoc.length() > 100)
-                {
-                sDoc = sDoc.substring(0, 97) + "...";
-                }
-            appendString(sb.append("/*"), sDoc).append("*/\n");
-            }
 
         if (modifiers != null)
             {
             for (Token token : modifiers)
                 {
                 sb.append(token.getId().TEXT)
-                  .append(' ');
+                        .append(' ');
                 }
             }
 
@@ -70,7 +81,7 @@ public class MethodDeclarationStatement
             for (Annotation annotation : annotations)
                 {
                 sb.append(annotation)
-                  .append(' ');
+                        .append(' ');
                 }
             }
 
@@ -100,7 +111,7 @@ public class MethodDeclarationStatement
         else if (returns.size() == 1)
             {
             sb.append(returns.get(0))
-              .append(' ');
+                    .append(' ');
             }
         else
             {
@@ -161,6 +172,26 @@ public class MethodDeclarationStatement
             sb.append(')');
             }
 
+        return sb.toString();
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        if (doc != null)
+            {
+            String sDoc = String.valueOf(doc.getValue());
+            if (sDoc.length() > 100)
+                {
+                sDoc = sDoc.substring(0, 97) + "...";
+                }
+            appendString(sb.append("/*"), sDoc).append("*/\n");
+            }
+
+        sb.append(toSignatureString());
+
         if (body == null)
             {
             sb.append(';');
@@ -199,26 +230,37 @@ public class MethodDeclarationStatement
         return sb.toString();
         }
 
-    public StructureContainer getStructure()
+    @Override
+    public String getDumpDesc()
         {
-        return struct;
+        return toSignatureString();
         }
 
-    public void setStructure(StructureContainer struct)
+    @Override
+    public Map<String, Object> getDumpChildren()
         {
-        this.struct = struct;
+        ListMap<String, Object> map = new ListMap();
+        map.put("annotations", annotations);
+        map.put("returns", returns);
+        map.put("redundant", redundant);
+        map.put("params", params);
+        map.put("body", body);
+        map.put("continuation", continuation);
+        return map;
         }
 
-    public final List<Token>          modifiers;
-    public final List<Annotation>     annotations;
-    public final List<Token>          typeVars;
-    public final List<TypeExpression> returns;
-    public final Token                name;
-    public final List<TypeExpression> redundant;
-    public final List<Parameter>      params;
-    public final StatementBlock body;
-    public final StatementBlock continuation;
-    public final Token                doc;
 
-    StructureContainer struct;
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected List<Token>          modifiers;
+    protected List<Annotation>     annotations;
+    protected List<Token>          typeVars;
+    protected List<TypeExpression> returns;
+    protected Token                name;
+    protected List<TypeExpression> redundant;
+    protected List<Parameter>      params;
+    protected StatementBlock       body;
+    protected StatementBlock       continuation;
+    protected Token                doc;
+    protected StructureContainer   struct;
     }

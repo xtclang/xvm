@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.PackedInteger;
-
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.parseDelimitedString;
 
@@ -16,60 +14,18 @@ import static org.xvm.util.Handy.parseDelimitedString;
  * @author cp 2017.04.03
  */
 public class Version
+        extends AstNode
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public Version(Token literal)
         {
         this.literal = literal;
         assert literal.getId() == Token.Id.LIT_STRING;
         }
 
-    @Override
-    public String toString()
-        {
-        StringBuilder sb = new StringBuilder();
 
-        // yes, we could just return the literal value, but doing it the hard way tests to make
-        // sure that the parsing works
-
-        sb.append('\"');
-        String[] strs  = toStringArray();
-        boolean  first = true;
-        for (String str : strs)
-            {
-            if (first)
-                {
-                first = false;
-                }
-            else
-                {
-                sb.append('.');
-                }
-            sb.append(str);
-            }
-        sb.append('\"');
-
-        int[] ints = toIntArray();
-        if (ints.length > strs.length)
-            {
-            sb.append(" /* ");
-            first = true;
-            for (int n : ints)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append('.');
-                    }
-                sb.append(n);
-                }
-            sb.append(" */");
-            }
-
-        return sb.toString();
-        }
+    // ----- accessors -----------------------------------------------------------------------------
 
     public String[] toStringArray()
         {
@@ -184,10 +140,69 @@ public class Version
         return false;
         }
 
+
+    // ----- debugging assistance ------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        // yes, we could just return the literal value, but doing it the hard way tests to make
+        // sure that the parsing works
+
+        sb.append('\"');
+        String[] strs  = toStringArray();
+        boolean  first = true;
+        for (String str : strs)
+            {
+            if (first)
+                {
+                first = false;
+                }
+            else
+                {
+                sb.append('.');
+                }
+            sb.append(str);
+            }
+        sb.append('\"');
+
+        int[] ints = toIntArray();
+        if (ints.length > strs.length)
+            {
+            sb.append(" /* ");
+            first = true;
+            for (int n : ints)
+                {
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append('.');
+                    }
+                sb.append(n);
+                }
+            sb.append(" */");
+            }
+
+        return sb.toString();
+        }
+
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
     public static final String[] PREFIX = {"dev", "ci", "alpha", "beta", "rc"};
 
-    public final Token literal;
-
-    private String[] strs;
-    private int[] ints;
+    protected Token    literal;
+    protected String[] strs;
+    protected int[]    ints;
     }

@@ -2,6 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.compiler.Token;
+import org.xvm.util.ListMap;
+
+import java.util.Map;
 
 /**
  * Generic expression for something that follows the pattern "expression operator".
@@ -11,11 +14,19 @@ import org.xvm.compiler.Token;
 public class PostfixExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public PostfixExpression(Expression expr, Token operator)
         {
-        this.operator = operator;
         this.expr     = expr;
+        this.operator = operator;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -28,6 +39,23 @@ public class PostfixExpression
         return sb.toString();
         }
 
-    public final Expression expr;
-    public final Token      operator;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("expr", expr);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Expression expr;
+    protected Token      operator;
     }

@@ -1,7 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -12,11 +15,19 @@ import java.util.List;
 public class ArrayAccessExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public ArrayAccessExpression(Expression expr, List<Expression> indexes)
         {
         this.expr    = expr;
         this.indexes = indexes;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -45,6 +56,24 @@ public class ArrayAccessExpression
         return sb.toString();
         }
 
-    public final Expression       expr;
-    public final List<Expression> indexes;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("expr", expr);
+        map.put("indexes", indexes);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Expression       expr;
+    protected List<Expression> indexes;
     }

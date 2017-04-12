@@ -3,8 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.StructureContainer;
 import org.xvm.compiler.Token;
+import org.xvm.util.ListMap;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
@@ -18,6 +20,8 @@ import static org.xvm.util.Handy.indentLines;
 public class TypeCompositionStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public TypeCompositionStatement(List<Token> modifiers,
                                     List<Annotation> annotations,
                                     Token category,
@@ -41,6 +45,14 @@ public class TypeCompositionStatement
         this.doc               = doc;
         }
 
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    public Token getCategory()
+        {
+        return category;
+        }
+
     public String getName()
         {
         if (category.getId() == Token.Id.MODULE)
@@ -58,6 +70,18 @@ public class TypeCompositionStatement
             return (String) name.getValue();
             }
         }
+
+    public StructureContainer getStructure()
+        {
+        return struct;
+        }
+
+    public void setStructure(StructureContainer struct)
+        {
+        this.struct = struct;
+        }
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -182,26 +206,42 @@ public class TypeCompositionStatement
         return sb.toString();
         }
 
-    public StructureContainer getStructure()
+    @Override
+    public String getDumpDesc()
         {
-        return struct;
+        return (category == null ? "?" : category.getValue() == null ? category.getId().TEXT : String.valueOf(category.getValue()))
+                + ' ' + (name == null ? "?" : name.getValue() == null ? name.getId().TEXT : String.valueOf(name.getValue()));
         }
 
-    public void setStructure(StructureContainer struct)
+    @Override
+    public Map<String, Object> getDumpChildren()
         {
-        this.struct = struct;
+        ListMap<String, Object> map = new ListMap();
+        map.put("modifiers", modifiers);
+        map.put("modifiers", modifiers);
+        map.put("annotations", annotations);
+        map.put("category", category);
+        map.put("name", name);
+        map.put("qualified", qualified);
+        map.put("typeParams", typeParams);
+        map.put("constructorParams", constructorParams);
+        map.put("composition", composition);
+        map.put("body", body);
+        return map;
         }
+        
 
-    public final List<Token>       modifiers;
-    public final List<Annotation>  annotations;
-    public final Token             category;
-    public final Token             name;
-    public final List<Token>       qualified;
-    public final List<Parameter>   typeParams;
-    public final List<Parameter>   constructorParams;
-    public final List<Composition> composition;
-    public final StatementBlock body;
-    public final Token             doc;
+    // ----- fields --------------------------------------------------------------------------------
 
-    StructureContainer struct;
+    protected List<Token>        modifiers;
+    protected List<Annotation>   annotations;
+    protected Token              category;
+    protected Token              name;
+    protected List<Token>        qualified;
+    protected List<Parameter>    typeParams;
+    protected List<Parameter>    constructorParams;
+    protected List<Composition>  composition;
+    protected StatementBlock     body;
+    protected Token              doc;
+    protected StructureContainer struct;
     }

@@ -3,7 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -14,12 +17,20 @@ import java.util.List;
 public class DotNameExpression
         extends Expression
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     public DotNameExpression(Expression expr, Token name, List<TypeExpression> params)
         {
         this.expr   = expr;
         this.name   = name;
         this.params = params;
         }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -52,7 +63,26 @@ public class DotNameExpression
         return sb.toString();
         }
 
-    public final Expression expr;
-    public final Token      name;
-    public final List<TypeExpression> params;
+    @Override
+    public String getDumpDesc()
+        {
+        return toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("expr", expr);
+        map.put("name", name);
+        map.put("params", params);
+        return map;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected Expression           expr;
+    protected Token                name;
+    protected List<TypeExpression> params;
     }
