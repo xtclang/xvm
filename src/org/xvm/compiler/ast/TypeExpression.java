@@ -10,5 +10,8 @@ public abstract class TypeExpression
         extends Expression
     {
     @Override
-    public abstract String toString();
+    public TypeExpression toTypeExpression()
+        {
+        return this;
+        }
     }

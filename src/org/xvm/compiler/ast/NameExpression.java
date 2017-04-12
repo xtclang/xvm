@@ -46,11 +46,7 @@ public class NameExpression
     @Override
     public TypeExpression toTypeExpression()
         {
-        // TODO "this:type"
-        // TODO "this.ChildClass"?
-        return isSpecial()
-                ? new BadTypeExpression(this)
-                : new NamedTypeExpression(null, names, null);
+        return new NamedTypeExpression(null, names, null);
         }
 
 

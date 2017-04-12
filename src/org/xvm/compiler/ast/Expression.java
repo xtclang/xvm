@@ -13,16 +13,14 @@ public abstract class Expression
      */
     public TypeExpression toTypeExpression()
         {
-        if (this instanceof TypeExpression)
-            {
-            return (TypeExpression) this;
-            }
-        else
-            {
-            return new BadTypeExpression(this);
-            }
+        return new BadTypeExpression(this);
         }
 
-    @Override
-    public abstract String toString();
+    /**
+     * @return true iff the expression is capable of completing normally
+     */
+    public boolean canComplete()
+        {
+        return true;
+        }
     }

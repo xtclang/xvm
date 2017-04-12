@@ -26,6 +26,12 @@ public class ArrayAccessExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public TypeExpression toTypeExpression()
+        {
+        return new ArrayTypeExpression(expr.toTypeExpression(), indexes);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

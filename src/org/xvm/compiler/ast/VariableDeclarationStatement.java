@@ -53,7 +53,7 @@ public class VariableDeclarationStatement
 
         sb.append(type)
           .append(' ')
-          .append(name);
+          .append(name.getValue() == null ? name.getId().TEXT : name.getValue());
 
         if (value != null)
             {

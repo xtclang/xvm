@@ -25,6 +25,17 @@ public class PostfixExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public TypeExpression toTypeExpression()
+        {
+        if (operator.getId() == Token.Id.COND)
+            {
+            // convert "expr?" to "type?"
+            return new NullableTypeExpression(expr.toTypeExpression());
+            }
+
+        return super.toTypeExpression();
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

@@ -25,6 +25,11 @@ public class BadTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public boolean canComplete()
+        {
+        return false;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

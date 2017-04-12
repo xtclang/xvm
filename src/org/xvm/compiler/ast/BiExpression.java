@@ -28,6 +28,19 @@ public class BiExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public TypeExpression toTypeExpression()
+        {
+        switch (operator.getId())
+            {
+            case ADD:
+            case BIT_OR:
+                return new BiTypeExpression(expr1.toTypeExpression(), operator, expr2.toTypeExpression());
+
+            default:
+                return super.toTypeExpression();
+            }
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

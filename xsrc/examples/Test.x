@@ -1,10 +1,7 @@
-class HashMap<KeyType extends immutable Hashable, ValueType>
-        extends ExtHashMap<KeyType, ValueType>
+module Test
     {
-    // ----- constructors --------------------------------------------------------------------------
-
-    construct HashMap(Int initCapacity = 0)
+    Void foo()
         {
-        construct ExtHashMap(new NaturalHasher<KeyType>(), initCapacity);
+        this:type x = null;
         }
     }

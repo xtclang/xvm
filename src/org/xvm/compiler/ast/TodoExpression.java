@@ -28,6 +28,11 @@ public class TodoExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public boolean canComplete()
+        {
+        return false;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

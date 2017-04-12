@@ -244,14 +244,6 @@ public class Lexer
 
                         case '=':
                             return new Token(lInitPos, source.getPosition(), Id.ADD_ASN);
-
-// TODO get rid of this; add unary +/-
-//                        case '0': case '1': case '2': case '3': case '4':
-//                        case '5': case '6': case '7': case '8': case '9':
-//                        case '.':
-//                            source.rewind();
-//                            source.rewind();
-//                            return eatNumericLiteral();
                         }
                     source.rewind();
                     }
@@ -270,14 +262,6 @@ public class Lexer
 
                         case '=':
                             return new Token(lInitPos, source.getPosition(), Id.SUB_ASN);
-
-// TODO get rid of this; add unary +/-
-//                        case '0': case '1': case '2': case '3': case '4':
-//                        case '5': case '6': case '7': case '8': case '9':
-//                        case '.':
-//                            source.rewind();
-//                            source.rewind();
-//                            return eatNumericLiteral();
                         }
                     source.rewind();
                     }

@@ -83,20 +83,9 @@ public class TypeCompositionStatement
 
     // ----- debugging assistance ------------------------------------------------------------------
 
-    @Override
-    public String toString()
+    public String toSignatureString()
         {
         StringBuilder sb = new StringBuilder();
-
-        if (doc != null)
-            {
-            String sDoc = String.valueOf(doc.getValue());
-            if (sDoc.length() > 100)
-                {
-                sDoc = sDoc.substring(0, 97) + "...";
-                }
-            appendString(sb.append("/*"), sDoc).append("*/\n");
-            }
 
         if (modifiers != null)
             {
@@ -178,6 +167,26 @@ public class TypeCompositionStatement
             sb.append(')');
             }
 
+        return sb.toString();
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        if (doc != null)
+            {
+            String sDoc = String.valueOf(doc.getValue());
+            if (sDoc.length() > 100)
+                {
+                sDoc = sDoc.substring(0, 97) + "...";
+                }
+            appendString(sb.append("/*"), sDoc).append("*/\n");
+            }
+
+        sb.append(toSignatureString());
+
         for (Composition composition : this.composition)
             {
             sb.append("\n        ")
@@ -209,20 +218,13 @@ public class TypeCompositionStatement
     @Override
     public String getDumpDesc()
         {
-        return (category == null ? "?" : category.getValue() == null ? category.getId().TEXT : String.valueOf(category.getValue()))
-                + ' ' + (name == null ? "?" : name.getValue() == null ? name.getId().TEXT : String.valueOf(name.getValue()));
+        return toSignatureString();
         }
 
     @Override
     public Map<String, Object> getDumpChildren()
         {
         ListMap<String, Object> map = new ListMap();
-        map.put("modifiers", modifiers);
-        map.put("modifiers", modifiers);
-        map.put("annotations", annotations);
-        map.put("category", category);
-        map.put("name", name);
-        map.put("qualified", qualified);
         map.put("typeParams", typeParams);
         map.put("constructorParams", constructorParams);
         map.put("composition", composition);
