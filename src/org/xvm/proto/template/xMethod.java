@@ -13,10 +13,14 @@ import org.xvm.proto.*;
 public class xMethod
         extends TypeCompositionTemplate
     {
+    public static xMethod INSTANCE;
+
     public xMethod(TypeSet types)
         {
         // TODO:ParamType extends Tuple, ReturnType extends Tuple
         super(types, "x:Method<TargetType,ParamType,ReturnType>", "x:Object", Shape.Const);
+
+        INSTANCE = this;
         }
 
     @Override
@@ -37,9 +41,11 @@ public class xMethod
             String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
             TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
 
-            MethodHandle handle = new MethodHandle(f_clazzCanonical);
-            handle.m_method = target.getMethodTemplate(constMethod.getName(), "");
-            return handle;
+            MethodTemplate method = target.getMethodTemplate(constMethod.getName(), "");
+            if (method != null)
+                {
+                return new MethodHandle(f_clazzCanonical, method);
+                }
             }
         return null;
         }
@@ -52,6 +58,13 @@ public class xMethod
         protected MethodHandle(TypeComposition clazz)
             {
             super(clazz);
+            }
+
+        protected MethodHandle(TypeComposition clazz, MethodTemplate method)
+            {
+            super(clazz);
+
+            m_method = method;
             }
 
         @Override

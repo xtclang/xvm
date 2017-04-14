@@ -132,18 +132,46 @@ public class xTestApp extends xModule
             new X_Print(2),
             new Exit(),
 
-            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+3}),
             new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
-            new GuardEnd(+4),
-            new Enter(), // #2 (e)
-            new X_Print(2),
-            new Exit(),
-
             new X_Print(1),
             new Return_0(),
             };
         ftTestService.m_cVars = 3;
         ftTestService.m_cScopes = 2;
+
+        // --- testService()
+
+        FunctionTemplate ftTestRef = ensureFunctionTemplate("testRef", VOID, VOID);
+        ftTestRef.m_aop = new Op[]
+            {
+            new X_Print(-adapter.ensureValueConstantId("# in TestApp.testRef() #")),
+            new NVar(adapter.getClassConstId("x:Ref"), adapter.ensureValueConstantId("ri")),     // #0 (ri)
+            new Enter(),
+            new INVar(adapter.getClassConstId("x:Int64"),
+                    adapter.ensureValueConstantId("i"), adapter.ensureValueConstantId(1)),     // #1 (i)
+            new NVar(adapter.getClassConstId("x:Ref"), adapter.ensureValueConstantId("ri2")),  // #2 (ri2)
+            new MoveRef(1, 2),
+            new MoveRef(1, 0),
+
+            new Var(adapter.getClassConstId("x:Int64")), // #3 (temp)
+            new Invoke_01(0, -adapter.getMethodConstId("x:Ref", "get"), 3),
+            new X_Print(3),
+
+            new Invoke_10(0, -adapter.getMethodConstId("x:Ref", "set"),
+                             -adapter.ensureValueConstantId(2)),
+            new X_Print(1),
+
+            new Move(-adapter.ensureValueConstantId(3), 1),
+            new X_Print(2),
+            new Exit(),
+
+            new Var(adapter.getClassConstId("x:Int64")), // #1 (temp)
+            new Invoke_01(0, -adapter.getMethodConstId("x:Ref", "get"), 1),
+            new X_Print(1),
+            new Return_0()
+            };
+        ftTestRef.m_cVars = 4;
+        ftTestRef.m_cScopes = 2;
 
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);
@@ -152,6 +180,7 @@ public class xTestApp extends xModule
             new X_Print(-adapter.ensureValueConstantId("# in TestApp.run() #")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "testService")),
             new Return_0()
             };

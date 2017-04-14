@@ -34,7 +34,7 @@ public class Invoke_10 extends OpInvocable
         MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
 
         ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
-                Utils.resolveConst(frame, method.m_argTypeName[0], f_nArgValue);
+                Utils.resolveConst(frame, f_nArgValue);
 
         ExceptionHandle hException;
 

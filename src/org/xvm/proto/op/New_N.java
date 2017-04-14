@@ -42,8 +42,7 @@ public class New_N extends OpCallable
             {
             int nArg = f_anArgValue[i];
 
-            ahVar[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] :
-                    Utils.resolveConst(frame, constructor.m_argTypeName[i + 1], nArg);
+            ahVar[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] : Utils.resolveConst(frame, nArg);
             }
 
         ExceptionHandle hException = callConstructor(frame, constructor, ahVar);

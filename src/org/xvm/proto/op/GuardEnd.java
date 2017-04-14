@@ -20,10 +20,12 @@ public class GuardEnd extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        frame.f_aiRegister[I_GUARD]--;
+        frame.f_aiIndex[I_GUARD]--;
 
         // ++ Exit
-        frame.f_aiRegister[I_SCOPE]--;
+        int iScope = frame.f_aiIndex[I_SCOPE]--;
+
+        frame.clearScope(iScope);
         // --
 
         return iPC + f_nRelAddr;

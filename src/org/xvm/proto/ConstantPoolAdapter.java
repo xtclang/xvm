@@ -190,9 +190,16 @@ public class ConstantPoolAdapter
 
                 case Package:
                     PackageConstant constPackage = ((PackageConstant) constParent);
-                    sb.insert(0, ':')
+                    sb.insert(0, '.')
                       .insert(0, constPackage.getName());
                     constParent = constPackage.getNamespace();
+                    break;
+
+                case Class:
+                    ClassConstant constParentClass = ((ClassConstant) constParent);
+                    sb.insert(0, '$')
+                      .insert(0, constParentClass.getName());
+                    constParent = constParentClass.getNamespace();
                     break;
 
                 default:

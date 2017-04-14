@@ -39,7 +39,7 @@ public class Invoke_11 extends OpInvocable
         MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
 
         ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
-                Utils.resolveConst(frame, method.m_argTypeName[0], f_nArgValue);
+                Utils.resolveConst(frame, f_nArgValue);
 
         ObjectHandle[] ahReturn;
         ExceptionHandle hException;
@@ -53,6 +53,7 @@ public class Invoke_11 extends OpInvocable
             {
             hException = xFunction.makeAsyncHandle(method).
                     call(frame, new ObjectHandle[]{hTarget, hArg}, ahReturn = new ObjectHandle[1]);
+            // TODO: match up
             }
         else
             {

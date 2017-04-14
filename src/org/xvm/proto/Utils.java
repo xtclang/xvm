@@ -95,55 +95,42 @@ public abstract class Utils
         return sb.toString();
         }
 
-    public static ObjectHandle resolveConstReturn(Frame frame, int nReturn, int nConstValueId)
-        {
-        return resolveConst(frame, frame.f_function.m_retTypeName[nReturn], nConstValueId);
-        }
-
-    public static ObjectHandle resolveConst(Frame frame, TypeName typeName, int nConstValueId)
+    public static ObjectHandle resolveConst(Frame frame, int nConstValueId)
         {
         assert nConstValueId < 0;
 
         return nConstValueId < -Op.MAX_CONST_ID ? frame.getPredefinedArgument(nConstValueId) :
-            frame.f_context.f_heapGlobal.resolveConstHandle(typeName, -nConstValueId);
-        }
-
-    public static ObjectHandle resolveConst(Frame frame, TypeComposition clazz, int nConstValueId)
-        {
-        assert nConstValueId < 0;
-
-        return nConstValueId < -Op.MAX_CONST_ID ? frame.getPredefinedArgument(nConstValueId) :
-            frame.f_context.f_heapGlobal.resolveConstHandle(clazz, -nConstValueId);
+            frame.f_context.f_heapGlobal.resolveConstHandle(-nConstValueId);
         }
 
     public static ObjectHandle[] resolveArguments(Frame frame, InvocationTemplate function,
                                                   ObjectHandle[] ahVar, int[] anArg)
+        {
+        int cArgs = anArg.length;
+        int cVars = function.m_cVars;
+
+        assert cArgs <= cVars;
+
+        ObjectHandle[] ahArg = new ObjectHandle[cVars];
+
+        if (cArgs > 0)
             {
-            int cArgs = anArg.length;
-            int cVars = function.m_cVars;
-
-            assert cArgs <= cVars;
-
-            ObjectHandle[] ahArg = new ObjectHandle[cVars];
-
-            if (cArgs > 0)
+            if (cArgs == 1)
                 {
-                if (cArgs == 1)
+                int nArg = anArg[0];
+                ahArg[0] = nArg >= 0 ? ahVar[0] :
+                        Utils.resolveConst(frame, nArg);
+                }
+            else
+                {
+                for (int i = 0, c = cArgs; i < c; i++)
                     {
-                    int nArg = anArg[0];
-                    ahArg[0] = nArg >= 0 ? ahVar[0] :
-                            Utils.resolveConst(frame, function.m_argTypeName[0], nArg);
-                    }
-                else
-                    {
-                    for (int i = 0, c = cArgs; i < c; i++)
-                        {
-                        int nArg = anArg[i];
-                        ahArg[i] = nArg >= 0 ? ahVar[i] :
-                                Utils.resolveConst(frame, function.m_argTypeName[i], nArg);
-                        }
+                    int nArg = anArg[i];
+                    ahArg[i] = nArg >= 0 ? ahVar[i] :
+                            Utils.resolveConst(frame, nArg);
                     }
                 }
-            return ahArg;
             }
+        return ahArg;
+        }
     }

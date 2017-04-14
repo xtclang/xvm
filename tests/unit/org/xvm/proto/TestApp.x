@@ -4,10 +4,9 @@ module TestApp
     Void run()
         {
         test1();
-
         test2();
-
-        testCounter();
+        testRef();
+        testService();
         }
 
     static Int getIntValue()
@@ -47,6 +46,25 @@ module TestApp
         TestClass t3 = new TestClass2("ABC");
         Function fn = t3.method1;
         print(fn());
+        }
+
+    static Void testRef()
+        {
+        Ref<Int> ri;
+            {
+            Int i = 1;
+            Ref<Int> ri2 = &i;
+            ri = &i;
+
+            print(ri.get())
+
+            ri.set(2);
+            print(i);
+
+            i = 3;
+            print(ri2);
+            }
+        print(ri.get())
         }
 
     class TestClass(String prop1)
@@ -92,17 +110,14 @@ module TestApp
             }
         }
 
-
     static Void testService()
         {
         TestService service = new TestService();
         print(service);
 
-        Int c = service.counter;
+        Int c = service.increment();
         print(c);
 
-        c = service.increment();
-        print(c);
         c = service.counter;
         print(c);
 
@@ -110,29 +125,21 @@ module TestApp
         try
             {
             c = service.throwing();
-            print(c);
             }
         catch (Exception e)
             {
             print(e);
             }
 
-        // un handled exception
-        try
-            {
-            c = service.throwing();
-            }
-        catch (Exception e)
-            {
-            print(e);
-            }
+        // unhandled exception
+        c = service.throwing();
         print(c);
         }
 
-    service Counter(Int counter = 48)
+    service TestService(Int counter = 48)
         {
         // post-increment
-        Int next()
+        Int increment()
             {
             return counter++;
             }

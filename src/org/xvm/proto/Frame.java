@@ -4,8 +4,8 @@ import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Access;
 
-import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
@@ -20,11 +20,12 @@ public class Frame
     public final InvocationTemplate f_function;
 
     public final ObjectHandle   f_hTarget;      // target
-    public final ObjectHandle[] f_ahVar;        // arguments/local vars (index 0 for target:private)
+    public final ObjectHandle[] f_ahVar;        // arguments/local var registers
+    public final VarInfo[]      f_aInfo;        // optional info for var registers
     public final ObjectHandle[] f_ahReturn;     // the return value(s)
     public final Frame          f_framePrev;    // the caller's frame
-    public final int[]          f_aiRegister;   // execution registers
-                                                // [0] - current scope
+    public final int[]          f_aiIndex;      // frame indexes
+                                                // [0] - current scope index (starts with 0)
                                                 // [1] - current guard index (-1 if none)
     public final int[]          f_anNextVar;    // at index i, the "next available" var register for scope i
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
@@ -38,7 +39,8 @@ public class Frame
         f_function = function;
         f_hTarget = hTarget;
         f_ahVar = ahVar; // [0] - target:private for methods
-        f_aiRegister = new int[] {0, -1};
+        f_aInfo = new VarInfo[ahVar.length];
+        f_aiIndex = new int[] {0, -1};
 
         int cScopes = function == null ? 1 : function.m_cScopes;
         f_anNextVar = new int[cScopes];
@@ -67,21 +69,14 @@ public class Frame
             {
             Op op = abOps[iPC];
 
-            if (op == null)
+            try
                 {
-                iPC++;
+                iPC = op.process(this, iPC);
                 }
-            else
+            catch (RuntimeException e)
                 {
-                try
-                    {
-                    iPC = op.process(this, iPC);
-                    }
-                catch (RuntimeException e)
-                    {
-                    System.out.println("!!! frame " + this);
-                    throw e;
-                    }
+                System.out.println("!!! frame " + this);
+                throw e;
                 }
 
             if (iPC < 0)
@@ -119,7 +114,7 @@ public class Frame
             {
             TypeComposition clzException = hException.f_clazz;
 
-            for (int iGuard = f_aiRegister[Op.I_GUARD]; iGuard >= 0; iGuard--)
+            for (int iGuard = f_aiIndex[Op.I_GUARD]; iGuard >= 0; iGuard--)
                 {
                 Guard guard = aGuard[iGuard];
 
@@ -130,8 +125,11 @@ public class Frame
                     if (clzException.extends_(clzCatch))
                         {
                         int nScope = guard.f_nScope - 1;
-                        f_aiRegister[Op.I_SCOPE] = nScope;
-                        f_aiRegister[Op.I_GUARD] = iGuard - 1;
+
+                        clearAllScopes(nScope);
+
+                        f_aiIndex[Op.I_SCOPE] = nScope;
+                        f_aiIndex[Op.I_GUARD] = iGuard - 1;
 
                         int nNextVar = f_anNextVar[nScope]++;
                         f_ahVar[nNextVar] = hException;
@@ -206,6 +204,44 @@ public class Frame
             }
         }
 
+    // clear the var info for the specified scope
+    public void clearScope(int iScope)
+        {
+        int iVarFrom = f_anNextVar[iScope - 1];
+        int iVarTo   = f_anNextVar[iScope] - 1;
+
+        for (int i = iVarFrom; i <= iVarTo; i++)
+            {
+            Frame.VarInfo info = f_aInfo[i];
+
+            if (info != null)
+                {
+                info.release();
+
+                f_aInfo[i] = null;
+                }
+            }
+        }
+
+    // clear the var info for all scopes above the specified one
+    public void clearAllScopes(int iScope)
+        {
+        int iVarFrom = f_anNextVar[iScope];
+        int iVarTo   = f_anNextVar.length - 1;
+
+        for (int i = iVarFrom; i <= iVarTo; i++)
+            {
+            Frame.VarInfo info = f_aInfo[i];
+
+            if (info != null)
+                {
+                info.release();
+
+                f_aInfo[i] = null;
+                }
+            }
+        }
+
     // temporary
     public String getStackTrace()
         {
@@ -231,6 +267,7 @@ public class Frame
         return "Frame:" + (f_hTarget == null ? "" : f_hTarget) + " " + f_function.f_sName;
         }
 
+    // try-catch support
     public static class Guard
         {
         public final int f_nStartAddress;
@@ -244,6 +281,34 @@ public class Frame
             f_nScope = nScope;
             f_anClassConstId = anClassConstId;
             f_anCatchRelAddress = anCatchAddress;
+            }
+        }
+
+    // variable into (support for Refs and debugger)
+    public class VarInfo
+        {
+        public final TypeComposition f_clazz;
+        public final String f_sVarName;
+        public RefHandle m_ref; // an "active" reference to this register
+
+        public VarInfo(TypeComposition clazz)
+            {
+            this(clazz, null);
+            }
+
+        public VarInfo(TypeComposition clazz, String sName)
+            {
+            f_clazz = clazz;
+            f_sVarName = sName;
+            }
+
+        // this VarInfo goes out of scope
+        public void release()
+            {
+            if (m_ref != null)
+                {
+                m_ref.dereference();
+                }
             }
         }
     }

@@ -7,6 +7,7 @@ import org.xvm.asm.ConstantPool.MethodConstant;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
+import org.xvm.proto.template.xObject;
 import org.xvm.util.ListMap;
 
 import java.util.Arrays;
@@ -31,7 +32,7 @@ public abstract class TypeCompositionTemplate
     protected final String f_sName; // globally known type composition name (e.g. x:Boolean or x:annotation.AtomicRef)
     protected final String[] f_asFormalType;
     protected final String f_sSuper; // super composition name; always x:Object for interfaces
-    protected final Shape f_shape;
+    public final Shape f_shape;
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized
 
@@ -74,14 +75,15 @@ public abstract class TypeCompositionTemplate
             assert(sName.charAt(ofLast) == '>');
 
             String[] asFormalType = sName.substring(ofBracket + 1, ofLast).split(",");
-            for (int i = 0; i < asFormalType.length; i++)
+            int cTypes = asFormalType.length;
+            for (int i = 0; i < cTypes; i++)
                 {
                 String sFormalType = asFormalType[i];
                 assert (!types.existsTemplate(sFormalType)); // must not be know
                 }
             f_sName = sName.substring(0, ofBracket);
             f_asFormalType = asFormalType;
-            f_clazzCanonical = null;
+            f_clazzCanonical = new TypeComposition(this, xObject.getTypeArray(cTypes));
             }
 
         f_sSuper = sSuper;
@@ -169,15 +171,15 @@ public abstract class TypeCompositionTemplate
         {
         MultiMethodTemplate mmt = m_mapMultiMethods.get(sMethodName);
 
-        return mmt.m_mapMethods.get(sSig);
+        return mmt == null ? null : mmt.m_mapMethods.get(sSig);
         }
 
     public MethodTemplate getMethodTemplate(MethodConstant constMethod)
         {
-        MultiMethodTemplate mft = m_mapMultiMethods.get(constMethod.getName());
+        MultiMethodTemplate mmt = m_mapMultiMethods.get(constMethod.getName());
 
         // TODO: when MethodConstant is done
-        return mft.m_mapMethods.values().iterator().next();
+        return mmt == null ? null : mmt.m_mapMethods.values().iterator().next();
         }
 
     public void forEachMethod(Consumer<MethodTemplate> consumer)
@@ -218,7 +220,7 @@ public abstract class TypeCompositionTemplate
         {
         MultiFunctionTemplate mft = m_mapMultiFunctions.get(sFunctionName);
 
-        return mft.m_mapFunctions.get(sSig);
+        return mft == null ? null : mft.m_mapFunctions.get(sSig);
         }
 
     public FunctionTemplate getFunctionTemplate(MethodConstant constMethod)
@@ -226,7 +228,7 @@ public abstract class TypeCompositionTemplate
         MultiFunctionTemplate mft = m_mapMultiFunctions.get(constMethod.getName());
 
         // TODO: when MethodConstant is done
-        return mft.m_mapFunctions.values().iterator().next();
+        return mft == null ? null : mft.m_mapFunctions.values().iterator().next();
         }
 
     public void forEachFunction(Consumer<FunctionTemplate> consumer)
@@ -300,6 +302,18 @@ public abstract class TypeCompositionTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
+    public TypeComposition resolve(TypeComposition[] aclzGenericActual)
+        {
+        int    c = aclzGenericActual.length;
+        Type[] aType = new Type[c];
+        for (int i = 0; i < c; i++)
+            {
+            aType[i] = aclzGenericActual[i].ensurePublicType();
+            }
+        return resolve(aType);
+        }
+
+    // produce a TypeComposition for this template by resolving the generic types
     public TypeComposition resolve(Type[] atGenericActual)
         {
         if (atGenericActual.length == 0)
@@ -323,6 +337,8 @@ public abstract class TypeCompositionTemplate
         {
         Type type = new Type(f_sName);
         // TODO create the specified type
+
+        f_types.addType(type);
         return type;
         }
 
@@ -390,15 +406,7 @@ public abstract class TypeCompositionTemplate
     // get a property value
     public ExceptionHandle getProperty(ObjectHandle hTarget, String sName, ObjectHandle[] ahRet)
         {
-        GenericHandle hThis;
-        try
-            {
-            hThis = hTarget.as(GenericHandle.class);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return e.getExceptionHandle();
-            }
+        GenericHandle hThis = (GenericHandle) hTarget;
 
         ObjectHandle hProp = hThis.m_mapFields.get(sName);
         if (hProp == null)
@@ -414,15 +422,7 @@ public abstract class TypeCompositionTemplate
     public ExceptionHandle setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
         {
         // TODO: check the access rights
-        GenericHandle hThis;
-        try
-            {
-            hThis = hTarget.as(GenericHandle.class);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return e.getExceptionHandle();
-            }
+        GenericHandle hThis = (GenericHandle) hTarget;
 
         assert hThis.m_mapFields.containsKey(sName);
 
@@ -477,6 +477,12 @@ public abstract class TypeCompositionTemplate
     public boolean isService()
         {
         return f_shape == Shape.Service;
+        }
+
+    public boolean isSingleton()
+        {
+        // TODO: add static classes
+        return f_shape == Shape.Enum;
         }
 
     @Override

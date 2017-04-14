@@ -39,7 +39,7 @@ public class New_1 extends OpCallable
         ObjectHandle[] ahVar = new ObjectHandle[constructor.m_cVars];
         ahVar[0] = hNew;
         ahVar[1] = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
-                Utils.resolveConst(frame, constructor.m_argTypeName[1], f_nArgValue);
+                Utils.resolveConst(frame, f_nArgValue);
 
         ExceptionHandle hException = callConstructor(frame, constructor, ahVar);
 

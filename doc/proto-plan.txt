@@ -5,11 +5,17 @@
         - cleanup an un-referenced service (phantom refs)
         - container terminates when all services are stopped
 
+- Function wrapping for services
+
+- Atomics
+
 - Array
+
 - Multi:
     -- new
     -- call
     -- invoke
     -- return
+
 - Generic types
 

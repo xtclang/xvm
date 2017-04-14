@@ -25,14 +25,21 @@ public class X_Print extends Op
         {
         int nValue = f_nValue;
 
-        String sPrefix = new Date().toString() + " " + frame.f_context.toString() + ": ";
+        StringBuilder sb = new StringBuilder();
+        sb.append(new Date()).append(" ")
+          .append(frame.f_context).append(": ");
+
         if (nValue >= 0)
             {
             try
                 {
                 ObjectHandle handle = frame.f_ahVar[nValue].as(ObjectHandle.class);
-
-                System.out.println(sPrefix + handle);
+                Frame.VarInfo info = frame.f_aInfo[nValue];
+                if (info != null && info.f_sVarName != null)
+                    {
+                    sb.append(info.f_sVarName).append("=");
+                    }
+                sb.append(handle);
                 }
             catch (ObjectHandle.ExceptionHandle.WrapperException e)
                 {
@@ -42,9 +49,10 @@ public class X_Print extends Op
             }
         else
             {
-            System.out.println(sPrefix +
-                    frame.f_context.f_constantPool.getConstantValue(-nValue).getValueString());
+            sb.append(frame.f_context.f_constantPool.getConstantValue(-nValue).getValueString());
             }
+
+        System.out.println(sb.toString());
 
         return iPC + 1;
         }

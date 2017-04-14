@@ -2,7 +2,16 @@ package org.xvm.proto;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool.CharStringConstant;
-import org.xvm.proto.TypeName.UnionTypeName;
+import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.asm.ConstantPool.IntConstant;
+import org.xvm.asm.ConstantPool.MethodConstant;
+import org.xvm.asm.ConstantPool.ModuleConstant;
+import org.xvm.proto.template.xClass;
+import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xInt64;
+import org.xvm.proto.template.xMethod;
+import org.xvm.proto.template.xModule;
+import org.xvm.proto.template.xString;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +26,7 @@ public class ObjectHeap
     public final TypeSet f_types;
     public final ConstantPoolAdapter f_constantPool;
 
-    Map<Long, ObjectHandle> m_mapConstants = new HashMap<>();
+    Map<Integer, ObjectHandle> m_mapConstants = new HashMap<>();
 
     public ObjectHeap(ConstantPoolAdapter adapter, TypeSet types)
         {
@@ -35,70 +44,46 @@ public class ObjectHeap
         }
 
     // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
-    public ObjectHandle resolveConstHandle(TypeName typeName, int nValueConstId)
+    public ObjectHandle resolveConstHandle(int nValueConstId)
         {
-        assert(typeName.isResolved());
-
-        if (typeName instanceof UnionTypeName)
-            {
-            for (TypeName tn : ((UnionTypeName) typeName).m_listTypeName)
-                {
-                try
-                    {
-                    String sType = tn.getSimpleName();
-                    // TODO: generic names
-                    int nClassConstId = f_constantPool.getClassConstId(sType);
-                    return resolveConstHandle(nClassConstId, nValueConstId);
-                    }
-                catch (UnsupportedOperationException e) {}
-                }
-
-            throw new UnsupportedOperationException(
-                    "Constant " + f_constantPool.getConstantValue(nValueConstId) + " for " + typeName);
-            }
-        else
-            {
-            String sType = typeName.getSimpleName();
-            // TODO: generic names
-            int nClassConstId = f_constantPool.getClassConstId(sType);
-            return resolveConstHandle(nClassConstId, nValueConstId);
-            }
-        }
-
-    public ObjectHandle resolveConstHandle(TypeComposition clazz, int nValueConstId)
-        {
-        int nClassConstId = f_constantPool.getClassConstId(clazz.f_template.f_sName);
-
-        return resolveConstHandle(nClassConstId, nValueConstId);
-        }
-
-    // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
-    public ObjectHandle resolveConstHandle(int nClassConstId, int nValueConstId)
-        {
-        ObjectHandle handle = null;
-        if (nValueConstId > 0)
-            {
-            handle = getConstHandle(nClassConstId, nValueConstId);
-            }
+        ObjectHandle handle = getConstHandle(nValueConstId);
 
         if (handle == null)
             {
-            TypeComposition typeComposition = f_types.ensureConstComposition(nClassConstId);
-
-            // TODO: BiTypeComposition (String?) may not have the template reference
-
-            TypeCompositionTemplate template = typeComposition.f_template;
-
             Constant constValue = f_constantPool.getConstantValue(nValueConstId); // must exist
 
-            handle = template.createConstHandle(constValue);
-            if (handle == null)
+            if (constValue instanceof CharStringConstant)
                 {
-                throw new UnsupportedOperationException(
-                        "Constant " + constValue + " for " + template);
+                handle = xString.INSTANCE.createConstHandle(constValue);
+                }
+            else if (constValue instanceof IntConstant)
+                {
+                handle = xInt64.INSTANCE.createConstHandle(constValue);
+                }
+            else if (constValue instanceof MethodConstant)
+                {
+                handle = xMethod.INSTANCE.createConstHandle(constValue);
+                if (handle == null)
+                    {
+                    // TODO: replace with function when implemented
+                    handle = xFunction.INSTANCE.createConstHandle(constValue);
+                    }
+                }
+            else if (constValue instanceof ClassConstant)
+                {
+                handle = xClass.INSTANCE.createConstHandle(constValue);
+                }
+            else if (constValue instanceof ModuleConstant)
+                {
+                handle = xModule.INSTANCE.createConstHandle(constValue);
                 }
 
-            registerConstHandle(nClassConstId, nValueConstId, handle);
+            if (handle == null)
+                {
+                throw new UnsupportedOperationException("Unknown constant " + constValue);
+                }
+
+            registerConstHandle(nValueConstId, handle);
             }
 
         return handle;
@@ -109,13 +94,13 @@ public class ObjectHeap
         return ((CharStringConstant) f_constantPool.getConstantValue(nValueConstId)).getValue();
         }
 
-    public ObjectHandle getConstHandle(int nClassConstId, int nValueConstId)
+    public ObjectHandle getConstHandle(int nValueConstId)
         {
-        return m_mapConstants.get(((long) nClassConstId << 32) | ((long) nValueConstId));
+        return m_mapConstants.get(nValueConstId);
         }
-    protected void registerConstHandle(int nClassConstId, int nValueConstId, ObjectHandle handle)
+    protected void registerConstHandle(int nValueConstId, ObjectHandle handle)
         {
-        m_mapConstants.put(((long) nClassConstId << 32) | ((long) nValueConstId), handle);
+        m_mapConstants.put(nValueConstId, handle);
         }
 
     }
