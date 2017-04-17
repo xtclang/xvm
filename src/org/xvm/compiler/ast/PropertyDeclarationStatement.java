@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.StructureContainer;
 
 import org.xvm.compiler.Token;
@@ -20,7 +21,7 @@ import static org.xvm.util.Handy.indentLines;
  * @author cp 2017.04.04
  */
 public class PropertyDeclarationStatement
-        extends Statement
+        extends StructureContainerStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -44,14 +45,48 @@ public class PropertyDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    public StructureContainer getStructure()
-        {
-        return struct;
-        }
 
-    public void setStructure(StructureContainer struct)
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    protected AstNode registerNames(AstNode parent, ErrorList errs)
         {
-        this.struct = struct;
+        setParent(parent);
+
+        // create the structure for this property
+        if (getStructure() == null)
+            {
+            // create a structure for this type
+            StructureContainer container = parent.getStructure();
+            // TODO is it a constant or a property? does it matter at this point?
+            if (container instanceof StructureContainer.ClassContainer)
+                {
+                setStructure(((StructureContainer.ClassContainer) container).ensureProperty((String) name.getValue()));
+                }
+            else
+                {
+                // TODO log error
+                throw new UnsupportedOperationException("not a property container: " + container);
+                }
+            }
+
+        // recurse to children
+        // TODO what if one of them changes?
+        if (annotations != null)
+            {
+            for (Annotation annotation : annotations)
+                {
+                annotation.registerNames(this, errs);
+                }
+            }
+        type.registerNames(this, errs);
+        value.registerNames(this, errs);
+        if (body != null)
+            {
+            body.registerNames(this, errs);
+            }
+
+        return this;
         }
 
 
@@ -158,5 +193,4 @@ public class PropertyDeclarationStatement
     protected Expression         value;
     protected StatementBlock     body;
     protected Token              doc;
-    protected StructureContainer struct;
     }

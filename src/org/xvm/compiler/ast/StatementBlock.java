@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.StructureContainer;
 import org.xvm.util.ListMap;
 
 import java.util.List;
@@ -28,6 +30,33 @@ public class StatementBlock
     public List<Statement> getStatements()
         {
         return statements;
+        }
+
+    public void addStatement(Statement stmt)
+        {
+        statements.add(stmt);
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    protected AstNode registerNames(AstNode parent, ErrorList errs)
+        {
+        AstNode newNode = super.registerNames(parent, errs);
+        assert newNode == this;
+
+        // recurse to children
+        // TODO what if one of them changes?
+        if (statements != null)
+            {
+            for (Statement stmt : statements)
+                {
+                stmt.registerNames(this, errs);
+                }
+            }
+
+        return this;
         }
 
 

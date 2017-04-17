@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.compiler.Token;
+
 import org.xvm.util.ListMap;
 
 import java.util.List;
@@ -17,19 +19,57 @@ public abstract class Composition
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public Composition(TypeExpression type)
+    public Composition(Expression condition, Token keyword, TypeExpression type)
         {
-        this.type = type;
+        this.condition = condition;
+        this.keyword   = keyword;
+        this.type      = type;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public Token getKeyword()
+        {
+        return keyword;
+        }
+
+    public TypeExpression getType()
+        {
+        return type;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
-    public abstract String toString();
+    public String toString()
+        {
+        return toStartString() + toEndString();
+        }
+
+    public String toStartString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        if (condition != null)
+            {
+            sb.append("if (")
+                    .append(condition)
+                    .append(") { ");
+            }
+
+        sb.append(keyword.getId().TEXT)
+                .append(' ')
+                .append(type);
+
+        return sb.toString();
+        }
+
+    protected String toEndString()
+        {
+        return condition == null ? "" : " }";
+        }
 
     @Override
     public String getDumpDesc()
@@ -41,6 +81,7 @@ public abstract class Composition
     public Map<String, Object> getDumpChildren()
         {
         ListMap<String, Object> map = new ListMap();
+        map.put("condition", condition);
         map.put("type", type);
         return map;
         }
@@ -51,9 +92,9 @@ public abstract class Composition
     public static class Extends
             extends Composition
         {
-        public Extends(TypeExpression type, List<Expression> args)
+        public Extends(Expression condition, Token keyword, TypeExpression type, List<Expression> args)
             {
-            super(type);
+            super(condition, keyword, type);
             this.args = args;
             }
 
@@ -62,8 +103,7 @@ public abstract class Composition
             {
             StringBuilder sb = new StringBuilder();
 
-            sb.append("extends ")
-              .append(type);
+            sb.append(toStartString());
 
             if (args != null)
                 {
@@ -84,6 +124,7 @@ public abstract class Composition
                   sb.append(')');
                 }
 
+            sb.append(toEndString());
             return sb.toString();
             }
 
@@ -101,9 +142,9 @@ public abstract class Composition
     public static class Incorporates
             extends Composition
         {
-        public Incorporates(TypeExpression type, List<Expression> args)
+        public Incorporates(Expression condition, Token keyword, TypeExpression type, List<Expression> args)
             {
-            super(type);
+            super(condition, keyword, type);
             this.args = args;
             }
 
@@ -112,8 +153,7 @@ public abstract class Composition
             {
             StringBuilder sb = new StringBuilder();
 
-            sb.append("incorporates ")
-                    .append(type);
+            sb.append(toStartString());
 
             if (args != null)
                 {
@@ -134,6 +174,7 @@ public abstract class Composition
                 sb.append(')');
                 }
 
+            sb.append(toEndString());
             return sb.toString();
             }
 
@@ -151,31 +192,25 @@ public abstract class Composition
     public static class Implements
             extends Composition
         {
-        public Implements(TypeExpression type)
+        public Implements(Expression condition, Token keyword, TypeExpression type)
             {
-            super(type);
-            }
-
-        @Override
-        public String toString()
-            {
-            return "implements " + type;
+            super(condition, keyword, type);
             }
         }
 
     public static class Delegates
             extends Composition
         {
-        public Delegates(TypeExpression type, Expression delegate)
+        public Delegates(Expression condition, Token keyword, TypeExpression type, Expression delegate)
             {
-            super(type);
+            super(condition, keyword, type);
             this.delegate = delegate;
             }
 
         @Override
         public String toString()
             {
-            return "delegates " + type + '(' + delegate + ')';
+            return toStartString() + '(' + delegate + ')' + toEndString();
             }
 
         @Override
@@ -192,24 +227,18 @@ public abstract class Composition
     public static class Into
             extends Composition
         {
-        public Into(TypeExpression type)
+        public Into(Expression condition, Token keyword, TypeExpression type)
             {
-            super(type);
-            }
-
-        @Override
-        public String toString()
-            {
-            return "into " + type;
+            super(condition, keyword, type);
             }
         }
 
     public static class Import
             extends Composition
         {
-        public Import(NamedTypeExpression type, List<VersionOverride> vers)
+        public Import(Expression condition, Token keyword, NamedTypeExpression type, List<VersionOverride> vers)
             {
-            super(type);
+            super(condition, keyword, type);
             this.vers = vers;
             }
 
@@ -218,8 +247,7 @@ public abstract class Composition
             {
             StringBuilder sb = new StringBuilder();
 
-            sb.append("import ")
-                    .append(type);
+            sb.append(toStartString());
 
             if (vers != null)
                 {
@@ -239,6 +267,7 @@ public abstract class Composition
                     }
                 }
 
+            sb.append(toEndString());
             return sb.toString();
             }
 
@@ -246,7 +275,7 @@ public abstract class Composition
         public Map<String, Object> getDumpChildren()
             {
             Map<String, Object> map = super.getDumpChildren();
-            map.put("vers", vers);
+            map.put("type", vers);
             return map;
             }
 
@@ -256,5 +285,7 @@ public abstract class Composition
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Expression     condition;
+    protected Token          keyword;
     protected TypeExpression type;
     }

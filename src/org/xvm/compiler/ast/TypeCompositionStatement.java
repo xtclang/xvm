@@ -1,10 +1,15 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.StructureContainer;
+
 import org.xvm.compiler.Token;
+
 import org.xvm.util.ListMap;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -18,7 +23,7 @@ import static org.xvm.util.Handy.indentLines;
  * @author cp 2017.03.28
  */
 public class TypeCompositionStatement
-        extends Statement
+        extends StructureContainerStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -71,15 +76,129 @@ public class TypeCompositionStatement
             }
         }
 
-    public StructureContainer getStructure()
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    /**
+     * Add an enclosed type composition to this type composition. Because the parser may have to
+     * wrap the parsed type composition into a statement block, this method takes a Statement
+     * instead of a TypeCompositionStatement, but the idea is the same: the argument to this method
+     * should be an object that was returned from {@link org.xvm.compiler.Parser#parseSource()}.
+     *
+     * @param stmt  a statement returned from {@link org.xvm.compiler.Parser#parseSource()}
+     */
+    public void addEnclosed(Statement stmt)
         {
-        return struct;
+        if (enclosed == null)
+            {
+            if (body == null)
+                {
+                body = new StatementBlock(new ArrayList<>());
+                }
+
+            enclosed = new StatementBlock(new ArrayList<>());
+            body.addStatement(enclosed);
+            }
+
+        enclosed.addStatement(stmt);
         }
 
-    public void setStructure(StructureContainer struct)
+    /**
+     * Provide the file structure that will contain the module.
+     *
+     * @param struct the ModuleStructure for this module
+     */
+    public void setModuleStructure(ModuleStructure struct)
         {
-        this.struct = struct;
+        setStructure(struct);
         }
+
+    @Override
+    protected AstNode registerNames(AstNode parent, ErrorList errs)
+        {
+        setParent(parent);
+
+        // create the structure for this package or class (etc.)
+        if (getStructure() == null)
+            {
+            // create a structure for this type
+            StructureContainer container = parent.getStructure();
+            switch (category.getId())
+                {
+                case PACKAGE:
+                    if (container instanceof StructureContainer.PackageContainer)
+                        {
+                        setStructure(((StructureContainer.PackageContainer) container).ensurePackage((String) name.getValue()));
+                        }
+                    else
+                        {
+                        // TODO log error
+                        throw new UnsupportedOperationException("not a package container: " + container);
+                        }
+                    break;
+
+                case CLASS:
+                case INTERFACE:
+                case SERVICE:
+                case CONST:
+                case ENUM:
+                case TRAIT:
+                case MIXIN:
+                    if (container instanceof StructureContainer.ClassContainer)
+                        {
+                        setStructure(((StructureContainer.ClassContainer) container).ensureClass((String) name.getValue()));
+                        }
+                    else
+                        {
+                        // TODO log error
+                        throw new UnsupportedOperationException("not a package container: " + container);
+                        }
+                    break;
+
+                default:
+                    // TODO log error
+                    throw new UnsupportedOperationException("not sure how to make a structure for: " + category.getId().TEXT);
+                }
+            }
+
+        // recurse to children
+        // TODO what if one of them changes?
+        if (annotations != null)
+            {
+            for (Annotation annotation : annotations)
+                {
+                annotation.registerNames(this, errs);
+                }
+            }
+        if (typeParams != null)
+            {
+            for (Parameter parameter : typeParams)
+                {
+                parameter.registerNames(this, errs);
+                }
+            }
+        if (constructorParams != null)
+            {
+            for (Parameter parameter : constructorParams)
+                {
+                parameter.registerNames(this, errs);
+                }
+            }
+        if (composition != null)
+            {
+            for (Composition each : composition)
+                {
+                each.registerNames(this, errs);
+                }
+            }
+        if (body != null)
+            {
+            body.registerNames(this, errs);
+            }
+
+        return this;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -245,5 +364,5 @@ public class TypeCompositionStatement
     protected List<Composition>  composition;
     protected StatementBlock     body;
     protected Token              doc;
-    protected StructureContainer struct;
+    protected StatementBlock     enclosed;
     }

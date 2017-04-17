@@ -15,6 +15,7 @@ import org.xvm.util.Severity;
 import java.io.File;
 import java.io.IOException;
 
+import java.io.PrintWriter;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -593,7 +594,14 @@ public class CommandLine
 
             // create a module/package/class structure for each dir/file node in the "module tree"
             FileStructure struct = new FileStructure(module.name(), null, null);
-            module.assignStructure((ModuleStructure) struct.getTopmostStructure());
+            module.getType().setModuleStructure((ModuleStructure) struct.getTopmostStructure());
+
+            // when there are multiple files, they have to all be linked together as a giant parse
+            // tree
+            if (module instanceof DirNode)
+                {
+                ((DirNode) module).linkParseTrees();
+                }
             }
         }
 
@@ -643,7 +651,7 @@ public class CommandLine
                 file = new File(file, sName + ".xtc");
                 }
 
-            FileStructure struct = module.getStructure().getFileStructure();
+            FileStructure struct = module.getType().getStructure().getFileStructure();
 
             // TODO - build the module
 
@@ -694,11 +702,13 @@ public class CommandLine
                     type.dump();
                     }
 
-                StructureContainer struct = node.getStructure();
+                StructureContainer struct = node.getType().getStructure();
                 if (struct != null)
                     {
                     out();
                     out(struct.getFileStructure());
+                    out();
+                    struct.getFileStructure().dump(new PrintWriter(System.out, true));
                     }
                 }
             }
@@ -753,8 +763,6 @@ public class CommandLine
         String name();
         String descriptiveName();
         TypeCompositionStatement getType();
-        void assignStructure(StructureContainer struct);
-        StructureContainer getStructure();
         void checkSyntax();
         void resolveDependencies();
         void checkErrors();
@@ -824,10 +832,10 @@ public class CommandLine
 
             if (progress == Progress.PARSED)
                 {
-                if (pkgNode != null)
-                    {
-                    pkgNode.registerNames();
-                    }
+                // code was created by the parse phase if there was none
+                assert pkgNode != null;
+
+                pkgNode.registerNames();
 
                 for (FileNode clz : sources.values())
                     {
@@ -918,8 +926,7 @@ public class CommandLine
             return pkgNode == null ? null : pkgNode.getType();
             }
 
-        @Override
-        public void assignStructure(StructureContainer struct)
+        public void linkParseTrees()
             {
             if (pkgNode == null)
                 {
@@ -928,27 +935,22 @@ public class CommandLine
                 }
             else
                 {
-                StructureContainer.PackageContainer thisPkg = (StructureContainer.PackageContainer) struct;
-
-                pkgNode.assignStructure(struct);
+                TypeCompositionStatement type = pkgNode.getType();
 
                 for (FileNode clzNode : sources.values())
                     {
-                    clzNode.assignStructure(thisPkg.ensureClass(clzNode.name()));
+                    type.addEnclosed(clzNode.stmt);
                     }
 
                 for (DirNode nestedPkgNode : packages)
                     {
-                    // create and assign the package structure
-                    nestedPkgNode.assignStructure(thisPkg.ensurePackage(nestedPkgNode.name()));
+                    // nest the package within this package
+                    type.addEnclosed(nestedPkgNode.pkgNode.stmt);
+
+                    // ask the package to nest its classes and packages
+                    nestedPkgNode.linkParseTrees();
                     }
                 }
-            }
-
-        @Override
-        public StructureContainer getStructure()
-            {
-            return pkgNode == null ? null : pkgNode.getStructure();
             }
 
         @Override
@@ -1162,18 +1164,6 @@ public class CommandLine
         public TypeCompositionStatement getType()
             {
             return type;
-            }
-
-        @Override
-        public void assignStructure(StructureContainer struct)
-            {
-            type.setStructure(struct);
-            }
-
-        @Override
-        public StructureContainer getStructure()
-            {
-            return type.getStructure();
             }
 
         @Override

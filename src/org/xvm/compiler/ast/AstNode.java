@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.StructureContainer;
+
 import java.io.PrintWriter;
 
 import java.io.StringWriter;
@@ -18,14 +21,59 @@ public abstract class AstNode
     {
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * Obtain the AstNode that contains this node. A parent is configured by the scan phase.
+     *
+     * @return  the parent node, or null
+     */
     public AstNode getParent()
         {
         return parent;
         }
 
-    public void setParent(AstNode parent)
+    protected void setParent(AstNode parent)
         {
         this.parent = parent;
+        }
+
+    /**
+     * Obtain the StructureContainer for this AstNode, if any. By default, a node uses the container
+     * for its parent.
+     *
+     * @return a StructureContainer
+     */
+    public StructureContainer getStructure()
+        {
+        StructureContainer struct = null;
+        AstNode            parent = getParent();
+        if (parent != null)
+            {
+            struct = parent.getStructure();
+            }
+        return struct;
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    /**
+     * First logical compiler pass. At this point, names are NOT resolvable; we're really just
+     * organizing the tree and checking obvious errors that are obvious from "this point down".
+     * The general idea is that this method recurses through the structure, allowing each node to
+     * introduce itself as the parent of each node under it, and that the nodes will register
+     * themselves as appropriate into the corresponding file structure if the nodes represent
+     * names that are visible in the file structure (such as packages, classes, properties, methods,
+     * and so on.)
+     *
+     * @param parent  the parent of this node to tie into (if necessary / appropriate)
+     * @param errs    the error list to log any errors etc. to
+     *
+     * @return the node to replace this node with (or null to discard this node)
+     */
+    protected AstNode registerNames(AstNode parent, ErrorList errs)
+        {
+        setParent(parent);
+        return this;
         }
 
 

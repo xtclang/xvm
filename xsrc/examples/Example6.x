@@ -178,7 +178,7 @@ package
 
 class Employee implements PotentialSpring
     {
-    if (Spring.present && Spring.version == 1.2.3)
+    if (Spring.present && Spring.version == "1.2.3")
         {
         Void superSpringRead(Spring.IO.InStream) {...}
         Void superSpringWrite(Spring.IO.OutStream) {...}
@@ -597,3 +597,92 @@ class Parent
 // type literals
 
 foo(List<Person>:{foo1(), b, c});
+
+
+// conditional compilation
+
+module MyApp
+    {
+    // :embedded :required :desired :optional
+    package Spring import:optional springframework.spring.org "2.1"
+            prefer "2.1.3"
+            avoid "2.1.0.0", "2.1.3.1";
+
+    class Employee
+            extends Person
+            if (Spring.present)
+                {
+                implements SpringSer
+                }
+            implements Serializable
+            {
+        if (Spring.present)
+            {
+            Void superSpringRead(Spring.IO.InStream)
+                {
+                // ...
+                }
+
+            Void superSpringWrite(Spring.IO.OutStream)
+                {
+                // ...
+                }
+            }
+        }
+    }
+
+
+// singletons
+
+const Point(Int x, Int y);
+
+Point p1 = new Point(0,0);
+Class c1 = Point;
+Method f = Point.draw;
+
+static const Origin extends Point(0,0);
+
+Point    p2 = Origin;
+Class    c2 = Origin!;
+Method   m2 = Origin!.draw;
+Function f2 = Origin.draw;
+
+
+Method f = RED.getRGB;
+if (color == RED) ...
+
+
+// future example
+
+class SomeTest
+    {
+    @future Int i;
+
+    Void foo(FutureRef<Int> f)
+        {
+        @future @soft @weak Int i;
+
+        @future Int i;  // DVAR @FuturRef<Int> (#5)
+        Int j;          // VAR Int (#6)
+
+        i = IntGeneratorService.makeMeAnIntPlease();
+        j = IntGeneratorService.makeMeAnIntPlease();
+
+        FutureRef<Int> f = &i;
+        FutureRef<Int> f2 = f;
+
+        @future Int j = &i.get();
+
+        &i.whenDone(r -> foo(r));
+
+        foo(&svc.inc()); // DVAR Int (#6); REF #6 (#7) ; CALL @foo #7
+
+        Int j = i;
+        @future Int i;
+        FutureRef<Int> f = &i;
+        assert !i.assigned;
+
+
+
+        }
+    }

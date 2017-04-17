@@ -3,7 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.ListMap;
+
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -16,8 +19,9 @@ public class ImportStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ImportStatement(Token alias, List<Token> qualifiedName)
+    public ImportStatement(Expression cond, Token alias, List<Token> qualifiedName)
         {
+        this.cond          = cond;
         this.alias         = alias;
         this.qualifiedName = qualifiedName;
         }
@@ -32,6 +36,15 @@ public class ImportStatement
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
+
+        if (cond != null)
+            {
+            sb.append("if (")
+              .append(cond)
+              .append(") { ");
+            }
+
+        sb.append("import ");
 
         boolean first = true;
         String last = null;
@@ -55,12 +68,28 @@ public class ImportStatement
               .append(alias.getValue());
             }
 
+        sb.append(';');
+
+        if (cond != null)
+            {
+            sb.append(" }");
+            }
+
         return sb.toString();
+        }
+
+    @Override
+    public Map<String, Object> getDumpChildren()
+        {
+        ListMap<String, Object> map = new ListMap();
+        map.put("cond", cond);
+        return map;
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Expression  cond;
     protected Token       alias;
     protected List<Token> qualifiedName;
     }

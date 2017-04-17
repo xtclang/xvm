@@ -501,7 +501,7 @@ public class Lexer
                     }
 
                 String name = source.toString(lInitPos, source.getPosition());
-                if (name.equals("this") && source.hasNext())
+                if (Token.Id.valueByPrefix(name) != null && source.hasNext())
                     {
                     long lPos = source.getPosition();
                     if (source.next() == ':')

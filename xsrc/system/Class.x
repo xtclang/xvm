@@ -543,4 +543,5 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * Create a new instance of this class.
      */
     PublicType newInstance(Constructor | ConstructorFinally constructor);
+    Function (Constructor | ConstructorFinally constructor);
     }

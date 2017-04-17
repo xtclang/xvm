@@ -290,7 +290,7 @@ public abstract class StructureContainer
      * <li><i>Method + Property + Class + Package</i> - the {@link
      * PackageContainer PackageContainer}</li>
      */
-    protected abstract static class MethodContainer
+    public abstract static class MethodContainer
             extends StructureContainer
         {
         // ----- constructors ----------------------------------------------
@@ -587,7 +587,7 @@ public abstract class StructureContainer
      * An XVM structure that can contain ClassStructure and PropertyStructure
      * objects, in addition to MethodStructure objects.
      */
-    protected abstract static class ClassContainer
+    public abstract static class ClassContainer
             extends MethodContainer
         {
         // ----- constructors ----------------------------------------------

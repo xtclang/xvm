@@ -18,10 +18,9 @@ public class AssertStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public AssertStatement(Token keyword, Token suffix, Statement stmt)
+    public AssertStatement(Token keyword, Statement stmt)
         {
         this.keyword = keyword;
-        this.suffix  = suffix;
         this.stmt    = stmt;
         }
 
@@ -37,11 +36,6 @@ public class AssertStatement
         StringBuilder sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT);
-        if (suffix != null)
-            {
-            sb.append(':')
-              .append(suffix);
-            }
 
         if (stmt != null)
             {
@@ -62,8 +56,6 @@ public class AssertStatement
     public Map<String, Object> getDumpChildren()
         {
         ListMap<String, Object> map = new ListMap();
-        map.put("keyword", keyword);
-        map.put("suffix", suffix);
         map.put("stmt", stmt);
         return map;
         }
@@ -72,6 +64,5 @@ public class AssertStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token keyword;
-    protected Token suffix;
     protected Statement stmt;
     }

@@ -14,7 +14,21 @@ module MyApp.xqiz.it
         /**
          * So much happiness.
          */
-        enum Happiness { SAD, MEDIOCRE, HAPPY, ECSTATIC }
+        enum Happiness
+                if (true)
+                    {
+                    if (Crazy.present)
+                        {
+                        implements Serializable
+                        }
+                    implements ExternalizableLite
+
+                    }
+                else
+                    {
+                    implements Externalizable
+                    }
+            { SAD, MEDIOCRE, HAPPY, ECSTATIC }
 
         /**
          * So much light.
@@ -40,6 +54,11 @@ module MyApp.xqiz.it
                        ║could be inside of an║
                        ║Ecstasy source file  ║
                        ╚═════════════════════╝;
+            String s2 = "This could be any    "
+                      + "\nfreeform text that"
+                      + "\ncould be inside of an"
+                      + "\nEcstasy source file";
+
             Map<Int, String> map = Map:{0="zero", 1="one", 2="two"};
             List<String> list = {"hello", "world", "!"};
             //List<Dec> list = {1.0, 2.0, 3.0};
@@ -83,6 +102,11 @@ module MyApp.xqiz.it
 
             Void move(Int dx, Int dy)
                 {
+                assert dx >= 0;
+                assert:always dx >= 0;
+                assert:once dy >= 0;
+                assert:test dx > 0 && dy >= 0;
+                assert:debug;
                 }
 
             Void paint()

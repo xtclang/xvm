@@ -1,5 +1,8 @@
 package org.xvm.compiler.ast;
 
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.StructureContainer;
+
 /**
  * Base class for all Ecstasy statements.
  *
@@ -8,6 +11,7 @@ package org.xvm.compiler.ast;
 public abstract class Statement
         extends AstNode
     {
-    @Override
-    public abstract String toString();
+    // ----- accessors -----------------------------------------------------------------------------
+
+
     }

@@ -36,18 +36,21 @@ public class TupleExpression
 
         sb.append('(');
 
-        boolean first = true;
-        for (Expression expr : exprs)
+        if (exprs != null)
             {
-            if (first)
+            boolean first = true;
+            for (Expression expr : exprs)
                 {
-                first = false;
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(expr);
                 }
-            else
-                {
-                sb.append(", ");
-                }
-            sb.append(expr);
             }
 
         sb.append(')');

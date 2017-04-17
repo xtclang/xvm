@@ -33,6 +33,15 @@ public class Parameter
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public TypeExpression getType()
+        {
+        return type;
+        }
+
+    public String getName()
+        {
+        return (String) name.getValue();
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

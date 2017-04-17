@@ -308,129 +308,137 @@ public class Token
      */
     public enum Id
         {
-        COLON       (":"             ),
-        SEMICOLON   (";"             ),
-        COMMA       (","             ),
-        DOT         ("."             ),
-        DOTDOT      (".."            ),
-        ELLIPSIS    ("..."           ),
-        AT          ("@"             ),
-        COND        ("?"             ),
-        COND_ELSE   ("?:"            ),
-        COND_ASN    ("?="            ),
-        L_PAREN     ("("             ),
-        R_PAREN     (")"             ),
-        L_CURLY     ("{"             ),
-        R_CURLY     ("}"             ),
-        L_SQUARE    ("["             ),
-        R_SQUARE    ("]"             ),
-        ADD         ("+"             ),
-        SUB         ("-"             ),
-        MUL         ("*"             ),
-        DIV         ("/"             ),
-        MOD         ("%"             ),
-        DIVMOD      ("/%"            ),
-        SHL         ("<<"            ),
-        SHR         (">>"            ),
-        USHR        (">>>"           ),
-        BIT_AND     ("&"             ),
-        BIT_OR      ("|"             ),
-        BIT_XOR     ("^"             ),
-        BIT_NOT     ("~"             ),
-        ASN         ("="             ),
-        ADD_ASN     ("+="            ),
-        SUB_ASN     ("-="            ),
-        MUL_ASN     ("*="            ),
-        DIV_ASN     ("/="            ),
-        MOD_ASN     ("%="            ),
-        DIVMOD_ASN  ("/%="           ),
-        SHL_ASN     ("<<="           ),
-        SHR_ASN     (">>="           ),
-        USHR_ASN    (">>>="          ),
-        BIT_AND_ASN ("&="            ),
-        BIT_OR_ASN  ("|="            ),
-        BIT_XOR_ASN ("^="            ),
-        COND_AND    ("&&"            ),
-        COND_OR     ("||"            ),
-        NOT         ("!"             ),
-        COMP_EQ     ("=="            ),
-        COMP_NEQ    ("!="            ),
-        COMP_ORD    ("<=>"           ),
-        COMP_LT     ("<"             ),
-        COMP_LTEQ   ("<="            ),
-        COMP_GT     (">"             ),
-        COMP_GTEQ   (">="            ),
-        INC         ("++"            ),
-        DEC         ("--"            ),
-        LAMBDA      ("->"            ),
-        IGNORED     ("_"             ),
-        ALLOW       ("allow"         , true),
-        AS          ("as"            ),
-        ASSERT      ("assert"        ),
-        AVOID       ("avoid"         , true),
-        BREAK       ("break"         ),
-        CASE        ("case"          ),
-        CATCH       ("catch"         ),
-        CLASS       ("class"         ),
-        CONDITIONAL ("conditional"   ),
-        CONST       ("const"         ),
-        CONSTRUCT   ("construct"     ),
-        CONTINUE    ("continue"      ),
-        DEFAULT     ("default"       ),
-        DELEGATES   ("delegates"     ),
-        DO          ("do"            ),
-        ELSE        ("else"          ),
-        ENUM        ("enum"          ),
-        EXTENDS     ("extends"       ),
-        FINALLY     ("finally"       ),
-        FOR         ("for"           ),
-        FUNCTION    ("function"      ),
-        IF          ("if"            ),
-        IMMUTABLE   ("immutable"     ),
-        IMPLEMENTS  ("implements"    ),
-        IMPORT      ("import"        ),
-        INCORPORATES("incorporates"  ),
-        INSTANCEOF  ("instanceof"    ),
-        INTERFACE   ("interface"     ),
-        INTO        ("into"          , true),
-        MIXIN       ("mixin"         ),
-        MODULE      ("module"        ),
-        NEW         ("new"           ),
-        PACKAGE     ("package"       ),
-        PREFER      ("prefer"        , true),
-        PRIVATE     ("private"       ),
-        PROTECTED   ("protected"     ),
-        PUBLIC      ("public"        ),
-        RETURN      ("return"        ),
-        SERVICE     ("service"       ),
-        STATIC      ("static"        ),
-        SUPER       ("super"         , true, true),
-        SWITCH      ("switch"        ),
-        THIS        ("this"          , true, true),
-        THIS_FRAME  ("this:frame"    , true, true),
-        THIS_MODULE ("this:module"   , true, true),
-        THIS_PRI    ("this:private"  , true, true),
-        THIS_PRO    ("this:protected", true, true),
-        THIS_PUB    ("this:public"   , true, true),
-        THIS_SERV   ("this:service"  , true, true),
-        THIS_STRUCT ("this:struct"   , true, true),
-        THIS_TARGET ("this:target"   , true, true),
-        THIS_TYPE   ("this:type"     , true, true),
-        THROW       ("throw"         ),
-        TODO        ("TODO"          ),
-        TRAIT       ("trait"         ),
-        TRY         ("try"           ),
-        TYPEDEF     ("typedef"       ),
-        USING       ("using"         ),
-        WHILE       ("while"         ),
-        IDENTIFIER  (null            ),
-        EOL_COMMENT (null            ),
-        ENC_COMMENT (null            ),
-        LIT_CHAR    (null            ),
-        LIT_STRING  (null            ),
-        LIT_INT     (null            ),
-        LIT_DEC     (null            ),
-        LIT_BIN     (null            );
+        COLON       (":"              ),
+        SEMICOLON   (";"              ),
+        COMMA       (","              ),
+        DOT         ("."              ),
+        DOTDOT      (".."             ),
+        ELLIPSIS    ("..."            ),
+        AT          ("@"              ),
+        COND        ("?"              ),
+        COND_ELSE   ("?:"             ),
+        COND_ASN    ("?="             ),
+        L_PAREN     ("("              ),
+        R_PAREN     (")"              ),
+        L_CURLY     ("{"              ),
+        R_CURLY     ("}"              ),
+        L_SQUARE    ("["              ),
+        R_SQUARE    ("]"              ),
+        ADD         ("+"              ),
+        SUB         ("-"              ),
+        MUL         ("*"              ),
+        DIV         ("/"              ),
+        MOD         ("%"              ),
+        DIVMOD      ("/%"             ),
+        SHL         ("<<"             ),
+        SHR         (">>"             ),
+        USHR        (">>>"            ),
+        BIT_AND     ("&"              ),
+        BIT_OR      ("|"              ),
+        BIT_XOR     ("^"              ),
+        BIT_NOT     ("~"              ),
+        ASN         ("="              ),
+        ADD_ASN     ("+="             ),
+        SUB_ASN     ("-="             ),
+        MUL_ASN     ("*="             ),
+        DIV_ASN     ("/="             ),
+        MOD_ASN     ("%="             ),
+        DIVMOD_ASN  ("/%="            ),
+        SHL_ASN     ("<<="            ),
+        SHR_ASN     (">>="            ),
+        USHR_ASN    (">>>="           ),
+        BIT_AND_ASN ("&="             ),
+        BIT_OR_ASN  ("|="             ),
+        BIT_XOR_ASN ("^="             ),
+        COND_AND    ("&&"             ),
+        COND_OR     ("||"             ),
+        NOT         ("!"              ),
+        COMP_EQ     ("=="             ),
+        COMP_NEQ    ("!="             ),
+        COMP_ORD    ("<=>"            ),
+        COMP_LT     ("<"              ),
+        COMP_LTEQ   ("<="             ),
+        COMP_GT     (">"              ),
+        COMP_GTEQ   (">="             ),
+        INC         ("++"             ),
+        DEC         ("--"             ),
+        LAMBDA      ("->"             ),
+        IGNORED     ("_"              ),
+        ALLOW       ("allow"          , true),
+        AS          ("as"             ),
+        ASSERT      ("assert"         ),
+        ASSERT_ALL  ("assert:always"  ),
+        ASSERT_ONCE ("assert:once"    ),
+        ASSERT_TEST ("assert:test"    ),
+        ASSERT_DBG  ("assert:debug"   ),
+        AVOID       ("avoid"          , true),
+        BREAK       ("break"          ),
+        CASE        ("case"           ),
+        CATCH       ("catch"          ),
+        CLASS       ("class"          ),
+        CONDITIONAL ("conditional"    ),
+        CONST       ("const"          ),
+        CONSTRUCT   ("construct"      ),
+        CONTINUE    ("continue"       ),
+        DEFAULT     ("default"        ),
+        DELEGATES   ("delegates"      , true),
+        DO          ("do"             ),
+        ELSE        ("else"           ),
+        ENUM        ("enum"           ),
+        EXTENDS     ("extends"        ),
+        FINALLY     ("finally"        ),
+        FOR         ("for"            ),
+        FUNCTION    ("function"       ),
+        IF          ("if"             ),
+        IMMUTABLE   ("immutable"      ),
+        IMPLEMENTS  ("implements"     , true),
+        IMPORT      ("import"         ),
+        IMPORT_EMBED("import:embedded"),
+        IMPORT_REQ  ("import:required"),
+        IMPORT_WANT ("import:desired" ),
+        IMPORT_OPT  ("import:optional"),
+        INCORPORATES("incorporates"   , true),
+        INSTANCEOF  ("instanceof"     ),
+        INTERFACE   ("interface"      ),
+        INTO        ("into"           , true),
+        MIXIN       ("mixin"          ),
+        MODULE      ("module"         ),
+        NEW         ("new"            ),
+        PACKAGE     ("package"        ),
+        PREFER      ("prefer"         , true),
+        PRIVATE     ("private"        ),
+        PROTECTED   ("protected"      ),
+        PUBLIC      ("public"         ),
+        RETURN      ("return"         ),
+        SERVICE     ("service"        ),
+        STATIC      ("static"         ),
+        SUPER       ("super"          , true, true),
+        SWITCH      ("switch"         ),
+        THIS        ("this"           , true, true),
+        THIS_FRAME  ("this:frame"     , true, true),
+        THIS_MODULE ("this:module"    , true, true),
+        THIS_PRI    ("this:private"   , true, true),
+        THIS_PRO    ("this:protected" , true, true),
+        THIS_PUB    ("this:public"    , true, true),
+        THIS_SERV   ("this:service"   , true, true),
+        THIS_STRUCT ("this:struct"    , true, true),
+        THIS_TARGET ("this:target"    , true, true),
+        THIS_TYPE   ("this:type"      , true, true),
+        THROW       ("throw"          ),
+        TODO        ("TODO"           ),
+        TRAIT       ("trait"          ),
+        TRY         ("try"            ),
+        TYPEDEF     ("typedef"        ),
+        USING       ("using"          ),
+        WHILE       ("while"          ),
+        IDENTIFIER  (null             ),
+        EOL_COMMENT (null             ),
+        ENC_COMMENT (null             ),
+        LIT_CHAR    (null             ),
+        LIT_STRING  (null             ),
+        LIT_INT     (null             ),
+        LIT_DEC     (null             ),
+        LIT_BIN     (null             );
 
         /**
          * Constructor.
@@ -458,6 +466,7 @@ public class Token
             this.ContextSensitive = fContextSensitive;
             this.Special          = fSpecial;
             }
+
         /**
          * Look up an Id enum by its ordinal.
          *
@@ -497,6 +506,19 @@ public class Token
             }
 
         /**
+         * Look up an Id enum by its {@link #TEXT}, and if it is one of the keywords that has both
+         * a normal and one-or-more suffixed forms, then return the Id of the normal form.
+         *
+         * @param sText  the possible keyword
+         *
+         * @return the Id of the "normal form" of the keyword, iff suffixed forms also exist
+         */
+        public static Id valueByPrefix(String sText)
+            {
+            return PREFIXES.get(sText);
+            }
+
+        /**
          * All of the Format enums.
          */
         private static final Id[] IDs = Id.values();
@@ -510,6 +532,12 @@ public class Token
          * String representations of all tokens that have constant representations.
          */
         private static final Map<String, Id> ALL_KEYWORDS = new HashMap<>();
+
+        /**
+         * String representations of tokens that have both "normal" and "suffixed" representations.
+         */
+        private static final Map<String, Id> PREFIXES = new HashMap<>();
+
         static
             {
             for (Id id : IDs)
@@ -518,9 +546,20 @@ public class Token
                 if (sText != null)
                     {
                     ALL_KEYWORDS.put(sText, id);
+
                     if (!id.ContextSensitive)
                         {
                         KEYWORDS.put(sText, id);
+                        }
+
+                    int ofColon = sText.indexOf(':');
+                    if (ofColon >= 0)
+                        {
+                        Id prefix = ALL_KEYWORDS.get(sText.substring(0, ofColon));
+                        if (prefix != null)
+                            {
+                            PREFIXES.put(prefix.TEXT, prefix);
+                            }
                         }
                     }
                 }

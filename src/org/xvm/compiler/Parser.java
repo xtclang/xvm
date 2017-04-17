@@ -78,82 +78,25 @@ public class Parser
 
             try
                 {
-                List<Statement> list = parseAliasStatements();
-
-                Statement toptype = parseTypeCompositionStatement();
-                if (list == null)
-                    {
-                    m_root = toptype;
-                    }
-                else
-                    {
-                    list.add(toptype);
-                    m_root = new StatementBlock(list);
-                    }
+                List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
+                m_root = new StatementBlock(stmts);
                 }
             catch (UnsupportedOperationException e)
                 {
                 // temporary exception handling while compiler is being built
                 throw new CompilerException(e);
                 }
+
+            // there shouldn't be more in the file; (note that a zero-length token doesn't count,
+            // since it is probably the synthetic closing '}')
+            Token next = peek();
+            if (next != null && next.getStartPosition() < next.getEndPosition())
+                {
+                log(Severity.ERROR, EXPECTED_EOF, new Object[] {next}, next.getStartPosition(), next.getEndPosition());
+                }
             }
 
         return m_root;
-        }
-
-    /**
-     * At the file level, it is possible to encounter any combination of import
-     * and typedef statements.
-     *
-     * <p/><code><pre>
-     * AliasStatements
-     *     AliasStatement
-     *     AliasStatements AliasStatement
-     *
-     * AliasStatement
-     *     ImportStatement
-     *     TypeDefStatement
-     * </pre></code>
-     *
-     * @return a list of statements, or null
-     */
-    List<Statement> parseAliasStatements()
-        {
-        List<Statement> list = null;
-        try
-            {
-            while (true)
-                {
-                if (peek().getId() == Id.IMPORT)
-                    {
-                    if (list == null)
-                        {
-                        list = new ArrayList<>();
-                        }
-                    list.add(parseImportStatement());
-                    }
-                else if (peek().getId() == Id.TYPEDEF)
-                    {
-                    if (list == null)
-                        {
-                        list = new ArrayList<>();
-                        }
-                    list.add(parseTypeDefStatement());
-                    }
-                else
-                    {
-                    return list;
-                    }
-                }
-            }
-        catch (CompilerException e)
-            {
-            if (recoverable())
-                {
-                skipToNextStatement();
-                }
-            return list;
-            }
         }
 
     /**
@@ -169,7 +112,7 @@ public class Parser
      *
      * @return an ImportStatement
      */
-    ImportStatement parseImportStatement()
+    ImportStatement parseImportStatement(Expression exprCond)
         {
         List<Token> qualifiedName = new ArrayList<>();
         Token       simpleName    = null;
@@ -194,7 +137,7 @@ public class Parser
 
         expect(Id.SEMICOLON);
 
-        return new ImportStatement(simpleName, qualifiedName);
+        return new ImportStatement(exprCond, simpleName, qualifiedName);
         }
 
     /**
@@ -207,7 +150,7 @@ public class Parser
      *
      * @return a TypedefStatement
      */
-    TypedefStatement parseTypeDefStatement()
+    TypedefStatement parseTypeDefStatement(Expression exprCond)
         {
         expect(Id.TYPEDEF);
 
@@ -217,7 +160,7 @@ public class Parser
 
         expect(Id.SEMICOLON);
 
-        return new TypedefStatement(simpleName, type);
+        return new TypedefStatement(exprCond, simpleName, type);
         }
 
     /**
@@ -297,13 +240,13 @@ public class Parser
             case TRAIT:
             case MIXIN:
                 category = current();
-                name     = expect(Id.IDENTIFIER);
+                name = expect(Id.IDENTIFIER);
                 break;
 
             default:
-                category  = expect(Id.MODULE);
+                category = expect(Id.MODULE);
                 qualified = parseQualifiedName();
-                name      = qualified.get(0);
+                name = qualified.get(0);
             }
 
         // optional type parameters
@@ -313,61 +256,8 @@ public class Parser
         List<Parameter> constructorParams = parseParameterList(false);
 
         // sequence of compositions
-        List<Composition> composition = new ArrayList<>();
-        while (true)
-            {
-            if (match(Id.EXTENDS) != null)
-                {
-                TypeExpression type = parseTypeExpression();
-                List<Expression> args = parseArgumentList(false);
-                composition.add(new Composition.Extends(type, args));
-                }
-            else if (match(Id.IMPLEMENTS) != null)
-                {
-                do
-                    {
-                    composition.add(new Composition.Implements(parseTypeExpression()));
-                    }
-                while (match(Id.COMMA) != null);
-                }
-            else if (match(Id.DELEGATES) != null)
-                {
-                do
-                    {
-                    TypeExpression type = parseTypeExpression();
-                    expect(Id.L_PAREN);
-                    Expression delegate = parseExpression();
-                    expect(Id.R_PAREN);
-                    composition.add(new Composition.Delegates(type, delegate));
-                    }
-                while (match(Id.COMMA) != null);
-                }
-            else if (match(Id.INCORPORATES) != null)
-                {
-                do
-                    {
-                    TypeExpression type = parseTypeExpression();
-                    List<Expression> args = parseArgumentList(false);
-                    composition.add(new Composition.Incorporates(type, args));
-                    }
-                while (match(Id.COMMA) != null);
-                }
-            else if (match(Id.INTO) != null)
-                {
-                composition.add(new Composition.Into(parseTypeExpression()));
-                }
-            else if (match(Id.IMPORT) != null)
-                {
-                List<Token>           qualifiedModule = parseQualifiedName();
-                NamedTypeExpression   module          = new NamedTypeExpression(null, qualifiedModule, null);
-                List<VersionOverride> versionSpecs    = parseVersionRequirement(false);
-                composition.add(new Composition.Import(module, versionSpecs));
-                }
-            else
-                {
-                break;
-                }
-            }
+        List<Composition> compositions = new ArrayList<>();
+        parseConditionalComposition(null, compositions);
 
         // TypeCompositionBody
         StatementBlock body = null;
@@ -381,7 +271,157 @@ public class Parser
             }
 
         return new TypeCompositionStatement(modifiers, annotations, category, name,
-                qualified, typeParams, constructorParams, composition, body, doc);
+                qualified, typeParams, constructorParams, compositions, body, doc);
+        }
+
+    /**
+     * Parse any compositions, including any conditions that surround them.
+     *
+     * @param exprCondition  the condition (or null if none) that applies to any found compositions
+     * @param compositions   a list of compositions to contribute to
+     */
+    void parseConditionalComposition(Expression exprCondition, List<Composition> compositions)
+        {
+        boolean fAny;
+        do
+            {
+            if (peek().getId() == Id.IF)
+                {
+                Token tokIf = expect(Id.IF);
+                expect(Id.L_PAREN);
+                Expression exprIf = parseExpression();
+                expect(Id.R_PAREN);
+
+                // then ...
+                expect(Id.L_CURLY);
+                Token tokAnd = null;
+                if (exprCondition == null)
+                    {
+                    parseConditionalComposition(exprIf, compositions);
+                    }
+                else
+                    {
+                    tokAnd = new Token(tokIf.getStartPosition(), tokIf.getEndPosition(), Id.COND_AND);
+                    parseConditionalComposition(new BiExpression(exprCondition, tokAnd, exprIf), compositions);
+                    }
+                expect(Id.R_CURLY);
+
+                // else ...
+                Token tokElse = match(Id.ELSE);
+                if (tokElse != null)
+                    {
+                    expect(Id.L_CURLY);
+                    Token tokNot = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
+                    Expression exprElse = new PrefixExpression(tokNot, exprIf);
+                    if (exprCondition == null)
+                        {
+                        parseConditionalComposition(exprElse, compositions);
+                        }
+                    else
+                        {
+                        parseConditionalComposition(new BiExpression(exprCondition, tokAnd, exprElse), compositions);
+                        }
+                    expect(Id.R_CURLY);
+                    }
+
+                fAny = true;
+                }
+            else
+                {
+                fAny = parseComposition(exprCondition, compositions);
+                }
+            }
+        while (fAny);
+        }
+
+    /**
+     * Parse any compositions found, but do not handle any conditional statements.
+     *
+     * @param exprCondition  the condition (or null if none) that applies to any found compositions
+     * @param compositions   a list of compositions to contribute to
+     *
+     * @return true if at least one composition was parsed
+     */
+    boolean parseComposition(Expression exprCondition, List<Composition> compositions)
+        {
+        boolean fAny = false;
+        while (true)
+            {
+            // the keywords below require "match()" to extract them, because they are context
+            // sensitive
+            Token keyword;
+            if ((keyword = match(Id.IMPLEMENTS)) != null)
+                {
+                do
+                    {
+                    compositions.add(new Composition.Implements(exprCondition, keyword, parseTypeExpression()));
+                    }
+                while (match(Id.COMMA) != null);
+                fAny = true;
+                }
+            else if ((keyword = match(Id.DELEGATES)) != null)
+                {
+                do
+                    {
+                    TypeExpression type = parseTypeExpression();
+                    expect(Id.L_PAREN);
+                    Expression delegate = parseExpression();
+                    expect(Id.R_PAREN);
+                    compositions.add(new Composition.Delegates(exprCondition, keyword, type, delegate));
+                    }
+                while (match(Id.COMMA) != null);
+                fAny = true;
+                }
+            else if ((keyword = match(Id.INCORPORATES)) != null)
+                {
+                do
+                    {
+                    TypeExpression   type = parseTypeExpression();
+                    List<Expression> args = parseArgumentList(false);
+                    compositions.add(new Composition.Incorporates(exprCondition, keyword, type, args));
+                    }
+                while (match(Id.COMMA) != null);
+                fAny = true;
+                }
+            else if ((keyword = match(Id.INTO)) != null)
+                {
+                compositions.add(new Composition.Into(exprCondition, keyword, parseTypeExpression()));
+                fAny = true;
+                }
+            else // not context sensitive keywords
+                {
+                switch (peek().getId())
+                    {
+                    case EXTENDS:
+                        {
+                                         keyword = expect(Id.EXTENDS);
+                        TypeExpression   type    = parseTypeExpression();
+                        List<Expression> args    = parseArgumentList(false);
+                        compositions.add(new Composition.Extends(exprCondition, keyword, type, args));
+                        fAny = true;
+                        }
+                        break;
+
+                    case IMPORT:
+                    case IMPORT_EMBED:
+                    case IMPORT_REQ:
+                    case IMPORT_WANT:
+                    case IMPORT_OPT:
+                        {
+                                              keyword         = current();
+                        List<Token>           qualifiedModule = parseQualifiedName();
+                        NamedTypeExpression   module          = new NamedTypeExpression(null, qualifiedModule, null);
+                        List<VersionOverride> versionSpecs    = parseVersionRequirement(false);
+                        compositions.add(new Composition.Import(exprCondition, keyword, module, versionSpecs));
+                        fAny = true;
+                        }
+                        break;
+
+                    default:
+                        return fAny;
+                    }
+                }
+            }
         }
 
     /**
@@ -439,7 +479,7 @@ public class Parser
                 StatementBlock body = null;
                 if (match(Id.L_CURLY) != null)
                     {
-                    body = parseTypeCompositionComponents(new ArrayList<>());
+                    body = new StatementBlock(parseTypeCompositionComponents(null, new ArrayList<>(), false));
                     }
 
                 stmts.add(new EnumDeclaration(annotations, name, typeParams, args, body, doc));
@@ -452,7 +492,7 @@ public class Parser
                 }
             }
 
-        return parseTypeCompositionComponents(stmts);
+        return new StatementBlock(parseTypeCompositionComponents(null, stmts, false));
         }
 
     /**
@@ -472,31 +512,83 @@ public class Parser
      *     ConstantDeclaration
      * </pre></code>
      *
-     * @return a StatementBlock
+     * @return a list of statements
      */
-    StatementBlock parseTypeCompositionComponents(List<Statement> stmts)
+    List<Statement> parseTypeCompositionComponents(Expression exprCondition, List<Statement> stmts, boolean fFileLevel)
         {
-        while (match(Id.R_CURLY) == null)
+        boolean fFoundType = false;
+        NextComponent: while (match(Id.R_CURLY) == null)
             {
             Statement stmt;
             switch (peek().getId())
                 {
                 case IMPORT:
-                    stmt = parseImportStatement();
+                    stmt = parseImportStatement(exprCondition);
                     break;
 
                 case TYPEDEF:
-                    stmt = parseTypeDefStatement();
+                    stmt = parseTypeDefStatement(exprCondition);
                     break;
 
+                case IF:
+                    {
+                    Token tokIf = expect(Id.IF);
+                    expect(Id.L_PAREN);
+                    Expression exprIf = parseExpression();
+                    expect(Id.R_PAREN);
+
+                    // then ...
+                    expect(Id.L_CURLY);
+                    Token tokAnd = null;
+                    if (exprCondition == null)
+                        {
+                        parseTypeCompositionComponents(exprIf, stmts, fFileLevel);
+                        }
+                    else
+                        {
+                        tokAnd = new Token(tokIf.getStartPosition(), tokIf.getEndPosition(), Id.COND_AND);
+                        parseTypeCompositionComponents(new BiExpression(exprCondition, tokAnd, exprIf), stmts, fFileLevel);
+                        }
+                    // the '}' is eaten by the recursive call to parseTypeCompositionComponents
+
+                    // else ...
+                    Token tokElse = match(Id.ELSE);
+                    if (tokElse != null)
+                        {
+                        expect(Id.L_CURLY);
+                        Token tokNot = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
+                        Expression exprElse = new PrefixExpression(tokNot, exprIf);
+                        if (exprCondition == null)
+                            {
+                            parseTypeCompositionComponents(exprElse, stmts, fFileLevel);
+                            }
+                        else
+                            {
+                            parseTypeCompositionComponents(new BiExpression(exprCondition, tokAnd, exprElse), stmts, fFileLevel);
+                            }
+                        // the '}' is eaten by the recursive call to parseTypeCompositionComponents
+                        }
+
+                    // there is no "if statement" per se; instead, the expression was simply pushed
+                    // down to any type composition components that were encountered inside the if
+                    continue NextComponent;
+                    }
+
                 default:
-                    stmt = parseTypeCompositionComponent(false);
+                    stmt = parseTypeCompositionComponent(exprCondition, false);
+                    fFoundType = true;
                     break;
                 }
             stmts.add(stmt);
+
+            if (fFileLevel && fFoundType)
+                {
+                // at the file level, there is nothing after the outermost type's conclusion
+                break;
+                }
             }
 
-        return new StatementBlock(stmts);
+        return stmts;
         }
 
     /**
@@ -539,13 +631,16 @@ public class Parser
      *     Expression ";"
      * </pre></code>
      *
-     * @param fInMethod  pass true to allow parsing of an expression statement, a variable
-     *                   declaration statement (almost the same syntax as a property), or an
-     *                   assignment statement
+     *
+     *
+     * @param exprCondition
+     * @param fInMethod      pass true to allow parsing of an expression statement, a variable
+     *                       declaration statement (almost the same syntax as a property), or an
+     *                       assignment statement
      *
      * @return a StatementBlock
      */
-    Statement parseTypeCompositionComponent(boolean fInMethod)
+    Statement parseTypeCompositionComponent(Expression exprCondition, boolean fInMethod)
         {
         Token doc = takeDoc();
 
@@ -1133,6 +1228,10 @@ public class Parser
                 return parseStatementBlock();
 
             case ASSERT:
+            case ASSERT_ALL:
+            case ASSERT_ONCE:
+            case ASSERT_TEST:
+            case ASSERT_DBG:
                 return parseAssertStatement();
 
             case BREAK:
@@ -1154,7 +1253,7 @@ public class Parser
                 return parseIfStatement();
 
             case IMPORT:
-                return parseImportStatement();
+                return parseImportStatement(null);
 
             case RETURN:
                 return parseReturnStatement();
@@ -1173,7 +1272,7 @@ public class Parser
                 return parseTryStatement();
 
             case TYPEDEF:
-                return parseTypeDefStatement();
+                return parseTypeDefStatement(null);
 
             case USING:
                 return parseUsingStatement();
@@ -1206,7 +1305,7 @@ public class Parser
                 }
                 // fall through
             default:
-                return parseTypeCompositionComponent(true);
+                return parseTypeCompositionComponent(null, true);
             }
         }
 
@@ -1219,6 +1318,7 @@ public class Parser
      *
      * AssertInstruction
      *     "assert"
+     *     "assert:always"
      *     "assert:once"
      *     "assert:test"
      *     "assert:debug"
@@ -1228,25 +1328,7 @@ public class Parser
      */
     Statement parseAssertStatement()
         {
-        Token keyword = expect(Id.ASSERT);
-        Token suffix = null;
-        if (match(Id.COLON) != null)
-            {
-            suffix = expect(Id.IDENTIFIER);
-            switch ((String) suffix.getValue())
-                {
-                case "once":
-                case "test":
-                case "debug":
-                case "always":
-                    break;
-
-                default:
-                    log(Severity.ERROR, BAD_ASSERT, new Object[] {suffix},
-                            suffix.getStartPosition(), suffix.getEndPosition());
-                    suffix = null;
-                }
-            }
+        Token keyword = current();
 
         Statement cond = null;
         if (peek().getId() != Id.SEMICOLON)
@@ -1255,7 +1337,7 @@ public class Parser
             }
 
         expect(Id.SEMICOLON);
-        return new AssertStatement(keyword, suffix, cond);
+        return new AssertStatement(keyword, cond);
         }
 
     /**
@@ -4101,6 +4183,10 @@ s     *
      * matching.
      */
     public static final String ALL_OR_NO_DIMS   = "PARSER-15";
+    /**
+     * Expected an End-Of-File (nothing else allowed to be here).
+     */
+    public static final String EXPECTED_EOF   = "PARSER-16";
 
 
     // ----- data members ------------------------------------------------------

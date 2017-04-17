@@ -72,19 +72,23 @@ public class NewExpression
           .append(expr)
           .append('(');
 
-        boolean first = true;
-        for (Expression arg : args)
+        if (args != null)
             {
-            if (first)
+            boolean first = true;
+            for (Expression arg : args)
                 {
-                first = false;
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(arg);
                 }
-            else
-                {
-                sb.append(", ");
-                }
-            sb.append(arg);
             }
+
         sb.append(')');
 
         return sb.toString();

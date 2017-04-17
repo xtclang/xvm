@@ -126,8 +126,12 @@ Category
     "mixin"
 
 Compositions
+    ConditionalComposition
+    Compositions ConditionalComposition
+
+ConditionalComposition
+    "if" "(" Expression ")" "{" Composition "}"
     Composition
-    Compositions Composition
 
 Composition
     "extends" TypeExpression ArgumentList-opt
@@ -135,7 +139,14 @@ Composition
     "delegates" TypeExpression "(" Expression ")"
     "incorporates" TypeExpression ArgumentList-opt
     "into" TypeExpression
-    "import" QualifiedName VersionRequirement-opt
+    ImportClause QualifiedName VersionRequirement-opt
+
+ImportClause
+    "import"
+    "import:embedded"
+    "import:required"
+    "import:desired"
+    "import:optional"
 
 VersionRequirement
     Version VersionOverrides-opt
@@ -719,6 +730,7 @@ Literal
     TupleLiteral
     ListLiteral
     MapLiteral
+    VersionLiteral
     CustomLiteral
 
 StringLiteral
@@ -759,6 +771,9 @@ Entries
 
 Entry
     Expression "=" Expression
+
+VersionLiteral
+    "Version" ":{" Version "}"
 
 CustomLiteral
     TypeExpression NoWhitespace ":{" Expression "}"

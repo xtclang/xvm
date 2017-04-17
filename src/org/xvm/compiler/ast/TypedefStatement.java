@@ -18,8 +18,9 @@ public class TypedefStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TypedefStatement(Token alias, TypeExpression type)
+    public TypedefStatement(Expression cond, Token alias, TypeExpression type)
         {
+        this.cond  = cond;
         this.alias = alias;
         this.type  = type;
         }
@@ -33,7 +34,27 @@ public class TypedefStatement
     @Override
     public String toString()
         {
-        return "typedef " + type + " " + alias.getValue() + ';';
+        StringBuilder sb = new StringBuilder();
+
+        if (cond != null)
+            {
+            sb.append("if (")
+              .append(cond)
+              .append(") { ");
+            }
+
+        sb.append("typedef ")
+          .append(type)
+          .append(' ')
+          .append(alias.getValue())
+          .append(';');
+
+        if (cond != null)
+            {
+            sb.append(" }");
+            }
+
+        return sb.toString();
         }
 
     @Override
@@ -46,6 +67,7 @@ public class TypedefStatement
     public Map<String, Object> getDumpChildren()
         {
         ListMap<String, Object> map = new ListMap();
+        map.put("cond", cond);
         map.put("type", type);
         return map;
         }
@@ -53,6 +75,7 @@ public class TypedefStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Expression     cond;
     protected Token          alias;
     protected TypeExpression type;
     }
