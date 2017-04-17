@@ -54,15 +54,7 @@ public class xString
     @Override
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
         {
-        StringHandle hThis;
-        try
-            {
-            hThis = hTarget.as(StringHandle.class);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return e.getExceptionHandle();
-            }
+        StringHandle hThis = (StringHandle) hTarget;
 
         switch (method.f_sName)
             {
@@ -79,31 +71,16 @@ public class xString
     public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method,
                                           ObjectHandle hArg, ObjectHandle[] ahReturn)
         {
-        StringHandle hThis;
-        try
-            {
-            hThis = hTarget.as(StringHandle.class);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return e.getExceptionHandle();
-            }
+        StringHandle hThis = (StringHandle) hTarget;
 
         switch (method.f_sName)
             {
             case "indexOf": // indexOf(String)
-                try
+                if (hArg instanceof StringHandle)
                     {
-                    if (hArg.isAssignableTo(StringHandle.class))
-                        {
-                        int nOf = hThis.m_sValue.indexOf(hArg.as(StringHandle.class).m_sValue);
-                        ahReturn[0] = xInt64.makeHandle(nOf);
-                        return null;
-                        }
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return e.getExceptionHandle();
+                    int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
+                    ahReturn[0] = xInt64.makeHandle(nOf);
+                    return null;
                     }
 
             default:

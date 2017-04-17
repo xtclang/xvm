@@ -58,9 +58,12 @@ public class xFunction
 
             String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
             TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
+            FunctionTemplate function = target.getFunctionTemplate(constFunction);
 
-            return new FunctionHandle(f_clazzCanonical,
-                    target.getFunctionTemplate(constFunction));
+            if (function != null)
+                {
+                return new FunctionHandle(f_clazzCanonical, function);
+                }
             }
         return null;
         }

@@ -27,8 +27,10 @@ public class xTestService extends xService
     @Override
     public void initDeclared()
         {
-        FunctionTemplate ftConstructor = ensureFunctionTemplate("construct", new String[]{"x:TestService", "x:Int64"}, VOID);
         ensurePropertyTemplate("counter", "x:Int64");
+
+        FunctionTemplate ftConstructor = ensureFunctionTemplate(
+                "construct", new String[]{"x:TestService", "x:Int64"}, VOID);
         ftConstructor.m_aop = new Op[]
             {
             new Set(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),

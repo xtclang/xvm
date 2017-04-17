@@ -176,17 +176,6 @@ public class xService
             }
 
         @Override
-        public <T extends ObjectHandle> boolean isAssignableTo(Class<T> clz)
-                throws ExceptionHandle.WrapperException
-            {
-            if (clz == FutureHandle.class)
-                {
-                return true;
-                }
-            return get().isAssignableTo(clz);
-            }
-
-        @Override
         public <T extends ObjectHandle> T as(Class<T> clz)
                 throws ExceptionHandle.WrapperException
             {
@@ -195,6 +184,17 @@ public class xService
                 return (T) xFutureRef.INSTANCE.makeHandle(m_type, m_future);
                 }
             return get().as(clz);
+            }
+
+        @Override
+        public <T extends ObjectHandle> T as(TypeComposition clazz)
+                throws ExceptionHandle.WrapperException
+            {
+            if (clazz.extends_(xFutureRef.INSTANCE.f_clazzCanonical))
+                {
+                return (T) xFutureRef.INSTANCE.makeHandle(m_type, m_future);
+                }
+            return get().as(clazz);
             }
 
         protected ObjectHandle get()

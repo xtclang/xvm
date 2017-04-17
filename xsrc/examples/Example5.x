@@ -200,9 +200,22 @@ Stage<InType, OutType> implements Stream
             }
         }
 
+// Int i = j; // VAR Int64 // #11
+@future Int i = j; // RVAR Int64, FutureRef<Int64> // #11
+           // COPY 10, 11
+Boolean f = &i.isAssigned    // VAR Ref<Int> // #12
+                             // REF 11, 12
 
 @future Image img1 = service.getAdvertisement(type1);
-@future Image img2 = service.getAdvertisement(type1);
+@future Image img2 = service.getAdvertisement(type1);   // RVAR @FutureRef<Image> // #27
+                                                        // Invoke ... -> 27
+@future Image img3 = img2;
+
+@soft Image img4 = getImage();
+
+Int c = img1.size();                                    // Var Int // #28
+                                                        // GET 27, @Referent, 28
+&img1.whenDone(x->foo(this, img1))
 
 &img1.thenAccept(...)
 
@@ -321,3 +334,35 @@ label3:
         {
 
         }
+
+if (..)
+    {
+    Ref<Int64> pi;
+    while (true)
+        {
+        int i = 5;
+        int j = 7;
+
+        if (f)
+            {
+            pi = &i;
+            pi.set(6);
+            i = 16;
+            someCrazyFunctionThatDoesWhoKnowswhatWrittenByDima(pi);
+            }
+        else
+           {
+           pi = &j;
+           pi.set(8);
+           j = 18; // MOV @18, #7
+           }
+        print(i);
+        }
+
+    if ()
+       {
+       x = 17;
+       y = 18;   // MOV @18, #7
+       }
+    }
+// there is no "pi" here, but "pi" still exists, because it got passed to Dima

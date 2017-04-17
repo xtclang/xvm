@@ -1,23 +1,26 @@
 package org.xvm.proto.op;
 
+import org.xvm.asm.ConstantPool.CharStringConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
 /**
- * IVAR CONST_CLASS ; (next register is an initialized anonymous variable)
+ * INVAR CONST_CLASS, CONST_STRING, CONST_* ; (next register is an initialized named variable)
  *
  * @author gg 2017.03.08
  */
-public class IVar extends Op
+public class INVar extends Op
     {
     final private int f_nClassConstId;
+    final private int f_nNameConstId;
     final private int f_nValueConstId;
 
-    public IVar(int nClassConstId, int nValueConstId)
+    public INVar(int nClassConstId, int nNamedConstId, int nValueConstId)
         {
         f_nClassConstId = nClassConstId;
+        f_nNameConstId = nNamedConstId;
         f_nValueConstId = nValueConstId;
         }
 
@@ -28,10 +31,14 @@ public class IVar extends Op
         int nNextVar = frame.f_anNextVar[iScope];
 
         ServiceContext context = frame.f_context;
-        TypeComposition clazz = context.f_types.ensureConstComposition(f_nClassConstId);
 
-        frame.f_aInfo[nNextVar] = frame.new VarInfo(clazz);
-        frame.f_ahVar[nNextVar] = context.f_heapGlobal.resolveConstHandle(f_nValueConstId);
+        TypeComposition clazz = context.f_types.ensureConstComposition(f_nClassConstId);
+        CharStringConstant constName = (CharStringConstant)
+                context.f_constantPool.getConstantValue(f_nNameConstId);
+
+        frame.f_aInfo[nNextVar] = frame.new VarInfo(clazz, constName.getValue());
+        frame.f_ahVar[nNextVar] =
+                frame.f_context.f_heapGlobal.resolveConstHandle(f_nValueConstId);
 
         frame.f_anNextVar[iScope] = nNextVar + 1;
 

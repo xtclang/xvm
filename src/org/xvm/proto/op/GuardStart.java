@@ -34,12 +34,12 @@ public class GuardStart extends Op
     public int process(Frame frame, int iPC)
         {
         // ++ Enter
-        int iScope = ++frame.f_aiRegister[I_SCOPE];
+        int iScope = ++frame.f_aiIndex[I_SCOPE];
 
         frame.f_anNextVar[iScope] = frame.f_anNextVar[iScope-1];
         // --
 
-        int iGuard = ++frame.f_aiRegister[I_GUARD];
+        int iGuard = ++frame.f_aiIndex[I_GUARD];
 
         Guard[] aGuard = frame.m_aGuard;
         if (aGuard == null)

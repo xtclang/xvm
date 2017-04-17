@@ -1,7 +1,8 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.proto.*;
 
 /**
  * TODO:
@@ -11,9 +12,13 @@ import org.xvm.proto.TypeSet;
 public class xClass
         extends TypeCompositionTemplate
     {
+    public static xClass INSTANCE;
+
     public xClass(TypeSet types)
         {
         super(types, "x:Class<ClassType>", "x:Object", Shape.Interface);
+
+        INSTANCE = this;
         }
 
     @Override
@@ -51,5 +56,34 @@ public class xClass
         ensurePropertyTemplate("isService", "x:Boolean").makeReadOnly();
         ensurePropertyTemplate("isConst", "x:Boolean").makeReadOnly();
         ensurePropertyTemplate("singleton", "x:ConditionalTuple<ClassType>").makeReadOnly();
+        }
+
+    @Override
+    public ObjectHandle createConstHandle(Constant constant)
+        {
+        if (constant instanceof ClassConstant)
+            {
+            String sTarget = ConstantPoolAdapter.getClassName((ClassConstant) constant);
+            TypeCompositionTemplate target = f_types.getTemplate(sTarget);
+            if (target.isSingleton())
+                {
+                return target.createConstHandle(constant);
+                }
+            return new ClassHandle(f_clazzCanonical, target);
+            }
+        return null;
+        }
+
+    public static class ClassHandle
+            extends ObjectHandle
+        {
+        protected TypeCompositionTemplate m_template;
+
+        protected ClassHandle(TypeComposition clazz, TypeCompositionTemplate template)
+            {
+            super(clazz);
+
+            m_template = template;
+            }
         }
     }

@@ -1,7 +1,10 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * TODO:
@@ -11,9 +14,16 @@ import org.xvm.proto.TypeSet;
 public class xObject
         extends TypeCompositionTemplate
     {
+    public static xObject INSTANCE;
+    public static TypeComposition CLASS;
+    private final static Map<Integer, Type[]> s_mapCanonical = new HashMap<>(4);
+
     public xObject(TypeSet types)
         {
         super(types, "x:Object", null, Shape.Class);
+
+        INSTANCE = this;
+        CLASS = resolve(Utils.TYPE_NONE);
         }
 
     // subclassing
@@ -42,5 +52,15 @@ public class xObject
         ensureMethodTemplate("to", VOID, new String[]{"x:collections.Array<x:String>"});
         ensureMethodTemplate("to", VOID, new String[]{"x:Tuple<x:Object>"});
         ensureMethodTemplate("to", VOID, new String[]{"x:Function"});
+        }
+
+    public static Type[] getTypeArray(int c)
+        {
+        return s_mapCanonical.computeIfAbsent(c, x ->
+            {
+            Type[] at = new Type[c];
+            Arrays.fill(at, CLASS.ensurePublicType());
+            return at;
+            });
         }
     }

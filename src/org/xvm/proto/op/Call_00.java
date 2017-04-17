@@ -36,16 +36,9 @@ public class Call_00 extends OpCallable
             }
         else if (f_nFunctionValue >= 0)
             {
-            try
-                {
-                FunctionHandle hFunction = frame.f_ahVar[f_nFunctionValue].as(FunctionHandle.class);
+            FunctionHandle hFunction = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
 
-                hException = hFunction.call(frame, Utils.OBJECTS_NONE, Utils.OBJECTS_NONE);
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                hException = e.getExceptionHandle();
-                }
+            hException = hFunction.call(frame, Utils.OBJECTS_NONE, Utils.OBJECTS_NONE);
             }
         else
             {

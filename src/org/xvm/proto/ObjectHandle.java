@@ -40,13 +40,13 @@ public abstract class ObjectHandle
             }
         }
 
-    public <T extends ObjectHandle> boolean isAssignableTo(Class<T> clz)
-                throws ExceptionHandle.WrapperException
+    public <T extends ObjectHandle> T as(Class<T> clz)
+            throws ExceptionHandle.WrapperException
         {
-        return clz.isAssignableFrom(getClass());
+        return (T) this;
         }
 
-    public <T extends ObjectHandle> T as(Class<T> clz)
+    public <T extends ObjectHandle> T as(TypeComposition clazz)
             throws ExceptionHandle.WrapperException
         {
         return (T) this;

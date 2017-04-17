@@ -40,17 +40,9 @@ public class Call_01 extends OpCallable
             }
         else if (f_nFunctionValue >= 0)
             {
-            ahReturn = new ObjectHandle[1];
-            try
-                {
-                FunctionHandle function = frame.f_ahVar[f_nFunctionValue].as(FunctionHandle.class);
+            FunctionHandle function = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
 
-                hException = function.call(frame, Utils.OBJECTS_NONE, ahReturn);
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                hException = e.getExceptionHandle();
-                }
+            hException = function.call(frame, Utils.OBJECTS_NONE, ahReturn = new ObjectHandle[1]);
             }
         else
             {
@@ -66,6 +58,7 @@ public class Call_01 extends OpCallable
 
         if (hException == null)
             {
+            // TODO: match up the return type
             frame.f_ahVar[f_nRetValue] = ahReturn[0];
             return iPC + 1;
             }

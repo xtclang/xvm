@@ -22,7 +22,7 @@ public class Return_1 extends Op
     public int process(Frame frame, int iPC)
         {
         frame.f_ahReturn[0] = f_nValue >= 0 ? frame.f_ahVar[f_nValue] :
-                Utils.resolveConstReturn(frame, 0, f_nValue);
+                Utils.resolveConst(frame, f_nValue);
 
         return RETURN_NORMAL;
         }

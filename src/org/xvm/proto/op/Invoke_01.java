@@ -47,6 +47,7 @@ public class Invoke_01 extends OpInvocable
             {
             hException = xFunction.makeAsyncHandle(method).
                     call(frame, new ObjectHandle[]{hTarget}, ahReturn = new ObjectHandle[1]);
+            // TODO: match up
             }
         else
             {

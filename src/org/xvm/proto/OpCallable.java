@@ -45,7 +45,7 @@ public abstract class OpCallable extends Op
 
         ahVar[0] = hThis;
         ahVar[1] = nArgValue >= 0 ? frame.f_ahVar[nArgValue] :
-                Utils.resolveConst(frame, methodSuper.m_argTypeName[1], nArgValue);
+                Utils.resolveConst(frame, nArgValue);
 
         return frame.f_context.createFrame(frame, methodSuper, hThis, ahVar);
         }
@@ -65,7 +65,7 @@ public abstract class OpCallable extends Op
             int nArg = anArgValue[i];
 
             ahVar[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] :
-                    Utils.resolveConst(frame, methodSuper.m_argTypeName[i + 1], nArg);
+                    Utils.resolveConst(frame, nArg);
             }
 
         return frame.f_context.createFrame(frame, methodSuper, hThis, ahVar);
@@ -74,21 +74,28 @@ public abstract class OpCallable extends Op
     // call the constructor; then potentially the finalizer; change this:struct handle to this:public
     protected ExceptionHandle callConstructor(Frame frame, FunctionTemplate constructor, ObjectHandle[] ahVar)
         {
+        ObjectHandle hTarget = ahVar[0];
+
+        TypeComposition clazzTarget = hTarget.f_clazz;
+        TypeCompositionTemplate template = clazzTarget.f_template;
+
+        if (template.isService())
+            {
+            // TODO: validate the immutability
+            }
+
         Frame frameNew = frame.f_context.createFrame(frame, constructor, null, ahVar);
 
         ExceptionHandle hException = frameNew.execute();
 
         if (hException == null)
             {
-            ObjectHandle hTarget = ahVar[0];
-
-            TypeComposition clazzTarget = hTarget.f_clazz;
-            TypeCompositionTemplate template = clazzTarget.f_template;
             ServiceHandle hService = null;
 
             if (template.isService())
                 {
-                hService = (ServiceHandle) ahVar[0]; // it has just been constructed; don't call "as"
+                // TODO: validate the immutability
+                hService = (ServiceHandle) ahVar[0];
                 ((xService) template).start(hService);
                 }
 

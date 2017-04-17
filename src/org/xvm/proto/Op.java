@@ -8,7 +8,7 @@ package org.xvm.proto;
  */
 public abstract class Op
     {
-    // indexes for execution registers
+    // offsets for the execution indexes
     public static final int I_SCOPE = 0;
     public static final int I_GUARD = 1;
 
@@ -30,7 +30,6 @@ public abstract class Op
     // return values
     public static final int RETURN_NORMAL = -1;
     public static final int RETURN_EXCEPTION = -2;
-
 
     // returns a positive iPC or a negative RETURN_*
     public abstract int process(Frame frame, int iPC);

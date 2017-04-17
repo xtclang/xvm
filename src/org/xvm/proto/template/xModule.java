@@ -19,9 +19,13 @@ import java.util.Map;
 public class xModule
         extends TypeCompositionTemplate
     {
+    public static xModule INSTANCE;
+
     public xModule(TypeSet types)
         {
         super(types, "x:Module", "x:Object", Shape.Interface);
+
+        INSTANCE = this;
         }
 
     // subclassing
