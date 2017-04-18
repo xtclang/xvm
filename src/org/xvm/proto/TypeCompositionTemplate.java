@@ -465,9 +465,11 @@ public abstract class TypeCompositionTemplate
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-        ahVar[0] = hValue;
+        ahVar[0] = hTarget;
+        ahVar[1] = hValue;
 
-        return frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
+        ServiceContext context = frame == null ? ServiceContext.getCurrentContext() : frame.f_context;
+        return context.createFrame(frame, method, hTarget, ahVar).execute();
         }
 
     public ExceptionHandle setField(ObjectHandle hTarget, String sName, ObjectHandle hValue)

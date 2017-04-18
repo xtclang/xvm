@@ -139,11 +139,18 @@ module TestApp
 
     service TestService(Int counter = 48)
         {
-        Int counter.get()
+        Int counter
             {
-            print("In counter.get");
-            return super();
-            }
+            Int get()
+                {
+                print("In counter.get");
+                return super();
+                }
+            Void set(Int c)
+                {
+                print("In counter.set");
+                super(c);
+                }
 
         // post-increment
         Int increment()

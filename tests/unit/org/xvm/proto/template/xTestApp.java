@@ -182,7 +182,7 @@ public class xTestApp extends xModule
             new X_Print(-adapter.ensureValueConstantId("# in TestApp.run() #")),
 //            new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
 //            new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
-//            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "testService")),
             new Return_0()
             };
