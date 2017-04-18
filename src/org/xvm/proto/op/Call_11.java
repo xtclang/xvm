@@ -35,7 +35,7 @@ public class Call_11 extends OpCallable
 
         if (f_nFunctionValue == A_SUPER)
             {
-            Frame frameNew = createSuperCall(frame, f_nArgValue);
+            Frame frameNew = createSuperCall(frame, new int[] {f_nArgValue});
 
             ahReturn   = frameNew.f_ahReturn;
             hException = frameNew.execute();

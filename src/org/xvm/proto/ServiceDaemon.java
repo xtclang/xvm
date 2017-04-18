@@ -95,6 +95,7 @@ public class ServiceDaemon
                         // TODO
                         System.out.println(f_context + " threw unhandled exception: ");
                         e.printStackTrace(System.out);
+                        System.exit(-1);
                         }
                     message = queue.poll();
                     }

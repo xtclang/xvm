@@ -5,7 +5,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 import org.xvm.proto.Utils;
 
@@ -34,22 +33,19 @@ public class Set extends OpInvocable
         TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
         PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
-        MethodTemplate method = property.m_templateSet;
 
-        ObjectHandle hArg = f_nValue >= 0 ? frame.f_ahVar[f_nValue] :
+        ObjectHandle hValue = f_nValue >= 0 ? frame.f_ahVar[f_nValue] :
                 Utils.resolveConst(frame, f_nValue);
 
         ExceptionHandle hException;
-        if (method == null)
+
+        if (hTarget.isStruct())
             {
-            hException = template.setProperty(hTarget, property.f_sName, hArg);
+            hException = template.setField(hTarget, property.f_sName, hValue);
             }
         else
             {
-            // almost identical to the second part of Invoke_10
-            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-
-            hException = frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
+            hException = template.setProperty(property, property.m_templateSet, frame, hTarget, hValue);
             }
 
         if (hException == null)

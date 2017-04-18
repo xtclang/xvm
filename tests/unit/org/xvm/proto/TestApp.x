@@ -118,6 +118,7 @@ module TestApp
         Int c = service.increment();
         print(c);
 
+        service.counter = 17;
         c = service.counter;
         print(c);
 
@@ -138,6 +139,12 @@ module TestApp
 
     service TestService(Int counter = 48)
         {
+        Int counter.get()
+            {
+            print("In counter.get");
+            return super();
+            }
+
         // post-increment
         Int increment()
             {

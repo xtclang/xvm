@@ -49,7 +49,7 @@ public class New_N extends OpCallable
 
         if (hException == null)
             {
-            frame.f_ahVar[f_nRetValue] = hNew;
+            frame.f_ahVar[f_nRetValue] = ahVar[0];
             return iPC + 1;
             }
         else

@@ -46,7 +46,7 @@ public class Frame
         f_anNextVar = new int[cScopes];
 
         int cReturns = function == null ? 0 : function.m_cReturns;
-        f_ahReturn = cReturns == 0 ? Utils.OBJECTS_NONE : new  ObjectHandle[cReturns];
+        f_ahReturn = cReturns == 0 ? Utils.OBJECTS_NONE : new ObjectHandle[cReturns];
         }
 
     public ExceptionHandle execute()

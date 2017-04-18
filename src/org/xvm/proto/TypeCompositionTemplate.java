@@ -8,6 +8,7 @@ import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xObject;
+import org.xvm.runtime.Service;
 import org.xvm.util.ListMap;
 
 import java.util.Arrays;
@@ -366,7 +367,7 @@ public abstract class TypeCompositionTemplate
 
     // invokeNative with 0 arguments and 1 return value
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget,
-                                  MethodTemplate method, ObjectHandle[] ahReturn)
+                                  MethodTemplate method, ObjectHandle[] ahReturn, int iRet)
         {
         throw new IllegalStateException();
         }
@@ -403,8 +404,36 @@ public abstract class TypeCompositionTemplate
         throw new IllegalStateException();
         }
 
-    // get a property value
-    public ExceptionHandle getProperty(ObjectHandle hTarget, String sName, ObjectHandle[] ahRet)
+    // get a property value into the specified place in the array
+    public ExceptionHandle getProperty(PropertyTemplate property, MethodTemplate method,
+                                       Frame frame, ObjectHandle hTarget, ObjectHandle[] ahRet, int iRet)
+        {
+       if (method == null)
+            {
+            ahRet[iRet] = getField(hTarget, property.f_sName);
+            return null;
+            }
+
+        if (method.isNative())
+            {
+            return invokeNative01(frame, hTarget, method, ahRet, iRet);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+
+        ServiceContext context = frame == null ? ServiceContext.getCurrentContext() : frame.f_context;
+        Frame frameNew = context.createFrame(frame, method, hTarget, ahVar);
+
+        ExceptionHandle hException = frameNew.execute();
+
+        if (hException == null)
+            {
+            ahRet[iRet] = frameNew.f_ahReturn[0];
+            }
+        return hException;
+        }
+
+    public ObjectHandle getField(ObjectHandle hTarget, String sName)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
@@ -414,14 +443,35 @@ public abstract class TypeCompositionTemplate
             throw new IllegalStateException((hThis.m_mapFields.containsKey(sName) ?
                     "Un-initialized property " : "Invalid property ") + sName);
             }
-        ahRet[0] = hProp;
-        return null;
+        return hProp;
         }
 
     // set a property value
-    public ExceptionHandle setProperty(ObjectHandle hTarget, String sName, ObjectHandle hValue)
+    public ExceptionHandle setProperty(PropertyTemplate property, MethodTemplate method,
+                                       Frame frame, ObjectHandle hTarget, ObjectHandle hValue)
         {
         // TODO: check the access rights
+
+        if (method == null)
+            {
+            setField(hTarget, property.f_sName, hValue);
+
+            return null;
+            }
+
+        if (method.isNative())
+            {
+            return invokeNative10(frame, hTarget, method, hValue);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+        ahVar[0] = hValue;
+
+        return frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
+        }
+
+    public ExceptionHandle setField(ObjectHandle hTarget, String sName, ObjectHandle hValue)
+        {
         GenericHandle hThis = (GenericHandle) hTarget;
 
         assert hThis.m_mapFields.containsKey(sName);
@@ -637,7 +687,9 @@ public abstract class TypeCompositionTemplate
 
         public MethodTemplate addMethod(String sMethodName, String[] asArgTypes, String[] asRetTypes)
             {
-            return ensureMethodTemplate(f_sName + '$' + sMethodName, asArgTypes, asRetTypes);
+            MethodTemplate method = ensureMethodTemplate(f_sName + '$' + sMethodName, asArgTypes, asRetTypes);
+            method.m_property = this;
+            return method;
             }
 
         public void deriveFrom(PropertyTemplate that)
@@ -663,6 +715,12 @@ public abstract class TypeCompositionTemplate
                     this.m_templateSet = deriveMethodTemplateFrom(that.m_templateSet);
                     }
                 }
+            }
+
+        // get the property type in the context of the specified parent class
+        public Type getType(TypeComposition clzParent)
+            {
+            return f_typeName.resolveFormalTypes(clzParent);
             }
 
         @Override
@@ -841,6 +899,7 @@ public abstract class TypeCompositionTemplate
             extends InvocationTemplate
         {
         protected MethodTemplate m_methodSuper;
+        protected PropertyTemplate m_property; // indicates that this method is property accessor
 
         protected MethodTemplate(String sName, String[] asArgType, String[] asRetType)
             {
@@ -861,10 +920,32 @@ public abstract class TypeCompositionTemplate
             {
             if (m_methodSuper == null)
                 {
-                throw new IllegalStateException(
-                        TypeCompositionTemplate.this + " - no super for method: \"" + getSignature());
+                if (m_property == null)
+                    {
+                    throw new IllegalStateException(
+                            TypeCompositionTemplate.this + " - no super for method: \"" + getSignature());
+                    }
+                else
+                    {
+                    return new PropertyAccessTemplate(m_property, true);
+                    }
                 }
+
             return m_methodSuper;
+            }
+        }
+
+    public class PropertyAccessTemplate
+            extends MethodTemplate
+        {
+        public final PropertyTemplate f_property;
+        protected PropertyAccessTemplate(PropertyTemplate property, boolean fGetter)
+            {
+            super(property.f_sName,
+                    fGetter ? Utils.TYPE_NAME_NONE : new TypeName[] {property.f_typeName},
+                    fGetter ? new TypeName[] {property.f_typeName} : Utils.TYPE_NAME_NONE
+                    );
+            f_property = property;
             }
         }
 

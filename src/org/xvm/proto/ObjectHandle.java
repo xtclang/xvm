@@ -52,6 +52,11 @@ public abstract class ObjectHandle
         return (T) this;
         }
 
+    public boolean isStruct()
+        {
+        return f_clazz.isStruct(m_type);
+        }
+
     @Override
     public String toString()
         {

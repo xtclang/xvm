@@ -1,6 +1,7 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.ConstantPool.CharStringConstant;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;

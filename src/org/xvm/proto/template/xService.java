@@ -6,7 +6,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
-import org.xvm.proto.template.xString.StringHandle;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -72,63 +71,115 @@ public class xService
     @Override
     public ObjectHandle createStruct()
         {
-        return createService(null);
-        }
-
-    public ServiceHandle createService(String sName)
-        {
         ServiceContext contextCurr = ServiceContext.getCurrentContext();
 
         ServiceContext context = contextCurr.f_container.createContext();
-        ServiceHandle hService = new ServiceHandle(f_clazzCanonical, context);
+        ServiceHandle hService = new ServiceHandle(
+                f_clazzCanonical, f_clazzCanonical.ensureStructType(), context);
 
         hService.createFields();
 
-        if (sName == null)
-            {
-            sName = getClass().getSimpleName();
-            }
-
-        setProperty(hService, "serviceName", xString.makeHandle(sName));
+        setField(hService, "serviceName", xString.makeHandle(f_sName));
         return hService;
         }
 
     public ExceptionHandle start(ServiceHandle hService)
         {
-        ObjectHandle[] ahName = new ObjectHandle[1];
-        getProperty(hService, "serviceName", ahName);
-
-        StringHandle hName = (StringHandle) ahName[0];
-        return hService.m_context.start(hService, hName.getValue());
+        return hService.m_context.start(hService, f_sName);
         }
 
     // return an exception
-    public ExceptionHandle invokeAsync(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
-                                    ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+    public ExceptionHandle asyncInvoke(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
+                                       ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
         {
         // TODO: validate that all the arguments are immutable or ImmutableAble
 
-        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendRequest(
+        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeRequest(
                 hService.m_context, hFunction, ahArg, ahReturn.length);
 
         InvocationTemplate function = hFunction.m_invoke;
         TypeComposition clzService = hService.f_clazz;
 
-        for (int i = 0, c = ahReturn.length; i < c; i++)
+        int cReturns = ahReturn.length;
+        if (cReturns > 0)
             {
-            final int iRet = i;
+            for (int i = 0; i < cReturns; i++)
+                {
+                final int iRet = i;
 
-            CompletableFuture<ObjectHandle> cfReturn =
-                    cfResult.thenApply(ahResult -> ahReturn[iRet] = ahResult[iRet]);
+                CompletableFuture<ObjectHandle> cfReturn =
+                        cfResult.thenApply(ahResult -> ahResult[iRet]);
 
-            ahReturn[i] = new ProxyHandle(function.getReturnType(i, clzService), cfReturn);
+                ahReturn[i] = new ProxyHandle(function.getReturnType(i, clzService), cfReturn);
+                }
+            }
+        else
+            {
+            cfResult.whenComplete((r, x) ->
+                {
+                if (x != null)
+                    {
+                    // TODO: call UnhandledExceptionNotification handler
+                    System.out.println(ServiceContext.getCurrentContext() + ": unhandled exception " + x);
+                    }
+                });
             }
 
         return null;
         }
 
     @Override
-    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
+    public ExceptionHandle getProperty(PropertyTemplate property, MethodTemplate method,
+                                       Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn, int iRet)
+        {
+        ServiceContext context = ServiceContext.getCurrentContext();
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (context == hService.m_context || property.isAtomic())
+            {
+            return super.getProperty(property, method, frame, hTarget, ahReturn, iRet);
+            }
+
+        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendGetRequest(
+                hService.m_context, property);
+
+        TypeComposition clzService = hService.f_clazz;
+
+        ahReturn[iRet] = new ProxyHandle(property.getType(clzService), cfResult);
+
+        return null;
+        }
+
+    @Override
+    public ExceptionHandle setProperty(PropertyTemplate property, MethodTemplate method,
+                                       Frame frame, ObjectHandle hTarget, ObjectHandle hValue)
+        {
+        ServiceContext context = ServiceContext.getCurrentContext();
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (context == hService.m_context || property.isAtomic())
+            {
+            return super.setProperty(property, method, frame, hTarget, hValue);
+            }
+
+        CompletableFuture<Void> cfResult = frame.f_context.sendSetRequest(
+                hService.m_context, property, hValue);
+
+        cfResult.whenComplete((r, x) ->
+            {
+            if (x != null)
+                {
+                // TODO: call UnhandledExceptionNotification handler
+                System.out.println(ServiceContext.getCurrentContext() + ": unhandled exception " + x);
+                }
+            });
+
+        return null;
+        }
+
+    @Override
+    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+                                          ObjectHandle[] ahReturn, int iRet)
         {
         ServiceHandle hThis;
         try
@@ -152,9 +203,10 @@ public class xService
             {
             super(clazz);
             }
-        public ServiceHandle(TypeComposition clazz, ServiceContext context)
+
+        public ServiceHandle(TypeComposition clazz, Type type, ServiceContext context)
             {
-            super(clazz);
+            super(clazz, type);
 
             m_context = context;
             }

@@ -27,7 +27,16 @@ public class xTestService extends xService
     @Override
     public void initDeclared()
         {
-        ensurePropertyTemplate("counter", "x:Int64");
+        PropertyTemplate ptCounter = ensurePropertyTemplate("counter", "x:Int64");
+        MethodTemplate mtCounter = ptCounter.addGet();
+        mtCounter.m_aop = new Op[]
+            {
+            new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.get #")),
+            new Var(adapter.getClassConstId("x:Int64")), // (#1)
+            new Call_01(Op.A_SUPER, 1),
+            new Return_1(1),
+            };
+        mtCounter.m_cVars = 2;
 
         FunctionTemplate ftConstructor = ensureFunctionTemplate(
                 "construct", new String[]{"x:TestService", "x:Int64"}, VOID);

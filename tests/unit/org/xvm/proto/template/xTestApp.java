@@ -121,6 +121,8 @@ public class xTestApp extends xModule
             new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "increment"), 1),
             new X_Print(1),
 
+            new Set(0, adapter.getPropertyConstId("x:TestService", "counter"),
+                      -adapter.ensureValueConstantId(17)),
             new Get(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
             new X_Print(1),
 
@@ -139,13 +141,13 @@ public class xTestApp extends xModule
         ftTestService.m_cVars = 3;
         ftTestService.m_cScopes = 2;
 
-        // --- testService()
+        // --- testRef()
 
         FunctionTemplate ftTestRef = ensureFunctionTemplate("testRef", VOID, VOID);
         ftTestRef.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestApp.testRef() #")),
-            new NVar(adapter.getClassConstId("x:Ref"), adapter.ensureValueConstantId("ri")),     // #0 (ri)
+                    new NVar(adapter.getClassConstId("x:Ref"), adapter.ensureValueConstantId("ri")),     // #0 (ri)
             new Enter(),
             new INVar(adapter.getClassConstId("x:Int64"),
                     adapter.ensureValueConstantId("i"), adapter.ensureValueConstantId(1)),     // #1 (i)
@@ -178,9 +180,9 @@ public class xTestApp extends xModule
         mtRun.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestApp.run() #")),
-            new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
-            new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
-            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
+//            new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
+//            new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
+//            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "testService")),
             new Return_0()
             };

@@ -3,7 +3,6 @@ package org.xvm.proto.template;
 import org.xvm.proto.*;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.op.Ref;
 
 /**
  * TODO:
@@ -51,14 +50,14 @@ public class xRef
 
     @Override
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget,
-                                          MethodTemplate method, ObjectHandle[] ahReturn)
+                                          MethodTemplate method, ObjectHandle[] ahReturn, int iRet)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
         switch (method.f_sName)
             {
             case "get":
-                ahReturn[0] = hThis.get();
+                ahReturn[iRet] = hThis.get();
                 return null;
 
             default:

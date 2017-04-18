@@ -1,11 +1,12 @@
 + super() method call
-        Issue with "construct super" return - see OpCallable.callConstructor()
+       - Issue with "construct super" return - see OpCallable.callConstructor()
 
 + Service
-        - cleanup an un-referenced service (phantom refs)
-        - container terminates when all services are stopped
+        - cleanup an un-referenced service (phantom refs?)
+        +/- container terminates when all services are stopped
 
 - Function wrapping for services
+- Get/Set on the service
 
 - Atomics
 

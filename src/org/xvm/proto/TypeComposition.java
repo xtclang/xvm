@@ -119,6 +119,11 @@ public class TypeComposition
         return type;
         }
 
+    public boolean isStruct(Type type)
+        {
+        return type == m_typeStruct;
+        }
+
     // does this class extend that?
     public boolean extends_(TypeComposition that)
         {
