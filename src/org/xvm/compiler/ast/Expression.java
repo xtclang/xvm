@@ -8,6 +8,8 @@ package org.xvm.compiler.ast;
 public abstract class Expression
         extends AstNode
     {
+    // ----- accessors -----------------------------------------------------------------------------
+
     /**
      * @return this expression, converted to a type expression
      */

@@ -2,9 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.compiler.Token;
-import org.xvm.util.ListMap;
 
-import java.util.Map;
+import java.lang.reflect.Field;
+
 
 /**
  * Generic expression for something that follows the pattern "expression operator".
@@ -37,6 +37,13 @@ public class PostfixExpression
         return super.toTypeExpression();
         }
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -56,17 +63,11 @@ public class PostfixExpression
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("expr", expr);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression expr;
     protected Token      operator;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(PostfixExpression.class, "expr");
     }

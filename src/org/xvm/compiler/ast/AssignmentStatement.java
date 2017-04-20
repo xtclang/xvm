@@ -3,9 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 
 /**
@@ -42,6 +40,12 @@ public class AssignmentStatement
         return op.getId() == Token.Id.COND;
         }
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -69,16 +73,6 @@ public class AssignmentStatement
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("lvalue", lvalue);
-        map.put("op", op);
-        map.put("rvalue", rvalue);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -87,4 +81,6 @@ public class AssignmentStatement
     protected Expression rvalue;
     protected boolean    cond;
     protected boolean    term;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "rvalue");
     }

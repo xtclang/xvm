@@ -3,9 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 
 /**
@@ -27,6 +25,12 @@ public class TypedefStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -63,19 +67,12 @@ public class TypedefStatement
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("cond", cond);
-        map.put("type", type);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression     cond;
     protected Token          alias;
     protected TypeExpression type;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(TypedefStatement.class, "cond", "type");
     }

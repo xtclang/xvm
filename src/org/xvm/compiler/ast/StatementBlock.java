@@ -1,12 +1,11 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.ErrorList;
-import org.xvm.asm.StructureContainer;
-import org.xvm.util.ListMap;
+import org.xvm.compiler.Source;
+
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -19,9 +18,15 @@ public class StatementBlock
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public StatementBlock(List<Statement> statements)
+    public StatementBlock(List<Statement> stmts)
         {
-        this.statements = statements;
+        this(stmts, null);
+        }
+
+    public StatementBlock(List<Statement> stmts, Source source)
+        {
+        this.stmts  = stmts;
+        this.source = source;
         }
 
 
@@ -29,35 +34,22 @@ public class StatementBlock
 
     public List<Statement> getStatements()
         {
-        return statements;
+        return stmts;
         }
 
     public void addStatement(Statement stmt)
         {
-        statements.add(stmt);
+        stmts.add(stmt);
+        }
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
         }
 
 
     // ----- compile phases ------------------------------------------------------------------------
-
-    @Override
-    protected AstNode registerNames(AstNode parent, ErrorList errs)
-        {
-        AstNode newNode = super.registerNames(parent, errs);
-        assert newNode == this;
-
-        // recurse to children
-        // TODO what if one of them changes?
-        if (statements != null)
-            {
-            for (Statement stmt : statements)
-                {
-                stmt.registerNames(this, errs);
-                }
-            }
-
-        return this;
-        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -65,7 +57,7 @@ public class StatementBlock
     @Override
     public String toString()
         {
-        if (statements == null || statements.isEmpty())
+        if (stmts == null || stmts.isEmpty())
             {
             return "{}";
             }
@@ -74,12 +66,12 @@ public class StatementBlock
         sb.append('{');
 
         int firstNonEnum = 0;
-        if (statements.get(0) instanceof EnumDeclaration)
+        if (stmts.get(0) instanceof EnumDeclaration)
             {
             boolean multiline = false;
-            for (int i = 0, c = statements.size(); i < c; ++i)
+            for (int i = 0, c = stmts.size(); i < c; ++i)
                 {
-                Statement stmt = statements.get(i);
+                Statement stmt = stmts.get(i);
                 if (stmt instanceof EnumDeclaration)
                     {
                     EnumDeclaration enumStmt = (EnumDeclaration) stmt;
@@ -99,34 +91,29 @@ public class StatementBlock
                     {
                     sb.append(sBetweenEnums);
                     }
-                sb.append(statements.get(i));
+                sb.append(stmts.get(i));
                 }
-            if (firstNonEnum < statements.size())
+            if (firstNonEnum < stmts.size())
                 {
                 sb.append(';');
                 }
             }
 
-        for (int i = firstNonEnum, c = statements.size(); i < c; ++i)
+        for (int i = firstNonEnum, c = stmts.size(); i < c; ++i)
             {
             sb.append('\n')
-              .append(statements.get(i));
+              .append(stmts.get(i));
             }
         sb.append("\n}");
 
         return sb.toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("statements", statements);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected List<Statement> statements;
+    protected Source          source;
+    protected List<Statement> stmts;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
     }

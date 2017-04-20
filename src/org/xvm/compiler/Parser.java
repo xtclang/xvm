@@ -79,7 +79,7 @@ public class Parser
             try
                 {
                 List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
-                m_root = new StatementBlock(stmts);
+                m_root = new StatementBlock(stmts, m_source);
                 }
             catch (UnsupportedOperationException e)
                 {
@@ -97,70 +97,6 @@ public class Parser
             }
 
         return m_root;
-        }
-
-    /**
-     * Parse an import statement.
-     *
-     * <p/><code><pre>
-     * ImportStatement
-     *     "import" QualifiedName ImportAlias-opt ";"
-     *
-     * ImportAlias
-     *     "as" Name
-     * </pre></code>
-     *
-     * @return an ImportStatement
-     */
-    ImportStatement parseImportStatement(Expression exprCond)
-        {
-        List<Token> qualifiedName = new ArrayList<>();
-        Token       simpleName    = null;
-
-        expect(Id.IMPORT);
-
-        // parse qualified name
-        boolean first = true;
-        while (first || (match(Id.DOT) != null))
-            {
-            simpleName = expect(Id.IDENTIFIER);
-            qualifiedName.add(simpleName);
-            first = false;
-            }
-
-        // optional alias override
-        if (match(Id.AS) != null)
-            {
-            // parse simple name
-            simpleName = expect(Id.IDENTIFIER);
-            }
-
-        expect(Id.SEMICOLON);
-
-        return new ImportStatement(exprCond, simpleName, qualifiedName);
-        }
-
-    /**
-     * Parse a typedef statement.
-     *
-     * <p/><code><pre>
-     * TypeDefStatement
-     *     "typedef" Type Name ";"
-     * </pre></code>
-     *
-     * @return a TypedefStatement
-     */
-    TypedefStatement parseTypeDefStatement(Expression exprCond)
-        {
-        expect(Id.TYPEDEF);
-
-        TypeExpression type = parseTypeExpression();
-
-        Token simpleName = expect(Id.IDENTIFIER);
-
-        expect(Id.SEMICOLON);
-
-        return new TypedefStatement(exprCond, simpleName, type);
         }
 
     /**
@@ -270,7 +206,7 @@ public class Parser
             expect(Id.SEMICOLON);
             }
 
-        return new TypeCompositionStatement(modifiers, annotations, category, name,
+        return new TypeCompositionStatement(m_source, modifiers, annotations, category, name,
                 qualified, typeParams, constructorParams, compositions, body, doc);
         }
 
@@ -575,9 +511,31 @@ public class Parser
                     }
 
                 default:
+                    {
+                    Token start = peek();
+
                     stmt = parseTypeCompositionComponent(exprCondition, false);
                     fFoundType = true;
+
+                    if (fFileLevel)
+                        {
+                        // module cannot have any statements before it in the source
+                        if (stmt instanceof TypeCompositionStatement)
+                            {
+                            if (((TypeCompositionStatement) stmt).getCategory().getId() == Id.MODULE
+                                    && !stmts.isEmpty())
+                                {
+                                log(Severity.ERROR, MODULE_NOT_ROOT, null, start.getStartPosition(), start.getEndPosition());
+                                }
+                            }
+                        else
+                            {
+                            log(Severity.ERROR, NO_TYPE_FOUND, null, start.getStartPosition(), start.getEndPosition());
+                            }
+                        }
+
                     break;
+                    }
                 }
             stmts.add(stmt);
 
@@ -1523,6 +1481,47 @@ public class Parser
         }
 
     /**
+     * Parse an import statement.
+     *
+     * <p/><code><pre>
+     * ImportStatement
+     *     "import" QualifiedName ImportAlias-opt ";"
+     *
+     * ImportAlias
+     *     "as" Name
+     * </pre></code>
+     *
+     * @return an ImportStatement
+     */
+    ImportStatement parseImportStatement(Expression exprCond)
+        {
+        List<Token> qualifiedName = new ArrayList<>();
+        Token       simpleName    = null;
+
+        expect(Id.IMPORT);
+
+        // parse qualified name
+        boolean first = true;
+        while (first || (match(Id.DOT) != null))
+            {
+            simpleName = expect(Id.IDENTIFIER);
+            qualifiedName.add(simpleName);
+            first = false;
+            }
+
+        // optional alias override
+        if (match(Id.AS) != null)
+            {
+            // parse simple name
+            simpleName = expect(Id.IDENTIFIER);
+            }
+
+        expect(Id.SEMICOLON);
+
+        return new ImportStatement(exprCond, simpleName, qualifiedName);
+        }
+
+    /**
      * Parse a return statement.
      *
      * <p/><code><pre>
@@ -1681,6 +1680,29 @@ public class Parser
             }
 
         return new TryStatement(keyword, resources, block, catches, catchall);
+        }
+
+    /**
+     * Parse a typedef statement.
+     *
+     * <p/><code><pre>
+     * TypeDefStatement
+     *     "typedef" Type Name ";"
+     * </pre></code>
+     *
+     * @return a TypedefStatement
+     */
+    TypedefStatement parseTypeDefStatement(Expression exprCond)
+        {
+        expect(Id.TYPEDEF);
+
+        TypeExpression type = parseTypeExpression();
+
+        Token simpleName = expect(Id.IDENTIFIER);
+
+        expect(Id.SEMICOLON);
+
+        return new TypedefStatement(exprCond, simpleName, type);
         }
 
     /**
@@ -4186,7 +4208,15 @@ s     *
     /**
      * Expected an End-Of-File (nothing else allowed to be here).
      */
-    public static final String EXPECTED_EOF   = "PARSER-16";
+    public static final String EXPECTED_EOF     = "PARSER-16";
+    /**
+     * Expected to find a type declaration.
+     */
+    public static final String NO_TYPE_FOUND    = "PARSER-17";
+    /**
+     * Statements not allowed outside of module declaration.
+     */
+    public static final String MODULE_NOT_ROOT  = "PARSER-18";
 
 
     // ----- data members ------------------------------------------------------

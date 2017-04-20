@@ -582,7 +582,6 @@ public abstract class StructureContainer
 
     // ----- inner class: ClassContainer ---------------------------------------
 
-
     /**
      * An XVM structure that can contain ClassStructure and PropertyStructure
      * objects, in addition to MethodStructure objects.
@@ -831,7 +830,6 @@ public abstract class StructureContainer
             return mapProperty == null ? null : mapProperty.get(sName);
             }
 
-
         /**
          * Find the property with the specified name, creating it if necessary.
          *
@@ -927,7 +925,6 @@ public abstract class StructureContainer
 
 
     // ----- inner class: PackageContainer -------------------------------------
-
 
     /**
      * An XVM structure that can contain PackageStructure objects, in addition
@@ -1062,7 +1059,6 @@ public abstract class StructureContainer
                     ? structpackage
                     : structpackage.getPackage(sRemainder);
             }
-
 
         /**
          * Find the package with the specified name, creating it if necessary.

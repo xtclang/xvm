@@ -592,16 +592,16 @@ public class CommandLine
 
             modulesByName.put(name, module);
 
-            // create a module/package/class structure for each dir/file node in the "module tree"
-            FileStructure struct = new FileStructure(module.name(), null, null);
-            module.getType().setModuleStructure((ModuleStructure) struct.getTopmostStructure());
-
             // when there are multiple files, they have to all be linked together as a giant parse
             // tree
             if (module instanceof DirNode)
                 {
                 ((DirNode) module).linkParseTrees();
                 }
+
+            // create a module/package/class structure for each dir/file node in the "module tree"
+            module.getType().createModuleStructure(module.getErrorList());
+            module.checkErrors();
             }
         }
 
@@ -706,7 +706,7 @@ public class CommandLine
                 if (struct != null)
                     {
                     out();
-                    out(struct.getFileStructure());
+                    out(struct.getFileStructure().toDebugString());
                     out();
                     struct.getFileStructure().dump(new PrintWriter(System.out, true));
                     }
@@ -765,6 +765,7 @@ public class CommandLine
         TypeCompositionStatement getType();
         void checkSyntax();
         void resolveDependencies();
+        ErrorList getErrorList();
         void checkErrors();
         }
 
@@ -992,6 +993,17 @@ public class CommandLine
             }
 
         @Override
+        public ErrorList getErrorList()
+            {
+            if (pkgNode != null)
+                {
+                return pkgNode.getErrorList();
+                }
+
+            return null;
+            }
+
+        @Override
         public void checkErrors()
             {
             if (pkgNode != null)
@@ -1176,6 +1188,12 @@ public class CommandLine
         public void resolveDependencies()
             {
             // TODO
+            }
+
+        @Override
+        public ErrorList getErrorList()
+            {
+            return errs;
             }
 
         @Override

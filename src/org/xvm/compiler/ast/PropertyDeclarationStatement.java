@@ -1,15 +1,11 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.ErrorList;
-import org.xvm.asm.StructureContainer;
-
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
@@ -45,49 +41,55 @@ public class PropertyDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 
-    @Override
-    protected AstNode registerNames(AstNode parent, ErrorList errs)
-        {
-        setParent(parent);
-
-        // create the structure for this property
-        if (getStructure() == null)
-            {
-            // create a structure for this type
-            StructureContainer container = parent.getStructure();
-            // TODO is it a constant or a property? does it matter at this point?
-            if (container instanceof StructureContainer.ClassContainer)
-                {
-                setStructure(((StructureContainer.ClassContainer) container).ensureProperty((String) name.getValue()));
-                }
-            else
-                {
-                // TODO log error
-                throw new UnsupportedOperationException("not a property container: " + container);
-                }
-            }
-
-        // recurse to children
-        // TODO what if one of them changes?
-        if (annotations != null)
-            {
-            for (Annotation annotation : annotations)
-                {
-                annotation.registerNames(this, errs);
-                }
-            }
-        type.registerNames(this, errs);
-        value.registerNames(this, errs);
-        if (body != null)
-            {
-            body.registerNames(this, errs);
-            }
-
-        return this;
-        }
+//    @Override
+//    protected void registerGlobalNames(AstNode parent, ErrorList errs)
+//        {
+//        setParent(parent);
+//
+//        // create the structure for this property
+//        if (getStructure() == null)
+//            {
+//            // create a structure for this type
+//            StructureContainer container = parent.getStructure();
+//            // TODO is it a constant or a property? does it matter at this point?
+//            if (container instanceof StructureContainer.ClassContainer)
+//                {
+//                setStructure(((StructureContainer.ClassContainer) container).ensureProperty((String) name.getValue()));
+//                }
+//            else
+//                {
+//                // TODO log error
+//                throw new UnsupportedOperationException("not a property container: " + container);
+//                }
+//            }
+//
+//        // recurse to children
+//        // TODO what if one of them changes?
+//        if (annotations != null)
+//            {
+//            for (Annotation annotation : annotations)
+//                {
+//                annotation.registerGlobalNames(this, errs);
+//                }
+//            }
+//        type.registerGlobalNames(this, errs);
+//        value.registerGlobalNames(this, errs);
+//        if (body != null)
+//            {
+//            body.registerGlobalNames(this, errs);
+//            }
+//
+//        return this;
+//        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -172,17 +174,6 @@ public class PropertyDeclarationStatement
         return toSignatureString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("annotations", annotations);
-        map.put("type", type);
-        map.put("value", value);
-        map.put("body", body);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -193,4 +184,7 @@ public class PropertyDeclarationStatement
     protected Expression         value;
     protected StatementBlock     body;
     protected Token              doc;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
+            "annotations", "type", "value", "body");
     }

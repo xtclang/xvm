@@ -1,9 +1,8 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
-import java.util.Map;
 
 /**
  * An sequence type expression is a type expression followed by an ellipsis.
@@ -22,6 +21,12 @@ public class SequenceTypeExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -43,16 +48,10 @@ public class SequenceTypeExpression
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("type", type);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression type;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(SequenceTypeExpression.class, "type");
     }

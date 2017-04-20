@@ -1,10 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -27,6 +26,12 @@ public class MapExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -62,20 +67,12 @@ public class MapExpression
         return "size=" + keys.size();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("type", type);
-        map.put("keys", keys);
-        map.put("values", values);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression   type;
     protected List<Expression> keys;
     protected List<Expression> values;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(MapExpression.class, "type", "keys", "values");
     }

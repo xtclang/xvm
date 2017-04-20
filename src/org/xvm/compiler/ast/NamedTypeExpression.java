@@ -3,10 +3,9 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -28,6 +27,12 @@ public class NamedTypeExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -84,18 +89,12 @@ public class NamedTypeExpression
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("paramTypes", paramTypes);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token immutable;
-    protected List<Token> names;
+    protected Token                immutable;
+    protected List<Token>          names;
     protected List<TypeExpression> paramTypes;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "paramTypes");
     }

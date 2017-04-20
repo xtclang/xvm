@@ -3,10 +3,9 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -30,6 +29,12 @@ public class DotNameExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -71,20 +76,12 @@ public class DotNameExpression
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("expr", expr);
-        map.put("name", name);
-        map.put("params", params);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression           expr;
     protected Token                name;
     protected List<TypeExpression> params;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(DotNameExpression.class, "expr", "params");
     }

@@ -3,9 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 
 /**
@@ -43,6 +41,12 @@ public class VariableDeclarationStatement
         return cond;
         }
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -77,15 +81,6 @@ public class VariableDeclarationStatement
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("type", type);
-        map.put("value", value);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -94,4 +89,6 @@ public class VariableDeclarationStatement
     protected Expression     value;
     protected boolean        cond;
     protected boolean        term;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type", "value");
     }

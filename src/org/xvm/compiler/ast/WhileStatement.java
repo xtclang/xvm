@@ -2,9 +2,8 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.compiler.Token;
-import org.xvm.util.ListMap;
 
-import java.util.Map;
+import java.lang.reflect.Field;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -28,6 +27,12 @@ public class WhileStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -69,19 +74,12 @@ public class WhileStatement
         return keyword.getId().TEXT;
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("cond", cond);
-        map.put("block", block);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token          keyword;
     protected Statement      cond;
     protected StatementBlock block;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "cond", "block");
     }

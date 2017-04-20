@@ -3,9 +3,8 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
-import java.util.Map;
 
 /**
  * A to-do expression raises an exception indicating missing functionality,
@@ -33,6 +32,12 @@ public class TodoExpression
         return false;
         }
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -55,17 +60,11 @@ public class TodoExpression
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("message", message);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token      keyword;
     protected Expression message;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(TodoExpression.class, "message");
     }

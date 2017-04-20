@@ -3,9 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 
 /**
@@ -28,6 +26,12 @@ public class BiTypeExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -52,20 +56,12 @@ public class BiTypeExpression
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("type1", type1);
-        map.put("operator", operator);
-        map.put("type2", type2);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression type1;
     protected Token operator;
     protected TypeExpression type2;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(BiTypeExpression.class, "type1", "type2");
     }

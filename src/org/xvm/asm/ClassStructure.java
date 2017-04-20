@@ -4,18 +4,18 @@ package org.xvm.asm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
 import java.io.PrintWriter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.StructureContainer.MethodContainer;
+import org.xvm.asm.StructureContainer.ClassContainer;
+
 import org.xvm.asm.ConstantPool.CharStringConstant;
 import org.xvm.asm.ConstantPool.ClassConstant;
 
-import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -29,7 +29,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.14
  */
 public class ClassStructure
-        extends MethodContainer
+        extends ClassContainer
     {
     // ----- constructors ------------------------------------------------------
     

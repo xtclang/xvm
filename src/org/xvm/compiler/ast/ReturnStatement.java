@@ -3,11 +3,10 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -38,6 +37,12 @@ public class ReturnStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -86,17 +91,11 @@ public class ReturnStatement
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("exprs", exprs);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token keyword;
+    protected Token            keyword;
     protected List<Expression> exprs;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
     }

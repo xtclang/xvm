@@ -151,4 +151,4 @@ const Char
             out.write(0b10_000000 | (ch >>> --cTrail * 6 & 0b00_111111));
             }
         }
-    };
+    }

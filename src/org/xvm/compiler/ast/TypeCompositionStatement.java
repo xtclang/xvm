@@ -1,17 +1,21 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.ErrorList;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.StructureContainer;
 
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
+
+import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
@@ -27,17 +31,19 @@ public class TypeCompositionStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TypeCompositionStatement(List<Token> modifiers,
-                                    List<Annotation> annotations,
-                                    Token category,
-                                    Token name,
-                                    List<Token> qualified,
-                                    List<Parameter> typeParams,
-                                    List<Parameter> constructorParams,
+    public TypeCompositionStatement(Source            source,
+                                    List<Token>       modifiers,
+                                    List<Annotation>  annotations,
+                                    Token             category,
+                                    Token             name,
+                                    List<Token>       qualified,
+                                    List<Parameter>   typeParams,
+                                    List<Parameter>   constructorParams,
                                     List<Composition> composition,
-                                    StatementBlock body,
-                                    Token doc)
+                                    StatementBlock    body,
+                                    Token             doc)
         {
+        this.source            = source;
         this.modifiers         = modifiers;
         this.annotations       = annotations;
         this.category          = category;
@@ -76,6 +82,12 @@ public class TypeCompositionStatement
             }
         }
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -104,27 +116,40 @@ public class TypeCompositionStatement
         }
 
     /**
-     * Provide the file structure that will contain the module.
+     * Instantiate and populate the initial FileStructure for this module.
      *
-     * @param struct the ModuleStructure for this module
+     * @return  a new FileStructure for this module, with the module, packages, and classes
+     *          registered
      */
-    public void setModuleStructure(ModuleStructure struct)
+    public FileStructure createModuleStructure(ErrorListener errorList)
         {
-        setStructure(struct);
+        assert category.getId() == Token.Id.MODULE;
+        assert getStructure() == null;
+
+        FileStructure struct = new FileStructure(getName(), null, null);
+        setStructure((ModuleStructure) struct.getTopmostStructure());
+
+        super.registerGlobalNames(null, errorList);
+
+        return struct;
         }
 
     @Override
-    protected AstNode registerNames(AstNode parent, ErrorList errs)
+    protected void registerGlobalNames(AstNode parent, ErrorListener errs)
         {
-        setParent(parent);
-
-        // create the structure for this package or class (etc.)
-        if (getStructure() == null)
+        if (parent.getStructure() != null)
             {
-            // create a structure for this type
+            // create the structure for this package or class (etc.)
+            assert getStructure() == null;
+
             StructureContainer container = parent.getStructure();
             switch (category.getId())
                 {
+                case MODULE:
+                    errs.log(Severity.ERROR, Compiler.MODULE_UNEXPECTED, null,
+                            getSource(), category.getStartPosition(), category.getEndPosition());
+                    break;
+
                 case PACKAGE:
                     if (container instanceof StructureContainer.PackageContainer)
                         {
@@ -132,8 +157,8 @@ public class TypeCompositionStatement
                         }
                     else
                         {
-                        // TODO log error
-                        throw new UnsupportedOperationException("not a package container: " + container);
+                        errs.log(Severity.ERROR, Compiler.PACKAGE_UNEXPECTED, new String[] {container.toString()},
+                                getSource(), category.getStartPosition(), category.getEndPosition());
                         }
                     break;
 
@@ -150,53 +175,17 @@ public class TypeCompositionStatement
                         }
                     else
                         {
-                        // TODO log error
-                        throw new UnsupportedOperationException("not a package container: " + container);
+                        errs.log(Severity.ERROR, Compiler.CLASS_UNEXPECTED, new String[] {container.toString()},
+                                getSource(), category.getStartPosition(), category.getEndPosition());
                         }
                     break;
 
                 default:
-                    // TODO log error
-                    throw new UnsupportedOperationException("not sure how to make a structure for: " + category.getId().TEXT);
+                    throw new UnsupportedOperationException("unable to guess structure for: " + category.getId().TEXT);
                 }
             }
 
-        // recurse to children
-        // TODO what if one of them changes?
-        if (annotations != null)
-            {
-            for (Annotation annotation : annotations)
-                {
-                annotation.registerNames(this, errs);
-                }
-            }
-        if (typeParams != null)
-            {
-            for (Parameter parameter : typeParams)
-                {
-                parameter.registerNames(this, errs);
-                }
-            }
-        if (constructorParams != null)
-            {
-            for (Parameter parameter : constructorParams)
-                {
-                parameter.registerNames(this, errs);
-                }
-            }
-        if (composition != null)
-            {
-            for (Composition each : composition)
-                {
-                each.registerNames(this, errs);
-                }
-            }
-        if (body != null)
-            {
-            body.registerNames(this, errs);
-            }
-
-        return this;
+        super.registerGlobalNames(parent, errs);
         }
 
 
@@ -340,20 +329,10 @@ public class TypeCompositionStatement
         return toSignatureString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("typeParams", typeParams);
-        map.put("constructorParams", constructorParams);
-        map.put("composition", composition);
-        map.put("body", body);
-        return map;
-        }
-        
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Source             source;
     protected List<Token>        modifiers;
     protected List<Annotation>   annotations;
     protected Token              category;
@@ -365,4 +344,7 @@ public class TypeCompositionStatement
     protected StatementBlock     body;
     protected Token              doc;
     protected StatementBlock     enclosed;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
+            "annotations", "typeParams", "constructorParams", "composition", "body");
     }

@@ -1,7 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.StructureContainer;
 
 
@@ -24,12 +23,6 @@ public abstract class StructureContainerStatement
         {
         this.struct = struct;
         }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    @Override
-    protected abstract AstNode registerNames(AstNode parent, ErrorList errs);
 
 
     // ----- fields --------------------------------------------------------------------------------

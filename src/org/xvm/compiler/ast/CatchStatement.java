@@ -1,9 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -27,6 +25,12 @@ public class CatchStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -36,18 +40,11 @@ public class CatchStatement
         return "catch (" + target + ")\n" + indentLines(block.toString(), "    ");
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("target", target);
-        map.put("block", block);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected VariableDeclarationStatement target;
     protected StatementBlock               block;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(CatchStatement.class, "target", "block");
     }

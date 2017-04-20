@@ -3,11 +3,11 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.Handy;
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
+
+import static org.xvm.util.Handy.indentLines;
 
 
 /**
@@ -30,29 +30,35 @@ public class NewExpression
     public NewExpression(Token operator, Expression expr, List<Expression> args, StatementBlock body)
         {
         super(operator, expr);
-        this.parent = null;
-        this.args   = args;
-        this.body   = body;
+        this.cont = null;
+        this.args = args;
+        this.body = body;
         }
 
     /**
      * Postfix ".new"
      *
-     * @param parent
+     * @param cont
      * @param operator
      * @param expr
      * @param args
      */
-    public NewExpression(Expression parent, Token operator, Expression expr, List<Expression> args)
+    public NewExpression(Expression cont, Token operator, Expression expr, List<Expression> args)
         {
         super(operator, expr);
-        this.parent = parent;
-        this.args   = args;
-        this.body   = null;
+        this.cont = cont;
+        this.args = args;
+        this.body = null;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -61,9 +67,9 @@ public class NewExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        if (parent != null)
+        if (cont != null)
             {
-            sb.append(parent)
+            sb.append(cont)
               .append('.');
             }
 
@@ -104,7 +110,7 @@ public class NewExpression
         if (body != null)
             {
             sb.append('\n')
-              .append(Handy.indentLines(body.toString(), "        "));
+              .append(indentLines(body.toString(), "        "));
             }
 
         return sb.toString();
@@ -116,20 +122,12 @@ public class NewExpression
         return toSignatureString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("parent", parent);
-        map.put("args", args);
-        map.put("body", body);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Expression       parent;
+    protected Expression       cont;
     protected List<Expression> args;
     protected StatementBlock   body;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "cont", "args", "body");
     }

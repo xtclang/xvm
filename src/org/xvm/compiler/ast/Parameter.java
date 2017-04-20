@@ -3,9 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 
 /**
@@ -43,6 +41,13 @@ public class Parameter
         return (String) name.getValue();
         }
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -74,19 +79,12 @@ public class Parameter
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("type", type);
-        map.put("value", value);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression type;
     protected Token name;
     protected Expression value;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(Parameter.class, "type", "value");
     }

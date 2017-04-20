@@ -3,10 +3,11 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
+
+import static org.xvm.util.Handy.indentLines;
 
 
 /**
@@ -30,11 +31,16 @@ public class ImplicitLambdaExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
-    @Override
-    public String toString()
+    public String toSignatureString()
         {
         StringBuilder sb = new StringBuilder();
 
@@ -55,26 +61,37 @@ public class ImplicitLambdaExpression
 
         sb.append(')')
           .append(' ')
-          .append(operator.getId().TEXT)
-          .append(' ')
-          .append(body);
+          .append(operator.getId().TEXT);
 
         return sb.toString();
         }
 
     @Override
-    public String getDumpDesc()
+    public String toString()
         {
-        return toString();
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(toSignatureString());
+
+        String s = body.toString();
+        if (s.indexOf('\n') >= 0)
+            {
+            sb.append('\n')
+              .append(indentLines(s, "    "));
+            }
+        else
+            {
+            sb.append(' ')
+              .append(s);
+            }
+
+        return sb.toString();
         }
 
     @Override
-    public Map<String, Object> getDumpChildren()
+    public String toDumpString()
         {
-        ListMap<String, Object> map = new ListMap();
-        map.put("params", params);
-        map.put("body", body);
-        return map;
+        return toSignatureString() + " {...}";
         }
 
 
@@ -83,4 +100,6 @@ public class ImplicitLambdaExpression
     protected List<Expression> params;
     protected Token            operator;
     protected StatementBlock   body;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ImplicitLambdaExpression.class, "params", "body");
     }

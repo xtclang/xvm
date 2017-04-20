@@ -1,16 +1,11 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
-import org.xvm.asm.StructureContainer;
-
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
@@ -52,83 +47,89 @@ public class MethodDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 
-    @Override
-    protected AstNode registerNames(AstNode parent, ErrorList errs)
-        {
-        setParent(parent);
-
-        // create the structure for this method
-        if (getStructure() == null)
-            {
-            // create a structure for this type
-            StructureContainer container = parent.getStructure();
-            if (container instanceof StructureContainer.MethodContainer)
-                {
-                ConstantPool.MethodConstant.Builder builder = ((StructureContainer.MethodContainer)
-                        container).methodBuilder((String) name.getValue());
-                if (params != null)
-                    {
-                    for (Parameter parameter : params)
-                        {
-                        // TODO chicken and egg problem: need a type constant
-                        // TODO look at TypeName
-                        // builder.addParameter(, parameter.getName());
-                        }
-                    }
-                if (returns != null)
-                    {
-                    for (TypeExpression type : returns)
-                        {
-                        // TODO chicken and egg problem: need a type constant
-                        // builder.addReturnValue() // also TODO get rid of name on return value
-                        }
-                    }
-                setStructure(builder.ensureMethod());
-                }
-            else
-                {
-                // TODO log error
-                throw new UnsupportedOperationException("not a method container: " + container);
-                }
-            }
-
-        // recurse to children
-        // TODO what if one of them changes?
-        if (annotations != null)
-            {
-            for (Annotation annotation : annotations)
-                {
-                annotation.registerNames(this, errs);
-                }
-            }
-        if (returns != null)
-            {
-            for (TypeExpression type : returns)
-                {
-                type.registerNames(this, errs);
-                }
-            }
-        if (params != null)
-            {
-            for (Parameter parameter : params)
-                {
-                parameter.registerNames(this, errs);
-                }
-            }
-        if (body != null)
-            {
-            body.registerNames(this, errs);
-            }
-        if (continuation != null)
-            {
-            continuation.registerNames(this, errs);
-            }
-
-        return this;
-        }
+//    @Override
+//    protected void registerGlobalNames(AstNode parent, ErrorList errs)
+//        {
+//        setParent(parent);
+//
+//        // create the structure for this method
+//        if (getStructure() == null)
+//            {
+//            // create a structure for this type
+//            StructureContainer container = parent.getStructure();
+//            if (container instanceof StructureContainer.MethodContainer)
+//                {
+//                ConstantPool.MethodConstant.Builder builder = ((StructureContainer.MethodContainer)
+//                        container).methodBuilder((String) name.getValue());
+//                if (params != null)
+//                    {
+//                    for (Parameter parameter : params)
+//                        {
+//                        // TODO chicken and egg problem: need a type constant
+//                        // TODO look at TypeName
+//                        // builder.addParameter(, parameter.getName());
+//                        }
+//                    }
+//                if (returns != null)
+//                    {
+//                    for (TypeExpression type : returns)
+//                        {
+//                        // TODO chicken and egg problem: need a type constant
+//                        // builder.addReturnValue() // also TODO get rid of name on return value
+//                        }
+//                    }
+//                setStructure(builder.ensureMethod());
+//                }
+//            else
+//                {
+//                // TODO log error
+//                throw new UnsupportedOperationException("not a method container: " + container);
+//                }
+//            }
+//
+//        // recurse to children
+//        // TODO what if one of them changes?
+//        if (annotations != null)
+//            {
+//            for (Annotation annotation : annotations)
+//                {
+//                annotation.registerGlobalNames(this, errs);
+//                }
+//            }
+//        if (returns != null)
+//            {
+//            for (TypeExpression type : returns)
+//                {
+//                type.registerGlobalNames(this, errs);
+//                }
+//            }
+//        if (params != null)
+//            {
+//            for (Parameter parameter : params)
+//                {
+//                parameter.registerGlobalNames(this, errs);
+//                }
+//            }
+//        if (body != null)
+//            {
+//            body.registerGlobalNames(this, errs);
+//            }
+//        if (continuation != null)
+//            {
+//            continuation.registerGlobalNames(this, errs);
+//            }
+//
+//        return this;
+//        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -306,19 +307,6 @@ public class MethodDeclarationStatement
         return toSignatureString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("annotations", annotations);
-        map.put("returns", returns);
-        map.put("redundant", redundant);
-        map.put("params", params);
-        map.put("body", body);
-        map.put("continuation", continuation);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -332,4 +320,7 @@ public class MethodDeclarationStatement
     protected StatementBlock       body;
     protected StatementBlock       continuation;
     protected Token                doc;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
+            "annotations", "returns", "redundant", "params", "body", "continuation");
     }

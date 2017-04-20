@@ -1,9 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 
 /**
@@ -30,6 +28,12 @@ public class ExpressionStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -48,15 +52,9 @@ public class ExpressionStatement
     @Override
     public String getDumpDesc()
         {
-        return toString();
-        }
-
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("expr", expr);
-        return map;
+        String s  = toString();
+        int    of = s.indexOf('\n');
+        return (of < 0) ? s : s.substring(0, of) + " ...";
         }
 
 
@@ -64,4 +62,6 @@ public class ExpressionStatement
 
     protected Expression expr;
     protected boolean    term;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ExpressionStatement.class, "expr");
     }

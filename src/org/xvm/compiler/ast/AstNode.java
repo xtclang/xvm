@@ -1,12 +1,17 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.StructureContainer;
 
-import java.io.PrintWriter;
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Source;
+import org.xvm.util.ListMap;
 
+import java.io.PrintWriter;
 import java.io.StringWriter;
+
+import java.lang.reflect.Field;
+
 import java.util.*;
 
 import static org.xvm.util.Handy.indentLines;
@@ -18,6 +23,7 @@ import static org.xvm.util.Handy.indentLines;
  * @author cp 2017.04.11
  */
 public abstract class AstNode
+        implements Iterable<AstNode>
     {
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -34,6 +40,44 @@ public abstract class AstNode
     protected void setParent(AstNode parent)
         {
         this.parent = parent;
+        }
+
+    /**
+     * Return an Iterable that represents all of the child nodes of this node.
+     *
+     * @return an Iterable of child nodes (from whence an Iterator can be obtained)
+     */
+    public Iterable<AstNode> children()
+        {
+        return this;
+        }
+
+    protected Field[] getChildFields()
+        {
+        return NO_FIELDS;
+        }
+
+    public Iterator<AstNode> iterator()
+        {
+        Field[] fields = getChildFields();
+        return fields.length == 0 ? Collections.EMPTY_LIST.iterator() : new ChildIterator(fields);
+        }
+
+    /**
+     * Obtain the Source for this AstNode, if any. By default, a node uses the same source as its
+     * parent.
+     *
+     * @return a Source instance
+     */
+    public Source getSource()
+        {
+        Source  source = null;
+        AstNode parent = getParent();
+        if (parent != null)
+            {
+            source = parent.getSource();
+            }
+        return source;
         }
 
     /**
@@ -60,20 +104,23 @@ public abstract class AstNode
      * First logical compiler pass. At this point, names are NOT resolvable; we're really just
      * organizing the tree and checking obvious errors that are obvious from "this point down".
      * The general idea is that this method recurses through the structure, allowing each node to
-     * introduce itself as the parent of each node under it, and that the nodes will register
-     * themselves as appropriate into the corresponding file structure if the nodes represent
-     * names that are visible in the file structure (such as packages, classes, properties, methods,
-     * and so on.)
+     * introduce itself as the parent of each node under it, and that the nodes which are modules,
+     * packages, and classes (but only those nested under modules/packages/classes) will register
+     * themselves as appropriate into the corresponding file structure.
      *
      * @param parent  the parent of this node to tie into (if necessary / appropriate)
      * @param errs    the error list to log any errors etc. to
      *
      * @return the node to replace this node with (or null to discard this node)
      */
-    protected AstNode registerNames(AstNode parent, ErrorList errs)
+    protected void registerGlobalNames(AstNode parent, ErrorListener errs)
         {
         setParent(parent);
-        return this;
+
+        for (AstNode node : children())
+            {
+            node.registerGlobalNames(this, errs);
+            }
         }
 
 
@@ -279,11 +326,244 @@ public abstract class AstNode
      */
     public Map<String, Object> getDumpChildren()
         {
-        return Collections.EMPTY_MAP;
+        Field[] fields = getChildFields();
+        if (fields.length == 0)
+            {
+            return Collections.EMPTY_MAP;
+            }
+
+        Map<String, Object> map = new ListMap<>();
+        for (Field field : fields)
+            {
+            try
+                {
+                map.put(field.getName(), field.get(this));
+                }
+            catch (IllegalAccessException e)
+                {
+                throw new IllegalStateException(e);
+                }
+            }
+        return map;
+        }
+
+
+    // ----- inner class: ChildIterator ------------------------------------------------------------
+
+    protected static Field[] fieldsForNames(Class clz, String... names)
+        {
+        if (names == null || names.length == 0)
+            {
+            return NO_FIELDS;
+            }
+
+        Field[] fields = new Field[names.length];
+        NextField: for (int i = 0, c = fields.length; i < c; ++i)
+            {
+            Class                clzTry = clz;
+            NoSuchFieldException eOrig  = null;
+            while (clzTry != null)
+                {
+                try
+                    {
+                    fields[i] = clzTry.getDeclaredField(names[i]);
+                    assert fields[i] != null;
+                    continue NextField;
+                    }
+                catch (NoSuchFieldException e)
+                    {
+                    if (eOrig == null)
+                        {
+                        eOrig = e;
+                        }
+
+                    clzTry = clzTry.getSuperclass();
+                    if (clz == null)
+                        {
+                        throw new IllegalStateException(eOrig);
+                        }
+                    }
+                catch (SecurityException e)
+                    {
+                    throw new IllegalStateException(e);
+                    }
+                }
+            }
+
+        return fields;
+        }
+
+
+    // ----- inner class: ChildIterator ------------------------------------------------------------
+
+    protected final class ChildIterator
+            implements Iterator<AstNode>
+        {
+        protected ChildIterator(Field[] fields)
+            {
+            this.fields = fields;
+            }
+
+        public boolean hasNext()
+            {
+            return state == HAS_NEXT || prepareNextElement();
+            }
+
+        public AstNode next()
+            {
+            if (state == HAS_NEXT || prepareNextElement())
+                {
+                state = HAS_PREV;
+                if (value instanceof AstNode)
+                    {
+                    return (AstNode) value;
+                    }
+                else
+                    {
+                    return (AstNode) ((Iterator) value).next();
+                    }
+                }
+
+            throw new NoSuchElementException();
+            }
+
+        private boolean prepareNextElement()
+            {
+            if (value instanceof Iterator && ((Iterator) value).hasNext())
+                {
+                state = HAS_NEXT;
+                return true;
+                }
+
+            boolean prepped = prepareNextField();
+            state = prepped ? HAS_NEXT : NOT_PREP;
+            return prepped;
+            }
+
+        private boolean prepareNextField()
+            {
+            while (++iField < fields.length)
+                {
+                Object next;
+                try
+                    {
+                    next = fields[iField].get(AstNode.this);
+                    }
+                catch (NullPointerException e)
+                    {
+                    throw new IllegalStateException("class=" + AstNode.this.getClass().getSimpleName()
+                            + ", field=" + iField);
+                    }
+                catch (IllegalAccessException e)
+                    {
+                    throw new IllegalStateException(e);
+                    }
+
+                if (next != null)
+                    {
+                    if (next instanceof List)
+                        {
+                        List list = (List) next;
+                        if (!list.isEmpty())
+                            {
+                            value = list.iterator();
+                            return true;
+                            }
+                        }
+                    else if (next instanceof Collection)
+                        {
+                        Collection coll = (Collection) next;
+                        if (!coll.isEmpty())
+                            {
+                            value = coll.iterator();
+                            return true;
+                            }
+                        }
+                    else
+                        {
+                        value = next;
+                        return true;
+                        }
+                    }
+                }
+
+            value = null;
+            return false;
+            }
+
+        public void remove()
+            {
+            if (state == HAS_PREV)
+                {
+                if (value instanceof AstNode)
+                    {
+                    // null out the field
+                    try
+                        {
+                        fields[iField].set(AstNode.this, null);
+                        }
+                    catch (IllegalAccessException e)
+                        {
+                        throw new IllegalStateException(e);
+                        }
+                    state = NOT_PREP;
+                    return;
+                    }
+
+                if (value instanceof Iterator)
+                    {
+                    // tell the underlying iterator to remove the value
+                    ((Iterator) value).remove();
+                    state = NOT_PREP;
+                    return;
+                    }
+                }
+
+            throw new IllegalStateException();
+            }
+
+        public void replace(AstNode newChild)
+            {
+            if (state == HAS_PREV)
+                {
+                if (value instanceof AstNode)
+                    {
+                    // the field holds a single node; store the new value
+                    try
+                        {
+                        fields[iField].set(AstNode.this, newChild);
+                        }
+                    catch (IllegalAccessException e)
+                        {
+                        throw new IllegalStateException(e);
+                        }
+                    return;
+                    }
+
+                if (value instanceof ListIterator)
+                    {
+                    ((ListIterator) value).set(newChild);
+                    return;
+                    }
+                }
+
+            throw new IllegalStateException();
+            }
+
+        private static final int NOT_PREP = 0;
+        private static final int HAS_NEXT = 1;
+        private static final int HAS_PREV = 2;
+
+        private Field[] fields;
+        private int     iField = -1;
+        private Object  value;
+        private int     state  = NOT_PREP;
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    protected static final Field[] NO_FIELDS = new Field[0];
 
     protected AstNode parent;
     }

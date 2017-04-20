@@ -3,10 +3,9 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -30,6 +29,12 @@ public class ForStatement2
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -63,19 +68,12 @@ public class ForStatement2
         return sb.toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("conds", conds);
-        map.put("block", block);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token           keyword;
     protected List<Statement> conds;
     protected StatementBlock  block;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement2.class, "conds", "block");
     }

@@ -1,9 +1,8 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
-import java.util.Map;
 
 /**
  * A ternary expression is the "a ? b : c" expression.
@@ -15,15 +14,21 @@ public class TernaryExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TernaryExpression(Expression expr, Expression exprThen, Expression exprElse)
+    public TernaryExpression(Expression cond, Expression exprThen, Expression exprElse)
         {
-        this.expr     = expr;
+        this.cond     = cond;
         this.exprThen = exprThen;
         this.exprElse = exprElse;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -33,7 +38,7 @@ public class TernaryExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(expr)
+        sb.append(cond)
           .append(" ? ")
           .append(exprThen)
           .append(" : ")
@@ -42,20 +47,12 @@ public class TernaryExpression
         return sb.toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("expr", expr);
-        map.put("exprThen", exprThen);
-        map.put("exprElse", exprElse);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Expression expr;
+    protected Expression cond;
     protected Expression exprThen;
     protected Expression exprElse;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(TernaryExpression.class, "cond", "exprThen", "exprElse");
     }

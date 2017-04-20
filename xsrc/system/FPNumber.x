@@ -1,18 +1,9 @@
 interface FPNumber
-        implements Number
-    {
-    @ro int Radix;
-    @ro int Precision;
-    @ro int ExpMin;
-    @ro int ExpMax;
-
-    static FPLiteral PI = 3.141592653589793238462643383279502884197169399375105820974944592307816406286;
-    static FPLiteral E  = 2.718281828459045235360287471352662497757247093699959574966967627724076630353;
-    }
-
-interface FPNumber
         extends Number
     {
+    static FPLiteral PI = 3.141592653589793238462643383279502884197169399375105820974944592307816406286;
+    static FPLiteral E  = 2.718281828459045235360287471352662497757247093699959574966967627724076630353;
+
     /**
      * If the floating point number is a finite value, indicating that it is neither
      * infinite nor Not-a-Number.
@@ -41,7 +32,7 @@ interface FPNumber
     /**
      * The minimum exponent, as specified by IEEE 754-2008.
      */
-    @ro Int emin
+    @ro Int emin.get()
         {
         return 1 - emax;
         }

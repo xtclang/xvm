@@ -3,9 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -35,6 +33,12 @@ public class IfStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -66,16 +70,6 @@ public class IfStatement
         return sb.toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("cond", cond);
-        map.put("then", stmtThen);
-        map.put("else", stmtElse);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -83,4 +77,6 @@ public class IfStatement
     protected Statement cond;
     protected Statement stmtThen;
     protected Statement stmtElse;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "cond", "stmtThen", "stmtElse");
     }

@@ -3,9 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 
 /**
@@ -27,6 +25,12 @@ public class CaseStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -55,18 +59,11 @@ public class CaseStatement
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("keyword", keyword);
-        map.put("expr", expr);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token keyword;
+    protected Token      keyword;
     protected Expression expr;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "expr");
     }

@@ -1,9 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 
 /**
@@ -24,6 +22,12 @@ public class AnnotatedTypeExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -46,18 +50,12 @@ public class AnnotatedTypeExpression
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("annotation", annotation);
-        map.put("type", type);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Annotation annotation;
     protected TypeExpression type;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotatedTypeExpression.class,
+            "annotation", "type");
     }

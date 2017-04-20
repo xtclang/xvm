@@ -1,9 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.util.ListMap;
-
-import java.util.Map;
+import java.lang.reflect.Field;
 
 /**
  * A nullable type expression is a type expression followed by a question mark.
@@ -22,6 +20,12 @@ public class NullableTypeExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -43,16 +47,10 @@ public class NullableTypeExpression
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("type", type);
-        return map;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression type;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(NullableTypeExpression.class, "type");
     }

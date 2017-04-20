@@ -81,4 +81,4 @@ enum Boolean
     @op Boolean or(Boolean that);
     @op Boolean xor(Boolean that);
     @op Boolean not();
-    };
+    }

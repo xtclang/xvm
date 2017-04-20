@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
+import java.lang.reflect.Field;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -25,7 +27,8 @@ public class NameExpression
 
     public NameExpression(List<Token> names, List<TypeExpression> params)
         {
-        this.names = names;
+        this.names  = names;
+        this.params = params;
         }
 
 
@@ -46,7 +49,13 @@ public class NameExpression
     @Override
     public TypeExpression toTypeExpression()
         {
-        return new NamedTypeExpression(null, names, null);
+        return new NamedTypeExpression(null, names, params);
+        }
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
         }
 
 
@@ -56,6 +65,7 @@ public class NameExpression
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
+
         boolean first = true;
         for (Token token : names)
             {
@@ -69,6 +79,26 @@ public class NameExpression
                 }
             sb.append(token.getValue());
             }
+
+        if (params != null)
+            {
+            sb.append('<');
+            first = true;
+            for (Expression param : params)
+                {
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(param);
+                }
+            sb.append('>');
+            }
+
         return sb.toString();
         }
 
@@ -81,5 +111,8 @@ public class NameExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected List<Token> names;
+    protected List<Token>          names;
+    protected List<TypeExpression> params;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "params");
     }

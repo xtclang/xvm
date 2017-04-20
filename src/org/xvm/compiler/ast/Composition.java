@@ -3,10 +3,9 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.util.ListMap;
+import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -37,6 +36,12 @@ public abstract class Composition
     public TypeExpression getType()
         {
         return type;
+        }
+
+    @Override
+    protected Field[] getChildFields()
+        {
+        return CHILD_FIELDS;
         }
 
 
@@ -77,17 +82,8 @@ public abstract class Composition
         return toString();
         }
 
-    @Override
-    public Map<String, Object> getDumpChildren()
-        {
-        ListMap<String, Object> map = new ListMap();
-        map.put("condition", condition);
-        map.put("type", type);
-        return map;
-        }
 
-
-    // ----- inner classes -------------------------------------------------------------------------
+    // ----- inner class: Extends ------------------------------------------------------------------
 
     public static class Extends
             extends Composition
@@ -96,6 +92,12 @@ public abstract class Composition
             {
             super(condition, keyword, type);
             this.args = args;
+            }
+
+        @Override
+        protected Field[] getChildFields()
+            {
+            return CHILD_FIELDS;
             }
 
         @Override
@@ -128,16 +130,13 @@ public abstract class Composition
             return sb.toString();
             }
 
-        @Override
-        public Map<String, Object> getDumpChildren()
-            {
-            Map<String, Object> map = super.getDumpChildren();
-            map.put("args", args);
-            return map;
-            }
-
         protected List<Expression> args;
+
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Extends.class, "condition", "type", "args");
         }
+
+
+    // ----- inner class: Incorporates -------------------------------------------------------------
 
     public static class Incorporates
             extends Composition
@@ -146,6 +145,12 @@ public abstract class Composition
             {
             super(condition, keyword, type);
             this.args = args;
+            }
+
+        @Override
+        protected Field[] getChildFields()
+            {
+            return CHILD_FIELDS;
             }
 
         @Override
@@ -178,16 +183,13 @@ public abstract class Composition
             return sb.toString();
             }
 
-        @Override
-        public Map<String, Object> getDumpChildren()
-            {
-            Map<String, Object> map = super.getDumpChildren();
-            map.put("args", args);
-            return map;
-            }
-
         protected List<Expression> args;
+
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class, "condition", "type", "args");
         }
+
+
+    // ----- inner class: Implements ---------------------------------------------------------------
 
     public static class Implements
             extends Composition
@@ -197,6 +199,9 @@ public abstract class Composition
             super(condition, keyword, type);
             }
         }
+
+
+    // ----- inner class: Delegates ----------------------------------------------------------------
 
     public static class Delegates
             extends Composition
@@ -208,21 +213,24 @@ public abstract class Composition
             }
 
         @Override
+        protected Field[] getChildFields()
+            {
+            return CHILD_FIELDS;
+            }
+
+        @Override
         public String toString()
             {
             return toStartString() + '(' + delegate + ')' + toEndString();
             }
 
-        @Override
-        public Map<String, Object> getDumpChildren()
-            {
-            Map<String, Object> map = super.getDumpChildren();
-            map.put("delegate", delegate);
-            return map;
-            }
-
         protected Expression delegate;
+
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Delegates.class, "condition", "type", "delegate");
         }
+
+
+    // ----- inner class: Into ---------------------------------------------------------------------
 
     public static class Into
             extends Composition
@@ -233,6 +241,9 @@ public abstract class Composition
             }
         }
 
+
+    // ----- inner class: Import -------------------------------------------------------------------
+
     public static class Import
             extends Composition
         {
@@ -240,6 +251,12 @@ public abstract class Composition
             {
             super(condition, keyword, type);
             this.vers = vers;
+            }
+
+        @Override
+        protected Field[] getChildFields()
+            {
+            return CHILD_FIELDS;
             }
 
         @Override
@@ -271,15 +288,9 @@ public abstract class Composition
             return sb.toString();
             }
 
-        @Override
-        public Map<String, Object> getDumpChildren()
-            {
-            Map<String, Object> map = super.getDumpChildren();
-            map.put("type", vers);
-            return map;
-            }
-
         protected List<VersionOverride> vers;
+
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Import.class, "condition", "type", "vers");
         }
 
 
@@ -288,4 +299,6 @@ public abstract class Composition
     protected Expression     condition;
     protected Token          keyword;
     protected TypeExpression type;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(Composition.class, "condition", "type");
     }
