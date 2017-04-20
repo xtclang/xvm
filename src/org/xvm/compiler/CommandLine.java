@@ -1,9 +1,12 @@
 package org.xvm.compiler;
 
 
+import org.xvm.asm.DirRepository;
+import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.LinkedRepository;
+import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.StructureContainer;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.TypeCompositionStatement;
@@ -15,7 +18,6 @@ import org.xvm.util.Severity;
 import java.io.File;
 import java.io.IOException;
 
-import java.io.PrintWriter;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -86,13 +88,16 @@ import static org.xvm.util.Handy.indentLines;
  */
 public class CommandLine
     {
-    protected String[]          args            = null;
-    protected List<File>        sources         = new ArrayList<>();
-    protected Options           opts            = new Options();
-    protected List<String>      deferred        = new ArrayList<>();
-    protected boolean           error           = false;
-    protected Map<File, Node>   modules         = new ListMap<>();
-    protected Map<String, Node> modulesByName   = new HashMap<>();
+    protected String[]              args            = null;
+    protected List<File>            sources         = new ArrayList<>();
+    protected Options               opts            = new Options();
+    protected List<String>          deferred        = new ArrayList<>();
+    protected boolean               error           = false;
+    protected Map<File, Node>       modules         = new ListMap<>();
+    protected Map<String, Compiler> modulesByName   = new HashMap<>();
+    protected BuildRepository       repoBuild       = new BuildRepository();
+    protected ModuleRepository      repoPath;
+    protected ModuleRepository      repoResult;
 
     public static void main(String[] args)
             throws Exception
@@ -103,6 +108,8 @@ public class CommandLine
         cmd.checkTerminalFailure();
         cmd.showCompilerOptions();
 
+        cmd.configureRepository();
+
         // what are the modules that need to be compiled?
         cmd.selectCompileTargets();
         cmd.checkTerminalFailure();
@@ -112,11 +119,13 @@ public class CommandLine
         cmd.checkTerminalFailure();
 
         // assign names
-        cmd.arrangeSourceByName();
+        cmd.populateTypeNamespace();
+        cmd.checkCompilerErrors();
         cmd.checkTerminalFailure();
 
         // syntax check
-        cmd.checkSyntax();
+        cmd.populateMembersNamespace();
+        cmd.checkCompilerErrors();
         cmd.checkTerminalFailure();
 
         // dependency resolution
@@ -350,6 +359,35 @@ public class CommandLine
         }
 
     /**
+     * Configure the repositories to use to read and write module files.
+     */
+    void configureRepository()
+        {
+        List<File> path = opts.modulePath;
+        if (path != null && !path.isEmpty())
+            {
+            ModuleRepository[] repos = new ModuleRepository[path.size() + 1];
+            repos[0] = repoBuild;
+            for (int i = 0, c = path.size(); i < c; ++i)
+                {
+                File file = path.get(i);
+                repos[i+1] = file.isDirectory() ? new DirRepository(file, true) : new FileRepository(file, true);
+                }
+            repoPath = new LinkedRepository(repos);
+            }
+        else
+            {
+            repoPath = repoBuild;
+            }
+
+        File file = opts.destination;
+        if (file != null)
+            {
+            repoResult = file.isDirectory() ? new DirRepository(file, false) : new FileRepository(file, false);
+            }
+        }
+
+    /**
      * Select the modules to compile.
      */
     protected void selectCompileTargets()
@@ -575,9 +613,10 @@ public class CommandLine
         }
 
     /**
-     * Parse all of the source code that needs to be compiled.
+     * Link all of the AST objects for each module into a single parse tree, and start the
+     * compilation by populating the global type namespace.
      */
-    protected void arrangeSourceByName()
+    protected void populateTypeNamespace()
         {
         for (Node module : modules.values())
             {
@@ -590,7 +629,6 @@ public class CommandLine
                 continue;
                 }
 
-            modulesByName.put(name, module);
 
             // when there are multiple files, they have to all be linked together as a giant parse
             // tree
@@ -600,26 +638,26 @@ public class CommandLine
                 }
 
             // create a module/package/class structure for each dir/file node in the "module tree"
-            module.getType().createModuleStructure(module.getErrorList());
-            module.checkErrors();
+            Compiler      compiler = new Compiler(repoPath, module.getType(), module.getErrorList());
+            FileStructure struct   = compiler.generateInitialFileStructure();
+            assert struct != null;
+            modulesByName.put(name, compiler);
             }
         }
 
-    protected void checkSyntax()
+    protected void populateMembersNamespace()
         {
-        for (Node module : modules.values())
+        for (Compiler compiler : modulesByName.values())
             {
-            module.checkSyntax();
-            module.checkErrors();
+            compiler.populateMembers();
             }
         }
 
     protected void resolveDependencies()
         {
-        for (Node module : modules.values())
+        for (Compiler compiler : modulesByName.values())
             {
-            module.resolveDependencies();
-            module.checkErrors();
+            // TODO compiler.doSomeNextStep();
             }
         }
 
@@ -627,46 +665,46 @@ public class CommandLine
         {
         for (Node module : modules.values())
             {
-            // figure out where to put the resulting module
-            File file = opts.destination;
-            if (file == null)
+            if (repoResult != null)
                 {
-                file = module.getFile();
+                repoResult.storeModule((ModuleStructure) module.getType().getStructure());
+                }
+            else
+                {
+                // figure out where to put the resulting module
+                File file = module.getFile();
                 if (file.isFile())
                     {
                     file = file.getParentFile();
                     }
-                }
 
-            // at this point, we either have a directory or a file to put it in; resolve that to
-            // an actual compiled module file name
-            if (file.isDirectory())
-                {
-                String sName = module.name();
-                int    ofDot = sName.indexOf('.');
-                if (ofDot > 0)
+                // at this point, we either have a directory or a file to put it in; resolve that to
+                // an actual compiled module file name
+                if (file.isDirectory())
                     {
-                    sName = sName.substring(0, ofDot);
+                    String sName = module.name();
+                    int ofDot = sName.indexOf('.');
+                    if (ofDot > 0)
+                        {
+                        sName = sName.substring(0, ofDot);
+                        }
+                    file = new File(file, sName + ".xtc");
                     }
-                file = new File(file, sName + ".xtc");
-                }
 
-            FileStructure struct = module.getType().getStructure().getFileStructure();
-
-            // TODO - build the module
-
-            try
-                {
-                struct.writeTo(file);
+                FileStructure struct = module.getType().getStructure().getFileStructure();
+                try
+                    {
+                    struct.writeTo(file);
+                    }
+                catch (IOException e)
+                    {
+                    deferred.add("xtc: Exception (" + e
+                            + ") occurred while attempting to write module file \""
+                            + file.getAbsolutePath() + "\"");
+                    error = true;
+                    }
+                module.checkErrors();
                 }
-            catch (IOException e)
-                {
-                deferred.add("xtc: Exception (" + e
-                        + ") occurred while attempting to write module file \""
-                        + file.getAbsolutePath() + "\"");
-                error = true;
-                }
-            module.checkErrors();
             }
         }
 
@@ -687,29 +725,19 @@ public class CommandLine
         else
             {
             out("xtc: dump modules by name:");
-            for (Map.Entry<String, Node> entry : modulesByName.entrySet())
+            for (Map.Entry<String, Compiler> entry : modulesByName.entrySet())
                 {
-                Node node = entry.getValue();
-                out(node);
-
-                TypeCompositionStatement type = node.getType();
-                if (type != null)
-                    {
-                    out();
-                    out(type);
-
-                    out();
-                    type.dump();
-                    }
-
-                StructureContainer struct = node.getType().getStructure();
-                if (struct != null)
-                    {
-                    out();
-                    out(struct.getFileStructure().toDebugString());
-                    out();
-                    struct.getFileStructure().dump(new PrintWriter(System.out, true));
-                    }
+                Compiler compiler = entry.getValue();
+                out("Compiler: " + compiler);
+                out();
+                out("Module:");
+                out(compiler.getModule());
+                out();
+                out("Module dump:");
+                compiler.getModule().dump();
+                out();
+                out("File Structure:");
+                out(compiler.getFileStructure().toDebugString());
                 }
             }
         }
@@ -744,6 +772,26 @@ public class CommandLine
         deferred.clear();
         }
 
+    public void checkCompilerErrors()
+        {
+        for (Compiler compiler : modulesByName.values())
+            {
+            ErrorList errs = (ErrorList) compiler.getErrorListener();
+            if (!errs.getErrors().isEmpty() && errs.getSeverity().ordinal() >= opts.badEnoughToPrint().ordinal())
+                {
+                out("xtc: Errors in " + compiler.getModule().getName());
+                int i = 0;
+                for (ErrorList.ErrorInfo err : errs.getErrors())
+                    {
+                    out(" [" + (i++) + "] " + err);
+                    }
+
+                error |= errs.getSeverity().ordinal() >= opts.badEnoughToQuit().ordinal();
+                errs.clear();
+                }
+            }
+        }
+
 
     // ----- inner class: Progress -----------------------------------------------------------------
 
@@ -763,8 +811,6 @@ public class CommandLine
         String name();
         String descriptiveName();
         TypeCompositionStatement getType();
-        void checkSyntax();
-        void resolveDependencies();
         ErrorList getErrorList();
         void checkErrors();
         }
@@ -955,44 +1001,6 @@ public class CommandLine
             }
 
         @Override
-        public void checkSyntax()
-            {
-            if (pkgNode != null)
-                {
-                pkgNode.checkSyntax();
-                }
-
-            for (FileNode cmpFile : sources.values())
-                {
-                cmpFile.checkSyntax();
-                }
-
-            for (DirNode child : packages)
-                {
-                child.checkSyntax();
-                }
-            }
-
-        @Override
-        public void resolveDependencies()
-            {
-            if (pkgNode != null)
-                {
-                pkgNode.resolveDependencies();
-                }
-
-            for (FileNode cmpFile : sources.values())
-                {
-                cmpFile.resolveDependencies();
-                }
-
-            for (DirNode child : packages)
-                {
-                child.resolveDependencies();
-                }
-            }
-
-        @Override
         public ErrorList getErrorList()
             {
             if (pkgNode != null)
@@ -1176,18 +1184,6 @@ public class CommandLine
         public TypeCompositionStatement getType()
             {
             return type;
-            }
-
-        @Override
-        public void checkSyntax()
-            {
-            // TODO
-            }
-
-        @Override
-        public void resolveDependencies()
-            {
-            // TODO
             }
 
         @Override

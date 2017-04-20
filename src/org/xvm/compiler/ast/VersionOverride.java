@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Version;
+
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;

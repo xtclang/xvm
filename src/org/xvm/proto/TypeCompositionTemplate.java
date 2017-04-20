@@ -8,7 +8,6 @@ import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xObject;
-import org.xvm.runtime.Service;
 import org.xvm.util.ListMap;
 
 import java.util.Arrays;

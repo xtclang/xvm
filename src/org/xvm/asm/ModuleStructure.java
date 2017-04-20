@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import java.util.Collections;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -112,7 +111,7 @@ public class ModuleStructure
                 sb.append("none");
                 break;
             case 1:
-                sb.append(setVer.iterator().next().getVersionString());
+                sb.append(setVer.iterator().next().getValueString());
                 break;
             default:
                 sb.append("multiple");
@@ -175,13 +174,13 @@ public class ModuleStructure
      * @throws IllegalStateException if this module structure has more than one
      *         version label
      */
-    public void labelModuleVersion(VersionConstant ver)
+    public void labelModuleVersion(Version ver)
         {
         SortedSet<VersionConstant> setVer = m_setVer;
         if (setVer.size() <= 1)
             {
             setVer.clear();
-            setVer.add(ver);
+            setVer.add(asConst(ver));
             markModified();
             }
         else
@@ -232,7 +231,6 @@ public class ModuleStructure
                     + " does not contain a version label");
             }
 
-
         SortedSet<VersionConstant> setThisVer = this.m_setVer;
         SortedSet<VersionConstant> setThatVer = that.m_setVer;
         for (VersionConstant ver : setThatVer)
@@ -258,7 +256,7 @@ public class ModuleStructure
      * @throws IllegalArgumentException if the specified version label does
      *         not exist within this module structure
      */
-    public void purgeVersion(VersionConstant ver)
+    public void purgeVersion(Version ver)
         {
         if (ver == null)
             {
@@ -266,7 +264,31 @@ public class ModuleStructure
             }
 
         SortedSet<VersionConstant> setVer = m_setVer;
-        if (!setVer.contains(ver))
+        VersionConstant verConst = asConst(ver);
+        if (!setVer.contains(verConst))
+            {
+            throw new IllegalArgumentException("version (" + ver  + ") does not exist in this module");
+            }
+
+        if (setVer.size() == 1)
+            {
+            // TODO - actual remove processing
+            }
+
+        setVer.remove(verConst);
+        markModified();
+        }
+
+    public void purgeAllExceptVersion(Version ver)
+        {
+        if (ver == null)
+            {
+            throw new IllegalArgumentException("version required");
+            }
+
+        SortedSet<VersionConstant> setVer = m_setVer;
+        VersionConstant verConst = asConst(ver);
+        if (!setVer.contains(verConst))
             {
             throw new IllegalArgumentException("version (" + ver  + ") does not exist in this module");
             }
@@ -276,7 +298,8 @@ public class ModuleStructure
             // TODO - actual remove processing
             }
 
-        setVer.remove(ver);
+        setVer.clear();
+        setVer.add(verConst);
         markModified();
         }
 
@@ -304,6 +327,11 @@ public class ModuleStructure
         return m_setVer.contains(ver);
         }
 
+    public boolean containsVersion(Version ver)
+        {
+        return containsVersion(asConst(ver));
+        }
+
     /**
      * Determine if the specified version of the module is supported by a
      * version label that is within this module structure.
@@ -313,16 +341,22 @@ public class ModuleStructure
      *
      * @return true if this module structure supports the specified version
      */
-    public boolean supportsVersion(VersionConstant ver, boolean fExact)
+    public boolean supportsVersion(Version ver, boolean fExact)
         {
-        if (m_setVer.contains(ver))
+        if (m_setVer.contains(asConst(ver)))
             {
             return true;
             }
 
         if (!fExact)
             {
-            // TODO is there a version that supports the specified version?
+            for (VersionConstant verSupported : m_setVer)
+                {
+                if (asVer(verSupported).isDerivedFrom(ver))
+                    {
+                    return true;
+                    }
+                }
             }
 
         return false;
@@ -337,11 +371,25 @@ public class ModuleStructure
      *         structure does not contain version information (the module
      *         information in the module structure is not version labeled)
      */
-    public SortedSet<VersionConstant> getVersions()
+    public SortedSet<Version> getVersions()
         {
-        return Collections.unmodifiableSortedSet(m_setVer);
+        SortedSet<Version> vers = new TreeSet<>();
+        for (VersionConstant ver : m_setVer)
+            {
+            vers.add(asVer(ver));
+            }
+        return vers;
         }
 
+    VersionConstant asConst(Version ver)
+        {
+        return ver == null ? null : getConstantPool().ensureVersionConstant(ver);
+        }
+
+    Version asVer(VersionConstant ver)
+        {
+        return ver == null ? null : ver.getVersion();
+        }
 
     // ----- data members ------------------------------------------------------
 

@@ -2,8 +2,8 @@ package org.xvm.compiler;
 
 
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.ModuleRepository;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 
@@ -20,32 +20,81 @@ public class Compiler
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public Compiler(TypeCompositionStatement module, ErrorListener listener)
+    public Compiler(ModuleRepository repos, TypeCompositionStatement module, ErrorListener listener)
         {
+        assert repos != null;
         assert module != null;
         assert listener != null;
         assert module.getCategory().getId() == Token.Id.MODULE;
 
-        m_module        = module;
-        m_errorListener = listener;
+        m_repos  = repos;
+        m_module = module;
+        m_errs   = listener;
+        }
+
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the TypeCompositionStatement for the module
+     */
+    public TypeCompositionStatement getModule()
+        {
+        return m_module;
+        }
+
+    /**
+     * @return the ErrorListener that the compiler reports errors to
+     */
+    public ErrorListener getErrorListener()
+        {
+        return m_errs;
+        }
+
+    /**
+     * @return the FileStructure if it has been created
+     */
+    public FileStructure getFileStructure()
+        {
+        return m_struct;
         }
 
 
     // ----- public API ----------------------------------------------------------------------------
 
     /**
-     * Create a FileStructure that represents the module, its packages, their classes, their nested
-     * classes (recursively), plus the names of properties and methods within each of those.
+     * First pass: Create a FileStructure that represents the module, its packages, their classes,
+     * their nested classes (recursively), plus the names of properties and methods within each of
+     * those.
      * <p/>
-     * This method operates without any external dependencies.
+     * This method is not permitted to use the ModuleRepository.
+     * <p/>
+     * Any error results are logged to the ErrorListener.
      *
-     * @return a FileStructure
+     * @return the initial file structure
      */
-    FileStructure generateInitialFileStructure()
+    public FileStructure generateInitialFileStructure()
         {
-        FileStructure struct = m_module.createModuleStructure(m_errorListener);
-        // TODO ?
-        return struct;
+        m_struct = m_module.createModuleStructure(m_errs);
+        return m_struct;
+        }
+
+    /**
+     * Second pass: Add the properties, methods, and the remainder of the classes that are located
+     * within the properties and methods to the existing FileStructure.
+     * <p/>
+     * This method uses the ModuleRepository to obtain type resolution information from other
+     * modules. Specifically, type resolution information is the same set of information that was
+     * produced by the first pass of this compiler, which allows two different modules with
+     * co-dependencies to be jointly compiled.
+     * <p/>
+     * Any error results are logged to the ErrorListener.
+     *
+     * @return the FileStructure with the methods and properties added
+     */
+    public void populateMembers()
+        {
+        // TODO - this is the next project to do
         }
 
 
@@ -72,12 +121,23 @@ public class Compiler
     // ----- data members --------------------------------------------------------------------------
 
     /**
-     * The Source to parse.
+     * The module repository to use.
+     */
+    private final ModuleRepository m_repos;
+
+    /**
+     * The TypeCompositionStatement for the module being compiled. This is an object returned from
+     * the Parser, or one assembled from multiple objects returned from the Parser.
      */
     private final TypeCompositionStatement m_module;
 
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errorListener;
+    private final ErrorListener m_errs;
+
+    /**
+     * The FileStructure that this compiler is putting together in a series of passes.
+     */
+    private FileStructure m_struct;
     }

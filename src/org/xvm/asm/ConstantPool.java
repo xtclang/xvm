@@ -248,7 +248,7 @@ public class ConstantPool
         return constant;
         }
 
-    public VersionConstant ensureVersionConstant()
+    public VersionConstant ensureVersionConstant(Version ver)
         {
         // TODO VersionConstant(ConstantPool pool, VersionConstant constBaseVer, int nVer, boolean fDot, String sDesc)
         return null;
@@ -1472,6 +1472,7 @@ public class ConstantPool
     // ----- inner class: VersionConstant --------------------------------------
 
     /**
+     * TODO update comment
      * Represent a version number. A version is either a base version, the
      * subsequent version of another version, or an revision of another version.
      * A version number is represented as a dot-delimited string of integer
@@ -1523,30 +1524,21 @@ public class ConstantPool
                 throws IOException
             {
             super(pool);
-            m_iBase = readIndex(in);
-            m_nVer  = readMagnitude(in);
-            m_fDot  = in.readBoolean();
+            m_iVer = readIndex(in);
             }
 
         /**
          * Construct a constant whose value is a PackedInteger.
          *
-         * @param pool          the ConstantPool that will contain this Constant
-         * @param constBaseVer  the optional version that is the base version
-         *                      for this version
-         * @param nVer          the least significant version identifier for
-         *                      this version
-         * @param fDot          true if this is a "dot version" of the base
-         *                      version; false if this is the next version of
-         *                      the base version
+         * @param pool  the ConstantPool that will contain this Constant
+         * @param ver   the version
          */
-        protected VersionConstant(ConstantPool pool, VersionConstant constBaseVer, int nVer, boolean fDot)
+        protected VersionConstant(ConstantPool pool, Version ver)
             {
             super(pool);
 
-            m_constBaseVer = constBaseVer;
-            m_nVer         = nVer;
-            m_fDot         = fDot;
+            assert ver != null;
+            m_ver = ver;
             }
 
         @Override
@@ -1564,7 +1556,7 @@ public class ConstantPool
         @Override
         public Object getLocator()
             {
-            return getVersionString();
+            return m_ver.toString();
             }
 
         @Override
@@ -1572,13 +1564,13 @@ public class ConstantPool
                 throws IOException
             {
             final ConstantPool pool = getConstantPool();
-            m_constBaseVer = (VersionConstant) pool.getConstant(m_iBase);
+            m_ver = new Version(((CharStringConstant) pool.getConstant(m_iVer)).getValue());
             }
 
         @Override
         protected void registerConstants(ConstantPool pool)
             {
-            m_constBaseVer = (VersionConstant) pool.register(m_constBaseVer);
+            pool.register(pool.ensureCharStringConstant(m_ver.toString()));
             }
 
         @Override
@@ -1586,52 +1578,19 @@ public class ConstantPool
                 throws IOException
             {
             out.writeByte(getFormat().ordinal());
-
-            writePackedLong(out, m_constBaseVer == null ? -1 : m_constBaseVer.getPosition());
-            writePackedLong(out, m_nVer);
-            out.writeBoolean(m_fDot);
+            writePackedLong(out, getConstantPool().ensureCharStringConstant(m_ver.toString()).getPosition());
             }
 
         @Override
         protected int compareDetails(Constant that)
             {
-            VersionConstant vThat       = (VersionConstant) that;
-            int             cDepthThis  = this.getVersionDepth();
-            int             cDepthThat  = vThat.getVersionDepth();
-            int             cDepthDelta = cDepthThis - cDepthThat;
-            if (cDepthDelta != 0)
-                {
-                if (cDepthDelta < 0)
-                    {
-                    // e.g. 1.2 vs. 1.2.3
-                    int nResult = this.compareDetails(vThat.getUpVersion());
-                    return nResult == 0 && vThat.m_nVer > 0 ? cDepthDelta : nResult;
-                    }
-                else
-                    {
-                    // e.g. 1.2.3 vs. 1.2
-                    int nResult = this.getUpVersion().compareDetails(vThat);
-                    return nResult == 0 && this.m_nVer > 0 ? cDepthDelta : nResult;
-                    }
-                }
-
-            if (cDepthThis > 0)
-                {
-                int nResult = getUpVersion().compareDetails(vThat.getUpVersion());
-                if (nResult != 0)
-                    {
-                    return nResult;
-                    }
-                }
-
-            // all "up versions" are identical; compare this version
-            return this.m_nVer - vThat.m_nVer;
+            return this.m_ver.compareTo(((VersionConstant) that).m_ver);
             }
 
         @Override
         public String getValueString()
             {
-            return getVersionString();
+            return m_ver.toString();
             }
 
         @Override
@@ -1643,107 +1602,7 @@ public class ConstantPool
         @Override
         public int hashCode()
             {
-            return getVersionString().hashCode();
-            }
-
-        /**
-         * Populate the lazily populated fields.
-         */
-        private void ensureCache()
-            {
-            if (m_iBase > 0 && m_constBaseVer == null)
-                {
-                // ensureCache can't be called before disassemble is called;
-                // this should only be possible while debugging or similar
-                return;
-                }
-
-            if (m_sVer == null)
-                {
-                VersionConstant constFirstNestedVer = this;
-                while (constFirstNestedVer != null && !constFirstNestedVer.m_fDot)
-                    {
-                    constFirstNestedVer = constFirstNestedVer.m_constBaseVer;
-                    }
-
-                VersionConstant constUpVer = constFirstNestedVer == null
-                        ? null
-                        : constFirstNestedVer.m_constBaseVer;
-
-                String sThisVer = String.valueOf(m_nVer);
-                if (constUpVer == null)
-                    {
-                    m_sVer   = sThisVer;
-                    m_cDepth = 0;
-                    }
-                else
-                    {
-                    m_sVer       = constUpVer.getVersionString() + '.' + sThisVer;
-                    m_cDepth     = constUpVer.getVersionDepth() + 1;
-                    m_constUpVer = constUpVer;
-                    }
-                }
-            }
-
-        /**
-         * Obtain the least significant version indicator for this version that
-         * differentiates it from its base version.
-         *
-         * @return the least significant version indicator of this version
-         */
-        public int getVersionNumber()
-            {
-            return m_nVer;
-            }
-
-        /**
-         * Determine if this version adds a dot to its base version, or if it
-         * simply is an increment to the base version.
-         *
-         * @return true iff this version adds a dot to its base version
-         */
-        public boolean isDotVersion()
-            {
-            return m_fDot;
-            }
-
-        /**
-         * Determine how deep this version is in the version hierarchy. In
-         * simple terms, the depth is equal to the number of dots in the version
-         * string.
-         *
-         * @return the depth of this version in the version hierarchy
-         */
-        public int getVersionDepth()
-            {
-            ensureCache();
-            return m_cDepth;
-            }
-
-        /**
-         * Determine the VersionConstant that this VersionConstant represents a
-         * "dot" version of.
-         *
-         * @return the version that this version is a "dot" version of, or null
-         *         if this version represents the most significant version
-         *         indicator (a version depth of 0)
-         */
-        public VersionConstant getUpVersion()
-            {
-            ensureCache();
-            return m_constUpVer;
-            }
-
-        /**
-         * Determine the VersionConstant that this VersionConstant represents an
-         * increment of.
-         *
-         * @return the version that this version is an increment of, or null if
-         *         this version is a "dot" version
-         */
-        public VersionConstant getLeftVersion()
-            {
-            return m_fDot ? null : m_constBaseVer;
+            return m_ver.hashCode();
             }
 
         /**
@@ -1751,51 +1610,21 @@ public class ConstantPool
          *
          * @return the fully qualified version number
          */
-        public String getVersionString()
+        public Version getVersion()
             {
-            ensureCache();
-            return m_sVer;
+            return m_ver;
             }
 
         /**
          * During disassembly, this holds the index of the constant that
-         * specifies the base version for this version.
+         * specifies the version String for this version.
          */
-        private int m_iBase;
+        private int m_iVer;
 
         /**
          * The version indicator for this version.
          */
-        private int m_nVer;
-
-        /**
-         * True means that this is a "dot" version of the base; false means that
-         * this version is subsequent to the base version.
-         */
-        private boolean m_fDot;
-
-        /**
-         * The constant that represents the base for this version.
-         */
-        private VersionConstant m_constBaseVer;
-
-        /**
-         * The formatted version string, composed of dot-delimited version
-         * indicators from most to least significant.
-         */
-        private transient String m_sVer;
-
-        /**
-         * Lazily calculated version depth, which is the number of "up" versions
-         * that this VersionConstant has.
-         */
-        private transient int m_cDepth;
-
-        /**
-         * Lazily calculated "up" version, which is the version that this
-         * VersionConstant is a "dot" version of.
-         */
-        private transient VersionConstant m_constUpVer;
+        private Version m_ver;
         }
 
 

@@ -1,6 +1,7 @@
 package org.xvm.compiler;
 
 
+import org.xvm.asm.Version;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.*;
 
@@ -3740,8 +3741,7 @@ s     *
      */
     Version parseVersion(boolean required)
         {
-        Version version = null;
-        Token   token   = match(Id.LIT_STRING, required);
+        Token token = match(Id.LIT_STRING, required);
         if (token != null)
             {
             String[] parts = parseDelimitedString((String) token.getValue(), '.');
@@ -3752,14 +3752,14 @@ s     *
                 if (!Version.isValidVersionPart(parts[i], i == c-1))
                     {
                     log(Severity.ERROR, BAD_VERSION, null, token.getStartPosition(), token.getEndPosition());
-                    break;
+                    return new Version("0");
                     }
                 }
 
-            // return a version even if the version is crap
-            version = new Version(token);
+            return new Version((String) token.getValue());
             }
-        return version;
+
+        return null;
         }
 
     /**

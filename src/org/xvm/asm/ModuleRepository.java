@@ -2,8 +2,7 @@ package org.xvm.asm;
 
 
 import java.util.Set;
-
-import org.xvm.asm.ConstantPool.VersionConstant;
+import java.util.TreeSet;
 
 
 /**
@@ -18,7 +17,20 @@ public interface ModuleRepository
      *
      * @return a set of domain names
      */
-    public Set<String> getDomainNames();
+    default public Set<String> getDomainNames()
+        {
+        Set<String> modules = getModuleNames();
+        Set<String> domains = new TreeSet<>();
+        for (String module : modules)
+            {
+            int of = module.indexOf('.');
+            if (of >= 0)
+                {
+                domains.add(module.substring(of + 1));
+                }
+            }
+        return domains;
+        }
 
     /**
      * For a specified domain name, obtain a set of qualified module names
@@ -28,7 +40,17 @@ public interface ModuleRepository
      *
      * @return a set of qualified module names
      */
-    public Set<String> getModuleNames(String sDomain);
+    default public Set<String> getModuleNames(String sDomain)
+        {
+        Set<String> modules = getModuleNames();
+        Set<String> names = new TreeSet<>();
+        for (String module : modules)
+            {
+            int of = module.indexOf('.');
+            names.add(of < 0 ? module : module.substring(0, of));
+            }
+        return names;
+        }
 
     /**
      * Obtain a set of all of the qualified module names known by this
@@ -45,9 +67,13 @@ public interface ModuleRepository
      *
      * @return a non-null set of versions available for the specified module;
      *         note that the set may contain a null value, indicating a
-     *         versionless module
+     *         versionless module; or null if the module does not exist
      */
-    public Set<VersionConstant> getAvailableVersions(String sModule);
+    default public Set<Version> getAvailableVersions(String sModule)
+        {
+        ModuleStructure module = loadModule(sModule);
+        return module == null ? null : module.getVersions();
+        }
 
     /**
      * Load the specified module.
@@ -68,7 +94,57 @@ public interface ModuleRepository
      *
      * @return a ModuleStructure, or null if the specified module is unavailable
      */
-    public ModuleStructure loadModule(String sModule, VersionConstant version, boolean fExact);
+    default public ModuleStructure loadModule(String sModule, Version version, boolean fExact)
+        {
+        ModuleStructure module = loadModule(sModule);
+        if (module == null)
+            {
+            return null;
+            }
+
+        Version useVersion = null;
+        if (module.containsVersion(version))
+            {
+            useVersion = version;
+            }
+        else
+            {
+            // check each version in the module to see if it would work; keep the most appropriate one
+            for (Version possibleVer : module.getVersions())
+                {
+                if (possibleVer.isDerivedFrom(version))
+                    {
+                    if (version.isDerivedFrom(possibleVer))
+                        {
+                        // use that version; it's the same as this version (except for .0 etc.)
+                        useVersion = possibleVer;
+                        break;
+                        }
+
+                    if (!fExact)
+                        {
+                        if (useVersion == null || useVersion.isDerivedFrom(possibleVer))
+                            {
+                            // use the oldest available version that matches
+                            useVersion = possibleVer;
+                            }
+                        }
+                    }
+                }
+
+            if (useVersion == null)
+                {
+                return null;
+                }
+            }
+
+        if (module.getVersions().size() > 1)
+            {
+            module.purgeAllExceptVersion(useVersion);
+            }
+
+        return module;
+        }
 
     /**
      * Store the specified module in the repository.
