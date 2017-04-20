@@ -13,28 +13,34 @@ import org.xvm.proto.TypeCompositionTemplate;
  */
 public class Neg extends OpInvocable
     {
-    private final int f_nTargetValue;
+    private final int f_nArgValue;
     private final int f_nRetValue;
 
-    public Neg(int nTarget, int nRet)
+    public Neg(int nArg, int nRet)
         {
-        f_nTargetValue = nTarget;
+        f_nArgValue = nArg;
         f_nRetValue = nRet;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-        ObjectHandle[] ahRet = new ObjectHandle[1];
+        ExceptionHandle hException;
+        try
+            {
+            ObjectHandle hTarget = frame.getArgument(f_nArgValue);
 
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        ExceptionHandle hException = template.invokeNeg(frame, hTarget, ahRet);
+            hException = template.invokeNeg(frame, hTarget, null, f_nRetValue);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
+            }
 
         if (hException == null)
             {
-            frame.f_ahVar[f_nRetValue] = ahRet[0];
             return iPC + 1;
             }
         else
@@ -43,5 +49,4 @@ public class Neg extends OpInvocable
             return RETURN_EXCEPTION;
             }
         }
-
     }

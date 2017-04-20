@@ -6,7 +6,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
-import org.xvm.proto.Utils;
 
 /**
  * Get rvalue-target, CONST_PROPERTY, rvalue
@@ -29,23 +28,28 @@ public class Set extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-
-        PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
-
-        ObjectHandle hValue = f_nValue >= 0 ? frame.f_ahVar[f_nValue] :
-                Utils.resolveConst(frame, f_nValue);
-
         ExceptionHandle hException;
+        try
+            {
+            ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
+            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        if (hTarget.isStruct())
-            {
-            hException = template.setField(hTarget, property.f_sName, hValue);
+            PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
+
+            ObjectHandle hValue = frame.getArgument(f_nValue);
+
+            if (hTarget.isStruct())
+                {
+                hException = template.setField(hTarget, property.f_sName, hValue);
+                }
+            else
+                {
+                hException = template.setProperty(property, property.m_templateSet, frame, hTarget, hValue);
+                }
             }
-        else
+        catch (ExceptionHandle.WrapperException e)
             {
-            hException = template.setProperty(property, property.m_templateSet, frame, hTarget, hValue);
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)

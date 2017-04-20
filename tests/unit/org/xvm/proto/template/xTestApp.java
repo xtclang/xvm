@@ -126,19 +126,25 @@ public class xTestApp extends xModule
             new Get(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
             new X_Print(1),
 
+            new NVar(adapter.getClassConstId("x:Function"),
+                     adapter.ensureValueConstantId("fnInc")),   // #2 (fnInc)
+            new MBind(0, -adapter.getMethodConstId("x:TestService", "increment"), 2),
+            new Call_01(2, 1),
+            new X_Print(1),
+
             new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+4}),
             new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
             new X_Print(1),
             new GuardEnd(+4),
-            new Enter(), // #2 (e)
-            new X_Print(2),
+            new Enter(), // #3 (e)
+            new X_Print(3),
             new Exit(),
 
             new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
             new X_Print(1),
             new Return_0(),
             };
-        ftTestService.m_cVars = 3;
+        ftTestService.m_cVars = 4;
         ftTestService.m_cScopes = 2;
 
         // --- testRef()
@@ -180,8 +186,8 @@ public class xTestApp extends xModule
         mtRun.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestApp.run() #")),
-//            new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
-//            new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "testService")),
             new Return_0()

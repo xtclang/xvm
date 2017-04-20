@@ -11,6 +11,7 @@ import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xService;
+import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -90,8 +91,11 @@ public class Container
             ModuleHandle hModule = (ModuleHandle) module.createConstHandle(m_constModule);
             FunctionHandle hFunction = xFunction.makeHandle(mtRun);
 
-            // TODO: create a service handle for "main" service
-            f_contextMain.start(null, "main");
+            TypeComposition clzService = xService.INSTANCE.f_clazzCanonical;
+            ServiceHandle hService = new ServiceHandle(
+                    clzService, clzService.ensurePublicType(), f_contextMain);
+
+            f_contextMain.start(hService, "main");
 
             f_contextMain.sendInvokeRequest(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
                 .whenComplete((ah, x) ->

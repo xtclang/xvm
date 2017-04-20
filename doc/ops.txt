@@ -1,27 +1,27 @@
-0x00 NOP                                                                    ; traditional no-op, which does nothing
-0x01 LINE                                                                   ; advance line counter
-0x02 BREAK                                                                  ; explicit break-point for debugger
-0x03 YIELD                                                                  ; explicit service yield point (check the backlog)
-0x04 ENTER                                                                  ; variable scope begin
-0x05 EXIT                                                                   ; variable scope end
-0x06 GUARD      #handlers:(CONST_CLASS, rel_addr)                           ; try { (+ “catch” addresses)      // note: ENTER
-0x07 ENDGUARD   rel_addr                                                    ; } ...                            // note: EXIT
-0x08 GUARDALL                                                               ; try {                            // note: ENTER
-0x09 FINALLY                                                                ; } finally {                      // note: EXIT, ENTER
-0x0A ENDFINALLY                                                             ; }                                // note: EXIT
-0x0B THROW      rvalue                                                      ; raise exception
-0x0C ASSERT     rvalue                                                      ; assert
-0x0D ASSERT_T   rvalue, CONST_STRING                                        ; assert with assertion text (e.g. assertion expression)
-0x0E ASSERT_V   rvalue, CONST_STRING, #vals(rvalue)                         ; assert with assertion text and variables to print
+0x00 NOP                                                ; traditional no-op, which does nothing
+0x01 LINE                                               ; advance line counter
+0x02 BREAK                                              ; explicit break-point for debugger
+0x03 YIELD                                              ; explicit service yield point (check the backlog)
+0x04 ENTER                                              ; variable scope begin
+0x05 EXIT                                               ; variable scope end
+0x06 GUARD      #handlers:(CONST_CLASS, rel_addr)       ; try { (+ “catch” addresses)      // note: ENTER
+0x07 ENDGUARD   rel_addr                                ; } ...                            // note: EXIT
+0x08 GUARDALL                                           ; try {                            // note: ENTER
+0x09 FINALLY                                            ; } finally {                      // note: EXIT, ENTER
+0x0A ENDFINALLY                                         ; }                                // note: EXIT
+0x0B THROW      rvalue                                  ; raise exception
+0x0C ASSERT     rvalue                                  ; assert
+0x0D ASSERT_T   rvalue, CONST_STRING                    ; assert with assertion text (e.g. assertion expression)
+0x0E ASSERT_V   rvalue, CONST_STRING, #vals(rvalue)     ; assert with assertion text and variables to print
 0x0F __RSVD_0F
 
-0x10 COND       CONST_COND                                                                                       ; specified condition is true        // note: ENTER
-0x11 NCOND      CONST_COND                                                                                       ; specified condition is false        // note: ENTER
-0x12 ACOND                                                                                                       ; assertions enabled                // note: ENTER
-0x13 NACOND                                                                                                      ; assertions not enabled         // ...
-0x14 TCOND                                                                                                       ; test mode enabled (implies assertions enabled)
-0x15 NTCOND                                                                                                      ; test mode not enabled
-0x16 DCOND                                                                                                       ; running in debugger
+0x10 COND       CONST_COND                              ; specified condition is true      // note: ENTER
+0x11 NCOND      CONST_COND                              ; specified condition is false     // note: ENTER
+0x12 ACOND                                              ; assertions enabled               // note: ENTER
+0x13 NACOND                                             ; assertions not enabled           // ...
+0x14 TCOND                                              ; test mode enabled (implies assertions enabled)
+0x15 NTCOND                                             ; test mode not enabled
+0x16 DCOND                                              ; running in debugger
 0x17 NDCOND                                                                                                      ; not running in debugger
 0x18 PCOND      (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY | CONST_STRING)    ; VM-structure or named condition present
 0x19 NPCOND     (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY | CONST_STRING)    ; VM-structure or named condition absent
@@ -30,40 +30,40 @@
 0x1C XCOND      CONST_VER                                                                                        ; XVM of a (>=) specified version (>=)
 0x1D NXCOND     CONST_VER                                                                                        ;          (<)
 0x1E __RSVD_1E
-0x1F END_COND                                                                                                        ; end conditional block                // note: EXIT
+0x1F END_COND                                                                                                    ; end conditional block         // note: EXIT
 
-0x20 GOTO       abs-addr                                                        ; unconditional absolute jump
-0x21 JMP        rel-addr                                                        ; unconditional relative jump
-0x22 JMP_TRUE   rvalue-bool, rel-addr                                           ; jump if value is true
-0x23 JMP_FALSE  rvalue-bool, rel-addr                                           ; jump if value is false
-0x24 JMP_ZERO   rvalue-int, rel-addr                                            ; jump if value is zero
-0x25 JMP_NZERO  rvalue-int, rel-addr                                            ; jump if value is NOT zero
-0x26 JMP_NULL   rvalue, rel-addr                                                ; jump if value is null
-0x27 JMP_NNULL  rvalue, rel-addr                                                ; jump if value is NOT null
-0x28 JMP_EQ     rvalue, rvalue, rel-addr                                        ; jump if value is equal
-0x29 JMP_NEQ    rvalue, rvalue, rel-addr                                        ; jump if value is NOT equal
-0x2A JMP_LT     rvalue, rvalue, rel-addr                                        ; jump if value is less than
-0x2B JMP_LTE    rvalue, rvalue, rel-addr                                        ; jump if value is less than or equal
-0x2C JMP_GT     rvalue, rvalue, rel-addr                                        ; jump if value is greater than
-0x2D JMP_GTE    rvalue, rvalue, rel-addr                                        ; jump if value is greater than or equal
-0x2E JMP_TYPE   rvalue, rvalue-type, rel-addr                                   ; jump if type of the value is “instanceof" specified type
-0x2F JMP_NTYPE  rvalue, rvalue-type, rel-addr                                   ; jump if type of the value is NOT “instanceof" specified type
+0x20 GOTO       abs-addr                                ; unconditional absolute jump
+0x21 JMP        rel-addr                                ; unconditional relative jump
+0x22 JMP_TRUE   rvalue-bool, rel-addr                   ; jump if value is true
+0x23 JMP_FALSE  rvalue-bool, rel-addr                   ; jump if value is false
+0x24 JMP_ZERO   rvalue-int, rel-addr                    ; jump if value is zero
+0x25 JMP_NZERO  rvalue-int, rel-addr                    ; jump if value is NOT zero
+0x26 JMP_NULL   rvalue, rel-addr                        ; jump if value is null
+0x27 JMP_NNULL  rvalue, rel-addr                        ; jump if value is NOT null
+0x28 JMP_EQ     rvalue, rvalue, rel-addr                ; jump if value is equal
+0x29 JMP_NEQ    rvalue, rvalue, rel-addr                ; jump if value is NOT equal
+0x2A JMP_LT     rvalue, rvalue, rel-addr                ; jump if value is less than
+0x2B JMP_LTE    rvalue, rvalue, rel-addr                ; jump if value is less than or equal
+0x2C JMP_GT     rvalue, rvalue, rel-addr                ; jump if value is greater than
+0x2D JMP_GTE    rvalue, rvalue, rel-addr                ; jump if value is greater than or equal
+0x2E JMP_TYPE   rvalue, rvalue-type, rel-addr           ; jump if type of the value is “instanceof" specified type
+0x2F JMP_NTYPE  rvalue, rvalue-type, rel-addr           ; jump if type of the value is NOT “instanceof" specified type
 
-0x30 MATCH_2    rvalue, CONST_*, rel-addr, CONST_*, rel-addr                    ; if the value equals one of the two constants, jump accordingly
-0x31 MATCH_3    rvalue, CONST_*, rel-addr, CONST_*, rel-addr, CONST_*, rel-addr ; if the value equals one of the three constants, jump accordingly
-0x32 MATCH_N    rvalue, #opts:(CONST_*, rel-addr)                               ; if the value equals one of the N constants, jump accordingly
-0x33 VAR        CONST_CLASS                                                     ; next register is an uninitialized anonymous variable
-0x34 IVAR       CONST_CLASS, CONST_*                                            ; next register is an initialized anonymous variable
-0x35 NVAR       CONST_CLASS, CONST_STRING                                       ; next register is an uninitialized named variable
-0x36 INVAR      CONST_CLASS, CONST_STRING, CONST_*                              ; next register is an initialized named variable
-0x37 REF        lvalue                                                          ; next register represents the Variable ref for the specified variable
-0x38 CREF       rvalue                                                          ; next register represents the @ro Variable ref for the specified variable
-0x39 CAST       rvalue, CONST_CLASS                                             ; next register holds the type-casted value
-0x3A MOV        rvalue-src, lvalue-dest                                         ; move source value to destination
-0x3B MOV_REF    lvalue-src, lvalue-dest                                         ; move reference-to-source to destination
-0x3C MOV_CREF   rvalue-src, lvalue-dest                                         ; move reference-to-source to destination
-0x3D MOV_CAST   rvalue-src, lvalue-dest, CONST_CLASS                            ; move type-casted source reference to destination
-0x3E SWAP       lvalue, lvalue                                                  ; swap source and destination values
+0x30 VAR        CONST_CLASS                             ; next register is an uninitialized anonymous variable
+0x31 IVAR       CONST_CLASS, CONST_*                    ; next register is an initialized anonymous variable
+0x32 NVAR       CONST_CLASS, CONST_STRING               ; next register is an uninitialized named variable
+0x33 INVAR      CONST_CLASS, CONST_STRING, CONST_*      ; next register is an initialized named variable
+0x34 DVAR       CONST_REF_CLASS                         ; next register is an anonymous "dynamic reference" variable
+0x35 DNVAR      CONST_REF_CLASS, CONST_STRING           ; next register is a named "dynamic reference" variable
+0x36 REF        lvalue                                  ; next register represents the Variable ref for the specified variable
+0x37 CREF       rvalue                                  ; next register represents the @ro Variable ref for the specified variable
+0x38 CAST       rvalue, CONST_CLASS                     ; next register holds the type-casted value
+0x39 MOV        rvalue-src, lvalue-dest                 ; move source value to destination
+0x3A MOV_REF    lvalue-src, lvalue-dest                 ; move reference-to-source to destination
+0x3B MOV_CREF   rvalue-src, lvalue-dest                 ; move reference-to-source to destination
+0x3C MOV_CAST   rvalue-src, lvalue-dest, CONST_CLASS    ; move type-casted source reference to destination
+0x3D SWAP       lvalue, lvalue                          ; swap source and destination values
+0x3E __RSVD_3E
 0x3F __RSVD_3F
 
 TODO DUP
@@ -190,12 +190,11 @@ TODO DUP
 TODO is a service?
 TODO is a const?
 TODO is immutable?
-
-0xB0 RTYPE_1 CLASS_CONST, rvalue-type, lvalue-return                   ; resolve generic type; lvalue-return - a Type object
+0xB0 RTYPE_1 CLASS_CONST, rvalue-type, lvalue-return                            ; resolve generic type; lvalue-return - a Type object
 0xB1 RTYPE_N CLASS_CONST, #type-params:(rvalue-type), lvalue-return
-0xB2
-0xB3
-0xB4
+0xB2 MATCH_2    rvalue, CONST_*, rel-addr, CONST_*, rel-addr                    ; if the value equals one of the two constants, jump accordingly
+0xB3 MATCH_3    rvalue, CONST_*, rel-addr, CONST_*, rel-addr, CONST_*, rel-addr ; if the value equals one of the three constants, jump accordingly
+0xB4 MATCH_N    rvalue, #opts:(CONST_*, rel-addr)                               ; if the value equals one of the N constants, jump accordingly
 0xB5
 0xB6
 0xB7

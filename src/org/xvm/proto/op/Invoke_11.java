@@ -32,43 +32,56 @@ public class Invoke_11 extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-
-        MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
-
-        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
-                Utils.resolveConst(frame, f_nArgValue);
-
-        ObjectHandle[] ahReturn;
         ExceptionHandle hException;
 
-        if (method.isNative())
+        try
             {
-            ahReturn = new ObjectHandle[1];
-            hException = template.invokeNative11(frame, hTarget, method, hArg, ahReturn);
-            }
-        else if (template.isService())
-            {
-            hException = xFunction.makeAsyncHandle(method).
-                    call(frame, new ObjectHandle[]{hTarget, hArg}, ahReturn = new ObjectHandle[1]);
-            // TODO: match up
-            }
-        else
-            {
-            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-            ahVar[1] = hArg;
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
 
-            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-            ahReturn = frameNew.f_ahReturn;
-            hException = frameNew.execute();
+            MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
+
+            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+
+            if (method.isNative())
+                {
+                hException = template.invokeNative11(frame, hTarget, method, hArg, null, f_nRetValue);
+                }
+            else if (template.isService())
+                {
+                ObjectHandle[] ahReturn = new ObjectHandle[1];
+
+                hException = xFunction.makeAsyncHandle(method).
+                        call(frame, new ObjectHandle[]{hTarget, hArg}, ahReturn);
+
+                if (hException == null)
+                    {
+                    hException = frame.assignValue(f_nRetValue, ahReturn[0]);
+                    }
+                }
+            else
+                {
+                ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+                ahVar[1] = hArg;
+
+                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+
+                hException = frameNew.execute();
+
+                if (hException == null)
+                    {
+                    hException = frame.assignValue(f_nRetValue, frameNew.f_ahReturn[0]);
+                    }
+                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)
             {
-            frame.f_ahVar[f_nRetValue] = ahReturn[0];
             return iPC + 1;
             }
         else
@@ -77,5 +90,4 @@ public class Invoke_11 extends OpInvocable
             return RETURN_EXCEPTION;
             }
         }
-
     }

@@ -32,15 +32,26 @@ public class Call_01 extends OpCallable
 
         if (f_nFunctionValue == A_SUPER)
             {
-            hException = callSuper01(frame, frame.f_ahVar, f_nRetValue);
+            hException = callSuper01(frame, f_nRetValue);
             }
         else if (f_nFunctionValue >= 0)
             {
-            FunctionHandle function = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
-            ObjectHandle[] ahReturn = new ObjectHandle[1];
+            try
+                {
+                FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+                ObjectHandle[] ahReturn = new ObjectHandle[1];
 
-            hException = function.call(frame, Utils.OBJECTS_NONE, ahReturn);
-            frame.f_ahVar[f_nRetValue] = ahReturn[0];
+                hException = function.call(frame, Utils.OBJECTS_NONE, ahReturn);
+
+                if (hException == null)
+                    {
+                    hException = frame.assignValue(f_nRetValue, ahReturn[0]);
+                    }
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                hException = e.getExceptionHandle();
+                }
             }
         else
             {
@@ -51,12 +62,15 @@ public class Call_01 extends OpCallable
             Frame frameNew = frame.f_context.createFrame(frame, function, null, ahVar);
 
             hException = frameNew.execute();
-            frame.f_ahVar[f_nRetValue] = frameNew.f_ahReturn[0];
+
+            if (hException == null)
+                {
+                hException = frame.assignValue(f_nRetValue, frameNew.f_ahReturn[0]);
+                }
             }
 
         if (hException == null)
             {
-            // TODO: match up the return type
             return iPC + 1;
             }
         else

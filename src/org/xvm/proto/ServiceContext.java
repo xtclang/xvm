@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.proto.TypeCompositionTemplate.Access;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -21,10 +22,10 @@ public class ServiceContext
     public final ObjectHeap f_heapGlobal;
     public final ConstantPoolAdapter f_constantPool;
 
-    protected ServiceHandle m_hService;
-    protected ServiceDaemon m_daemon;
+    ServiceHandle m_hService;
+    Frame m_frameCurrent;
 
-    public Frame m_frameCurrent;
+    ServiceDaemon m_daemon;
 
     ServiceContext(Container container)
         {
@@ -58,7 +59,7 @@ public class ServiceContext
 
     public ExceptionHandle start(ServiceHandle hService, String sServiceName)
         {
-        m_hService = hService;
+        m_hService = (ServiceHandle) hService.f_clazz.ensureAccess(hService, Access.Public);
 
         String sThreadName = f_container.m_constModule.getQualifiedName() + "/" + sServiceName;
 

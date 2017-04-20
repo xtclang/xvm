@@ -153,6 +153,13 @@ public class TypeComposition
         throw new IllegalArgumentException("Invalid formal name: " + sFormalName);
         }
 
+    // create an un-initialized handle for this class
+    public ObjectHandle createHandle()
+        {
+        // TODO: ByComposition may not have a single template
+        return f_template.createHandle(this);
+        }
+
     @Override
     public String toString()
         {

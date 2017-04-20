@@ -33,7 +33,7 @@ public class X_Print extends Op
             {
             try
                 {
-                ObjectHandle handle = frame.f_ahVar[nValue].as(ObjectHandle.class);
+                ObjectHandle handle = frame.getArgument(nValue);
                 Frame.VarInfo info = frame.f_aInfo[nValue];
                 if (info != null && info.f_sVarName != null)
                     {

@@ -6,7 +6,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.Utils;
 
 /**
  * NEW_1 CONST-CONSTRUCT, rvalue-param, lvalue-return
@@ -36,16 +35,28 @@ public class New_1 extends OpCallable
         ObjectHandle hNew = template.createStruct();
 
         // call the constructor with this:struct and arg
-        ObjectHandle[] ahVar = new ObjectHandle[constructor.m_cVars];
-        ahVar[0] = hNew;
-        ahVar[1] = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
-                Utils.resolveConst(frame, f_nArgValue);
+        ExceptionHandle hException;
 
-        ExceptionHandle hException = callConstructor(frame, constructor, ahVar);
+        try
+            {
+            ObjectHandle[] ahVar = new ObjectHandle[constructor.m_cVars];
+            ahVar[0] = hNew;
+            ahVar[1] = frame.getArgument(f_nArgValue);
+
+            hException = callConstructor(frame, constructor, ahVar);
+
+            if (hException == null)
+                {
+                hException = frame.assignValue(f_nRetValue, ahVar[0]); // not the same as hNew
+                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
+            }
 
         if (hException == null)
             {
-            frame.f_ahVar[f_nRetValue] = ahVar[0]; // not the same as hNew
             return iPC + 1;
             }
         else

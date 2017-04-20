@@ -39,12 +39,11 @@ public class ObjectHeap
         {
         TypeComposition typeComposition = f_types.ensureConstComposition(nClassConstId);
 
-        // TODO: ByComposition may not have a single template
-        return typeComposition.f_template.createHandle(typeComposition);
+        return typeComposition.createHandle();
         }
 
     // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
-    public ObjectHandle resolveConstHandle(int nValueConstId)
+    public ObjectHandle ensureConstHandle(int nValueConstId)
         {
         ObjectHandle handle = getConstHandle(nValueConstId);
 

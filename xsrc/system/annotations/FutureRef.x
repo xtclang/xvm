@@ -116,8 +116,15 @@ mixin FutureRef<RefType>
     @Override
     Void set(RefType value)
         {
-        assert assignable && !assigned;
-        super(value);
+        assert !assigned;
+        if (assignable)
+            {
+            super(value);
+            }
+        else
+            {
+            complete(value);
+            }
         }
 
     // ----- composing future behavior -------------------------------------------------------------

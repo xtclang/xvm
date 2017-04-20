@@ -11,18 +11,25 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
  */
 public class Throw extends Op
     {
-    private final int f_nValue;
+    private final int f_nArgValue;
 
     public Throw(int nValue)
         {
-        f_nValue = nValue;
+        f_nArgValue = nValue;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        // there are no "const" exceptions
-        frame.m_hException = (ExceptionHandle) frame.f_ahVar[f_nValue];
+        try
+            {
+            // there are no "const" exceptions
+            frame.m_hException = (ExceptionHandle) frame.getArgument(f_nArgValue);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            frame.m_hException = e.getExceptionHandle();
+            }
 
         return RETURN_EXCEPTION;
         }

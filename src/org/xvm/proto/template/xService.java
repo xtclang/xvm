@@ -18,9 +18,13 @@ import java.util.concurrent.ExecutionException;
 public class xService
         extends TypeCompositionTemplate
     {
+    public static xService INSTANCE;
+
     public xService(TypeSet types)
         {
         super(types, "x:Service", "x:Object", Shape.Interface);
+
+        INSTANCE = this;
         }
 
     // subclassing
@@ -56,10 +60,9 @@ public class xService
         //    Void registerShuttingDownNotification(function Void notify());
         //    Void registerUnhandledExceptionNotification(function Void notify(Exception));
 
-        PropertyTemplate pt;
+        f_types.ensureTemplate("x:FutureRef");
 
-        pt = ensurePropertyTemplate("serviceName", "x:String");
-        pt.makeAtomic();
+        ensurePropertyTemplate("serviceName", "x:String").makeAtomic();
         }
 
     @Override
@@ -110,7 +113,7 @@ public class xService
                 CompletableFuture<ObjectHandle> cfReturn =
                         cfResult.thenApply(ahResult -> ahResult[iRet]);
 
-                ahReturn[i] = new ProxyHandle(function.getReturnType(i, clzService), cfReturn);
+                ahReturn[i] = xFutureRef.makeHandle(function.getReturnType(i, clzService), cfReturn);
                 }
             }
         else
@@ -145,8 +148,14 @@ public class xService
 
         TypeComposition clzService = hService.f_clazz;
 
-        ahReturn[iRet] = new ProxyHandle(property.getType(clzService), cfResult);
+        ObjectHandle hValue = xFutureRef.makeHandle(property.getType(clzService), cfResult);
 
+        if (ahReturn == null)
+            {
+            return frame.assignValue(iRet, hValue);
+            }
+
+        ahReturn[iRet] = hValue;
         return null;
         }
 
@@ -181,16 +190,6 @@ public class xService
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method,
                                           ObjectHandle[] ahReturn, int iRet)
         {
-        ServiceHandle hThis;
-        try
-            {
-            hThis = hTarget.as(ServiceHandle.class);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return e.getExceptionHandle();
-            }
-
         throw new IllegalStateException("Unknown method: " + method);
         }
 
@@ -209,71 +208,6 @@ public class xService
             super(clazz, type);
 
             m_context = context;
-            }
-        }
-
-    // a dynamic proxy handle automatically convertible to a FutureHandle or a "real" handle
-    public static class ProxyHandle
-            extends ObjectHandle
-        {
-        protected Type m_type;
-        protected CompletableFuture<ObjectHandle> m_future;
-
-        public ProxyHandle(Type type, CompletableFuture<ObjectHandle> future)
-            {
-            super(null, type);
-
-            m_type = type;
-            m_future = future;
-            }
-
-        @Override
-        public <T extends ObjectHandle> T as(Class<T> clz)
-                throws ExceptionHandle.WrapperException
-            {
-            if (clz == FutureHandle.class)
-                {
-                return (T) xFutureRef.INSTANCE.makeHandle(m_type, m_future);
-                }
-            return get().as(clz);
-            }
-
-        @Override
-        public <T extends ObjectHandle> T as(TypeComposition clazz)
-                throws ExceptionHandle.WrapperException
-            {
-            if (clazz.extends_(xFutureRef.INSTANCE.f_clazzCanonical))
-                {
-                return (T) xFutureRef.INSTANCE.makeHandle(m_type, m_future);
-                }
-            return get().as(clazz);
-            }
-
-        protected ObjectHandle get()
-                throws ExceptionHandle.WrapperException
-            {
-            try
-                {
-                // TODO: use the timeout defined on the service
-                while (!m_future.isDone())
-                    {
-                    ServiceContext.getCurrentContext().yield();
-                    }
-                return m_future.get();
-                }
-            catch (InterruptedException e)
-                {
-                throw new UnsupportedOperationException("TODO");
-                }
-            catch (ExecutionException e)
-                {
-                Throwable eOrig = e.getCause();
-                if (eOrig instanceof ExceptionHandle.WrapperException)
-                    {
-                    throw (ExceptionHandle.WrapperException) eOrig;
-                    }
-                throw new UnsupportedOperationException(e);
-                }
             }
         }
     }

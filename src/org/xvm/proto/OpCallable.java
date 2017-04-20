@@ -33,11 +33,10 @@ public abstract class OpCallable extends Op
         TypeCompositionTemplate template = frame.f_context.f_types.getTemplate(sClass);
 
         return template.getFunctionTemplate(constFunction);
-
         }
 
-    // call super() method or "getProperty", placing the return value into the specified slot
-    protected ExceptionHandle callSuper01(Frame frame, ObjectHandle[] ahReturn, int iRet)
+    // call super() method or "getProperty", placing the return value into the specified frame slot
+    protected ExceptionHandle callSuper01(Frame frame, int iRet)
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
@@ -49,7 +48,7 @@ public abstract class OpCallable extends Op
             TypeCompositionTemplate template = propertyAccess.getClazzTemplate();
 
             return template.getProperty(propertyAccess.f_property, null,
-                    frame, hThis, ahReturn, iRet);
+                    frame, hThis, null, iRet);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
@@ -60,7 +59,7 @@ public abstract class OpCallable extends Op
         ExceptionHandle hException = frameNew.execute();
         if (hException == null)
             {
-            ahReturn[iRet] = frameNew.f_ahReturn[0];
+            frame.assignValue(iRet, frameNew.f_ahReturn[0]);
             }
         return hException;
         }
@@ -71,8 +70,15 @@ public abstract class OpCallable extends Op
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
         ObjectHandle hThis = frame.f_ahVar[0];
-        ObjectHandle hArg  = nArgValue >= 0 ? frame.f_ahVar[nArgValue] :
-                Utils.resolveConst(frame, nArgValue);
+        ObjectHandle hArg;
+        try
+            {
+            hArg = frame.getArgument(nArgValue);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
+            }
 
         if (methodSuper instanceof PropertyAccessTemplate)
             {
@@ -83,14 +89,14 @@ public abstract class OpCallable extends Op
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
-        ahVar[0] = hThis;
         ahVar[1] = hArg;
 
         return frame.f_context.createFrame(frame, methodSuper, hThis, ahVar).execute();
         }
 
-    // create a "super" call frame for methods that cannot be properties
-    protected Frame createSuperCall(Frame frame, int[] anArgValue)
+    // call super() methods with multiple arguments and no more than one return
+    // (cannot be properties)
+    protected ExceptionHandle callSuperN(Frame frame, int[] anArgValue, int iReturn)
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
@@ -98,17 +104,26 @@ public abstract class OpCallable extends Op
 
         ObjectHandle hThis = frame.f_ahVar[0];
 
-        ahVar[0] = hThis;
-
-        for (int i = 0, c = anArgValue.length; i < c; i++)
+        try
             {
-            int nArg = anArgValue[i];
-
-            ahVar[i + 1] = nArg >= 0 ? frame.f_ahVar[nArg] :
-                    Utils.resolveConst(frame, nArg);
+            for (int i = 0, c = anArgValue.length; i < c; i++)
+                {
+                ahVar[i + 1] = frame.getArgument(anArgValue[i]);
+                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return e.getExceptionHandle();
             }
 
-        return frame.f_context.createFrame(frame, methodSuper, hThis, ahVar);
+        Frame frameNew = frame.f_context.createFrame(frame, methodSuper, hThis, ahVar);
+
+        ExceptionHandle hException = frameNew.execute();
+        if (hException == null && iReturn >= 0)
+            {
+            frame.assignValue(iReturn, frameNew.f_ahReturn[0]);
+            }
+        return hException;
         }
 
     // call the constructor; then potentially the finalizer; change this:struct handle to this:public

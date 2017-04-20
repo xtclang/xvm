@@ -29,34 +29,49 @@ public class Invoke_01 extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-
-        MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
-
         ExceptionHandle hException;
 
-        if (method.isNative())
+        try
             {
-            hException = template.invokeNative01(frame, hTarget, method, frame.f_ahVar, f_nRetValue);
-            }
-        else if (template.isService())
-            {
-            ObjectHandle[] ahReturn = new ObjectHandle[1];
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
 
-            hException = xFunction.makeAsyncHandle(method).
-                    call(frame, new ObjectHandle[]{hTarget}, ahReturn);
-            // TODO: match up the return type
-            frame.f_ahVar[f_nRetValue] = ahReturn[0];
-            }
-        else
-            {
-            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-            hException = frameNew.execute();
-            frame.f_ahVar[f_nRetValue] = frameNew.f_ahReturn[0];
+            MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
+
+            if (method.isNative())
+                {
+                hException = template.invokeNative01(frame, hTarget, method, null, f_nRetValue);
+                }
+            else if (template.isService())
+                {
+                ObjectHandle[] ahReturn = new ObjectHandle[1];
+
+                hException = xFunction.makeAsyncHandle(method).
+                        call(frame, new ObjectHandle[]{hTarget}, ahReturn);
+
+                if (hException == null)
+                    {
+                    hException = frame.assignValue(f_nRetValue, ahReturn[0]);
+                    }
+                }
+            else
+                {
+                ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+
+                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+
+                hException = frameNew.execute();
+
+                if (hException == null)
+                    {
+                    hException = frame.assignValue(f_nRetValue, frameNew.f_ahReturn[0]);
+                    }
+                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)

@@ -49,34 +49,53 @@ public class xInt64
         }
 
     @Override
-    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget,
-                                     ObjectHandle hArg, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg,
+                                     ObjectHandle[] ahReturn, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
         JavaLong hThat = (JavaLong) hArg;
 
         // TODO: check overflow
-        ahReturn[0] = makeHandle(hThis.getValue() + hThat.getValue());
+        ObjectHandle hResult = makeHandle(hThis.getValue() + hThat.getValue());
+        if (ahReturn == null)
+            {
+            return frame.assignValue(iReturn, hResult);
+            }
+        ahReturn[iReturn] = hResult;
         return null;
         }
 
     @Override
-    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget,
+                                     ObjectHandle[] ahReturn, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
         // TODO: check overflow
-        ahReturn[0] = makeHandle(hThis.getValue() + 1);
+        ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
+        if (ahReturn == null)
+            {
+            return frame.assignValue(iReturn, hResult);
+            }
+
+        ahReturn[iReturn] = hResult;
         return null;
         }
 
     @Override
-    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget,
+                                     ObjectHandle[] ahReturn, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
         // TODO: check overflow
-        ahReturn[0] = makeHandle(-hThis.getValue());
+        ObjectHandle hResult = makeHandle(-hThis.getValue());
+        if (ahReturn == null)
+            {
+            return frame.assignValue(iReturn, hResult);
+            }
+
+        ahReturn[iReturn] = hResult;
         return null;
         }
 

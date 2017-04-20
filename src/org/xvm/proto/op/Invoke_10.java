@@ -27,32 +27,38 @@ public class Invoke_10 extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-
-        MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
-
-        ObjectHandle hArg = f_nArgValue >= 0 ? frame.f_ahVar[f_nArgValue] :
-                Utils.resolveConst(frame, f_nArgValue);
-
         ExceptionHandle hException;
 
-        if (method.isNative())
+        try
             {
-            hException = template.invokeNative10(frame, hTarget, method, hArg);
-            }
-        else if (template.isService())
-            {
-            hException = xFunction.makeAsyncHandle(method).
-                    call(frame, new ObjectHandle[]{hTarget, hArg}, Utils.OBJECTS_NONE);
-            }
-        else
-            {
-            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-            ahVar[1] = hArg;
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
 
-            hException = frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
+            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+
+            MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
+
+            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+
+            if (method.isNative())
+                {
+                hException = template.invokeNative10(frame, hTarget, method, hArg);
+                }
+            else if (template.isService())
+                {
+                hException = xFunction.makeAsyncHandle(method).
+                        call(frame, new ObjectHandle[]{hTarget, hArg}, Utils.OBJECTS_NONE);
+                }
+            else
+                {
+                ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+                ahVar[1] = hArg;
+
+                hException = frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
+                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)
