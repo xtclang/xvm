@@ -53,14 +53,20 @@ public class xString
 
     @Override
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          ObjectHandle[] ahReturn, int iRet)
+                                          ObjectHandle[] ahReturn, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
         switch (method.f_sName)
             {
             case "length$get": // length.get()
-                ahReturn[iRet] = xInt64.makeHandle(hThis.m_sValue.length());
+                ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
+                if (ahReturn == null)
+                    {
+                    return frame.assignValue(iReturn, hResult);
+                    }
+
+                ahReturn[iReturn] = hResult;
                 return null;
 
             default:
@@ -70,7 +76,7 @@ public class xString
 
     @Override
     public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          ObjectHandle hArg, ObjectHandle[] ahReturn)
+                                          ObjectHandle hArg, ObjectHandle[] ahReturn, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -80,7 +86,14 @@ public class xString
                 if (hArg instanceof StringHandle)
                     {
                     int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
-                    ahReturn[0] = xInt64.makeHandle(nOf);
+
+                    ObjectHandle hResult = xInt64.makeHandle(nOf);
+                    if (ahReturn == null)
+                        {
+                        return frame.assignValue(iReturn, hResult);
+                        }
+
+                    ahReturn[iReturn] = hResult;
                     return null;
                     }
 

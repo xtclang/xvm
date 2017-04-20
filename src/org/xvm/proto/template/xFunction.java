@@ -84,9 +84,16 @@ public class xFunction
 
         // this method doesn't have to be overridden
         // it simply collects ths specified arguments off the frame's vars
-        public ExceptionHandle call(Frame frame, ObjectHandle[] ahVar, int[] anArg, ObjectHandle[] ahReturn)
+        public ExceptionHandle call(Frame frame, int[] anArg, ObjectHandle[] ahReturn)
             {
-            return call(frame, Utils.resolveArguments(frame, m_invoke, ahVar, anArg), ahReturn);
+            try
+                {
+                return call(frame, frame.getArguments(anArg), ahReturn);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return e.getExceptionHandle();
+                }
             }
 
         public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
@@ -258,15 +265,7 @@ public class xFunction
         @Override
         public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
-            ServiceHandle hService;
-            try
-                {
-                hService = ahArg[0].as(ServiceHandle.class);
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return e.getExceptionHandle();
-                }
+            ServiceHandle hService = (ServiceHandle) ahArg[0];
 
             // native method on the service means "execute on the caller's thread"
             if (m_invoke.isNative() || frame.f_context == hService.m_context)

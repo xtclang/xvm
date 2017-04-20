@@ -6,8 +6,6 @@ import org.xvm.asm.ConstantPool.PropertyConstant;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
-import org.xvm.proto.template.xMethod.MethodHandle;
-
 /**
  * Common base for INVOKE_ ops.
  *

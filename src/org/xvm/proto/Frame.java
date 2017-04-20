@@ -5,6 +5,8 @@ import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Access;
 
 import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xFutureRef.FutureHandle;
+import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -195,9 +197,11 @@ public class Frame
                     throw new IllegalStateException();
                     }
             case Op.A_FRAME:
-            case Op.A_SERVICE:
             case Op.A_MODULE:
-                throw new UnsupportedOperationException();
+                throw new UnsupportedOperationException("TODO");
+
+            case Op.A_SERVICE:
+                return ServiceContext.getCurrentContext().m_hService;
 
             default:
                 throw new IllegalStateException("Invalid argument" + nArgId);
@@ -240,6 +244,65 @@ public class Frame
                 f_aInfo[i] = null;
                 }
             }
+        }
+
+    public ObjectHandle getArgument(int iArg)
+                throws ExceptionHandle.WrapperException
+        {
+        if (iArg >= 0)
+            {
+            Frame.VarInfo info = f_aInfo[iArg];
+            if (info == null || !info.m_fDynamicRef)
+                {
+                return f_ahVar[iArg];
+                }
+            return ((xRef.Ref) f_ahVar[iArg]).get();
+            }
+        else
+            {
+            return iArg < -Op.MAX_CONST_ID ? getPredefinedArgument(iArg) :
+                f_context.f_heapGlobal.ensureConstHandle(-iArg);
+            }
+        }
+
+    public ObjectHandle[] getArguments(int[] aiArg)
+                throws ExceptionHandle.WrapperException
+        {
+        int cArgs = aiArg.length;
+
+        ObjectHandle[] ahArg = new ObjectHandle[cArgs];
+
+        for (int i = 0, c = cArgs; i < c; i++)
+            {
+            ahArg[i] = getArgument(aiArg[i]);
+            }
+
+        return ahArg;
+        }
+
+    public ExceptionHandle assignValue(int nVar, ObjectHandle hValue)
+        {
+        VarInfo info = f_aInfo[nVar];
+
+        if (info.m_fDynamicRef)
+            {
+            return ((xRef.Ref) f_ahVar[nVar]).set(hValue);
+            }
+
+        if (hValue instanceof FutureHandle)
+            {
+            try
+                {
+                hValue = ((FutureHandle) hValue).get();
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return e.getExceptionHandle();
+                }
+            }
+
+        f_ahVar[nVar] = hValue;
+        return null;
         }
 
     // temporary
@@ -290,6 +353,7 @@ public class Frame
         public final TypeComposition f_clazz;
         public final String f_sVarName;
         public RefHandle m_ref; // an "active" reference to this register
+        public boolean m_fDynamicRef; // true iff this variable is a "dynamic" ref
 
         public VarInfo(TypeComposition clazz)
             {

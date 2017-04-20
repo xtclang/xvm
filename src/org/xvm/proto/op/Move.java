@@ -1,8 +1,9 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
-import org.xvm.proto.Utils;
 
 /**
  * MOV rvalue-src, lvalue-dest
@@ -23,12 +24,28 @@ public class Move extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        // TODO: validate the source/destination compatibility
+        ExceptionHandle hException;
+        try
+            {
+            ObjectHandle hValue = frame.getArgument(f_nFromValue);
 
-        frame.f_ahVar[f_nToValue] =
-            f_nFromValue >= 0 ? frame.f_ahVar[f_nFromValue] :
-                Utils.resolveConst(frame, f_nFromValue);
+            // TODO: validate the source/destination compatibility?
 
-        return iPC + 1;
+            hException = frame.assignValue(f_nToValue, hValue);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
+            }
+
+        if (hException == null)
+            {
+            return iPC + 1;
+            }
+        else
+            {
+            frame.m_hException = hException;
+            return RETURN_EXCEPTION;
+            }
         }
     }

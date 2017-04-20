@@ -303,11 +303,11 @@ String s2 = sc ?: "hello";
 if (sc?)
     {
     String? sc3 = sc;
-    String? sc4 = (true, sc); 
-    String? sc5 = false; 
+    String? sc4 = (true, sc);
+    String? sc5 = false;
     String? sc6 = true;
     }
-    
+
 x = a.b ?: c;
 // translates to:
 x = a.b != null ? a.b : c;
@@ -339,8 +339,8 @@ Boolean s2 = sc ?: true;
 if (sc?)
     {
     Boolean? sc3 = sc;
-    Boolean? sc4 = (true, sc); 
-    Boolean? sc5 = false; 
+    Boolean? sc4 = (true, sc);
+    Boolean? sc5 = false;
     Boolean? sc6 = true;
     }
 
@@ -675,7 +675,10 @@ class SomeTest
 
         &i.whenDone(r -> foo(r));
 
-        foo(&svc.inc()); // DVAR Int (#6); REF #6 (#7) ; CALL @foo #7
+        foo(&svc.inc()); // DVAR @Ref<Int> (#6)
+                         // INVOKE_01 #1, @"inc", #6 (#1 == svc)
+                         // REF #6 (#7) (#7 of FutureRef<Int>)
+                         // CALL @foo #7
 
         Int j = i;
         @future Int i;

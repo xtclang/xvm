@@ -32,23 +32,35 @@ public class Call_N0 extends OpCallable
 
         if (f_nFunctionValue == A_SUPER)
             {
-            Frame frameNew = createSuperCall(frame, f_anArgValue);
-
-            hException = frameNew.execute();
+            hException = callSuperN(frame, f_anArgValue, -1);
             }
         else if (f_nFunctionValue >= 0)
             {
-            FunctionHandle function = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
+            try
+                {
+                FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
-            hException = function.call(frame, frame.f_ahVar, f_anArgValue, Utils.OBJECTS_NONE);
+                hException = function.call(frame, f_anArgValue, Utils.OBJECTS_NONE);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                hException = e.getExceptionHandle();
+                }
             }
         else
             {
             FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
 
-            ObjectHandle[] ahVar = Utils.resolveArguments(frame, function, frame.f_ahVar, f_anArgValue);
+            try
+                {
+                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue);
 
-            hException = frame.f_context.createFrame(frame, function, null, ahVar).execute();
+                hException = frame.f_context.createFrame(frame, function, null, ahVar).execute();
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                hException = e.getExceptionHandle();
+                }
             }
 
         if (hException == null)

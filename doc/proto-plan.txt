@@ -5,8 +5,12 @@
         - cleanup an un-referenced service (phantom refs?)
         +/- container terminates when all services are stopped
 
-- Function wrapping for services
-- Get/Set on the service
++ Function wrapping for services
++ Get/Set on the service
+
+- Matching the function/method return value with a Ref
+
+- Add LGET, LSET
 
 - Atomics
 

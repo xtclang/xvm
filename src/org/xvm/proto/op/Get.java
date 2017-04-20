@@ -28,23 +28,30 @@ public class Get extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-
-        PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
-
         ExceptionHandle hException;
 
-        if (hTarget.isStruct())
+        try
             {
-            frame.f_ahVar[f_nRetValue] = template.getField(hTarget, property.f_sName);
-            hException = null;
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+
+            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+
+            PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
+
+            if (hTarget.isStruct())
+                {
+                frame.f_ahVar[f_nRetValue] = template.getField(hTarget, property.f_sName);
+                hException = null;
+                }
+            else
+                {
+                hException = template.getProperty(
+                    property, property.m_templateGet, frame, hTarget, null, f_nRetValue);
+                }
             }
-        else
+        catch (ExceptionHandle.WrapperException e)
             {
-            hException = template.getProperty(
-                property, property.m_templateGet, frame, hTarget, frame.f_ahVar, f_nRetValue);
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)

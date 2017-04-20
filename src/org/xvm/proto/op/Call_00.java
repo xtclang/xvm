@@ -5,6 +5,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
+import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
@@ -30,15 +31,26 @@ public class Call_00 extends OpCallable
 
         if (f_nFunctionValue == A_SUPER)
             {
-            Frame frameNew = createSuperCall(frame, Utils.ARGS_NONE);
+            // in-lined version of "createSuperCall"
+            MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
-            hException = frameNew.execute();
+            ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
+            ObjectHandle hThis = frame.f_ahVar[0];
+
+            hException = frame.f_context.createFrame(frame, methodSuper, hThis, ahVar).execute();
             }
         else if (f_nFunctionValue >= 0)
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
+            try
+                {
+                FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
-            hException = hFunction.call(frame, Utils.OBJECTS_NONE, Utils.OBJECTS_NONE);
+                hException = hFunction.call(frame, Utils.OBJECTS_NONE, Utils.OBJECTS_NONE);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                hException = e.getExceptionHandle();
+                }
             }
         else
             {

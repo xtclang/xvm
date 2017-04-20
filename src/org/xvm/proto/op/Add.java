@@ -3,7 +3,6 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.TypeCompositionTemplate;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
@@ -28,17 +27,23 @@ public class Add extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-        ObjectHandle hArg = frame.f_ahVar[f_nArgValue];
-        ObjectHandle[] ahRet = new ObjectHandle[1];
+        ExceptionHandle hException;
 
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+        try
+            {
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            ObjectHandle hArg = frame.getArgument(f_nArgValue);
 
-        ExceptionHandle hException = template.invokeAdd(frame, hTarget, hArg, ahRet);
+            hException = hTarget.f_clazz.f_template.
+                    invokeAdd(frame, hTarget, hArg, frame.f_ahVar, f_nRetValue);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
+            }
 
         if (hException == null)
             {
-            frame.f_ahVar[f_nRetValue] = ahRet[0];
             return iPC + 1;
             }
         else
@@ -47,5 +52,4 @@ public class Add extends OpInvocable
             return RETURN_EXCEPTION;
             }
         }
-
     }

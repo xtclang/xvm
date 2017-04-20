@@ -361,55 +361,68 @@ public abstract class TypeCompositionTemplate
     public ExceptionHandle invokeNative00(Frame frame, ObjectHandle hTarget, MethodTemplate method)
         {
         // many classes don't have native methods
-        throw new IllegalStateException();
+        throw new IllegalStateException(f_sName);
         }
 
     // invokeNative with 0 arguments and 1 return value
+    // if ahReturn is null, use frame.assignValue()
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget,
-                                  MethodTemplate method, ObjectHandle[] ahReturn, int iRet)
+                                  MethodTemplate method, ObjectHandle[] ahReturn, int iReturn)
         {
-        throw new IllegalStateException();
+        throw new IllegalStateException(f_sName);
         }
 
     // invokeNative with 1 argument and 1 return value
-    public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget,
-                                       MethodTemplate method, ObjectHandle hArg, ObjectHandle[] ahReturn)
+    // if ahReturn is null, use frame.assignValue()
+    public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+                                          ObjectHandle hArg, ObjectHandle[] ahReturn, int iReturn)
         {
-        throw new IllegalStateException();
+        throw new IllegalStateException(f_sName);
         }
 
     // invokeNative with 1 argument and 0 return value
-    public ExceptionHandle invokeNative10(Frame frame, ObjectHandle hTarget,
-                                       MethodTemplate method, ObjectHandle hArg)
+    public ExceptionHandle invokeNative10(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+                                          ObjectHandle hArg)
         {
-        throw new IllegalStateException();
+        throw new IllegalStateException(f_sName);
         }
 
-    // Add operation
-    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, ObjectHandle[] ahReturn)
+    // Add operation; place the result into the specified place in the array
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg,
+                                     ObjectHandle[] ahReturn, int iReturn)
         {
-        throw new IllegalStateException();
+        throw new IllegalStateException(f_sName);
         }
 
-    // Increment operation
-    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+    // Increment operation; place the result into the specified place in the array
+    // if ahReturn is null, use frame.assignValue()
+    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget,
+                                     ObjectHandle[] ahReturn, int iReturn)
         {
-        throw new IllegalStateException();
+        throw new IllegalStateException(f_sName);
         }
 
     // Neg operation
-    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn)
+    // if ahReturn is null, use frame.assignValue()
+    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget,
+                                     ObjectHandle[] ahReturn, int iReturn)
         {
-        throw new IllegalStateException();
+        throw new IllegalStateException(f_sName);
         }
 
     // get a property value into the specified place in the array
+    // if ahReturn is null, use frame.assignValue()
     public ExceptionHandle getProperty(PropertyTemplate property, MethodTemplate method,
                                        Frame frame, ObjectHandle hTarget, ObjectHandle[] ahRet, int iRet)
         {
        if (method == null)
             {
-            ahRet[iRet] = getField(hTarget, property.f_sName);
+            ObjectHandle hValue = getField(hTarget, property.f_sName);
+            if (ahRet == null)
+                {
+                return frame.assignValue(iRet, hValue);
+                }
+            ahRet[iRet] = hValue;
             return null;
             }
 
@@ -427,6 +440,10 @@ public abstract class TypeCompositionTemplate
 
         if (hException == null)
             {
+            if (ahRet == null)
+                {
+                return frame.assignValue(iRet, frameNew.f_ahReturn[0]);
+                }
             ahRet[iRet] = frameNew.f_ahReturn[0];
             }
         return hException;
@@ -464,7 +481,6 @@ public abstract class TypeCompositionTemplate
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-        ahVar[0] = hTarget;
         ahVar[1] = hValue;
 
         ServiceContext context = frame == null ? ServiceContext.getCurrentContext() : frame.f_context;

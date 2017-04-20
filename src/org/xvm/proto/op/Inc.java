@@ -4,7 +4,6 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.TypeCompositionTemplate;
 
 /**
  * INC lvalue-target
@@ -13,26 +12,31 @@ import org.xvm.proto.TypeCompositionTemplate;
  */
 public class Inc extends OpInvocable
     {
-    private final int f_nTargetValue;
+    private final int f_nArgValue;
 
-    public Inc(int nTarget)
+    public Inc(int nArg)
         {
-        f_nTargetValue = nTarget;
+        f_nArgValue = nArg;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-        ObjectHandle[] ahRet = new ObjectHandle[1];
+        ExceptionHandle hException;
+        try
+            {
+            ObjectHandle hTarget = frame.getArgument(f_nArgValue);
 
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-
-        ExceptionHandle hException = template.invokeInc(frame, hTarget, ahRet);
+            hException = hTarget.f_clazz.f_template.
+                    invokeInc(frame, hTarget, frame.f_ahVar, f_nArgValue);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
+            }
 
         if (hException == null)
             {
-            frame.f_ahVar[f_nTargetValue] = ahRet[0];
             return iPC + 1;
             }
         else
@@ -41,5 +45,4 @@ public class Inc extends OpInvocable
             return RETURN_EXCEPTION;
             }
         }
-
     }

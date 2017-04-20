@@ -1,9 +1,9 @@
 package org.xvm.proto.template;
 
 import org.xvm.proto.*;
-import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * TODO:
@@ -34,17 +34,13 @@ public class xFutureRef
 
         }
 
-    // a reference
+    // TODO: should it extend xRef.RefHandle?
     public static class FutureHandle
             extends ObjectHandle
+            implements xRef.Ref
         {
         protected Type m_typeReferent;
         protected CompletableFuture<ObjectHandle> m_future;
-
-        public FutureHandle(TypeComposition clazz)
-            {
-            super(clazz);
-            }
 
         public FutureHandle(TypeComposition clazz, Type typeReferent, CompletableFuture<ObjectHandle> future)
             {
@@ -54,7 +50,9 @@ public class xFutureRef
             m_future = future;
             }
 
-        protected ObjectHandle get()
+        @Override
+        public ObjectHandle get()
+                throws ExceptionHandle.WrapperException
             {
             try
                 {
@@ -65,11 +63,34 @@ public class xFutureRef
                     }
                 return m_future.get();
                 }
-            catch (Exception e )
+            catch (InterruptedException e)
                 {
-                // pass it onto the service handle
-                throw new UnsupportedOperationException();
+                throw new UnsupportedOperationException("TODO");
                 }
+            catch (ExecutionException e)
+                {
+                Throwable eOrig = e.getCause();
+                if (eOrig instanceof ExceptionHandle.WrapperException)
+                    {
+                    throw (ExceptionHandle.WrapperException) eOrig;
+                    }
+                throw new UnsupportedOperationException(e);
+                }
+            }
+
+        @Override
+        public ExceptionHandle set(ObjectHandle handle)
+            {
+            if (handle instanceof FutureHandle)
+                {
+                assert m_future == null;
+                m_future = ((FutureHandle) handle).m_future;
+                }
+            else if (!m_future.isDone())
+                {
+                m_future.complete(handle);
+                }
+            return null;
             }
 
         @Override
@@ -79,9 +100,8 @@ public class xFutureRef
             }
         }
 
-    public FutureHandle makeHandle(Type type, CompletableFuture<ObjectHandle> future)
+    public static FutureHandle makeHandle(Type type, CompletableFuture<ObjectHandle> future)
         {
         return new FutureHandle(INSTANCE.f_clazzCanonical, type, future);
         }
-
     }

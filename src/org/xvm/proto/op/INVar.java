@@ -39,11 +39,10 @@ public class INVar extends Op
 
         frame.f_aInfo[nNextVar] = frame.new VarInfo(clazz, constName.getValue());
         frame.f_ahVar[nNextVar] =
-                frame.f_context.f_heapGlobal.resolveConstHandle(f_nValueConstId);
+                frame.f_context.f_heapGlobal.ensureConstHandle(f_nValueConstId);
 
         frame.f_anNextVar[iScope] = nNextVar + 1;
 
         return iPC + 1;
         }
-
     }

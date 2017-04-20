@@ -57,7 +57,12 @@ public class xRef
         switch (method.f_sName)
             {
             case "get":
-                ahReturn[iRet] = hThis.get();
+                ObjectHandle hValue = hThis.get();
+                if (ahReturn == null)
+                    {
+                    return frame.assignValue(iRet, hValue);
+                    }
+                ahReturn[iRet] = hValue;
                 return null;
 
             default:
@@ -83,8 +88,19 @@ public class xRef
         }
 
     // a reference
+    public interface Ref
+        {
+        ObjectHandle get()
+                throws ExceptionHandle.WrapperException;
+
+        // return exception
+        ExceptionHandle set(ObjectHandle handle);
+        }
+
+    // a simple reference handle
     public static class RefHandle
             extends ObjectHandle
+            implements Ref
         {
         protected Frame m_frame;
         protected int m_iVar = REF_REFERENT;
@@ -95,11 +111,6 @@ public class xRef
 
         // indicates ath the the m_hDelegate field holds a Ref that this Ref is "chained" to
         private static final int REF_REF = -2;
-
-        public RefHandle(TypeComposition clazz)
-            {
-            super(clazz);
-            }
 
         public RefHandle(TypeComposition clazz, ObjectHandle handle)
             {
@@ -150,7 +161,7 @@ public class xRef
                 }
             }
 
-        public void set(ObjectHandle handle)
+        public ExceptionHandle set(ObjectHandle handle)
             {
             // TODO: assert type compatibility
             if (m_iVar >= 0)
@@ -165,12 +176,7 @@ public class xRef
                 {
                 ((RefHandle) m_hDelegate).set(handle);
                 }
-            }
-
-        @Override
-        public <T extends ObjectHandle> T as(Class<T> clz) throws ExceptionHandle.WrapperException
-            {
-            return super.as(clz);
+            return null;
             }
 
         // dereference the Ref from a register-bound to a handle-bound
@@ -188,6 +194,33 @@ public class xRef
             {
             return super.toString() +
                     (m_iVar >= 0 ? "-> " + m_frame.f_ahVar[m_iVar] : m_hDelegate);
+            }
+        }
+
+    protected static class DelegatingRef
+            extends ObjectHandle
+            implements Ref
+        {
+        public Ref m_hDelegate;
+
+        protected DelegatingRef(TypeComposition clazz, Ref referent)
+            {
+            super(clazz);
+
+            m_hDelegate = referent;
+            }
+
+        @Override
+        public ObjectHandle get()
+                throws ExceptionHandle.WrapperException
+            {
+            return m_hDelegate.get();
+            }
+
+        @Override
+        public ExceptionHandle set(ObjectHandle handle)
+            {
+            return m_hDelegate.set(handle);
             }
         }
 

@@ -100,7 +100,7 @@ public abstract class Utils
         assert nConstValueId < 0;
 
         return nConstValueId < -Op.MAX_CONST_ID ? frame.getPredefinedArgument(nConstValueId) :
-            frame.f_context.f_heapGlobal.resolveConstHandle(-nConstValueId);
+            frame.f_context.f_heapGlobal.ensureConstHandle(-nConstValueId);
         }
 
     public static ObjectHandle[] resolveArguments(Frame frame, InvocationTemplate function,

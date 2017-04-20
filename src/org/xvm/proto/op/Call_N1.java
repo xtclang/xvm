@@ -5,7 +5,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -31,38 +30,55 @@ public class Call_N1 extends OpCallable
     public int process(Frame frame, int iPC)
         {
         ExceptionHandle hException;
-        ObjectHandle[] ahReturn;
 
         if (f_nFunctionValue == A_SUPER)
             {
-            Frame frameNew = createSuperCall(frame, f_anArgValue);
-
-            ahReturn   = frameNew.f_ahReturn;
-            hException = frameNew.execute();
+            hException = callSuperN(frame, f_anArgValue, f_nRetValue);
             }
         else if (f_nFunctionValue >= 0)
             {
-            FunctionHandle function = (FunctionHandle) frame.f_ahVar[f_nFunctionValue];
+            try
+                {
+                FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+                ObjectHandle[] ahReturn = new ObjectHandle[1];
 
-            hException = function.call(frame, frame.f_ahVar,
-                    f_anArgValue, ahReturn = new ObjectHandle[1]);
+                hException = function.call(frame, f_anArgValue, ahReturn);
+
+                if (hException == null)
+                    {
+                    hException = frame.assignValue(f_nRetValue, ahReturn[0]);
+                    }
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                hException = e.getExceptionHandle();
+                }
             }
         else
             {
             FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
 
-            ObjectHandle[] ahVar = Utils.resolveArguments(frame, function, frame.f_ahVar, f_anArgValue);
+            try
+                {
+                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue);
 
-            Frame frameNew = frame.f_context.createFrame(frame, function, null, ahVar);
+                Frame frameNew = frame.f_context.createFrame(frame, function, null, ahVar);
 
-            ahReturn   = frameNew.f_ahReturn;
-            hException = frameNew.execute();
+                hException = frameNew.execute();
+
+                if (hException == null)
+                    {
+                    hException = frame.assignValue(f_nRetValue, frameNew.f_ahReturn[0]);
+                    }
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                hException = e.getExceptionHandle();
+                }
             }
 
         if (hException == null)
             {
-            // TODO: match up
-            frame.f_ahVar[f_nRetValue] = ahReturn[0];
             return iPC + 1;
             }
         else

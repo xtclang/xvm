@@ -122,6 +122,10 @@ module TestApp
         c = service.counter;
         print(c);
 
+        function Int() fnInc = service.increment;
+        c = fiInc();
+        print(c);
+
         // handled exception
         try
             {

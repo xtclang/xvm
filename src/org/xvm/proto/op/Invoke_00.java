@@ -24,29 +24,36 @@ public class Invoke_00 extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
-
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-
-        MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
-
         ExceptionHandle hException;
+        try
+            {
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
 
-        if (method.isNative())
-            {
-            hException = template.invokeNative00(frame, hTarget, method);
-            }
-        else if (template.isService())
-            {
-            hException = xFunction.makeAsyncHandle(method).
-                    call(frame, new ObjectHandle[]{hTarget}, Utils.OBJECTS_NONE);
-            }
-        else
-            {
-            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-            Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-            hException = frameNew.execute();
+            MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
+
+            if (method.isNative())
+                {
+                hException = template.invokeNative00(frame, hTarget, method);
+                }
+            else if (template.isService())
+                {
+                hException = xFunction.makeAsyncHandle(method).
+                        call(frame, new ObjectHandle[]{hTarget}, Utils.OBJECTS_NONE);
+                }
+            else
+                {
+                ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+
+                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+
+                hException = frameNew.execute();
+                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)
