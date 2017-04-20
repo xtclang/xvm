@@ -1,6 +1,7 @@
 package org.xvm.proto;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
+import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
@@ -59,7 +60,7 @@ public class ServiceContext
         {
         m_hService = hService;
 
-        String sThreadName = f_container.m_constModule.getQualifiedName() + ":" + sServiceName;
+        String sThreadName = f_container.m_constModule.getQualifiedName() + "/" + sServiceName;
 
         // TODO: we need to be able to share native threads across services
         ServiceDaemon daemon = m_daemon = new ServiceDaemon(sThreadName, this);
@@ -85,23 +86,45 @@ public class ServiceContext
         {
         return m_daemon.isContended();
         }
-    //
-    // send and asynchronous "call" message
-    public CompletableFuture<ObjectHandle[]> sendRequest(ServiceContext context, FunctionHandle hFunction,
-                                                 ObjectHandle[] ahArg, int cReturns)
+
+    // send and asynchronous "invoke" message
+    public CompletableFuture<ObjectHandle[]> sendInvokeRequest(ServiceContext context,
+                FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle[]> future = new CompletableFuture<>();
 
-        context.m_daemon.add(new Request(this, hFunction, ahArg, cReturns, future));
+        context.m_daemon.add(new InvokeRequest(this, hFunction, ahArg, cReturns, future));
+
+        return future;
+        }
+
+    // send and asynchronous "get" message
+    public CompletableFuture<ObjectHandle> sendGetRequest(ServiceContext context,
+                PropertyTemplate property)
+        {
+        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+
+        context.m_daemon.add(new GetRequest(this, property, future));
+
+        return future;
+        }
+
+    // send and asynchronous "set" message
+    public CompletableFuture<Void> sendSetRequest(ServiceContext context,
+                PropertyTemplate property, ObjectHandle hValue)
+        {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+
+        context.m_daemon.add(new SetRequest(this, property, hValue, future));
 
         return future;
         }
 
     // return an asynchronous call result
-    public void sendResponse(ServiceContext context, ExceptionHandle hException, ObjectHandle[] ahReturn,
-                             CompletableFuture<ObjectHandle[]> future)
+    public <T> void sendResponse(ServiceContext context, ExceptionHandle hException,
+                                 T returnValue, CompletableFuture<T> future)
         {
-        context.m_daemon.add(new Response(hException, ahReturn, future));
+        context.m_daemon.add(new Response(hException, returnValue, future));
         }
 
     public interface Message
@@ -110,9 +133,9 @@ public class ServiceContext
         }
 
     /**
-     * Represents a call from one service onto another.
+     * Represents an invoke request from one service onto another.
      */
-    public static class Request
+    public static class InvokeRequest
             implements Message
         {
         private final ServiceContext f_contextCaller;
@@ -121,9 +144,9 @@ public class ServiceContext
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle[]> f_future;
 
-        public Request(ServiceContext contextCaller, FunctionHandle hFunction,
-                       ObjectHandle[] ahArg, int cReturns,
-                       CompletableFuture<ObjectHandle[]> future)
+        public InvokeRequest(ServiceContext contextCaller, FunctionHandle hFunction,
+                             ObjectHandle[] ahArg, int cReturns,
+                             CompletableFuture<ObjectHandle[]> future)
             {
             f_contextCaller = contextCaller;
             f_hFunction = hFunction;
@@ -145,19 +168,78 @@ public class ServiceContext
         }
 
     /**
+     * Represents a property Get request from one service onto another.
+     */
+    public static class GetRequest
+            implements Message
+        {
+        private final ServiceContext f_contextCaller;
+        private final PropertyTemplate f_property;
+        private final CompletableFuture<ObjectHandle> f_future;
+
+        public GetRequest(ServiceContext contextCaller, PropertyTemplate property,
+                             CompletableFuture<ObjectHandle> future)
+            {
+            f_contextCaller = contextCaller;
+            f_property = property;
+            f_future = future;
+            }
+
+        @Override
+        public void process(ServiceContext context)
+            {
+            ObjectHandle[] ahReturn = new ObjectHandle[1];
+            ExceptionHandle hException = f_property.getClazzTemplate().getProperty(
+                    f_property, f_property.m_templateGet, null, context.m_hService, ahReturn, 0);
+
+            context.sendResponse(f_contextCaller, hException, ahReturn[0], f_future);
+            }
+        }
+
+    /**
+     * Represents a property Set request from one service onto another.
+     */
+    public static class SetRequest
+            implements Message
+        {
+        private final ServiceContext f_contextCaller;
+        private final PropertyTemplate f_property;
+        private final ObjectHandle f_hValue;
+        private final CompletableFuture<Void> f_future;
+
+        public SetRequest(ServiceContext contextCaller, PropertyTemplate property,
+                          ObjectHandle hValue, CompletableFuture<Void> future)
+            {
+            f_contextCaller = contextCaller;
+            f_property = property;
+            f_hValue = hValue;
+            f_future = future;
+            }
+
+        @Override
+        public void process(ServiceContext context)
+            {
+            ExceptionHandle hException = f_property.getClazzTemplate().setProperty(
+                    f_property, f_property.m_templateSet, null, context.m_hService, f_hValue);
+
+            context.sendResponse(f_contextCaller, hException, null, f_future);
+            }
+        }
+
+    /**
      * Represents a call return.
      */
-    public static class Response
+    public static class Response<T>
             implements Message
         {
         private final ExceptionHandle f_hException;
-        private final ObjectHandle[] f_ahReturn;
-        private final CompletableFuture<ObjectHandle[]> f_future;
+        private final T f_return;
+        private final CompletableFuture<T> f_future;
 
-        public Response(ExceptionHandle hException, ObjectHandle[] ahReturn, CompletableFuture<ObjectHandle[]> future)
+        public Response(ExceptionHandle hException, T returnValue, CompletableFuture<T> future)
             {
             f_hException = hException;
-            f_ahReturn = ahReturn;
+            f_return = returnValue;
             f_future = future;
             }
 
@@ -167,7 +249,7 @@ public class ServiceContext
 // try {System.out.println(this + " completing");Thread.sleep(10000);}catch (Throwable e) {}
             if (f_hException == null)
                 {
-                f_future.complete(f_ahReturn);
+                f_future.complete(f_return);
                 }
             else
                 {

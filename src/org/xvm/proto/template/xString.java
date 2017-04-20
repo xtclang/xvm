@@ -52,14 +52,15 @@ public class xString
         }
 
     @Override
-    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahReturn)
+    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+                                          ObjectHandle[] ahReturn, int iRet)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
         switch (method.f_sName)
             {
             case "length$get": // length.get()
-                ahReturn[0] = xInt64.makeHandle(hThis.m_sValue.length());
+                ahReturn[iRet] = xInt64.makeHandle(hThis.m_sValue.length());
                 return null;
 
             default:

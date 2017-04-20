@@ -366,3 +366,22 @@ if (..)
        }
     }
 // there is no "pi" here, but "pi" still exists, because it got passed to Dima
+
+MyService
+    {
+    Int prop;
+    Void foo();
+    }
+
+// to call foo on a service and not care sync/async
+svc.foo();
+
+// to get a future for it
+@future Tuple<> result = svc.foo<Tuple<>>();
+@future Void result = svc.foo<Void>();
+
+// to call foo on a service and not care sync/async
+svc.prop = 5;
+
+// to get a future for it
+@future Tuple<> result = (&svc.prop).set<Tuple>(5);

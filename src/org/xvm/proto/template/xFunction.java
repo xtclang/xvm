@@ -275,7 +275,7 @@ public class xFunction
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();
-            return service.invokeAsync(frame, hService, this, ahArg, ahReturn);
+            return service.asyncInvoke(frame, hService, this, ahArg, ahReturn);
             }
         }
 

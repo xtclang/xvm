@@ -32,9 +32,7 @@ public class Call_10 extends OpCallable
 
         if (f_nFunctionValue == A_SUPER)
             {
-            Frame frameNew = createSuperCall(frame, f_nArgValue);
-
-            hException = frameNew.execute();
+            hException = callSuper10(frame, f_nArgValue);
             }
         else if (f_nFunctionValue >= 0)
             {

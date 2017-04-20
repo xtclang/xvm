@@ -93,7 +93,7 @@ public class Container
             // TODO: create a service handle for "main" service
             f_contextMain.start(null, "main");
 
-            f_contextMain.sendRequest(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
+            f_contextMain.sendInvokeRequest(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
                 .whenComplete((ah, x) ->
                 {
                 if (x != null)
