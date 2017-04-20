@@ -50,7 +50,7 @@ public class xRef
 
     @Override
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget,
-                                          MethodTemplate method, ObjectHandle[] ahReturn, int iRet)
+                                          MethodTemplate method, int iRet)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
@@ -58,12 +58,7 @@ public class xRef
             {
             case "get":
                 ObjectHandle hValue = hThis.get();
-                if (ahReturn == null)
-                    {
-                    return frame.assignValue(iRet, hValue);
-                    }
-                ahReturn[iRet] = hValue;
-                return null;
+                return frame.assignValue(iRet, hValue);
 
             default:
                 throw new IllegalStateException("Unknown method: " + method);

@@ -28,7 +28,7 @@ public class Inc extends OpInvocable
             ObjectHandle hTarget = frame.getArgument(f_nArgValue);
 
             hException = hTarget.f_clazz.f_template.
-                    invokeInc(frame, hTarget, frame.f_ahVar, f_nArgValue);
+                    invokeInc(frame, hTarget, f_nArgValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

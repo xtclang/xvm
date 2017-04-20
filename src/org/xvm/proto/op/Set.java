@@ -14,13 +14,13 @@ import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
  */
 public class Set extends OpInvocable
     {
-    private final int f_nTargetValue;
+    private final int f_nTarget;
     private final int f_nPropConstId;
     private final int f_nValue;
 
     public Set(int nTarget, int nPropId, int nValue)
         {
-        f_nTargetValue = nTarget;
+        f_nTarget = nTarget;
         f_nPropConstId = nPropId;
         f_nValue = nValue;
         }
@@ -31,12 +31,13 @@ public class Set extends OpInvocable
         ExceptionHandle hException;
         try
             {
-            ObjectHandle hTarget = frame.f_ahVar[f_nTargetValue];
+            ObjectHandle hTarget = frame.getArgument(f_nTarget);
+            ObjectHandle hValue = frame.getArgument(f_nValue);
+
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
             PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
 
-            ObjectHandle hValue = frame.getArgument(f_nValue);
 
             if (hTarget.isStruct())
                 {

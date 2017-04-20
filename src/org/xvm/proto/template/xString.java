@@ -53,7 +53,7 @@ public class xString
 
     @Override
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          ObjectHandle[] ahReturn, int iReturn)
+                                          int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -61,13 +61,7 @@ public class xString
             {
             case "length$get": // length.get()
                 ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
-                if (ahReturn == null)
-                    {
-                    return frame.assignValue(iReturn, hResult);
-                    }
-
-                ahReturn[iReturn] = hResult;
-                return null;
+                return frame.assignValue(iReturn, hResult);
 
             default:
                 throw new IllegalStateException("Unknown method: " + method);
@@ -76,7 +70,7 @@ public class xString
 
     @Override
     public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          ObjectHandle hArg, ObjectHandle[] ahReturn, int iReturn)
+                                          ObjectHandle hArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -88,13 +82,7 @@ public class xString
                     int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
 
                     ObjectHandle hResult = xInt64.makeHandle(nOf);
-                    if (ahReturn == null)
-                        {
-                        return frame.assignValue(iReturn, hResult);
-                        }
-
-                    ahReturn[iReturn] = hResult;
-                    return null;
+                    return frame.assignValue(iReturn, hResult);
                     }
 
             default:

@@ -41,19 +41,12 @@ public class Invoke_01 extends OpInvocable
 
             if (method.isNative())
                 {
-                hException = template.invokeNative01(frame, hTarget, method, null, f_nRetValue);
+                hException = template.invokeNative01(frame, hTarget, method, f_nRetValue);
                 }
             else if (template.isService())
                 {
-                ObjectHandle[] ahReturn = new ObjectHandle[1];
-
                 hException = xFunction.makeAsyncHandle(method).
-                        call(frame, new ObjectHandle[]{hTarget}, ahReturn);
-
-                if (hException == null)
-                    {
-                    hException = frame.assignValue(f_nRetValue, ahReturn[0]);
-                    }
+                        call1(frame, new ObjectHandle[]{hTarget}, f_nRetValue);
                 }
             else
                 {

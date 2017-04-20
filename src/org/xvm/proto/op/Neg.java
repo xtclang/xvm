@@ -32,7 +32,7 @@ public class Neg extends OpInvocable
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-            hException = template.invokeNeg(frame, hTarget, null, f_nRetValue);
+            hException = template.invokeNeg(frame, hTarget, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

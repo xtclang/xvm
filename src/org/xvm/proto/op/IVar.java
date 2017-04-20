@@ -31,7 +31,7 @@ public class IVar extends Op
         TypeComposition clazz = context.f_types.ensureConstComposition(f_nClassConstId);
 
         frame.f_aInfo[nNextVar] = frame.new VarInfo(clazz);
-        frame.f_ahVar[nNextVar] = context.f_heapGlobal.ensureConstHandle(f_nValueConstId);
+        frame.assignValue(nNextVar, context.f_heapGlobal.ensureConstHandle(f_nValueConstId));
 
         frame.f_anNextVar[iScope] = nNextVar + 1;
 
