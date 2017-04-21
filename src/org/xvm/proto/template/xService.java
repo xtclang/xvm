@@ -5,10 +5,8 @@ import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
-import org.xvm.proto.template.xFutureRef.FutureHandle;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 /**
  * TODO:
@@ -89,6 +87,41 @@ public class xService
     public ExceptionHandle start(ServiceHandle hService)
         {
         return hService.m_context.start(hService, f_sName);
+        }
+
+    // return an exception
+    public ExceptionHandle asyncInvoke1(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
+                                        ObjectHandle[] ahArg, int iReturn)
+        {
+        // TODO: validate that all the arguments are immutable or ImmutableAble
+        int cReturns = iReturn < 0 ? 0 : 1;
+
+        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeRequest(
+                hService.m_context, hFunction, ahArg, cReturns);
+
+        InvocationTemplate function = hFunction.m_invoke;
+        TypeComposition clzService = hService.f_clazz;
+
+        if (cReturns == 1)
+            {
+            CompletableFuture<ObjectHandle> cfReturn = cfResult.thenApply(ahResult -> ahResult[0]);
+
+            frame.assignValue(iReturn,
+                    xFutureRef.makeHandle(function.getReturnType(0, clzService), cfReturn));
+            }
+        else
+            {
+            cfResult.whenComplete((r, x) ->
+                {
+                if (x != null)
+                    {
+                    // TODO: call UnhandledExceptionNotification handler
+                    System.out.println(ServiceContext.getCurrentContext() + ": unhandled exception " + x);
+                    }
+                });
+            }
+
+        return null;
         }
 
     // return an exception
@@ -175,12 +208,12 @@ public class xService
                 hService.m_context, property, hValue);
 
         cfResult.whenComplete((r, x) ->
+        {
+        if (x != null)
             {
-            if (x != null)
-                {
-                // TODO: call UnhandledExceptionNotification handler
-                System.out.println(ServiceContext.getCurrentContext() + ": unhandled exception " + x);
-                }
+            // TODO: call UnhandledExceptionNotification handler
+            System.out.println(ServiceContext.getCurrentContext() + ": unhandled exception " + x);
+            }
             });
 
         return null;
@@ -188,7 +221,7 @@ public class xService
 
     @Override
     public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          ObjectHandle[] ahReturn, int iRet)
+                                          int iRet)
         {
         throw new IllegalStateException("Unknown method: " + method);
         }

@@ -265,16 +265,18 @@ public class Frame
             }
         }
 
-    public ObjectHandle[] getArguments(int[] aiArg)
+    public ObjectHandle[] getArguments(int[] aiArg, int cVars, int ofStart)
                 throws ExceptionHandle.WrapperException
         {
         int cArgs = aiArg.length;
 
-        ObjectHandle[] ahArg = new ObjectHandle[cArgs];
+        assert cArgs <= cVars;
+
+        ObjectHandle[] ahArg = new ObjectHandle[cVars];
 
         for (int i = 0, c = cArgs; i < c; i++)
             {
-            ahArg[i] = getArgument(aiArg[i]);
+            ahArg[ofStart + i] = getArgument(aiArg[i]);
             }
 
         return ahArg;

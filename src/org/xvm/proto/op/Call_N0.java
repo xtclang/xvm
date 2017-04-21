@@ -53,7 +53,7 @@ public class Call_N0 extends OpCallable
 
             try
                 {
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue);
+                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.m_cVars, 0);
 
                 hException = frame.f_context.createFrame(frame, function, null, ahVar).execute();
                 }

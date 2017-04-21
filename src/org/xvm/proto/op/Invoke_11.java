@@ -6,7 +6,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
-import org.xvm.proto.Utils;
 import org.xvm.proto.template.xFunction;
 
 /**
@@ -46,19 +45,12 @@ public class Invoke_11 extends OpInvocable
 
             if (method.isNative())
                 {
-                hException = template.invokeNative11(frame, hTarget, method, hArg, null, f_nRetValue);
+                hException = template.invokeNative11(frame, hTarget, method, hArg, f_nRetValue);
                 }
             else if (template.isService())
                 {
-                ObjectHandle[] ahReturn = new ObjectHandle[1];
-
                 hException = xFunction.makeAsyncHandle(method).
-                        call(frame, new ObjectHandle[]{hTarget, hArg}, ahReturn);
-
-                if (hException == null)
-                    {
-                    hException = frame.assignValue(f_nRetValue, ahReturn[0]);
-                    }
+                        call1(frame, new ObjectHandle[]{hTarget, hArg}, f_nRetValue);
                 }
             else
                 {

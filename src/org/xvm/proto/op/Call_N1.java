@@ -40,14 +40,8 @@ public class Call_N1 extends OpCallable
             try
                 {
                 FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
-                ObjectHandle[] ahReturn = new ObjectHandle[1];
 
-                hException = function.call(frame, f_anArgValue, ahReturn);
-
-                if (hException == null)
-                    {
-                    hException = frame.assignValue(f_nRetValue, ahReturn[0]);
-                    }
+                hException = function.call1(frame, f_anArgValue, f_nRetValue);
                 }
             catch (ExceptionHandle.WrapperException e)
                 {
@@ -60,7 +54,7 @@ public class Call_N1 extends OpCallable
 
             try
                 {
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue);
+                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.m_cVars, 0);
 
                 Frame frameNew = frame.f_context.createFrame(frame, function, null, ahVar);
 

@@ -34,8 +34,7 @@ public class Add extends OpInvocable
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
 
-            hException = hTarget.f_clazz.f_template.
-                    invokeAdd(frame, hTarget, hArg, frame.f_ahVar, f_nRetValue);
+            hException = hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

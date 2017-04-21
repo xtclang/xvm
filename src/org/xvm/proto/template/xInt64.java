@@ -49,54 +49,36 @@ public class xInt64
         }
 
     @Override
-    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg,
-                                     ObjectHandle[] ahReturn, int iReturn)
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
         JavaLong hThat = (JavaLong) hArg;
 
         // TODO: check overflow
         ObjectHandle hResult = makeHandle(hThis.getValue() + hThat.getValue());
-        if (ahReturn == null)
-            {
-            return frame.assignValue(iReturn, hResult);
-            }
-        ahReturn[iReturn] = hResult;
-        return null;
+
+        return frame.assignValue(iReturn, hResult);
         }
 
     @Override
-    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget,
-                                     ObjectHandle[] ahReturn, int iReturn)
+    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
         // TODO: check overflow
         ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
-        if (ahReturn == null)
-            {
-            return frame.assignValue(iReturn, hResult);
-            }
 
-        ahReturn[iReturn] = hResult;
-        return null;
+        return frame.assignValue(iReturn, hResult);
         }
 
     @Override
-    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget,
-                                     ObjectHandle[] ahReturn, int iReturn)
+    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
         // TODO: check overflow
         ObjectHandle hResult = makeHandle(-hThis.getValue());
-        if (ahReturn == null)
-            {
-            return frame.assignValue(iReturn, hResult);
-            }
-
-        ahReturn[iReturn] = hResult;
-        return null;
+        return frame.assignValue(iReturn, hResult);
         }
 
     public static JavaLong makeHandle(long lValue)
