@@ -231,7 +231,7 @@ public class Frame
     public void clearAllScopes(int iScope)
         {
         int iVarFrom = f_anNextVar[iScope];
-        int iVarTo   = f_anNextVar.length - 1;
+        int iVarTo   = f_ahVar.length - 1;
 
         for (int i = iVarFrom; i <= iVarTo; i++)
             {
@@ -246,17 +246,21 @@ public class Frame
             }
         }
 
+    // return "private:this"
+    public ObjectHandle getThis()
+        {
+        return f_ahVar[0];
+        }
+
     public ObjectHandle getArgument(int iArg)
                 throws ExceptionHandle.WrapperException
         {
         if (iArg >= 0)
             {
             Frame.VarInfo info = f_aInfo[iArg];
-            if (info == null || !info.m_fDynamicRef)
-                {
-                return f_ahVar[iArg];
-                }
-            return ((xRef.Ref) f_ahVar[iArg]).get();
+
+            return info != null && info.m_fDynamicRef ?
+                    ((RefHandle) f_ahVar[iArg]).get() : f_ahVar[iArg];
             }
         else
             {
@@ -288,18 +292,22 @@ public class Frame
 
         if (info.m_fDynamicRef)
             {
-            return ((xRef.Ref) f_ahVar[nVar]).set(hValue);
+            return ((RefHandle) f_ahVar[nVar]).set(hValue);
             }
 
         if (hValue instanceof FutureHandle)
             {
-            try
+            FutureHandle hFuture = (FutureHandle) hValue;
+            if (hFuture.f_fSynthetic)
                 {
-                hValue = ((FutureHandle) hValue).get();
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return e.getExceptionHandle();
+                try
+                    {
+                    hValue = hFuture.get();
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    return e.getExceptionHandle();
+                    }
                 }
             }
 
@@ -350,7 +358,7 @@ public class Frame
         }
 
     // variable into (support for Refs and debugger)
-    public class VarInfo
+    public static class VarInfo
         {
         public final TypeComposition f_clazz;
         public final String f_sVarName;

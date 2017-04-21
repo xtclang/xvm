@@ -6,7 +6,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.xRef.RefHandle;
 
 /**
  * DNVAR CONST_REF_CLASS, CONST_STRING ; next register is a named "dynamic reference" variable
@@ -34,12 +34,12 @@ public class DNVar extends Op
 
         ObjectHandle hRef = context.f_heapGlobal.ensureHandle(f_nClassConstId);
 
-        assert hRef instanceof xRef.Ref;
+        assert hRef instanceof RefHandle;
 
         CharStringConstant constName =
                 (CharStringConstant) context.f_constantPool.getConstantValue(f_nNameConstId);
 
-        Frame.VarInfo info = frame.new VarInfo(hRef.f_clazz, constName.getValue());
+        Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz, constName.getValue());
         info.m_fDynamicRef = true;
 
         frame.f_aInfo[nNextVar] = info;

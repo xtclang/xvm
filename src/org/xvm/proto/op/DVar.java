@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.xRef.RefHandle;
 
 /**
  * DVAR CONST_REF_CLASS ; next register is an anonymous "dynamic reference" variable
@@ -28,9 +28,9 @@ public class DVar extends Op
 
         ObjectHandle hRef = frame.f_context.f_heapGlobal.ensureHandle(f_nClassConstId);
 
-        assert hRef instanceof xRef.Ref;
+        assert hRef instanceof RefHandle;
 
-        Frame.VarInfo info = frame.new VarInfo(hRef.f_clazz);
+        Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz);
         info.m_fDynamicRef = true;
 
         frame.f_aInfo[nNextVar] = info;

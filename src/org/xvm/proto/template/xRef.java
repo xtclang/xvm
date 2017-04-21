@@ -23,6 +23,12 @@ public class xRef
         INSTANCE = this;
         }
 
+    // subclassing
+    protected xRef(TypeSet types, String sName, String sSuper, Shape shape)
+        {
+        super(types, sName, sSuper, shape);
+        }
+
     @Override
     public void initDeclared()
         {
@@ -36,14 +42,18 @@ public class xRef
         //    @ro Int byteLength;
         //    @ro Boolean selfContained;
 
-        ensurePropertyTemplate("assigned", "x:Boolean").makeReadOnly();
-        ensureMethodTemplate("peek", VOID, new String[]{"x:ConditionalTuple<RefType>"});
-        ensureMethodTemplate("get", VOID, new String[]{"RefType"}).markNative();
-        ensureMethodTemplate("set", new String[]{"RefType"}, VOID).markNative();
+        PropertyTemplate ptAssigned = ensurePropertyTemplate("assigned", "x:Boolean");
+        ptAssigned.makeReadOnly();
+        ptAssigned.addGet().markNative();
+
         ensurePropertyTemplate("ActualType", "x:Type").makeReadOnly();
         ensurePropertyTemplate("name", "x:String|x:Nullable").makeReadOnly();
         ensurePropertyTemplate("byteLength", "x:Int").makeReadOnly();
         ensurePropertyTemplate("selfContained", "x:Boolean").makeReadOnly();
+
+        ensureMethodTemplate("peek", VOID, new String[]{"x:ConditionalTuple<RefType>"});
+        ensureMethodTemplate("get", VOID, new String[]{"RefType"}).markNative();
+        ensureMethodTemplate("set", new String[]{"RefType"}, VOID).markNative();
 
         ensureFunctionTemplate("equals", new String[]{"x:Ref", "x:Ref"}, BOOLEAN);
         }
@@ -57,8 +67,14 @@ public class xRef
         switch (method.f_sName)
             {
             case "get":
-                ObjectHandle hValue = hThis.get();
-                return frame.assignValue(iRet, hValue);
+                try
+                    {
+                    return frame.assignValue(iRet, hThis.get());
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    return e.getExceptionHandle();
+                    }
 
             default:
                 throw new IllegalStateException("Unknown method: " + method);
@@ -74,28 +90,22 @@ public class xRef
         switch (method.f_sName)
             {
             case "set":
-                hThis.set(hArg);
-                return null;
+                return hThis.set(hArg);
 
             default:
                 throw new IllegalStateException("Unknown method: " + method);
             }
         }
 
-    // a reference
-    public interface Ref
+    @Override
+    public ObjectHandle createHandle(TypeComposition clazz)
         {
-        ObjectHandle get()
-                throws ExceptionHandle.WrapperException;
-
-        // return exception
-        ExceptionHandle set(ObjectHandle handle);
+        return new RefHandle(clazz, null);
         }
 
     // a simple reference handle
     public static class RefHandle
             extends ObjectHandle
-            implements Ref
         {
         protected Frame m_frame;
         protected int m_iVar = REF_REFERENT;
@@ -141,6 +151,7 @@ public class xRef
             }
 
         public ObjectHandle get()
+                throws ExceptionHandle.WrapperException
             {
             if (m_iVar >= 0)
                 {
@@ -189,33 +200,6 @@ public class xRef
             {
             return super.toString() +
                     (m_iVar >= 0 ? "-> " + m_frame.f_ahVar[m_iVar] : m_hDelegate);
-            }
-        }
-
-    protected static class DelegatingRef
-            extends ObjectHandle
-            implements Ref
-        {
-        public Ref m_hDelegate;
-
-        protected DelegatingRef(TypeComposition clazz, Ref referent)
-            {
-            super(clazz);
-
-            m_hDelegate = referent;
-            }
-
-        @Override
-        public ObjectHandle get()
-                throws ExceptionHandle.WrapperException
-            {
-            return m_hDelegate.get();
-            }
-
-        @Override
-        public ExceptionHandle set(ObjectHandle handle)
-            {
-            return m_hDelegate.set(handle);
             }
         }
 

@@ -26,14 +26,23 @@ public class Ref extends OpInvocable
 
         Frame.VarInfo infoSrc = frame.f_aInfo[f_nSrcValue];
 
-        TypeComposition clzRef = xRef.INSTANCE.resolve(new TypeComposition[] {infoSrc.f_clazz});
+        if (infoSrc.m_fDynamicRef)
+            {
+            // the "dynamic ref" register must contain a RefHandle itself
+            RefHandle hRef = (RefHandle) frame.f_ahVar[f_nSrcValue];
 
-        RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);
+            frame.f_aInfo[nNextVar] = new Frame.VarInfo(infoSrc.f_clazz);
+            frame.f_ahVar[nNextVar] = hRef;
+            }
+        else
+            {
+            TypeComposition clzRef = xRef.INSTANCE.resolve(new TypeComposition[]{infoSrc.f_clazz});
 
-        frame.f_aInfo[nNextVar] = frame.new VarInfo(clzRef);
-        frame.f_ahVar[nNextVar] = hRef;
+            RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);
 
+            frame.f_aInfo[nNextVar] = new Frame.VarInfo(clzRef);
+            frame.f_ahVar[nNextVar] = hRef;
+            }
         return iPC + 1;
         }
-
     }

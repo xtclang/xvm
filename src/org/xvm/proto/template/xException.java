@@ -55,6 +55,15 @@ public class xException
         return makeHandle(null, null);
         }
 
+    public static ExceptionHandle makeHandle(String sMessage)
+        {
+        ExceptionHandle hException = makeHandle(null, null);
+
+        INSTANCE.setField(hException, "text", xString.makeHandle(sMessage));
+
+        return hException;
+        }
+
     public static ExceptionHandle makeHandle(ExceptionHandle hCause, Throwable eCause)
         {
         ExceptionHandle hException = eCause == null ?

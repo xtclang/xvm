@@ -87,7 +87,7 @@ public class Type
     @Override
     public String toString()
         {
-        return f_sName + "(id=" + m_nId + ")";
+        return f_sName;
         }
 
     // ----- debugging support ------

@@ -40,18 +40,6 @@ public abstract class ObjectHandle
             }
         }
 
-    public <T extends ObjectHandle> T as(Class<T> clz)
-            throws ExceptionHandle.WrapperException
-        {
-        return (T) this;
-        }
-
-    public <T extends ObjectHandle> T as(TypeComposition clazz)
-            throws ExceptionHandle.WrapperException
-        {
-        return (T) this;
-        }
-
     public boolean isStruct()
         {
         return f_clazz.isStruct(m_type);

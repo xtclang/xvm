@@ -37,7 +37,7 @@ public class INVar extends Op
         CharStringConstant constName = (CharStringConstant)
                 context.f_constantPool.getConstantValue(f_nNameConstId);
 
-        frame.f_aInfo[nNextVar] = frame.new VarInfo(clazz, constName.getValue());
+        frame.f_aInfo[nNextVar] = new Frame.VarInfo(clazz, constName.getValue());
 
         frame.assignValue(nNextVar,
                 frame.f_context.f_heapGlobal.ensureConstHandle(f_nValueConstId));

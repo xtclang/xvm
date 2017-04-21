@@ -38,7 +38,7 @@ public class Call_11 extends OpCallable
 
             ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
 
-            ObjectHandle hThis = frame.f_ahVar[0];
+            ObjectHandle hThis = frame.getThis();
 
             try
                 {

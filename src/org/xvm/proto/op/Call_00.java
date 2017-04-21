@@ -35,7 +35,7 @@ public class Call_00 extends OpCallable
             MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
             ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
-            ObjectHandle hThis = frame.f_ahVar[0];
+            ObjectHandle hThis = frame.getThis();
 
             hException = frame.f_context.createFrame(frame, methodSuper, hThis, ahVar).execute();
             }

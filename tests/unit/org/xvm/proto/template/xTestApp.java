@@ -132,19 +132,47 @@ public class xTestApp extends xModule
             new Call_01(2, 1),
             new X_Print(1),
 
-            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+4}),
-            new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
-            new X_Print(1),
-            new GuardEnd(+4),
-            new Enter(), // #3 (e)
+            new DNVar(adapter.getClassConstId("x:FutureRef"), adapter.ensureValueConstantId("fc")), // #3 (fc)
+            new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "increment"), 3),
+            new NVar(adapter.getClassConstId("x:FutureRef"), adapter.ensureValueConstantId("rfc")), // #4 (rfc)
+            new MoveRef(3, 4),
+            new X_Print(4),
             new X_Print(3),
+            new X_Print(4),
+
+            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+3}),
+            new Invoke_10(4, -adapter.getMethodConstId("x:FutureRef", "set"), -adapter.ensureValueConstantId(99)),
+            new GuardEnd(+4),
+            new Enter(), // #5 (e)
+            new X_Print(5),
+            new Exit(),
+
+            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+3}),
+            new Invoke_10(4, -adapter.getMethodConstId("x:FutureRef", "set"), -adapter.ensureValueConstantId(98)),
+            new GuardEnd(+4),
+            new Enter(), // #5 (e)
+            new X_Print(5),
+            new Exit(),
+
+            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+3}),
+            new Invoke_10(4, -adapter.getMethodConstId("x:FutureRef", "set"), -adapter.ensureValueConstantId(97)),
+            new GuardEnd(+4),
+            new Enter(), // #5 (e)
+            new X_Print(5),
+            new Exit(),
+
+            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+3}),
+            new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
+            new GuardEnd(+4),
+            new Enter(), // #5 (e)
+            new X_Print(5),
             new Exit(),
 
             new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
             new X_Print(1),
             new Return_0(),
             };
-        ftTestService.m_cVars = 4;
+        ftTestService.m_cVars = 6;
         ftTestService.m_cScopes = 2;
 
         // --- testRef()

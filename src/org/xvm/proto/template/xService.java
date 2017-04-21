@@ -99,15 +99,11 @@ public class xService
         CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeRequest(
                 hService.m_context, hFunction, ahArg, cReturns);
 
-        InvocationTemplate function = hFunction.m_invoke;
-        TypeComposition clzService = hService.f_clazz;
-
         if (cReturns == 1)
             {
             CompletableFuture<ObjectHandle> cfReturn = cfResult.thenApply(ahResult -> ahResult[0]);
 
-            frame.assignValue(iReturn,
-                    xFutureRef.makeHandle(function.getReturnType(0, clzService), cfReturn));
+            frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfReturn));
             }
         else
             {
@@ -133,9 +129,6 @@ public class xService
         CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeRequest(
                 hService.m_context, hFunction, ahArg, ahReturn.length);
 
-        InvocationTemplate function = hFunction.m_invoke;
-        TypeComposition clzService = hService.f_clazz;
-
         int cReturns = ahReturn.length;
         if (cReturns > 0)
             {
@@ -146,7 +139,7 @@ public class xService
                 CompletableFuture<ObjectHandle> cfReturn =
                         cfResult.thenApply(ahResult -> ahResult[iRet]);
 
-                ahReturn[i] = xFutureRef.makeHandle(function.getReturnType(i, clzService), cfReturn);
+                ahReturn[i] = xFutureRef.makeSyntheticHandle(cfReturn);
                 }
             }
         else
@@ -179,9 +172,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendGetRequest(
                 hService.m_context, property);
 
-        TypeComposition clzService = hService.f_clazz;
-
-        ObjectHandle hValue = xFutureRef.makeHandle(property.getType(clzService), cfResult);
+        ObjectHandle hValue = xFutureRef.makeSyntheticHandle(cfResult);
 
         if (ahReturn == null)
             {

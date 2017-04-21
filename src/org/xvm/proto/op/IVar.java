@@ -30,7 +30,7 @@ public class IVar extends Op
         ServiceContext context = frame.f_context;
         TypeComposition clazz = context.f_types.ensureConstComposition(f_nClassConstId);
 
-        frame.f_aInfo[nNextVar] = frame.new VarInfo(clazz);
+        frame.f_aInfo[nNextVar] = new Frame.VarInfo(clazz);
         frame.assignValue(nNextVar, context.f_heapGlobal.ensureConstHandle(f_nValueConstId));
 
         frame.f_anNextVar[iScope] = nNextVar + 1;

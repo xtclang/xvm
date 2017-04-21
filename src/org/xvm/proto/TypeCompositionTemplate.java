@@ -409,6 +409,7 @@ public abstract class TypeCompositionTemplate
 
     // get a property value into the specified place in the array
     // if ahReturn is null, use frame.assignValue()
+    // frame could be null if called for a service's property
     public ExceptionHandle getProperty(PropertyTemplate property, MethodTemplate method,
                                        Frame frame, ObjectHandle hTarget, ObjectHandle[] ahRet, int iRet)
         {

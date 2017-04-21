@@ -25,13 +25,20 @@ public class MoveRef extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        // TODO: validate the source/destination compatibility
-
         Frame.VarInfo infoSrc = frame.f_aInfo[f_nSrcValue];
+        RefHandle hRef;
 
-        TypeComposition clzRef = xRef.INSTANCE.resolve(
-                new TypeComposition[] {infoSrc.f_clazz});
-        RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);
+        if (infoSrc.m_fDynamicRef)
+            {
+            // the "dynamic ref" register must contain a RefHandle itself
+            hRef = (RefHandle) frame.f_ahVar[f_nSrcValue];
+            }
+        else
+            {
+            TypeComposition clzRef = xRef.INSTANCE.resolve(new TypeComposition[]{infoSrc.f_clazz});
+
+            hRef = new RefHandle(clzRef, frame, f_nSrcValue);
+            }
 
         frame.f_ahVar[f_nDestValue] = hRef;
 

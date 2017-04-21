@@ -123,8 +123,24 @@ module TestApp
         print(c);
 
         function Int() fnInc = service.increment;
-        c = fiInc();
+        c = fnInc();
         print(c);
+
+        @future Int fc = service.increment();
+        FutureRef<Int> rfc = &fc;
+        print(rfc);
+        print(fc);
+        print(rfc);
+
+        // setting the "future" value should blow
+        try
+            {
+            rfc.set(99);
+            }
+        catch (Exception e)
+            {
+            print(e);
+            }
 
         // handled exception
         try

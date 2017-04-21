@@ -40,7 +40,7 @@ public abstract class OpCallable extends Op
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
-        ObjectHandle hThis = frame.f_ahVar[0];
+        ObjectHandle hThis = frame.getThis();
 
         if (methodSuper instanceof PropertyAccessTemplate)
             {
@@ -69,7 +69,7 @@ public abstract class OpCallable extends Op
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
-        ObjectHandle hThis = frame.f_ahVar[0];
+        ObjectHandle hThis = frame.getThis();
         ObjectHandle hArg;
         try
             {
@@ -102,7 +102,7 @@ public abstract class OpCallable extends Op
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
 
-        ObjectHandle hThis = frame.f_ahVar[0];
+        ObjectHandle hThis = frame.getThis();
 
         try
             {
@@ -156,15 +156,7 @@ public abstract class OpCallable extends Op
 
             if (constructor.m_cReturns > 0)
                 {
-                FunctionHandle hFinally;
-                try
-                    {
-                    hFinally = frameNew.f_ahReturn[0].as(FunctionHandle.class);
-                    }
-                catch (ExceptionHandle.WrapperException e )
-                    {
-                    return e.getExceptionHandle();
-                    }
+                FunctionHandle hFinally = (FunctionHandle) frameNew.f_ahReturn[0];
 
                 hTarget = ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Private); // this:struct -> this:private
 
