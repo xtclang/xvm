@@ -3,7 +3,7 @@
  */
 module MyApp.xqiz.it
     {
-    package x import ecstasy.xtclang.org "1.0"
+    package x import ecstasy.xtclang.org "1"
             avoid "1.0.3"
             allow "1.2.1.rc2", "1.1.beta7"
             prefer "1.2.1", "1.1"

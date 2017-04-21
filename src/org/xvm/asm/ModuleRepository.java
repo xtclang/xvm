@@ -112,9 +112,9 @@ public interface ModuleRepository
             // check each version in the module to see if it would work; keep the most appropriate one
             for (Version possibleVer : module.getVersions())
                 {
-                if (possibleVer.isDerivedFrom(version))
+                if (possibleVer.isSubstitutableFor(version))
                     {
-                    if (version.isDerivedFrom(possibleVer))
+                    if (version.isSubstitutableFor(possibleVer))
                         {
                         // use that version; it's the same as this version (except for .0 etc.)
                         useVersion = possibleVer;
@@ -123,7 +123,7 @@ public interface ModuleRepository
 
                     if (!fExact)
                         {
-                        if (useVersion == null || useVersion.isDerivedFrom(possibleVer))
+                        if (useVersion == null || useVersion.isSubstitutableFor(possibleVer))
                             {
                             // use the oldest available version that matches
                             useVersion = possibleVer;

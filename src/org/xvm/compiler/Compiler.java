@@ -30,6 +30,7 @@ public class Compiler
         m_repos  = repos;
         m_module = module;
         m_errs   = listener;
+        m_fRoot  = module.getName().equals("ecstasy.xtclang.org");
         }
 
 
@@ -140,4 +141,6 @@ public class Compiler
      * The FileStructure that this compiler is putting together in a series of passes.
      */
     private FileStructure m_struct;
+
+    private boolean m_fRoot;
     }

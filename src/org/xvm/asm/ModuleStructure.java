@@ -352,7 +352,7 @@ public class ModuleStructure
             {
             for (VersionConstant verSupported : m_setVer)
                 {
-                if (asVer(verSupported).isDerivedFrom(ver))
+                if (asVer(verSupported).isSubstitutableFor(ver))
                     {
                     return true;
                     }
