@@ -250,8 +250,12 @@ public class ConstantPool
 
     public VersionConstant ensureVersionConstant(Version ver)
         {
-        // TODO VersionConstant(ConstantPool pool, VersionConstant constBaseVer, int nVer, boolean fDot, String sDesc)
-        return null;
+        VersionConstant constant = (VersionConstant) ensureLocatorLookup(Type.Version).get(ver.toString());
+        if (constant == null)
+            {
+            constant = new VersionConstant(this, ver);
+            }
+        return constant;
         }
 
     public ConditionalConstant.NamedCondition ensureNamedCondition(String sName)
