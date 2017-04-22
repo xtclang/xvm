@@ -5,6 +5,7 @@ import org.xvm.asm.StructureContainer;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
+
 import org.xvm.util.ListMap;
 
 import java.io.PrintWriter;
@@ -12,7 +13,14 @@ import java.io.StringWriter;
 
 import java.lang.reflect.Field;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -97,21 +105,37 @@ public abstract class AstNode
         return struct;
         }
 
+    /**
+     *
+     */
+    public Map<String, Object> typesByUnqualifiedNames() // TODO
+        {
+        return parent.typesByUnqualifiedNames();
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 
     /**
-     * First logical compiler pass. At this point, names are NOT resolvable; we're really just
-     * organizing the tree and checking obvious errors that are obvious from "this point down".
-     * The general idea is that this method recurses through the structure, allowing each node to
-     * introduce itself as the parent of each node under it, and that the nodes which are modules,
-     * packages, and classes (but only those nested under modules/packages/classes) will register
-     * themselves as appropriate into the corresponding file structure.
+     * First logical compiler pass.
+     * <p/>
+     * <ul>
+     * <li>At this point, names are NOT resolvable; we're really just organizing the tree and
+     * checking for errors that are obvious from "this point down" (no lateral evaluation of
+     * structures, because we can't count on them even existing yet.)</li>
+     *
+     * <li>The general idea is that this method recurses through the structure, allowing each node
+     * to introduce itself as the parent of each node under it, and that the nodes which will be
+     * structures in the resulting FileStructure will register themselves.</li>
+     *
+     * <li>Type parameters for the types must also be registered, because they are also types, and
+     * they will be required to already be present when the second pass begins.</li>
+     * <li></li>
+     * </ul>
+     *
      *
      * @param parent  the parent of this node to tie into (if necessary / appropriate)
      * @param errs    the error list to log any errors etc. to
-     *
-     * @return the node to replace this node with (or null to discard this node)
      */
     protected void registerGlobalNames(AstNode parent, ErrorListener errs)
         {
@@ -120,6 +144,22 @@ public abstract class AstNode
         for (AstNode node : children())
             {
             node.registerGlobalNames(this, errs);
+            }
+        }
+
+    /**
+     * Second logical compiler pass. This pass is responsible for populating the remaining items in
+     * the module structure, including properties, methods, and any structures (e.g. classes) nested
+     * thereunder. To accomplish this, this pass must be able to resolve type names, which is why
+     * the first pass was necessarily a separate pass.
+     *
+     * @param errs  the error list to log any errors etc. to
+     */
+    protected void registerRemainingStructures(ErrorListener errs)
+        {
+        for (AstNode node : children())
+            {
+            node.registerRemainingStructures(errs);
             }
         }
 
@@ -348,7 +388,7 @@ public abstract class AstNode
         }
 
 
-    // ----- inner class: ChildIterator ------------------------------------------------------------
+    // ----- internal -------------------------------------------------------------------
 
     protected static Field[] fieldsForNames(Class clz, String... names)
         {

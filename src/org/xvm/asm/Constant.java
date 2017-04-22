@@ -2,43 +2,41 @@ package org.xvm.asm;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.Comparator;
 
-import org.xvm.asm.ConstantPool.ConditionalConstant;
+import org.xvm.asm.constants.ConditionalConstant;
 
 
 /**
  * A Constant value stored in the ConstantPool of an XVM FileStructure.
- * <p>
- * Constants are the immutable terminals of the XVM Structure hierarchy. For
- * example, the string "hello world" is a constant, as is the number 42. By
- * representing these as constant values in a "pool" of constant values, it
- * is possible for multiple uses of the same constant value to all refer to
- * one location within the assembled binary FileStructure, saving space.
- * Furthermore, it allows a reference to a particular constant to be made from
- * anywhere within the FileStructure using an integer, which identifies the
- * ordinal position (known as the <i>index</i>) of the constant within the
- * sequence of all constants (whose particular order should be considered to
+ * <p/>
+ * Constants are the immutable terminals of the XVM Structure hierarchy. For example, the string
+ * "hello world" is a constant, as is the number 42. By representing these as constant values in a
+ * "pool" of constant values, it is possible for multiple uses of the same constant value to all
+ * refer to one location within the assembled binary FileStructure, saving space. Furthermore, it
+ * allows a reference to a particular constant to be made from anywhere within the FileStructure
+ * using an integer, which identifies the ordinal position (known as the <i>index</i>) of the
+ * constant within the sequence of all constants (whose particular order should be considered to
  * be arbitrary).
- * <p>
- * In addition to the simple examples of constant values above, constants also
- * serve to identify structures within the FileStructure, and to identify
- * structures that must be found in other FileStructures. Specifically:
+ * <p/>
+ * In addition to the simple examples of constant values above, constants also serve to identify
+ * structures within the FileStructure, and to identify structures that must be found in other
+ * FileStructures. Specifically:
+ * <p/>
  * <ul>
- * <li>Each identifiable sub-structure within the FileStructure specifies the
- *     index of the constant that is the identity of that sub-structure, such
- *     as a Package or a Class or a Method or a Property;</li>
- * <li>Each reference to a sub-structure that exists within the FileStructure
- *     is made by specifying the index of the constant that identifies that
- *     particular sub-structure, such as a Method that is being invoked or a
- *     Property that is being accessed;</li>
- * <li>Similarly, each reference to a sub-structure that exists in some other
- *     FileStructure is made by specifying the index of the constant within
- *     this FileStructure that exactly identifies (fully qualifies) the
- *     particular sub-structure in the other FileStructure, such as a Class
+ * <li>Each identifiable sub-structure within the FileStructure specifies the index of the constant
+ *     that is the identity of that sub-structure, such as a Package or a Class or a Method or a
+ *     Property;</li>
+ * <li>Each reference to a sub-structure that exists within the FileStructure is made by specifying
+ *     the index of the constant that identifies that particular sub-structure, such as a Method
+ *     that is being invoked or a Property that is being accessed;</li>
+ * <li>Similarly, each reference to a sub-structure that exists in some other FileStructure is made
+ *     by specifying the index of the constant within this FileStructure that exactly identifies
+ *     (fully qualifies) the particular sub-structure in the other FileStructure, such as a Class
  *     being referenced or a Method being invoked in a different Module.</li>
  * </ul>
  *
@@ -48,7 +46,7 @@ public abstract class Constant
         extends XvmStructure
         implements Comparable<Constant>
     {
-    // ----- constructors ------------------------------------------------------
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a Constant.
@@ -61,8 +59,7 @@ public abstract class Constant
         }
 
 
-    // ----- XvmStructure operations -------------------------------------------
-
+    // ----- XvmStructure operations ---------------------------------------------------------------
 
     @Override
     protected ConstantPool getConstantPool()
@@ -112,9 +109,8 @@ public abstract class Constant
     @Override
     public boolean isPresent(LinkerContext ctx)
         {
-        // a constant does not support conditional inclusion of itself; it will
-        // simply be automatically discarded if it is not referenced at the
-        // time of assembly
+        // a constant does not support conditional inclusion of itself; it will simply be
+        // automatically discarded if it is not referenced at the time of assembly
         return true;
         }
 
@@ -126,13 +122,11 @@ public abstract class Constant
 
     /**
      * {@inheritDoc}
-     * <p>
-     * Since the reading of the Constant information is done as part of
-     * construction, this method is used to provide the Constant a chance to
-     * resolve other Constants that it knows only by index.
-     * <p>
-     * This method must be overridden by constant types which reference other
-     * constants.
+     * <p/>
+     * Since the reading of the Constant information is done as part of construction, this method is
+     * used to provide the Constant a chance to resolve other Constants that it knows only by index.
+     * <p/>
+     * This method must be overridden by constant types which reference other constants.
      */
     @Override
     protected void disassemble(DataInput in)
@@ -142,30 +136,35 @@ public abstract class Constant
 
     /**
      * {@inheritDoc}
-     * <p>
-     * This method must be overridden by constant types which reference other
-     * constants.
+     * <p/>
+     * This method must be overridden by constant types which reference other constants.
      */
     @Override
     protected void registerConstants(ConstantPool pool)
         {
         }
 
+    protected abstract void assemble(DataOutput out)
+            throws IOException;
 
-    // ----- debugging support -------------------------------------------------
 
+    // ----- debugging support ---------------------------------------------------------------------
+
+    /**
+     * @return the value of the Constant as it might appear in source code
+     */
     public abstract String getValueString();
 
     @Override
     protected void dump(PrintWriter out, String sIndent)
         {
-        // to be over-ridden by various specific constants if they have multi-line toString() implementations
+        // this must be over-ridden by any Constant implementation that has a multi-line toString()
         out.print(sIndent);
         out.println(toString());
         }
 
 
-    // ----- Object operations -------------------------------------------------
+    // ----- Object operations ---------------------------------------------------------------------
 
     @Override
     public int hashCode()
@@ -193,7 +192,7 @@ public abstract class Constant
         }
 
 
-    // ----- Comparable interface ----------------------------------------------
+    // ----- Comparable interface ------------------------------------------------------------------
 
     @Override
     public int compareTo(Constant that)
@@ -208,7 +207,6 @@ public abstract class Constant
         int cDif = this.getFormat().ordinal() - that.getFormat().ordinal();
         if (cDif != 0)
             {
-            // order by types
             return cDif;
             }
 
@@ -218,7 +216,7 @@ public abstract class Constant
         }
 
 
-    // ----- Constant operations ------------------------------------------------
+    // ----- Constant operations -------------------------------------------------------------------
 
     /**
      * Determine the enumerated constant type classification.
@@ -235,13 +233,12 @@ public abstract class Constant
     public abstract Format getFormat();
 
     /**
-     * Determine the last known position that the Constant was located at in
-     * its ConstantPool. Generally. the position only has meaning during the
-     * disassembly and assembly processes. The position of all constants may
-     * be re-ordered as part of the assembly process.
+     * Determine the last known position that the Constant was located at in its ConstantPool.
+     * Generally. the position only has meaning during the disassembly and assembly processes. The
+     * position of all constants may be re-ordered as part of the assembly process.
      *
-     * @return the last known index of the Constant, or <tt>-1</tt> if no
-     *         position has been assigned to the constant
+     * @return the last known index of the Constant, or <tt>-1</tt> if no position has been assigned
+     *         to the constant
      */
     public int getPosition()
         {
@@ -260,16 +257,23 @@ public abstract class Constant
         }
 
     /**
-     * Obtain an object that can be used as a key to locate this Constant. By
-     * default, the Constant does not have a locator. Even within a particular
-     * category of Constants, it is acceptable that only some of the Constants
-     * will have a locator, but given a particular Constant value, the choice
-     * must be consistent.
+     * Obtain an object that can be used as a key to locate this Constant. By default, the Constant
+     * does not have a locator. Even within a particular category of Constants, it is acceptable
+     * that only some of the Constants will have a locator, but given a particular Constant value,
+     * the choice must be consistent. The purpose of the locator is to avoid having to create a new
+     * Constant instance just to see if there is already an old Constant index; for example, if the
+     * constant for the character string "Hello World!" is requested by calling the {@link
+     * ConstantPool#ensureCharStringConstant(String)} method, it would use the string "Hello World!"
+     * as the locator object to see if that constant already exists; if it could not do so, it would
+     * have to create a new CharStringConstant and register it just to find out if such a constant
+     * already exists! Some constants would spend as much time and memory creating a locator as it
+     * would take to just create a new constant, so in those cases, no locator is used. Lastly, the
+     * locator is a completely hidden concept shared between the Constant and the ConstantPool;
+     * users of the Constant and ConstantPool APIs are not even aware that the concept exists.
      *
-     * @return an object that uniquely identifies this Constant within its
-     *         category of constants, and implements the Object methods
-     *         {@link #equals}, {@link #hashCode}, and {@link #toString}; or
-     *         null
+     * @return an object that uniquely identifies this Constant within its category of constants,
+     *         and implements the Object methods {@link #equals}, {@link #hashCode}, and {@link
+     *         #toString}; or null
      */
     protected Object getLocator()
         {
@@ -277,23 +281,24 @@ public abstract class Constant
         }
 
     /**
-     * This method allows each particular type of constant to compare its
-     * detailed information with another instance of the same type of constant
-     * in order to provide a stable and predictable ordering of constants.
+     * This method allows each particular type of constant to compare its detailed information with
+     * another instance of the same type of constant in order to provide a stable and predictable
+     * ordering of constants.
      *
      * @param that  another Constant of the same Type
      *
-     * @return a negative integer, zero, or a positive integer as this Constant
-     *         is less than, equal to, or greater than the specified Constant
+     * @return a negative integer, zero, or a positive integer as this Constant is less than, equal
+     *         to, or greater than the specified Constant
      */
     protected abstract int compareDetails(Constant that);
 
     /**
-     * Before the registration of constants begins, each Constant's tracking of
-     * its references is reset. There are two purposes: (1) to be able to tally
-     * how many references there are to the constant, so that it can be placed
-     * near the front of the ConstantPool, and (2) to be able to determine which
-     * Constants can be discarded altogether.
+     * Before the registration of constants begins, each Constant's tracking of its references is
+     * reset. There are two purposes: (1) to be able to tally how many references there are to the
+     * constant, so that it can be placed near the front of the ConstantPool if it is used
+     * frequently (which will reduce the size of the index used to specify the constant), and
+     * (2) to be able to determine which Constants can be discarded altogether (i.e. the ones that
+     * have zero references to them.)
      */
     protected void resetRefs()
         {
@@ -301,7 +306,7 @@ public abstract class Constant
         }
 
     /**
-     * Note that the Constant is referred to by another XvmStructure.
+     * This marks that the Constant is referred to by another XvmStructure.
      */
     protected void addRef()
         {
@@ -309,23 +314,10 @@ public abstract class Constant
         }
 
     /**
-     * Note that the Constant is referred to by another Contant.
-     * <p>
-     * This method must be overridden by constant types which track references
-     * from other constants.
+     * Based on the Constant registration process that tallies references to the Constants,
+     * determine if this constant has any references to it.
      *
-     * @param that  the Constant that references this Constant
-     */
-    protected void addRef(Constant that)
-        {
-        addRef();
-        }
-
-    /**
-     * Based on the Constant registration process that tallies references to the
-     * Constants, determine if this constant has no references to it.
-     *
-     * @return true iff there are no known references to this Constant
+     * @return true iff there are any known references to this Constant
      */
     protected boolean hasRefs()
         {
@@ -333,8 +325,8 @@ public abstract class Constant
         }
 
     /**
-     * If this constant acts as an identity for an XVM structure, then
-     * instantiate that XVM Structure using this constant as its identity.
+     * If this constant acts as an identity for an XVM structure, then instantiate that XVM
+     * Structure using this constant as its identity.
      *
      * @param xsParent  the parent of the XVM structure to instantiate
      *
@@ -345,12 +337,15 @@ public abstract class Constant
         throw new UnsupportedOperationException();
         }
 
+
+    // ----- helpers -------------------------------------------------------------------------------
+
     /**
-     * TODO
+     * Determine the index of the specified Constant.
      *
-     * @param constant
+     * @param constant  the Constant to look up the index for, or null
      *
-     * @return
+     * @return the Constant's index in the ConstantPool, or -1 if passed constant is null
      */
     protected static int indexOf(Constant constant)
         {
@@ -358,10 +353,10 @@ public abstract class Constant
         }
 
 
-    // ----- constant pool type identifiers ------------------------------------
+    // ----- constant pool type identifiers --------------------------------------------------------
 
     /**
-     * Enum: Types of Constant values in the ConstantPool.
+     * The Type enum is used to specify what type of information the Constant represents.
      */
     public enum Type
         {
@@ -377,7 +372,7 @@ public abstract class Constant
         Class,
         Method,
         Property,
-        Parameter;  // REVIEW not in constant pool=
+        Parameter;
 
         /**
          * Look up a Type enum by its ordinal.
@@ -392,11 +387,10 @@ public abstract class Constant
             }
 
         /**
-         * Determine if structures of the type are length-encoded when
-         * assembled.
+         * Determine if structures of the type are length-encoded when assembled.
          *
-         * @return true if the persistent form of the corresponding XVM
-         *         structure gets length-encoded
+         * @return true if the persistent form of the corresponding XVM structure gets
+         *         length-encoded
          */
         public boolean isLengthEncoded()
             {
@@ -420,12 +414,15 @@ public abstract class Constant
         }
 
 
-    // ----- constant pool format identifiers ----------------------------------
+    // ----- constant pool format identifiers ------------------------------------------------------
 
     /**
-     * Enum: Binary formats of Constant values in the ConstantPool.
+     * The Format enum is used to specify the "binary format on disk" used to encode a constant's
+     * information. This is necessary because all of the Constants in the ConstantPool are written
+     * out in a seemingly-arbitrary sequence, mixed in with various other Constants that have
+     * various other formats.
      */
-    enum Format // TODO re-do / maybe discard this altogether?
+    public enum Format
         {
         Byte,
         ByteString,
@@ -445,8 +442,7 @@ public abstract class Constant
         Class,
         Method,
         Property,
-
-        Parameter; // TODO remove?
+        Parameter;
 
         /**
          * Look up a Format enum by its ordinal.
@@ -467,11 +463,11 @@ public abstract class Constant
         }
 
 
-    // ----- Constant Comparators for ordering ConstantPool --------------------
+    // ----- Constant Comparators for ordering ConstantPool ----------------------------------------
 
     /**
-     * A Comparator of Constant values that orders the "most frequently used"
-     * constants to the front of the ConstantPool.
+     * A Comparator of Constant values that orders the "most frequently used" constants to the front
+     * of the ConstantPool.
      */
     public static final Comparator<Constant> MFU_ORDER = new Comparator<Constant>()
         {
@@ -485,15 +481,16 @@ public abstract class Constant
 
             assert o1.getConstantPool() == o2.getConstantPool();
 
+            // how much more is the first constant used than the second constant?
             int cDif = o1.m_cRefs - o2.m_cRefs;
 
-            // most used comes first
+            // most used comes first (i.e. _reverse_ sort on most used)
             return -cDif;
             }
         };
 
 
-    // ----- data members ------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
     /**
      * A cached index of the location of the Constant in the pool.
@@ -501,8 +498,8 @@ public abstract class Constant
     private transient int m_iPos = -1;
 
     /**
-     * A calculated number of references to this constant; useful for priority
-     * based ordering of the constant pool.
+     * A calculated number of references to this constant; useful for priority based ordering of the
+     * constant pool.
      */
     private transient int m_cRefs;
     }

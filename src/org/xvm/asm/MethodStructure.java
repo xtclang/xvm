@@ -1,7 +1,7 @@
 package org.xvm.asm;
 
 
-import org.xvm.asm.ConstantPool.MethodConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.StructureContainer.ClassContainer;
 
 

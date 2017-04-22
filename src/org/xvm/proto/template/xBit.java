@@ -1,7 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool.IntConstant;
+import org.xvm.asm.constants.IntConstant;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.TypeComposition;

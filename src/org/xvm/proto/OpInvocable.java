@@ -1,7 +1,7 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ConstantPool.MethodConstant;
-import org.xvm.asm.ConstantPool.PropertyConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;

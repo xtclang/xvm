@@ -2,18 +2,18 @@ package org.xvm.proto;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ConstantPool.ClassConstant;
-import org.xvm.asm.ConstantPool.ModuleConstant;
-import org.xvm.asm.ConstantPool.MethodConstant;
-import org.xvm.asm.ConstantPool.PackageConstant;
-import org.xvm.asm.ConstantPool.PropertyConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
+
 
 /**
  * A temporary intermediary between the RT and the ConstantPool

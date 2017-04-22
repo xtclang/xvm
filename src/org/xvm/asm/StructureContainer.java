@@ -17,12 +17,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.ConstantPool.CharStringConstant;
-import org.xvm.asm.ConstantPool.ClassConstant;
-import org.xvm.asm.ConstantPool.ConditionalConstant;
-import org.xvm.asm.ConstantPool.MethodConstant;
-import org.xvm.asm.ConstantPool.PackageConstant;
+import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PackageConstant;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 
@@ -441,7 +442,7 @@ public abstract class StructureContainer
         public MethodConstant.Builder methodBuilder(String sName)
             {
             assert sName != null;
-            return new MethodConstant.Builder(this, sName);
+            return new MethodConstant.Builder(this, getConstantPool(), sName);
             }
 
         /**
@@ -902,8 +903,8 @@ public abstract class StructureContainer
 
             ConstantPool pool = getConstantPool();
             Constant constThis = getIdentityConstant();
-            ConstantPool.ClassConstant constType = null;
-            ConstantPool.PropertyConstant constproperty = pool.ensurePropertyConstant(constThis, constType, sName);
+            ClassConstant constType = null;
+            PropertyConstant constproperty = pool.ensurePropertyConstant(constThis, constType, sName);
             PropertyStructure structproperty = new PropertyStructure(this, constproperty);
 
             mapProperty.put(sName, structproperty);

@@ -5,8 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.ConstantPool.ModuleConstant;
-import org.xvm.asm.ConstantPool.PackageConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.StructureContainer.PackageContainer;
 
 import org.xvm.util.Handy;
@@ -32,7 +32,7 @@ public class PackageStructure
      * @param constpackage  the constant that specifies the identity of the
      *                      Package
      */
-    PackageStructure(XvmStructure structParent, ConstantPool.PackageConstant constpackage)
+    public PackageStructure(XvmStructure structParent, PackageConstant constpackage)
         {
         super(structParent, constpackage);
         }

@@ -1,7 +1,7 @@
 package org.xvm.asm;
 
 
-import org.xvm.asm.ConstantPool.VersionConstant;
+import org.xvm.asm.constants.VersionConstant;
 
 
 /**

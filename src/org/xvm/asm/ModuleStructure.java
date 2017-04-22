@@ -9,8 +9,8 @@ import java.io.PrintWriter;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.xvm.asm.ConstantPool.ModuleConstant;
-import org.xvm.asm.ConstantPool.VersionConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.StructureContainer.PackageContainer;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -35,7 +35,7 @@ public class ModuleStructure
      * @param constmodule   the constant that specifies the identity of the
      *                      Module
      */
-    ModuleStructure(XvmStructure structParent, ModuleConstant constmodule)
+    public ModuleStructure(XvmStructure structParent, ModuleConstant constmodule)
         {
         super(structParent, constmodule);
         }

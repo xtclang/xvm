@@ -1,7 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool.ModuleConstant;
+import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.TypeComposition;
