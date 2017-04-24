@@ -53,7 +53,7 @@ public class xTestClass extends TypeCompositionTemplate
             { // #0 (this)
             new X_Print(-adapter.ensureValueConstantId("# in TestClass.method1 #")),
             new Var(adapter.getClassConstId("x:String")), // #1 (s)
-            new Get(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
+            new LGet(adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
             new Var(adapter.getClassConstId("x:Int64")), // #2 (of)
             new IVar(adapter.getClassConstId("x:String"), adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(1, -adapter.getMethodConstId("x:String", "indexOf"), 3, 2),

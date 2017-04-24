@@ -4,7 +4,7 @@
 0x03 YIELD                                              ; explicit service yield point (check the backlog)
 0x04 ENTER                                              ; variable scope begin
 0x05 EXIT                                               ; variable scope end
-0x06 GUARD      #handlers:(CONST_CLASS, rel_addr)       ; try { (+ “catch” addresses)      // note: ENTER
+0x06 GUARD      #handlers:(CONST_CLASS, CONST_STRING, rel_addr) ; try { (+ “catch” class and variable name) // note: ENTER
 0x07 ENDGUARD   rel_addr                                ; } ...                            // note: EXIT, ENTER
 0x08 GUARDALL                                           ; try {                            // note: ENTER
 0x09 FINALLY                                            ; } finally {                      // note: EXIT, ENTER

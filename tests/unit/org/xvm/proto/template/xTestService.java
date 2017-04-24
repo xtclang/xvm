@@ -61,10 +61,10 @@ public class xTestService extends xService
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.increment #")),
             new Var(adapter.getClassConstId("x:Int64")), // (#1)
-            new Get(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
+            new LGet(adapter.getPropertyConstId("x:TestService", "counter"), 1),
             new IVar(adapter.getClassConstId("x:Int64"), adapter.ensureValueConstantId(1)), // (#2)
             new Add(1, 2, 1),
-            new Set(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
+            new LSet(adapter.getPropertyConstId("x:TestService", "counter"), 1),
             new Return_1(1),
             };
         mtIncrement.m_cVars = 3;

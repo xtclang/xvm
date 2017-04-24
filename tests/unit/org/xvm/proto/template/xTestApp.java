@@ -75,7 +75,8 @@ public class xTestApp extends xModule
             new Invoke_01(0, -adapter.getMethodConstId("x:TestClass", "method1"), 2),
             new X_Print(2),
 
-            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+3}),
+            new GuardStart(adapter.getClassConstId("x:Exception"),
+                           adapter.ensureValueConstantId("e"), +3),
             new Invoke_10(0, -adapter.getMethodConstId("x:TestClass", "throwing"),
                              -adapter.ensureValueConstantId("handled")),
             new GuardEnd(+3), // #3 (e)
@@ -139,13 +140,16 @@ public class xTestApp extends xModule
             new X_Print(3),
             new X_Print(4),
 
-            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+3}),
-            new Invoke_10(4, -adapter.getMethodConstId("x:FutureRef", "set"), -adapter.ensureValueConstantId(99)),
+            new GuardStart(adapter.getClassConstId("x:Exception"),
+                           adapter.ensureValueConstantId("e"), +3),
+            new Invoke_10(4, -adapter.getMethodConstId("x:FutureRef", "set"),
+                             -adapter.ensureValueConstantId(99)),
             new GuardEnd(+3), // #5 (e)
             new X_Print(5),
             new Exit(),
 
-            new GuardStart(new int[]{adapter.getClassConstId("x:Exception")}, new int[] {+3}),
+            new GuardStart(adapter.getClassConstId("x:Exception"),
+                           adapter.ensureValueConstantId("e"), +3),
             new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
             new GuardEnd(+3),// #5 (e)
             new X_Print(5),

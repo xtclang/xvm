@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Access;
@@ -135,7 +136,12 @@ public class Frame
                         f_aiIndex[Op.I_GUARD] = iGuard - 1;
 
                         int nNextVar = f_anNextVar[nScope - 1];
+
+                        CharStringConstant constVarName = (CharStringConstant)
+                                f_context.f_constantPool.getConstantValue(guard.f_anNameConstId[iCatch]);
                         f_ahVar[nNextVar] = hException;
+                        f_aInfo[nNextVar] = new VarInfo(clzException, constVarName.getValue());
+
                         f_anNextVar[nScope] = nNextVar + 1;
 
                         return guard.f_nStartAddress + guard.f_anCatchRelAddress[iCatch];
@@ -348,13 +354,15 @@ public class Frame
         public final int f_nStartAddress;
         public final int f_nScope;
         public final int[] f_anClassConstId;
+        public final int[] f_anNameConstId;
         public final int[] f_anCatchRelAddress;
 
-        public Guard(int nStartAddr, int nScope, int[] anClassConstId, int[] anCatchAddress)
+        public Guard(int nStartAddr, int nScope, int[] anClassConstId, int[] anNameConstId, int[] anCatchAddress)
             {
             f_nStartAddress = nStartAddr;
             f_nScope = nScope;
             f_anClassConstId = anClassConstId;
+            f_anNameConstId = anNameConstId;
             f_anCatchRelAddress = anCatchAddress;
             }
         }

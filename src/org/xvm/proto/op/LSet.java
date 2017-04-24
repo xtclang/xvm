@@ -8,19 +8,17 @@ import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 /**
- * Set rvalue-target, CONST_PROPERTY, rvalue
+ * LSET CONST_PROPERTY, rvalue ; local set (target=this)
  *
  * @author gg 2017.03.08
  */
-public class Set extends OpInvocable
+public class LSet extends OpInvocable
     {
-    private final int f_nTarget;
     private final int f_nPropConstId;
     private final int f_nValue;
 
-    public Set(int nTarget, int nPropId, int nValue)
+    public LSet(int nPropId, int nValue)
         {
-        f_nTarget = nTarget;
         f_nPropConstId = nPropId;
         f_nValue = nValue;
         }
@@ -31,7 +29,7 @@ public class Set extends OpInvocable
         ExceptionHandle hException;
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTarget);
+            ObjectHandle hTarget = frame.getThis();
             ObjectHandle hValue = frame.getArgument(f_nValue);
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;

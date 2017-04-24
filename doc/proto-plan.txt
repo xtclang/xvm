@@ -8,9 +8,11 @@
 + Function wrapping for services
 + Get/Set on the service
 
-- Matching the function/method return value with a Ref
++ Matching the function/method return value with a Ref
 
 - Add LGET, LSET
+
+- FutureRef aync completion handling
 
 - Atomics
 
