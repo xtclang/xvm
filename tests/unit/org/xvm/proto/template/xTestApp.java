@@ -79,9 +79,10 @@ public class xTestApp extends xModule
                            adapter.ensureValueConstantId("e"), +3),
             new Invoke_10(0, -adapter.getMethodConstId("x:TestClass", "throwing"),
                              -adapter.ensureValueConstantId("handled")),
-            new GuardEnd(+3), // #3 (e)
+            new GuardEnd(+4),
+            new HandlerStart(), // #3 (e)
             new X_Print(3),
-            new Exit(),
+            new HandlerEnd(1),
 
             new Var(adapter.getClassConstId("x:TestClass")),     // #3 (t2)
             new New_1(adapter.getMethodConstId("x:TestClass2", "construct"),
@@ -144,16 +145,18 @@ public class xTestApp extends xModule
                            adapter.ensureValueConstantId("e"), +3),
             new Invoke_10(4, -adapter.getMethodConstId("x:FutureRef", "set"),
                              -adapter.ensureValueConstantId(99)),
-            new GuardEnd(+3), // #5 (e)
+            new GuardEnd(+4),
+            new HandlerStart(), // #5 (e)
             new X_Print(5),
-            new Exit(),
+            new HandlerEnd(1),
 
             new GuardStart(adapter.getClassConstId("x:Exception"),
                            adapter.ensureValueConstantId("e"), +3),
             new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
-            new GuardEnd(+3),// #5 (e)
+            new GuardEnd(+4),
+            new HandlerStart(), // #5 (e)
             new X_Print(5),
-            new Exit(),
+            new HandlerEnd(1),
 
             new Invoke_00(0, -adapter.getMethodConstId("x:TestService", "throwing")),
             new Return_0(),

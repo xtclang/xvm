@@ -5,8 +5,8 @@ module TestApp
         {
         test1();
         test2();
-        testRef();
         testService();
+        testRef();
         }
 
     static Int getIntValue()
@@ -46,25 +46,6 @@ module TestApp
         TestClass t3 = new TestClass2("ABC");
         Function fn = t3.method1;
         print(fn());
-        }
-
-    static Void testRef()
-        {
-        Ref<Int> ri;
-            {
-            Int i = 1;
-            Ref<Int> ri2 = &i;
-            ri = &i;
-
-            print(ri.get())
-
-            ri.set(2);
-            print(i);
-
-            i = 3;
-            print(ri2);
-            }
-        print(ri.get())
         }
 
     class TestClass(String prop1)
@@ -182,5 +163,24 @@ module TestApp
             {
             throw new Exception("test");
             }
+        }
+
+    static Void testRef()
+        {
+        Ref<Int> ri;
+            {
+            Int i = 1;
+            Ref<Int> ri2 = &i;
+            ri = &i;
+
+            print(ri.get())
+
+            ri.set(2);
+            print(i);
+
+            i = 3;
+            print(ri2);
+            }
+        print(ri.get())
         }
     }
