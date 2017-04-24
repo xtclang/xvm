@@ -1,7 +1,7 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ConstantPool.ClassConstant;
-import org.xvm.asm.ConstantPool.MethodConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeCompositionTemplate.Access;

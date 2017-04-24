@@ -1,11 +1,11 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool.CharStringConstant;
-import org.xvm.asm.ConstantPool.ClassConstant;
-import org.xvm.asm.ConstantPool.IntConstant;
-import org.xvm.asm.ConstantPool.MethodConstant;
-import org.xvm.asm.ConstantPool.ModuleConstant;
+import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.proto.template.xClass;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xInt64;

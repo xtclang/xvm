@@ -1,8 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ConstantPool.IntConstant;
+import org.xvm.asm.constants.IntConstant;
 
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -61,7 +60,7 @@ public class xByte
     public ObjectHandle createConstHandle(Constant constant)
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
-            (((ConstantPool.IntConstant) constant).getValue().getLong() | 0xFF)) : null;
+            (((IntConstant) constant).getValue().getLong() | 0xFF)) : null;
         }
 
     @Override

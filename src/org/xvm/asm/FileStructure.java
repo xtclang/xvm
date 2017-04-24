@@ -16,9 +16,9 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import org.xvm.asm.ConstantPool.ClassConstant;
-import org.xvm.asm.ConstantPool.ModuleConstant;
-import org.xvm.asm.ConstantPool.PackageConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PackageConstant;
 
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readMagnitude;

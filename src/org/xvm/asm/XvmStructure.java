@@ -12,7 +12,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.xvm.asm.ConstantPool.ConditionalConstant;
+import org.xvm.asm.constants.ConditionalConstant;
 
 
 /**

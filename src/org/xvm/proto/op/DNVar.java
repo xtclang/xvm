@@ -1,6 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.ConstantPool.CharStringConstant;
+import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;

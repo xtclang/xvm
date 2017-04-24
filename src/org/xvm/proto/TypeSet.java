@@ -1,6 +1,6 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.asm.constants.ClassConstant;
 
 import java.util.HashSet;
 import java.util.Map;

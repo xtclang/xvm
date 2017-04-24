@@ -11,8 +11,6 @@ import java.util.Arrays;
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.xvm.asm.ConstantPool.MethodConstant.Builder;
-
 import static org.xvm.util.Handy.byteArrayToHexDump;
 
 

@@ -3,10 +3,10 @@ package org.xvm.asm;
 
 import java.util.ArrayList;
 
-import org.xvm.asm.ConstantPool.VersionConstant;
-import org.xvm.asm.ConstantPool.ConditionalConstant;
-import org.xvm.asm.ConstantPool.ConditionalConstant.NamedCondition;
-import org.xvm.asm.ConstantPool.ConditionalConstant.PresentCondition;
+import org.xvm.asm.constants.VersionConstant;
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.NamedCondition;
+import org.xvm.asm.constants.PresentCondition;
 
 import org.xvm.util.Handy;
 
@@ -14,7 +14,7 @@ import org.xvm.util.Handy;
 /**
  * The AssemblerContext is used to notify the assembler of changes in the
  * current set of conditions during the assembly process. For example, when
- * a compiler is emitting XMV structures, it will modify the assembler
+ * a compiler is emitting XVM structures, it will modify the assembler
  * context to notify the assembler each time it enters or leaves a
  * conditional scope of code.
  *

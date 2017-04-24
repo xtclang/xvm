@@ -13,8 +13,8 @@ import java.util.Map;
 
 import org.xvm.asm.StructureContainer.ClassContainer;
 
-import org.xvm.asm.ConstantPool.CharStringConstant;
-import org.xvm.asm.ConstantPool.ClassConstant;
+import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.ClassConstant;
 
 import org.xvm.util.ListMap;
 
@@ -43,7 +43,7 @@ public class ClassStructure
      * @param constclass    the constant that specifies the identity of the
      *                      Class
      */
-    ClassStructure(XvmStructure structParent, ConstantPool.ClassConstant constclass)
+    public ClassStructure(XvmStructure structParent, ClassConstant constclass)
         {
         super(structParent, constclass);
         }

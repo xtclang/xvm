@@ -1,8 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ConstantPool.IntConstant;
+import org.xvm.asm.constants.IntConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -45,7 +44,7 @@ public class xInt64
     public ObjectHandle createConstHandle(Constant constant)
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
-            (((ConstantPool.IntConstant) constant).getValue().getLong())) : null;
+            (((IntConstant) constant).getValue().getLong())) : null;
         }
 
     @Override

@@ -1,7 +1,7 @@
 package org.xvm.asm;
 
 
-import org.xvm.asm.ConstantPool.PropertyConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.StructureContainer.MethodContainer;
 
 
@@ -23,7 +23,7 @@ public class PropertyStructure
      * @param constproperty   the constant that specifies the identity of the
      *                        property
      */
-    PropertyStructure(XvmStructure structParent, PropertyConstant constproperty)
+    public PropertyStructure(XvmStructure structParent, PropertyConstant constproperty)
         {
         super(structParent, constproperty);
         }
