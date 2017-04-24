@@ -46,7 +46,7 @@ public class New_N extends OpCallable
 
             if (hException == null)
                 {
-                frame.assignValue(f_nRetValue, ahVar[0]);
+                hException = frame.assignValue(f_nRetValue, ahVar[0]);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

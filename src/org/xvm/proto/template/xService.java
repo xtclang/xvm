@@ -103,7 +103,7 @@ public class xService
             {
             CompletableFuture<ObjectHandle> cfReturn = cfResult.thenApply(ahResult -> ahResult[0]);
 
-            frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfReturn));
+            return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfReturn));
             }
         else
             {

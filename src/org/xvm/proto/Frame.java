@@ -126,15 +126,17 @@ public class Frame
                             ensureConstComposition(guard.f_anClassConstId[iCatch]);
                     if (clzException.extends_(clzCatch))
                         {
-                        int nScope = guard.f_nScope - 1;
+                        int nScope = guard.f_nScope;
 
-                        clearAllScopes(nScope);
+                        clearAllScopes(nScope - 1);
 
+                        // implicit "enter" with an exception variable introduction
                         f_aiIndex[Op.I_SCOPE] = nScope;
                         f_aiIndex[Op.I_GUARD] = iGuard - 1;
 
-                        int nNextVar = f_anNextVar[nScope]++;
+                        int nNextVar = f_anNextVar[nScope - 1];
                         f_ahVar[nNextVar] = hException;
+                        f_anNextVar[nScope] = nNextVar + 1;
 
                         return guard.f_nStartAddress + guard.f_anCatchRelAddress[iCatch];
                         }

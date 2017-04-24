@@ -59,7 +59,7 @@ public abstract class OpCallable extends Op
         ExceptionHandle hException = frameNew.execute();
         if (hException == null)
             {
-            frame.assignValue(iRet, frameNew.f_ahReturn[0]);
+            return frame.assignValue(iRet, frameNew.f_ahReturn[0]);
             }
         return hException;
         }
@@ -121,7 +121,7 @@ public abstract class OpCallable extends Op
         ExceptionHandle hException = frameNew.execute();
         if (hException == null && iReturn >= 0)
             {
-            frame.assignValue(iReturn, frameNew.f_ahReturn[0]);
+            return frame.assignValue(iReturn, frameNew.f_ahReturn[0]);
             }
         return hException;
         }

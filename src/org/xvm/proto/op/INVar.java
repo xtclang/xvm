@@ -6,6 +6,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 /**
  * INVAR CONST_CLASS, CONST_STRING, CONST_* ; (next register is an initialized named variable)
@@ -39,6 +40,7 @@ public class INVar extends Op
 
         frame.f_aInfo[nNextVar] = new Frame.VarInfo(clazz, constName.getValue());
 
+        // constant assignment must not fail
         frame.assignValue(nNextVar,
                 frame.f_context.f_heapGlobal.ensureConstHandle(f_nValueConstId));
 
