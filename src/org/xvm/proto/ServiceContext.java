@@ -161,8 +161,7 @@ public class ServiceContext
             {
             ObjectHandle[] ahReturn = f_cReturns == 0 ? Utils.OBJECTS_NONE : new ObjectHandle[f_cReturns];
 
-            ExceptionHandle hException = f_hFunction.invoke(context, null,
-                    f_ahArg[0], f_hFunction.prepareVars(f_ahArg), ahReturn);
+            ExceptionHandle hException = f_hFunction.invokeFrameless(context, f_ahArg[0], f_ahArg, ahReturn);
 
             context.sendResponse(f_contextCaller, hException, ahReturn, f_future);
             }

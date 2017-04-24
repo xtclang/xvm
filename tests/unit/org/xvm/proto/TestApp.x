@@ -113,20 +113,33 @@ module TestApp
         print(fc);
         print(rfc);
 
-        // setting the "future" value should blow
-        try
+        FutureRef<Int> rfc2 = &service.increment();
+        rfc2.whenComplete((r, x) ->
             {
-            rfc.set(99);
-            }
-        catch (Exception e)
-            {
-            print(e);
+            if (x == null)
+                {
+                print(r); print(fc2);
+                }
+            else
+                {
+                print(x);
+                }
             }
 
         // handled exception
         try
             {
             c = service.throwing();
+            }
+        catch (Exception e)
+            {
+            print(e);
+            }
+
+        // setting the "future" value should blow
+        try
+            {
+            rfc.set(99);
             }
         catch (Exception e)
             {

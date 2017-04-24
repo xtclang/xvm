@@ -52,25 +52,26 @@ public class xString
         }
 
     @Override
-    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          int iReturn)
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+                                        ObjectHandle[] ahArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
         switch (method.f_sName)
             {
             case "length$get": // length.get()
+                assert ahArg.length == 0;
+
                 ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
                 return frame.assignValue(iReturn, hResult);
-
-            default:
-                throw new IllegalStateException("Unknown method: " + method);
             }
+
+        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
         }
 
     @Override
-    public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          ObjectHandle hArg, int iReturn)
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+                                        ObjectHandle hArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -79,15 +80,21 @@ public class xString
             case "indexOf": // indexOf(String)
                 if (hArg instanceof StringHandle)
                     {
-                    int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
+                    if (iReturn >= 0)
+                        {
+                        int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
 
-                    ObjectHandle hResult = xInt64.makeHandle(nOf);
-                    return frame.assignValue(iReturn, hResult);
+                        ObjectHandle hResult = xInt64.makeHandle(nOf);
+                        return frame.assignValue(iReturn, hResult);
+                        }
+                    else
+                        {
+                        return null;
+                        }
                     }
-
-            default:
-                throw new IllegalStateException("Unknown method: " + method);
             }
+
+        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }
 
     @Override

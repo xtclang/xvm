@@ -210,13 +210,6 @@ public class xService
         return null;
         }
 
-    @Override
-    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          int iRet)
-        {
-        throw new IllegalStateException("Unknown method: " + method);
-        }
-
     public static class ServiceHandle
             extends GenericHandle
         {

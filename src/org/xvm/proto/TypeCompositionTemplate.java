@@ -357,34 +357,20 @@ public abstract class TypeCompositionTemplate
         return null;
         }
 
-    // invokeNative with 0 arguments and 0 return values
-    public ExceptionHandle invokeNative00(Frame frame, ObjectHandle hTarget, MethodTemplate method)
+    // invokeNative with one argument and zero or one return value
+    // place the result into the specified frame register
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
+                                        MethodTemplate method, ObjectHandle hArg, int iReturn)
+        {
+        throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
+        }
+
+    // invokeNative with N arguments and zero or one return values
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
+                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
         {
         // many classes don't have native methods
-        throw new IllegalStateException(f_sName);
-        }
-
-    // invokeNative with 0 arguments and 1 return value
-    // place the result into the specified frame register
-    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget,
-                                          MethodTemplate method, int iReturn)
-        {
-        throw new IllegalStateException(f_sName);
-        }
-
-    // invokeNative with 1 argument and 1 return value
-    // place the result into the specified frame register
-    public ExceptionHandle invokeNative11(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException(f_sName);
-        }
-
-    // invokeNative with 1 argument and 0 return value
-    public ExceptionHandle invokeNative10(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                          ObjectHandle hArg)
-        {
-        throw new IllegalStateException(f_sName);
+        throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
         }
 
     // Add operation; place the result into the specified frame register
@@ -426,7 +412,7 @@ public abstract class TypeCompositionTemplate
 
         if (method.isNative())
             {
-            return invokeNative01(frame, hTarget, method, iRet);
+            return invokeNative(frame, hTarget, method, Utils.OBJECTS_NONE, iRet);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
@@ -475,7 +461,7 @@ public abstract class TypeCompositionTemplate
 
         if (method.isNative())
             {
-            return invokeNative10(frame, hTarget, method, hValue);
+            return invokeNative(frame, hTarget, method, hValue, -1);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];

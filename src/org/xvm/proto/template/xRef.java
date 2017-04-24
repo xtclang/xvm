@@ -59,8 +59,8 @@ public class xRef
         }
 
     @Override
-    public ExceptionHandle invokeNative01(Frame frame, ObjectHandle hTarget,
-                                          MethodTemplate method, int iRet)
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
+                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
@@ -69,32 +69,31 @@ public class xRef
             case "get":
                 try
                     {
-                    return frame.assignValue(iRet, hThis.get());
+                    assert ahArg.length == 0;
+
+                    return frame.assignValue(iReturn, hThis.get());
                     }
                 catch (ExceptionHandle.WrapperException e)
                     {
                     return e.getExceptionHandle();
                     }
-
-            default:
-                throw new IllegalStateException("Unknown method: " + method);
             }
+
+        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
         }
 
     @Override
-    public ExceptionHandle invokeNative10(Frame frame, ObjectHandle hTarget,
-                                          MethodTemplate method, ObjectHandle hArg)
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
+                                        MethodTemplate method, ObjectHandle hArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
         switch (method.f_sName)
             {
             case "set":
-                return hThis.set(hArg);
-
-            default:
-                throw new IllegalStateException("Unknown method: " + method);
+                return iReturn >= 0 ? hThis.set(hArg) : null;
             }
+        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }
 
     @Override

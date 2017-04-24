@@ -45,7 +45,7 @@ public class Invoke_11 extends OpInvocable
 
             if (method.isNative())
                 {
-                hException = template.invokeNative11(frame, hTarget, method, hArg, f_nRetValue);
+                hException = template.invokeNative(frame, hTarget, method, hArg, f_nRetValue);
                 }
             else if (template.isService())
                 {

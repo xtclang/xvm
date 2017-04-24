@@ -1,6 +1,9 @@
 package org.xvm.proto.template;
 
 import org.xvm.proto.*;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
+
+import org.xvm.proto.template.xFunction.FunctionHandle;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -31,6 +34,41 @@ public class xFutureRef
         //    private Exception? failure = null;
         //    typedef function Void (Completion, RefType?, Exception?) NotifyDependent;
         //    private NotifyDependent? notify = null;
+
+        // FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
+        MethodTemplate mtWC = ensureMethodTemplate("whenComplete", new String[] {"x:Function"}, THIS);
+        mtWC.markNative();
+        }
+
+    @Override
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
+                                        MethodTemplate method, ObjectHandle hArg, int iReturn)
+        {
+        FutureHandle hThis = (FutureHandle) hTarget;
+
+        switch (method.f_sName)
+            {
+            case "whenComplete":
+                FunctionHandle hNotify = (FunctionHandle) hArg;
+                CompletableFuture<ObjectHandle> cf = hThis.m_future.whenComplete((r, x) ->
+                    {
+                    ObjectHandle[] ahArg = new ObjectHandle[2];
+                    ahArg[0] = r;
+                    ahArg[1] = x == null ? xNullable.NULL :
+                                ((ExceptionHandle.WrapperException) x).getExceptionHandle();
+
+                    ExceptionHandle hException = hNotify.invoke(frame, hThis, ahArg, Utils.OBJECTS_NONE);
+
+                    if (hException != null)
+                        {
+                        // TODO: call the "Unhandled exception" handler
+                        Utils.log("Unhandled exception: " + hException);
+                        }
+                    });
+                return iReturn >= 0 ? frame.assignValue(iReturn, makeHandle(cf)) : null;
+
+            }
+        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }
 
     @Override

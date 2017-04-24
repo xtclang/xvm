@@ -1,10 +1,7 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.OpInvocable;
-import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.template.xFunction;
 
@@ -41,7 +38,7 @@ public class Invoke_01 extends OpInvocable
 
             if (method.isNative())
                 {
-                hException = template.invokeNative01(frame, hTarget, method, f_nRetValue);
+                hException = template.invokeNative(frame, hTarget, method, Utils.OBJECTS_NONE, f_nRetValue);
                 }
             else if (template.isService())
                 {

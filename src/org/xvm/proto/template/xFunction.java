@@ -99,7 +99,7 @@ public class xFunction
 
         public ExceptionHandle call1(Frame frame, ObjectHandle[] ahArg, int iReturn)
             {
-            return invoke1(frame.f_context, frame, null, prepareVars(ahArg), iReturn);
+            return invoke1Impl(frame.f_context, frame, null, prepareVars(ahArg), iReturn);
             }
 
         // this method doesn't have to be overridden
@@ -118,7 +118,7 @@ public class xFunction
 
         public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
-            return invoke(frame.f_context, frame, null, prepareVars(ahArg), ahReturn);
+            return invokeImpl(frame.f_context, frame, null, prepareVars(ahArg), ahReturn);
             }
 
         public ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
@@ -153,9 +153,14 @@ public class xFunction
             return ahVar;
             }
 
+        public ExceptionHandle invoke1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            return invoke1Impl(frame.f_context, frame, hTarget, prepareVars(ahArg), iReturn);
+            }
+
         // invoke with zero or one return to be placed into the specified register
-        public ExceptionHandle invoke1(ServiceContext context, Frame frame, ObjectHandle hTarget,
-                                      ObjectHandle[] ahVar, int iReturn)
+        protected ExceptionHandle invoke1Impl(ServiceContext context, Frame frame, ObjectHandle hTarget,
+                                           ObjectHandle[] ahVar, int iReturn)
             {
             if (hTarget == null && m_invoke instanceof MethodTemplate)
                 {
@@ -173,9 +178,22 @@ public class xFunction
             return hException;
             }
 
+        public ExceptionHandle invoke(Frame frame, ObjectHandle hTarget,
+                                      ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+            {
+            return invokeImpl(frame.f_context, frame, hTarget, prepareVars(ahArg), ahReturn);
+            }
+
+        // this method is only used by the ServiceContext
+        public ExceptionHandle invokeFrameless(ServiceContext context, ObjectHandle hTarget,
+                                      ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+            {
+            return invokeImpl(context, null, hTarget, prepareVars(ahArg), ahReturn);
+            }
+
         // frame could be null
-        public ExceptionHandle invoke(ServiceContext context, Frame frame, ObjectHandle hTarget,
-                                      ObjectHandle[] ahVar, ObjectHandle[] ahReturn)
+        protected ExceptionHandle invokeImpl(ServiceContext context, Frame frame, ObjectHandle hTarget,
+                                             ObjectHandle[] ahVar, ObjectHandle[] ahReturn)
             {
             if (hTarget == null && m_invoke instanceof MethodTemplate)
                 {
@@ -278,7 +296,7 @@ public class xFunction
 
             addBoundArguments(ahVar);
 
-            return invoke1(frame.f_context, frame, null, ahVar, iReturn);
+            return invoke1Impl(frame.f_context, frame, null, ahVar, iReturn);
             }
 
         @Override
@@ -288,7 +306,7 @@ public class xFunction
 
             addBoundArguments(ahVar);
 
-            return invoke(frame.f_context, frame, null, ahVar, ahReturn);
+            return invokeImpl(frame.f_context, frame, null, ahVar, ahReturn);
             }
 
         @Override
@@ -323,7 +341,7 @@ public class xFunction
             // native method on the service means "execute on the caller's thread"
             if (m_invoke.isNative() || frame.f_context == hService.m_context)
                 {
-                return invoke1(frame.f_context, frame, hService, prepareVars(ahArg), iReturn);
+                return invoke1Impl(frame.f_context, frame, hService, prepareVars(ahArg), iReturn);
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();
@@ -338,7 +356,7 @@ public class xFunction
             // native method on the service means "execute on the caller's thread"
             if (m_invoke.isNative() || frame.f_context == hService.m_context)
                 {
-                return invoke(frame.f_context, frame, hService, prepareVars(ahArg), ahReturn);
+                return invokeImpl(frame.f_context, frame, hService, prepareVars(ahArg), ahReturn);
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();

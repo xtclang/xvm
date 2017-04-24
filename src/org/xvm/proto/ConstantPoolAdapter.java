@@ -89,6 +89,13 @@ public class ConstantPoolAdapter
 
     public int getClassConstId(String sName)
         {
+        int ofTypeParam = sName.indexOf('<');
+        if (ofTypeParam >= 0)
+            {
+            // ignore the generic param type for now
+            sName = sName.substring(0, ofTypeParam);
+            }
+
         try
             {
             return m_mapClasses.get(sName);
