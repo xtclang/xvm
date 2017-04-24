@@ -3,8 +3,7 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
-
-import java.util.Date;
+import org.xvm.proto.Utils;
 
 /**
  * Debugging only.
@@ -26,8 +25,6 @@ public class X_Print extends Op
         int nValue = f_nValue;
 
         StringBuilder sb = new StringBuilder();
-        sb.append(new Date()).append(" ")
-          .append(frame.f_context).append(": ");
 
         if (nValue >= 0)
             {
@@ -52,7 +49,7 @@ public class X_Print extends Op
             sb.append(frame.f_context.f_constantPool.getConstantValue(-nValue).getValueString());
             }
 
-        System.out.println(sb.toString());
+        Utils.log(sb.toString());
 
         return iPC + 1;
         }

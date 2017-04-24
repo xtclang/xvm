@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -103,34 +104,8 @@ public abstract class Utils
             frame.f_context.f_heapGlobal.ensureConstHandle(-nConstValueId);
         }
 
-    public static ObjectHandle[] resolveArguments(Frame frame, InvocationTemplate function,
-                                                  ObjectHandle[] ahVar, int[] anArg)
+    public static void log(String sMsg)
         {
-        int cArgs = anArg.length;
-        int cVars = function.m_cVars;
-
-        assert cArgs <= cVars;
-
-        ObjectHandle[] ahArg = new ObjectHandle[cVars];
-
-        if (cArgs > 0)
-            {
-            if (cArgs == 1)
-                {
-                int nArg = anArg[0];
-                ahArg[0] = nArg >= 0 ? ahVar[0] :
-                        Utils.resolveConst(frame, nArg);
-                }
-            else
-                {
-                for (int i = 0, c = cArgs; i < c; i++)
-                    {
-                    int nArg = anArg[i];
-                    ahArg[i] = nArg >= 0 ? ahVar[i] :
-                            Utils.resolveConst(frame, nArg);
-                    }
-                }
-            }
-        return ahArg;
+        System.out.println(new Date().toString() + " " + ServiceContext.getCurrentContext() + ": " + sMsg);
         }
     }

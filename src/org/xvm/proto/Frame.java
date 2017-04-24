@@ -78,7 +78,7 @@ public class Frame
                 }
             catch (RuntimeException e)
                 {
-                System.out.println("!!! frame " + this);
+                System.out.println("!!! frame " + this); // TODO: remove
                 throw e;
                 }
 

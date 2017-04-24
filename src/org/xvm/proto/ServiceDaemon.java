@@ -93,7 +93,7 @@ public class ServiceDaemon
                     catch (Throwable e)
                         {
                         // TODO
-                        System.out.println(f_context + " threw unhandled exception: ");
+                        Utils.log("unhandled exception: " + e);
                         e.printStackTrace(System.out);
                         System.exit(-1);
                         }

@@ -153,8 +153,7 @@ module TestApp
             }
 
         // unhandled exception
-        c = service.throwing();
-        print(c);
+        service.throwing();
         }
 
     service TestService(Int counter = 48)

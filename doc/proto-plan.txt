@@ -10,9 +10,7 @@
 
 + Matching the function/method return value with a Ref
 
-- Add LGET, LSET
-
-- FutureRef aync completion handling
+- FutureRef async completion handling
 
 - Atomics
 

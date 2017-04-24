@@ -119,6 +119,12 @@ public abstract class ObjectHandle
                 {
                 return ExceptionHandle.this;
                 }
+
+            @Override
+            public String toString()
+                {
+                return getExceptionHandle().toString();
+                }
             }
         }
 

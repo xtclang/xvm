@@ -112,7 +112,7 @@ public class xService
                 if (x != null)
                     {
                     // TODO: call UnhandledExceptionNotification handler
-                    System.out.println(ServiceContext.getCurrentContext() + ": unhandled exception " + x);
+                    Utils.log("unhandled exception " + x + "\n  by " + hService);
                     }
                 });
             }
@@ -149,7 +149,7 @@ public class xService
                 if (x != null)
                     {
                     // TODO: call UnhandledExceptionNotification handler
-                    System.out.println(ServiceContext.getCurrentContext() + ": unhandled exception " + x);
+                    Utils.log("unhandled exception " + x + "\n  by " + hService);
                     }
                 });
             }
@@ -199,12 +199,12 @@ public class xService
                 hService.m_context, property, hValue);
 
         cfResult.whenComplete((r, x) ->
-        {
-        if (x != null)
             {
-            // TODO: call UnhandledExceptionNotification handler
-            System.out.println(ServiceContext.getCurrentContext() + ": unhandled exception " + x);
-            }
+            if (x != null)
+                {
+                // TODO: call UnhandledExceptionNotification handler
+                Utils.log("unhandled exception " + x + "\n  by " + hService);
+                }
             });
 
         return null;

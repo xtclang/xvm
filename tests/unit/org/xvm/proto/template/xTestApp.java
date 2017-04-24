@@ -155,8 +155,7 @@ public class xTestApp extends xModule
             new X_Print(5),
             new Exit(),
 
-            new Invoke_01(0, -adapter.getMethodConstId("x:TestService", "throwing"), 1),
-            new X_Print(1),
+            new Invoke_00(0, -adapter.getMethodConstId("x:TestService", "throwing")),
             new Return_0(),
             };
         ftTestService.m_cVars = 6;
@@ -203,8 +202,8 @@ public class xTestApp extends xModule
             new X_Print(-adapter.ensureValueConstantId("# in TestApp.run() #")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
-            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "testService")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
             new Return_0()
             };
         mtRun.m_cVars = 2;

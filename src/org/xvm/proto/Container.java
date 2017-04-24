@@ -2,6 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.constants.ModuleConstant;
 
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 
 import org.xvm.proto.template.xException;
@@ -99,13 +100,12 @@ public class Container
 
             f_contextMain.sendInvokeRequest(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
                 .whenComplete((ah, x) ->
-                {
-                if (x != null)
                     {
-                    System.out.println("Unhandled exception " + x);
-                    System.out.println(((ObjectHandle.ExceptionHandle.WrapperException) x).getExceptionHandle().toString());
-                    }
-                });
+                    if (x != null)
+                        {
+                        Utils.log("Unhandled exception " + x);
+                        }
+                    });
             }
         catch (Exception e)
             {
