@@ -110,12 +110,6 @@ public class ModuleConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Type getType()
-        {
-        return Type.Module;
-        }
-
-    @Override
     public Format getFormat()
         {
         return Format.Module;

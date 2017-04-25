@@ -59,6 +59,121 @@ public abstract class Constant
         }
 
 
+    // ----- Constant operations -------------------------------------------------------------------
+
+    /**
+     * Determine the enumerated constant format classification.
+     *
+     * @return the format for the Constant
+     */
+    public abstract Format getFormat();
+
+    /**
+     * Determine the last known position that the Constant was located at in its ConstantPool.
+     * Generally. the position only has meaning during the disassembly and assembly processes. The
+     * position of all constants may be re-ordered as part of the assembly process.
+     *
+     * @return the last known index of the Constant, or <tt>-1</tt> if no position has been assigned
+     *         to the constant
+     */
+    public int getPosition()
+        {
+        return m_iPos;
+        }
+
+    /**
+     * Assign a position to the Constant.
+     *
+     * @param iPos  the position to assign to the Constant
+     */
+    protected void setPosition(int iPos)
+        {
+        assert iPos >= -1;
+        m_iPos = iPos;
+        }
+
+    /**
+     * Obtain an object that can be used as a key to locate this Constant. By default, the Constant
+     * does not have a locator. Even within a particular category of Constants, it is acceptable
+     * that only some of the Constants will have a locator, but given a particular Constant value,
+     * the choice must be consistent. The purpose of the locator is to avoid having to create a new
+     * Constant instance just to see if there is already an old Constant index; for example, if the
+     * constant for the character string "Hello World!" is requested by calling the {@link
+     * ConstantPool#ensureCharStringConstant(String)} method, it would use the string "Hello World!"
+     * as the locator object to see if that constant already exists; if it could not do so, it would
+     * have to create a new CharStringConstant and register it just to find out if such a constant
+     * already exists! Some constants would spend as much time and memory creating a locator as it
+     * would take to just create a new constant, so in those cases, no locator is used. Lastly, the
+     * locator is a completely hidden concept shared between the Constant and the ConstantPool;
+     * users of the Constant and ConstantPool APIs are not even aware that the concept exists.
+     *
+     * @return an object that uniquely identifies this Constant within its category of constants,
+     *         and implements the Object methods {@link #equals}, {@link #hashCode}, and {@link
+     *         #toString}; or null
+     */
+    protected Object getLocator()
+        {
+        return null;
+        }
+
+    /**
+     * This method allows each particular type of constant to compare its detailed information with
+     * another instance of the same type of constant in order to provide a stable and predictable
+     * ordering of constants.
+     *
+     * @param that  another Constant of the same Type
+     *
+     * @return a negative integer, zero, or a positive integer as this Constant is less than, equal
+     *         to, or greater than the specified Constant
+     */
+    protected abstract int compareDetails(Constant that);
+
+    /**
+     * Before the registration of constants begins, each Constant's tracking of its references is
+     * reset. There are two purposes: (1) to be able to tally how many references there are to the
+     * constant, so that it can be placed near the front of the ConstantPool if it is used
+     * frequently (which will reduce the size of the index used to specify the constant), and
+     * (2) to be able to determine which Constants can be discarded altogether (i.e. the ones that
+     * have zero references to them.)
+     */
+    protected void resetRefs()
+        {
+        m_cRefs = 0;
+        }
+
+    /**
+     * This marks that the Constant is referred to by another XvmStructure.
+     */
+    protected void addRef()
+        {
+        ++m_cRefs;
+        }
+
+    /**
+     * Based on the Constant registration process that tallies references to the Constants,
+     * determine if this constant has any references to it.
+     *
+     * @return true iff there are any known references to this Constant
+     */
+    protected boolean hasRefs()
+        {
+        return m_cRefs > 0;
+        }
+
+    /**
+     * If this constant acts as an identity for an XVM structure, then instantiate that XVM
+     * Structure using this constant as its identity.
+     *
+     * @param xsParent  the parent of the XVM structure to instantiate
+     *
+     * @return the new XVM structure
+     */
+    protected XvmStructure instantiate(XvmStructure xsParent)
+        {
+        throw new UnsupportedOperationException();
+        }
+
+
     // ----- XvmStructure operations ---------------------------------------------------------------
 
     @Override
@@ -179,7 +294,7 @@ public abstract class Constant
         if (obj instanceof Constant)
             {
             Constant that = (Constant) obj;
-            return this == that || (this.getType() == that.getType() && this.compareDetails(that) == 0);
+            return this == that || (this.getFormat() == that.getFormat() && this.compareDetails(that) == 0);
             }
 
         return false;
@@ -188,7 +303,7 @@ public abstract class Constant
     @Override
     public String toString()
         {
-        return getType().name() + '{' + getDescription() + '}';
+        return getFormat().name() + '{' + getDescription() + '}';
         }
 
 
@@ -216,128 +331,6 @@ public abstract class Constant
         }
 
 
-    // ----- Constant operations -------------------------------------------------------------------
-
-    /**
-     * Determine the enumerated constant type classification.
-     *
-     * @return the type for the Constant
-     */
-    public abstract Type getType();
-
-    /**
-     * Determine the enumerated constant format classification.
-     *
-     * @return the format for the Constant
-     */
-    public abstract Format getFormat();
-
-    /**
-     * Determine the last known position that the Constant was located at in its ConstantPool.
-     * Generally. the position only has meaning during the disassembly and assembly processes. The
-     * position of all constants may be re-ordered as part of the assembly process.
-     *
-     * @return the last known index of the Constant, or <tt>-1</tt> if no position has been assigned
-     *         to the constant
-     */
-    public int getPosition()
-        {
-        return m_iPos;
-        }
-
-    /**
-     * Assign a position to the Constant.
-     *
-     * @param iPos  the position to assign to the Constant
-     */
-    protected void setPosition(int iPos)
-        {
-        assert iPos >= -1;
-        m_iPos = iPos;
-        }
-
-    /**
-     * Obtain an object that can be used as a key to locate this Constant. By default, the Constant
-     * does not have a locator. Even within a particular category of Constants, it is acceptable
-     * that only some of the Constants will have a locator, but given a particular Constant value,
-     * the choice must be consistent. The purpose of the locator is to avoid having to create a new
-     * Constant instance just to see if there is already an old Constant index; for example, if the
-     * constant for the character string "Hello World!" is requested by calling the {@link
-     * ConstantPool#ensureCharStringConstant(String)} method, it would use the string "Hello World!"
-     * as the locator object to see if that constant already exists; if it could not do so, it would
-     * have to create a new CharStringConstant and register it just to find out if such a constant
-     * already exists! Some constants would spend as much time and memory creating a locator as it
-     * would take to just create a new constant, so in those cases, no locator is used. Lastly, the
-     * locator is a completely hidden concept shared between the Constant and the ConstantPool;
-     * users of the Constant and ConstantPool APIs are not even aware that the concept exists.
-     *
-     * @return an object that uniquely identifies this Constant within its category of constants,
-     *         and implements the Object methods {@link #equals}, {@link #hashCode}, and {@link
-     *         #toString}; or null
-     */
-    protected Object getLocator()
-        {
-        return null;
-        }
-
-    /**
-     * This method allows each particular type of constant to compare its detailed information with
-     * another instance of the same type of constant in order to provide a stable and predictable
-     * ordering of constants.
-     *
-     * @param that  another Constant of the same Type
-     *
-     * @return a negative integer, zero, or a positive integer as this Constant is less than, equal
-     *         to, or greater than the specified Constant
-     */
-    protected abstract int compareDetails(Constant that);
-
-    /**
-     * Before the registration of constants begins, each Constant's tracking of its references is
-     * reset. There are two purposes: (1) to be able to tally how many references there are to the
-     * constant, so that it can be placed near the front of the ConstantPool if it is used
-     * frequently (which will reduce the size of the index used to specify the constant), and
-     * (2) to be able to determine which Constants can be discarded altogether (i.e. the ones that
-     * have zero references to them.)
-     */
-    protected void resetRefs()
-        {
-        m_cRefs = 0;
-        }
-
-    /**
-     * This marks that the Constant is referred to by another XvmStructure.
-     */
-    protected void addRef()
-        {
-        ++m_cRefs;
-        }
-
-    /**
-     * Based on the Constant registration process that tallies references to the Constants,
-     * determine if this constant has any references to it.
-     *
-     * @return true iff there are any known references to this Constant
-     */
-    protected boolean hasRefs()
-        {
-        return m_cRefs > 0;
-        }
-
-    /**
-     * If this constant acts as an identity for an XVM structure, then instantiate that XVM
-     * Structure using this constant as its identity.
-     *
-     * @param xsParent  the parent of the XVM structure to instantiate
-     *
-     * @return the new XVM structure
-     */
-    protected XvmStructure instantiate(XvmStructure xsParent)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -350,67 +343,6 @@ public abstract class Constant
     protected static int indexOf(Constant constant)
         {
         return constant == null ? -1 : constant.getPosition();
-        }
-
-
-    // ----- constant pool type identifiers --------------------------------------------------------
-
-    /**
-     * The Type enum is used to specify what type of information the Constant represents.
-     */
-    public enum Type
-        {
-        Byte,
-        ByteString,
-        Char,
-        CharString,
-        Int,
-        Version,
-        Condition,
-        Module,
-        Package,
-        Class,
-        Method,
-        Property,
-        Parameter;
-
-        /**
-         * Look up a Type enum by its ordinal.
-         *
-         * @param i  the ordinal
-         *
-         * @return the Type enum for the specified ordinal
-         */
-        public static Type valueOf(int i)
-            {
-            return TYPES[i];
-            }
-
-        /**
-         * Determine if structures of the type are length-encoded when assembled.
-         *
-         * @return true if the persistent form of the corresponding XVM structure gets
-         *         length-encoded
-         */
-        public boolean isLengthEncoded()
-            {
-            switch (this)
-                {
-                case Package:
-                case Class:
-                case Method:
-                case Property:
-                    return true;
-
-                default:
-                    return false;
-                }
-            }
-
-        /**
-         * All of the Type enums.
-         */
-        private static final Type[] TYPES = Type.values();
         }
 
 
@@ -440,9 +372,31 @@ public abstract class Constant
         Module,
         Package,
         Class,
-        Method,
         Property,
-        Parameter;
+        Method,
+        Parameter,
+        Unresolved;
+
+        /**
+         * Determine if structures of the type are length-encoded when assembled.
+         *
+         * @return true if the persistent form of the corresponding XVM structure gets
+         *         length-encoded
+         */
+        public boolean isLengthEncoded()
+            {
+            switch (this)
+                {
+                case Package:
+                case Class:
+                case Method:
+                case Property:
+                    return true;
+
+                default:
+                    return false;
+                }
+            }
 
         /**
          * Look up a Format enum by its ordinal.

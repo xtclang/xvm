@@ -74,12 +74,6 @@ public class ByteStringConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Type getType()
-        {
-        return Type.ByteString;
-        }
-
-    @Override
     public Format getFormat()
         {
         return Format.ByteString;

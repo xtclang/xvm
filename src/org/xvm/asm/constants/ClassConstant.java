@@ -52,10 +52,10 @@ public class ClassConstant
         super(pool);
 
         if (constParent == null ||
-                !( constParent.getType() == Type.Module
-                || constParent.getType() == Type.Package
-                || constParent.getType() == Type.Class
-                || constParent.getType() == Type.Method ))
+                !( constParent.getFormat() == Format.Module
+                || constParent.getFormat() == Format.Package
+                || constParent.getFormat() == Format.Class
+                || constParent.getFormat() == Format.Method ))
             {
             throw new IllegalArgumentException("parent module, package, class, or method required");
             }
@@ -100,18 +100,12 @@ public class ClassConstant
     public boolean isEcstasyObject()
         {
         return getName().equals(CLASS_OBJECT)
-                && getNamespace().getType() == Type.Module
+                && getNamespace().getFormat() == Format.Module
                 && ((ModuleConstant) getNamespace()).isEcstasyModule();
         }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
-
-    @Override
-    public Type getType()
-        {
-        return Type.Class;
-        }
 
     @Override
     public Format getFormat()

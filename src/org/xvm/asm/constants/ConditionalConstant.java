@@ -82,12 +82,6 @@ public abstract class ConditionalConstant
 
     // ----- Constant methods ----------------------------------------------------------------------
 
-    @Override
-    public Type getType()
-        {
-        return Type.Condition;
-        }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

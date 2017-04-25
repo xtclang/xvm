@@ -30,7 +30,7 @@ public class VersionConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    protected VersionConstant(ConstantPool pool, Format format, DataInput in)
+    public VersionConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -66,12 +66,6 @@ public class VersionConstant
 
 
     // ----- Constant methods ----------------------------------------------------------------------
-
-    @Override
-    public Type getType()
-        {
-        return Type.Version;
-        }
 
     @Override
     public Format getFormat()

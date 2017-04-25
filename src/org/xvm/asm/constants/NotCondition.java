@@ -34,7 +34,7 @@ public class NotCondition
      * @throws IOException  if an issue occurs reading the Constant
      *                      value
      */
-    protected NotCondition(ConstantPool pool, Format format, DataInput in)
+    public NotCondition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -48,7 +48,7 @@ public class NotCondition
      *                   Constant
      * @param constCond  the underlying condition to evaluate
      */
-    protected NotCondition(ConstantPool pool, ConditionalConstant constCond)
+    public NotCondition(ConstantPool pool, ConditionalConstant constCond)
         {
         super(pool);
 

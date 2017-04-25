@@ -188,7 +188,7 @@ public class ConstantPoolAdapter
 
         while (true)
             {
-            switch (constParent.getType())
+            switch (constParent.getFormat())
                 {
                 case Module:
                     sb.insert(0, ':')

@@ -45,24 +45,18 @@ public class PropertyConstant
      *
      * @param pool         the ConstantPool that will contain this Constant
      * @param constParent  the module, package, class, or method that contains this property
-     * @param constType    the type of the property
      * @param sName        the property name
      */
-    public PropertyConstant(ConstantPool pool, Constant constParent, ClassConstant constType, String sName)
+    public PropertyConstant(ConstantPool pool, Constant constParent, String sName)
         {
         super(pool);
 
-        if (constParent == null || !(constParent.getType() == Type.Module
-                || constParent.getType() == Type.Package
-                || constParent.getType() == Type.Class
-                || constParent.getType() == Type.Method))
+        if (constParent == null || !(constParent.getFormat() == Format.Module
+                || constParent.getFormat() == Format.Package
+                || constParent.getFormat() == Format.Class
+                || constParent.getFormat() == Format.Method))
             {
             throw new IllegalArgumentException("parent module, package, class, or method required");
-            }
-
-        if (constType == null)
-            {
-            throw new IllegalArgumentException("property type required");
             }
 
         if (sName == null)
@@ -71,7 +65,6 @@ public class PropertyConstant
             }
 
         m_constParent = constParent;
-        m_constType   = constType;
         m_constName   = pool.ensureCharStringConstant(sName);
         }
 
@@ -90,16 +83,6 @@ public class PropertyConstant
         }
 
     /**
-     * Get the type of the property.
-     *
-     * @return the property type
-     */
-    public ClassConstant getPropertyType()
-        {
-        return m_constType;
-        }
-
-    /**
      * Get the name of the property.
      *
      * @return the property name
@@ -111,12 +94,6 @@ public class PropertyConstant
 
 
     // ----- Constant methods ----------------------------------------------------------------------
-
-    @Override
-    public Type getType()
-        {
-        return Type.Property;
-        }
 
     @Override
     public Format getFormat()
@@ -131,10 +108,6 @@ public class PropertyConstant
         if (n == 0)
             {
             n = this.m_constName.compareTo(((PropertyConstant) that).m_constName);
-            if (n == 0)
-                {
-                n = this.m_constType.compareTo(((PropertyConstant) that).m_constType);
-                }
             }
         return n;
         }
@@ -144,7 +117,7 @@ public class PropertyConstant
         {
         String sParent;
         final Constant constParent = m_constParent;
-        switch (constParent.getType())
+        switch (constParent.getFormat())
             {
             case Module:
                 sParent = ((ModuleConstant) constParent).getUnqualifiedName();
@@ -179,7 +152,6 @@ public class PropertyConstant
         {
         final ConstantPool pool = getConstantPool();
         m_constParent = pool.getConstant(m_iParent);
-        m_constType   = (ClassConstant) pool.getConstant(m_iType);
         m_constName   = (CharStringConstant) pool.getConstant(m_iName);
         }
 
@@ -187,7 +159,6 @@ public class PropertyConstant
     protected void registerConstants(ConstantPool pool)
         {
         m_constParent = pool.register(m_constParent);
-        m_constType   = (ClassConstant) pool.register(m_constType);
         m_constName   = (CharStringConstant) pool.register(m_constName);
         }
 
@@ -197,14 +168,13 @@ public class PropertyConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
-        writePackedLong(out, m_constType.getPosition());
         writePackedLong(out, m_constName.getPosition());
         }
 
     @Override
     public String getDescription()
         {
-        return "property=" + getValueString() + ", type=" + m_constType.getValueString();
+        return "property=" + getValueString();
         }
 
 
@@ -213,9 +183,8 @@ public class PropertyConstant
     @Override
     public int hashCode()
         {
-        return (m_constParent.hashCode() * 17
-                + m_constName.hashCode()) * 31
-                + m_constType.hashCode();
+        return m_constParent.hashCode() * 17
+                + m_constName.hashCode();
         }
 
 
@@ -244,11 +213,6 @@ public class PropertyConstant
      * Module, a Package, a Class, or a Method.
      */
     private Constant m_constParent;
-
-    /**
-     * The constant that represents the type of this property.
-     */
-    private ClassConstant m_constType;
 
     /**
      * The constant that holds the name of the property.

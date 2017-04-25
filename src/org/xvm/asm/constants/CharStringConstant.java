@@ -64,14 +64,25 @@ public class CharStringConstant
         return m_sVal;
         }
 
+    /**
+     * For a sub-class of CharStringConstant that has not yet been resolved, this allows the value
+     * to be resolved.
+     *
+     * @param value  the value to resolve the constant to
+     */
+    protected void resolve(String value)
+        {
+        if (m_sVal == UNRESOLVED && this.getClass() != CharStringConstant.class)
+            {
+            m_sVal = value;
+            }
+        else
+            {
+            throw new IllegalStateException();
+            }
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
-
-    @Override
-    public Type getType()
-        {
-        return Type.CharString;
-        }
 
     @Override
     public Format getFormat()
@@ -125,6 +136,11 @@ public class CharStringConstant
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * A special value that means that the constant has not been resolved.
+     */
+    protected static final String UNRESOLVED = "<unresolved-name>";
 
     /**
      * The constant character string value.

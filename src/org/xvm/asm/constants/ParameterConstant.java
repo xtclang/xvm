@@ -39,7 +39,7 @@ public class ParameterConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    protected ParameterConstant(ConstantPool pool, Format format, DataInput in)
+    public ParameterConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -97,12 +97,6 @@ public class ParameterConstant
 
 
     // ----- Constant methods ----------------------------------------------------------------------
-
-    @Override
-    public Type getType()
-        {
-        return Type.Parameter;
-        }
 
     @Override
     public Format getFormat()

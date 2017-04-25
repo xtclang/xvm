@@ -25,7 +25,7 @@ public class Only1Condition
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    protected Only1Condition(ConstantPool pool, Format format, DataInput in)
+    public Only1Condition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool, format, in);
@@ -37,7 +37,7 @@ public class Only1Condition
      * @param pool        the ConstantPool that will contain this Constant
      * @param aconstCond  an array of underlying conditions to evaluate
      */
-    protected Only1Condition(ConstantPool pool, ConditionalConstant[] aconstCond)
+    public Only1Condition(ConstantPool pool, ConditionalConstant[] aconstCond)
         {
         super(pool, aconstCond);
         }

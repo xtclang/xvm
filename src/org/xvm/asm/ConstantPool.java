@@ -12,31 +12,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import org.xvm.asm.Constant.Format;
-import org.xvm.asm.Constant.Type;
 
-import org.xvm.asm.constants.AllCondition;
-import org.xvm.asm.constants.ByteConstant;
-import org.xvm.asm.constants.ByteStringConstant;
-import org.xvm.asm.constants.CharConstant;
-import org.xvm.asm.constants.CharStringConstant;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.NamedCondition;
-import org.xvm.asm.constants.PackageConstant;
-import org.xvm.asm.constants.ParameterConstant;
-import org.xvm.asm.constants.PresentCondition;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.VersionConstant;
+import org.xvm.asm.constants.*;
+
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
-import static org.xvm.util.Handy.appendIntAsHex;
-import static org.xvm.util.Handy.byteArrayToHexString;
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readMagnitude;
@@ -104,7 +87,7 @@ public class ConstantPool
             }
 
         // check if the Constant is already registered
-        final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getType());
+        final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
         final Constant constantOld = mapConstants.get(constant);
         if (constantOld == null)
             {
@@ -122,7 +105,7 @@ public class ConstantPool
             Object oLocator = constant.getLocator();
             if (oLocator != null)
                 {
-                ensureLocatorLookup(constant.getType()).put(oLocator, constant);
+                ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
                 }
 
             // make sure that the recursively referenced constants are all
@@ -159,8 +142,7 @@ public class ConstantPool
     public ByteConstant ensureByteConstant(int b)
         {
         // check the pre-existing constants first
-        ByteConstant constant =
-                (ByteConstant) ensureLocatorLookup(Type.Byte).get(Byte.valueOf((byte) b));
+        ByteConstant constant = (ByteConstant) ensureLocatorLookup(Format.Byte).get(Byte.valueOf((byte) b));
         if (constant == null)
             {
             constant = (ByteConstant) register(new ByteConstant(this, b));
@@ -169,8 +151,7 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified byte array value, obtain a ByteStringConstant that
-     * represents it.
+     * Given the specified byte array value, obtain a ByteStringConstant that represents it.
      *
      * @param ab  the byte array value
      *
@@ -183,8 +164,7 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified character value, obtain a CharConstant that
-     * represents it.
+     * Given the specified character value, obtain a CharConstant that represents it.
      *
      * @param ch  the character value
      *
@@ -195,8 +175,7 @@ public class ConstantPool
         // check the cache
         if (ch <= 0x7F)
             {
-            CharConstant constant =
-                    (CharConstant) ensureLocatorLookup(Type.Char).get(Character.valueOf((char) ch));
+            CharConstant constant = (CharConstant) ensureLocatorLookup(Format.Char).get(Character.valueOf((char) ch));
             if (constant != null)
                 {
                 return constant;
@@ -207,8 +186,7 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified String value, obtain a CharStringConstant that
-     * represents it.
+     * Given the specified String value, obtain a CharStringConstant that represents it.
      *
      * @param s  the String value
      *
@@ -217,8 +195,7 @@ public class ConstantPool
     public CharStringConstant ensureCharStringConstant(String s)
         {
         // check the pre-existing constants first
-        CharStringConstant constant =
-                (CharStringConstant) ensureLocatorLookup(Type.CharString).get(s);
+        CharStringConstant constant = (CharStringConstant) ensureLocatorLookup(Format.CharString).get(s);
         if (constant == null)
             {
             constant = (CharStringConstant) register(new CharStringConstant(this, s));
@@ -227,12 +204,11 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified <tt>long</tt> value, obtain a IntConstant that
-     * represents it.
+     * Given the specified {@code long} value, obtain a IntConstant that represents it.
      *
-     * @param n  the <tt>long</tt> value of the integer
+     * @param n  the {@code long} value of the integer
      *
-     * @return an IntConstant for the passed <tt>long</tt> value
+     * @return an IntConstant for the passed {@code long} value
      */
     public IntConstant ensureIntConstant(long n)
         {
@@ -240,8 +216,7 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified PackedInteger value, obtain a IntConstant that
-     * represents it.
+     * Given the specified PackedInteger value, obtain a IntConstant that represents it.
      *
      * @param pint  the PackedInteger value
      *
@@ -250,7 +225,7 @@ public class ConstantPool
     public IntConstant ensureIntConstant(PackedInteger pint)
         {
         // check the pre-existing constants first
-        IntConstant constant = (IntConstant) ensureLocatorLookup(Type.Int).get(pint);
+        IntConstant constant = (IntConstant) ensureLocatorLookup(Format.Int).get(pint);
         if (constant == null)
             {
             constant = (IntConstant) register(new IntConstant(this, pint));
@@ -258,10 +233,16 @@ public class ConstantPool
         return constant;
         }
 
+    /**
+     * Given the specified Version value, obtain a VersionConstant that represents it.
+     *
+     * @param ver  a version
+     *
+     * @return a VersionConstant for the passed version value
+     */
     public VersionConstant ensureVersionConstant(Version ver)
         {
-        VersionConstant constant =
-                (VersionConstant) ensureLocatorLookup(Type.Version).get(ver.toString());
+        VersionConstant constant = (VersionConstant) ensureLocatorLookup(Format.Version).get(ver.toString());
         if (constant == null)
             {
             constant = new VersionConstant(this, ver);
@@ -269,52 +250,76 @@ public class ConstantPool
         return constant;
         }
 
+    /**
+     * Given the specified name, obtain a NamedCondition that represents a test for the name being
+     * specified.
+     *
+     * @param sName  a name
+     *
+     * @return a NamedCondition
+     */
     public NamedCondition ensureNamedCondition(String sName)
         {
-        // TODO locator?
-        return new NamedCondition(this, ensureCharStringConstant(sName));
-        }
-
-    public PresentCondition ensurePresentCondition(Constant constVMStruct)
-        {
-        // TODO locator?
-        return ensurePresentCondition(constVMStruct, null, false);
-        }
-
-    public PresentCondition ensurePresentCondition(Constant constVMStruct,
-            VersionConstant constVer, boolean fExactVer)
-        {
-        // TODO PresentCondition(ConstantPool pool, Constant constVMStruct, VersionConstant constVer, boolean fExactVer)
-        return null;
+        NamedCondition constant = (NamedCondition) ensureLocatorLookup(Format.ConditionNamed).get(sName);
+        if (constant == null)
+            {
+            constant = new NamedCondition(this, ensureCharStringConstant(sName));
+            }
+        return constant;
         }
 
     /**
-     * TODO
+     * Given a constant for a particular XVM structure, obtain a PresentCondition that represents a
+     * test for the structure's existence.
      *
-     * @param condition1
-     * @param condition2
+     * @param constVMStruct   a constant specifying a particular XVM structure
      *
-     * @return
+     * @return a PresentCondition
      */
-    public AllCondition ensureAllCondition(ConditionalConstant condition1,
-            ConditionalConstant condition2)
+    public PresentCondition ensurePresentCondition(Constant constVMStruct)
+        {
+        return ensurePresentCondition(constVMStruct, null, false);
+        }
+
+    /**
+     * Given a constant for a particular XVM structure and version, obtain a PresentCondition that
+     * represents a test for the structure's existence of the specified version.
+     *
+     * @param constVMStruct   a constant specifying a particular XVM structure
+     * @param constVer        the version of that structure to test for
+     * @param fExactVer       true iff the version must match exactly
+     *
+     * @return a PresentCondition
+     */
+    public PresentCondition ensurePresentCondition(Constant constVMStruct, VersionConstant constVer, boolean fExactVer)
+        {
+        return new PresentCondition(this, constVMStruct, constVer, fExactVer);
+        }
+
+    /**
+     * Given the two conditions, obtain an AllCondition that represents them.
+     *
+     * @param condition1   the first condition
+     * @param condition2   the second condition
+     *
+     * @return an AllCondition
+     */
+    public AllCondition ensureAllCondition(ConditionalConstant condition1, ConditionalConstant condition2)
         {
         if (condition1 == null || condition2 == null)
             {
             throw new IllegalArgumentException("conditions required");
             }
 
-        return (AllCondition) register(
-                new AllCondition(this,
-                        new ConditionalConstant[] {condition1, condition2}));
+        return (AllCondition) register(new AllCondition(this, new ConditionalConstant[] {condition1, condition2}));
         }
 
     /**
-     * TODO
+     * Given the two conditions, obtain an AllCondition that represents them.
      *
-     * @param acondition
+     * @param acondition  an array of conditions
      *
-     * @return
+     * @return an AllCondition
      */
     public AllCondition ensureAllCondition(ConditionalConstant[] acondition)
         {
@@ -341,7 +346,7 @@ public class ConstantPool
             throw new IllegalArgumentException("illegal qualified module name: " + quotedString(sName));
             }
 
-        ModuleConstant constant = (ModuleConstant) ensureLocatorLookup(Type.Module).get(sName);
+        ModuleConstant constant = (ModuleConstant) ensureLocatorLookup(Format.Module).get(sName);
         if (constant == null)
             {
             constant = (ModuleConstant) register(new ModuleConstant(this, sName));
@@ -350,11 +355,10 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified package name and the context (module or package)
-     * within which it exists, obtain a PackageConstant that represents it.
+     * Given the specified package name and the context (module or package) within which it exists,
+     * obtain a PackageConstant that represents it.
      *
-     * @param constParent  the ModuleConstant or PackageConstant that contains
-     *                     the specified package
+     * @param constParent  the ModuleConstant or PackageConstant that contains the specified package
      * @param sPackage     the unqualified name of the package
      *
      * @return the specified PackageConstant
@@ -372,75 +376,26 @@ public class ConstantPool
             throw new IllegalArgumentException("illegal package name: " + sPackage);
             }
 
-        switch (constParent.getType())
+        switch (constParent.getFormat())
             {
             case Module:
             case Package:
-                PackageConstant constant = (PackageConstant) ensureLocatorLookup(Type.Package).get(sPackage);
+                PackageConstant constant = (PackageConstant) ensureLocatorLookup(Format.Package).get(sPackage);
                 if (constant == null)
                     {
-                    constant = (PackageConstant) register(new PackageConstant(this, constParent, sPackage, null));
+                    constant = (PackageConstant) register(new PackageConstant(this, constParent, sPackage));
                     }
                 return constant;
 
             default:
-                throw new IllegalArgumentException("constant type " + constParent.getType()
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
                         + " is not a Module or Package");
             }
         }
 
-    // REVIEW
     /**
-     * Given a specified module to import, and given the module that it is
-     * being imported into and the package name at which it will be imported,
-     * obtain the PackageConstant for the package that will represent the
-     * imported module.
-     *
-     * @param constParent  the ModuleConstant the the module into which a
-     *                     different module is being imported
-     * @param sPackage     the name of the package which will be used to
-     *                     refer to the imported module
-     * @param constModule  the ModuleConstant for the module to import
-     *
-     * @return the PackageConstant that represents the imported module
-     */
-    public PackageConstant ensurePackageConstant(ModuleConstant constParent, String sPackage, ModuleConstant constModule)
-        {
-        if (constParent == null)
-            {
-            throw new IllegalArgumentException("ModuleConstant to import into required");
-            }
-
-        if (constModule == null)
-            {
-            throw new IllegalArgumentException("ModuleConstant to import required");
-            }
-
-        // validate the package name
-        if (!isValidIdentifier(sPackage))
-            {
-            throw new IllegalArgumentException("illegal package name: " + sPackage);
-            }
-
-        PackageConstant constant = (PackageConstant) ensureLocatorLookup(Type.Package).get(sPackage);
-        if (constant == null)
-            {
-            constant = (PackageConstant) register(new PackageConstant(this, constParent, sPackage, constModule));
-            }
-
-// REVIEW
-//        else if (Handy.equals(constModule, constant.getImportedModule()))
-//            {
-//            throw new IllegalStateException("Imported module mismatch: old=" + constant.getImportedModule()
-//                    + ", new=" + constModule);
-//            }
-
-        // TODO
-        return constant;
-        }
-
-    /**
-     * TODO
+     * Given the specified class name and the context (module, package, class, method) within which
+     * it exists, obtain a ClassConstant that represents it.
      *
      * @param constParent
      * @param sClass
@@ -449,27 +404,36 @@ public class ConstantPool
      */
     public ClassConstant ensureClassConstant(Constant constParent, String sClass)
         {
-        switch (constParent.getType())
+        switch (constParent.getFormat())
             {
             case Module:
             case Package:
             case Class:
-                // TODO if qualified
             case Method:
                 return (ClassConstant) register(new ClassConstant(this, constParent, sClass));
 
             default:
-                throw new IllegalArgumentException("constant type " + constParent.getType()
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
                         + " is not a Module, Package, Class, or Method");
             }
         }
 
+    /**
+     * Given the specified property name and the context (module, package, class, method) within
+     * which it exists, obtain a PropertyConstant that represents it.
+     *
+     * @param constParent  the constant representing the container of the property, for example a
+     *                     ClassConstant
+     * @param constType    the constant representing the type of the property
+     * @param sName        the name of the property
+     *
+     * @return the specified PropertyConstant
+     */
     public PropertyConstant ensurePropertyConstant(Constant constParent,
             ClassConstant constType,
             String sName)
         {
-        // TODO
-        return (PropertyConstant) register(new PropertyConstant(this, constParent, constType, sName));
+        return (PropertyConstant) register(new PropertyConstant(this, constParent, sName));
         }
 
     /**
@@ -492,7 +456,7 @@ public class ConstantPool
         {
         assert constParent != null;
 
-        switch (constParent.getType())
+        switch (constParent.getFormat())
             {
             case Module:
             case Package:
@@ -503,7 +467,7 @@ public class ConstantPool
                         sName, aconstGenericParam, aconstInvokeParam, aconstReturnParam));
 
             default:
-                throw new IllegalArgumentException("constant type " + constParent.getType()
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
                         + " is not a Module, Package, Class, Method, or Property");
             }
         }
@@ -526,48 +490,34 @@ public class ConstantPool
         }
 
 
-    // ----- XvmStructure operations -------------------------------------------
+    // ----- XvmStructure methods ------------------------------------------------------------------
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected ConstantPool getConstantPool()
         {
         return this;
         }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Iterator<? extends XvmStructure> getContained()
         {
         return m_listConst.iterator();
         }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isModified()
         {
-        // changes to the constant pool only modify the resulting file if there are changes to other structures that
-        // reference the changes in the constant pool; the constants themselves are constant
+        // changes to the constant pool only modify the resulting file if there are changes to other
+        // structures that reference the changes in the constant pool; the constants themselves are
+        // constant
         return false;
         }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void markModified()
         {
         }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void resetModified()
         {
@@ -601,9 +551,6 @@ public class ConstantPool
         {
         }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void disassemble(DataInput in)
             throws IOException
@@ -664,7 +611,37 @@ public class ConstantPool
                     constant = new MethodConstant(this, format, in);
                     break;
 
-                // TODO
+                case Version:
+                    constant = new VersionConstant(this, format, in);
+                    break;
+
+                case ConditionNot:
+                    constant = new NotCondition(this, format, in);
+                    break;
+
+                case ConditionAll:
+                    constant = new AllCondition(this, format, in);
+                    break;
+
+                case ConditionAny:
+                    constant = new AnyCondition(this, format, in);
+                    break;
+
+                case ConditionOnly1:
+                    constant = new Only1Condition(this, format, in);
+                    break;
+
+                case ConditionNamed:
+                    constant = new NamedCondition(this, format, in);
+                    break;
+
+                case ConditionPresent:
+                    constant = new PresentCondition(this, format, in);
+                    break;
+
+                case ConditionVersion:
+                    constant = new VersionCondition(this, format, in);
+                    break;
 
                 default:
                     throw new IOException("Unsupported constant format: " + nFmt);
@@ -681,24 +658,16 @@ public class ConstantPool
             }
         }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        // the ConstantPool does contain constants, but it does not itself
-        // reference any constants, so it has nothing to register itself.
-        // furthermore, this must be over-ridden here to avoid the super
-        // implementation calling to each of the contained Constants (some of
-        // which may no longer be referenced by any XVM Structure) and having
-        // them accidentally register everything that they in turn depend
-        // upon
+        // the ConstantPool does contain constants, but it does not itself reference any constants,
+        // so it has nothing to register itself. furthermore, this must be over-ridden here to avoid
+        // the super implementation calling to each of the contained Constants (some of which may no
+        // longer be referenced by any XVM Structure) and having them accidentally register
+        // everything that they in turn depend upon
         }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void assemble(DataOutput out)
             throws IOException
@@ -711,13 +680,12 @@ public class ConstantPool
         }
 
 
-    // ----- debugging support -------------------------------------------------
+    // ----- debugging support ---------------------------------------------------------------------
 
     @Override
     public String getDescription()
         {
-        return "size=" + m_listConst.size()
-                + ", recurse-reg=" + m_fRecurseReg;
+        return "size=" + m_listConst.size() + ", recurse-reg=" + m_fRecurseReg;
         }
 
     @Override
@@ -727,7 +695,7 @@ public class ConstantPool
         }
 
 
-    // ----- Object methods ----------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public boolean equals(Object obj)
@@ -749,17 +717,15 @@ public class ConstantPool
         }
 
 
-    // ----- methods exposed to FileStructure ----------------------------------
+    // ----- methods exposed to FileStructure ------------------------------------------------------
 
     /**
-     * Before the registration of constants begins as part of assembling the
-     * FileStructure, the ConstantPool is notified of the impending assembly
-     * process so that it can determine which constants are actually used, and
-     * how many times each is used. This is important because the unused
-     * constants can be discarded, and the most frequently used constants can
-     * be written out first in the ConstantPool, allowing their ordinal position
-     * to be addressed using a smaller number of bytes throughout the
-     * FileStructure.
+     * Before the registration of constants begins as part of assembling the FileStructure, the
+     * ConstantPool is notified of the impending assembly process so that it can determine which
+     * constants are actually used, and how many times each is used. This is important because the
+     * unused constants can be discarded, and the most frequently used constants can be written out
+     * first in the ConstantPool, allowing their ordinal position to be addressed using a smaller
+     * number of bytes throughout the FileStructure.
      */
     protected void preRegisterAll()
         {
@@ -773,11 +739,10 @@ public class ConstantPool
         }
 
     /**
-     * Called after all of the Constants have been registered by the bulk
-     * registration process.
+     * Called after all of the Constants have been registered by the bulk registration process.
      *
-     * @param fOptimize pass true to optimize the order of the constants, or
-     *                  false to maintain the present order
+     * @param fOptimize pass true to optimize the order of the constants, or false to maintain the
+     *                  present order
      */
     protected void postRegisterAll(final boolean fOptimize)
         {
@@ -791,19 +756,17 @@ public class ConstantPool
         }
 
     /**
-     * Discard unused Constants and order the remaining constants so that the
-     * most-referred-to Constants occur before the less used constants.
+     * Discard unused Constants and order the remaining constants so that the most-referred-to
+     * Constants occur before the less used constants.
      */
     private void optimize()
         {
-        // sort the Constants by how often they are referred to within the
-        // FileStructure, with the most frequently referred-to Constants
-        // appearing first
+        // sort the Constants by how often they are referred to within the FileStructure, with the
+        // most frequently referred-to Constants appearing first
         m_listConst.sort(Constant.MFU_ORDER);
 
-        // go through and mark each constant with its new position; the
-        // iteration is backwards to support the efficient removal of all of the
-        // unused Constant from the end of the list
+        // go through and mark each constant with its new position; the iteration is backwards to
+        // support the efficient removal of all of the unused Constants from the end of the list
         for (int i = m_listConst.size() - 1; i >= 0; --i)
             {
             Constant constant = m_listConst.get(i);
@@ -821,92 +784,86 @@ public class ConstantPool
                 }
             }
 
-        // discard any previous lookup structures, since contents may have
-        // changed
+        // discard any previous lookup structures, since contents may have changed
         m_mapConstants.clear();
         m_mapLocators.clear();
         }
 
 
-    // ----- internal ----------------------------------------------------------
+    // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Obtain a Constant lookup table for Constants of the specified type, using
-     * Constants as the keys of the lookup table.
-     * <p>
-     * Constants are natural identities, so they act as the keys in this lookup
-     * structure. This data structure allows there to be exactly one instance
-     * of each Constant identity held by the ConstantPool, similar to how
-     * String objects are "interned" in Java.
+     * Obtain a Constant lookup table for Constants of the specified type, using Constants as the
+     * keys of the lookup table.
+     * <p/>
+     * Constants are natural identities, so they act as the keys in this lookup structure. This data
+     * structure allows there to be exactly one instance of each Constant identity held by the
+     * ConstantPool, similar to how String objects are "interned" in Java.
      *
-     * @param type  the Constant Type
+     * @param format  the Constant Type
      *
      * @return the map from Constant to Constant
      */
-    private HashMap<Constant, Constant> ensureConstantLookup(Type type)
+    private HashMap<Constant, Constant> ensureConstantLookup(Format format)
         {
         ensureLookup();
-        return m_mapConstants.get(type);
+        return m_mapConstants.get(format);
         }
 
     /**
-     * Obtain a Constant lookup table for Constants of the specified type, using
-     * locators as the keys of the lookup table.
-     * <p>
-     * Locators are optional identities that are specific to each different
-     * Type of Constant:
+     * Obtain a Constant lookup table for Constants of the specified type, using locators as the
+     * keys of the lookup table.
+     * <p/>
+     * Locators are optional identities that are specific to each different Type of Constant:
      * <ul>
-     * <li>A Constant Types may not support locators at all;</li>
-     * <li>A Constant Types may support locators, but only for some of the
+     * <li>A Constant Type may not support locators at all;</li>
+     * <li>A Constant Type may support locators, but only for some of the
      * Constant values of that Type;</li>
-     * <li>A Constant Types may support locators for all of the Constant values
+     * <li>A Constant Type may support locators for all of the Constant values
      * of that Type.</li>
      * </ul>
-     * The
      *
-     * @param type  the Constant Type
+     * @param format  the Constant Type
      *
      * @return the map from locator to Constant
      */
-    private HashMap<Object, Constant> ensureLocatorLookup(Type type)
+    private HashMap<Object, Constant> ensureLocatorLookup(Format format)
         {
-        final EnumMap<Type, HashMap<Object, Constant>> mapLocatorMaps = m_mapLocators;
+        final EnumMap<Format, HashMap<Object, Constant>> mapLocatorMaps = m_mapLocators;
 
-        HashMap<Object, Constant> mapLocators = mapLocatorMaps.get(type);
+        HashMap<Object, Constant> mapLocators = mapLocatorMaps.get(format);
         if (mapLocators == null)
             {
             // lazily instantiate the locator map for the specified type
             mapLocators = new HashMap<>();
-            mapLocatorMaps.put(type, mapLocators);
+            mapLocatorMaps.put(format, mapLocators);
             }
 
         return mapLocators;
         }
 
     /**
-     * Create the necessary structures for looking up Constant objects quickly,
-     * and populate those structures with the set of existing Constant objects.
+     * Create the necessary structures for looking up Constant objects quickly, and populate those
+     * structures with the set of existing Constant objects.
      */
     private void ensureLookup()
         {
         if (m_mapConstants.isEmpty())
             {
-            for (Type type : Type.values())
+            for (Format format : Format.values())
                 {
-                m_mapConstants.put(type, new HashMap<>());
+                m_mapConstants.put(format, new HashMap<>());
                 }
-
-            // TODO intrinsics (note: not sure what this comment means)
 
             for (Constant constant : m_listConst)
                 {
-                Constant constantOld = m_mapConstants.get(constant.getType()).put(constant, constant);
+                Constant constantOld = m_mapConstants.get(constant.getFormat()).put(constant, constant);
                 assert constantOld == null;
 
                 Object oLocator = constant.getLocator();
                 if (oLocator != null)
                     {
-                    constantOld = ensureLocatorLookup(constant.getType()).put(oLocator, constant);
+                    constantOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
                     assert constantOld == null;
                     }
                 }
@@ -914,7 +871,7 @@ public class ConstantPool
         }
 
 
-    // ----- data members ------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
      * An immutable, empty, zero-length array of parameters.
@@ -929,12 +886,12 @@ public class ConstantPool
     /**
      * Reverse lookup structure to find a particular constant by constant.
      */
-    private final EnumMap<Type, HashMap<Constant, Constant>> m_mapConstants = new EnumMap<>(Type.class);
+    private final EnumMap<Format, HashMap<Constant, Constant>> m_mapConstants = new EnumMap<>(Format.class);
 
     /**
      * Reverse lookup structure to find a particular constant by locator.
      */
-    private final EnumMap<Type, HashMap<Object, Constant>> m_mapLocators = new EnumMap<>(Type.class);
+    private final EnumMap<Format, HashMap<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
 
     /**
      * Tracks whether the ConstantPool should recursively register constants.

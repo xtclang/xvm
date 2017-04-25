@@ -135,7 +135,7 @@ public abstract class StructureContainer
         // read in the identity of this file structure
         Constant constId = getConstantPool().getConstant(readMagnitude(in));
 
-        if (constId.getType().isLengthEncoded())
+        if (constId.getFormat().isLengthEncoded())
             {
             // skip over length encoding
             readMagnitude(in);
@@ -223,7 +223,7 @@ public abstract class StructureContainer
         Constant constId = structSub.getIdentityConstant();
         writePackedLong(out, constId.getPosition());
 
-        if (constId.getType().isLengthEncoded())
+        if (constId.getFormat().isLengthEncoded())
             {
             // length-encode the sub-structure (allowing a reader to optionally
             // skip over it)

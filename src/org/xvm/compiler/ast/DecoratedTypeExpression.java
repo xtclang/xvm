@@ -41,6 +41,7 @@ public class DecoratedTypeExpression
         StringBuilder sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT)
+          .append(' ')
           .append(type);
 
         return sb.toString();

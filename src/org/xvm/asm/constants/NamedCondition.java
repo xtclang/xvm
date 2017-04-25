@@ -32,7 +32,7 @@ public class NamedCondition
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    protected NamedCondition(ConstantPool pool, Format format, DataInput in)
+    public NamedCondition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -82,6 +82,12 @@ public class NamedCondition
     public Format getFormat()
         {
         return Format.ConditionNamed;
+        }
+
+    @Override
+    protected Object getLocator()
+        {
+        return getName();
         }
 
     @Override

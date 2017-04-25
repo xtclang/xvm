@@ -49,14 +49,13 @@ public class PackageConstant
      * @param pool         the ConstantPool that will contain this Constant
      * @param constParent  the module or package that contains this package
      * @param sName        the unqualified package name
-     * @param constModule  the module that this is an alias for, or null
      */
-    public PackageConstant(ConstantPool pool, Constant constParent, String sName, ModuleConstant constModule)
+    public PackageConstant(ConstantPool pool, Constant constParent, String sName)
         {
         super(pool);
 
-        if (constParent == null || !(constParent.getType() == Type.Module ||
-                constParent.getType() == Type.Package))
+        if (constParent == null || !(constParent.getFormat() == Format.Module ||
+                constParent.getFormat() == Format.Package))
             {
             throw new IllegalArgumentException("parent module or package required");
             }
@@ -64,11 +63,6 @@ public class PackageConstant
         if (sName == null)
             {
             throw new IllegalArgumentException("package name required");
-            }
-
-        if (constModule != null && constParent.getType() != Type.Module)
-            {
-            throw new IllegalArgumentException("module import can only occur directly within another module");
             }
 
         m_constParent = constParent;
@@ -100,12 +94,6 @@ public class PackageConstant
 
 
     // ----- Constant methods ----------------------------------------------------------------------
-
-    @Override
-    public Type getType()
-        {
-        return Type.Package;
-        }
 
     @Override
     public Format getFormat()

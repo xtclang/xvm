@@ -1,16 +1,16 @@
 module Test
     {
-    if (true)
+    interface Iterator<ElementType>
         {
-        import x.y.z as x;
-        }
-    else
-        {
-        typedef function Void (Int) PassANumber;
+        conditional ElementType next();
         }
 
-    Void foo()
+    class List<ElementType>
         {
-        this:type x = null;
+        ElementType first;
+
+        Void add(ElementType value);
+
+        Iterator<ElementType> iterator();
         }
     }

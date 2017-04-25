@@ -36,7 +36,7 @@ public class PresentCondition
      * @throws IOException  if an issue occurs reading the Constant
      *                      value
      */
-    protected PresentCondition(ConstantPool pool, Format format, DataInput in)
+    public PresentCondition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -54,7 +54,7 @@ public class PresentCondition
      *                       or Method
      * @param fExactVer      true if the version has to match exactly
      */
-    protected PresentCondition(ConstantPool pool, Constant constVMStruct, VersionConstant constVer, boolean fExactVer)
+    public PresentCondition(ConstantPool pool, Constant constVMStruct, VersionConstant constVer, boolean fExactVer)
         {
         super(pool);
         m_constStruct = constVMStruct;

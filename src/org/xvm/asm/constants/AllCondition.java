@@ -25,7 +25,7 @@ public class AllCondition
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    protected AllCondition(ConstantPool pool, Format format, DataInput in)
+    public AllCondition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool, format, in);

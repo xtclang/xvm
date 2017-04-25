@@ -287,7 +287,7 @@ public class FileStructure
         // figure out what type of structure is in the file
         Constant     constTop = pool.getConstant(nId);
         XvmStructure xsTop;
-        switch (constTop.getType())
+        switch (constTop.getFormat())
             {
             case Module:
             case Package:

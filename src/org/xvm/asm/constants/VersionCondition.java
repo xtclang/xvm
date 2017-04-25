@@ -39,7 +39,7 @@ public class VersionCondition
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    protected VersionCondition(ConstantPool pool, Format format, DataInput in)
+    public VersionCondition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -54,7 +54,7 @@ public class VersionCondition
      * @param constVer   the version of this Module to evaluate
      * @param fExactVer  true if the version has to match exactly
      */
-    protected VersionCondition(ConstantPool pool, VersionConstant constVer, boolean fExactVer)
+    public VersionCondition(ConstantPool pool, VersionConstant constVer, boolean fExactVer)
         {
         super(pool);
         m_constVer  = constVer;

@@ -25,7 +25,7 @@ public class AnyCondition
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    protected AnyCondition(ConstantPool pool, Format format, DataInput in)
+    public AnyCondition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool, format, in);
@@ -37,7 +37,7 @@ public class AnyCondition
      * @param pool        the ConstantPool that will contain this Constant
      * @param aconstCond  an array of underlying conditions to evaluate
      */
-    protected AnyCondition(ConstantPool pool, ConditionalConstant[] aconstCond)
+    public AnyCondition(ConstantPool pool, ConditionalConstant[] aconstCond)
         {
         super(pool, aconstCond);
         }

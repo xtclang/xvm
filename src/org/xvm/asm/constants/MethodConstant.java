@@ -62,11 +62,11 @@ public class MethodConstant
         super(pool);
 
         if (constParent == null ||
-                !( constParent.getType() == Type.Module
-                || constParent.getType() == Type.Package
-                || constParent.getType() == Type.Class
-                || constParent.getType() == Type.Method
-                || constParent.getType() == Type.Property ))
+                !( constParent.getFormat() == Format.Module
+                || constParent.getFormat() == Format.Package
+                || constParent.getFormat() == Format.Class
+                || constParent.getFormat() == Format.Method
+                || constParent.getFormat() == Format.Property ))
             {
             throw new IllegalArgumentException("parent module, package, class, method, or property required");
             }
@@ -137,12 +137,6 @@ public class MethodConstant
         }
 
     @Override
-    public Type getType()
-        {
-        return Type.Method;
-        }
-
-    @Override
     public Format getFormat()
         {
         return Format.Method;
@@ -168,7 +162,7 @@ public class MethodConstant
         {
         String sParent;
         final Constant constParent = m_constParent;
-        switch (constParent.getType())
+        switch (constParent.getFormat())
             {
             case Module:
                 sParent = ((ModuleConstant) constParent).getUnqualifiedName();

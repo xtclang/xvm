@@ -67,12 +67,6 @@ public class CharConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public Type getType()
-        {
-        return Type.Char;
-        }
-
-    @Override
     public Format getFormat()
         {
         return Format.Char;
