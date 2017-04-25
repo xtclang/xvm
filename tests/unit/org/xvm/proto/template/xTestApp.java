@@ -111,14 +111,16 @@ public class xTestApp extends xModule
         // --- testService()
 
         FunctionTemplate ftLambda$1 = ensureFunctionTemplate("lambda$1",
-                new String[] {"x:Int64", "x:Exception"}, VOID);
+                new String[] {"x:FutureRef", "x:Int64", "x:Exception"}, VOID);
+        ftLambda$1.setAccess(Access.Private);
         ftLambda$1.m_aop = new Op[]
-            { // #0 = r; #1 = x
+            { // #0 = rfc2; #1 = r, #2 = x
             new X_Print(-adapter.ensureValueConstantId("# in TestApp.lambda$1 #")),
             new X_Print(0),
             new X_Print(1),
+            new X_Print(2),
             };
-        ftLambda$1.m_cVars = 2;
+        ftLambda$1.m_cVars = 3;
 
         FunctionTemplate ftTestService = ensureFunctionTemplate("testService", VOID, VOID);
         ftTestService.m_aop = new Op[]
@@ -161,6 +163,7 @@ public class xTestApp extends xModule
 
             new IVar(adapter.getClassConstId("x:Function"),
                      adapter.getMethodConstId("x:TestApp", "lambda$1")), // #7
+            new FBind(7, new int[] {0}, new int[] {1}, 7),
             new Invoke_10(5, -adapter.getMethodConstId("x:FutureRef", "whenComplete"), 7),
 
             new GuardStart(adapter.getClassConstId("x:Exception"),

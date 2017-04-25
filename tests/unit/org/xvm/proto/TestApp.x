@@ -116,14 +116,9 @@ module TestApp
         FutureRef<Int> rfc2 = &service.increment();
         rfc2.whenComplete((r, x) ->
             {
-            if (x == null)
-                {
-                print(r); print(fc2);
-                }
-            else
-                {
-                print(x);
-                }
+            print(c);
+            print(r);
+            print(x);
             }
 
         // handled exception

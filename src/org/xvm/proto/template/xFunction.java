@@ -82,6 +82,15 @@ public class xFunction
 
         // ----- FunctionHandle interface -----
 
+        // this method is only used by the ServiceContext
+        public ExceptionHandle invokeFrameless(ServiceContext context, ObjectHandle hTarget,
+                                      ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+            {
+            return callNImpl(context, null, hTarget, prepareVars(ahArg), ahReturn);
+            }
+
+        // ---- calls for methods with a single return value -----
+
         // call with one return value to be placed into the specified slot
         // this method doesn't have to be overridden
         // it simply collects ths specified arguments off the frame's vars
@@ -97,10 +106,13 @@ public class xFunction
                 }
             }
 
+        // this method must be overridden by the specialized handles
         public ExceptionHandle call1(Frame frame, ObjectHandle[] ahArg, int iReturn)
             {
-            return invoke1Impl(frame.f_context, frame, null, prepareVars(ahArg), iReturn);
+            return call1Impl(frame.f_context, frame, null, prepareVars(ahArg), iReturn);
             }
+
+        // ---- calls for methods with multiple return values -----
 
         // this method doesn't have to be overridden
         // it simply collects ths specified arguments off the frame's vars
@@ -116,12 +128,15 @@ public class xFunction
                 }
             }
 
+        // this method must be overridden by the specialized handles
         public ExceptionHandle call(Frame frame, ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
             {
-            return invokeImpl(frame.f_context, frame, null, prepareVars(ahArg), ahReturn);
+            return callNImpl(frame.f_context, frame, null, prepareVars(ahArg), ahReturn);
             }
 
-        public ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
+        // ----- internal implementation -----
+
+        protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
             {
             int cArgs = ahArg.length;
             int cVars = m_invoke.m_cVars;
@@ -153,14 +168,10 @@ public class xFunction
             return ahVar;
             }
 
-        public ExceptionHandle invoke1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
-            {
-            return invoke1Impl(frame.f_context, frame, hTarget, prepareVars(ahArg), iReturn);
-            }
-
-        // invoke with zero or one return to be placed into the specified register
-        protected ExceptionHandle invoke1Impl(ServiceContext context, Frame frame, ObjectHandle hTarget,
-                                           ObjectHandle[] ahVar, int iReturn)
+        // invoke with zero or one return to be placed into the specified register;
+        // frame can be null
+        protected ExceptionHandle call1Impl(ServiceContext context, Frame frame, ObjectHandle hTarget,
+                                            ObjectHandle[] ahVar, int iReturn)
             {
             if (hTarget == null && m_invoke instanceof MethodTemplate)
                 {
@@ -178,22 +189,10 @@ public class xFunction
             return hException;
             }
 
-        public ExceptionHandle invoke(Frame frame, ObjectHandle hTarget,
-                                      ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
-            {
-            return invokeImpl(frame.f_context, frame, hTarget, prepareVars(ahArg), ahReturn);
-            }
-
-        // this method is only used by the ServiceContext
-        public ExceptionHandle invokeFrameless(ServiceContext context, ObjectHandle hTarget,
-                                      ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
-            {
-            return invokeImpl(context, null, hTarget, prepareVars(ahArg), ahReturn);
-            }
-
+        // invoke with multiple return values;
         // frame could be null
-        protected ExceptionHandle invokeImpl(ServiceContext context, Frame frame, ObjectHandle hTarget,
-                                             ObjectHandle[] ahVar, ObjectHandle[] ahReturn)
+        protected ExceptionHandle callNImpl(ServiceContext context, Frame frame, ObjectHandle hTarget,
+                                            ObjectHandle[] ahVar, ObjectHandle[] ahReturn)
             {
             if (hTarget == null && m_invoke instanceof MethodTemplate)
                 {
@@ -296,7 +295,7 @@ public class xFunction
 
             addBoundArguments(ahVar);
 
-            return invoke1Impl(frame.f_context, frame, null, ahVar, iReturn);
+            return call1Impl(frame.f_context, frame, null, ahVar, iReturn);
             }
 
         @Override
@@ -306,7 +305,7 @@ public class xFunction
 
             addBoundArguments(ahVar);
 
-            return invokeImpl(frame.f_context, frame, null, ahVar, ahReturn);
+            return callNImpl(frame.f_context, frame, null, ahVar, ahReturn);
             }
 
         @Override
@@ -341,7 +340,7 @@ public class xFunction
             // native method on the service means "execute on the caller's thread"
             if (m_invoke.isNative() || frame.f_context == hService.m_context)
                 {
-                return invoke1Impl(frame.f_context, frame, hService, prepareVars(ahArg), iReturn);
+                return call1Impl(frame.f_context, frame, hService, prepareVars(ahArg), iReturn);
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();
@@ -356,7 +355,7 @@ public class xFunction
             // native method on the service means "execute on the caller's thread"
             if (m_invoke.isNative() || frame.f_context == hService.m_context)
                 {
-                return invokeImpl(frame.f_context, frame, hService, prepareVars(ahArg), ahReturn);
+                return callNImpl(frame.f_context, frame, hService, prepareVars(ahArg), ahReturn);
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();
