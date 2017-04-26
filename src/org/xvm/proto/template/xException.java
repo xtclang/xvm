@@ -59,7 +59,7 @@ public class xException
         {
         ExceptionHandle hException = makeHandle(null, null);
 
-        INSTANCE.setField(hException, "text", xString.makeHandle(sMessage));
+        INSTANCE.setField(hException, INSTANCE.getPropertyTemplate("text"), xString.makeHandle(sMessage));
 
         return hException;
         }
@@ -73,8 +73,9 @@ public class xException
         ServiceContext context = ServiceContext.getCurrentContext();
         Frame frame = context.getCurrentFrame();
 
-        INSTANCE.setField(hException, "stackTrace", xString.makeHandle(frame.getStackTrace()));
-        INSTANCE.setField(hException, "cause", hCause);
+        INSTANCE.setField(hException, INSTANCE.getPropertyTemplate("stackTrace"),
+                xString.makeHandle(frame.getStackTrace()));
+        INSTANCE.setField(hException, INSTANCE.getPropertyTemplate("cause"), hCause);
 
         return hException;
         }

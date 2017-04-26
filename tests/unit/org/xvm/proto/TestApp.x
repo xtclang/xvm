@@ -114,6 +114,7 @@ module TestApp
         print(rfc);
 
         FutureRef<Int> rfc2 = &service.increment();
+        @future Int rfc3 = rfc2;
         rfc2.whenComplete((r, x) ->
             {
             print(c);

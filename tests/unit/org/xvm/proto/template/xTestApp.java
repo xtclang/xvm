@@ -40,8 +40,9 @@ public class xTestApp extends xModule
         FunctionTemplate ftTest1 = ensureFunctionTemplate("test1", VOID, VOID);
         ftTest1.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId("# in TestApp.test1() #")),
-            new IVar(adapter.getClassConstId("x:String"), adapter.ensureValueConstantId("Hello world!")), // #0 (s)
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
+            new IVar(adapter.getClassConstId("x:String"),
+                     adapter.ensureValueConstantId("Hello world!")), // #0 (s)
             new X_Print(0),
 
             new Var(adapter.getClassConstId("x:Int64")), // #1 (i)
@@ -49,7 +50,8 @@ public class xTestApp extends xModule
             new X_Print(1),
 
             new Var(adapter.getClassConstId("x:Int64")), // #2 (of)
-            new IVar(adapter.getClassConstId("x:String"), adapter.ensureValueConstantId("world")), // #3
+            new IVar(adapter.getClassConstId("x:String"),
+                     adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(0, -adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
 
             new Var(adapter.getClassConstId("x:Int64")), // #4
@@ -111,11 +113,11 @@ public class xTestApp extends xModule
         // --- testService()
 
         FunctionTemplate ftLambda$1 = ensureFunctionTemplate("lambda$1",
-                new String[] {"x:FutureRef", "x:Int64", "x:Exception"}, VOID);
+                new String[] {"x:Int64", "x:Int64", "x:Exception"}, VOID);
         ftLambda$1.setAccess(Access.Private);
         ftLambda$1.m_aop = new Op[]
-            { // #0 = rfc2; #1 = r, #2 = x
-            new X_Print(-adapter.ensureValueConstantId("# in TestApp.lambda$1 #")),
+            { // #0 = c; #1 = r, #2 = x
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.lambda$1 #")),
             new X_Print(0),
             new X_Print(1),
             new X_Print(2),
@@ -194,7 +196,7 @@ public class xTestApp extends xModule
         FunctionTemplate ftTestRef = ensureFunctionTemplate("testRef", VOID, VOID);
         ftTestRef.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId("# in TestApp.testRef() #")),
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testRef() #")),
             new NVar(adapter.getClassConstId("x:Ref"), adapter.ensureValueConstantId("ri")),     // #0 (ri)
             new Enter(),
             new INVar(adapter.getClassConstId("x:Int64"),
@@ -227,11 +229,10 @@ public class xTestApp extends xModule
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);
         mtRun.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId("# in TestApp.run() #")),
-//            new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
-//            new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "test1")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "test2")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "testService")),
-//            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "testRef")),
             new Return_0()
             };
         mtRun.m_cVars = 2;

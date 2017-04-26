@@ -36,14 +36,13 @@ public class LSet extends OpInvocable
 
             PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
 
-
             if (hTarget.isStruct())
                 {
-                hException = template.setField(hTarget, property.f_sName, hValue);
+                hException = template.setField(hTarget, property, hValue);
                 }
             else
                 {
-                hException = template.setProperty(property, property.m_templateSet, frame, hTarget, hValue);
+                hException = template.setProperty(frame, hTarget, property, hValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

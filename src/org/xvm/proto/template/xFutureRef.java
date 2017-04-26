@@ -81,7 +81,7 @@ public class xFutureRef
             extends xRef.RefHandle
         {
         public final boolean f_fSynthetic;
-        protected CompletableFuture<ObjectHandle> m_future;
+        public CompletableFuture<ObjectHandle> m_future;
 
         protected FutureHandle(TypeComposition clazz, CompletableFuture<ObjectHandle> future, boolean fSynthetic)
             {
@@ -92,7 +92,7 @@ public class xFutureRef
             }
 
         @Override
-        public ObjectHandle get()
+        protected ObjectHandle getInternal()
                 throws ExceptionHandle.WrapperException
             {
             try
@@ -120,24 +120,30 @@ public class xFutureRef
             }
 
         @Override
-        public ExceptionHandle set(ObjectHandle handle)
+        protected ExceptionHandle setInternal(ObjectHandle handle)
             {
             if (handle instanceof FutureHandle)
                 {
+                // this is only possible if this "handle" is a "dynamic ref" and the "handle" is
+                // is a synthetic one (see Frame.assignValue)
                 if (m_future != null)
                     {
                     return xException.makeHandle("Future has already been assigned");
                     }
-                m_future = ((FutureHandle) handle).m_future;
+
+                FutureHandle that = (FutureHandle) handle;
+                assert that.f_fSynthetic;
+
+                m_future = that.m_future;
+                return null;
                 }
-            else if (m_future.isDone())
+
+            if (m_future.isDone())
                 {
                 return xException.makeHandle("Future has already been set");
                 }
-            else
-                {
-                m_future.complete(handle);
-                }
+
+            m_future.complete(handle);
             return null;
             }
 

@@ -46,7 +46,7 @@ public class Invoke_10 extends OpInvocable
             else if (template.isService())
                 {
                 hException = xFunction.makeAsyncHandle(method).
-                        call(frame, new ObjectHandle[]{hTarget, hArg}, Utils.OBJECTS_NONE);
+                        call1(frame, new ObjectHandle[]{hTarget, hArg}, -1);
                 }
             else
                 {

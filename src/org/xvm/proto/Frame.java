@@ -7,7 +7,6 @@ import org.xvm.proto.TypeCompositionTemplate.Access;
 
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
-import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -34,8 +33,8 @@ public class Frame
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
     public ExceptionHandle      m_hException;   // an exception
 
-    public Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
-                 ObjectHandle hTarget, ObjectHandle[] ahVar)
+    protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
+                    ObjectHandle hTarget, ObjectHandle[] ahVar)
         {
         f_context = context;
         f_framePrev = framePrev;
@@ -50,6 +49,20 @@ public class Frame
 
         int cReturns = function == null ? 0 : function.m_cReturns;
         f_ahReturn = cReturns == 0 ? Utils.OBJECTS_NONE : new ObjectHandle[cReturns];
+        }
+
+    // service-entry pseudo-frame
+    protected Frame(ServiceContext context, Frame framePrev, int cVars)
+        {
+        f_context = context;
+        f_framePrev = framePrev;
+        f_function = null;
+        f_hTarget = null;
+        f_ahVar = new ObjectHandle[cVars];
+        f_aInfo = new VarInfo[cVars];
+        f_aiIndex = null;
+        f_anNextVar = null;
+        f_ahReturn = null;
         }
 
     public ExceptionHandle execute()
@@ -345,7 +358,8 @@ public class Frame
     @Override
     public String toString()
         {
-        return "Frame:" + (f_hTarget == null ? "" : f_hTarget) + " " + f_function.f_sName;
+        return "Frame: " + (f_hTarget == null ? "" : f_hTarget) + " " +
+                           (f_function == null ? "<none>" : f_function.f_sName);
         }
 
     // try-catch support

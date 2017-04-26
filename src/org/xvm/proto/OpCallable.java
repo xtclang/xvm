@@ -47,8 +47,7 @@ public abstract class OpCallable extends Op
             PropertyAccessTemplate propertyAccess = (PropertyAccessTemplate) methodSuper;
             TypeCompositionTemplate template = propertyAccess.getClazzTemplate();
 
-            return template.getProperty(propertyAccess.f_property, null,
-                    frame, hThis, null, iRet);
+            return template.getField(frame, hThis, propertyAccess.f_property, iRet);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
@@ -84,8 +83,7 @@ public abstract class OpCallable extends Op
             {
             PropertyAccessTemplate propertyAccess = (PropertyAccessTemplate) methodSuper;
             TypeCompositionTemplate template = propertyAccess.getClazzTemplate();
-            return template.setProperty(propertyAccess.f_property, null,
-                    frame, hThis, hArg);
+            return template.setField(hThis, propertyAccess.f_property, hArg);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
@@ -149,8 +147,8 @@ public abstract class OpCallable extends Op
 
             if (template.isService())
                 {
-                // TODO: validate the immutability
                 hService = (ServiceHandle) ahVar[0];
+
                 ((xService) template).start(hService);
                 }
 
@@ -162,12 +160,12 @@ public abstract class OpCallable extends Op
 
                 if (hService == null)
                     {
-                    hException = hFinally.call(frame, ahVar, Utils.OBJECTS_NONE);
+                    hException = hFinally.call1(frame, ahVar, -1);
                     }
                 else
                     {
                     hException = ((xService) template).
-                            asyncInvoke(frame, hService, hFinally, ahVar, Utils.OBJECTS_NONE);
+                            asyncInvoke1(frame, hService, hFinally, ahVar, -1);
                     }
                 }
 

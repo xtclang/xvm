@@ -42,7 +42,7 @@ public class xTestClass2 extends TypeCompositionTemplate
         MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId("# in TestClass2.method1() #")),
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
             new Var(adapter.getClassConstId("x:Int64")), // #1
             new Call_01(Op.A_SUPER, 1),
             new Neg(1, 1),

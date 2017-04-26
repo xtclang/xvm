@@ -45,7 +45,7 @@ public class Call_00 extends OpCallable
                 {
                 FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
-                hException = hFunction.call(frame, Utils.OBJECTS_NONE, Utils.OBJECTS_NONE);
+                hException = hFunction.call1(frame, Utils.OBJECTS_NONE, -1);
                 }
             catch (ExceptionHandle.WrapperException e)
                 {

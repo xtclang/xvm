@@ -51,7 +51,7 @@ public class xTestClass extends TypeCompositionTemplate
         MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             { // #0 (this)
-            new X_Print(-adapter.ensureValueConstantId("# in TestClass.method1 #")),
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
             new Var(adapter.getClassConstId("x:String")), // #1 (s)
             new LGet(adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
             new Var(adapter.getClassConstId("x:Int64")), // #2 (of)

@@ -1,5 +1,4 @@
 + super() method call
-       - Issue with "construct super" return - see OpCallable.callConstructor()
 
 + Service
         - cleanup an un-referenced service (phantom refs?)
@@ -10,11 +9,13 @@
 
 + Matching the function/method return value with a Ref
 
-- FutureRef async completion handling
++ FutureRef async completion handling
 
 - Atomics
 
 - Array
+
+- Property and Method
 
 - Multi:
     -- new
@@ -24,3 +25,11 @@
 
 - Generic types
 
+
+
+$$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
+
+- Issue with "construct super" return - see OpCallable.callConstructor()
+
+- TypeSet and TypeComposition could be mutated by different threads
+    (hence the use of ConcurrentHashMap in TypeSet and synchronization in TypeComposition)

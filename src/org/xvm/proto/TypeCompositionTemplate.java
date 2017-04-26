@@ -8,6 +8,8 @@ import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xObject;
+import org.xvm.proto.template.xRef.RefHandle;
+
 import org.xvm.util.ListMap;
 
 import java.util.Arrays;
@@ -394,69 +396,70 @@ public abstract class TypeCompositionTemplate
         }
 
     // get a property value into the specified place in the array
-    // if ahReturn is null, use frame.assignValue()
-    // frame could be null if called for a service's property
-    public ExceptionHandle getProperty(PropertyTemplate property, MethodTemplate method,
-                                       Frame frame, ObjectHandle hTarget, ObjectHandle[] ahRet, int iRet)
+    public ExceptionHandle getProperty(
+            Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
-       if (method == null)
+        MethodTemplate method = property.m_templateGet;
+
+        if (method == null)
             {
-            ObjectHandle hValue = getField(hTarget, property.f_sName);
-            if (ahRet == null)
-                {
-                return frame.assignValue(iRet, hValue);
-                }
-            ahRet[iRet] = hValue;
-            return null;
+            return getField(frame, hTarget, property, iReturn);
             }
 
         if (method.isNative())
             {
-            return invokeNative(frame, hTarget, method, Utils.OBJECTS_NONE, iRet);
+            return invokeNative(frame, hTarget, method, Utils.OBJECTS_NONE, iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-        ServiceContext context = frame == null ? ServiceContext.getCurrentContext() : frame.f_context;
-        Frame frameNew = context.createFrame(frame, method, hTarget, ahVar);
+        Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
 
         ExceptionHandle hException = frameNew.execute();
 
-        if (hException == null)
-            {
-            if (ahRet == null)
-                {
-                return frame.assignValue(iRet, frameNew.f_ahReturn[0]);
-                }
-            ahRet[iRet] = frameNew.f_ahReturn[0];
-            }
-        return hException;
+        return hException == null ?
+                frame.assignValue(iReturn, frameNew.f_ahReturn[0]) : hException;
         }
 
-    public ObjectHandle getField(ObjectHandle hTarget, String sName)
+    public ExceptionHandle getField(
+            Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        ObjectHandle hProp = hThis.m_mapFields.get(sName);
+        ObjectHandle hProp = hThis.m_mapFields.get(property.f_sName);
+
         if (hProp == null)
             {
-            throw new IllegalStateException((hThis.m_mapFields.containsKey(sName) ?
-                    "Un-initialized property " : "Invalid property ") + sName);
+            throw new IllegalStateException((hThis.m_mapFields.containsKey(property.f_sName) ?
+                    "Un-initialized property " : "Invalid property ") + property);
             }
-        return hProp;
+
+        if (property.isRef())
+            {
+            try
+                {
+                hProp = ((RefHandle) hProp).get();
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return e.getExceptionHandle();
+                }
+            }
+
+        return frame.assignValue(iReturn, hProp);
         }
 
     // set a property value
-    public ExceptionHandle setProperty(PropertyTemplate property, MethodTemplate method,
-                                       Frame frame, ObjectHandle hTarget, ObjectHandle hValue)
+    public ExceptionHandle setProperty(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                                       ObjectHandle hValue)
         {
         // TODO: check the access rights
 
+        MethodTemplate method = property.m_templateSet;
+
         if (method == null)
             {
-            setField(hTarget, property.f_sName, hValue);
-
-            return null;
+            return setField(hTarget, property, hValue);
             }
 
         if (method.isNative())
@@ -467,18 +470,21 @@ public abstract class TypeCompositionTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
         ahVar[1] = hValue;
 
-        ServiceContext context = frame == null ? ServiceContext.getCurrentContext() : frame.f_context;
-        return context.createFrame(frame, method, hTarget, ahVar).execute();
+        return frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
         }
 
-    public ExceptionHandle setField(ObjectHandle hTarget, String sName, ObjectHandle hValue)
+    public ExceptionHandle setField(ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        assert hThis.m_mapFields.containsKey(sName);
+        assert hThis.m_mapFields.containsKey(property.f_sName);
 
-        hThis.m_mapFields.put(sName, hValue);
+        if (property.isRef())
+            {
+            return ((RefHandle) hThis.m_mapFields.get(property.f_sName)).set(hValue);
+            }
 
+        hThis.m_mapFields.put(property.f_sName, hValue);
         return null;
         }
 
@@ -488,8 +494,7 @@ public abstract class TypeCompositionTemplate
         assert f_asFormalType.length == 0;
         assert f_shape == Shape.Class || f_shape == Shape.Const;
 
-        return new GenericHandle(f_clazzCanonical,
-                f_clazzCanonical.ensureStructType());
+        return new GenericHandle(f_clazzCanonical, f_clazzCanonical.ensureStructType());
         }
 
     // does this template extend that?
@@ -621,7 +626,12 @@ public abstract class TypeCompositionTemplate
         public final String f_sName;
         public final TypeName f_typeName;
 
+        // indicate that the property is represented by a RefHandle
+        private boolean m_fRef = false;
+
+        // indicates that the property is represented by an AtomicRef
         private boolean m_fAtomic = false;
+
         public Access m_accessGet = Access.Public;
         public Access m_accessSet = Access.Public;
 
@@ -660,6 +670,16 @@ public abstract class TypeCompositionTemplate
         public boolean isAtomic()
             {
             return m_fAtomic;
+            }
+
+        public void makeRef()
+            {
+            m_fRef = true;
+            }
+
+        public boolean isRef()
+            {
+            return m_fRef;
             }
 
         public void setGetAccess(Access access)

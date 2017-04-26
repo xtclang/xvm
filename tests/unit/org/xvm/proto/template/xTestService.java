@@ -41,7 +41,6 @@ public class xTestService extends xService
         MethodTemplate mtSetCounter = ptCounter.addSet();
         mtSetCounter.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.set #")),
             new Call_10(Op.A_SUPER, 1),
             new Return_0(),
             };
@@ -72,7 +71,6 @@ public class xTestService extends xService
         MethodTemplate mtThrowing = ensureMethodTemplate("throwing", VOID, INT);
         mtThrowing.m_aop = new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId("# in TestService.throwing #")),
             new Var(this.adapter.getClassConstId("x:Exception")), // #1
             new New_N(this.adapter.getMethodConstId("x:Exception", "construct"),
                     new int[]{-adapter.ensureValueConstantId("test"),

@@ -1,5 +1,8 @@
 package org.xvm.proto.op;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.constants.CharStringConstant;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
@@ -46,7 +49,16 @@ public class X_Print extends Op
             }
         else
             {
-            sb.append(frame.f_context.f_constantPool.getConstantValue(-nValue).getValueString());
+            Constant constValue = frame.f_context.f_constantPool.getConstantValue(-nValue);
+
+            if (constValue instanceof CharStringConstant)
+                {
+                sb.append(((CharStringConstant) constValue).getValue());
+                }
+            else
+                {
+                sb.append(constValue.getValueString());
+                }
             }
 
         Utils.log(sb.toString());

@@ -1,7 +1,6 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 
 /**
@@ -21,15 +20,14 @@ public class Return_1 extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        try
-            {
-            frame.f_ahReturn[0] = frame.getArgument(f_nArgValue);
-            return RETURN_NORMAL;
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            frame.m_hException = e.getExceptionHandle();
-            return RETURN_EXCEPTION;
-            }
+        int iArg = f_nArgValue;
+
+        frame.f_ahReturn[0] =
+                iArg >= 0 ?
+                    frame.f_ahVar[f_nArgValue] :
+                iArg < -Op.MAX_CONST_ID ?
+                    frame.getPredefinedArgument(iArg) :
+                    frame.f_context.f_heapGlobal.ensureConstHandle(-iArg);
+        return RETURN_NORMAL;
         }
     }
