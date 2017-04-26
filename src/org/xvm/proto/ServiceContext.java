@@ -53,10 +53,18 @@ public class ServiceContext
         return "Service(" + m_daemon.getThread().getName() + ')';
         }
 
-    public Frame createFrame(Frame framePrev, InvocationTemplate template,
-                             ObjectHandle hTarget, ObjectHandle[] ahVar)
+    // create a new frame that returns zero or one value into the specified slot
+    public Frame createFrame1(Frame framePrev, InvocationTemplate template,
+                              ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return new Frame(this, framePrev, template, hTarget, ahVar);
+        return new Frame(this, framePrev, template, hTarget, ahVar,
+                iReturn < 0 ? Utils.ARGS_NONE : new int[] {iReturn});
+        }
+
+    public Frame createFrameN(Frame framePrev, InvocationTemplate template,
+                             ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        return new Frame(this, framePrev, template, hTarget, ahVar, aiReturn);
         }
 
     // this method is used by the ServiceContext
@@ -66,7 +74,7 @@ public class ServiceContext
         // the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
-        Frame frame = createFrame(null, null, null, ahVar);
+        Frame frame = createFrame1(null, null, null, ahVar, -1);
 
         for (int i = 0; i < cReturns; i++)
             {

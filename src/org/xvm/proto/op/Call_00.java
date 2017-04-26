@@ -37,7 +37,7 @@ public class Call_00 extends OpCallable
             ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
             ObjectHandle hThis = frame.getThis();
 
-            hException = frame.f_context.createFrame(frame, methodSuper, hThis, ahVar).execute();
+            hException = frame.f_context.createFrame1(frame, methodSuper, hThis, ahVar, -1).execute();
             }
         else if (f_nFunctionValue >= 0)
             {
@@ -58,7 +58,7 @@ public class Call_00 extends OpCallable
 
             ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
 
-            hException = frame.f_context.createFrame(frame, function, null, ahVar).execute();
+            hException = frame.f_context.createFrame1(frame, function, null, ahVar, -1).execute();
             }
 
         if (hException == null)

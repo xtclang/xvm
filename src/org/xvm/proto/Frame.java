@@ -24,7 +24,7 @@ public class Frame
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVar;        // arguments/local var registers
     public final VarInfo[]      f_aInfo;        // optional info for var registers
-    public final ObjectHandle[] f_ahReturn;     // the return value(s)
+    public final int[]          f_aiReturn;     // the indexes for return values
     public final Frame          f_framePrev;    // the caller's frame
     public final int[]          f_aiIndex;      // frame indexes
                                                 // [0] - current scope index (starts with 0)
@@ -34,7 +34,7 @@ public class Frame
     public ExceptionHandle      m_hException;   // an exception
 
     protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
-                    ObjectHandle hTarget, ObjectHandle[] ahVar)
+                    ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         f_context = context;
         f_framePrev = framePrev;
@@ -47,22 +47,7 @@ public class Frame
         int cScopes = function == null ? 1 : function.m_cScopes;
         f_anNextVar = new int[cScopes];
 
-        int cReturns = function == null ? 0 : function.m_cReturns;
-        f_ahReturn = cReturns == 0 ? Utils.OBJECTS_NONE : new ObjectHandle[cReturns];
-        }
-
-    // service-entry pseudo-frame
-    protected Frame(ServiceContext context, Frame framePrev, int cVars)
-        {
-        f_context = context;
-        f_framePrev = framePrev;
-        f_function = null;
-        f_hTarget = null;
-        f_ahVar = new ObjectHandle[cVars];
-        f_aInfo = new VarInfo[cVars];
-        f_aiIndex = null;
-        f_anNextVar = null;
-        f_ahReturn = null;
+        f_aiReturn = aiReturn;
         }
 
     public ExceptionHandle execute()

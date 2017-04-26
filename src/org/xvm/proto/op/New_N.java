@@ -6,7 +6,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.Utils;
 
 /**
  * NEW_N CONST-CONSTRUCT, #params:(rvalue), lvalue-return
@@ -30,6 +29,7 @@ public class New_N extends OpCallable
     public int process(Frame frame, int iPC)
         {
         FunctionTemplate constructor = getFunctionTemplate(frame, f_nConstructId);
+        FunctionTemplate finalizer = null;
 
         TypeCompositionTemplate template = constructor.getClazzTemplate();
 
@@ -42,12 +42,7 @@ public class New_N extends OpCallable
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.m_cVars, 1);
             ahVar[0] = hNew;
 
-            hException = callConstructor(frame, constructor, ahVar);
-
-            if (hException == null)
-                {
-                hException = frame.assignValue(f_nRetValue, ahVar[0]);
-                }
+            hException = callConstructor(frame, constructor, finalizer, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

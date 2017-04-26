@@ -4,12 +4,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xService.ServiceHandle;
 
 import org.xvm.proto.*;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * TODO:
@@ -181,15 +178,7 @@ public class xFunction
             {
             ObjectHandle hTarget = m_invoke instanceof MethodTemplate ? ahVar[0] : null;
 
-            Frame frameNew = frame.f_context.createFrame(frame, m_invoke, hTarget, ahVar);
-
-            ExceptionHandle hException = frameNew.execute();
-
-            if (hException == null && iReturn >= 0)
-                {
-                hException = frame.assignValue(iReturn, frameNew.f_ahReturn[0]);
-                }
-            return hException;
+            return frame.f_context.createFrame1(frame, m_invoke, hTarget, ahVar, iReturn).execute();
             }
 
         // invoke with multiple return values;
@@ -197,27 +186,7 @@ public class xFunction
             {
             ObjectHandle hTarget = m_invoke instanceof MethodTemplate ? ahVar[0] : null;
 
-            Frame frameNew = frame.f_context.createFrame(frame, m_invoke, hTarget, ahVar);
-
-            ExceptionHandle hException = frameNew.execute();
-
-            if (hException == null)
-                {
-                int cReturns = aiReturn.length;
-                assert cReturns <= m_invoke.m_cReturns;
-
-                for (int i = 0; i < cReturns; i ++)
-                    {
-                    hException = frame.assignValue(aiReturn[i], frameNew.f_ahReturn[i]);
-
-                    if (hException != null)
-                        {
-                        break;
-                        }
-                    }
-                }
-
-            return hException;
+            return frame.f_context.createFrameN(frame, m_invoke, hTarget, ahVar, aiReturn).execute();
             }
 
         public FunctionHandle bind(int iArg, ObjectHandle hArg)

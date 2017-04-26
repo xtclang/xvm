@@ -5,7 +5,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -55,7 +54,7 @@ public class Call_N0 extends OpCallable
                 {
                 ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.m_cVars, 0);
 
-                hException = frame.f_context.createFrame(frame, function, null, ahVar).execute();
+                hException = frame.f_context.createFrame1(frame, function, null, ahVar, -1).execute();
                 }
             catch (ExceptionHandle.WrapperException e)
                 {

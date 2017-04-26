@@ -46,7 +46,7 @@ public class Invoke_00 extends OpInvocable
                 {
                 ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
+                Frame frameNew = frame.f_context.createFrame1(frame, method, hTarget, ahVar, -1);
 
                 hException = frameNew.execute();
                 }

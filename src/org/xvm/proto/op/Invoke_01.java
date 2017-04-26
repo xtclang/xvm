@@ -49,14 +49,8 @@ public class Invoke_01 extends OpInvocable
                 {
                 ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-                Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
-
-                hException = frameNew.execute();
-
-                if (hException == null)
-                    {
-                    hException = frame.assignValue(f_nRetValue, frameNew.f_ahReturn[0]);
-                    }
+                hException = frame.f_context.
+                        createFrame1(frame, method, hTarget, ahVar, f_nRetValue).execute();
                 }
             }
         catch (ExceptionHandle.WrapperException e)

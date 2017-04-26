@@ -29,6 +29,7 @@ public class New_1 extends OpCallable
     public int process(Frame frame, int iPC)
         {
         FunctionTemplate constructor = getFunctionTemplate(frame, f_nConstructId);
+        FunctionTemplate finalizer = null;
 
         TypeCompositionTemplate template = constructor.getClazzTemplate();
 
@@ -39,16 +40,10 @@ public class New_1 extends OpCallable
 
         try
             {
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.m_cVars];
+            ObjectHandle[] ahVar = frame.getArguments(new int[] {f_nArgValue}, constructor.m_cVars, 1);
             ahVar[0] = hNew;
-            ahVar[1] = frame.getArgument(f_nArgValue);
 
-            hException = callConstructor(frame, constructor, ahVar);
-
-            if (hException == null)
-                {
-                hException = frame.assignValue(f_nRetValue, ahVar[0]); // not the same as hNew
-                }
+            hException = callConstructor(frame, constructor, finalizer, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

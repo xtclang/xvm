@@ -413,12 +413,7 @@ public abstract class TypeCompositionTemplate
 
         ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-        Frame frameNew = frame.f_context.createFrame(frame, method, hTarget, ahVar);
-
-        ExceptionHandle hException = frameNew.execute();
-
-        return hException == null ?
-                frame.assignValue(iReturn, frameNew.f_ahReturn[0]) : hException;
+        return frame.f_context.createFrame1(frame, method, hTarget, ahVar, iReturn).execute();
         }
 
     public ExceptionHandle getField(
@@ -470,7 +465,7 @@ public abstract class TypeCompositionTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
         ahVar[1] = hValue;
 
-        return frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
+        return frame.f_context.createFrame1(frame, method, hTarget, ahVar, -1).execute();
         }
 
     public ExceptionHandle setField(ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue)
