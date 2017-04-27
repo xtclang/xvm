@@ -53,9 +53,7 @@ public abstract class OpCallable extends Op
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
         ahVar[0] = hThis;
 
-        Frame frameNew = frame.f_context.createFrame1(frame, methodSuper, hThis, ahVar, iRet);
-
-        return frameNew.execute();
+        return frame.call1(methodSuper, hThis, ahVar, iRet);
         }
 
     // call super() method or "setProperty"
@@ -84,7 +82,7 @@ public abstract class OpCallable extends Op
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
         ahVar[1] = hArg;
 
-        return frame.f_context.createFrame1(frame, methodSuper, hThis, ahVar, -1).execute();
+        return frame.call1(methodSuper, hThis, ahVar, -1);
         }
 
     // call super() methods with multiple arguments and no more than one return
@@ -109,7 +107,7 @@ public abstract class OpCallable extends Op
             return e.getExceptionHandle();
             }
 
-        return frame.f_context.createFrame1(frame, methodSuper, hThis, ahVar, iReturn).execute();
+        return frame.call1(methodSuper, hThis, ahVar, iReturn);
         }
 
     // call the constructor; then potentially the finalizer; change this:struct handle to this:public
@@ -128,7 +126,7 @@ public abstract class OpCallable extends Op
 
         // ahVar[0] == this:struct
         ExceptionHandle hException =
-                frame.f_context.createFrame1(frame, constructor, null, ahVar, -1).execute();
+                frame.call1(constructor, null, ahVar, -1);
 
         if (hException == null)
             {
@@ -146,7 +144,7 @@ public abstract class OpCallable extends Op
                 // TODO: replace the vars
                 if (hService == null)
                     {
-                    hException = frame.f_context.createFrame1(frame, constructor, null, ahVar, -1).execute();
+                    hException = frame.call1(constructor, null, ahVar, -1);
                     }
                 else
                     {

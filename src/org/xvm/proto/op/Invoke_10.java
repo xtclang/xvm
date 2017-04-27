@@ -53,7 +53,7 @@ public class Invoke_10 extends OpInvocable
                 ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
                 ahVar[1] = hArg;
 
-                hException = frame.f_context.createFrame1(frame, method, hTarget, ahVar, -1).execute();
+                hException = frame.call1(method, hTarget, ahVar, -1);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

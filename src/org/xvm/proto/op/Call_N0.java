@@ -54,7 +54,7 @@ public class Call_N0 extends OpCallable
                 {
                 ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.m_cVars, 0);
 
-                hException = frame.f_context.createFrame1(frame, function, null, ahVar, -1).execute();
+                hException = frame.call1(function, null, ahVar, -1);
                 }
             catch (ExceptionHandle.WrapperException e)
                 {

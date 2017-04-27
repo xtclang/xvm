@@ -106,6 +106,18 @@ public class Frame
             }
         }
 
+    public ExceptionHandle call1(InvocationTemplate template, ObjectHandle hTarget,
+                                 ObjectHandle[] ahVar, int iReturn)
+        {
+        return f_context.createFrame1(this, template, hTarget, ahVar, iReturn).execute();
+        }
+
+    public ExceptionHandle callN(InvocationTemplate template, ObjectHandle hTarget,
+                                 ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        return f_context.createFrameN(this, template, hTarget, ahVar, aiReturn).execute();
+        }
+
     // find a first matching guard; unwind the scope and initialize the next var with the exception
     // return the PC of the catch
     private int findGuard(ExceptionHandle hException)

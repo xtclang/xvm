@@ -53,7 +53,7 @@ public class Call_01 extends OpCallable
 
             ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
 
-            hException = frame.f_context.createFrame1(frame, function, null, ahVar, f_nRetValue).execute();
+            hException = frame.call1(function, null, ahVar, f_nRetValue);
             }
 
         if (hException == null)

@@ -178,7 +178,7 @@ public class xFunction
             {
             ObjectHandle hTarget = m_invoke instanceof MethodTemplate ? ahVar[0] : null;
 
-            return frame.f_context.createFrame1(frame, m_invoke, hTarget, ahVar, iReturn).execute();
+            return frame.call1(m_invoke, hTarget, ahVar, iReturn);
             }
 
         // invoke with multiple return values;
