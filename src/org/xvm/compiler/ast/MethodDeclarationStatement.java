@@ -57,7 +57,7 @@ public class MethodDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
 //    @Override
-//    protected void registerGlobalNames(AstNode parent, ErrorList errs)
+//    protected void registerStructures(AstNode parent, ErrorList errs)
 //        {
 //        setParent(parent);
 //
@@ -102,30 +102,30 @@ public class MethodDeclarationStatement
 //            {
 //            for (Annotation annotation : annotations)
 //                {
-//                annotation.registerGlobalNames(this, errs);
+//                annotation.registerStructures(this, errs);
 //                }
 //            }
 //        if (returns != null)
 //            {
 //            for (TypeExpression type : returns)
 //                {
-//                type.registerGlobalNames(this, errs);
+//                type.registerStructures(this, errs);
 //                }
 //            }
 //        if (params != null)
 //            {
 //            for (Parameter parameter : params)
 //                {
-//                parameter.registerGlobalNames(this, errs);
+//                parameter.registerStructures(this, errs);
 //                }
 //            }
 //        if (body != null)
 //            {
-//            body.registerGlobalNames(this, errs);
+//            body.registerStructures(this, errs);
 //            }
 //        if (continuation != null)
 //            {
-//            continuation.registerGlobalNames(this, errs);
+//            continuation.registerStructures(this, errs);
 //            }
 //
 //        return this;

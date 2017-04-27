@@ -692,18 +692,19 @@ public class CommandLine
                     }
 
                 FileStructure struct = module.getType().getStructure().getFileStructure();
-                try
-                    {
-                    struct.writeTo(file);
-                    }
-                catch (IOException e)
-                    {
-                    deferred.add("xtc: Exception (" + e
-                            + ") occurred while attempting to write module file \""
-                            + file.getAbsolutePath() + "\"");
-                    error = true;
-                    }
-                module.checkErrors();
+// TODO this won't work until we start resolving types
+//                try
+//                    {
+//                    struct.writeTo(file);
+//                    }
+//                catch (IOException e)
+//                    {
+//                    deferred.add("xtc: Exception (" + e
+//                            + ") occurred while attempting to write module file \""
+//                            + file.getAbsolutePath() + "\"");
+//                    error = true;
+//                    }
+//                module.checkErrors();
                 }
             }
         }

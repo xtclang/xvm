@@ -126,16 +126,16 @@ public class TypeCompositionStatement
         assert category.getId() == Token.Id.MODULE;
         assert getStructure() == null;
 
-        FileStructure struct = new FileStructure(getName(), null, null);
-        setStructure((ModuleStructure) struct.getTopmostStructure());
+        FileStructure struct = new FileStructure(getName());
+        setStructure((ModuleStructure) struct.getMainModule());
 
-        super.registerGlobalNames(null, errorList);
+        super.registerStructures(null, errorList);
 
         return struct;
         }
 
     @Override
-    protected void registerGlobalNames(AstNode parent, ErrorListener errs)
+    protected void registerStructures(AstNode parent, ErrorListener errs)
         {
         if (parent.getStructure() != null)
             {
@@ -153,6 +153,7 @@ public class TypeCompositionStatement
                 case PACKAGE:
                     if (container instanceof StructureContainer.PackageContainer)
                         {
+                        // TODO check for duplicate
                         setStructure(((StructureContainer.PackageContainer) container).ensurePackage((String) name.getValue()));
                         }
                     else
@@ -171,6 +172,7 @@ public class TypeCompositionStatement
                 case MIXIN:
                     if (container instanceof StructureContainer.ClassContainer)
                         {
+                        // TODO check for duplicate
                         setStructure(((StructureContainer.ClassContainer) container).ensureClass((String) name.getValue()));
                         }
                     else
@@ -185,7 +187,7 @@ public class TypeCompositionStatement
                 }
             }
 
-        super.registerGlobalNames(parent, errs);
+        super.registerStructures(parent, errs);
         }
 
 

@@ -53,6 +53,9 @@ public abstract class TypeConstant
     @Override
     public abstract Constant.Format getFormat();
 
+    @Override
+    protected abstract int compareDetails(Constant that);
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

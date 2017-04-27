@@ -183,13 +183,6 @@ public abstract class Constant
         }
 
     @Override
-    protected boolean isModifiable()
-        {
-        // it's a constant; it can't be modified
-        return false;
-        }
-
-    @Override
     public boolean isModified()
         {
         // it's a constant; it can't be modified
@@ -373,9 +366,11 @@ public abstract class Constant
         Package,
         Class,
         Property,
+        MultiMethod,
         Method,
         Parameter,
-        Unresolved;
+        Unresolved,
+        ClassType;
 
         /**
          * Determine if structures of the type are length-encoded when assembled.
@@ -444,7 +439,7 @@ public abstract class Constant
         };
 
 
-    // ----- data members --------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
      * A cached index of the location of the Constant in the pool.

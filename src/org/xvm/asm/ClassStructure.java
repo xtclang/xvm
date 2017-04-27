@@ -16,6 +16,7 @@ import org.xvm.asm.StructureContainer.ClassContainer;
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -82,14 +83,14 @@ public class ClassStructure
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        final ListMap<CharStringConstant, ClassConstant> mapOld = m_mapParams;
+        final ListMap<CharStringConstant, TypeConstant> mapOld = m_mapParams;
         if (mapOld != null && mapOld.size() > 0)
             {
-            final ListMap<CharStringConstant, ClassConstant> mapNew = new ListMap<>();
-            for (Map.Entry<CharStringConstant, ClassConstant> entry : mapOld.entrySet())
+            final ListMap<CharStringConstant, TypeConstant> mapNew = new ListMap<>();
+            for (Map.Entry<CharStringConstant, TypeConstant> entry : mapOld.entrySet())
                 {
                 mapNew.put((CharStringConstant) pool.register(entry.getKey()),
-                           (ClassConstant     ) pool.register(entry.getValue()));
+                           (TypeConstant      ) pool.register(entry.getValue()));
                 }
             m_mapParams = mapNew;
             }
@@ -141,7 +142,7 @@ public class ClassStructure
         sb.append(super.getDescription())
           .append(", type-params=");
 
-        final ListMap<CharStringConstant, ClassConstant> map = m_mapParams;
+        final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
         if (map == null || map.size() == 0)
             {
             sb.append("none");
@@ -150,7 +151,7 @@ public class ClassStructure
             {
             sb.append('<');
             boolean fFirst = true;
-            for (Map.Entry<CharStringConstant, ClassConstant> entry : map.entrySet())
+            for (Map.Entry<CharStringConstant, TypeConstant> entry : map.entrySet())
                 {
                 if (fFirst)
                     {
@@ -163,11 +164,11 @@ public class ClassStructure
 
                 sb.append(entry.getKey().getValue());
 
-                ClassConstant constType = entry.getValue();
-                if (!constType.isEcstasyObject())
+                TypeConstant constType = entry.getValue();
+// TODO if (!constType.isEcstasyObject())
                     {
                     sb.append(" extends ")
-                      .append(entry.getValue().getName());
+                      .append(entry.getValue());
                     }
                 }
             sb.append('>');
@@ -198,6 +199,8 @@ public class ClassStructure
                 }
             }
 
+        dumpStructureMap(out, sIndent, "Classes", getClassMap());
+        dumpStructureMap(out, sIndent, "Properties", getPropertyMap());
         dumpStructureMap(out, sIndent, "Methods", getMethodMap());
         }
 
@@ -315,9 +318,9 @@ public class ClassStructure
      *
      * @return
      */
-    public Map<CharStringConstant, ClassConstant> getTypeParams()
+    public Map<CharStringConstant, TypeConstant> getTypeParams()
         {
-        final ListMap<CharStringConstant, ClassConstant> map = m_mapParams;
+        final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
         return map == null ? Collections.EMPTY_MAP : Collections.unmodifiableMap(map);
         }
 
@@ -326,9 +329,9 @@ public class ClassStructure
      *
      * @return
      */
-    public List<Map.Entry<CharStringConstant, ClassConstant>> getTypeParamsAsList()
+    public List<Map.Entry<CharStringConstant, TypeConstant>> getTypeParamsAsList()
         {
-        final ListMap<CharStringConstant, ClassConstant> map = m_mapParams;
+        final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
         return map == null ? Collections.EMPTY_LIST : map.asList();
         }
 
@@ -338,9 +341,9 @@ public class ClassStructure
      * @param sName
      * @param clz
      */
-    public void addTypeParam(String sName, ClassConstant clz)
+    public void addTypeParam(String sName, TypeConstant clz)
         {
-        ListMap<CharStringConstant, ClassConstant> map = m_mapParams;
+        ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
         if (map == null)
             {
             m_mapParams = map = new ListMap<>();
@@ -621,7 +624,7 @@ public class ClassStructure
     /**
      * The name-to-type information for type parameters.
      */
-    private ListMap<CharStringConstant, ClassConstant> m_mapParams;
+    private ListMap<CharStringConstant, TypeConstant> m_mapParams;
 
     /**
      * The contributions that make up this class.

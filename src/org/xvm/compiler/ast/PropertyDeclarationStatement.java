@@ -1,7 +1,17 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.StructureContainer;
+import org.xvm.asm.StructureContainer.ClassContainer;
+
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 import java.lang.reflect.Field;
 
@@ -26,7 +36,7 @@ public class PropertyDeclarationStatement
                                         TypeExpression   type,
                                         Token            name,
                                         Expression       value,
-                                        StatementBlock body,
+                                        StatementBlock   body,
                                         Token            doc)
         {
         this.modifiers   = modifiers;
@@ -41,6 +51,60 @@ public class PropertyDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff the property is declared as static
+     */
+    public boolean isStatic()
+        {
+        // properties inside a method are ALWAYS specified as static, but NEVER actually static (in
+        // the "constant property" sense)
+        if (getParent().getStructure() instanceof MethodStructure)
+            {
+            return false;
+            }
+
+        List<Token> list = modifiers;
+        if (list != null && list.isEmpty())
+            {
+            for (Token token : list)
+                {
+                if (token.getId() == Token.Id.STATIC)
+                    {
+                    return true;
+                    }
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * @return the access specifier for the property
+     */
+    public Access getAccess()
+        {
+        List<Token> list = modifiers;
+        if (list != null && list.isEmpty())
+            {
+            for (Token token : list)
+                {
+                switch (token.getId())
+                    {
+                    case PUBLIC:
+                        return Access.PUBLIC;
+
+                    case PROTECTED:
+                        return Access.PROTECTED;
+
+                    case PRIVATE:
+                        return Access.PRIVATE;
+                    }
+                }
+            }
+
+        return Access.PUBLIC;           // TODO get the parent's access
+        }
+
     @Override
     protected Field[] getChildFields()
         {
@@ -50,46 +114,42 @@ public class PropertyDeclarationStatement
 
     // ----- compile phases ------------------------------------------------------------------------
 
-//    @Override
-//    protected void registerGlobalNames(AstNode parent, ErrorList errs)
-//        {
-//        setParent(parent);
-//
-//        // create the structure for this property
-//        if (getStructure() == null)
-//            {
-//            // create a structure for this type
-//            StructureContainer container = parent.getStructure();
-//            // TODO is it a constant or a property? does it matter at this point?
-//            if (container instanceof StructureContainer.ClassContainer)
-//                {
-//                setStructure(((StructureContainer.ClassContainer) container).ensureProperty((String) name.getValue()));
-//                }
-//            else
-//                {
-//                // TODO log error
-//                throw new UnsupportedOperationException("not a property container: " + container);
-//                }
-//            }
-//
-//        // recurse to children
-//        // TODO what if one of them changes?
-//        if (annotations != null)
-//            {
-//            for (Annotation annotation : annotations)
-//                {
-//                annotation.registerGlobalNames(this, errs);
-//                }
-//            }
-//        type.registerGlobalNames(this, errs);
-//        value.registerGlobalNames(this, errs);
-//        if (body != null)
-//            {
-//            body.registerGlobalNames(this, errs);
-//            }
-//
-//        return this;
-//        }
+    @Override
+    protected void registerStructures(AstNode parent, ErrorListener errs)
+        {
+        setParent(parent);
+
+        // create the structure for this property
+        if (getStructure() == null)
+            {
+            // create a structure for this type
+            String sName = (String) name.getValue();
+            StructureContainer container = parent.getStructure();
+            if (container instanceof ClassContainer)
+                {
+                ClassContainer propContainer = (ClassContainer) container;
+                // another property by the same name should not already exist
+                if (propContainer.getProperty(sName) == null)
+                    {
+                    PropertyStructure prop = propContainer.createProperty(isStatic(), getAccess(),
+                            type.toString(), (String) name.getValue());
+                    setStructure(prop);
+                    }
+                else
+                    {
+                    errs.log(Severity.ERROR, Compiler.PROP_DUPLICATE, new Object[] {sName},
+                            getSource(), name.getStartPosition(), name.getEndPosition());
+                    }
+                }
+            else
+                {
+                errs.log(Severity.ERROR, Compiler.PROP_UNEXPECTED, new Object[] {sName, container},
+                        getSource(), name.getStartPosition(), name.getEndPosition());
+                }
+            }
+
+        super.registerStructures(parent, errs);
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------

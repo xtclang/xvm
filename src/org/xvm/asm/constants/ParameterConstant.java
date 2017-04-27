@@ -54,7 +54,7 @@ public class ParameterConstant
      * @param constType  the type of the parameter
      * @param sName      the parameter name
      */
-    public ParameterConstant(ConstantPool pool, ClassConstant constType, String sName)
+    public ParameterConstant(ConstantPool pool, TypeConstant constType, String sName)
         {
         super(pool);
 
@@ -80,7 +80,7 @@ public class ParameterConstant
      *
      * @return the parameter type
      */
-    public ClassConstant getParameterType()
+    public TypeConstant getParameterType()
         {
         return m_constType;
         }
@@ -129,14 +129,14 @@ public class ParameterConstant
             throws IOException
         {
         final ConstantPool pool = getConstantPool();
-        m_constType = (ClassConstant) pool.getConstant(m_iType);
+        m_constType = (TypeConstant) pool.getConstant(m_iType);
         m_constName = (CharStringConstant) pool.getConstant(m_iName);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constType = (ClassConstant) pool.register(m_constType);
+        m_constType = (TypeConstant) pool.register(m_constType);
         m_constName = (CharStringConstant) pool.register(m_constName);
         }
 
@@ -182,7 +182,7 @@ public class ParameterConstant
     /**
      * The constant that represents the type of this parameter.
      */
-    private ClassConstant m_constType;
+    private TypeConstant m_constType;
 
     /**
      * The constant that holds the name of the parameter.

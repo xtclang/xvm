@@ -2,7 +2,6 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.ClassStructure;
@@ -10,15 +9,12 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.XvmStructure;
 
-import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * Represent a Class constant.
  */
 public class ClassConstant
-        extends Constant
+        extends NamedConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -34,9 +30,7 @@ public class ClassConstant
     public ClassConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
-        super(pool);
-        m_iParent = readIndex(in);
-        m_iName   = readIndex(in);
+        super(pool, format, in);
         }
 
     /**
@@ -49,48 +43,19 @@ public class ClassConstant
      */
     public ClassConstant(ConstantPool pool, Constant constParent, String sName)
         {
-        super(pool);
+        super(pool, constParent, sName);
 
-        if (constParent == null ||
-                !( constParent.getFormat() == Format.Module
+        if (    !( constParent.getFormat() == Format.Module
                 || constParent.getFormat() == Format.Package
                 || constParent.getFormat() == Format.Class
                 || constParent.getFormat() == Format.Method ))
             {
             throw new IllegalArgumentException("parent module, package, class, or method required");
             }
-
-        if (sName == null)
-            {
-            throw new IllegalArgumentException("class name required");
-            }
-
-        m_constParent = constParent;
-        m_constName   = pool.ensureCharStringConstant(sName);
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
-
-    /**
-     * Obtain the module, package, class, method, or property that this class is contained within.
-     *
-     * @return the containing constant
-     */
-    public Constant getNamespace()
-        {
-        return m_constParent;
-        }
-
-    /**
-     * Get the unqualified name of the class.
-     *
-     * @return the class's unqualified name
-     */
-    public String getName()
-        {
-        return m_constName.getValue();
-        }
 
     /**
      * Determine if this ClassConstant is the "Object" class.
@@ -104,6 +69,14 @@ public class ClassConstant
                 && ((ModuleConstant) getNamespace()).isEcstasyModule();
         }
 
+    /**
+     * @return the ClassTypeConstant for the public interface of this class
+     */
+    public ClassTypeConstant asTypeConstant()
+        {
+        return getConstantPool().ensureClassTypeConstant(this, null);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -111,25 +84,6 @@ public class ClassConstant
     public Format getFormat()
         {
         return Format.Class;
-        }
-
-    @Override
-    protected int compareDetails(Constant that)
-        {
-        int n = this.m_constParent.compareTo(((ClassConstant) that).m_constParent);
-        if (n == 0)
-            {
-            n = this.m_constName.compareTo(((ClassConstant) that).m_constName);
-            }
-        return n;
-        }
-
-    @Override
-    public String getValueString()
-        {
-        return m_constParent instanceof ClassConstant
-                ? m_constParent.getValueString() + '.' + m_constName.getValue()
-                : m_constName.getValue();
         }
 
     @Override
@@ -142,34 +96,9 @@ public class ClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        final ConstantPool pool = getConstantPool();
-        m_constParent = pool.getConstant(m_iParent);
-        m_constName   = (CharStringConstant) pool.getConstant(m_iName);
-        }
-
-    @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        m_constParent = pool.register(m_constParent);
-        m_constName   = (CharStringConstant) pool.register(m_constName);
-        }
-
-    @Override
-    protected void assemble(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(getFormat().ordinal());
-        writePackedLong(out, indexOf(m_constParent));
-        writePackedLong(out, indexOf(m_constName));
-        }
-
-    @Override
     public String getDescription()
         {
-        Constant constParent = m_constParent;
+        Constant constParent = getNamespace();
         while (constParent instanceof ClassConstant)
             {
             constParent = ((ClassConstant) constParent).getNamespace();
@@ -177,37 +106,4 @@ public class ClassConstant
 
         return "class=" + getValueString() + ", " + constParent.getDescription();
         }
-
-
-    // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    public int hashCode()
-        {
-        return m_constParent.hashCode() * 17 + m_constName.hashCode();
-        }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * During disassembly, this holds the index of the constant that specifies the parent of this
-     * class.
-     */
-    private int m_iParent;
-
-    /**
-     * During disassembly, this holds the index of the constant that specifies the class name.
-     */
-    private int m_iName;
-
-    /**
-     * The constant that represents the parent of this class.
-     */
-    private Constant m_constParent;
-
-    /**
-     * The constant that holds the unqualified name of the class.
-     */
-    private CharStringConstant m_constName;
     }

@@ -244,7 +244,7 @@ public class DirRepository
             try
                 {
                 FileStructure struct = new FileStructure(file);
-                XvmStructure top = struct.getTopmostStructure();
+                XvmStructure top = struct.getMainModule();
                 if (top instanceof ModuleStructure)
                     {
                     return (ModuleStructure) top;

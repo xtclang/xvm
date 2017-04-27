@@ -1,19 +1,19 @@
 package org.xvm.asm.constants;
 
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.XvmStructure;
+
 import java.io.DataInput;
 import java.io.IOException;
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.XvmStructure;
-
 
 /**
- * Represent a property constant.
+ * Represent a collection of methods or functions with the same name.
  */
-public class PropertyConstant
+public class MultiMethodConstant
         extends NamedConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -27,7 +27,7 @@ public class PropertyConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public PropertyConstant(ConstantPool pool, Format format, DataInput in)
+    public MultiMethodConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool, format, in);
@@ -40,13 +40,14 @@ public class PropertyConstant
      * @param constParent  the module, package, class, or method that contains this property
      * @param sName        the property name
      */
-    public PropertyConstant(ConstantPool pool, Constant constParent, String sName)
+    public MultiMethodConstant(ConstantPool pool, Constant constParent, String sName)
         {
         super(pool, constParent, sName);
 
         if (    !( constParent.getFormat() == Format.Module
                 || constParent.getFormat() == Format.Package
                 || constParent.getFormat() == Format.Class
+                || constParent.getFormat() == Format.Property
                 || constParent.getFormat() == Format.Method ))
             {
             throw new IllegalArgumentException("parent module, package, class, or method required");
@@ -59,13 +60,13 @@ public class PropertyConstant
     @Override
     public Format getFormat()
         {
-        return Format.Property;
+        return Format.MultiMethod;
         }
 
     @Override
-    protected PropertyStructure instantiate(XvmStructure xsParent)
+    protected MultiMethodStructure instantiate(XvmStructure xsParent)
         {
-        return new PropertyStructure(xsParent, this);
+        return new MultiMethodStructure(xsParent, this);
         }
 
 
@@ -74,6 +75,6 @@ public class PropertyConstant
     @Override
     public String getDescription()
         {
-        return "property=" + getValueString();
+        return "multimethod=" + getValueString();
         }
     }
