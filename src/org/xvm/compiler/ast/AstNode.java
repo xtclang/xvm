@@ -137,13 +137,13 @@ public abstract class AstNode
      * @param parent  the parent of this node to tie into (if necessary / appropriate)
      * @param errs    the error list to log any errors etc. to
      */
-    protected void registerGlobalNames(AstNode parent, ErrorListener errs)
+    protected void registerStructures(AstNode parent, ErrorListener errs)
         {
         setParent(parent);
 
         for (AstNode node : children())
             {
-            node.registerGlobalNames(this, errs);
+            node.registerStructures(this, errs);
             }
         }
 

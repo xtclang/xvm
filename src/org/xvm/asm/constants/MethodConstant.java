@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.asm.Constant;
@@ -13,13 +14,13 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.StructureContainer;
 
+import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a Method constant.
- * REVIEW parent return(type, name?)* name param(type, name)* attrs?
+ * Represent a Method constant. A method constant uniquely identifies a method, but
  */
 public class MethodConstant
         extends Constant
@@ -39,102 +40,95 @@ public class MethodConstant
             throws IOException
         {
         super(pool);
-        m_iParent = readMagnitude(in);
-        m_iName   = readMagnitude(in);
+        m_iParent   = readMagnitude(in);
+        m_access    = Access.valueOf(readIndex(in));
+        m_aiReturns = readMagnitudeArray(in);
+        m_aiParams  = readMagnitudeArray(in);
         }
 
     /**
      * Construct a constant whose value is a method identifier.
      *
-     * @param pool                the ConstantPool that will contain this Constant
-     * @param constParent         specifies the module, package, class, method, or property that
-     *                            contains this method
-     * @param sName               the method name
-     * @param aconstGenericParam  the parameters of the genericized method
-     * @param aconstInvokeParam   the invocation parameters for the method
-     * @param aconstReturnParam   the return values from the method
+     * @param pool         the ConstantPool that will contain this Constant
+     * @param constParent  specifies the MultiMethodConstant that contains this method
+     * @param access       the accessibility of the method, public/private etc.
+     * @param returns      the return types
+     * @param params       the param types
      */
-    public MethodConstant(ConstantPool pool, Constant constParent, String sName,
-            ParameterConstant[] aconstGenericParam,
-            ParameterConstant[] aconstInvokeParam,
-            ParameterConstant[] aconstReturnParam)
+    public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, Access access,
+                          TypeConstant[] returns, TypeConstant[] params)
         {
         super(pool);
 
-        if (constParent == null ||
-                !( constParent.getFormat() == Format.Module
-                || constParent.getFormat() == Format.Package
-                || constParent.getFormat() == Format.Class
-                || constParent.getFormat() == Format.Method
-                || constParent.getFormat() == Format.Property ))
+        if (constParent == null)
             {
-            throw new IllegalArgumentException("parent module, package, class, method, or property required");
+            throw new IllegalArgumentException("parent required");
             }
 
-        if (sName == null)
+        if (access == null)
             {
-            throw new IllegalArgumentException("property name required");
+            throw new IllegalArgumentException("access specifier required");
             }
 
-        m_constParent        = constParent;
-        m_constName          = pool.ensureCharStringConstant(sName);
-        m_aconstGenericParam = validateParameterArray(aconstGenericParam);
-        m_aconstInvokeParam  = validateParameterArray(aconstInvokeParam);
-        m_aconstReturnParam  = validateParameterArray(aconstReturnParam);
+        m_constParent   = constParent;
+        m_access        = access;
+        m_aconstReturns = validateTypes(returns);
+        m_aconstParams  = validateTypes(params);
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * Obtain the identity of the module, package, class, method, or property that this method is
-     * contained within.
-     *
-     * @return the containing constant
+     * @return the containing MultiMethodConstant
      */
-    public Constant getNamespace()
+    public MultiMethodConstant getParent()
         {
         return m_constParent;
         }
 
     /**
-     * Get the name of the method.
-     *
-     * @return the method name
+     * @return the constant for the namespace containing the method name
+     */
+    public Constant getNamespace()
+        {
+        return getParent().getNamespace();
+        }
+
+    /**
+     * @return the method's name
      */
     public String getName()
         {
-        return m_constName.getValue();
+        return getParent().getName();
+        }
+
+    /**
+     * @return the method's accessibility
+     */
+    public Access getAccess()
+        {
+        return m_access;
+        }
+
+    /**
+     * @return the method's return types
+     */
+    public List<TypeConstant> getReturns()
+        {
+        return Arrays.asList(m_aconstReturns);
+        }
+
+    /**
+     * @return the method's parameter types
+     */
+    public List<TypeConstant> getParams()
+        {
+        return Arrays.asList(m_aconstParams);
         }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
-
-    /**
-     * Internal helper to scan a parameter array for nulls.
-     *
-     * @param aconst  an array of ParameterConstant; may be null
-     *
-     * @return a non-null array of ParameterConstant, each element of which is non-null; note that
-     *         the returned array is a new (and thus safe) copy of the passed array
-     */
-    private ParameterConstant[] validateParameterArray(ParameterConstant[] aconst)
-        {
-        if (aconst == null)
-            {
-            return ConstantPool.NO_PARAMS;
-            }
-
-        for (ParameterConstant constant : aconst)
-            {
-            if (constant == null)
-                {
-                throw new IllegalArgumentException("parameter required");
-                }
-            }
-
-        return aconst.clone();
-        }
 
     @Override
     public Format getFormat()
@@ -143,15 +137,20 @@ public class MethodConstant
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant obj)
         {
-        int n = this.m_constParent.compareTo(((MethodConstant) that).m_constParent);
+        MethodConstant that = (MethodConstant) obj;
+        int n = this.m_constParent.compareTo(that.m_constParent);
         if (n == 0)
             {
-            n = this.m_constName.compareTo(((MethodConstant) that).m_constName);
+            n = this.m_access.compareTo(that.m_access);
             if (n == 0)
                 {
-                // TODO
+                n = compareTypes(this.m_aconstReturns, that.m_aconstReturns);
+                if (n == 0)
+                    {
+                    n = compareTypes(this.m_aconstParams, that.m_aconstParams);
+                    }
                 }
             }
         return n;
@@ -160,29 +159,26 @@ public class MethodConstant
     @Override
     public String getValueString()
         {
-        String sParent;
-        final Constant constParent = m_constParent;
-        switch (constParent.getFormat())
+        StringBuilder sb = new StringBuilder();
+        sb.append(m_constParent.getValueString())
+          .append('(');
+
+        boolean first = true;
+        for (TypeConstant type : m_aconstParams)
             {
-            case Module:
-                sParent = ((ModuleConstant) constParent).getUnqualifiedName();
-                break;
-            case Package:
-                sParent = ((PackageConstant) constParent).getName();
-                break;
-            case Class:
-                sParent = ((ClassConstant) constParent).getName();
-                break;
-            case Property:
-                sParent = ((PropertyConstant) constParent).getName();
-                break;
-            case Method:
-                sParent = ((MethodConstant) constParent).getName() + "(..)";
-                break;
-            default:
-                throw new IllegalStateException();
+            if (first)
+                {
+                first = false;
+                }
+            else
+                {
+                sb.append(", ");
+                }
+            sb.append(type.getValueString());
             }
-        return sParent + '.' + m_constName.getValue() + "(..)"; // TODO
+
+        sb.append(')');
+        return sb.toString();
         }
 
 
@@ -193,17 +189,20 @@ public class MethodConstant
             throws IOException
         {
         final ConstantPool pool = getConstantPool();
-        m_constParent = pool.getConstant(m_iParent);
-        m_constName   = (CharStringConstant) pool.getConstant(m_iName);
-        // TODO
+        m_constParent   = (MultiMethodConstant) pool.getConstant(m_iParent);
+        m_aconstReturns = lookupTypes(m_aiReturns);
+        m_aconstParams  = lookupTypes(m_aiParams);
+
+        m_aiReturns = null;
+        m_aiParams  = null;
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constParent = pool.register(m_constParent);
-        m_constName = (CharStringConstant) pool.register(m_constName);
-        // TODO
+        m_constParent = (MultiMethodConstant) pool.register(m_constParent);
+        registerTypes(pool, m_aconstReturns);
+        registerTypes(pool, m_aconstParams);
         }
 
     @Override
@@ -212,14 +211,15 @@ public class MethodConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
-        writePackedLong(out, m_constName.getPosition());
-        // TODO
+        writePackedLong(out, m_access.ordinal());
+        writeTypes(out, m_aconstReturns);
+        writeTypes(out, m_aconstParams);
         }
 
     @Override
     public String getDescription()
         {
-        return "method=" + getValueString(); // TODO
+        return "method=" + getValueString();
         }
 
 
@@ -228,163 +228,95 @@ public class MethodConstant
     @Override
     public int hashCode()
         {
-        // TODO
-        return m_constParent.hashCode() * 17 + m_constName.hashCode();
+        return (m_constParent.hashCode() * 17 + m_access.ordinal()) * 3
+                + m_aconstReturns.length + m_aconstParams.length;
         }
 
 
-    // ----- inner class: MethodConstant Builder ---------------------------------------------------
+    // ----- helpers -------------------------------------------------------------------------------
+
+    protected static int[] readMagnitudeArray(DataInput in)
+            throws IOException
+        {
+        int   c  = readMagnitude(in);
+        int[] an = new int[c];
+        for (int i = 0; i < c; ++i)
+            {
+            an[i] = readMagnitude(in);
+            }
+        return an;
+        }
+
+    protected TypeConstant[] lookupTypes(int[] an)
+        {
+        int c = an.length;
+        TypeConstant[] aconst = new TypeConstant[c];
+        final ConstantPool pool = getConstantPool();
+        for (int i = 0; i < c; ++i)
+            {
+            aconst[i] = (TypeConstant) pool.getConstant(an[i]);
+            }
+        return aconst;
+        }
+
+    protected static void registerTypes(ConstantPool pool, TypeConstant[] aconst)
+        {
+        for (int i = 0, c = aconst.length; i < c; ++i)
+            {
+            aconst[i] = (TypeConstant) pool.register(aconst[i]);
+            }
+        }
+
+    protected static void writeTypes(DataOutput out, TypeConstant[] aconst)
+            throws IOException
+        {
+        int c = aconst.length;
+        writePackedLong(out, c);
+
+        for (int i = 0; i < c; ++i)
+            {
+            writePackedLong(out, aconst[i].getPosition());
+            }
+        }
 
     /**
-     * A utility class used to build MethodConstant objects.
+     * Internal helper to scan a type array for nulls.
+     *
+     * @param aconst  an array of TypeConstant; may be null
+     *
+     * @return a non-null array of TypeConstant, each element of which is non-null
      */
-    public static class Builder
+    protected static TypeConstant[] validateTypes(TypeConstant[] aconst)
         {
-        /**
-         * Construct a MethodConstant Builder.
-         *
-         * @param container  the MethodContainer that the MethodConstant will be used in
-         * @param sMethod    the name of the method
-         */
-        public Builder(StructureContainer.MethodContainer container, ConstantPool pool, String sMethod)
+        if (aconst == null)
             {
-            assert container != null && sMethod != null;
-
-            m_container = container;
-            m_pool      = pool;
-            m_sMethod   = sMethod;
+            return ConstantPool.NO_TYPES;
             }
 
-        /**
-         * Add information about a return value.
-         *
-         * @param constType  parameter type
-         * @param sName      parameter name
-         */
-        public Builder addReturnValue(ClassConstant constType, String sName)
+        for (TypeConstant constant : aconst)
             {
-            m_listReturnValue = add(m_listReturnValue, constType, sName);
-            return this;
-            }
-
-        /**
-         * Add information about a type parameter of a generic method.
-         *
-         * @param constType  parameter type
-         * @param sName      parameter name
-         */
-        public Builder addTypeParameter(ClassConstant constType, String sName)
-            {
-            m_listTypeParam = add(m_listTypeParam, constType, sName);
-            return this;
-            }
-
-        /**
-         * Add information about a method invocation parameter.
-         *
-         * @param constType  parameter type
-         * @param sName      parameter name
-         */
-        public Builder addParameter(ClassConstant constType, String sName)
-            {
-            m_listParam = add(m_listParam, constType, sName);
-            return this;
-            }
-
-        /**
-         * Convert the information provided to the builder into a MethodConstant.
-         *
-         * @return the new MethodConstant
-         */
-        public MethodConstant toConstant()
-            {
-            MethodConstant constmethod = m_constmethod;
-            if (constmethod == null)
+            if (constant == null)
                 {
-                constmethod = m_pool.ensureMethodConstant(m_container.getIdentityConstant(), m_sMethod,
-                        toArray(m_listTypeParam),
-                        toArray(m_listParam),
-                        toArray(m_listReturnValue));
-                m_constmethod = constmethod;
+                throw new IllegalArgumentException("type required");
                 }
-            return constmethod;
             }
 
-        /**
-         * Obtain the ModuleStructure that is identified by this builder's name and various
-         * parameters.
-         *
-         * @return the corresponding MethodStructure, created if it did not previously exist
-         */
-        public MethodStructure ensureMethod()
-            {
-            return m_container.ensureMethod(toConstant());
-            }
+        return aconst;
+        }
 
-        /**
-         * Add the specified parameter information to the passed list of parameters.
-         *
-         * @param list       the list to add to; may be null, in which case a list will be created
-         * @param constType  the parameter type
-         * @param sName      the parameter name
-         *
-         * @return the updated parameter list
-         */
-        private List<ParameterConstant> add(List<ParameterConstant> list, ClassConstant constType, String sName)
+    protected static int compareTypes(TypeConstant[] aconstThis, TypeConstant[] aconstThat)
+        {
+        int cThis = aconstThis.length;
+        int cThat = aconstThat.length;
+        for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i)
             {
-            if (list == null)
+            int n = aconstThis[i].compareDetails(aconstThat[i]);
+            if (n != 0)
                 {
-                list = new ArrayList<>(4);
+                return n;
                 }
-
-            list.add(m_pool.ensureParameterConstant(constType, sName));
-
-            m_constmethod = null;
-            return list;
             }
-
-        /**
-         * Given a list of ParameterConstant objects, produce an array of the same.
-         *
-         * @param list  the list to turn into an array; may be null
-         *
-         * @return an array of parameters, or null if the list was null
-         */
-        private ParameterConstant[] toArray(List<ParameterConstant> list)
-            {
-            return list == null
-                    ? null
-                    : list.toArray(new ParameterConstant[list.size()]);
-            }
-
-        /**
-         * The MethodContainer that the MethodConstant is being built for.
-         */
-        StructureContainer.MethodContainer m_container;
-        /**
-         * The constant pool.
-         */
-        ConstantPool m_pool;
-        /**
-         * The name of the method.
-         */
-        String                             m_sMethod;
-        /**
-         * The return values from the method.
-         */
-        List<ParameterConstant>            m_listReturnValue;
-        /**
-         * The type parameters for the method.
-         */
-        List<ParameterConstant>            m_listTypeParam;
-        /**
-         * The method parameters.
-         */
-        List<ParameterConstant>            m_listParam;
-        /**
-         * A cached MethodConstant produced from this builder.
-         */
-        MethodConstant                     m_constmethod;
+        return cThis - cThat;
         }
 
 
@@ -397,34 +329,32 @@ public class MethodConstant
     private int m_iParent;
 
     /**
-     * During disassembly, this holds the index of the constant that specifies the name of this
-     * method.
+     * During disassembly, this holds the indexes of the type constants for the return values.
      */
-    private int m_iName;
+    private int[] m_aiReturns;
 
     /**
-     * The constant that represents the parent of this method. A Method can be a child of a Module,
-     * a Package, a Class, a Method, or a Property.
+     * During disassembly, this holds the indexes of the type constants for the parameters.
      */
-    private Constant m_constParent;
+    private int[] m_aiParams;
 
     /**
-     * The constant that holds the name of the method.
+     * The constant that represents the parent of this method.
      */
-    private CharStringConstant m_constName;
+    private MultiMethodConstant m_constParent;
 
     /**
-     * The parameters of the parameterized method.
+     * The accessibility of the method.
      */
-    ParameterConstant[] m_aconstGenericParam;
-
-    /**
-     * The invocation parameters of the method.
-     */
-    ParameterConstant[] m_aconstInvokeParam;
+    private Access m_access;
 
     /**
      * The return values from the method.
      */
-    ParameterConstant[] m_aconstReturnParam;
+    TypeConstant[] m_aconstReturns;
+
+    /**
+     * The invocation parameters of the method.
+     */
+    TypeConstant[] m_aconstParams;
     }

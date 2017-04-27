@@ -117,6 +117,14 @@ public class Compiler
      * Cannot nest a class etc.
      */
     public static final String CLASS_UNEXPECTED     = "COMPILER-04";
+    /**
+     * Another property by the same name exists.
+     */
+    public static final String PROP_DUPLICATE       = "COMPILER-05";
+    /**
+     * Cannot nest a property.
+     */
+    public static final String PROP_UNEXPECTED = "COMPILER-04";
 
 
     // ----- data members --------------------------------------------------------------------------

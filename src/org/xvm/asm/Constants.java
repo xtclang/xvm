@@ -32,31 +32,27 @@ public interface Constants
 
     public static final String CLASS_OBJECT   = "Object";
 
-    // TODO review - where are we going to use these?
-    /**
-     * Used to specify that an item (such as a parameter) is not specified as
-     * being either mutable or immutable. For a parameter, this means that a
-     * caller can pass either a mutable or an immutable object as an argument.
-     */
-    public static final int CONST_NOSPEC   = 0x0;
-    /**
-     * Used to specify that an item (such as a parameter) is mutable. For a
-     * parameter, this means that a caller can only pass a mutable object as an
-     * argument.
-     */
-    public static final int CONST_FALSE    = 0x1;
-    /**
-     * Used to specify that an item (such as a parameter) is immutable. For a
-     * parameter, this means that a caller can only pass an immutable object as
-     * an argument.
-     */
-    public static final int CONST_TRUE     = 0x2;
-    /**
-     * Used to specify that an item (such as a parameter) will be treated as if
-     * it is immutable, regardless of whether it is mutable or immutable. For a
-     * parameter, this means that a call can pass either a mutable or an
-     * immutable object as an argument, but only explicitly immutable operations
-     * on the object will be performed.
-     */
-    public static final int PARAM_READONLY = 0x3;
+    public enum Access
+        {
+        PUBLIC, PROTECTED, PRIVATE, STRUCT;
+
+        /**
+         * Look up a Access enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Access enum for the specified ordinal
+         */
+        public static Access valueOf(int i)
+            {
+            return VALUES[i];
+            }
+
+        /**
+         * All of the Access enums.
+         */
+        private static final Access[] VALUES = Access.values();
+
+        public final String KEYWORD = name().toLowerCase();
+        }
     }

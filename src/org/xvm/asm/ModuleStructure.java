@@ -25,7 +25,7 @@ import static org.xvm.util.Handy.writePackedLong;
 public class ModuleStructure
         extends PackageContainer
     {
-    // ----- constructors ------------------------------------------------------
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a ModuleStructure with the specified identity.
@@ -41,7 +41,7 @@ public class ModuleStructure
         }
 
 
-    // ----- XvmStructure methods ----------------------------------------------
+    // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void disassemble(DataInput in)

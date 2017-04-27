@@ -16,14 +16,18 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PackageConstant;
-
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 
@@ -33,16 +37,34 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * The StructureContainer abstract class is an XvmStructure that is intended to
- * nest other XvmStructures. Specifically, it tracks modifications and it
- * supports conditional inclusion.
+ * The StructureContainer abstract class is an XvmStructure that is intended to nest other
+ * XvmStructures. Specifically, it tracks modifications and it supports conditional inclusion.
+ * <p/>
+ * Containment model, with container type on the left and containee type across the top:
+ * <p/>
+ * <code><pre>
+ *           Module  Package  Class  Method  Property
+ * File        x
+ * Module              x       x       x       x
+ * Package             x       x       x       x
+ * Class                       x       x       x
+ * Property                            x
+ * Method                      x       x       x
+ * </pre></code>
+ * <p/>
+ * Based on the containment model, of these types, there are three groups of containment:
+ * <ul>
+ * <li><i>Method</i> - the {@link MethodContainer MethodContainer}</li>
+ * <li><i>Method + Property + Class</i> - the {@link ClassContainer ClassContainer}</li>
+ * <li><i>Method + Property + Class + Package</i> - the {@link PackageContainer PackageContainer}</li>
+ * </ul>
  *
  * @author cp 2016.09.22
  */
 public abstract class StructureContainer
         extends XvmStructure
     {
-    // ----- constructors ------------------------------------------------------
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct an XVM structure.
@@ -55,7 +77,7 @@ public abstract class StructureContainer
         }
 
 
-    // ----- XvmStructure methods ----------------------------------------------
+    // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     public abstract Iterator<? extends XvmStructure> getContained();
@@ -69,7 +91,6 @@ public abstract class StructureContainer
     @Override
     protected void markModified()
         {
-        super.markModified();
         m_fModified = true;
         }
 
@@ -87,19 +108,17 @@ public abstract class StructureContainer
         }
 
 
-    // ----- containment support -----------------------------------------------
+    // ----- helper methods ------------------------------------------------------------------------
 
     /**
-     * Helper method to read a collection of XVM sub-structures from the
-     * DataInput stream.
+     * Helper method to read a collection of XVM sub-structures from the DataInput stream.
      *
      * @param in  the DataInput containing the XVM structures
      *
-     * @return TODO
+     * @return a List of XvmStructure objects
      *
-     * @throws IOException  if an I/O exception occurs during disassembly from
-     *         the provided DataInput stream, or if there is invalid data in the
-     *         stream
+     * @throws IOException  if an I/O exception occurs during disassembly from the provided
+     *                      DataInput stream, or if there is invalid data in the stream
      */
     protected List<? extends XvmStructure> disassembleSubStructureCollection(DataInput in)
             throws IOException
@@ -123,11 +142,10 @@ public abstract class StructureContainer
      *
      * @param in  the DataInput containing the XVM structure
      *
-     * @return TODO
+     * @return an XvmStructure
      *
-     * @throws IOException  if an I/O exception occurs during disassembly from
-     *         the provided DataInput stream, or if there is invalid data in the
-     *         stream
+     * @throws IOException  if an I/O exception occurs during disassembly from the provided
+     *                      DataInput stream, or if there is invalid data in the stream
      */
     protected XvmStructure disassembleSubStructure(DataInput in)
             throws IOException
@@ -151,14 +169,13 @@ public abstract class StructureContainer
      *
      * @param in  the DataInput containing the type parameters
      *
-     * @return null if there are no type parameters, otherwise a map from
-     *         CharStringConstant to the type constraint for each parameter
+     * @return null if there are no type parameters, otherwise a map from CharStringConstant to the
+     *         type constraint for each parameter
      *
-     * @throws IOException  if an I/O exception occurs during disassembly from
-     *         the provided DataInput stream, or if there is invalid data in the
-     *         stream
+     * @throws IOException  if an I/O exception occurs during disassembly from the provided
+     *                      DataInput stream, or if there is invalid data in the stream
      */
-    protected ListMap<CharStringConstant, ClassConstant> disassembleTypeParams(DataInput in)
+    protected ListMap<CharStringConstant, TypeConstant> disassembleTypeParams(DataInput in)
             throws IOException
         {
         int c = readMagnitude(in);
@@ -168,12 +185,12 @@ public abstract class StructureContainer
             return null;
             }
 
-        final ListMap<CharStringConstant, ClassConstant> map = new ListMap<>();
+        final ListMap<CharStringConstant, TypeConstant> map = new ListMap<>();
         final ConstantPool pool = getConstantPool();
         for (int i = 0; i < c; ++i)
             {
             CharStringConstant constName = (CharStringConstant) pool.getConstant(readIndex(in));
-            ClassConstant      constType = (ClassConstant)      pool.getConstant(readIndex(in));
+            TypeConstant       constType = (TypeConstant)       pool.getConstant(readIndex(in));
             assert !map.containsKey(constName);
             map.put(constName, constType);
             }
@@ -186,8 +203,8 @@ public abstract class StructureContainer
      * @param coll  the collection of XVM structure to assemble
      * @param out   the DataOutput to write the XVM structure to
      *
-     * @throws IOException  if an I/O exception occurs during assembly to the
-     *         provided DataOutput stream
+     * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
+     *                      stream
      */
     protected void assembleSubStructureCollection(Collection<? extends XvmStructure> coll, DataOutput out)
             throws IOException
@@ -214,8 +231,8 @@ public abstract class StructureContainer
      * @param structSub  the XVM structure to assemble
      * @param out        the DataOutput to write the XVM structure to
      *
-     * @throws IOException  if an I/O exception occurs during assembly to the
-     *         provided DataOutput stream
+     * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
+     *                      stream
      */
     protected void assembleSubStructure(XvmStructure structSub, DataOutput out)
             throws IOException
@@ -245,10 +262,10 @@ public abstract class StructureContainer
      * @param map  the type parameters
      * @param out  the DataOutput to write the XVM structure to
      *
-     * @throws IOException  if an I/O exception occurs during assembly to the
-     *         provided DataOutput stream
+     * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
+     *                      stream
      */
-    protected void assembleTypeParams(ListMap<CharStringConstant, ClassConstant> map, DataOutput out)
+    protected void assembleTypeParams(ListMap<CharStringConstant, TypeConstant> map, DataOutput out)
             throws IOException
         {
         int c = map == null ? 0 : map.size();
@@ -259,42 +276,39 @@ public abstract class StructureContainer
             return;
             }
 
-        for (Map.Entry<CharStringConstant, ClassConstant> entry : map.entrySet())
+        for (Map.Entry<CharStringConstant, TypeConstant> entry : map.entrySet())
             {
             writePackedLong(out, entry.getKey().getPosition());
             writePackedLong(out, entry.getValue().getPosition());
             }
         }
 
+    /**
+     * Compare two lazily instantiated maps for equality.
+     *
+     * @param mapThis  a map, or null
+     * @param mapThat  a map, or null
+     *
+     * @return false iff at least one map is non-null and non-empty, and the other map is null or
+     *         their contents do not match
+     */
+    protected static boolean equalMaps(Map mapThis, Map mapThat)
+        {
+        int cThis = mapThis == null ? 0 : mapThis.size();
+        int cThat = mapThat == null ? 0 : mapThat.size();
+        return cThis == cThat && (cThis == 0 || mapThis.equals(mapThat));
+        }
 
-    // ----- inner class: MethodContainer --------------------------------------
+
+    // ----- inner class: MethodContainer ----------------------------------------------------------
 
     /**
-     * An XVM structure that can contain MethodStructure objects.
-     * <p>
-     * Containment model, with container type across the top row and containee
-     * type down the left column:
-     * <code><pre>
-     *           Module  Package  Class  Method  Property
-     * Module
-     * Package     x       x
-     * Class       x       x       x       x
-     * Property    x       x       x       x
-     * Method      x       x       x       x       x
-     * </pre></code>
-     * <p>
-     * Based on the containment model, of these types, there are three groups of
-     * containment:
-     * <li><i>Method</i> - the {@link MethodContainer MethodContainer}</li>
-     * <li><i>Method + Property + Class</i> - the {@link ClassContainer
-     * ClassContainer}</li>
-     * <li><i>Method + Property + Class + Package</i> - the {@link
-     * PackageContainer PackageContainer}</li>
+     * An XVM structure that can contain MultiMethodStructure and thus MethodStructure objects.
      */
     public abstract static class MethodContainer
             extends StructureContainer
         {
-        // ----- constructors ----------------------------------------------
+        // ----- constructors --------------------------------------------------
 
         /**
          * Construct a MethodContainer.
@@ -306,15 +320,158 @@ public abstract class StructureContainer
             {
             super(xsParent);
             assert constId != null;
-            m_constId = constId;
+            this.constId = constId;
             }
 
-        // ----- XvmStructure methods --------------------------------------
+        // ----- MethodStructure children --------------------------------------
+
+        /**
+         * @return a set of method names contained within this MethodContainer; the caller must
+         *         treat the set as a read-only object
+         */
+        public Set<String> methodNames()
+            {
+            if (multimethodsByName == null)
+                {
+                return Collections.EMPTY_SET;
+                }
+
+            Set<String> names = multimethodsByName.keySet();
+            // if assertions are enabled, wrap it as unmodifiable
+            assert (names = Collections.unmodifiableSet(names)) != null;
+            return names;
+            }
+
+        /**
+         * Obtain the MultiMethodStructure for the given name. The MultiMethodStructure represents
+         * all of the methods that share the same name.
+         *
+         * @param sName  the method name
+         *
+         * @return the MultiMethodStructure that represents all of the methods with the specified
+         *         name
+         */
+        public MultiMethodStructure getMultiMethod(String sName)
+            {
+            return multimethodsByName == null
+                    ? null
+                    : multimethodsByName.get(sName);
+            }
+
+        /**
+         * Obtain an Iterable for all of the methods of a given name.
+         *
+         * @param sName  a method name
+         *
+         * @return all of the methods with the specified name
+         */
+        public Iterable<MethodStructure> methodsByName(String sName)
+            {
+            if (multimethodsByName == null)
+                {
+                return Collections.EMPTY_SET;
+                }
+
+            MultiMethodStructure multimethod = multimethodsByName.get(sName);
+            return multimethod == null
+                    ? Collections.EMPTY_LIST
+                    : multimethod.methods();
+            }
+
+        /**
+         * Remove the specified method from this structure.
+         *
+         * @param constMethod  the identifier of the method
+         */
+        protected void deleteMethod(MethodConstant constMethod)
+            {
+            // this will have to remove it from the multi-method, and if it is the last method in
+            // the multi-method, it will have to remove the multi-method as well
+            throw new UnsupportedOperationException();
+            }
+
+        /**
+         * Obtain a read-only map from String name to MultiMethodStructure.
+         *
+         * @return a non-null Map containing the various MultiMethodStructure objects keyed by name
+         */
+        public Map<String, MultiMethodStructure> getMethodMap()
+            {
+            Map<String, MultiMethodStructure> map = multimethodsByName;
+            if (map == null)
+                {
+                return Collections.EMPTY_MAP;
+                }
+
+            assert (map = Collections.unmodifiableMap(map)) != null;
+            return map;
+            }
+
+        /**
+         * Obtain a mutable map from name to MultiMethodStructure.
+         *
+         * @return a non-null Map containing the various MultiMethodStructure objects keyed by
+         *         method name
+         */
+        protected Map<String, MultiMethodStructure> ensureMultiMethodMap()
+            {
+            Map<String, MultiMethodStructure> map = multimethodsByName;
+            if (map == null)
+                {
+                multimethodsByName = map = new HashMap<>();
+                }
+            return map;
+            }
+
+        /**
+         * Obtain (creating if necessary) the multi-method for the specified name.
+         *
+         * @param sName the (multi-)method name
+         *
+         * @return the MultiMethodStructure for the specified name
+         */
+        protected MultiMethodStructure ensureMultiMethodStructure(String sName)
+            {
+            Map<String, MultiMethodStructure> map = ensureMultiMethodMap();
+            MultiMethodStructure multimethod = map.get(sName);
+            if (multimethod == null)
+                {
+                multimethod = new MultiMethodStructure(this,
+                        getConstantPool().ensureMultiMethodConstant(getIdentityConstant(), sName));
+                map.put(sName, multimethod);
+                }
+            return multimethod;
+            }
+
+        /**
+         * Create a MethodStructure with the specified name, but whose identity is not yet fully
+         * realized / resolved.
+         *
+         * @param sName  the method name
+         */
+        protected MethodStructure createMethod(String sName, Access access, TypeConstant[] returnTypes, TypeConstant[] paramTypes)
+            {
+            assert sName != null;
+            assert access != null;
+//          TODO
+//            MultiMethodConstant multimethod = getConstantPool().ensureMultiMethodConstant(this, sName);
+//
+//            MethodStructure method = new MethodStructure()
+//            Map<MethodConstant, MethodStructure> mapMethod = ensureMultiMethodMap();
+//            assert !mapMethod.containsKey(constMethod);
+//
+//            final MethodStructure method = new MethodStructure(this, constMethod);
+//            mapMethod.put(constMethod, method);
+//            return method;
+            return null;
+            }
+
+        // ----- XvmStructure methods ------------------------------------------
 
         @Override
         public Constant getIdentityConstant()
             {
-            return m_constId;
+            return constId;
             }
 
         @Override
@@ -326,14 +483,13 @@ public abstract class StructureContainer
         @Override
         public ConditionalConstant getCondition()
             {
-            return m_condition;
+            return condition;
             }
 
         @Override
         protected void setCondition(ConditionalConstant condition)
             {
-            assert isModifiable();
-            m_condition = condition;
+            this.condition = condition;
             markModified();
             }
 
@@ -341,18 +497,18 @@ public abstract class StructureContainer
         protected void disassemble(DataInput in)
                 throws IOException
             {
-            List<MethodStructure> listStruct = (List<MethodStructure>) disassembleSubStructureCollection(in);
-            if (listStruct.isEmpty())
+            List<MultiMethodStructure> list = (List<MultiMethodStructure>) disassembleSubStructureCollection(in);
+            if (list.isEmpty())
                 {
-                m_mapMethod = null;
+                multimethodsByName = null;
                 }
             else
                 {
-                Map<MethodConstant, MethodStructure> mapMethod = ensureMethodMap();
-                mapMethod.clear();
-                for (MethodStructure struct : listStruct)
+                Map<String, MultiMethodStructure> map = ensureMultiMethodMap();
+                map.clear();
+                for (MultiMethodStructure struct : list)
                     {
-                    mapMethod.put(struct.getMethodConstant(), struct);
+                    map.put(struct.getName(), struct);
                     }
                 }
             }
@@ -360,7 +516,7 @@ public abstract class StructureContainer
         @Override
         protected void registerConstants(ConstantPool pool)
             {
-            m_constId = pool.register(m_constId);
+            constId = pool.register(constId);
             super.registerConstants(pool);
             }
 
@@ -374,14 +530,14 @@ public abstract class StructureContainer
         @Override
         public String getDescription()
             {
-            StringBuilder sb = new StringBuilder();
-            return sb.append("id=")
-                     .append(getIdentityConstant())
-                     .append(", condition=")
-                     .append(getCondition())
-                     .append(", ")
-                     .append(super.getDescription())
-                     .toString();
+            return new StringBuilder()
+                    .append("id=")
+                    .append(getIdentityConstant())
+                    .append(", condition=")
+                    .append(getCondition())
+                    .append(", ")
+                    .append(super.getDescription())
+                    .toString();
             }
 
         @Override
@@ -390,10 +546,10 @@ public abstract class StructureContainer
             out.print(sIndent);
             out.println(toString());
 
-            dumpStructureMap(out, sIndent, "Methods", m_mapMethod);
+            dumpStructureMap(out, sIndent, "Methods", multimethodsByName);
             }
 
-        // ----- Object methods --------------------------------------------
+        // ----- Object methods ------------------------------------------------
 
         @Override
         public boolean equals(Object obj)
@@ -409,183 +565,36 @@ public abstract class StructureContainer
                 }
 
             MethodContainer that = (MethodContainer) obj;
-            return this.m_constId.equals(that.m_constId)
-                    && equalMaps(this.m_mapMethod, that.m_mapMethod);
-            }
-
-        /**
-         * Compare two lazily instantiated maps for equality.
-         *
-         * @param mapThis  a map, or null
-         * @param mapThat  a map, or null
-         *
-         * @return false iff at least one map is non-null and non-empty, and
-         *         the other map is null or their contents do not match
-         */
-        protected static boolean equalMaps(Map mapThis, Map mapThat)
-            {
-            int cThis = mapThis == null ? 0 : mapThis.size();
-            int cThat = mapThat == null ? 0 : mapThat.size();
-            return cThis == cThat && (cThis == 0 || mapThis.equals(mapThat));
+            return this.constId.equals(that.constId)
+                    && equalMaps(this.multimethodsByName, that.multimethodsByName);
             }
 
 
-        // ----- MethodStructure children ----------------------------------
-
-        /**
-         * Obtain a builder that helps to create a MethodConstant.
-         *
-         * @param sName  the name of the method to build
-         *
-         * @return a MethodConstant builder
-         */
-        public MethodConstant.Builder methodBuilder(String sName)
-            {
-            assert sName != null;
-            return new MethodConstant.Builder(this, getConstantPool(), sName);
-            }
-
-        /**
-         * Get an iterator over each MethodConstant for each corresponding
-         * MethodStructure that is contained immediately within this structure.
-         *
-         * @return an Iterator of MethodConstants
-         */
-        public Iterator<MethodConstant> methodConstants()
-            {
-            return getMethodMap().keySet().iterator();
-            }
-
-        /**
-         * Find the method that has the specified MethodConstant.
-         *
-         * @param constMethod  the MethodConstant for the method
-         *
-         * @return the MethodStructure for the specified method, or null if
-         *         it does not exist
-         */
-        public MethodStructure getMethod(MethodConstant constMethod)
-            {
-            return getMethodMap().get(constMethod);
-            }
-
-        // REVIEW
-        public Iterator<MethodStructure> findMethods(String sName)
-            {
-            return getMethodMap().values().stream().filter(struct ->
-                    ((MethodConstant) struct.getIdentityConstant()).getName().equals(sName)).iterator();
-            }
-
-        /**
-         * Find the method with the specified MethodConstant, creating it if necessary.
-         *
-         * @param constMethod  the identifier of the method
-         *
-         * @return the MethodStructure for the specified method
-         */
-        public MethodStructure ensureMethod(MethodConstant constMethod)
-            {
-            // see if the method already exists
-            final MethodStructure structmethod = getMethod(constMethod);
-            return structmethod == null
-                    ? createMethod(constMethod)
-                    : structmethod;
-            }
-
-        /**
-         * Remove the specified method from this structure.
-         *
-         * @param constMethod  the identifier of the method
-         */
-        public void deleteMethod(MethodConstant constMethod)
-            {
-            final Map<MethodConstant, MethodStructure> mapMethod = m_mapMethod;
-            if (mapMethod != null)
-                {
-                mapMethod.remove(constMethod);
-                }
-            }
-
-        /**
-         * Obtain a read-only map from MethodConstant to MethodStructure.
-         *
-         * @return a non-null Map containing the various MethodStructure
-         *         objects keyed by MethodConstant
-         */
-        protected Map<MethodConstant, MethodStructure> getMethodMap()
-            {
-            final Map<MethodConstant, MethodStructure> mapMethod = m_mapMethod;
-            return mapMethod == null ? Collections.EMPTY_MAP : mapMethod;
-            }
-
-        /**
-         * Obtain a mutable map from MethodConstant to MethodStructure.
-         *
-         * @return a non-null Map containing the various MethodStructure
-         *         objects keyed by MethodConstant
-         */
-        protected Map<MethodConstant, MethodStructure> ensureMethodMap()
-            {
-            Map<MethodConstant, MethodStructure> mapMethod = m_mapMethod;
-            if (mapMethod == null)
-                {
-                m_mapMethod = mapMethod = new HashMap<>();
-                }
-            return mapMethod;
-            }
-
-        /**
-         * Create and register a MethodStructure with the specified identity.
-         *
-         * @param constMethod  the identity of the method to create
-         */
-        protected MethodStructure createMethod(MethodConstant constMethod)
-            {
-            assert constMethod != null;
-
-            Map<MethodConstant, MethodStructure> mapMethod = ensureMethodMap();
-            assert !mapMethod.containsKey(constMethod);
-
-            final MethodStructure method = new MethodStructure(this, constMethod);
-            mapMethod.put(constMethod, method);
-            return method;
-            }
-
-        // ----- data members ----------------------------------------------
+        // ----- fields --------------------------------------------------------
 
         /**
          * The identity constant for this XVM structure.
          */
-        private Constant m_constId;
+        private Constant constId;
 
         /**
-         * An optional ConditionalConstant that determines under what
-         * conditions this XvmStructure will be present after the linking
-         * process is finished.
+         * An optional ConditionalConstant that determines under what conditions this XvmStructure
+         * will be present after the linking process is finished.
          */
-        private ConditionalConstant m_condition;
+        private ConditionalConstant condition;
 
         /**
-         * A lazily instantiated MethodConstant-to-MethodStructure lookup table.
+         * A lazily instantiated String-to-MultiMethodStructure lookup table.
          */
-        private Map<MethodConstant, MethodStructure> m_mapMethod;
-
-        /**
-         * An alternate XVM Structure to this MethodContainer. The alternate is
-         * used when an change is made to an XVM Structure that only applies to
-         * a subset of the conditions defined on the XVM Structure, and the
-         * change is incompatible with the state of the XVM Structure as it
-         * exists under other conditions.
-         */
-        private MethodContainer m_structAlternate;    // REVIEW either this, or m_map... could be a "conditional map"
+        private Map<String, MultiMethodStructure> multimethodsByName;
         }
 
 
-    // ----- inner class: ClassContainer ---------------------------------------
+    // ----- inner class: ClassContainer -----------------------------------------------------------
 
     /**
-     * An XVM structure that can contain ClassStructure and PropertyStructure
-     * objects, in addition to MethodStructure objects.
+     * An XVM structure that can contain ClassStructure and PropertyStructure objects, in addition
+     * to MethodStructure objects.
      */
     public abstract static class ClassContainer
             extends MethodContainer
@@ -832,22 +841,6 @@ public abstract class StructureContainer
             }
 
         /**
-         * Find the property with the specified name, creating it if necessary.
-         *
-         * @param sName  the name of the property
-         *
-         * @return the PropertyStructure for the specified property
-         */
-        public PropertyStructure ensureProperty(String sName)
-            {
-            // see if the property already exists
-            final PropertyStructure structproperty = getProperty(sName);
-            return structproperty == null
-                    ? createProperty(sName)
-                    : structproperty;
-            }
-
-        /**
          * Remove the specified property from this structure.
          *
          * @param sName  the name of the property
@@ -890,12 +883,30 @@ public abstract class StructureContainer
             }
 
         /**
-         * Create and register a PropertyStructure with the specified property name.
+         * Create and register a PropertyStructure with an unresolved type and the specified name.
          *
-         * @param sName  the simple (unqualified) property name to create
+         * @param fStatic  true if the property is defined as static
+         * @param access   the accessibility of the property to create
+         * @param sType    the string representation of the unresolved type
+         * @param sName    the simple (unqualified) property name to create
          */
-        protected PropertyStructure createProperty(String sName)
+        public PropertyStructure createProperty(boolean fStatic, Access access, String sType, String sName)
             {
+            return createProperty(fStatic, access, new UnresolvedTypeConstant(getConstantPool(), sType), sName);
+            }
+
+        /**
+         * Create and register a PropertyStructure with the specified property type and name.
+         *
+         * @param fStatic  true if the property is defined as static
+         * @param access   the accessibility of the property to create
+         * @param type     the type of the property to create
+         * @param sName    the simple (unqualified) property name to create
+         */
+        public PropertyStructure createProperty(boolean fStatic, Access access, TypeConstant type, String sName)
+            {
+            assert access != null;
+            assert type != null;
             assert sName != null;
 
             Map<String, PropertyStructure> mapProperty = ensurePropertyMap();
@@ -903,9 +914,8 @@ public abstract class StructureContainer
 
             ConstantPool pool = getConstantPool();
             Constant constThis = getIdentityConstant();
-            ClassConstant constType = null;
-            PropertyConstant constproperty = pool.ensurePropertyConstant(constThis, constType, sName);
-            PropertyStructure structproperty = new PropertyStructure(this, constproperty);
+            PropertyConstant constproperty = pool.ensurePropertyConstant(constThis, sName);
+            PropertyStructure structproperty = new PropertyStructure(this, constproperty, fStatic, access, type);
 
             mapProperty.put(sName, structproperty);
             return structproperty;
@@ -925,11 +935,11 @@ public abstract class StructureContainer
         }
 
 
-    // ----- inner class: PackageContainer -------------------------------------
+    // ----- inner class: PackageContainer ---------------------------------------------------------
 
     /**
-     * An XVM structure that can contain PackageStructure objects, in addition
-     * to ClassStructure, PropertyStructure, and MethodStructure objects.
+     * An XVM structure that can contain PackageStructure objects, in addition to ClassStructure,
+     * PropertyStructure, and MethodStructure objects.
      */
     public abstract static class PackageContainer
             extends ClassContainer
@@ -1197,11 +1207,11 @@ public abstract class StructureContainer
         }
 
 
-    // ----- constants ---------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * A Comparator that compares two XvmStructure object for sorting purposes
-     * based on their identity constants.
+     * A Comparator that compares two XvmStructure object for sorting purposes based on their
+     * identity constants.
      */
     private static final Comparator<? super XvmStructure> IDENTITY_CONSTANT_COMPARATOR = new Comparator<XvmStructure>()
         {
@@ -1219,7 +1229,7 @@ public abstract class StructureContainer
         };
 
 
-    // ----- data members ------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
      * For XVM structures that can be modified, this flag tracks whether or not

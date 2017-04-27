@@ -380,12 +380,7 @@ public class ConstantPool
             {
             case Module:
             case Package:
-                PackageConstant constant = (PackageConstant) ensureLocatorLookup(Format.Package).get(sPackage);
-                if (constant == null)
-                    {
-                    constant = (PackageConstant) register(new PackageConstant(this, constParent, sPackage));
-                    }
-                return constant;
+                return (PackageConstant) register(new PackageConstant(this, constParent, sPackage));
 
             default:
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
@@ -424,35 +419,45 @@ public class ConstantPool
      *
      * @param constParent  the constant representing the container of the property, for example a
      *                     ClassConstant
-     * @param constType    the constant representing the type of the property
      * @param sName        the name of the property
      *
      * @return the specified PropertyConstant
      */
-    public PropertyConstant ensurePropertyConstant(Constant constParent,
-            ClassConstant constType,
-            String sName)
+    public PropertyConstant ensurePropertyConstant(Constant constParent, String sName)
         {
         return (PropertyConstant) register(new PropertyConstant(this, constParent, sName));
         }
 
     /**
+     * Given the specified method name and the context (module, package, class, property, method)
+     * within which it exists, obtain a MultiMethodConstant that represents it.
+     *
+     * @param constParent  the constant representing the container of the multi-method, for example
+     *                     a ClassConstant
+     * @param sName        the name of the multi-method
+     *
+     * @return the specified MultiMethodConstant
+     */
+    public MultiMethodConstant ensureMultiMethodConstant(Constant constParent, String sName)
+        {
+        return (MultiMethodConstant) register(new MultiMethodConstant(this, constParent, sName));
+        }
+
+    /**
      * Obtain a Constant that represents the specified method.
      *
-     * @param constParent         specifies the module, package, class, method,
-     *                            or property that contains the method
-     * @param sName               the method name
-     * @param aconstGenericParam  the parameters of the genericized method
-     * @param aconstInvokeParam   the invocation parameters for the method
-     * @param aconstReturnParam   the return values from the method
+     * @param constParent    specifies the module, package, class, method, or property that contains
+     *                       the method
+     * @param sName          the method name
+     * @param access         the method accessibility
+     * @param aconstReturns  the return values from the method
+     * @param aconstParams   the invocation parameters for the method
      *
-     * @return the MethodConstant for the specified method name of the specified
-     *         container with the specified parameters and return values
+     * @return the MethodConstant for the specified method name of the specified container with the
+     *         specified parameters and return values
      */
-    public MethodConstant ensureMethodConstant(Constant constParent, String sName,
-            ParameterConstant[] aconstGenericParam,
-            ParameterConstant[] aconstInvokeParam,
-            ParameterConstant[] aconstReturnParam)
+    public MethodConstant ensureMethodConstant(Constant constParent, String sName, Access access,
+            TypeConstant[] aconstParams, TypeConstant[] aconstReturns)
         {
         assert constParent != null;
 
@@ -463,8 +468,9 @@ public class ConstantPool
             case Class:
             case Method:
             case Property:
-                return (MethodConstant) register(new MethodConstant(this, constParent,
-                        sName, aconstGenericParam, aconstInvokeParam, aconstReturnParam));
+                MultiMethodConstant constMultiMethod = ensureMultiMethodConstant(constParent, sName);
+                return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access,
+                        aconstReturns, aconstParams));
 
             default:
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
@@ -473,22 +479,52 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified type and name, obtain a ParameterConstant that
-     * represents it.
+     * Given the specified type and name, obtain a ParameterConstant that represents it.
      *
      * @param constType  the type of the parameter
      * @param sName      the name of the parameter
      *
      * @return a ParameterConstant
      */
-    public ParameterConstant ensureParameterConstant(ClassConstant constType, String sName)
+    public ParameterConstant ensureParameterConstant(TypeConstant constType, String sName)
         {
-        // note: the parameter constant is NOT registered, because it is not an
-        // actual constant type; it is simply a sub-component of a method
-        // constant
+        // note: the parameter constant is NOT registered, because it is not an actual constant
+        // type; it is simply a sub-component of a method constant
         return new ParameterConstant(this, constType, sName);
         }
 
+    /**
+     * Given the
+     * @param constClass
+     * @param access
+     * @return
+     */
+    public ClassTypeConstant ensureClassTypeConstant(Constant constClass, Access access)
+        {
+        assert constClass != null;
+        switch (constClass.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                ClassTypeConstant constant = null;
+                if (access == Access.PUBLIC)
+                    {
+                    constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constClass);
+                    }
+                if (constant == null)
+                    {
+                    constant = (ClassTypeConstant) register(new ClassTypeConstant(this, constClass, access));
+                    }
+                return constant;
+
+            default:
+                throw new IllegalArgumentException("constant " + constClass.getFormat()
+                        + " is not a Module, Package, or Class");
+            }
+
+
+        }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -877,6 +913,11 @@ public class ConstantPool
      * An immutable, empty, zero-length array of parameters.
      */
     public static final ParameterConstant[] NO_PARAMS = new ParameterConstant[0];
+
+    /**
+     * An immutable, empty, zero-length array of types.
+     */
+    public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
 
     /**
      * Storage of Constant objects by index.

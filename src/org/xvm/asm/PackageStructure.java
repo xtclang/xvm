@@ -124,8 +124,6 @@ public class PackageStructure
      */
     public void setImportedModule(ModuleConstant constModule)
         {
-        checkModifiable();
-
         // TODO
 
         m_constModule = constModule;

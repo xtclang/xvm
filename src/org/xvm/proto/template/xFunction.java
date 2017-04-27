@@ -1,9 +1,11 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.proto.template.xService.ServiceHandle;
 
 import org.xvm.proto.*;

@@ -25,6 +25,7 @@ public class UnresolvedTypeConstant
     public UnresolvedTypeConstant(ConstantPool pool, String sType)
         {
         super(pool);
+        m_sType = sType;
         }
 
 
@@ -84,7 +85,7 @@ public class UnresolvedTypeConstant
     @Override
     public String getValueString()
         {
-        return "<unresolved-type>";
+        return m_sType == null ? "<unresolved-type>" : m_sType + " (unresolved)";
         }
 
 
@@ -132,7 +133,7 @@ public class UnresolvedTypeConstant
         {
         if (m_resolved == null)
             {
-            return -314159265;
+            return m_sType == null ? -314159265 : m_sType.hashCode();
             }
         else
             {
@@ -157,4 +158,5 @@ public class UnresolvedTypeConstant
     // ----- fields --------------------------------------------------------------------------------
 
     private TypeConstant m_resolved;
+    private String m_sType;
     }
