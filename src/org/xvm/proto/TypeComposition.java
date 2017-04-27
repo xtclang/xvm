@@ -3,8 +3,6 @@ package org.xvm.proto;
 import org.xvm.proto.TypeCompositionTemplate.Access;
 import org.xvm.proto.TypeCompositionTemplate.Shape;
 
-import java.util.Arrays;
-
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String>)
  *
@@ -80,7 +78,7 @@ public class TypeComposition
         return handle;
         }
 
-    public Type ensurePublicType()
+    public synchronized Type ensurePublicType()
         {
         Type type = m_typePublic;
         if (type == null)
@@ -89,7 +87,7 @@ public class TypeComposition
             }
         return type;
         }
-    public Type ensureProtectedType()
+    public synchronized Type ensureProtectedType()
         {
         Type type = m_typeProtected;
         if (type == null)
@@ -99,7 +97,7 @@ public class TypeComposition
         return type;
         }
 
-    public Type ensurePrivateType()
+    public synchronized Type ensurePrivateType()
         {
         Type type = m_typePrivate;
         if (type == null)
@@ -109,7 +107,7 @@ public class TypeComposition
         return type;
         }
 
-    public Type ensureStructType()
+    public synchronized Type ensureStructType()
         {
         Type type = m_typeStruct;
         if (type == null)

@@ -38,7 +38,8 @@
  *           }
  *       }
  *
- * Consider the following example that illustrates the second and third use cases:
+ * Consider the following example that illustrates the second and third use cases
+ * (also see AtomicIntNumber for the specifics of the Int operation overrides):
  *
  *   static service Statistics
  *       {

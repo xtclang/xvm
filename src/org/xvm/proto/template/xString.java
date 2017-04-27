@@ -57,13 +57,15 @@ public class xString
         {
         StringHandle hThis = (StringHandle) hTarget;
 
-        switch (method.f_sName)
+        switch (ahArg.length)
             {
-            case "length$get": // length.get()
-                assert ahArg.length == 0;
-
-                ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
-                return frame.assignValue(iReturn, hResult);
+            case 0:
+                switch (method.f_sName)
+                    {
+                    case "length$get": // length.get()
+                        ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
+                        return frame.assignValue(iReturn, hResult);
+                    }
             }
 
         return super.invokeNative(frame, hTarget, method, ahArg, iReturn);

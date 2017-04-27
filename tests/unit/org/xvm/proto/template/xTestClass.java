@@ -27,7 +27,7 @@ public class xTestClass extends TypeCompositionTemplate
 
         // --- constructor()
         FunctionTemplate ftConstruct = ensureFunctionTemplate(
-                "construct", new String[]{"x:TestClass", "x:String"}, new String[]{"x:Function"});
+                "construct", new String[]{"x:TestClass", "x:String"}, VOID);
         FunctionTemplate ftFinally = ensureFunctionTemplate(
                 "construct:finally", new String[]{"x:TestClass", "x:String"}, VOID);
 
@@ -35,7 +35,7 @@ public class xTestClass extends TypeCompositionTemplate
             {
             new X_Print(-adapter.ensureValueConstantId("# in constructor: TestClass #")),
             new Set(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
-            new Return_1(-adapter.getMethodConstId("x:TestClass", "construct:finally")),
+            new Return_0(),
             };
         ftConstruct.m_cVars = 2;
 
@@ -51,7 +51,7 @@ public class xTestClass extends TypeCompositionTemplate
         MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             { // #0 (this)
-            new X_Print(-adapter.ensureValueConstantId("# in TestClass.method1 #")),
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
             new Var(adapter.getClassConstId("x:String")), // #1 (s)
             new LGet(adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
             new Var(adapter.getClassConstId("x:Int64")), // #2 (of)

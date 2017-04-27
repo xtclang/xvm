@@ -102,6 +102,11 @@ public abstract class ObjectHandle
                 }
             }
 
+        public WrapperException getException()
+            {
+            return new WrapperException();
+            }
+
         public class WrapperException
                 extends Exception
             {

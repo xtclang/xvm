@@ -1,9 +1,16 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
+import org.xvm.proto.ServiceContext;
+import org.xvm.proto.Type;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
+import org.xvm.proto.Utils;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
 import java.util.concurrent.CompletableFuture;
@@ -58,8 +65,6 @@ public class xService
         //    Void registerShuttingDownNotification(function Void notify());
         //    Void registerUnhandledExceptionNotification(function Void notify(Exception));
 
-        f_types.ensureTemplate("x:FutureRef");
-
         ensurePropertyTemplate("serviceName", "x:String").makeAtomic();
         }
 
@@ -72,20 +77,20 @@ public class xService
     @Override
     public ObjectHandle createStruct()
         {
-        ServiceContext contextCurr = ServiceContext.getCurrentContext();
-
-        ServiceContext context = contextCurr.f_container.createContext();
         ServiceHandle hService = new ServiceHandle(
-                f_clazzCanonical, f_clazzCanonical.ensureStructType(), context);
+                f_clazzCanonical, f_clazzCanonical.ensureStructType(), null);
 
         hService.createFields();
 
-        setField(hService, "serviceName", xString.makeHandle(f_sName));
+        setField(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
+
         return hService;
         }
 
     public ExceptionHandle start(ServiceHandle hService)
         {
+        hService.m_context = ServiceContext.getCurrentContext().f_container.createContext();
+
         return hService.m_context.start(hService, f_sName);
         }
 
@@ -96,14 +101,12 @@ public class xService
         // TODO: validate that all the arguments are immutable or ImmutableAble
         int cReturns = iReturn < 0 ? 0 : 1;
 
-        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeRequest(
+        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendInvoke1Request(
                 hService.m_context, hFunction, ahArg, cReturns);
 
         if (cReturns == 1)
             {
-            CompletableFuture<ObjectHandle> cfReturn = cfResult.thenApply(ahResult -> ahResult[0]);
-
-            return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfReturn));
+            return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
             }
         else
             {
@@ -121,15 +124,15 @@ public class xService
         }
 
     // return an exception
-    public ExceptionHandle asyncInvoke(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
-                                       ObjectHandle[] ahArg, ObjectHandle[] ahReturn)
+    public ExceptionHandle asyncInvokeN(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
+                                        ObjectHandle[] ahArg, int[] aiReturn)
         {
         // TODO: validate that all the arguments are immutable or ImmutableAble
 
-        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeRequest(
-                hService.m_context, hFunction, ahArg, ahReturn.length);
+        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeNRequest(
+                hService.m_context, hFunction, ahArg, aiReturn.length);
 
-        int cReturns = ahReturn.length;
+        int cReturns = aiReturn.length;
         if (cReturns > 0)
             {
             for (int i = 0; i < cReturns; i++)
@@ -139,7 +142,7 @@ public class xService
                 CompletableFuture<ObjectHandle> cfReturn =
                         cfResult.thenApply(ahResult -> ahResult[iRet]);
 
-                ahReturn[i] = xFutureRef.makeSyntheticHandle(cfReturn);
+                frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
                 }
             }
         else
@@ -158,45 +161,78 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle getProperty(PropertyTemplate property, MethodTemplate method,
-                                       Frame frame, ObjectHandle hTarget, ObjectHandle[] ahReturn, int iRet)
+    public ExceptionHandle getProperty(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                                       int iReturn)
         {
-        ServiceContext context = ServiceContext.getCurrentContext();
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (context == hService.m_context || property.isAtomic())
+        if (frame.f_context == hService.m_context || property.isAtomic())
             {
-            return super.getProperty(property, method, frame, hTarget, ahReturn, iRet);
+            return super.getProperty(frame, hTarget, property, iReturn);
             }
 
         CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendGetRequest(
                 hService.m_context, property);
 
-        ObjectHandle hValue = xFutureRef.makeSyntheticHandle(cfResult);
-
-        if (ahReturn == null)
-            {
-            return frame.assignValue(iRet, hValue);
-            }
-
-        ahReturn[iRet] = hValue;
-        return null;
+        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
         }
 
     @Override
-    public ExceptionHandle setProperty(PropertyTemplate property, MethodTemplate method,
-                                       Frame frame, ObjectHandle hTarget, ObjectHandle hValue)
+    public ExceptionHandle getField(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
-        ServiceContext context = ServiceContext.getCurrentContext();
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (context == hService.m_context || property.isAtomic())
+        if (frame.f_context == hService.m_context || property.isAtomic())
             {
-            return super.setProperty(property, method, frame, hTarget, hValue);
+            return super.getField(frame, hTarget, property, iReturn);
+            }
+
+        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendGetRequest(
+                hService.m_context, property);
+
+        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        }
+
+    @Override
+    public ExceptionHandle setProperty(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                                       ObjectHandle hValue)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (frame.f_context == hService.m_context || property.isAtomic())
+            {
+            return super.setProperty(frame, hTarget, property, hValue);
             }
 
         CompletableFuture<Void> cfResult = frame.f_context.sendSetRequest(
                 hService.m_context, property, hValue);
+
+        cfResult.whenComplete((r, x) ->
+            {
+            if (x != null)
+                {
+                // TODO: call UnhandledExceptionNotification handler
+                Utils.log("unhandled exception " + x + "\n  by " + hService);
+                }
+            });
+
+        return null;
+        }
+
+    @Override
+    public ExceptionHandle setField(ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        ServiceContext context = hService.m_context;
+        ServiceContext contextCurrent = ServiceContext.getCurrentContext();
+
+        if (context == null || context == contextCurrent || property.isAtomic())
+            {
+            return super.setField(hTarget, property, hValue);
+            }
+
+        CompletableFuture<Void> cfResult = contextCurrent.sendSetRequest(context, property, hValue);
 
         cfResult.whenComplete((r, x) ->
             {

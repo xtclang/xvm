@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The type registry.
@@ -15,7 +16,7 @@ import java.util.TreeMap;
 public class TypeSet
     {
     private int m_nMaxTypeId = 0;
-    private Map<Integer, Type> m_mapTypes = new TreeMap<>(Integer::compare);
+    private Map<Integer, Type> m_mapTypes = new ConcurrentHashMap<>();
     private Map<String, TypeCompositionTemplate> m_mapTemplates = new TreeMap<>();
     private Map<String, String> m_mapAliases = new TreeMap<>();
 

@@ -7,7 +7,6 @@ import org.xvm.proto.TypeCompositionTemplate.Access;
 
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
-import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -25,7 +24,7 @@ public class Frame
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVar;        // arguments/local var registers
     public final VarInfo[]      f_aInfo;        // optional info for var registers
-    public final ObjectHandle[] f_ahReturn;     // the return value(s)
+    public final int[]          f_aiReturn;     // the indexes for return values
     public final Frame          f_framePrev;    // the caller's frame
     public final int[]          f_aiIndex;      // frame indexes
                                                 // [0] - current scope index (starts with 0)
@@ -34,8 +33,8 @@ public class Frame
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
     public ExceptionHandle      m_hException;   // an exception
 
-    public Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
-                 ObjectHandle hTarget, ObjectHandle[] ahVar)
+    protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
+                    ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         f_context = context;
         f_framePrev = framePrev;
@@ -48,8 +47,7 @@ public class Frame
         int cScopes = function == null ? 1 : function.m_cScopes;
         f_anNextVar = new int[cScopes];
 
-        int cReturns = function == null ? 0 : function.m_cReturns;
-        f_ahReturn = cReturns == 0 ? Utils.OBJECTS_NONE : new ObjectHandle[cReturns];
+        f_aiReturn = aiReturn;
         }
 
     public ExceptionHandle execute()
@@ -345,7 +343,8 @@ public class Frame
     @Override
     public String toString()
         {
-        return "Frame:" + (f_hTarget == null ? "" : f_hTarget) + " " + f_function.f_sName;
+        return "Frame: " + (f_hTarget == null ? "" : f_hTarget) + " " +
+                           (f_function == null ? "<none>" : f_function.f_sName);
         }
 
     // try-catch support

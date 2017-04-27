@@ -96,16 +96,13 @@ public abstract class Utils
         return sb.toString();
         }
 
-    public static ObjectHandle resolveConst(Frame frame, int nConstValueId)
-        {
-        assert nConstValueId < 0;
-
-        return nConstValueId < -Op.MAX_CONST_ID ? frame.getPredefinedArgument(nConstValueId) :
-            frame.f_context.f_heapGlobal.ensureConstHandle(-nConstValueId);
-        }
-
     public static void log(String sMsg)
         {
+        if (sMsg.charAt(0) == '\n')
+            {
+            System.out.println();
+            sMsg = sMsg.substring(1);
+            }
         System.out.println(new Date().toString() + " " + ServiceContext.getCurrentContext() + ": " + sMsg);
         }
     }

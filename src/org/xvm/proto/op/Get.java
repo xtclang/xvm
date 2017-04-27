@@ -40,13 +40,11 @@ public class Get extends OpInvocable
 
             if (hTarget.isStruct())
                 {
-                hException = frame.assignValue(
-                        f_nRetValue, template.getField(hTarget, property.f_sName));
+                hException = template.getField(frame, hTarget, property, f_nRetValue);
                 }
             else
                 {
-                hException = template.getProperty(
-                    property, property.m_templateGet, frame, hTarget, null, f_nRetValue);
+                hException = template.getProperty(frame, hTarget, property, f_nRetValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

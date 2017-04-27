@@ -9,7 +9,7 @@ import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyAccessTemplate;
 
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xService.ServiceHandle;
 
@@ -47,21 +47,15 @@ public abstract class OpCallable extends Op
             PropertyAccessTemplate propertyAccess = (PropertyAccessTemplate) methodSuper;
             TypeCompositionTemplate template = propertyAccess.getClazzTemplate();
 
-            return template.getProperty(propertyAccess.f_property, null,
-                    frame, hThis, null, iRet);
+            return template.getField(frame, hThis, propertyAccess.f_property, iRet);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
         ahVar[0] = hThis;
 
-        Frame frameNew = frame.f_context.createFrame(frame, methodSuper, hThis, ahVar);
+        Frame frameNew = frame.f_context.createFrame1(frame, methodSuper, hThis, ahVar, iRet);
 
-        ExceptionHandle hException = frameNew.execute();
-        if (hException == null)
-            {
-            return frame.assignValue(iRet, frameNew.f_ahReturn[0]);
-            }
-        return hException;
+        return frameNew.execute();
         }
 
     // call super() method or "setProperty"
@@ -84,14 +78,13 @@ public abstract class OpCallable extends Op
             {
             PropertyAccessTemplate propertyAccess = (PropertyAccessTemplate) methodSuper;
             TypeCompositionTemplate template = propertyAccess.getClazzTemplate();
-            return template.setProperty(propertyAccess.f_property, null,
-                    frame, hThis, hArg);
+            return template.setField(hThis, propertyAccess.f_property, hArg);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
         ahVar[1] = hArg;
 
-        return frame.f_context.createFrame(frame, methodSuper, hThis, ahVar).execute();
+        return frame.f_context.createFrame1(frame, methodSuper, hThis, ahVar, -1).execute();
         }
 
     // call super() methods with multiple arguments and no more than one return
@@ -116,22 +109,16 @@ public abstract class OpCallable extends Op
             return e.getExceptionHandle();
             }
 
-        Frame frameNew = frame.f_context.createFrame(frame, methodSuper, hThis, ahVar);
-
-        ExceptionHandle hException = frameNew.execute();
-        if (hException == null && iReturn >= 0)
-            {
-            return frame.assignValue(iReturn, frameNew.f_ahReturn[0]);
-            }
-        return hException;
+        return frame.f_context.createFrame1(frame, methodSuper, hThis, ahVar, iReturn).execute();
         }
 
     // call the constructor; then potentially the finalizer; change this:struct handle to this:public
-    protected ExceptionHandle callConstructor(Frame frame, FunctionTemplate constructor, ObjectHandle[] ahVar)
+    protected ExceptionHandle callConstructor(Frame frame, FunctionTemplate constructor,
+                                              FunctionTemplate finalizer, ObjectHandle[] ahVar, int iReturn)
         {
-        ObjectHandle hTarget = ahVar[0];
+        ObjectHandle hNew = ahVar[0];
 
-        TypeComposition clazzTarget = hTarget.f_clazz;
+        TypeComposition clazzTarget = hNew.f_clazz;
         TypeCompositionTemplate template = clazzTarget.f_template;
 
         if (template.isService())
@@ -139,9 +126,9 @@ public abstract class OpCallable extends Op
             // TODO: validate the immutability
             }
 
-        Frame frameNew = frame.f_context.createFrame(frame, constructor, null, ahVar);
-
-        ExceptionHandle hException = frameNew.execute();
+        // ahVar[0] == this:struct
+        ExceptionHandle hException =
+                frame.f_context.createFrame1(frame, constructor, null, ahVar, -1).execute();
 
         if (hException == null)
             {
@@ -149,29 +136,26 @@ public abstract class OpCallable extends Op
 
             if (template.isService())
                 {
-                // TODO: validate the immutability
-                hService = (ServiceHandle) ahVar[0];
-                ((xService) template).start(hService);
+                ((xService) template).start(hService = (ServiceHandle) ahVar[0]);
                 }
 
-            if (constructor.m_cReturns > 0)
+            if (finalizer != null)
                 {
-                FunctionHandle hFinally = (FunctionHandle) frameNew.f_ahReturn[0];
+                hNew = ahVar[0] = clazzTarget.ensureAccess(hNew, Access.Private); // this:struct -> this:private
 
-                hTarget = ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Private); // this:struct -> this:private
-
+                // TODO: replace the vars
                 if (hService == null)
                     {
-                    hException = hFinally.call(frame, ahVar, Utils.OBJECTS_NONE);
+                    hException = frame.f_context.createFrame1(frame, constructor, null, ahVar, -1).execute();
                     }
                 else
                     {
                     hException = ((xService) template).
-                            asyncInvoke(frame, hService, hFinally, ahVar, Utils.OBJECTS_NONE);
+                            asyncInvoke1(frame, hService, xFunction.makeAsyncHandle(finalizer), ahVar, -1);
                     }
                 }
 
-            ahVar[0] = clazzTarget.ensureAccess(hTarget, Access.Public);
+            frame.assignValue(iReturn, clazzTarget.ensureAccess(hNew, Access.Public));
             }
         return hException;
         }

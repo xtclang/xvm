@@ -2,15 +2,12 @@ package org.xvm.proto;
 
 import org.xvm.asm.constants.ModuleConstant;
 
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 
-import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
-import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xService.ServiceHandle;
 
@@ -55,9 +52,11 @@ public class Container
         types.addAlias("x:Int", "x:Int64");
         types.addAlias("x:UInt", "x:UInt64");
 
-        types.addTemplate(new xObject(types));
-        types.addTemplate(new xException(types));
-        types.addTemplate(new xService(types));
+        types.ensureTemplate("x:Object");
+        types.ensureTemplate("x:Exception");
+        types.ensureTemplate("x:Service");
+        types.ensureTemplate("x:FutureRef");
+        types.ensureTemplate("x:AtomicRef");
 
         // container.m_typeSet.dumpTemplates();
         }
@@ -98,7 +97,7 @@ public class Container
 
             f_contextMain.start(hService, "main");
 
-            f_contextMain.sendInvokeRequest(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
+            f_contextMain.sendInvoke1Request(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
                 .whenComplete((ah, x) ->
                     {
                     if (x != null)

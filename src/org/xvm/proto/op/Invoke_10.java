@@ -46,14 +46,14 @@ public class Invoke_10 extends OpInvocable
             else if (template.isService())
                 {
                 hException = xFunction.makeAsyncHandle(method).
-                        call(frame, new ObjectHandle[]{hTarget, hArg}, Utils.OBJECTS_NONE);
+                        call1(frame, new ObjectHandle[]{hTarget, hArg}, -1);
                 }
             else
                 {
                 ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
                 ahVar[1] = hArg;
 
-                hException = frame.f_context.createFrame(frame, method, hTarget, ahVar).execute();
+                hException = frame.f_context.createFrame1(frame, method, hTarget, ahVar, -1).execute();
                 }
             }
         catch (ExceptionHandle.WrapperException e)

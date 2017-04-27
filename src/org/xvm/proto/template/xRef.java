@@ -64,18 +64,20 @@ public class xRef
         {
         RefHandle hThis = (RefHandle) hTarget;
 
-        switch (method.f_sName)
+        switch (ahArg.length)
             {
-            case "get":
-                try
+            case 0:
+                switch (method.f_sName)
                     {
-                    assert ahArg.length == 0;
-
-                    return frame.assignValue(iReturn, hThis.get());
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return e.getExceptionHandle();
+                    case "get":
+                        try
+                            {
+                            return frame.assignValue(iReturn, hThis.get());
+                            }
+                        catch (ExceptionHandle.WrapperException e)
+                            {
+                            return e.getExceptionHandle();
+                            }
                     }
             }
 
@@ -108,6 +110,7 @@ public class xRef
         {
         protected Frame m_frame;
         protected int m_iVar = REF_REFERENT;
+
         protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
 
         // indicates ath the the m_hDelegate field holds a referent
@@ -152,35 +155,48 @@ public class xRef
         public ObjectHandle get()
                 throws ExceptionHandle.WrapperException
             {
-            if (m_iVar >= 0)
+            switch (m_iVar)
                 {
-                return m_frame.f_ahVar[m_iVar];
+                case REF_REFERENT:
+                    return getInternal();
+
+                case REF_REF:
+                    return ((RefHandle) m_hDelegate).get();
+
+                default: // assertion m_iVar >= 0
+                    return m_frame.f_ahVar[m_iVar];
                 }
-            else if (m_iVar == REF_REFERENT)
+            }
+
+        protected ObjectHandle getInternal()
+                throws ExceptionHandle.WrapperException
+            {
+            if (m_hDelegate == null)
                 {
-                return m_hDelegate;
+                throw xException.makeHandle("Unassigned reference").getException();
                 }
-            else  // REF_REF
-                {
-                return ((RefHandle) m_hDelegate).get();
-                }
+            return m_hDelegate;
             }
 
         public ExceptionHandle set(ObjectHandle handle)
             {
-            // TODO: assert type compatibility
-            if (m_iVar >= 0)
+            switch (m_iVar)
                 {
-                m_frame.f_ahVar[m_iVar] = handle;
+                case REF_REFERENT:
+                    return setInternal(handle);
+
+                case REF_REF:
+                    return ((RefHandle) m_hDelegate).set(handle);
+
+                default: // assertion m_iVar >= 0
+                    m_frame.f_ahVar[m_iVar] = handle;
+                    return null;
                 }
-            else if (m_iVar == REF_REFERENT)
-                {
-                m_hDelegate = handle;
-                }
-            else // REF_REF
-                {
-                ((RefHandle) m_hDelegate).set(handle);
-                }
+            }
+
+        protected ExceptionHandle setInternal(ObjectHandle handle)
+            {
+            m_hDelegate = handle;
             return null;
             }
 
@@ -198,7 +214,7 @@ public class xRef
         public String toString()
             {
             return super.toString() +
-                    (m_iVar >= 0 ? "-> " + m_frame.f_ahVar[m_iVar] : m_hDelegate);
+                    (m_iVar >= 0 ? " -> " + m_frame.f_ahVar[m_iVar] : m_hDelegate);
             }
         }
 
