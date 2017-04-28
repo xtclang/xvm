@@ -1,11 +1,12 @@
 package org.xvm.proto;
 
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
-import org.xvm.proto.TypeCompositionTemplate.Access;
 
 import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xRef.RefHandle;
 
@@ -32,6 +33,7 @@ public class Frame
     public final int[]          f_anNextVar;    // at index i, the "next available" var register for scope i
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
     public ExceptionHandle      m_hException;   // an exception
+    public FullyBoundHandle     m_hfnFinally;   // a "finally" method for the constructors
 
     protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
@@ -62,7 +64,7 @@ public class Frame
             }
         else  // #0 - this:private
             {
-            f_ahVar[0]     = f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Private);
+            f_ahVar[0]     = f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PRIVATE);
             f_anNextVar[0] = 1 + f_function.m_cArgs;
             }
 
@@ -106,12 +108,14 @@ public class Frame
             }
         }
 
+    // a convenience method; ahVar - prepared variables
     public ExceptionHandle call1(InvocationTemplate template, ObjectHandle hTarget,
                                  ObjectHandle[] ahVar, int iReturn)
         {
         return f_context.createFrame1(this, template, hTarget, ahVar, iReturn).execute();
         }
 
+    // a convenience method
     public ExceptionHandle callN(InvocationTemplate template, ObjectHandle hTarget,
                                  ObjectHandle[] ahVar, int[] aiReturn)
         {
@@ -186,28 +190,28 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Public);
+                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PUBLIC);
 
             case Op.A_PROTECTED:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Protected);
+                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PROTECTED);
 
             case Op.A_PRIVATE:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Private);
+                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PRIVATE);
 
             case Op.A_STRUCT:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.Struct);
+                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.STRUCT);
 
             case Op.A_TYPE:
                 if (f_hTarget == null)

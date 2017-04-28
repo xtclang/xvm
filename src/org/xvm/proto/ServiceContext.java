@@ -1,6 +1,6 @@
 package org.xvm.proto;
 
-import org.xvm.proto.TypeCompositionTemplate.Access;
+import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -8,6 +8,7 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFutureRef;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
+import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.concurrent.CompletableFuture;
@@ -70,6 +71,8 @@ public class ServiceContext
     // this method is used by the ServiceContext
     public Frame createServiceEntryFrame(int cReturns)
         {
+        // TODO: collect the caller's frame proxy
+
         // create a pseudo frame that has variables to collect
         // the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
@@ -91,11 +94,8 @@ public class ServiceContext
         return frame;
         }
 
-
-    public ExceptionHandle start(ServiceHandle hService, String sServiceName)
+    public ExceptionHandle start(String sServiceName)
         {
-        m_hService = (ServiceHandle) hService.f_clazz.ensureAccess(hService, Access.Public);
-
         String sThreadName = f_container.m_constModule.getQualifiedName() + "/" + sServiceName;
 
         // TODO: we need to be able to share native threads across services
@@ -107,6 +107,7 @@ public class ServiceContext
             // TODO: timeout
             yield();
             }
+
         return null;
         }
 
@@ -121,6 +122,17 @@ public class ServiceContext
     public boolean isContended()
         {
         return m_daemon.isContended();
+        }
+
+    // send and asynchronous "construct service" message
+    public CompletableFuture<ServiceHandle> sendConstructRequest(
+            ServiceContext context, ConstructTemplate constructor, ObjectHandle[] ahArg)
+        {
+        CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
+
+        context.m_daemon.add(new ConstructRequest(this, constructor, ahArg, future));
+
+        return future;
         }
 
     // send and asynchronous "invoke" message with zero or one return value
@@ -232,6 +244,43 @@ public class ServiceContext
     /**
      * Represents an invoke request from one service onto another with zero or one return value.
      */
+    public static class ConstructRequest
+            implements Message
+        {
+        private final ServiceContext f_contextCaller;
+        private final ConstructTemplate f_constructor;
+        private final ObjectHandle[] f_ahArg;
+        private final CompletableFuture<ServiceHandle> f_future;
+
+        public ConstructRequest(ServiceContext contextCaller, ConstructTemplate constructor,
+                              ObjectHandle[] ahArg, CompletableFuture<ServiceHandle> future)
+            {
+            f_contextCaller = contextCaller;
+            f_constructor = constructor;
+            f_ahArg = ahArg;
+            f_future = future;
+            }
+
+        @Override
+        public void process(ServiceContext context)
+            {
+            Frame frame = context.createServiceEntryFrame(1);
+
+            xService template = (xService) f_constructor.getClazzTemplate();
+
+            ServiceHandle hService = (ServiceHandle) template.createService(context);
+
+            f_ahArg[0] = context.m_hService = hService;
+
+            ExceptionHandle hException = f_constructor.construct(frame, f_ahArg, 0);
+
+            sendResponse1(f_contextCaller, hException, frame, 1, f_future);
+            }
+        }
+
+    /**
+     * Represents an invoke request from one service onto another with zero or one return value.
+     */
     public static class Invoke1Request
             implements Message
         {
@@ -255,8 +304,7 @@ public class ServiceContext
         @Override
         public void process(ServiceContext context)
             {
-            // TODO: collect the caller's frame proxy
-            Frame frame = context.createServiceEntryFrame(f_hFunction.getReturnSize());
+            Frame frame = context.createServiceEntryFrame(f_hFunction.getReturnCount());
 
             ExceptionHandle hException = f_hFunction.call1(frame, f_ahArg, f_cReturns - 1);
 
@@ -290,7 +338,7 @@ public class ServiceContext
         @Override
         public void process(ServiceContext context)
             {
-            Frame frame = context.createServiceEntryFrame(f_hFunction.getReturnSize());
+            Frame frame = context.createServiceEntryFrame(f_hFunction.getReturnCount());
 
             // the pseudo-frame's vars are the return values
             int[] aiReturn = new int[f_cReturns];

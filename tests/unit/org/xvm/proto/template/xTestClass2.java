@@ -25,19 +25,29 @@ public class xTestClass2 extends TypeCompositionTemplate
     @Override
     public void initDeclared()
         {
-        ensurePropertyTemplate("prop2", "x:Int").setSetAccess(Access.Protected);
+        ensurePropertyTemplate("prop2", "x:Int");
 
-        FunctionTemplate ctConstruct = ensureFunctionTemplate("construct", new String[]{"x:TestClass2", "x:String"}, VOID);
-        ctConstruct.m_aop = new Op[]
-            {
+        ConstructTemplate construct = ensureConstructTemplate(new String[]{"x:TestClass2", "x:Int64", "x:String"});
+        FunctionTemplate ftFinally = ensureFunctionTemplate(
+                "finally", new String[]{"x:TestClass2", "x:Int64", "x:String"}, VOID);
+
+        construct.m_aop = new Op[]
+            { // #0 = this:struct; #1 = i; #2 = s
             new X_Print(-adapter.ensureValueConstantId("# in constructor: TestClass2 #")),
-            new Var(adapter.getClassConstId("x:Int64")), // #2
-            new Get(1, adapter.getPropertyConstId("x:String", "length"), 2),
-            new Set(0, adapter.getPropertyConstId("x:TestClass2", "prop2"), 2),
-            new Call_N0(-adapter.getMethodConstId("x:TestClass", "construct"), new int[] {0, 1}),
+            new Set(0, adapter.getPropertyConstId("x:TestClass2", "prop2"), 1),
+            new Construct_N(-adapter.getMethodConstId("x:TestClass", "construct"), new int[] {0, 2}),
             new Return_0(),
             };
-        ctConstruct.m_cVars = 3;
+        construct.m_cVars = 3;
+        construct.setFinally(ftFinally);
+
+        ftFinally.m_aop = new Op[]
+            { // #0 = this:private; #1 = i; #2 = s
+            new X_Print(-adapter.ensureValueConstantId("# in finally: TestClass2 #")),
+            new X_Print(1),
+            new Return_0(),
+            };
+        ftFinally.m_cVars = 3;
 
         MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
@@ -45,9 +55,11 @@ public class xTestClass2 extends TypeCompositionTemplate
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
             new Var(adapter.getClassConstId("x:Int64")), // #1
             new Call_01(Op.A_SUPER, 1),
-            new Neg(1, 1),
+            new Var(adapter.getClassConstId("x:Int64")), // #2
+            new LGet(adapter.getPropertyConstId("x:TestClass2", "prop2"), 2),
+            new Add(1, 2, 1),
             new Return_1(1),
             };
-        mtMethod1.m_cVars = 2;
+        mtMethod1.m_cVars = 3;
         }
     }

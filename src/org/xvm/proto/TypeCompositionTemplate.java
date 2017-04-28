@@ -1,12 +1,14 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
+import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef.RefHandle;
 
@@ -193,6 +195,19 @@ public abstract class TypeCompositionTemplate
         }
 
     // add a function
+    public ConstructTemplate ensureConstructTemplate(String[] asArgTypes)
+        {
+        ConstructTemplate templateC = new ConstructTemplate(asArgTypes);
+
+        m_mapMultiFunctions.computeIfAbsent(templateC.f_sName, s -> new MultiFunctionTemplate()).
+                add(templateC);
+
+        templateC.resolveTypes(this);
+
+        return templateC;
+        }
+
+    // add a function
     public FunctionTemplate ensureFunctionTemplate(String sFunctionName, String[] asArgTypes, String[] asRetTypes)
         {
         FunctionTemplate templateF = new FunctionTemplate(sFunctionName, asArgTypes, asRetTypes);
@@ -287,7 +302,7 @@ public abstract class TypeCompositionTemplate
             {
             m_templateSuper.forEachProperty(propSuper ->
                 {
-                if (propSuper.m_accessGet != Access.Private || propSuper.m_accessSet != Access.Private)
+                if (propSuper.m_accessGet != Constants.Access.PRIVATE || propSuper.m_accessSet != Constants.Access.PRIVATE)
                     {
                     derivePropertyTemplateFrom(propSuper);
                     }
@@ -295,7 +310,7 @@ public abstract class TypeCompositionTemplate
 
             m_templateSuper.forEachMethod(methodSuper ->
                 {
-                if (methodSuper.m_access != Access.Private)
+                if (methodSuper.m_access != Constants.Access.PRIVATE)
                     {
                     deriveMethodTemplateFrom(methodSuper);
                     }
@@ -335,7 +350,7 @@ public abstract class TypeCompositionTemplate
         return resolve(Utils.TYPE_NONE);
         }
 
-    public Type createType(Type[] atGenericActual, Access access)
+    public Type createType(Type[] atGenericActual, Constant.Access access)
         {
         Type type = new Type(f_sName);
         // TODO create the specified type
@@ -601,7 +616,6 @@ public abstract class TypeCompositionTemplate
 
     // -----
 
-
     public abstract class FunctionContainer
         {
         public TypeCompositionTemplate getClazzTemplate()
@@ -627,8 +641,8 @@ public abstract class TypeCompositionTemplate
         // indicates that the property is represented by an AtomicRef
         private boolean m_fAtomic = false;
 
-        public Access m_accessGet = Access.Public;
-        public Access m_accessSet = Access.Public;
+        public Constant.Access m_accessGet = Constants.Access.PUBLIC;
+        public Constant.Access m_accessSet = Constants.Access.PUBLIC;
 
         // the following fields don't impact the type (and neither do the super fields)
         // (e.g. a presence of a "get" implementation doesn't change the type)
@@ -677,12 +691,12 @@ public abstract class TypeCompositionTemplate
             return m_fRef;
             }
 
-        public void setGetAccess(Access access)
+        public void setGetAccess(Constant.Access access)
             {
             m_accessGet = access;
             }
 
-        public void setSetAccess(Access access)
+        public void setSetAccess(Constant.Access access)
             {
             m_accessSet = access;
             }
@@ -710,7 +724,7 @@ public abstract class TypeCompositionTemplate
 
         public void deriveFrom(PropertyTemplate that)
             {
-            if (that.m_accessGet != Access.Private)
+            if (that.m_accessGet != Constants.Access.PRIVATE)
                 {
                 this.m_accessGet = that.m_accessGet;
 
@@ -721,7 +735,7 @@ public abstract class TypeCompositionTemplate
                     }
                 }
 
-            if (that.m_accessSet != Access.Private)
+            if (that.m_accessSet != Constants.Access.PRIVATE)
                 {
                 this.m_accessSet = that.m_accessSet;
 
@@ -774,7 +788,7 @@ public abstract class TypeCompositionTemplate
         public TypeName[] m_retTypeName; // length = 0 for Void return type
 
         // TODO: pointer to what XVM Structure?
-        Access m_access = Access.Public;
+        Constant.Access m_access = Constants.Access.PUBLIC;
         boolean m_fNative;
         public int m_cArgs; // number of args
         public int m_cReturns; // number of return values
@@ -817,7 +831,7 @@ public abstract class TypeCompositionTemplate
             return m_retTypeName[iRet].resolveFormalTypes(clzParent);
             }
 
-        public void setAccess(Access access)
+        public void setAccess(Constant.Access access)
             {
             m_access = access;
             }
@@ -972,14 +986,78 @@ public abstract class TypeCompositionTemplate
             {
             super(sName, asArgType, asRetType);
             }
+
         protected FunctionTemplate(String sName, TypeName[] atArg, TypeName[] atRet)
             {
             super(sName, atArg, atRet);
             }
         }
 
+    // constructor function specialization
+    public class ConstructTemplate
+            extends FunctionTemplate
+        {
+        private FunctionTemplate m_ftFinally;
+
+        protected ConstructTemplate(String[] asArgType)
+            {
+            super("construct", asArgType, VOID);
+            }
+
+        protected ConstructTemplate(TypeName[] atArg)
+            {
+            super("construct", atArg, Utils.TYPE_NAME_NONE);
+            }
+
+        public void setFinally(FunctionTemplate ftFinally)
+            {
+            m_ftFinally = ftFinally;
+            }
+
+        public FunctionTemplate getFinally()
+            {
+            return m_ftFinally;
+            }
+
+        public xFunction.FullyBoundHandle makeFinalizer(ObjectHandle[] ahArg)
+            {
+            return m_ftFinally == null ? null : xFunction.makeHandle(m_ftFinally).bindAll(ahArg);
+            }
+
+        public int getVarCount()
+            {
+            return m_ftFinally == null ? m_cVars : Math.max(m_cVars, m_ftFinally.m_cVars);
+            }
+
+        // call the constructor, then the finalizers; change this:struct handle to this:public
+        public ExceptionHandle construct(Frame frame, ObjectHandle[] ahVar, int iReturn)
+            {
+            // ahVar[0] == this:struct
+            ExceptionHandle hException = frame.call1(this, null, ahVar, -1);
+
+            if (hException == null)
+                {
+                xFunction.FullyBoundHandle fnFinalize = xFunction.FullyBoundHandle.resolveFinalizer(
+                        frame.m_hfnFinally, makeFinalizer(ahVar));
+                if (fnFinalize != null)
+                    {
+                    // this:struct -> this:private
+                    hException = fnFinalize.callChain(frame, Constants.Access.PRIVATE);
+                    }
+
+                if (hException == null)
+                    {
+                    ObjectHandle hNew = ahVar[0];
+                    hException = frame.assignValue(iReturn,
+                            hNew.f_clazz.ensureAccess(hNew, Constants.Access.PUBLIC));
+                    }
+                }
+
+            return hException;
+            }
+        }
+
     public enum Shape {Class, Interface, Trait, Mixin, Const, Service, Enum}
-    public enum Access {Public, Protected, Private, Struct}
 
     public static String[] VOID = new String[0];
     public static String[] BOOLEAN = new String[]{"x:Boolean"};

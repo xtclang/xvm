@@ -1,5 +1,6 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constants;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 
@@ -42,10 +43,10 @@ public class xArray
         // TODO initialization?
 
         PropertyTemplate ptCap = ensurePropertyTemplate("capacity", "x:Int");
-        ptCap.setSetAccess(Access.Private);
+        ptCap.setSetAccess(Constants.Access.PRIVATE);
 
         PropertyTemplate ptLen = ensurePropertyTemplate("size", "x:Int");
-        ptLen.setSetAccess(Access.Private);
+        ptLen.setSetAccess(Constants.Access.PRIVATE);
 
         ensureMethodTemplate("elementAt", INT, new String[]{"x:Ref<ElementType>"});
         ensureMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, THIS);
@@ -56,8 +57,8 @@ public class xArray
         ensureFunctionTemplate("compare", new String[]{"this.Type", "this.Type"}, new String[]{"x:Ordered"});
 
         PropertyTemplate ptHead = ensurePropertyTemplate("head", "x:Ref<ElementType>");
-        ptHead.setGetAccess(Access.Private);
-        ptHead.setSetAccess(Access.Private);
+        ptHead.setGetAccess(Constants.Access.PRIVATE);
+        ptHead.setSetAccess(Constants.Access.PRIVATE);
 
 
         // TODO child class

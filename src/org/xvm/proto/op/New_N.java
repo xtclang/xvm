@@ -5,7 +5,8 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
+import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
+import org.xvm.proto.template.xService;
 
 /**
  * NEW_N CONST-CONSTRUCT, #params:(rvalue), lvalue-return
@@ -28,21 +29,26 @@ public class New_N extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        FunctionTemplate constructor = getFunctionTemplate(frame, f_nConstructId);
-        FunctionTemplate finalizer = null;
-
+        ConstructTemplate constructor = (ConstructTemplate) getFunctionTemplate(frame, f_nConstructId);
         TypeCompositionTemplate template = constructor.getClazzTemplate();
-
-        ObjectHandle hNew = template.createStruct();
 
         ExceptionHandle hException;
         try
             {
-            // call the constructor with this:struct and args
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.m_cVars, 1);
-            ahVar[0] = hNew;
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount(), 1);
 
-            hException = callConstructor(frame, constructor, finalizer, ahVar, f_nRetValue);
+            if (template.isService())
+                {
+                hException = ((xService) template).
+                        asyncCreateService(frame, constructor, ahVar, f_nRetValue);
+                }
+            else
+                {
+                // this:struct
+                ahVar[0] = template.createStruct();
+
+                hException = constructor.construct(frame, ahVar, f_nRetValue);
+                }
             }
         catch (ExceptionHandle.WrapperException e)
             {

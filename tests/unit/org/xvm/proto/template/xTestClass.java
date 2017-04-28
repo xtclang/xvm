@@ -26,23 +26,24 @@ public class xTestClass extends TypeCompositionTemplate
         ensurePropertyTemplate("prop1", "x:String");
 
         // --- constructor()
-        FunctionTemplate ftConstruct = ensureFunctionTemplate(
-                "construct", new String[]{"x:TestClass", "x:String"}, VOID);
+        ConstructTemplate construct = ensureConstructTemplate(
+                new String[]{"x:TestClass", "x:String"});
         FunctionTemplate ftFinally = ensureFunctionTemplate(
-                "construct:finally", new String[]{"x:TestClass", "x:String"}, VOID);
+                "finally", new String[]{"x:TestClass", "x:String"}, VOID);
 
-        ftConstruct.m_aop = new Op[]
-            {
+        construct.m_aop = new Op[]
+            { // #0 = this:struct; #1 = s
             new X_Print(-adapter.ensureValueConstantId("# in constructor: TestClass #")),
             new Set(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
             new Return_0(),
             };
-        ftConstruct.m_cVars = 2;
+        construct.m_cVars = 2;
+        construct.setFinally(ftFinally);
 
         ftFinally.m_aop = new Op[]
-            {
-            new X_Print(-adapter.ensureValueConstantId("# in finally: #")),
-            new X_Print(0),
+            { // #0 = this:private; #1 = s
+            new X_Print(-adapter.ensureValueConstantId("# in finally: TestClass #")),
+            new X_Print(1),
             new Return_0(),
             };
         ftFinally.m_cVars = 2;

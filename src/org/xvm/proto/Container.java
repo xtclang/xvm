@@ -91,11 +91,7 @@ public class Container
             ModuleHandle hModule = (ModuleHandle) module.createConstHandle(m_constModule);
             FunctionHandle hFunction = xFunction.makeHandle(mtRun);
 
-            TypeComposition clzService = xService.INSTANCE.f_clazzCanonical;
-            ServiceHandle hService = new ServiceHandle(
-                    clzService, clzService.ensurePublicType(), f_contextMain);
-
-            f_contextMain.start(hService, "main");
+            f_contextMain.start("main");
 
             f_contextMain.sendInvoke1Request(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
                 .whenComplete((ah, x) ->

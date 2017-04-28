@@ -174,18 +174,18 @@ TODO DUP
 0xA1 NEW_1      CONST-CONSTRUCT, rvalue-param, lvalue-return
 0xA2 NEW_N      CONST-CONSTRUCT, #params:(rvalue), lvalue-return
 0xA3 NEW_T      CONST-CONSTRUCT, rvalue-params-tuple, lvalue-return
-0xA4 NEW_0G     CONST-CONSTRUCT, rvalue-type, lvalue-return                                 ; generic "new"
+0xA4 NEW_0G     CONST-CONSTRUCT, rvalue-type, lvalue-return                             ; generic "new"
 0xA5 NEW_1G     CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
 0xA6 NEW_NG     CONST-CONSTRUCT, rvalue-type, #params:(rvalue), lvalue-return
 0xA7 NEW_TG     CONST-CONSTRUCT, rvalue-type, rvalue-params-tuple, lvalue-return
-0xA8 NEWC_0     CONST-CONSTRUCT, rvalue-parent, lvalue-return                               ; virtual "new" for child classes
+0xA8 NEWC_0     CONST-CONSTRUCT, rvalue-parent, lvalue-return                           ; virtual "new" for child classes
 0xA9 NEWC_1     CONST-CONSTRUCT, rvalue-parent, rvalue-param, lvalue-return
 0xAA NEWC_N     CONST-CONSTRUCT, rvalue-parent, #params:(rvalue), lvalue-return
 0xAB NEWC_T     CONST-CONSTRUCT, rvalue-parent, rvalue-params-tuple, lvalue-return
-0xAC
-0xAD
-0xAE
-0xAF
+0xAC CONSTR_0   CONST-CONSTRUCT                                                         ; "super" construct call
+0xAD CONSTR_1   CONST-CONSTRUCT, rvalue-param
+0xAE CONSTR_N   CONST-CONSTRUCT, #params:(rvalue)
+0xAF CONSTR_T   CONST-CONSTRUCT, rvalue-params-tuple
 
 TODO is a service?
 TODO is a const?

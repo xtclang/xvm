@@ -1,11 +1,10 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.Constants;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.proto.template.xService.ServiceHandle;
 
 import org.xvm.proto.*;
@@ -82,9 +81,14 @@ public class xFunction
             m_invoke = function;
             }
 
-        public int getReturnSize()
+        public int getReturnCount()
             {
             return m_invoke.m_cReturns;
+            }
+
+        public int getVarCount()
+            {
+            return m_invoke.m_cVars;
             }
 
         // ----- FunctionHandle interface -----
@@ -193,7 +197,12 @@ public class xFunction
 
         public FunctionHandle bind(int iArg, ObjectHandle hArg)
             {
-            return new BoundHandle(f_clazz, this, iArg, hArg);
+            return new SingleBoundHandle(f_clazz, this, iArg, hArg);
+            }
+
+        public FullyBoundHandle bindAll(ObjectHandle[] ahArg)
+            {
+            return new FullyBoundHandle(f_clazz, this, ahArg);
             }
 
         protected void addBoundArguments(ObjectHandle[] ahVar)
@@ -245,15 +254,15 @@ public class xFunction
         }
 
 
-    // partially bound function
-    public static class BoundHandle
+    // one parameter bound function
+    public static class SingleBoundHandle
             extends DelegatingHandle
         {
         protected int m_iArg; // the bound argument index
         protected ObjectHandle m_hArg;
 
-        protected BoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
-                              int iArg, ObjectHandle hArg)
+        protected SingleBoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
+                                    int iArg, ObjectHandle hArg)
             {
             super(clazz, hDelegate);
 
@@ -272,6 +281,66 @@ public class xFunction
                 System.arraycopy(ahVar, m_iArg, ahVar, m_iArg + 1, cMove);
                 }
             ahVar[m_iArg] = m_hArg;
+            }
+        }
+
+    // all parameter bound function
+    public static class FullyBoundHandle
+            extends DelegatingHandle
+        {
+        protected ObjectHandle[] m_ahArg;
+        protected FullyBoundHandle m_next;
+
+        protected FullyBoundHandle(TypeComposition clazz, FunctionHandle hDelegate, ObjectHandle[] ahArg)
+            {
+            super(clazz, hDelegate);
+
+            m_ahArg = ahArg;
+            }
+
+        @Override
+        protected void addBoundArguments(ObjectHandle[] ahVar)
+            {
+            super.addBoundArguments(ahVar);
+
+            // to avoid extra array creation, the argument array may contain unused null elements
+            System.arraycopy(m_ahArg, 0, ahVar, 0, Math.min(ahVar.length, m_ahArg.length));
+            }
+
+        public FullyBoundHandle chain(FullyBoundHandle handle)
+            {
+            m_next = handle;
+            return this;
+            }
+
+        // @param access - if specified, apply to "this"
+        public ExceptionHandle callChain(Frame frame, Constants.Access access)
+            {
+            if (access != null)
+                {
+                ObjectHandle hThis = m_ahArg[0];
+                m_ahArg[0] = hThis.f_clazz.ensureAccess(hThis, access);
+                }
+
+            ExceptionHandle hException = call1(frame, Utils.OBJECTS_NONE, -1);
+            if (m_next != null)
+                {
+                ExceptionHandle hExNext = m_next.callChain(frame, access);
+                if (hException == null)
+                    {
+                    hException = hExNext;
+                    }
+                }
+            return hException;
+            }
+
+        // construct-finally support
+        public static FullyBoundHandle resolveFinalizer(
+                FullyBoundHandle hfnFirst, FullyBoundHandle hfnSecond)
+            {
+            return hfnFirst == null  ? hfnSecond :
+                   hfnSecond == null ? hfnFirst :
+                                       hfnFirst.chain(hfnSecond);
             }
         }
 

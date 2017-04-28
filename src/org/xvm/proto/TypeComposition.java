@@ -1,6 +1,6 @@
 package org.xvm.proto;
 
-import org.xvm.proto.TypeCompositionTemplate.Access;
+import org.xvm.asm.Constants;
 import org.xvm.proto.TypeCompositionTemplate.Shape;
 
 /**
@@ -28,7 +28,7 @@ public class TypeComposition
         f_atGenericActual = atnGenericActual;
         }
 
-    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
+    public ObjectHandle ensureAccess(ObjectHandle handle, Constants.Access access)
         {
         assert handle.f_clazz == this;
 
@@ -37,7 +37,7 @@ public class TypeComposition
 
         switch (access)
             {
-            case Public:
+            case PUBLIC:
                 typeTarget = ensurePublicType();
                 if (typeCurrent == typeTarget)
                     {
@@ -45,7 +45,7 @@ public class TypeComposition
                     }
                 break;
 
-            case Protected:
+            case PROTECTED:
                 typeTarget = ensureProtectedType();
                 if (typeCurrent == typeTarget)
                     {
@@ -53,7 +53,7 @@ public class TypeComposition
                     }
                 break;
 
-            case Private:
+            case PRIVATE:
                 typeTarget = ensurePrivateType();
                 if (typeCurrent == typeTarget)
                     {
@@ -61,7 +61,7 @@ public class TypeComposition
                     }
                 break;
 
-            case Struct:
+            case STRUCT:
                 typeTarget = ensureStructType();
                 if (typeCurrent == typeTarget)
                     {
@@ -83,7 +83,7 @@ public class TypeComposition
         Type type = m_typePublic;
         if (type == null)
             {
-            m_typePublic = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Public);
+            m_typePublic = type = f_template.createType(f_atGenericActual, Constants.Access.PUBLIC);
             }
         return type;
         }
@@ -92,7 +92,7 @@ public class TypeComposition
         Type type = m_typeProtected;
         if (type == null)
             {
-            m_typeProtected = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Protected);
+            m_typeProtected = type = f_template.createType(f_atGenericActual, Constants.Access.PROTECTED);
             }
         return type;
         }
@@ -102,7 +102,7 @@ public class TypeComposition
         Type type = m_typePrivate;
         if (type == null)
             {
-            m_typePrivate = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Private);
+            m_typePrivate = type = f_template.createType(f_atGenericActual, Constants.Access.PRIVATE);
             }
         return type;
         }
@@ -112,7 +112,7 @@ public class TypeComposition
         Type type = m_typeStruct;
         if (type == null)
             {
-            m_typeStruct = type = f_template.createType(f_atGenericActual, TypeCompositionTemplate.Access.Struct);
+            m_typeStruct = type = f_template.createType(f_atGenericActual, Constants.Access.STRUCT);
             }
         return type;
         }

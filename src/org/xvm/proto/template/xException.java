@@ -32,7 +32,8 @@ public class xException
         ensurePropertyTemplate("cause", "this.Type");
         ensurePropertyTemplate("stackTrace", "x:String"); // TODO: replace "x:String" with "x:Iterable<this.Type.StackFrame>"
 
-        FunctionTemplate ct = ensureFunctionTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"}, VOID);
+        ConstructTemplate ct = ensureConstructTemplate(
+                new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"});
 
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {

@@ -1,17 +1,15 @@
 package org.xvm.proto;
 
+import org.xvm.asm.Constants;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.TypeCompositionTemplate.Access;
+import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyAccessTemplate;
-
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xService;
-import org.xvm.proto.template.xService.ServiceHandle;
+import org.xvm.proto.template.xFunction.FullyBoundHandle;
 
 /**
  * Common base for CALL_ ops.
@@ -91,70 +89,15 @@ public abstract class OpCallable extends Op
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
-        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
-
-        ObjectHandle hThis = frame.getThis();
-
         try
             {
-            for (int i = 0, c = anArgValue.length; i < c; i++)
-                {
-                ahVar[i + 1] = frame.getArgument(anArgValue[i]);
-                }
+            ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.m_cVars, 1);
+
+            return frame.call1(methodSuper, frame.getThis(), ahVar, iReturn);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return e.getExceptionHandle();
             }
-
-        return frame.call1(methodSuper, hThis, ahVar, iReturn);
-        }
-
-    // call the constructor; then potentially the finalizer; change this:struct handle to this:public
-    protected ExceptionHandle callConstructor(Frame frame, FunctionTemplate constructor,
-                                              FunctionTemplate finalizer, ObjectHandle[] ahVar, int iReturn)
-        {
-        ObjectHandle hNew = ahVar[0];
-
-        TypeComposition clazzTarget = hNew.f_clazz;
-        TypeCompositionTemplate template = clazzTarget.f_template;
-
-        if (template.isService())
-            {
-            // TODO: validate the immutability
-            }
-
-        // ahVar[0] == this:struct
-        ExceptionHandle hException =
-                frame.call1(constructor, null, ahVar, -1);
-
-        if (hException == null)
-            {
-            ServiceHandle hService = null;
-
-            if (template.isService())
-                {
-                ((xService) template).start(hService = (ServiceHandle) ahVar[0]);
-                }
-
-            if (finalizer != null)
-                {
-                hNew = ahVar[0] = clazzTarget.ensureAccess(hNew, Access.Private); // this:struct -> this:private
-
-                // TODO: replace the vars
-                if (hService == null)
-                    {
-                    hException = frame.call1(constructor, null, ahVar, -1);
-                    }
-                else
-                    {
-                    hException = ((xService) template).
-                            asyncInvoke1(frame, hService, xFunction.makeAsyncHandle(finalizer), ahVar, -1);
-                    }
-                }
-
-            frame.assignValue(iReturn, clazzTarget.ensureAccess(hNew, Access.Public));
-            }
-        return hException;
         }
     }

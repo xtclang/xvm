@@ -1,5 +1,6 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constants;
 import org.xvm.proto.*;
 
 import java.util.Arrays;
@@ -43,8 +44,8 @@ public class xObject
         // @auto function Object() to<function Object()>()
 
         PropertyTemplate propMeta = ensurePropertyTemplate("meta", "x:Meta");
-        propMeta.setGetAccess(Access.Protected);
-        propMeta.setSetAccess(Access.Protected);
+        propMeta.setGetAccess(Constants.Access.PROTECTED);
+        propMeta.setSetAccess(Constants.Access.PROTECTED);
 
         ensureFunctionTemplate("equals", new String[]{"x:Object", "x:Object"}, VOID);
 

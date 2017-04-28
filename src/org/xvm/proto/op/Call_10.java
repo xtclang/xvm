@@ -29,38 +29,31 @@ public class Call_10 extends OpCallable
         {
         ExceptionHandle hException;
 
-        if (f_nFunctionValue == A_SUPER)
+        try
             {
-            hException = callSuper10(frame, f_nArgValue);
-            }
-        else if (f_nFunctionValue >= 0)
-            {
-            try
+            if (f_nFunctionValue == A_SUPER)
+                {
+                hException = callSuper10(frame, f_nArgValue);
+                }
+            else if (f_nFunctionValue >= 0)
                 {
                 FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
                 hException = function.call1(frame, new int[]{f_nArgValue}, -1);
                 }
-            catch (ExceptionHandle.WrapperException e)
+            else
                 {
-                hException = e.getExceptionHandle();
-                }
-            }
-        else
-            {
-            FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
-            ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
+                FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
+                ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
 
-            try
-                {
                 ahVar[0] = frame.getArgument(f_nArgValue);
 
                 hException = frame.call1(function, null, ahVar, -1);
                 }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                hException = e.getExceptionHandle();
-                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)

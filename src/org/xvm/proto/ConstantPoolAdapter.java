@@ -82,7 +82,8 @@ public class ConstantPoolAdapter
 
         ClassConstant constClass = getClassConstant(getClassConstId(sClzName));
 
-        MethodConstant constMethod = m_constantPool.ensureMethodConstant(constClass, sName, null, null, null);
+        MethodConstant constMethod = m_constantPool.ensureMethodConstant(
+                constClass, sName, templateMethod.m_access, null, null);
 
         m_mapMethods.put(sClzName + '#' + sName, constMethod.getPosition());
         }

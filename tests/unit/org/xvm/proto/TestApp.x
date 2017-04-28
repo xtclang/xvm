@@ -39,12 +39,11 @@ module TestApp
             print(e);
             }
 
-        TestClass t2 = new TestClass2("Goodbye");
+        TestClass t2 = new TestClass2(42, "Goodbye");
         print(t2.prop1);
         print(t2.method1());
 
-        TestClass t3 = new TestClass2("ABC");
-        Function fn = t3.method1;
+        Function fn = t2.method1;
         print(fn());
         }
 
@@ -75,19 +74,23 @@ module TestApp
     class TestClass2
             extends TestClass
         {
-        protected Int prop2;
+        Int prop2;
 
-        TestClass2 construct(String s)
+        TestClass2 construct(Int i, String s)
             {
-            prop2 = s.length();
+            prop2 = i;
 
             construct TestClass(s);
+            }
+        finally
+            {
+            print(i);
             }
 
         @Override
         Int method1()
             {
-            return -super();
+            return super() + prop2;
             }
         }
 

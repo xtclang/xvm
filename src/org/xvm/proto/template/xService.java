@@ -77,8 +77,13 @@ public class xService
     @Override
     public ObjectHandle createStruct()
         {
+        throw new IllegalStateException();
+        }
+
+    public ObjectHandle createService(ServiceContext context)
+        {
         ServiceHandle hService = new ServiceHandle(
-                f_clazzCanonical, f_clazzCanonical.ensureStructType(), null);
+                f_clazzCanonical, f_clazzCanonical.ensureStructType(), context);
 
         hService.createFields();
 
@@ -87,11 +92,21 @@ public class xService
         return hService;
         }
 
-    public ExceptionHandle start(ServiceHandle hService)
+    public ExceptionHandle asyncCreateService(Frame frame, ConstructTemplate constructor,
+                                              ObjectHandle[] ahArg, int iReturn)
         {
-        hService.m_context = ServiceContext.getCurrentContext().f_container.createContext();
+        ServiceContext contextCur = frame.f_context;
+        ServiceContext contextNew = contextCur.f_container.createContext();
 
-        return hService.m_context.start(hService, f_sName);
+        ExceptionHandle hException = contextNew.start(f_sName);
+
+        if (hException == null)
+            {
+            CompletableFuture cfService =
+                    contextCur.sendConstructRequest(contextNew, constructor, ahArg);
+            hException = frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
+            }
+        return hException;
         }
 
     // return an exception

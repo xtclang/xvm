@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -40,8 +41,8 @@ public class xBit
         //    @op Bit not()
 
         PropertyTemplate ptLiteral = ensurePropertyTemplate("literal", "x:IntLiteral");
-        ptLiteral.setGetAccess(Access.Private);
-        ptLiteral.setSetAccess(Access.Private);
+        ptLiteral.setGetAccess(Constants.Access.PRIVATE);
+        ptLiteral.setSetAccess(Constants.Access.PRIVATE);
 
         ensureMethodTemplate("to", new String[]{"x:IntLiteral"}, new String[]{"x:IntLiteral"});
         ensureMethodTemplate("to", BOOLEAN, BOOLEAN);

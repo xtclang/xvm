@@ -46,14 +46,14 @@ public class xTestService extends xService
             };
         mtSetCounter.m_cVars = 2;
 
-        FunctionTemplate ftConstructor = ensureFunctionTemplate(
-                "construct", new String[]{"x:TestService", "x:Int64"}, VOID);
-        ftConstructor.m_aop = new Op[]
+        ConstructTemplate constructor = ensureConstructTemplate(
+                new String[]{"x:TestService", "x:Int64"});
+        constructor.m_aop = new Op[]
             {
             new Set(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
             new Return_0(),
             };
-        ftConstructor.m_cVars = 2;
+        constructor.m_cVars = 2;
 
         MethodTemplate mtIncrement = ensureMethodTemplate("increment", VOID, INT);
         mtIncrement.m_aop = new Op[]

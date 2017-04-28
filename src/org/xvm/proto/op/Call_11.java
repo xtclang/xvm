@@ -32,54 +32,36 @@ public class Call_11 extends OpCallable
         {
         ExceptionHandle hException;
 
-        if (f_nFunctionValue == A_SUPER)
+        try
             {
-            MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
-
-            ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
-
-            ObjectHandle hThis = frame.getThis();
-
-            try
+            if (f_nFunctionValue == A_SUPER)
                 {
+                MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
+
+                ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
                 ahVar[1] = frame.getArgument(f_nArgValue);
 
-                hException = frame.call1(methodSuper, hThis, ahVar, f_nRetValue);
+                hException = frame.call1(methodSuper, frame.getThis(), ahVar, f_nRetValue);
                 }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                hException = e.getExceptionHandle();
-                }
-            }
-        else if (f_nFunctionValue >= 0)
-            {
-            try
+            else if (f_nFunctionValue >= 0)
                 {
                 FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
                 hException = function.call1(frame, new int[]{f_nArgValue}, f_nRetValue);
                 }
-            catch (ExceptionHandle.WrapperException e)
+            else
                 {
-                hException = e.getExceptionHandle();
-                }
-            }
-        else
-            {
-            InvocationTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
+                InvocationTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
 
-            ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
-
-            try
-                {
+                ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
                 ahVar[0] = frame.getArgument(f_nArgValue);
 
                 hException = frame.call1(function, null, ahVar, f_nRetValue);
                 }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                hException = e.getExceptionHandle();
-                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)

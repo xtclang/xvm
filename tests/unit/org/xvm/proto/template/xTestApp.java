@@ -1,5 +1,6 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.Constants;
 import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
@@ -68,11 +69,12 @@ public class xTestApp extends xModule
         FunctionTemplate ftTest2 = ensureFunctionTemplate("test2", VOID, VOID);
         ftTest2.m_aop = new Op[]
             {
-            new Var(adapter.getClassConstId("x:TestClass")),     // #0 (t)
+            new NVar(adapter.getClassConstId("x:TestClass"), adapter.ensureValueConstantId("t")),  // #0 (t)
             new New_1(adapter.getMethodConstId("x:TestClass", "construct"),
                      -adapter.ensureValueConstantId("Hello World!"), 0),
             new Var(adapter.getClassConstId("x:String")),   // #1
             new Get(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
+            new X_Print(1),
             new Var(adapter.getClassConstId("x:Int64")),    // #2
             new Invoke_01(0, -adapter.getMethodConstId("x:TestClass", "method1"), 2),
             new X_Print(2),
@@ -86,9 +88,10 @@ public class xTestApp extends xModule
             new X_Print(3),
             new HandlerEnd(1),
 
-            new Var(adapter.getClassConstId("x:TestClass")),     // #3 (t2)
-            new New_1(adapter.getMethodConstId("x:TestClass2", "construct"),
-                     -adapter.ensureValueConstantId("Goodbye"), 3),
+            new NVar(adapter.getClassConstId("x:TestClass"), adapter.ensureValueConstantId("t2")), // #3 (t2)
+            new New_N(adapter.getMethodConstId("x:TestClass2", "construct"),
+                     new int[]{-adapter.ensureValueConstantId(42),
+                              -adapter.ensureValueConstantId("Goodbye")}, 3),
             new Var(adapter.getClassConstId("x:String")),   // #4
             new Get(3, adapter.getPropertyConstId("x:TestClass", "prop1"), 4),
             new X_Print(4),
@@ -96,14 +99,11 @@ public class xTestApp extends xModule
             new Invoke_01(3, -adapter.getMethodConstId("x:TestClass", "method1"), 5),
             new X_Print(5),
 
-            new Var(adapter.getClassConstId("x:TestClass")),     // #6 (t3)
-            new New_1(adapter.getMethodConstId("x:TestClass2", "construct"),
-                     -adapter.ensureValueConstantId("ABC"), 6),
-            new Var(adapter.getClassConstId("x:Function")),   // #7 (fn)
-            new MBind(6, -adapter.getMethodConstId("x:TestClass", "method1"), 7),
-            new Var(adapter.getClassConstId("x:Int64")),    // #8
-            new Call_01(7, 8),
-            new X_Print(2),
+            new NVar(adapter.getClassConstId("x:Function"), adapter.ensureValueConstantId("fn")), // #6 (fn)
+            new MBind(3, -adapter.getMethodConstId("x:TestClass", "method1"), 6),
+            new Var(adapter.getClassConstId("x:Int64")),    // #7
+            new Call_01(6, 7),
+            new X_Print(7),
 
             new Return_0(),
             };
@@ -114,7 +114,7 @@ public class xTestApp extends xModule
 
         FunctionTemplate ftLambda$1 = ensureFunctionTemplate("lambda$1",
                 new String[] {"x:Int64", "x:Int64", "x:Exception"}, VOID);
-        ftLambda$1.setAccess(Access.Private);
+        ftLambda$1.setAccess(Constants.Access.PRIVATE);
         ftLambda$1.m_aop = new Op[]
             { // #0 = c; #1 = r, #2 = x
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.lambda$1 #")),
