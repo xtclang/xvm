@@ -8,19 +8,19 @@ import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
 
 /**
- * CONSTR_N CONST-CONSTRUCT, #params:(rvalue)
+ * CONSTR_1 CONST-CONSTRUCT, rvalue
  *
  * @author gg 2017.03.08
  */
-public class Construct_N extends OpCallable
+public class Construct_1 extends OpCallable
     {
     private final int f_nConstructId;
-    private final int[] f_anArgValue;
+    private final int f_nArgValue;
 
-    public Construct_N(int nConstructorId, int[] anArg)
+    public Construct_1(int nConstructorId, int anArg)
         {
         f_nConstructId = nConstructorId;
-        f_anArgValue = anArg;
+        f_nArgValue = anArg;
         }
 
     @Override
@@ -33,8 +33,9 @@ public class Construct_N extends OpCallable
             {
             ConstructTemplate constructor = (ConstructTemplate) getFunctionTemplate(frame, f_nConstructId);
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount(), 1);
+            ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
             ahVar[0] = frame.getThis();
+            ahVar[1] = frame.getArgument(f_nArgValue);
 
             hfnFinally = constructor.makeFinalizer(ahVar);
 

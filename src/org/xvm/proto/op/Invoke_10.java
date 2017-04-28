@@ -35,7 +35,7 @@ public class Invoke_10 extends OpInvocable
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-            MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
+            MethodTemplate method = getMethodTemplate(frame, template, f_nMethodId);
 
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
 

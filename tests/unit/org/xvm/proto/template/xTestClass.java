@@ -57,7 +57,7 @@ public class xTestClass extends TypeCompositionTemplate
             new LGet(adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
             new Var(adapter.getClassConstId("x:Int64")), // #2 (of)
             new IVar(adapter.getClassConstId("x:String"), adapter.ensureValueConstantId("world")), // #3
-            new Invoke_11(1, -adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
+            new Invoke_11(1, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
             new Var(adapter.getClassConstId("x:Int64")), // #4
             new Get(1, adapter.getPropertyConstId("x:String", "length"), 4),
             new Add(4, 2, 4),

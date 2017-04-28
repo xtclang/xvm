@@ -37,7 +37,7 @@ public class MBind extends OpInvocable
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-            MethodTemplate method = getMethodTemplate(frame, template, -f_nMethodId);
+            MethodTemplate method = getMethodTemplate(frame, template, f_nMethodId);
 
             hException = frame.assignValue(f_nResultValue, template.isService() ?
                     xFunction.makeAsyncHandle(method).bind(0, hTarget) :
