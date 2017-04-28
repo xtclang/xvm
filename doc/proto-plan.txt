@@ -29,7 +29,5 @@
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
-- Issue with "construct super" return - see OpCallable.callConstructor()
-
 - TypeSet and TypeComposition could be mutated by different threads
     (hence the use of ConcurrentHashMap in TypeSet and synchronization in TypeComposition)

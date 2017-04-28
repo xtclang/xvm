@@ -48,6 +48,12 @@ public class ServiceContext
         return ServiceDaemon.s_tloContext.get();
         }
 
+    public void setService(ServiceHandle hService)
+        {
+        assert m_hService == null;
+        m_hService = hService;
+        }
+
     @Override
     public String toString()
         {
@@ -132,7 +138,13 @@ public class ServiceContext
 
         context.m_daemon.add(new ConstructRequest(this, constructor, ahArg, future));
 
-        return future;
+        return future.whenComplete((r, x) ->
+            {
+            if (x != null)
+                {
+                context.m_daemon.kill();
+                }
+            });
         }
 
     // send and asynchronous "invoke" message with zero or one return value
@@ -268,11 +280,7 @@ public class ServiceContext
 
             xService template = (xService) f_constructor.getClazzTemplate();
 
-            ServiceHandle hService = (ServiceHandle) template.createService(context);
-
-            f_ahArg[0] = context.m_hService = hService;
-
-            ExceptionHandle hException = f_constructor.construct(frame, f_ahArg, 0);
+            ExceptionHandle hException = template.construct(frame, f_constructor, f_ahArg, 0);
 
             sendResponse1(f_contextCaller, hException, frame, 1, f_future);
             }

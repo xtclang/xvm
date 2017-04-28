@@ -51,7 +51,7 @@ public class xException
         }
 
     @Override
-    public ObjectHandle createStruct()
+    public ObjectHandle createStruct(Frame frame)
         {
         return makeHandle(null, null);
         }

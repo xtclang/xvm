@@ -101,6 +101,10 @@ public class ServiceDaemon
                     }
                 }
             }
+        catch (InterruptedException e)
+            {
+            setState(State.Stopping);
+            }
         catch (Throwable e)
             {
             // TODO

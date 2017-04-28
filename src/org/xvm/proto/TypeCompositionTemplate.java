@@ -499,12 +499,43 @@ public abstract class TypeCompositionTemplate
         }
 
     // return a handle with this:struct access
-    public ObjectHandle createStruct()
+    protected ObjectHandle createStruct(Frame frame)
         {
         assert f_asFormalType.length == 0;
         assert f_shape == Shape.Class || f_shape == Shape.Const;
 
         return new GenericHandle(f_clazzCanonical, f_clazzCanonical.ensureStructType());
+        }
+
+    // call the constructor, then the finalizers; change this:struct handle to this:public
+    public ExceptionHandle construct(Frame frame, ConstructTemplate constructor,
+                                     ObjectHandle[] ahVar, int iReturn)
+        {
+        // this:struct
+        ahVar[0] = createStruct(frame);
+
+        // ahVar[0] == this:struct
+        ExceptionHandle hException = frame.call1(constructor, null, ahVar, -1);
+
+        if (hException == null)
+            {
+            xFunction.FullyBoundHandle fnFinalize = xFunction.FullyBoundHandle.resolveFinalizer(
+                    frame.m_hfnFinally, constructor.makeFinalizer(ahVar));
+            if (fnFinalize != null)
+                {
+                // this:struct -> this:private
+                hException = fnFinalize.callChain(frame, Constants.Access.PRIVATE);
+                }
+
+            if (hException == null)
+                {
+                ObjectHandle hNew = ahVar[0];
+                hException = frame.assignValue(iReturn,
+                        hNew.f_clazz.ensureAccess(hNew, Constants.Access.PUBLIC));
+                }
+            }
+
+        return hException;
         }
 
     // does this template extend that?
@@ -1027,33 +1058,6 @@ public abstract class TypeCompositionTemplate
         public int getVarCount()
             {
             return m_ftFinally == null ? m_cVars : Math.max(m_cVars, m_ftFinally.m_cVars);
-            }
-
-        // call the constructor, then the finalizers; change this:struct handle to this:public
-        public ExceptionHandle construct(Frame frame, ObjectHandle[] ahVar, int iReturn)
-            {
-            // ahVar[0] == this:struct
-            ExceptionHandle hException = frame.call1(this, null, ahVar, -1);
-
-            if (hException == null)
-                {
-                xFunction.FullyBoundHandle fnFinalize = xFunction.FullyBoundHandle.resolveFinalizer(
-                        frame.m_hfnFinally, makeFinalizer(ahVar));
-                if (fnFinalize != null)
-                    {
-                    // this:struct -> this:private
-                    hException = fnFinalize.callChain(frame, Constants.Access.PRIVATE);
-                    }
-
-                if (hException == null)
-                    {
-                    ObjectHandle hNew = ahVar[0];
-                    hException = frame.assignValue(iReturn,
-                            hNew.f_clazz.ensureAccess(hNew, Constants.Access.PUBLIC));
-                    }
-                }
-
-            return hException;
             }
         }
 

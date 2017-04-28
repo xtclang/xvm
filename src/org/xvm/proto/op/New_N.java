@@ -40,14 +40,11 @@ public class New_N extends OpCallable
             if (template.isService())
                 {
                 hException = ((xService) template).
-                        asyncCreateService(frame, constructor, ahVar, f_nRetValue);
+                        asyncConstruct(frame, constructor, ahVar, f_nRetValue);
                 }
             else
                 {
-                // this:struct
-                ahVar[0] = template.createStruct();
-
-                hException = constructor.construct(frame, ahVar, f_nRetValue);
+                hException = template.construct(frame, constructor, ahVar, f_nRetValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

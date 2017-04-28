@@ -75,25 +75,22 @@ public class xService
         }
 
     @Override
-    public ObjectHandle createStruct()
-        {
-        throw new IllegalStateException();
-        }
-
-    public ObjectHandle createService(ServiceContext context)
+    public ObjectHandle createStruct(Frame frame)
         {
         ServiceHandle hService = new ServiceHandle(
-                f_clazzCanonical, f_clazzCanonical.ensureStructType(), context);
+                f_clazzCanonical, f_clazzCanonical.ensureStructType(), frame.f_context);
 
         hService.createFields();
 
         setField(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
 
+        frame.f_context.setService(hService);
+
         return hService;
         }
 
-    public ExceptionHandle asyncCreateService(Frame frame, ConstructTemplate constructor,
-                                              ObjectHandle[] ahArg, int iReturn)
+    public ExceptionHandle asyncConstruct(Frame frame, ConstructTemplate constructor,
+                                          ObjectHandle[] ahArg, int iReturn)
         {
         ServiceContext contextCur = frame.f_context;
         ServiceContext contextNew = contextCur.f_container.createContext();
@@ -109,7 +106,6 @@ public class xService
         return hException;
         }
 
-    // return an exception
     public ExceptionHandle asyncInvoke1(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
                                         ObjectHandle[] ahArg, int iReturn)
         {
@@ -138,7 +134,6 @@ public class xService
         return null;
         }
 
-    // return an exception
     public ExceptionHandle asyncInvokeN(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
                                         ObjectHandle[] ahArg, int[] aiReturn)
         {
