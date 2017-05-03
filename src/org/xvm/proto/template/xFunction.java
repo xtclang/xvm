@@ -322,7 +322,7 @@ public class xFunction
                 m_ahArg[0] = hThis.f_clazz.ensureAccess(hThis, access);
                 }
 
-            ExceptionHandle hException = call1(frame, Utils.OBJECTS_NONE, -1);
+            ExceptionHandle hException = call1(frame, Utils.OBJECTS_NONE, Frame.R_UNUSED);
             if (m_next != null)
                 {
                 ExceptionHandle hExNext = m_next.callChain(frame, access);

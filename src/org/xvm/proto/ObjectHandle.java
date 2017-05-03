@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.util.ListMap;
 
 import java.util.Map;
@@ -73,9 +74,19 @@ public abstract class ObjectHandle
             {
             f_clazz.f_template.forEachProperty(pt ->
                 {
-                if (!pt.isReadOnly())
+                RefHandle templateRef = null;
+                if (pt.isRef())
                     {
-                    m_mapFields.put(pt.f_sName, null);
+                    String sReferent = pt.f_typeName.getSimpleName();
+                    TypeCompositionTemplate templateReferent =
+                            f_clazz.f_template.f_types.getTemplate(sReferent);
+                    templateRef = pt.createRefHandle(templateReferent == null ? null :
+                        templateReferent.f_clazzCanonical.ensurePublicType());
+                    }
+
+                if (!pt.isReadOnly() || templateRef != null)
+                    {
+                    m_mapFields.put(pt.f_sName, templateRef);
                     }
                 });
             }
@@ -176,6 +187,12 @@ public abstract class ObjectHandle
             {
             assert m_lValue == UNASSIGNED;
             m_lValue = lValue;
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return m_lValue == ((JavaLong) obj).m_lValue;
             }
 
         @Override

@@ -33,13 +33,13 @@ public class Call_N0 extends OpCallable
             {
             if (f_nFunctionValue == A_SUPER)
                 {
-                hException = callSuperN(frame, f_anArgValue, -1);
+                hException = callSuperN(frame, f_anArgValue, Frame.R_UNUSED);
                 }
             else if (f_nFunctionValue >= 0)
                 {
                 FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
-                hException = function.call1(frame, f_anArgValue, -1);
+                hException = function.call1(frame, f_anArgValue, Frame.R_UNUSED);
                 }
             else
                 {
@@ -47,7 +47,7 @@ public class Call_N0 extends OpCallable
 
                 ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.m_cVars, 0);
 
-                hException = frame.call1(function, null, ahVar, -1);
+                hException = frame.call1(function, null, ahVar, Frame.R_UNUSED);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

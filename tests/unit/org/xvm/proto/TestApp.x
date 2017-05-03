@@ -96,27 +96,27 @@ module TestApp
 
     static Void testService()
         {
-        TestService service = new TestService();
-        print(service);
+        TestService svc = new TestService();
+        print(svc);
 
-        Int c = service.increment();
+        Int c = svc.increment();
         print(c);
 
-        service.counter = 17;
-        c = service.counter;
+        svc.counter = 17;
+        c = svc.counter;
         print(c);
 
-        function Int() fnInc = service.increment;
+        function Int() fnInc = svc.increment;
         c = fnInc();
         print(c);
 
-        @future Int fc = service.increment();
+        @future Int fc = svc.increment();
         FutureRef<Int> rfc = &fc;
         print(rfc);
         print(fc);
         print(rfc);
 
-        FutureRef<Int> rfc2 = &service.increment();
+        FutureRef<Int> rfc2 = &svc.increment();
         @future Int rfc3 = rfc2;
         rfc2.whenComplete((r, x) ->
             {
@@ -128,7 +128,7 @@ module TestApp
         // handled exception
         try
             {
-            c = service.throwing();
+            c = svc.throwing();
             }
         catch (Exception e)
             {
@@ -145,8 +145,11 @@ module TestApp
             print(e);
             }
 
+        print(++svc.counter2);
+        print(svc.counter++);
+
         // unhandled exception
-        service.throwing();
+        svc.throwing();
         }
 
     service TestService(Int counter = 48)
@@ -163,6 +166,8 @@ module TestApp
                 print("In counter.set");
                 super(c);
                 }
+
+        @atomic Int counter2 = 5;
 
         // post-increment
         Int increment()

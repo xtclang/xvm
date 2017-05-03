@@ -13,7 +13,7 @@
     <keywords keywords="class;const;construct;enum;extends;function;implements;incorporates;interface;into;module;mixin;package;private;protected;public;service;static;trait" ignore_case="false" />
     <keywords2 keywords="assert;case;catch;else;false;finally;for;if;instanceof;new;null;return;super;switch;true;try;while" />
     <keywords3 keywords="conditional;typedef" />
-    <keywords4 keywords="@auto;@future;@inject;@lazy;@op;@ro;@soft;@watch;@Override" />
+    <keywords4 keywords="@auto;@atomic;@future;@inject;@lazy;@op;@ro;@soft;@watch;@Override" />
   </highlighting>
   <extensionMap>
     <mapping ext="x" />

@@ -34,7 +34,7 @@ public class xTestClass extends TypeCompositionTemplate
         construct.m_aop = new Op[]
             { // #0 = this:struct; #1 = s
             new X_Print(-adapter.ensureValueConstantId("# in constructor: TestClass #")),
-            new Set(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
+            new PSet(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
             new Return_0(),
             };
         construct.m_cVars = 2;
@@ -59,7 +59,7 @@ public class xTestClass extends TypeCompositionTemplate
             new IVar(adapter.getClassConstId("x:String"), adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(1, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
             new Var(adapter.getClassConstId("x:Int64")), // #4
-            new Get(1, adapter.getPropertyConstId("x:String", "length"), 4),
+            new PGet(1, adapter.getPropertyConstId("x:String", "length"), 4),
             new Add(4, 2, 4),
             new Return_1(4),
             };

@@ -56,7 +56,7 @@ public class xTestApp extends xModule
             new Invoke_11(0, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
 
             new Var(adapter.getClassConstId("x:Int64")), // #4
-            new Get(0, adapter.getPropertyConstId("x:String", "length"), 4),
+            new PGet(0, adapter.getPropertyConstId("x:String", "length"), 4),
             new Add(4, 2, 4),
             new X_Print(4),
 
@@ -73,7 +73,7 @@ public class xTestApp extends xModule
             new New_1(adapter.getMethodConstId("x:TestClass", "construct"),
                      -adapter.ensureValueConstantId("Hello World!"), 0),
             new Var(adapter.getClassConstId("x:String")),   // #1
-            new Get(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
+            new PGet(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
             new X_Print(1),
             new Var(adapter.getClassConstId("x:Int64")),    // #2
             new Invoke_01(0, adapter.getMethodConstId("x:TestClass", "method1"), 2),
@@ -93,7 +93,7 @@ public class xTestApp extends xModule
                      new int[]{-adapter.ensureValueConstantId(42),
                               -adapter.ensureValueConstantId("Goodbye")}, 3),
             new Var(adapter.getClassConstId("x:String")),   // #4
-            new Get(3, adapter.getPropertyConstId("x:TestClass", "prop1"), 4),
+            new PGet(3, adapter.getPropertyConstId("x:TestClass", "prop1"), 4),
             new X_Print(4),
             new Var(adapter.getClassConstId("x:Int64")),    // #5
             new Invoke_01(3, adapter.getMethodConstId("x:TestClass", "method1"), 5),
@@ -127,7 +127,7 @@ public class xTestApp extends xModule
         FunctionTemplate ftTestService = ensureFunctionTemplate("testService", VOID, VOID);
         ftTestService.m_aop = new Op[]
             {
-            new Var(adapter.getClassConstId("x:TestService")),     // #0
+            new NVar(adapter.getClassConstId("x:TestService"), adapter.ensureValueConstantId("svc")),     // #0
             new New_1(adapter.getMethodConstId("x:TestService", "construct"),
                      -adapter.ensureValueConstantId(48), 0),
             new X_Print(0),
@@ -136,9 +136,9 @@ public class xTestApp extends xModule
             new Invoke_01(0, adapter.getMethodConstId("x:TestService", "increment"), 1),
             new X_Print(1),
 
-            new Set(0, adapter.getPropertyConstId("x:TestService", "counter"),
+            new PSet(0, adapter.getPropertyConstId("x:TestService", "counter"),
                       -adapter.ensureValueConstantId(17)),
-            new Get(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
+            new PGet(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
             new X_Print(1),
 
             new NVar(adapter.getClassConstId("x:Function"),
@@ -184,6 +184,12 @@ public class xTestApp extends xModule
             new HandlerStart(), // #8 (e)
             new X_Print(8),
             new HandlerEnd(1),
+
+            new Var(adapter.getClassConstId("x:Int64")), // #8
+            new PPreInc(0, adapter.getPropertyConstId("x:TestService", "counter2"), 8),
+            new X_Print(8),
+//            new PPostInc(0, adapter.getPropertyConstId("x:TestService", "counter"), 8),
+//            new X_Print(8),
 
             new Invoke_00(0, adapter.getMethodConstId("x:TestService", "throwing")),
             new Return_0(),

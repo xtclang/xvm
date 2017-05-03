@@ -1,7 +1,9 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constants;
+import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Shape;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String>)
@@ -156,6 +158,29 @@ public class TypeComposition
         {
         // TODO: ByComposition may not have a single template
         return f_template.createHandle(this);
+        }
+
+    // TODO: this needs to be dramatically improved
+    public ExceptionHandle callDefaultConstructors(Frame frame, ObjectHandle[] ahVar)
+        {
+        TypeCompositionTemplate template = f_template;
+        TypeCompositionTemplate templateSuper = template.m_templateSuper;
+
+        // just call the super chain for now
+        if (templateSuper != null)
+            {
+            TypeComposition clazzSuper = templateSuper.resolve(f_atGenericActual);
+            ExceptionHandle hException = clazzSuper.callDefaultConstructors(frame, ahVar);
+
+            if (hException != null)
+                {
+                return hException;
+                }
+            }
+
+        FunctionTemplate ftDefault = template.getDefaultConstructTemplate();
+
+        return ftDefault == null ? null : frame.call1(ftDefault, ahVar[0], ahVar, Frame.R_UNUSED);
         }
 
     @Override

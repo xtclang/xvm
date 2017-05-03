@@ -8,19 +8,21 @@ import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 /**
- * LSET CONST_PROPERTY, rvalue ; local set (target=this)
+ * P_PREINC rvalue-target, CONST_PROPERTY, lvalue ; same as PREINC for a register
  *
  * @author gg 2017.03.08
  */
-public class LSet extends OpInvocable
+public class PPreInc extends OpInvocable
     {
+    private final int f_nTarget;
     private final int f_nPropConstId;
-    private final int f_nValue;
+    private final int f_nRetValue;
 
-    public LSet(int nPropId, int nValue)
+    public PPreInc(int nTarget, int nArg, int nRet)
         {
-        f_nPropConstId = nPropId;
-        f_nValue = nValue;
+        f_nTarget = nTarget;
+        f_nPropConstId = nArg;
+        f_nRetValue = nRet;
         }
 
     @Override
@@ -29,14 +31,13 @@ public class LSet extends OpInvocable
         ExceptionHandle hException;
         try
             {
-            ObjectHandle hTarget = frame.getThis();
-            ObjectHandle hValue = frame.getArgument(f_nValue);
+            ObjectHandle hTarget = frame.getArgument(f_nTarget);
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
             PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
 
-            hException = template.setPropertyValue(frame, hTarget, property, hValue);
+            hException = template.invokePreInc(frame, hTarget, property, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

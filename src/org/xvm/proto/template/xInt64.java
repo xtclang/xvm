@@ -60,17 +60,6 @@ public class xInt64
         }
 
     @Override
-    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        JavaLong hThis = (JavaLong) hTarget;
-
-        // TODO: check overflow
-        ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
-
-        return frame.assignValue(iReturn, hResult);
-        }
-
-    @Override
     public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
@@ -83,5 +72,26 @@ public class xInt64
     public static JavaLong makeHandle(long lValue)
         {
         return new JavaLong(INSTANCE.f_clazzCanonical, lValue);
+        }
+
+    @Override
+    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget,
+                                        PropertyTemplate property, int iReturn)
+        {
+        assert property == null;
+
+        JavaLong hThis = (JavaLong) hTarget;
+
+        // TODO: check overflow
+        ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
+
+        return frame.assignValue(iReturn, hResult);
+        }
+
+    @Override
+    public ExceptionHandle invokePostInc(Frame frame, ObjectHandle hTarget,
+                                         PropertyTemplate property, int iReturn)
+        {
+        return invokePreInc(frame, hTarget, property, iReturn);
         }
     }

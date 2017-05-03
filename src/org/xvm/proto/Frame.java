@@ -34,6 +34,10 @@ public class Frame
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
     public ExceptionHandle      m_hException;   // an exception
     public FullyBoundHandle     m_hfnFinally;   // a "finally" method for the constructors
+    public ObjectHandle         m_hFrameLocal;  // a "frame local" holding area; assigned by
+
+    public final static int R_UNUSED = -1; // an register index for an "unused return value"
+    public final static int R_FRAME  = -2; // an register index for the "frame local value"
 
     protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
@@ -271,7 +275,13 @@ public class Frame
     // return "private:this"
     public ObjectHandle getThis()
         {
-        return f_ahVar[0];
+        assert f_hTarget != null;
+        return f_hTarget;
+        }
+
+    public ObjectHandle getFrameLocal()
+        {
+        return m_hFrameLocal;
         }
 
     public ObjectHandle getArgument(int iArg)
@@ -310,31 +320,42 @@ public class Frame
 
     public ExceptionHandle assignValue(int nVar, ObjectHandle hValue)
         {
-        VarInfo info = f_aInfo[nVar];
-
-        if (info.m_fDynamicRef)
+        switch (nVar)
             {
-            return ((RefHandle) f_ahVar[nVar]).set(hValue);
-            }
+            case R_FRAME:
+                m_hFrameLocal = hValue;
+                // fall through
 
-        if (hValue instanceof FutureHandle)
-            {
-            FutureHandle hFuture = (FutureHandle) hValue;
-            if (hFuture.f_fSynthetic)
-                {
-                try
-                    {
-                    hValue = hFuture.get();
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return e.getExceptionHandle();
-                    }
-                }
-            }
+            case R_UNUSED:
+                return null;
 
-        f_ahVar[nVar] = hValue;
-        return null;
+            default:
+                VarInfo info = f_aInfo[nVar];
+
+                if (info.m_fDynamicRef)
+                    {
+                    return ((RefHandle) f_ahVar[nVar]).set(hValue);
+                    }
+
+                if (hValue instanceof FutureHandle)
+                    {
+                    FutureHandle hFuture = (FutureHandle) hValue;
+                    if (hFuture.f_fSynthetic)
+                        {
+                        try
+                            {
+                            hValue = hFuture.get();
+                            }
+                        catch (ExceptionHandle.WrapperException e)
+                            {
+                            return e.getExceptionHandle();
+                            }
+                        }
+                    }
+
+                f_ahVar[nVar] = hValue;
+                return null;
+            }
         }
 
     // temporary

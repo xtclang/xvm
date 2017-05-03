@@ -3,7 +3,7 @@ package org.xvm.proto.template;
 import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.op.Return_0;
-import org.xvm.proto.op.Set;
+import org.xvm.proto.op.PSet;
 
 /**
  * TODO:
@@ -37,8 +37,8 @@ public class xException
 
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {
-            new Set(0, f_types.f_constantPool.getPropertyConstId("x:Exception", "text"), 1),
-            new Set(0, f_types.f_constantPool.getPropertyConstId("x:Exception", "cause"), 2),
+            new PSet(0, f_types.f_constantPool.getPropertyConstId("x:Exception", "text"), 1),
+            new PSet(0, f_types.f_constantPool.getPropertyConstId("x:Exception", "cause"), 2),
             new Return_0(),
             };
         ct.m_cVars = 3;
@@ -51,7 +51,7 @@ public class xException
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame)
+    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         return makeHandle(null, null);
         }
@@ -60,7 +60,7 @@ public class xException
         {
         ExceptionHandle hException = makeHandle(null, null);
 
-        INSTANCE.setField(hException, INSTANCE.getPropertyTemplate("text"), xString.makeHandle(sMessage));
+        INSTANCE.setFieldValue(hException, INSTANCE.getPropertyTemplate("text"), xString.makeHandle(sMessage));
 
         return hException;
         }
@@ -74,9 +74,9 @@ public class xException
         ServiceContext context = ServiceContext.getCurrentContext();
         Frame frame = context.getCurrentFrame();
 
-        INSTANCE.setField(hException, INSTANCE.getPropertyTemplate("stackTrace"),
+        INSTANCE.setFieldValue(hException, INSTANCE.getPropertyTemplate("stackTrace"),
                 xString.makeHandle(frame.getStackTrace()));
-        INSTANCE.setField(hException, INSTANCE.getPropertyTemplate("cause"), hCause);
+        INSTANCE.setFieldValue(hException, INSTANCE.getPropertyTemplate("cause"), hCause);
 
         return hException;
         }

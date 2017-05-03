@@ -57,7 +57,7 @@ public class xFutureRef
                     ahArg[1] = x == null ? xNullable.NULL :
                                 ((ExceptionHandle.WrapperException) x).getExceptionHandle();
 
-                    ExceptionHandle hException = hNotify.call1(frame, ahArg, -1);
+                    ExceptionHandle hException = hNotify.call1(frame, ahArg, Frame.R_UNUSED);
 
                     if (hException != null)
                         {

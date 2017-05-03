@@ -8,21 +8,21 @@ import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 /**
- * Set rvalue-target, CONST_PROPERTY, rvalue
+ * P_POSTINC rvalue-target, CONST_PROPERTY, lvalue ; same as POSTINC for a register
  *
  * @author gg 2017.03.08
  */
-public class Set extends OpInvocable
+public class PPostInc extends OpInvocable
     {
     private final int f_nTarget;
     private final int f_nPropConstId;
-    private final int f_nValue;
+    private final int f_nRetValue;
 
-    public Set(int nTarget, int nPropId, int nValue)
+    public PPostInc(int nTarget, int nArg, int nRet)
         {
         f_nTarget = nTarget;
-        f_nPropConstId = nPropId;
-        f_nValue = nValue;
+        f_nPropConstId = nArg;
+        f_nRetValue = nRet;
         }
 
     @Override
@@ -32,21 +32,12 @@ public class Set extends OpInvocable
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTarget);
-            ObjectHandle hValue = frame.getArgument(f_nValue);
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-            PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
+            PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
 
-
-            if (hTarget.isStruct())
-                {
-                hException = template.setField(hTarget, property, hValue);
-                }
-            else
-                {
-                hException = template.setProperty(frame, hTarget, property, hValue);
-                }
+            hException = template.invokePostInc(frame, hTarget, property, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

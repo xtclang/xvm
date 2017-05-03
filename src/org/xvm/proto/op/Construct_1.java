@@ -34,12 +34,12 @@ public class Construct_1 extends OpCallable
             ConstructTemplate constructor = (ConstructTemplate) getFunctionTemplate(frame, f_nConstructId);
 
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
-            ahVar[0] = frame.getThis();
+            ahVar[0] = frame.getArgument(0);
             ahVar[1] = frame.getArgument(f_nArgValue);
 
             hfnFinally = constructor.makeFinalizer(ahVar);
 
-            hException = frame.call1(constructor, null, ahVar, -1);
+            hException = frame.call1(constructor, null, ahVar, Frame.R_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

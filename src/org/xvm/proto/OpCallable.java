@@ -1,15 +1,12 @@
 package org.xvm.proto;
 
-import org.xvm.asm.Constants;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyAccessTemplate;
-import org.xvm.proto.template.xFunction.FullyBoundHandle;
 
 /**
  * Common base for CALL_ ops.
@@ -45,7 +42,7 @@ public abstract class OpCallable extends Op
             PropertyAccessTemplate propertyAccess = (PropertyAccessTemplate) methodSuper;
             TypeCompositionTemplate template = propertyAccess.getClazzTemplate();
 
-            return template.getField(frame, hThis, propertyAccess.f_property, iRet);
+            return template.getFieldValue(frame, hThis, propertyAccess.f_property, iRet);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
@@ -74,13 +71,13 @@ public abstract class OpCallable extends Op
             {
             PropertyAccessTemplate propertyAccess = (PropertyAccessTemplate) methodSuper;
             TypeCompositionTemplate template = propertyAccess.getClazzTemplate();
-            return template.setField(hThis, propertyAccess.f_property, hArg);
+            return template.setFieldValue(hThis, propertyAccess.f_property, hArg);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
         ahVar[1] = hArg;
 
-        return frame.call1(methodSuper, hThis, ahVar, -1);
+        return frame.call1(methodSuper, hThis, ahVar, Frame.R_UNUSED);
         }
 
     // call super() methods with multiple arguments and no more than one return

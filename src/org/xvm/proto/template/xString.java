@@ -82,17 +82,10 @@ public class xString
             case "indexOf": // indexOf(String)
                 if (hArg instanceof StringHandle)
                     {
-                    if (iReturn >= 0)
-                        {
-                        int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
+                    int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
 
-                        ObjectHandle hResult = xInt64.makeHandle(nOf);
-                        return frame.assignValue(iReturn, hResult);
-                        }
-                    else
-                        {
-                        return null;
-                        }
+                    ObjectHandle hResult = xInt64.makeHandle(nOf);
+                    return frame.assignValue(iReturn, hResult);
                     }
             }
 

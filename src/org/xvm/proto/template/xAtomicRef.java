@@ -25,6 +25,12 @@ public class xAtomicRef
         INSTANCE = this;
         }
 
+    // subclassing
+    protected xAtomicRef(TypeSet types, String sName, String sSuper, Shape shape)
+        {
+        super(types, sName, sSuper, shape);
+        }
+
     @Override
     public void initDeclared()
         {

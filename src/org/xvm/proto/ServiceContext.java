@@ -83,7 +83,7 @@ public class ServiceContext
         // the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
-        Frame frame = createFrame1(null, null, null, ahVar, -1);
+        Frame frame = createFrame1(null, null, null, ahVar, Frame.R_UNUSED);
 
         for (int i = 0; i < cReturns; i++)
             {
@@ -131,12 +131,12 @@ public class ServiceContext
         }
 
     // send and asynchronous "construct service" message
-    public CompletableFuture<ServiceHandle> sendConstructRequest(
-            ServiceContext context, ConstructTemplate constructor, ObjectHandle[] ahArg)
+    public CompletableFuture<ServiceHandle> sendConstructRequest(ServiceContext context,
+                ConstructTemplate constructor, TypeComposition clazz, ObjectHandle[] ahArg)
         {
         CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
 
-        context.m_daemon.add(new ConstructRequest(this, constructor, ahArg, future));
+        context.m_daemon.add(new ConstructRequest(this, constructor, clazz, future, ahArg));
 
         return future.whenComplete((r, x) ->
             {
@@ -261,14 +261,16 @@ public class ServiceContext
         {
         private final ServiceContext f_contextCaller;
         private final ConstructTemplate f_constructor;
+        private final TypeComposition f_clazz;
         private final ObjectHandle[] f_ahArg;
         private final CompletableFuture<ServiceHandle> f_future;
 
         public ConstructRequest(ServiceContext contextCaller, ConstructTemplate constructor,
-                              ObjectHandle[] ahArg, CompletableFuture<ServiceHandle> future)
+                                TypeComposition clazz, CompletableFuture<ServiceHandle> future, ObjectHandle[] ahArg)
             {
             f_contextCaller = contextCaller;
             f_constructor = constructor;
+            f_clazz = clazz;
             f_ahArg = ahArg;
             f_future = future;
             }
@@ -280,7 +282,7 @@ public class ServiceContext
 
             xService template = (xService) f_constructor.getClazzTemplate();
 
-            ExceptionHandle hException = template.construct(frame, f_constructor, f_ahArg, 0);
+            ExceptionHandle hException = template.construct(frame, f_constructor, f_clazz, f_ahArg, 0);
 
             sendResponse1(f_contextCaller, hException, frame, 1, f_future);
             }
@@ -413,7 +415,7 @@ public class ServiceContext
             {
             Frame frame = context.createServiceEntryFrame(1);
 
-            ExceptionHandle hException = f_property.getClazzTemplate().getProperty(
+            ExceptionHandle hException = f_property.getClazzTemplate().getPropertyValue(
                     frame, context.m_hService, f_property, 0);
 
             sendResponse1(f_contextCaller, hException, frame, 1, f_future);
@@ -445,7 +447,7 @@ public class ServiceContext
             {
             Frame frame = context.createServiceEntryFrame(0);
 
-            ExceptionHandle hException = f_property.getClazzTemplate().setProperty(
+            ExceptionHandle hException = f_property.getClazzTemplate().setPropertyValue(
                     frame, context.m_hService, f_property, f_hValue);
 
             sendResponse1(f_contextCaller, hException, frame, 0, f_future);

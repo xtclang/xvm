@@ -34,7 +34,7 @@ public class xTestClass2 extends TypeCompositionTemplate
         construct.m_aop = new Op[]
             { // #0 = this:struct; #1 = i; #2 = s
             new X_Print(-adapter.ensureValueConstantId("# in constructor: TestClass2 #")),
-            new Set(0, adapter.getPropertyConstId("x:TestClass2", "prop2"), 1),
+            new PSet(0, adapter.getPropertyConstId("x:TestClass2", "prop2"), 1),
             new Construct_1(adapter.getMethodConstId("x:TestClass", "construct"), 2),
             new Return_0(),
             };

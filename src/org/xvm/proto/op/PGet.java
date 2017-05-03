@@ -8,17 +8,19 @@ import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 /**
- * LGET CONST_PROPERTY, lvalue ; local get (target=this)
+ * P_GET rvalue-target, CONST_PROPERTY, lvalue
  *
  * @author gg 2017.03.08
  */
-public class LGet extends OpInvocable
+public class PGet extends OpInvocable
     {
+    private final int f_nTarget;
     private final int f_nPropConstId;
     private final int f_nRetValue;
 
-    public LGet(int nPropId, int nRet)
+    public PGet(int nTarget, int nPropId, int nRet)
         {
+        f_nTarget = nTarget;
         f_nPropConstId = nPropId;
         f_nRetValue = nRet;
         }
@@ -26,13 +28,22 @@ public class LGet extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hTarget = frame.getThis();
+        ExceptionHandle hException;
 
-        TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+        try
+            {
+            ObjectHandle hTarget = frame.getArgument(f_nTarget);
 
-        PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
+            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-        ExceptionHandle hException = template.getPropertyValue(frame, hTarget, property, f_nRetValue);
+            PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
+
+            hException = template.getPropertyValue(frame, hTarget, property, f_nRetValue);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
+            }
 
         if (hException == null)
             {

@@ -25,19 +25,10 @@ public abstract class OpInvocable extends Op
 
     protected PropertyTemplate getPropertyTemplate(Frame frame, TypeCompositionTemplate template, int nPropValue)
         {
-        if (nPropValue >= 0)
-            {
-            // PropertyHandle hProperty = (PropertyHandle) frame.f_ahVar[nPropValue];
+        assert (nPropValue >= 0);
 
-            // TODO:
-            return null;
-            }
-        else
-            {
-            PropertyConstant constProperty =
-                    frame.f_context.f_constantPool.getPropertyConstant(-nPropValue);
-            // TODO parameters, returns
-            return template.getPropertyTemplate(constProperty.getName());
-            }
+        PropertyConstant constProperty =
+                frame.f_context.f_constantPool.getPropertyConstant(nPropValue);
+        return template.getPropertyTemplate(constProperty.getName());
         }
     }

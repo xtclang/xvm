@@ -75,14 +75,14 @@ public class xService
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame)
+    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         ServiceHandle hService = new ServiceHandle(
                 f_clazzCanonical, f_clazzCanonical.ensureStructType(), frame.f_context);
 
         hService.createFields();
 
-        setField(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
+        setFieldValue(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
 
         frame.f_context.setService(hService);
 
@@ -90,7 +90,7 @@ public class xService
         }
 
     public ExceptionHandle asyncConstruct(Frame frame, ConstructTemplate constructor,
-                                          ObjectHandle[] ahArg, int iReturn)
+                                          TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
         ServiceContext contextCur = frame.f_context;
         ServiceContext contextNew = contextCur.f_container.createContext();
@@ -100,7 +100,7 @@ public class xService
         if (hException == null)
             {
             CompletableFuture cfService =
-                    contextCur.sendConstructRequest(contextNew, constructor, ahArg);
+                    contextCur.sendConstructRequest(contextNew, constructor, clazz, ahArg);
             hException = frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
             }
         return hException;
@@ -171,14 +171,38 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle getProperty(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
-                                       int iReturn)
+    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
         if (frame.f_context == hService.m_context || property.isAtomic())
             {
-            return super.getProperty(frame, hTarget, property, iReturn);
+            return super.invokePreInc(frame, hTarget, property, iReturn);
+            }
+        throw new IllegalStateException("Invalid context");
+        }
+
+    @Override
+    public ExceptionHandle invokePostInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (frame.f_context == hService.m_context || property.isAtomic())
+            {
+            return super.invokePostInc(frame, hTarget, property, iReturn);
+            }
+        throw new IllegalStateException("Invalid context");
+        }
+
+    @Override
+    public ExceptionHandle getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                                            int iReturn)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (frame.f_context == hService.m_context || property.isAtomic())
+            {
+            return super.getPropertyValue(frame, hTarget, property, iReturn);
             }
 
         CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendGetRequest(
@@ -188,30 +212,26 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle getField(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public ExceptionHandle getFieldValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
         if (frame.f_context == hService.m_context || property.isAtomic())
             {
-            return super.getField(frame, hTarget, property, iReturn);
+            return super.getFieldValue(frame, hTarget, property, iReturn);
             }
-
-        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendGetRequest(
-                hService.m_context, property);
-
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        throw new IllegalStateException("Invalid context");
         }
 
     @Override
-    public ExceptionHandle setProperty(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
-                                       ObjectHandle hValue)
+    public ExceptionHandle setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                                            ObjectHandle hValue)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
         if (frame.f_context == hService.m_context || property.isAtomic())
             {
-            return super.setProperty(frame, hTarget, property, hValue);
+            return super.setPropertyValue(frame, hTarget, property, hValue);
             }
 
         CompletableFuture<Void> cfResult = frame.f_context.sendSetRequest(
@@ -230,7 +250,7 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle setField(ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue)
+    public ExceptionHandle setFieldValue(ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -239,21 +259,10 @@ public class xService
 
         if (context == null || context == contextCurrent || property.isAtomic())
             {
-            return super.setField(hTarget, property, hValue);
+            return super.setFieldValue(hTarget, property, hValue);
             }
 
-        CompletableFuture<Void> cfResult = contextCurrent.sendSetRequest(context, property, hValue);
-
-        cfResult.whenComplete((r, x) ->
-            {
-            if (x != null)
-                {
-                // TODO: call UnhandledExceptionNotification handler
-                Utils.log("unhandled exception " + x + "\n  by " + hService);
-                }
-            });
-
-        return null;
+        throw new IllegalStateException("Invalid context");
         }
 
     public static class ServiceHandle

@@ -93,7 +93,8 @@ public class xRef
         switch (method.f_sName)
             {
             case "set":
-                return iReturn >= 0 ? hThis.set(hArg) : null;
+                hThis.set(hArg);
+                return null;
             }
         return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }

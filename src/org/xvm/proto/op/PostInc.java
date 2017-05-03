@@ -8,20 +8,18 @@ import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 /**
- * GET rvalue-target, CONST_PROPERTY, lvalue
+ * POSTINC lvalue-target, lvalue-return ; T++ -> T
  *
  * @author gg 2017.03.08
  */
-public class Get extends OpInvocable
+public class PostInc extends OpInvocable
     {
-    private final int f_nTarget;
-    private final int f_nPropConstId;
+    private final int f_nArgValue;
     private final int f_nRetValue;
 
-    public Get(int nTarget, int nPropId, int nRet)
+    public PostInc(int nArg, int nRet)
         {
-        f_nTarget = nTarget;
-        f_nPropConstId = nPropId;
+        f_nArgValue = nArg;
         f_nRetValue = nRet;
         }
 
@@ -29,22 +27,26 @@ public class Get extends OpInvocable
     public int process(Frame frame, int iPC)
         {
         ExceptionHandle hException;
-
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTarget);
-
-            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-
-            PropertyTemplate property = getPropertyTemplate(frame, template, -f_nPropConstId);
-
-            if (hTarget.isStruct())
+            if (f_nArgValue >= 0)
                 {
-                hException = template.getField(frame, hTarget, property, f_nRetValue);
+                // operation on a register
+                ObjectHandle hTarget = frame.getArgument(f_nArgValue);
+
+                hException = hTarget.f_clazz.f_template.
+                        invokePostInc(frame, hTarget, null, f_nRetValue);
                 }
             else
                 {
-                hException = template.getProperty(frame, hTarget, property, f_nRetValue);
+                // operation on a local property
+                ObjectHandle hTarget = frame.getThis();
+                TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+
+                PropertyTemplate property = getPropertyTemplate(frame, template, -f_nArgValue);
+
+                hException = hTarget.f_clazz.f_template.
+                        invokePostInc(frame, hTarget, property, f_nRetValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

@@ -194,7 +194,20 @@ public abstract class TypeCompositionTemplate
             }
         }
 
-    // add a function
+    // add a default constructor
+    public FunctionTemplate ensureDefaultConstructTemplate()
+        {
+        FunctionTemplate templateD = new FunctionTemplate("default", THIS, VOID);
+
+        m_mapMultiFunctions.computeIfAbsent(templateD.f_sName, s -> new MultiFunctionTemplate()).
+                add(templateD);
+
+        templateD.resolveTypes(this);
+
+        return templateD;
+        }
+
+    // add a constructor
     public ConstructTemplate ensureConstructTemplate(String[] asArgTypes)
         {
         ConstructTemplate templateC = new ConstructTemplate(asArgTypes);
@@ -227,13 +240,18 @@ public abstract class TypeCompositionTemplate
         return templateF;
         }
 
+    public FunctionTemplate getDefaultConstructTemplate()
+        {
+        return getFunctionTemplate("default", THIS, VOID);
+        }
+
     public FunctionTemplate getFunctionTemplate(String sFunctionName, String[] asArgTypes, String[] asRetTypes)
         {
         return getFunctionTemplate(sFunctionName,
                 TypeName.getFunctionSignature(sFunctionName, asArgTypes, asRetTypes));
         }
 
-    public FunctionTemplate getFunctionTemplate(String sFunctionName, String sSig)
+    protected FunctionTemplate getFunctionTemplate(String sFunctionName, String sSig)
         {
         MultiFunctionTemplate mft = m_mapMultiFunctions.get(sFunctionName);
 
@@ -301,20 +319,20 @@ public abstract class TypeCompositionTemplate
         if (m_templateSuper != null)
             {
             m_templateSuper.forEachProperty(propSuper ->
+            {
+            if (propSuper.m_accessGet != Constants.Access.PRIVATE || propSuper.m_accessSet != Constants.Access.PRIVATE)
                 {
-                if (propSuper.m_accessGet != Constants.Access.PRIVATE || propSuper.m_accessSet != Constants.Access.PRIVATE)
-                    {
-                    derivePropertyTemplateFrom(propSuper);
-                    }
-                });
+                derivePropertyTemplateFrom(propSuper);
+                }
+            });
 
             m_templateSuper.forEachMethod(methodSuper ->
+            {
+            if (methodSuper.m_access != Constants.Access.PRIVATE)
                 {
-                if (methodSuper.m_access != Constants.Access.PRIVATE)
-                    {
-                    deriveMethodTemplateFrom(methodSuper);
-                    }
-                });
+                deriveMethodTemplateFrom(methodSuper);
+                }
+            });
             }
         }
 
@@ -357,185 +375,6 @@ public abstract class TypeCompositionTemplate
 
         f_types.addType(type);
         return type;
-        }
-
-    // ---- OpCode support -----
-
-    // create an un-initialized handle (Int i;)
-    public ObjectHandle createHandle(TypeComposition clazz)
-        {
-        return new GenericHandle(clazz);
-        }
-
-    // assign (Int i = 5;)
-    // @return null if this type doesn't take that constant
-    public ObjectHandle createConstHandle(Constant constant)
-        {
-        return null;
-        }
-
-    // invokeNative with one argument and zero or one return value
-    // place the result into the specified frame register
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
-        }
-
-    // invokeNative with N arguments and zero or one return values
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
-        {
-        // many classes don't have native methods
-        throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
-        }
-
-    // Add operation; place the result into the specified frame register
-    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException(f_sName);
-        }
-
-    // Increment operation; place the result into the specified frame register
-    // if ahReturn is null, use frame.assignValue()
-    public ExceptionHandle invokeInc(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException(f_sName);
-        }
-
-    // Neg operation
-    // if ahReturn is null, use frame.assignValue()
-    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException(f_sName);
-        }
-
-    // get a property value into the specified place in the array
-    public ExceptionHandle getProperty(
-            Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
-        {
-        MethodTemplate method = property.m_templateGet;
-
-        if (method == null)
-            {
-            return getField(frame, hTarget, property, iReturn);
-            }
-
-        if (method.isNative())
-            {
-            return invokeNative(frame, hTarget, method, Utils.OBJECTS_NONE, iReturn);
-            }
-
-        ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-
-        return frame.call1(method, hTarget, ahVar, iReturn);
-        }
-
-    public ExceptionHandle getField(
-            Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
-        {
-        GenericHandle hThis = (GenericHandle) hTarget;
-
-        ObjectHandle hProp = hThis.m_mapFields.get(property.f_sName);
-
-        if (hProp == null)
-            {
-            throw new IllegalStateException((hThis.m_mapFields.containsKey(property.f_sName) ?
-                    "Un-initialized property " : "Invalid property ") + property);
-            }
-
-        if (property.isRef())
-            {
-            try
-                {
-                hProp = ((RefHandle) hProp).get();
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return e.getExceptionHandle();
-                }
-            }
-
-        return frame.assignValue(iReturn, hProp);
-        }
-
-    // set a property value
-    public ExceptionHandle setProperty(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
-                                       ObjectHandle hValue)
-        {
-        // TODO: check the access rights
-
-        MethodTemplate method = property.m_templateSet;
-
-        if (method == null)
-            {
-            return setField(hTarget, property, hValue);
-            }
-
-        if (method.isNative())
-            {
-            return invokeNative(frame, hTarget, method, hValue, -1);
-            }
-
-        ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-        ahVar[1] = hValue;
-
-        return frame.call1(method, hTarget, ahVar, -1);
-        }
-
-    public ExceptionHandle setField(ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue)
-        {
-        GenericHandle hThis = (GenericHandle) hTarget;
-
-        assert hThis.m_mapFields.containsKey(property.f_sName);
-
-        if (property.isRef())
-            {
-            return ((RefHandle) hThis.m_mapFields.get(property.f_sName)).set(hValue);
-            }
-
-        hThis.m_mapFields.put(property.f_sName, hValue);
-        return null;
-        }
-
-    // return a handle with this:struct access
-    protected ObjectHandle createStruct(Frame frame)
-        {
-        assert f_asFormalType.length == 0;
-        assert f_shape == Shape.Class || f_shape == Shape.Const;
-
-        return new GenericHandle(f_clazzCanonical, f_clazzCanonical.ensureStructType());
-        }
-
-    // call the constructor, then the finalizers; change this:struct handle to this:public
-    public ExceptionHandle construct(Frame frame, ConstructTemplate constructor,
-                                     ObjectHandle[] ahVar, int iReturn)
-        {
-        // this:struct
-        ahVar[0] = createStruct(frame);
-
-        // ahVar[0] == this:struct
-        ExceptionHandle hException = frame.call1(constructor, null, ahVar, -1);
-
-        if (hException == null)
-            {
-            xFunction.FullyBoundHandle fnFinalize = xFunction.FullyBoundHandle.resolveFinalizer(
-                    frame.m_hfnFinally, constructor.makeFinalizer(ahVar));
-            if (fnFinalize != null)
-                {
-                // this:struct -> this:private
-                hException = fnFinalize.callChain(frame, Constants.Access.PRIVATE);
-                }
-
-            if (hException == null)
-                {
-                ObjectHandle hNew = ahVar[0];
-                hException = frame.assignValue(iReturn,
-                        hNew.f_clazz.ensureAccess(hNew, Constants.Access.PUBLIC));
-                }
-            }
-
-        return hException;
         }
 
     // does this template extend that?
@@ -586,6 +425,276 @@ public abstract class TypeCompositionTemplate
     public String toString()
         {
         return f_shape + " " + f_sName + Utils.formatArray(f_asFormalType, "<", ">", ", ");
+        }
+
+    // ---- OpCode support: construction and initialization -----
+
+    // create an un-initialized handle (Int i;)
+    public ObjectHandle createHandle(TypeComposition clazz)
+        {
+        return new GenericHandle(clazz);
+        }
+
+    // assign (Int i = 5;)
+    // @return null if this type doesn't take that constant
+    public ObjectHandle createConstHandle(Constant constant)
+        {
+        return null;
+        }
+
+    // return a handle with this:struct access
+    protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
+        {
+        assert f_asFormalType.length == 0;
+        assert f_shape == Shape.Class || f_shape == Shape.Const;
+
+        return new GenericHandle(clazz, clazz.ensureStructType());
+        }
+
+    // call the default constructors, then the specified constructor,
+    // then finalizers; change this:struct handle to this:public
+    public ExceptionHandle construct(Frame frame, ConstructTemplate constructor,
+                                     TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
+        {
+        ahVar[0] = createStruct(frame, clazz); // this:struct
+
+        ExceptionHandle hException = clazz.callDefaultConstructors(frame, ahVar);
+
+        if (hException == null)
+            {
+            hException = frame.call1(constructor, null, ahVar, Frame.R_UNUSED);
+
+            if (hException == null)
+                {
+                xFunction.FullyBoundHandle fnFinalize = xFunction.FullyBoundHandle.resolveFinalizer(
+                        frame.m_hfnFinally, constructor.makeFinalizer(ahVar));
+                if (fnFinalize != null)
+                    {
+                    // this:struct -> this:private
+                    hException = fnFinalize.callChain(frame, Constants.Access.PRIVATE);
+                    }
+
+                if (hException == null)
+                    {
+                    ObjectHandle hNew = ahVar[0];
+                    hException = frame.assignValue(iReturn,
+                            hNew.f_clazz.ensureAccess(hNew, Constants.Access.PUBLIC));
+                    }
+                }
+            }
+
+        return hException;
+        }
+
+    // ----- OpCode support: register operations ------
+
+    // invokeNative with one argument and zero or one return value
+    // place the result into the specified frame register
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
+                                        MethodTemplate method, ObjectHandle hArg, int iReturn)
+        {
+        throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
+        }
+
+    // invokeNative with N arguments and zero or one return values
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
+                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+        {
+        // many classes don't have native methods
+        throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
+        }
+
+    // Add operation; place the result into the specified frame register
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget,
+                                     ObjectHandle hArg, int iReturn)
+        {
+        throw new IllegalStateException("Invalid op for " + f_sName);
+
+        }
+
+    // Neg operation
+    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        throw new IllegalStateException("Invalid op for " + f_sName);
+        }
+
+    // ---- OpCode support: register or property operations -----
+
+    // helper method
+    private ObjectHandle extractPropertyValue(GenericHandle hTarget, PropertyTemplate property)
+        {
+        if (property == null)
+            {
+            throw new IllegalStateException("Invalid op for " + f_sName);
+            }
+
+        ObjectHandle hProp = hTarget.m_mapFields.get(property.f_sName);
+
+        if (hProp == null)
+            {
+            throw new IllegalStateException((hTarget.m_mapFields.containsKey(property.f_sName) ?
+                    "Un-initialized property " : "Invalid property ") + property);
+            }
+        return hProp;
+        }
+
+    // Increment and place the result into the specified frame register
+    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget,
+                                        PropertyTemplate property, int iReturn)
+        {
+        GenericHandle hThis = (GenericHandle) hTarget;
+
+        ObjectHandle hProp = extractPropertyValue(hThis, property);
+
+        if (property.isRef())
+            {
+            return property.getRefTemplate().invokePreInc(frame, hProp, null, iReturn);
+            }
+
+        ExceptionHandle hException = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.R_FRAME);
+        if (hException != null)
+            {
+            return hException;
+            }
+
+        ObjectHandle hPropNew = frame.getFrameLocal();
+        hThis.m_mapFields.put(property.f_sName, hPropNew);
+        return frame.assignValue(iReturn, hPropNew);
+        }
+
+    // PostIncrement operation; place the result into the specified frame register
+    public ExceptionHandle invokePostInc(Frame frame, ObjectHandle hTarget,
+                                         PropertyTemplate property, int iReturn)
+        {
+        GenericHandle hThis = (GenericHandle) hTarget;
+
+        ObjectHandle hProp = extractPropertyValue(hThis, property);
+
+        if (property.isRef())
+            {
+            return property.getRefTemplate().invokePostInc(frame, hProp, null, iReturn);
+            }
+
+        ExceptionHandle hException = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.R_FRAME);
+        if (hException != null)
+            {
+            return hException;
+            }
+
+        ObjectHandle hPropNew = frame.getFrameLocal();
+        hThis.m_mapFields.put(property.f_sName, hPropNew);
+        return frame.assignValue(iReturn, hProp);
+        }
+
+    // ----- OpCode support: property operations -----
+
+    // get a property value into the specified place in the array
+    public ExceptionHandle getPropertyValue(Frame frame, ObjectHandle hTarget,
+                                            PropertyTemplate property, int iReturn)
+        {
+        if (property == null)
+            {
+            throw new IllegalStateException(f_sName);
+            }
+
+        MethodTemplate method = hTarget.isStruct() ? null : property.m_templateGet;
+
+        if (method == null)
+            {
+            return getFieldValue(frame, hTarget, property, iReturn);
+            }
+
+        if (method.isNative())
+            {
+            return invokeNative(frame, hTarget, method, Utils.OBJECTS_NONE, iReturn);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+
+        return frame.call1(method, hTarget, ahVar, iReturn);
+        }
+
+    public ExceptionHandle getFieldValue(Frame frame, ObjectHandle hTarget,
+                                         PropertyTemplate property, int iReturn)
+        {
+        if (property == null)
+            {
+            throw new IllegalStateException(f_sName);
+            }
+
+        GenericHandle hThis = (GenericHandle) hTarget;
+
+        ObjectHandle hProp = hThis.m_mapFields.get(property.f_sName);
+
+        if (hProp == null)
+            {
+            throw new IllegalStateException((hThis.m_mapFields.containsKey(property.f_sName) ?
+                    "Un-initialized property " : "Invalid property ") + property);
+            }
+
+        if (property.isRef())
+            {
+            try
+                {
+                hProp = ((RefHandle) hProp).get();
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return e.getExceptionHandle();
+                }
+            }
+
+        return frame.assignValue(iReturn, hProp);
+        }
+
+    // set a property value
+    public ExceptionHandle setPropertyValue(Frame frame, ObjectHandle hTarget,
+                                            PropertyTemplate property, ObjectHandle hValue)
+        {
+        if (property == null)
+            {
+            throw new IllegalStateException(f_sName);
+            }
+
+        // TODO: check the access rights
+
+        MethodTemplate method = hTarget.isStruct() ? null : property.m_templateSet;
+
+        if (method == null)
+            {
+            return setFieldValue(hTarget, property, hValue);
+            }
+
+        if (method.isNative())
+            {
+            return invokeNative(frame, hTarget, method, hValue, Frame.R_UNUSED);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+        ahVar[1] = hValue;
+
+        return frame.call1(method, hTarget, ahVar, Frame.R_UNUSED);
+        }
+
+    public ExceptionHandle setFieldValue(ObjectHandle hTarget,
+                                         PropertyTemplate property, ObjectHandle hValue)
+        {
+        if (property == null)
+            {
+            throw new IllegalStateException(f_sName);
+            }
+
+        GenericHandle hThis = (GenericHandle) hTarget;
+
+        assert hThis.m_mapFields.containsKey(property.f_sName);
+
+        if (property.isRef())
+            {
+            return ((RefHandle) hThis.m_mapFields.get(property.f_sName)).set(hValue);
+            }
+
+        hThis.m_mapFields.put(property.f_sName, hValue);
+        return null;
         }
 
     // ----- debugging support -----
@@ -645,7 +754,7 @@ public abstract class TypeCompositionTemplate
         return sb.toString();
         }
 
-    // -----
+    // ----- inner classes
 
     public abstract class FunctionContainer
         {
@@ -667,7 +776,7 @@ public abstract class TypeCompositionTemplate
         public final TypeName f_typeName;
 
         // indicate that the property is represented by a RefHandle
-        private boolean m_fRef = false;
+        private TypeCompositionTemplate m_templateRef;
 
         // indicates that the property is represented by an AtomicRef
         private boolean m_fAtomic = false;
@@ -705,6 +814,9 @@ public abstract class TypeCompositionTemplate
         public void makeAtomic()
             {
             m_fAtomic = true;
+            m_templateRef = f_typeName.getSimpleName().equals("x:Int64")
+                ? f_types.ensureTemplate("x:AtomicIntNumber")
+                : f_types.ensureTemplate("x:AtomicRef");
             }
 
         public boolean isAtomic()
@@ -712,14 +824,27 @@ public abstract class TypeCompositionTemplate
             return m_fAtomic;
             }
 
-        public void makeRef()
+        public void makeRef(String sRefClassName)
             {
-            m_fRef = true;
+            m_templateRef = f_types.ensureTemplate(sRefClassName);
             }
 
         public boolean isRef()
             {
-            return m_fRef;
+            return m_templateRef != null;
+            }
+
+        public TypeCompositionTemplate getRefTemplate()
+            {
+            return m_templateRef;
+            }
+
+        public RefHandle createRefHandle(Type typeReferent)
+            {
+            TypeComposition classReferent = typeReferent == null ?
+                m_templateRef.resolve(new Type[] {typeReferent}) :
+                m_templateRef.f_clazzCanonical;
+            return (RefHandle) m_templateRef.createHandle(classReferent);
             }
 
         public void setGetAccess(Constant.Access access)
@@ -788,9 +913,9 @@ public abstract class TypeCompositionTemplate
         public String toString()
             {
             StringBuilder sb = new StringBuilder();
-            if (isAtomic())
+            if (isRef())
                 {
-                sb.append("@atomic ");
+                sb.append('@').append(m_templateRef.f_sName).append(' ');
                 }
             if (isReadOnly())
                 {
@@ -1033,11 +1158,6 @@ public abstract class TypeCompositionTemplate
         protected ConstructTemplate(String[] asArgType)
             {
             super("construct", asArgType, VOID);
-            }
-
-        protected ConstructTemplate(TypeName[] atArg)
-            {
-            super("construct", atArg, Utils.TYPE_NAME_NONE);
             }
 
         public void setFinally(FunctionTemplate ftFinally)
