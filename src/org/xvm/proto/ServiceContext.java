@@ -9,9 +9,11 @@ import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFutureRef;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xService;
+import org.xvm.proto.template.xService.PropertyOperation;
 import org.xvm.proto.template.xService.PropertyOperation10;
-import org.xvm.proto.template.xService.ServiceHandle;
 import org.xvm.proto.template.xService.PropertyOperation01;
+import org.xvm.proto.template.xService.PropertyOperation11;
+import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -177,7 +179,7 @@ public class ServiceContext
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        context.m_daemon.add(new PropertyOp01Request(this, property, future, op));
+        context.m_daemon.add(new PropertyOpRequest(this, property, null, 1, future, op));
 
         return future;
         }
@@ -186,11 +188,11 @@ public class ServiceContext
     public CompletableFuture<Void> sendProperty10Request(ServiceContext context,
             PropertyTemplate property, ObjectHandle hValue, PropertyOperation10 op)
         {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        context.m_daemon.add(new PropertyOp10Request(this, property, hValue, future, op));
+        context.m_daemon.add(new PropertyOpRequest(this, property, hValue, 0, future, op));
 
-        return future;
+        return (CompletableFuture) future;
         }
 
     // ----- helpers ------
@@ -396,55 +398,25 @@ public class ServiceContext
 
     /**
      * Represents a property operation request from one service onto another
-     * that takes no parameters and returns one value.
+     * that takes zero or one parameter and returns zero or one value.
      */
-    public static class PropertyOp01Request
-            implements Message
-        {
-        private final ServiceContext f_contextCaller;
-        private final PropertyTemplate f_property;
-        private final CompletableFuture<ObjectHandle> f_future;
-        private final PropertyOperation01 f_op;
-
-        public PropertyOp01Request(ServiceContext contextCaller, PropertyTemplate property,
-                                   CompletableFuture<ObjectHandle> future, PropertyOperation01 op)
-            {
-            f_contextCaller = contextCaller;
-            f_property = property;
-            f_future = future;
-            f_op = op;
-            }
-
-        @Override
-        public void process(ServiceContext context)
-            {
-            Frame frame = context.createServiceEntryFrame(1);
-
-            ExceptionHandle hException = f_op.invoke(frame, context.m_hService, f_property, 0);
-
-            sendResponse1(f_contextCaller, hException, frame, 1, f_future);
-            }
-        }
-
-    /**
-     * Represents a property operation request from one service onto another
-     * that takes one parameters and returns no values.
-     */
-    public static class PropertyOp10Request
+    public static class PropertyOpRequest
             implements Message
         {
         private final ServiceContext f_contextCaller;
         private final PropertyTemplate f_property;
         private final ObjectHandle f_hValue;
-        private final CompletableFuture<Void> f_future;
-        private final PropertyOperation10 f_op;
+        private final int f_cReturns;
+        private final CompletableFuture<ObjectHandle> f_future;
+        private final PropertyOperation f_op;
 
-        public PropertyOp10Request(ServiceContext contextCaller, PropertyTemplate property,
-                                   ObjectHandle hValue, CompletableFuture<Void> future, PropertyOperation10 op)
+        public PropertyOpRequest(ServiceContext contextCaller, PropertyTemplate property,
+                ObjectHandle hValue, int cReturns, CompletableFuture<ObjectHandle> future, PropertyOperation op)
             {
             f_contextCaller = contextCaller;
             f_property = property;
             f_hValue = hValue;
+            f_cReturns = cReturns;
             f_future = future;
             f_op = op;
             }
@@ -452,11 +424,18 @@ public class ServiceContext
         @Override
         public void process(ServiceContext context)
             {
-            Frame frame = context.createServiceEntryFrame(0);
+            int cReturns = f_cReturns;
 
-            ExceptionHandle hException = f_op.invoke(frame, context.m_hService, f_property, f_hValue);
+            Frame frame = context.createServiceEntryFrame(cReturns);
 
-            sendResponse1(f_contextCaller, hException, frame, 0, f_future);
+            ExceptionHandle hException =
+                    cReturns == 0
+                        ? ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_property, f_hValue)
+                    : f_hValue == null
+                        ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_property, 0)
+                        : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_property, f_hValue, 0);
+
+            sendResponse1(f_contextCaller, hException, frame, cReturns, f_future);
             }
         }
 

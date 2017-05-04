@@ -290,17 +290,35 @@ public class xService
             }
         }
 
+    // a tag interface for property operations
+    public interface PropertyOperation
+        {
+        }
+
     // an operation against a property that takes no parameters and returns one value
     @FunctionalInterface
     public interface PropertyOperation01
+            extends PropertyOperation
         {
-        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn);
+        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                               int iReturn);
         }
 
     // an operation against a property that takes one parameter and returns zero values
     @FunctionalInterface
     public interface PropertyOperation10
+            extends PropertyOperation
         {
-        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue);
+        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                               ObjectHandle hValue);
+        }
+
+    // an operation against a property that takes one parameter and returns one value
+    @FunctionalInterface
+    public interface PropertyOperation11
+            extends PropertyOperation
+        {
+        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                               ObjectHandle hValue, int iReturn);
         }
     }
