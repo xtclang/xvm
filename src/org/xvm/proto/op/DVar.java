@@ -30,8 +30,7 @@ public class DVar extends Op
 
         assert hRef instanceof RefHandle;
 
-        Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz);
-        info.m_fDynamicRef = true;
+        Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz, null, true);
 
         frame.f_aInfo[nNextVar] = info;
         frame.f_ahVar[nNextVar] = hRef;

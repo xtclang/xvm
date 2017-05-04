@@ -158,7 +158,7 @@ public class Frame
                         CharStringConstant constVarName = (CharStringConstant)
                                 f_context.f_constantPool.getConstantValue(guard.f_anNameConstId[iCatch]);
                         f_ahVar[nNextVar] = hException;
-                        f_aInfo[nNextVar] = new VarInfo(clzException, constVarName.getValue());
+                        f_aInfo[nNextVar] = new VarInfo(clzException, constVarName.getValue(), false);
 
                         f_anNextVar[nScope] = nNextVar + 1;
 
@@ -290,9 +290,22 @@ public class Frame
         if (iArg >= 0)
             {
             Frame.VarInfo info = f_aInfo[iArg];
+            ObjectHandle hValue = f_ahVar[iArg];
 
-            return info != null && info.m_fDynamicRef ?
-                    ((RefHandle) f_ahVar[iArg]).get() : f_ahVar[iArg];
+            if (info != null)
+                {
+                if (info.m_fDynamicRef)
+                    {
+                    return ((RefHandle) hValue).get();
+                    }
+
+                if (info.m_fDeferrable && hValue instanceof FutureHandle
+                        && ((FutureHandle) hValue).f_fSynthetic)
+                    {
+                    return ((FutureHandle) hValue).get();
+                    }
+                }
+            return hValue;
             }
         else
             {
@@ -337,7 +350,7 @@ public class Frame
                     return ((RefHandle) f_ahVar[nVar]).set(hValue);
                     }
 
-                if (hValue instanceof FutureHandle)
+                if (!info.m_fDeferrable && hValue instanceof FutureHandle)
                     {
                     FutureHandle hFuture = (FutureHandle) hValue;
                     if (hFuture.f_fSynthetic)
@@ -408,18 +421,24 @@ public class Frame
         {
         public final TypeComposition f_clazz;
         public final String f_sVarName;
+        public final boolean m_fDynamicRef; // true iff this register is a "dynamic" ref
+        public final boolean m_fDeferrable; // true iff this register is "deferrable"
         public RefHandle m_ref; // an "active" reference to this register
-        public boolean m_fDynamicRef; // true iff this variable is a "dynamic" ref
 
-        public VarInfo(TypeComposition clazz)
+        public VarInfo(TypeComposition clazz, boolean fDeferrable)
             {
-            this(clazz, null);
+            f_clazz = clazz;
+            f_sVarName = null;
+            m_fDynamicRef = false; // unnamed register is never dynamic
+            m_fDeferrable = fDeferrable;
             }
 
-        public VarInfo(TypeComposition clazz, String sName)
+        public VarInfo(TypeComposition clazz, String sName, boolean fDynamic)
             {
             f_clazz = clazz;
             f_sVarName = sName;
+            m_fDynamicRef = fDynamic;
+            m_fDeferrable = false; // named register is never deferrable
             }
 
         // this VarInfo goes out of scope

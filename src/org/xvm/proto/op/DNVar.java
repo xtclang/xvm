@@ -39,8 +39,7 @@ public class DNVar extends Op
         CharStringConstant constName =
                 (CharStringConstant) context.f_constantPool.getConstantValue(f_nNameConstId);
 
-        Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz, constName.getValue());
-        info.m_fDynamicRef = true;
+        Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz, constName.getValue(), true);
 
         frame.f_aInfo[nNextVar] = info;
         frame.f_ahVar[nNextVar] = hRef;

@@ -31,7 +31,7 @@ public class Ref extends OpInvocable
             // the "dynamic ref" register must contain a RefHandle itself
             RefHandle hRef = (RefHandle) frame.f_ahVar[f_nSrcValue];
 
-            frame.f_aInfo[nNextVar] = new Frame.VarInfo(infoSrc.f_clazz);
+            frame.f_aInfo[nNextVar] = new Frame.VarInfo(infoSrc.f_clazz, false);
             frame.f_ahVar[nNextVar] = hRef;
             }
         else
@@ -40,7 +40,7 @@ public class Ref extends OpInvocable
 
             RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);
 
-            frame.f_aInfo[nNextVar] = new Frame.VarInfo(clzRef);
+            frame.f_aInfo[nNextVar] = new Frame.VarInfo(clzRef, false);
             frame.f_ahVar[nNextVar] = hRef;
             }
         return iPC + 1;

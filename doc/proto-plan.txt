@@ -13,7 +13,7 @@
 
 + Atomics
 
-- Vars as "pass through" registers
++ Vars as "deferrable" registers
 
 - Array
 

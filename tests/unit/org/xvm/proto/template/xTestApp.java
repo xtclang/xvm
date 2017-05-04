@@ -42,7 +42,8 @@ public class xTestApp extends xModule
         ftTest1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
-            new IVar(adapter.getClassConstId("x:String"),
+            new INVar(adapter.getClassConstId("x:String"),
+                        adapter.ensureValueConstantId("s"),
                      adapter.ensureValueConstantId("Hello world!")), // #0 (s)
             new X_Print(0),
 
@@ -51,7 +52,8 @@ public class xTestApp extends xModule
             new X_Print(1),
 
             new Var(adapter.getClassConstId("x:Int64")), // #2 (of)
-            new IVar(adapter.getClassConstId("x:String"),
+            new INVar(adapter.getClassConstId("x:String"),
+                     adapter.ensureValueConstantId("of"),
                      adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(0, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
 
@@ -127,12 +129,14 @@ public class xTestApp extends xModule
         FunctionTemplate ftTestService = ensureFunctionTemplate("testService", VOID, VOID);
         ftTestService.m_aop = new Op[]
             {
-            new NVar(adapter.getClassConstId("x:TestService"), adapter.ensureValueConstantId("svc")),     // #0
+            new NVar(adapter.getClassConstId("x:TestService"),
+                    adapter.ensureValueConstantId("svc")),     // #0
             new New_1(adapter.getMethodConstId("x:TestService", "construct"),
                      -adapter.ensureValueConstantId(48), 0),
             new X_Print(0),
 
-            new Var(adapter.getClassConstId("x:Int64")),        // #1 (c)
+            new NVar(adapter.getClassConstId("x:Int64"),
+                    adapter.ensureValueConstantId("c")),        // #1 (c)
             new Invoke_01(0, adapter.getMethodConstId("x:TestService", "increment"), 1),
             new X_Print(1),
 
@@ -159,7 +163,8 @@ public class xTestApp extends xModule
 
             new NVar(adapter.getClassConstId("x:FutureRef<Int>"),
                      adapter.ensureValueConstantId("rfc")), // #5 (rfc2)
-            new DVar(adapter.getClassConstId("x:FutureRef<Int>")), // #6
+            new DNVar(adapter.getClassConstId("x:FutureRef<Int>"),
+                      adapter.ensureValueConstantId("rfc3")), // #6 (rfc3)
             new Invoke_01(0, adapter.getMethodConstId("x:TestService", "increment"), 6),
             new MoveRef(6, 5),
 
@@ -169,7 +174,7 @@ public class xTestApp extends xModule
             new Invoke_10(5, adapter.getMethodConstId("x:FutureRef", "whenComplete"), 7),
 
             new GuardStart(adapter.getClassConstId("x:Exception"),
-                           adapter.ensureValueConstantId("e"), +3),
+                    adapter.ensureValueConstantId("e"), +3),
             new Invoke_01(0, adapter.getMethodConstId("x:TestService", "throwing"), 1),
             new GuardEnd(+4),
             new HandlerStart(), // #8 (e)
@@ -189,6 +194,8 @@ public class xTestApp extends xModule
             new PPreInc(0, adapter.getPropertyConstId("x:TestService", "counter2"), 8),
             new X_Print(8),
             new PPostInc(0, adapter.getPropertyConstId("x:TestService", "counter"), 8),
+            new X_Print(8),
+            new Invoke_01(0, adapter.getMethodConstId("x:TestService", "increment"), 8),
             new X_Print(8),
 
             new Invoke_00(0, adapter.getMethodConstId("x:TestService", "throwing")),

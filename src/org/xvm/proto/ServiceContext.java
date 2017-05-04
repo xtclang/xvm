@@ -95,8 +95,7 @@ public class ServiceContext
             // (see DVar op-code)
             FutureHandle hRef = xFutureRef.makeHandle(new CompletableFuture<>());
 
-            Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz);
-            info.m_fDynamicRef = true;
+            Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz, null, true);
 
             frame.f_aInfo[i] = info;
             frame.f_ahVar[i] = hRef;

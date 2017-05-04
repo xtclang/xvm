@@ -43,7 +43,7 @@ public class PreInc extends OpInvocable
                 ObjectHandle hTarget = frame.getThis();
                 TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-                PropertyTemplate property = getPropertyTemplate(frame, template, f_nArgValue);
+                PropertyTemplate property = getPropertyTemplate(frame, template, -f_nArgValue);
 
                 hException = hTarget.f_clazz.f_template.
                         invokePreInc(frame, hTarget, property, f_nRetValue);

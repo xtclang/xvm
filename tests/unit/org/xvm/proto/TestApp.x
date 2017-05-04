@@ -147,6 +147,7 @@ module TestApp
 
         print(++svc.counter2);
         print(svc.counter++);
+        print(svc.increment()));
 
         // unhandled exception
         svc.throwing();
@@ -169,10 +170,10 @@ module TestApp
 
         @atomic Int counter2 = 5;
 
-        // post-increment
+        // pre-increment
         Int increment()
             {
-            return counter++;
+            return ++counter;
             }
 
         // exceptional
