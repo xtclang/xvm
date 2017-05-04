@@ -179,7 +179,11 @@ public class xService
             {
             return super.invokePreInc(frame, hTarget, property, iReturn);
             }
-        throw new IllegalStateException("Invalid context");
+
+        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendProperty01Request(
+                hService.m_context, property, this::invokePreInc);
+
+        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
         }
 
     @Override
@@ -191,12 +195,15 @@ public class xService
             {
             return super.invokePostInc(frame, hTarget, property, iReturn);
             }
-        throw new IllegalStateException("Invalid context");
+
+        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendProperty01Request(
+                hService.m_context, property, this::invokePostInc);
+
+        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
         }
 
     @Override
-    public ExceptionHandle getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
-                                            int iReturn)
+    public ExceptionHandle getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -205,8 +212,8 @@ public class xService
             return super.getPropertyValue(frame, hTarget, property, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendGetRequest(
-                hService.m_context, property);
+        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendProperty01Request(
+                hService.m_context, property, this::getPropertyValue);
 
         return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
         }
@@ -234,8 +241,8 @@ public class xService
             return super.setPropertyValue(frame, hTarget, property, hValue);
             }
 
-        CompletableFuture<Void> cfResult = frame.f_context.sendSetRequest(
-                hService.m_context, property, hValue);
+        CompletableFuture<Void> cfResult = frame.f_context.sendProperty10Request(
+                hService.m_context, property, hValue, this::setPropertyValue);
 
         cfResult.whenComplete((r, x) ->
             {
@@ -281,5 +288,19 @@ public class xService
 
             m_context = context;
             }
+        }
+
+    // an operation against a property that takes no parameters and returns one value
+    @FunctionalInterface
+    public interface PropertyOperation01
+        {
+        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn);
+        }
+
+    // an operation against a property that takes one parameter and returns zero values
+    @FunctionalInterface
+    public interface PropertyOperation10
+        {
+        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue);
         }
     }

@@ -9,7 +9,9 @@ import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFutureRef;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xService;
+import org.xvm.proto.template.xService.PropertyOperation10;
 import org.xvm.proto.template.xService.ServiceHandle;
+import org.xvm.proto.template.xService.PropertyOperation01;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -139,12 +141,12 @@ public class ServiceContext
         context.m_daemon.add(new ConstructRequest(this, constructor, clazz, future, ahArg));
 
         return future.whenComplete((r, x) ->
+        {
+        if (x != null)
             {
-            if (x != null)
-                {
-                context.m_daemon.kill();
-                }
-            });
+            context.m_daemon.kill();
+            }
+        });
         }
 
     // send and asynchronous "invoke" message with zero or one return value
@@ -169,24 +171,24 @@ public class ServiceContext
         return future;
         }
 
-    // send and asynchronous "get" message
-    public CompletableFuture<ObjectHandle> sendGetRequest(ServiceContext context,
-                PropertyTemplate property)
+    // send and asynchronous property operation message
+    public CompletableFuture<ObjectHandle> sendProperty01Request(ServiceContext context,
+            PropertyTemplate property, PropertyOperation01 op)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        context.m_daemon.add(new GetRequest(this, property, future));
+        context.m_daemon.add(new PropertyOp01Request(this, property, future, op));
 
         return future;
         }
 
-    // send and asynchronous "set" message
-    public CompletableFuture<Void> sendSetRequest(ServiceContext context,
-                PropertyTemplate property, ObjectHandle hValue)
+    // send and asynchronous property operation message
+    public CompletableFuture<Void> sendProperty10Request(ServiceContext context,
+            PropertyTemplate property, ObjectHandle hValue, PropertyOperation10 op)
         {
         CompletableFuture<Void> future = new CompletableFuture<>();
 
-        context.m_daemon.add(new SetRequest(this, property, hValue, future));
+        context.m_daemon.add(new PropertyOp10Request(this, property, hValue, future, op));
 
         return future;
         }
@@ -393,21 +395,24 @@ public class ServiceContext
         }
 
     /**
-     * Represents a property Get request from one service onto another.
+     * Represents a property operation request from one service onto another
+     * that takes no parameters and returns one value.
      */
-    public static class GetRequest
+    public static class PropertyOp01Request
             implements Message
         {
         private final ServiceContext f_contextCaller;
         private final PropertyTemplate f_property;
         private final CompletableFuture<ObjectHandle> f_future;
+        private final PropertyOperation01 f_op;
 
-        public GetRequest(ServiceContext contextCaller, PropertyTemplate property,
-                             CompletableFuture<ObjectHandle> future)
+        public PropertyOp01Request(ServiceContext contextCaller, PropertyTemplate property,
+                                   CompletableFuture<ObjectHandle> future, PropertyOperation01 op)
             {
             f_contextCaller = contextCaller;
             f_property = property;
             f_future = future;
+            f_op = op;
             }
 
         @Override
@@ -415,31 +420,33 @@ public class ServiceContext
             {
             Frame frame = context.createServiceEntryFrame(1);
 
-            ExceptionHandle hException = f_property.getClazzTemplate().getPropertyValue(
-                    frame, context.m_hService, f_property, 0);
+            ExceptionHandle hException = f_op.invoke(frame, context.m_hService, f_property, 0);
 
             sendResponse1(f_contextCaller, hException, frame, 1, f_future);
             }
         }
 
     /**
-     * Represents a property Set request from one service onto another.
+     * Represents a property operation request from one service onto another
+     * that takes one parameters and returns no values.
      */
-    public static class SetRequest
+    public static class PropertyOp10Request
             implements Message
         {
         private final ServiceContext f_contextCaller;
         private final PropertyTemplate f_property;
         private final ObjectHandle f_hValue;
         private final CompletableFuture<Void> f_future;
+        private final PropertyOperation10 f_op;
 
-        public SetRequest(ServiceContext contextCaller, PropertyTemplate property,
-                          ObjectHandle hValue, CompletableFuture<Void> future)
+        public PropertyOp10Request(ServiceContext contextCaller, PropertyTemplate property,
+                                   ObjectHandle hValue, CompletableFuture<Void> future, PropertyOperation10 op)
             {
             f_contextCaller = contextCaller;
             f_property = property;
             f_hValue = hValue;
             f_future = future;
+            f_op = op;
             }
 
         @Override
@@ -447,8 +454,7 @@ public class ServiceContext
             {
             Frame frame = context.createServiceEntryFrame(0);
 
-            ExceptionHandle hException = f_property.getClazzTemplate().setPropertyValue(
-                    frame, context.m_hService, f_property, f_hValue);
+            ExceptionHandle hException = f_op.invoke(frame, context.m_hService, f_property, f_hValue);
 
             sendResponse1(f_contextCaller, hException, frame, 0, f_future);
             }

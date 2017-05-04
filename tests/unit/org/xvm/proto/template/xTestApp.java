@@ -188,8 +188,8 @@ public class xTestApp extends xModule
             new Var(adapter.getClassConstId("x:Int64")), // #8
             new PPreInc(0, adapter.getPropertyConstId("x:TestService", "counter2"), 8),
             new X_Print(8),
-//            new PPostInc(0, adapter.getPropertyConstId("x:TestService", "counter"), 8),
-//            new X_Print(8),
+            new PPostInc(0, adapter.getPropertyConstId("x:TestService", "counter"), 8),
+            new X_Print(8),
 
             new Invoke_00(0, adapter.getMethodConstId("x:TestService", "throwing")),
             new Return_0(),

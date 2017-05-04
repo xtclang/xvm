@@ -11,7 +11,9 @@
 
 + FutureRef async completion handling
 
-- Atomics
++ Atomics
+
+- Vars as "pass through" registers
 
 - Array
 
