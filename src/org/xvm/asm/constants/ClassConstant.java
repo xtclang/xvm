@@ -60,7 +60,7 @@ public class ClassConstant
     /**
      * Determine if this ClassConstant is the "Object" class.
      *
-     * @return true iff this ClasConstant represents the Ecstasy root Object class
+     * @return true iff this ClassConstant represents the Ecstasy root Object class
      */
     public boolean isEcstasyObject()
         {
@@ -74,7 +74,7 @@ public class ClassConstant
      */
     public ClassTypeConstant asTypeConstant()
         {
-        return getConstantPool().ensureClassTypeConstant(this, null);
+        return getConstantPool().ensureClassTypeConstant(this, Access.PUBLIC);
         }
 
 

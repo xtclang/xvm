@@ -499,7 +499,8 @@ public class ConstantPool
      * @param access
      * @return
      */
-    public ClassTypeConstant ensureClassTypeConstant(Constant constClass, Access access)
+    public ClassTypeConstant ensureClassTypeConstant(ClassConstant constClass,
+                                                     Access access, TypeConstant... constTypes)
         {
         assert constClass != null;
         switch (constClass.getFormat())
@@ -514,7 +515,8 @@ public class ConstantPool
                     }
                 if (constant == null)
                     {
-                    constant = (ClassTypeConstant) register(new ClassTypeConstant(this, constClass, access));
+                    constant = (ClassTypeConstant) register(
+                            new ClassTypeConstant(this, constClass, access, constTypes));
                     }
                 return constant;
 
@@ -677,6 +679,10 @@ public class ConstantPool
 
                 case ConditionVersion:
                     constant = new VersionCondition(this, format, in);
+                    break;
+
+                case ClassType:
+                    constant = new ClassTypeConstant(this, format, in);
                     break;
 
                 default:
