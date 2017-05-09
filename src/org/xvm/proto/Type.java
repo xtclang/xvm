@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public class Type
     {
-    final private String f_sName; // optional
+    final public String f_sName; // optional
     private int m_nId;
 
     private Map<String, PropertyTypelet> m_props = new HashMap<>();

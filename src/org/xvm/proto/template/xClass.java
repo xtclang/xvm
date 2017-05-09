@@ -1,7 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.proto.*;
 
 /**
@@ -61,15 +61,21 @@ public class xClass
     @Override
     public ObjectHandle createConstHandle(Constant constant)
         {
-        if (constant instanceof ClassConstant)
+        if (constant instanceof ClassTypeConstant)
             {
-            String sTarget = ConstantPoolAdapter.getClassName((ClassConstant) constant);
+            ClassTypeConstant constClass = (ClassTypeConstant) constant;
+
+            String sTarget = ConstantPoolAdapter.getClassName(constClass);
+
             TypeCompositionTemplate target = f_types.getTemplate(sTarget);
             if (target.isSingleton())
                 {
                 return target.createConstHandle(constant);
                 }
-            return new ClassHandle(f_clazzCanonical, target);
+
+            TypeComposition clzTarget = target.resolve(constClass);
+
+            return new ClassHandle(f_clazzCanonical, clzTarget);
             }
         return null;
         }
@@ -77,13 +83,19 @@ public class xClass
     public static class ClassHandle
             extends ObjectHandle
         {
-        protected TypeCompositionTemplate m_template;
+        protected TypeComposition m_clzTarget;
 
-        protected ClassHandle(TypeComposition clazz, TypeCompositionTemplate template)
+        protected ClassHandle(TypeComposition clazz, TypeComposition clzTarget)
             {
             super(clazz);
 
-            m_template = template;
+            m_clzTarget = clzTarget;
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + m_clzTarget;
             }
         }
     }

@@ -1,7 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
@@ -41,10 +41,10 @@ public class xNullable
     @Override
     public ObjectHandle createConstHandle(Constant constant)
         {
-        if (constant instanceof ClassConstant)
+        if (constant instanceof ClassTypeConstant)
             {
-            ClassConstant constClass = (ClassConstant) constant;
-            if (constClass.getName().equals("Null"))
+            ClassTypeConstant constClass = (ClassTypeConstant) constant;
+            if (constClass.getClassConstant().getName().equals("Null"))
                 {
                 return NULL;
                 }

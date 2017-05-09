@@ -19,7 +19,7 @@ public class xTestService extends xService
         {
         super(types, "x:TestService", "x:Object", Shape.Service);
 
-        adapter = types.f_constantPool;
+        adapter = types.f_adapter;
 
         addImplement("x:Service");
         }
@@ -32,7 +32,7 @@ public class xTestService extends xService
         mtGetCounter.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.get #")),
-            new Var(adapter.getClassConstId("x:Int64")), // (#1)
+            new Var(adapter.getClassTypeConstId("x:Int64")), // (#1)
             new Call_01(Op.A_SUPER, 1),
             new Return_1(1),
             };
@@ -71,7 +71,7 @@ public class xTestService extends xService
         mtIncrement.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.increment #")),
-            new Var(adapter.getClassConstId("x:Int64")), // (#1)
+            new Var(adapter.getClassTypeConstId("x:Int64")), // (#1)
             new PreInc(-adapter.getPropertyConstId("x:TestService", "counter"), 1),
             new Return_1(1),
             };
@@ -80,10 +80,10 @@ public class xTestService extends xService
         MethodTemplate mtThrowing = ensureMethodTemplate("throwing", VOID, INT);
         mtThrowing.m_aop = new Op[]
             {
-            new Var(this.adapter.getClassConstId("x:Exception")), // #1
+            new Var(this.adapter.getClassTypeConstId("x:Exception")), // #1
             new New_N(this.adapter.getMethodConstId("x:Exception", "construct"),
                     new int[]{-adapter.ensureValueConstantId("test"),
-                            -adapter.getClassConstId("x:Nullable$Null")}, 1),
+                            -adapter.getClassTypeConstId("x:Nullable$Null")}, 1),
             new Throw(1),
             };
         mtThrowing.m_cVars = 2;

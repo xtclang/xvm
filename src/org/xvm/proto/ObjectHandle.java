@@ -12,7 +12,7 @@ import java.util.Map;
  *
  * @author gg 2017.02.15
  */
-public abstract class ObjectHandle
+public class ObjectHandle
         implements Cloneable
     {
     final public TypeComposition f_clazz;
@@ -70,23 +70,25 @@ public abstract class ObjectHandle
             createFields();
             }
 
-        public void createFields()
+        protected void createFields()
             {
             f_clazz.f_template.forEachProperty(pt ->
                 {
-                RefHandle templateRef = null;
+                RefHandle hRef = null;
                 if (pt.isRef())
                     {
                     String sReferent = pt.f_typeName.getSimpleName();
+
                     TypeCompositionTemplate templateReferent =
                             f_clazz.f_template.f_types.getTemplate(sReferent);
-                    templateRef = pt.createRefHandle(templateReferent == null ? null :
-                        templateReferent.f_clazzCanonical.ensurePublicType());
+
+                    hRef = pt.createRefHandle(templateReferent == null ? null :
+                            templateReferent.f_clazzCanonical.ensurePublicType());
                     }
 
-                if (!pt.isReadOnly() || templateRef != null)
+                if (!pt.isReadOnly() || hRef != null)
                     {
-                    m_mapFields.put(pt.f_sName, templateRef);
+                    m_mapFields.put(pt.f_sName, hRef);
                     }
                 });
             }
@@ -144,23 +146,6 @@ public abstract class ObjectHandle
             }
         }
 
-    public static class JavaDelegate
-            extends ObjectHandle
-        {
-        protected Object m_oDelegate;
-
-        public JavaDelegate(TypeComposition clazz)
-            {
-            super(clazz);
-            }
-
-        @Override
-        public String toString()
-            {
-            return super.toString() + m_oDelegate;
-            }
-        }
-
     // anything that fits in a long
     public static class JavaLong
             extends ObjectHandle
@@ -203,6 +188,19 @@ public abstract class ObjectHandle
         private final static long UNASSIGNED = 0xBADBAD0BADBADBADl;
         }
 
+    // abstract array handle
+    public abstract static class ArrayHandle
+            extends ObjectHandle
+        {
+        public final boolean m_fFixed;
+
+        protected ArrayHandle(TypeComposition clzArray, boolean fFixed)
+            {
+            super(clzArray);
+
+            m_fFixed = fFixed;
+            }
+        }
 
     // ----- DEFERRED ----
 

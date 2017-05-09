@@ -15,7 +15,7 @@
 
 + Vars as "deferrable" registers
 
-- Array
+- Arrays, Generic types
 
 - Property and Method
 
@@ -24,8 +24,6 @@
     -- call
     -- invoke
     -- return
-
-- Generic types
 
 
 

@@ -80,8 +80,6 @@ public class xService
         ServiceHandle hService = new ServiceHandle(
                 f_clazzCanonical, f_clazzCanonical.ensureStructType(), frame.f_context);
 
-        hService.createFields();
-
         setFieldValue(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
 
         frame.f_context.setService(hService);
@@ -126,7 +124,7 @@ public class xService
                 if (x != null)
                     {
                     // TODO: call UnhandledExceptionNotification handler
-                    Utils.log("unhandled exception " + x + "\n  by " + hService);
+                    Utils.log("\nUnhandled exception " + x + "\n  by " + hService);
                     }
                 });
             }
@@ -162,7 +160,7 @@ public class xService
                 if (x != null)
                     {
                     // TODO: call UnhandledExceptionNotification handler
-                    Utils.log("unhandled exception " + x + "\n  by " + hService);
+                    Utils.log("\nUnhandled exception " + x + "\n  by " + hService);
                     }
                 });
             }
@@ -249,7 +247,7 @@ public class xService
             if (x != null)
                 {
                 // TODO: call UnhandledExceptionNotification handler
-                Utils.log("unhandled exception " + x + "\n  by " + hService);
+                Utils.log("\nUnhandled exception " + x + "\n  by " + hService);
                 }
             });
 

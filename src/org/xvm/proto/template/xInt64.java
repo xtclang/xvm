@@ -32,6 +32,7 @@ public class xInt64
     @Override
     public void initDeclared()
         {
+        f_types.addTemplate(new xIntArray(f_types));
         }
 
     @Override
@@ -45,6 +46,18 @@ public class xInt64
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
             (((IntConstant) constant).getValue().getLong())) : null;
+        }
+
+    @Override
+    public ExceptionHandle createArrayHandle(Frame frame,
+                TypeComposition clazz, long cCapacity, boolean fFixed, int iReturn)
+        {
+        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
+            {
+            return xException.makeHandle("Invalid array size: " + cCapacity);
+            }
+
+        return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity, fFixed));
         }
 
     @Override

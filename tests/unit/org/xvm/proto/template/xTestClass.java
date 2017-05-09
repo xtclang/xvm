@@ -17,7 +17,7 @@ public class xTestClass extends TypeCompositionTemplate
         {
         super(types, "x:TestClass", "x:Object", Shape.Class);
 
-        adapter = types.f_constantPool;
+        adapter = types.f_adapter;
         }
 
     @Override
@@ -53,12 +53,12 @@ public class xTestClass extends TypeCompositionTemplate
         mtMethod1.m_aop = new Op[]
             { // #0 (this)
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
-            new Var(adapter.getClassConstId("x:String")), // #1 (s)
+            new Var(adapter.getClassTypeConstId("x:String")), // #1 (s)
             new LGet(adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
-            new Var(adapter.getClassConstId("x:Int64")), // #2 (of)
-            new IVar(adapter.getClassConstId("x:String"), adapter.ensureValueConstantId("world")), // #3
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #2 (of)
+            new IVar(adapter.getClassTypeConstId("x:String"), adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(1, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
-            new Var(adapter.getClassConstId("x:Int64")), // #4
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #4
             new PGet(1, adapter.getPropertyConstId("x:String", "length"), 4),
             new Add(4, 2, 4),
             new Return_1(4),
@@ -68,9 +68,9 @@ public class xTestClass extends TypeCompositionTemplate
         MethodTemplate mtThrowing = ensureMethodTemplate("throwing", STRING, VOID);
         mtThrowing.m_aop = new Op[]
             { // #0 (this), #1 (s)
-            new Var(adapter.getClassConstId("x:Exception")), // #2
+            new Var(adapter.getClassTypeConstId("x:Exception")), // #2
             new New_N(adapter.getMethodConstId("x:Exception", "construct"),
-                        new int[]{1, -adapter.getClassConstId("x:Nullable$Null")}, 2),
+                        new int[]{1, -adapter.getClassTypeConstId("x:Nullable$Null")}, 2),
             new Throw(2),
             };
         mtThrowing.m_cVars = 3;

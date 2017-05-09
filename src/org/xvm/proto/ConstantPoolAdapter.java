@@ -2,14 +2,11 @@ package org.xvm.proto;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PackageConstant;
-import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.*;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
+import org.xvm.util.Handy;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +30,7 @@ public class ConstantPoolAdapter
     // the method template fully qualified name (x:collections.Map#get[KeyType]) -> the corresponding MethodConstant id
     private Map<String, Integer> m_mapMethods = new HashMap<>();
 
-    public void registerClass(TypeCompositionTemplate template)
+    public void registerTemplate(TypeCompositionTemplate template)
         {
         String sClassName = template.f_sName;
 
@@ -59,7 +56,9 @@ public class ConstantPoolAdapter
 
         ClassConstant constClass =
                 m_constantPool.ensureClassConstant(constParent, sClassName.substring(ofStart));
-        m_mapClasses.put(sClassName, constClass.getPosition());
+        ClassTypeConstant constType =
+                m_constantPool.ensureClassTypeConstant(constClass, null);
+        m_mapClasses.put(sClassName, constType.getPosition());
         }
 
     public void registerProperty(TypeCompositionTemplate templateClazz, PropertyTemplate templateProperty)
@@ -67,9 +66,9 @@ public class ConstantPoolAdapter
         String sName    = templateProperty.f_sName;
         String sClzName = templateClazz.f_sName;
 
-        ClassConstant constClass = getClassConstant(getClassConstId(sClzName));
-        ClassConstant constType  = getClassConstant(getClassConstId("x:Object")); // TODO
-        PropertyConstant constProperty = m_constantPool.ensurePropertyConstant(constClass, sName);
+        ClassTypeConstant constClass = getClassTypeConstant(getClassTypeConstId(sClzName));
+        ClassTypeConstant constType  = getClassTypeConstant(getClassTypeConstId("x:Object")); // TODO
+        PropertyConstant constProperty = m_constantPool.ensurePropertyConstant(constClass.getClassConstant(), sName);
 
         m_mapProperties.put(sClzName + '#' + sName, constProperty.getPosition());
         }
@@ -80,36 +79,55 @@ public class ConstantPoolAdapter
         String sName    = templateMethod.f_sName;
         String sClzName = templateClazz.f_sName;
 
-        ClassConstant constClass = getClassConstant(getClassConstId(sClzName));
+        ClassTypeConstant constClass = getClassTypeConstant(getClassTypeConstId(sClzName));
 
         MethodConstant constMethod = m_constantPool.ensureMethodConstant(
-                constClass, sName, templateMethod.m_access, null, null);
+                constClass.getClassConstant(), sName, templateMethod.m_access, null, null);
 
         m_mapMethods.put(sClzName + '#' + sName, constMethod.getPosition());
         }
 
-    public int getClassConstId(String sName)
+    public int getClassTypeConstId(String sName)
         {
-        int ofTypeParam = sName.indexOf('<');
-        if (ofTypeParam >= 0)
-            {
-            // ignore the generic param type for now
-            sName = sName.substring(0, ofTypeParam);
-            }
-
-        try
+        if (m_mapClasses.containsKey(sName))
             {
             return m_mapClasses.get(sName);
             }
-        catch (NullPointerException e)
+
+        int ofTypeParam = sName.indexOf('<');
+        if (ofTypeParam >= 0)
             {
-            throw new IllegalArgumentException("Constant is not defined: " + sName);
+            String sParam = sName.substring(ofTypeParam + 1, sName.length() - 1);
+            String sSimpleName = sName.substring(0, ofTypeParam);
+
+            if (m_mapClasses.containsKey(sSimpleName))
+                {
+                int nClass = m_mapClasses.get(sSimpleName);
+                ClassConstant constClass = getClassTypeConstant(nClass).getClassConstant();
+
+                String[] asType = Handy.parseDelimitedString(sParam, ',');
+                int cTypes = asType.length;
+                TypeConstant[] aType = new TypeConstant[cTypes];
+                for (int i = 0; i < cTypes; i++)
+                    {
+                    String sType = asType[i].trim();
+                    aType[i] = getClassTypeConstant(getClassTypeConstId(sType));
+                    }
+
+                int nTypeId = m_constantPool.ensureClassTypeConstant(constClass, null, aType).getPosition();
+
+                m_mapClasses.put(sName, nTypeId);
+
+                return nTypeId;
+                }
             }
+
+        throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
         }
 
-    public ClassConstant getClassConstant(int nConstId)
+    public ClassTypeConstant getClassTypeConstant(int nConstId)
         {
-        return (ClassConstant) m_constantPool.getConstant(nConstId);
+        return (ClassTypeConstant) m_constantPool.getConstant(nConstId);
         }
 
     public int getPropertyConstId(String sClassName, String sPropName)
@@ -182,6 +200,26 @@ public class ConstantPoolAdapter
         }
 
     // helper methods
+    public static String getClassName(Constant constant)
+        {
+        if (constant instanceof ClassConstant)
+            {
+            return getClassName((ClassConstant) constant);
+            }
+
+        if (constant instanceof ClassTypeConstant)
+            {
+            return getClassName(((ClassTypeConstant) constant).getClassConstant());
+            }
+
+        if (constant instanceof MethodConstant)
+            {
+            return getClassName(((MethodConstant) constant).getNamespace());
+            }
+
+        throw new IllegalArgumentException("Unsupported constant type: " + constant);
+        }
+
     public static String getClassName(ClassConstant constClass)
         {
         StringBuilder sb = new StringBuilder(constClass.getName());
@@ -217,8 +255,8 @@ public class ConstantPoolAdapter
         }
 
     // signature resolves and appends the actual type parameters
-    public static String getClassSignature(ClassConstant constClass)
+    public static String getClassSignature(ClassTypeConstant constClass)
         {
-        return getClassName(constClass);
+        return constClass.getValueString();
         }
     }

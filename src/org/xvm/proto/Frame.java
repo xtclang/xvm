@@ -438,7 +438,7 @@ public class Frame
             f_clazz = clazz;
             f_sVarName = sName;
             m_fDynamicRef = fDynamic;
-            m_fDeferrable = false; // named register is never deferrable
+            m_fDeferrable = false; // named or dynamic register is never deferrable
             }
 
         // this VarInfo goes out of scope

@@ -2,25 +2,24 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-
 /**
- * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T
+ * A_GET rvalue-target, rvalue-index, lvalue-return ; T = T[Ti]
  *
  * @author gg 2017.03.08
  */
-public class Add extends Op
+public class AGet extends Op
     {
     private final int f_nTargetValue;
-    private final int f_nArgValue;
+    private final int f_nIndexValue;
     private final int f_nRetValue;
 
-    public Add(int nTarget, int nArg, int nRet)
+    public AGet(int nTarget, int nArg, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nArgValue = nArg;
+        f_nIndexValue = nArg;
         f_nRetValue = nRet;
         }
 
@@ -32,9 +31,9 @@ public class Add extends Op
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            ObjectHandle hIndex = frame.getArgument(f_nIndexValue);
 
-            hException = hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, f_nRetValue);
+            hException = hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hIndex, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

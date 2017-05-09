@@ -2,12 +2,16 @@ package org.xvm.proto;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
+import org.xvm.proto.template.xArray;
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef.RefHandle;
@@ -58,7 +62,7 @@ public abstract class TypeCompositionTemplate
     protected Map<List<Type>, TypeComposition> m_mapCompositions = new HashMap<>();
 
     // cache of relationships
-    protected enum Relation {EXTENDS, IMPLEMENTS, INCOMPATIBLE};
+    protected enum Relation {EXTENDS, IMPLEMENTS, INCOMPATIBLE}
     protected Map<TypeCompositionTemplate, Relation> m_mapRelations = new HashMap<>();
 
     // construct the template
@@ -129,7 +133,7 @@ public abstract class TypeCompositionTemplate
 
         if (propPrev == null)
             {
-            f_types.f_constantPool.registerProperty(this, propThis);
+            f_types.f_adapter.registerProperty(this, propThis);
             }
         else
             {
@@ -336,6 +340,37 @@ public abstract class TypeCompositionTemplate
             }
         }
 
+
+    // produce a TypeComposition based on the specified ClassTypeConstant
+    public TypeComposition resolve(ClassTypeConstant constClass)
+        {
+        List<TypeConstant> listParams = constClass.getTypeConstants();
+        int cParams = listParams.size();
+        if (cParams == 0)
+            {
+            return resolve(Utils.TYPE_NONE);
+            }
+
+        TypeComposition[] aClz = new TypeComposition[cParams];
+        int iParam = 0;
+        for (TypeConstant constParamType : listParams)
+            {
+            if (constParamType instanceof ClassTypeConstant)
+                {
+                ClassTypeConstant constParamClass = (ClassTypeConstant) constParamType;
+
+                String sSimpleName = ConstantPoolAdapter.getClassName(constParamClass);
+                TypeCompositionTemplate templateParam = f_types.ensureTemplate(sSimpleName);
+                aClz[iParam] = templateParam.resolve(constParamClass);
+                }
+            else
+                {
+                throw new IllegalArgumentException("Invalid param type constant: " + constParamType);
+                }
+            }
+        return resolve(aClz);
+        }
+
     // produce a TypeComposition for this template by resolving the generic types
     public TypeComposition resolve(TypeComposition[] aclzGenericActual)
         {
@@ -359,13 +394,6 @@ public abstract class TypeCompositionTemplate
         List<Type> key = Arrays.asList(atGenericActual);
         return m_mapCompositions.computeIfAbsent(key,
                 (x) -> new TypeComposition(this, atGenericActual));
-        }
-
-    // produce a TypeComposition based on the specified ClassConstant
-    public TypeComposition resolve(ClassConstant classConstant)
-        {
-        // TODO: awaiting support from ClassConstant
-        return resolve(Utils.TYPE_NONE);
         }
 
     public Type createType(Type[] atGenericActual, Constant.Access access)
@@ -432,7 +460,7 @@ public abstract class TypeCompositionTemplate
     // create an un-initialized handle (Int i;)
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new GenericHandle(clazz);
+        return new ObjectHandle(clazz);
         }
 
     // assign (Int i = 5;)
@@ -697,6 +725,20 @@ public abstract class TypeCompositionTemplate
         return null;
         }
 
+    // ----- Op-code support: array operations -----
+
+    // get a handle to an array for the specified class
+    public ExceptionHandle createArrayHandle(Frame frame,
+                TypeComposition clazz, long cCapacity, boolean fFixed, int iReturn)
+        {
+        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
+            {
+            return xException.makeHandle("Invalid array size: " + cCapacity);
+            }
+
+        return frame.assignValue(iReturn, xArray.makeInstance(cCapacity, fFixed));
+        }
+
     // ----- debugging support -----
 
     public String getDescription()
@@ -841,10 +883,10 @@ public abstract class TypeCompositionTemplate
 
         public RefHandle createRefHandle(Type typeReferent)
             {
-            TypeComposition classReferent = typeReferent == null ?
+            TypeComposition clzReferent = typeReferent == null ?
                 m_templateRef.resolve(new Type[] {typeReferent}) :
                 m_templateRef.f_clazzCanonical;
-            return (RefHandle) m_templateRef.createHandle(classReferent);
+            return (RefHandle) m_templateRef.createHandle(clzReferent);
             }
 
         public void setGetAccess(Constant.Access access)
@@ -962,7 +1004,7 @@ public abstract class TypeCompositionTemplate
             f_sName = sName;
 
             m_argTypeName = atArg;
-            m_cArgs = atArg.length;
+            m_cVars = m_cArgs = atArg.length;
 
             m_retTypeName = atRet;
             m_cReturns = atRet.length;
@@ -1012,20 +1054,6 @@ public abstract class TypeCompositionTemplate
             m_aop = that.m_aop;
             }
 
-        // create a new function template for a bound method
-        public FunctionTemplate bind(int iArg)
-            {
-//            int cArgs = m_cArgs;
-//            TypeName[] atArg = new TypeName[cArgs + 1];
-//            System.arraycopy(m_argTypeName, 0, atArg, 1, cArgs);
-//            atArg[0] = new TypeName.SimpleTypeName(TypeCompositionTemplate.this.f_sName);
-//
-//            FunctionTemplate function = new FunctionTemplate(f_sName, atArg, m_retTypeName);
-//            function.copyCodeAttributes(this);
-//            return function;
-            throw new UnsupportedOperationException("TODO");
-            }
-
         public String getSignature()
             {
             return TypeName.getFunctionSignature(f_sName, m_argTypeName, m_retTypeName);
@@ -1053,7 +1081,7 @@ public abstract class TypeCompositionTemplate
             MethodTemplate methodSuper = m_mapMethods.put(method.getSignature(), method);
             if (methodSuper == null)
                 {
-                f_types.f_constantPool.registerInvocable(TypeCompositionTemplate.this, method);
+                f_types.f_adapter.registerInvocable(TypeCompositionTemplate.this, method);
                 }
             else
                 {
@@ -1071,7 +1099,7 @@ public abstract class TypeCompositionTemplate
             {
             if (m_mapFunctions.put(function.getSignature(), function) == null)
                 {
-                f_types.f_constantPool.registerInvocable(TypeCompositionTemplate.this, function);
+                f_types.f_adapter.registerInvocable(TypeCompositionTemplate.this, function);
                 }
             else
                 {

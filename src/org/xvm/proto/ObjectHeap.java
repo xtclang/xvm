@@ -2,7 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.CharStringConstant;
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -34,7 +34,7 @@ public class ObjectHeap
         f_constantPool = adapter;
         }
 
-    // nClassConstId - ClassConstant in the ConstantPool
+    // nClassConstId - ClassTypeConstant in the ConstantPool
     public ObjectHandle ensureHandle(int nClassConstId)
         {
         TypeComposition typeComposition = f_types.ensureConstComposition(nClassConstId);
@@ -68,7 +68,7 @@ public class ObjectHeap
                     handle = xFunction.INSTANCE.createConstHandle(constValue);
                     }
                 }
-            else if (constValue instanceof ClassConstant)
+            else if (constValue instanceof ClassTypeConstant)
                 {
                 handle = xClass.INSTANCE.createConstHandle(constValue);
                 }

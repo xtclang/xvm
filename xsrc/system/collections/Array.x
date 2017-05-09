@@ -1,14 +1,17 @@
 /**
  * An array is a container of elements of a particular type.
  *
- * TODO need a growable-from-empty array a-la arraylist (maybe with max and/or init capacity?)
+ * TODO need a growable-from-empty array a-la ArrayList (maybe with max and/or init capacity?)
  * TODO need a fixed size array that inits each element based on a value or fn()
  * TODO need a const array
  */
 class Array<ElementType>
         implements Sequence<ElementType>
     {
-    construct Array(Int capacity)
+    /**
+     * Construct a dynamically growing array with the specified initial capacity.
+     */
+    construct Array(Int capacity = 0) // dynamic growth with an initial ca
         {
         if (capacity < 0)
             {
@@ -17,17 +20,20 @@ class Array<ElementType>
         this.capacity = capacity;
         }
 
-    construct Array(Int capacity, function ElementType(Int) supply)
+    /**
+     * Construct a fixed size array with the specified size and initial value.
+     */
+    construct Array(Int size, function ElementType(Int) supply) // fixed size
         {
-        construct Array(capacity);
+        construct Array(size);
 
         Element<ElementType>? head = null;
-        if (capacity > 0)
+        if (size > 0)
             {
             head = new Element<ElementType>(supply(0));
 
             Element<ElementType> tail = head;
-            for (Int i : 1..capacity)
+            for (Int i : 1..size)
                 {
                 Element<ElementType> node = new Element<>(supply(i));
                 tail.next = node;
@@ -36,8 +42,8 @@ class Array<ElementType>
             }
 
         this.head     = head;
-        this.capacity = capacity;
-        this.length   = capacity;
+        this.capacity = size;
+        this.length   = size;
         }
 
     public/private Int capacity = 0;
@@ -115,18 +121,18 @@ class Array<ElementType>
         }
 
     /**
-     * Return a fixed-size tuple (whose values are mutable) of the same type and with the same
-     * contents as this tuple. If this tuple is already a fixed-size tuple, then _this_ is returned.
+     * Return a fixed-size array (whose values are mutable) of the same type and with the same
+     * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
      */
     @Override
     Array.Type<ElementType> ensureFixedSize();
 
     /**
-     * Return a persistent tuple of the same element types and values as are present in this tuple.
-     * If this tuple is already persistent or {@code const}, then _this_ is returned.
+     * Return a persistent array of the same element types and values as are present in this array.
+     * If this array is already persistent or {@code const}, then _this_ is returned.
      *
-     * A _persistent_ tuple does not support replacing the contents of the elements in this tuple
-     * using the {@link replace} method; instead, calls to {@link replace} will return a new tuple.
+     * A _persistent_ array does not support replacing the contents of the elements in this array
+     * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
      */
     @Override
     Array.Type<ElementType> ensurePersistent();

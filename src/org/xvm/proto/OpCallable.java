@@ -1,6 +1,5 @@
 package org.xvm.proto;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -23,7 +22,7 @@ public abstract class OpCallable extends Op
         MethodConstant constFunction =
                 frame.f_context.f_constantPool.getMethodConstant(nFunctionConstantId);
 
-        String sClass = ConstantPoolAdapter.getClassName((ClassConstant) constFunction.getNamespace());
+        String sClass = ConstantPoolAdapter.getClassName(constFunction);
 
         TypeCompositionTemplate template = frame.f_context.f_types.getTemplate(sClass);
 

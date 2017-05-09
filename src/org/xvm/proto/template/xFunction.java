@@ -2,7 +2,6 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.proto.template.xService.ServiceHandle;
@@ -55,9 +54,8 @@ public class xFunction
         if (constant instanceof MethodConstant)
             {
             MethodConstant constFunction = (MethodConstant) constant; // TODO: replace with function when implemented
-            ClassConstant constClass = (ClassConstant) constFunction.getNamespace();
 
-            String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
+            String sTargetClz = ConstantPoolAdapter.getClassName(constFunction);
             TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
             FunctionTemplate function = target.getFunctionTemplate(constFunction);
 

@@ -1,18 +1,18 @@
 // fundamentals
- NOP                                                ; traditional no-op, which does nothing
++NOP                                                ; traditional no-op, which does nothing
  LINE                                               ; advance line counter
  BREAK                                              ; explicit break-point for debugger
  YIELD                                              ; explicit service yield point (check the backlog)
- ENTER                                              ; variable scope begin
- EXIT                                               ; variable scope end
- GUARD      #handlers:(CONST_CLASS, CONST_STRING, rel_addr) ; try { (+ “catch” class and variable name) // note: ENTER
- END_GUARD   rel_addr                               ; } ...                            // note: EXIT (
++ENTER                                              ; variable scope begin
++EXIT                                               ; variable scope end
++GUARD      #handlers:(CLASS_CONST, CONST_STRING, rel_addr) ; try { (+ “catch” class and variable name) // note: ENTER
++END_GUARD   rel_addr                               ; } ...                            // note: EXIT (
  GUARD_ALL                                          ; try {                            // note: ENTER
  FINALLY                                            ; } finally {                      // note: EXIT, ENTER
  END_FINALLY                                        ; }                                // note: EXIT
- THROW      rvalue                                  ; raise exception
- HANDLER                                            ; begin an exception handler (implicit ENTER)
- END_HANDLER rel-addr                               ; finish an exception handler with a jump
++ THROW      rvalue                                  ; raise exception
++HANDLER                                            ; begin an exception handler (implicit ENTER)
++END_HANDLER rel-addr                               ; finish an exception handler with a jump
 
 // jumps
  GOTO       abs-addr                                ; unconditional absolute jump
@@ -33,29 +33,29 @@
  JMP_NTYPE  rvalue, rvalue-type, rel-addr           ; jump if type of the value is NOT “instanceof" specified type
 
 // variables and refs
- VAR        CONST_CLASS                             ; next register is an uninitialized anonymous variable
- IVAR       CONST_CLASS, CONST_*                    ; next register is an initialized anonymous variable
- NVAR       CONST_CLASS, CONST_STRING               ; next register is an uninitialized named variable
- INVAR      CONST_CLASS, CONST_STRING, CONST_*      ; next register is an initialized named variable
- DVAR       CONST_REF_CLASS                         ; next register is an anonymous "dynamic reference" variable
- DNVAR      CONST_REF_CLASS, CONST_STRING           ; next register is a named "dynamic reference" variable
- REF        lvalue                                  ; next register represents the Variable ref for the specified variable
++VAR        TYPE_CONST                              ; next register is an uninitialized anonymous variable
++IVAR       TYPE_CONST, CONST_*                    ; next register is an initialized anonymous variable
++NVAR       TYPE_CONST, CONST_STRING               ; next register is an uninitialized named variable
++INVAR      TYPE_CONST, CONST_STRING, CONST_*      ; next register is an initialized named variable
++DVAR       CONST_REF_CLASS                         ; next register is an anonymous "dynamic reference" variable
++DNVAR      CONST_REF_CLASS, CONST_STRING           ; next register is a named "dynamic reference" variable
++REF        lvalue                                  ; next register represents the Variable ref for the specified variable
  CREF       rvalue                                  ; next register represents the @ro Variable ref for the specified variable
- CAST       rvalue, CONST_CLASS                     ; next register holds the type-casted value
- MOV        rvalue-src, lvalue-dest                 ; move source value to destination
- MOV_REF    lvalue-src, lvalue-dest                 ; move reference-to-source to destination
+ CAST       rvalue, TYPE_CONST                     ; next register holds the type-casted value
++MOV        rvalue-src, lvalue-dest                 ; move source value to destination
++MOV_REF    lvalue-src, lvalue-dest                 ; move reference-to-source to destination
  MOV_CREF   rvalue-src, lvalue-dest                 ; move reference-to-source to destination
- MOV_CAST   rvalue-src, lvalue-dest, CONST_CLASS    ; move type-casted source reference to destination
+ MOV_CAST   rvalue-src, lvalue-dest, TYPE_CONST    ; move type-casted source reference to destination
  SWAP       lvalue, lvalue                          ; swap source and destination values
 
 // local property based
- L_GET       CONST_PROPERTY, lvalue                 ; local get property (target=this)
- L_SET       CONST_PROPERTY, rvalue                 ; local set property (target=this)
++L_GET       CONST_PROPERTY, lvalue                 ; local get property (target=this)
++L_SET       CONST_PROPERTY, rvalue                 ; local set property (target=this)
  L_REF       CONST_PROPERTY                         ; next register represents the Property ref for the specified local property (target=this)
 
 // register-based operations;
 // in this group either rvalue could be a constant
- ADD        rvalue-target, rvalue-second, lvalue-return                             ; T + T -> T
++ADD        rvalue-target, rvalue-second, lvalue-return                             ; T + T -> T
  SUB        rvalue-target, rvalue-second, lvalue-return                             ; T - T -> T
  MUL        rvalue-target, rvalue-second, lvalue-return                             ; T * T -> T
  DIV        rvalue-target, rvalue-second, lvalue-return                             ; T / T -> T
@@ -68,15 +68,15 @@
  XOR        rvalue-target, rvalue-second, lvalue-return                             ; T ^ T -> T
  DIVMOD     rvalue-target, rvalue-second, lvalue-div-return, lvalue-mod-return      ; T /% T -> T, T
  POS        rvalue-target, lvalue-return                                            ; +T -> T                ; TODO make this reserved? (it’s a no-op for built-in types)
- NEG        rvalue-target, lvalue-return                                            ; -T -> T
++NEG        rvalue-target, lvalue-return                                            ; -T -> T
  COMPL      rvalue-target, lvalue-return                                            ; ~T -> T                ; WHY DOES THIS EXIST?
 
 
 // in this group, the lvalue-target could be either a positive number, representing
 // a register, or a negative - representing a local property
- POSTINC    lvalue-target, lvalue-return                                            ; T++ -> T
++POSTINC    lvalue-target, lvalue-return                                            ; T++ -> T
  POSTDEC    lvalue-target, lvalue-return                                            ; T-— -> T
- PREINC     lvalue-target, lvalue-return                                            ; ++T -> T
++PREINC     lvalue-target, lvalue-return                                            ; ++T -> T
  PREDEC     lvalue-target, lvalue-return                                            ; --T -> T
  ADD_ASGN   lvalue-target, rvalue-second                                            ; T += T
  SUB_ASGN   lvalue-target, rvalue-second                                            ; T -= T
@@ -91,16 +91,16 @@
  XOR_ASGN   lvalue-target, rvalue-second                                            ; T ^= T
 
 // property ops
- P_GET        rvalue-target, CONST_PROPERTY, lvalue         ; get property
- P_SET        rvalue-target, CONST_PROPERTY, rvalue         ; set property
++P_GET        rvalue-target, CONST_PROPERTY, lvalue         ; get property
++P_SET        rvalue-target, CONST_PROPERTY, rvalue         ; set property
  P_REF        rvalue-target, CONST_PROPERTY                 ; next register represents the Property ref for the specified property
  P_CREF       rvalue-target, CONST_PROPERTY                 ; next register represents the @ro Property ref for the specified property
 
  P_INC        rvalue-target, CONST_PROPERTY                 ; in-place increment; no result
  P_DEC        rvalue-target, CONST_PROPERTY                 ; ditto
- P_POSTINC    rvalue-target, CONST_PROPERTY, lvalue         ; same as POSTINC for a register
++P_POSTINC    rvalue-target, CONST_PROPERTY, lvalue         ; same as POSTINC for a register
  P_POSTDEC    rvalue-target, CONST_PROPERTY, lvalue         ; ditto
- P_PREINC     rvalue-target, CONST_PROPERTY, lvalue
++P_PREINC     rvalue-target, CONST_PROPERTY, lvalue
  P_PREDEC     rvalue-target, CONST_PROPERTY, lvalue
  P_ADD_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
  P_SUB_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
@@ -116,16 +116,16 @@
 
 
 // function calls
- CALL_00    rvalue-function
- CALL_01    rvalue-function, lvalue-return
++CALL_00    rvalue-function
++CALL_01    rvalue-function, lvalue-return
  CALL_0N    rvalue-function, #returns:(lvalue)
  CALL_0T    rvalue-function, lvalue-return-tuple
- CALL_10    rvalue-function, rvalue-param
- CALL_11    rvalue-function, rvalue-param, lvalue-return
++CALL_10    rvalue-function, rvalue-param
++CALL_11    rvalue-function, rvalue-param, lvalue-return
  CALL_1N    rvalue-function, rvalue-param, #returns:(lvalue)
  CALL_1T    rvalue-function, rvalue-param, lvalue-return-tuple
- CALL_N0    rvalue-function, #params:(rvalue)
- CALL_N1    rvalue-function, #params:(rvalue), lvalue-return
++CALL_N0    rvalue-function, #params:(rvalue)
++CALL_N1    rvalue-function, #params:(rvalue), lvalue-return
  CALL_NN    rvalue-function, #params:(rvalue), #returns:(lvalue)
  CALL_NT    rvalue-function, #params:(rvalue), lvalue-return-tuple
  CALL_T0    rvalue-function, rvalue-params-tuple
@@ -134,16 +134,16 @@
  CALL_TT    rvalue-function, rvalue-params-tuple, lvalue-return-tuple
 
 // method calls
- INVOKE_00  rvalue-target, CONST-METHOD
- INVOKE_01  rvalue-target, CONST-METHOD, lvalue-return
++INVOKE_00  rvalue-target, CONST-METHOD
++INVOKE_01  rvalue-target, CONST-METHOD, lvalue-return
  INVOKE_0N  rvalue-target, CONST-METHOD, #returns:(lvalue)
  INVOKE_0T  rvalue-target, CONST-METHOD, lvalue-return-tuple
- INVOKE_10  rvalue-target, CONST-METHOD, rvalue-param
- INVOKE_11  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return
++INVOKE_10  rvalue-target, CONST-METHOD, rvalue-param
++INVOKE_11  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return
  INVOKE_1N  rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
  INVOKE_1T  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return-tuple
- INVOKE_N0  rvalue-target, CONST-METHOD, #params:(rvalue)
- INVOKE_N1  rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return
++INVOKE_N0  rvalue-target, CONST-METHOD, #params:(rvalue)
++INVOKE_N1  rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return
  INVOKE_NN  rvalue-target, CONST-METHOD, #params:(rvalue), #returns:(lvalue)
  INVOKE_NT  rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return-tuple
  INVOKE_T0  rvalue-target, CONST-METHOD, rvalue-params-tuple
@@ -176,8 +176,8 @@
 
 // construction
  NEW_0      CONST-CONSTRUCT, lvalue-return
- NEW_1      CONST-CONSTRUCT, rvalue-param, lvalue-return
- NEW_N      CONST-CONSTRUCT, #params:(rvalue), lvalue-return
++NEW_1      CONST-CONSTRUCT, rvalue-param, lvalue-return
++NEW_N      CONST-CONSTRUCT, #params:(rvalue), lvalue-return
  NEW_T      CONST-CONSTRUCT, rvalue-params-tuple, lvalue-return
  NEW_0G     CONST-CONSTRUCT, rvalue-type, lvalue-return                             ; generic "new"
  NEW_1G     CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
@@ -192,19 +192,19 @@
  CONSTR_N   CONST-CONSTRUCT, #params:(rvalue)
  CONSTR_T   CONST-CONSTRUCT, rvalue-params-tuple
 
- RTYPE_1 CLASS_CONST, rvalue-type, lvalue-return                            ; resolve generic type; lvalue-return - a Type object
- RTYPE_N CLASS_CONST, #type-params:(rvalue-type), lvalue-return
+ RTYPE_1    CLASS_TYPE_CONST, rvalue-type, lvalue-return                    ; resolve generic type; lvalue-return - a Type object
+ RTYPE_N    CLASS_TYPE_CONST, #type-params:(rvalue-type), lvalue-return
  MATCH_2    rvalue, CONST_*, rel-addr, CONST_*, rel-addr                    ; if the value equals one of the two constants, jump accordingly
  MATCH_3    rvalue, CONST_*, rel-addr, CONST_*, rel-addr, CONST_*, rel-addr ; if the value equals one of the three constants, jump accordingly
  MATCH_N    rvalue, #opts:(CONST_*, rel-addr)                               ; if the value equals one of the N constants, jump accordingly
  ASSERT     rvalue                                  ; assert
  ASSERT_T   rvalue, CONST_STRING                    ; assert with assertion text (e.g. assertion expression)
  ASSERT_V   rvalue, CONST_STRING, #vals(rvalue)     ; assert with assertion text and variables to print
- MBIND      rvalue-target, CONST-METHOD, lvalue-fn-result
- FBIND      rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
++MBIND      rvalue-target, CONST-METHOD, lvalue-fn-result
++FBIND      rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
  FBINDN     rvalue-fn, #params:(CONST_STRING, rvalue-param), lvalue-fn-result ; TODO is this something that could be deferred or eliminated???
- RETURN_0                                                                   ; return (no return value)
- RETURN_1   rvalue                                                          ; return (single return value)
++RETURN_0                                                                   ; return (no return value)
++RETURN_1   rvalue                                                          ; return (single return value)
  RETURN_N   #vals:(rvalue)                                                  ; return (multiple return value)
  RETURN_T   rvalue                                                          ; return (a tuple of return values)
 
@@ -236,24 +236,24 @@
  NTCOND                                             ; test mode not enabled
  DCOND                                              ; running in debugger
  NDCOND                                                                                                      ; not running in debugger
- PCOND      (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY | CONST_STRING)    ; VM-structure or named condition present
- NPCOND     (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY | CONST_STRING)    ; VM-structure or named condition absent
- VCOND      (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY), CONST_VER        ; VM-structure of a (>=) specified version present
- NVCOND     (CONST_MODULE | CONST_NAMESPACE | CONST_CLASS | CONST_METHOD | CONST_PROPERTY), CONST_VER        ;                   (<)
+ PCOND      (CONST_MODULE | CONST_NAMESPACE | CLASS_CONST | CONST_METHOD | CONST_PROPERTY | CONST_STRING)    ; VM-structure or named condition present
+ NPCOND     (CONST_MODULE | CONST_NAMESPACE | CLASS_CONST | CONST_METHOD | CONST_PROPERTY | CONST_STRING)    ; VM-structure or named condition absent
+ VCOND      (CONST_MODULE | CONST_NAMESPACE | CLASS_CONST | CONST_METHOD | CONST_PROPERTY), CONST_VER        ; VM-structure of a (>=) specified version present
+ NVCOND     (CONST_MODULE | CONST_NAMESPACE | CLASS_CONST | CONST_METHOD | CONST_PROPERTY), CONST_VER        ;                   (<)
  XCOND      CONST_VER                                                                                        ; XVM of a (>=) specified version (>=)
  NXCOND     CONST_VER                                                                                        ;          (<)
  END_COND                                                                                                    ; end conditional block         // note: EXIT
 
 
 pre-defined variables/constants:
-0: this
--1: this:public
--2: this:protected
--3: this:private
--4: this:target		..
--5: this:struct
--6: this:frame		Frame
--7: this:service		Service + ..
--8: this:module		Module + ..
--9: this:type		Type
--A: super		Function
++ 0: this
++ 1: this:public
++ 2: this:protected
++ 3: this:private
++ 4: this:target
++ 5: this:struct
++ 6: this:frame     Frame
++ 7: this:service	Service + ..
+  8: this:module    Module + ..
+  9: this:type      Type
++ A: super          Function

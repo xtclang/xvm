@@ -37,8 +37,8 @@ public class xException
 
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {
-            new PSet(0, f_types.f_constantPool.getPropertyConstId("x:Exception", "text"), 1),
-            new PSet(0, f_types.f_constantPool.getPropertyConstId("x:Exception", "cause"), 2),
+            new PSet(0, f_types.f_adapter.getPropertyConstId("x:Exception", "text"), 1),
+            new PSet(0, f_types.f_adapter.getPropertyConstId("x:Exception", "cause"), 2),
             new Return_0(),
             };
         ct.m_cVars = 3;

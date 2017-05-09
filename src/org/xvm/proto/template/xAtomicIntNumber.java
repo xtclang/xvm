@@ -122,8 +122,8 @@ public class xAtomicIntNumber
         @Override
         public String toString()
             {
-            return "x:AtomicIntNumber " +
-                    (m_atomicValue == null ? "unassigned" : "-> " + m_atomicValue.get());
+            return "(x:AtomicIntNumber) " +
+                    (m_atomicValue == null ? "unassigned" : m_atomicValue.get());
             }
         }
     }

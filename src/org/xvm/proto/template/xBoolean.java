@@ -1,7 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -64,14 +64,15 @@ public class xBoolean
     @Override
     public ObjectHandle createConstHandle(Constant constant)
         {
-        if (constant instanceof ClassConstant)
+        if (constant instanceof ClassTypeConstant)
             {
-            ClassConstant constClass = (ClassConstant) constant;
-            if (constClass.getName().equals("True"))
+            ClassTypeConstant constClass = (ClassTypeConstant) constant;
+            String sName = constClass.getClassConstant().getName();
+            if (sName.equals("True"))
                 {
                 return TRUE;
                 }
-            if (constClass.getName().equals("False"))
+            if (sName.equals("False"))
                 {
                 return FALSE;
                 }

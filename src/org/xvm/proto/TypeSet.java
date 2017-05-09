@@ -1,6 +1,6 @@
 package org.xvm.proto;
 
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -20,7 +20,7 @@ public class TypeSet
     private Map<String, TypeCompositionTemplate> m_mapTemplates = new TreeMap<>();
     private Map<String, String> m_mapAliases = new TreeMap<>();
 
-    public final ConstantPoolAdapter f_constantPool;
+    public final ConstantPoolAdapter f_adapter;
 
     // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
     private Map<Integer, TypeComposition> m_mapConstCompositions = new TreeMap<>(Integer::compare);
@@ -30,7 +30,7 @@ public class TypeSet
 
     TypeSet(ConstantPoolAdapter adapter)
         {
-        f_constantPool = adapter;
+        f_adapter = adapter;
         }
 
     public Type getType(int nTypeId)
@@ -90,7 +90,7 @@ public class TypeSet
             throw new IllegalArgumentException("CompositionTemplateName is already used:" + sName);
             }
 
-        f_constantPool.registerClass(template);
+        f_adapter.registerTemplate(template);
 
         template.resolveDependencies();
         template.initDeclared();
@@ -159,10 +159,10 @@ public class TypeSet
         TypeComposition typeComposition = m_mapConstCompositions.get(nClassConstId);
         if (typeComposition == null)
             {
-            ClassConstant classConstant = f_constantPool.getClassConstant(nClassConstId);   // must exist
+            ClassTypeConstant classConstant = f_adapter.getClassTypeConstant(nClassConstId);   // must exist
 
             // TODO: combination types (String|Runnable)
-            String sTemplate = ConstantPoolAdapter.getClassName(classConstant);
+            String sTemplate = ConstantPoolAdapter.getClassName(classConstant.getClassConstant());
             TypeCompositionTemplate template = ensureTemplate(sTemplate);
 
             typeComposition = template.resolve(classConstant);

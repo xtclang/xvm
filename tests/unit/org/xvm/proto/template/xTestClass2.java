@@ -19,7 +19,7 @@ public class xTestClass2 extends TypeCompositionTemplate
         {
         super(types, "x:TestClass2", "x:TestClass", Shape.Class);
 
-        adapter = types.f_constantPool;
+        adapter = types.f_adapter;
         }
 
     @Override
@@ -53,9 +53,9 @@ public class xTestClass2 extends TypeCompositionTemplate
         mtMethod1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
-            new Var(adapter.getClassConstId("x:Int64")), // #1
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #1
             new Call_01(Op.A_SUPER, 1),
-            new Var(adapter.getClassConstId("x:Int64")), // #2
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #2
             new LGet(adapter.getPropertyConstId("x:TestClass2", "prop2"), 2),
             new Add(1, 2, 1),
             new Return_1(1),

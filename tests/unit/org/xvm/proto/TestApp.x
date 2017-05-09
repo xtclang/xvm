@@ -7,6 +7,7 @@ module TestApp
         test2();
         testService();
         testRef();
+        testArray();
         }
 
     static Int getIntValue()
@@ -200,5 +201,10 @@ module TestApp
             print(ri2);
             }
         print(ri.get())
+        }
+
+    static Void testArray()
+        {
+        Int[] ai = new Int[]; // mutable Array<Int>
         }
     }

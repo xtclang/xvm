@@ -1,7 +1,6 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.proto.*;
 
@@ -36,9 +35,8 @@ public class xMethod
         if (constant instanceof MethodConstant)
             {
             MethodConstant constMethod = (MethodConstant) constant;
-            ClassConstant constClass = (ClassConstant) constMethod.getNamespace();
 
-            String sTargetClz = ConstantPoolAdapter.getClassName(constClass);
+            String sTargetClz = ConstantPoolAdapter.getClassName(constMethod);
             TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
 
             MethodTemplate method = target.getMethodTemplate(constMethod.getName(), "");
