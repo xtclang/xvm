@@ -43,6 +43,14 @@ public class StatementBlock
         }
 
     @Override
+    public Source getSource()
+        {
+        return source == null
+                ? super.getSource()
+                : source;
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

@@ -204,8 +204,8 @@ public class Version
      * most significant to the least significant is identical to the corresponding version indicator
      * in the actual version, or if the first different version indicator in the actual version is
      * greater than the corresponding version indicator in the requested version; in other words,
-     * version "1.2", "1.2.1", and "1.2.1.7", "1.3", "2.0", and "2.1" are all substitutable for
-     * version "1.2".</li>
+     * version "1.2", "1.2.1", and "1.2.1.7", and "1.3" are all substitutable for version "1.2", but
+     *  "2.0" and "2.1" are not.</li>
      * <li>In the previous example, to use only one of the versions that begins with "1.2", the
      * requested version <tt>v<sub>R</sub></tt> should be specified as "1.2.0"; versions "1.2",
      * "1.2.1", and "1.2.1.7" are subsitutes for 1.2.0, but versions "1.3", "2.0", and "2.1" are

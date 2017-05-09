@@ -41,6 +41,8 @@ public class ModuleStructure
         }
 
 
+    // -----
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override

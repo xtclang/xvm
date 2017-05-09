@@ -47,6 +47,7 @@ public class Source
             throws IOException
         {
         this(readFileChars(file));
+        setFileName(file.getPath());
         }
 
     /**
@@ -65,6 +66,32 @@ public class Source
 
 
     // ----- public API --------------------------------------------------------
+
+    /**
+     * @return the file name, if one has been configured
+     */
+    public String getFileName()
+        {
+        return m_sFile;
+        }
+
+    /**
+     * Specify the name of the file that the source comes from. This is automatically configured by
+     * the File-based constructor.
+     *
+     * @param sFile  the file name
+     */
+    public void setFileName(String sFile)
+        {
+        if (m_sFile == null)
+            {
+            m_sFile = sFile;
+            }
+        else if (!m_sFile.equals(sFile))
+            {
+            throw new IllegalStateException("file name cannot be modified");
+            }
+        }
 
     /**
      * Determine if there are more characters in the source.
@@ -485,4 +512,9 @@ public class Source
      * Set to true iff Unicode escapes have been encountered.
      */
     private boolean m_fEscapesEncountered;
+
+    /**
+     * The file name that the source comes from.
+     */
+    private String m_sFile;
     }

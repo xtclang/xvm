@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.StructureContainer;
 
 import org.xvm.compiler.ErrorListener;
@@ -79,13 +80,10 @@ public abstract class AstNode
      */
     public Source getSource()
         {
-        Source  source = null;
         AstNode parent = getParent();
-        if (parent != null)
-            {
-            source = parent.getSource();
-            }
-        return source;
+        return parent == null
+                ? null
+                : parent.getSource();
         }
 
     /**
@@ -96,21 +94,24 @@ public abstract class AstNode
      */
     public StructureContainer getStructure()
         {
-        StructureContainer struct = null;
-        AstNode            parent = getParent();
-        if (parent != null)
-            {
-            struct = parent.getStructure();
-            }
-        return struct;
+        AstNode parent = getParent();
+        return parent == null
+                ? null
+                : parent.getStructure();
         }
 
     /**
+     * For nested nodes, determine the default access if the nodes need to specify an accessibility.
      *
+     * @return the accessibility that this node should assume if this node has to specify its own
+     *         accessibility and no accessibility is specified
      */
-    public Map<String, Object> typesByUnqualifiedNames() // TODO
+    public Access getDefaultAccess()
         {
-        return parent.typesByUnqualifiedNames();
+        AstNode parent = getParent();
+        return parent == null
+                ? Access.PUBLIC
+                : parent.getDefaultAccess();
         }
 
 

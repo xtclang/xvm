@@ -65,7 +65,7 @@ public class Parser
      *         source code that forces the parser to abandon its progress before
      *         completion
      */
-    public Statement parseSource()
+    public StatementBlock parseSource()
         {
         // parsing can only occur once
         if (!m_fDone)
@@ -145,12 +145,12 @@ public class Parser
         // modifiers (including annotations)
         List<Token> modifiers = null;
         List<Annotation> annotations = null;
-        List[] twolists = parseModifiers();
-        if (twolists != null)
+        List[] twoLists = parseModifiers();
+        if (twoLists != null)
             {
             // note to self: this language needs multiple return values 
-            modifiers = twolists[0];
-            annotations = twolists[1];
+            modifiers   = twoLists[0];
+            annotations = twoLists[1];
             }
 
         return parseTypeDeclarationStatementAfterModifiers(doc, modifiers, annotations);
@@ -441,7 +441,7 @@ public class Parser
      *     TypeCompositionComponents TypeCompositionComponent
      *
      * TypeCompositionComponent
-     *     TypdefStatement
+     *     TypedefStatement
      *     ImportStatement
      *     TypeComposition
      *     PropertyDeclaration
@@ -606,21 +606,21 @@ public class Parser
         // constant starts with "static" (a modifier)
         // method starts with annotations/modifiers
         // property starts with annotations/modifiers
-        // typecomp starts with annotations/modifiers
+        // type-composition starts with annotations/modifiers
         List<Token>      modifiers   = null;
         List<Annotation> annotations = null;
-        List[] twolists = parseModifiers(true);
-        if (twolists != null)
+        List[] twoLists = parseModifiers(true);
+        if (twoLists != null)
             {
             // note to self: this language needs multiple return values
-            modifiers   = twolists[0];
-            annotations = twolists[1];
+            modifiers   = twoLists[0];
+            annotations = twoLists[1];
             }
 
         // both constant and property have a TypeExpression next
         // method has "TypeVariableList-opt ReturnList" next (so "<" is a give-away)
         // - ReturnList could be either a TypeExpression or a "(", so "(" is a give-away
-        // typecomp has a category keyword next
+        // type-composition has a category keyword next
         switch (peek().getId())
             {
             case MODULE:
@@ -675,7 +675,7 @@ public class Parser
                             if (stmts == null)
                                 {
                                 // build a statements list to match the expressions list (except for
-                                // the lastest expression)
+                                // the last expression)
                                 stmts = new ArrayList<>();
                                 for (int i = 0, c = exprs.size() - 1; i < c; ++i)
                                     {
@@ -742,7 +742,7 @@ public class Parser
                     //   declaration or an expression statement (for example, a tuple literal)
                     // - if there was only one expression, then it could be an expression statement,
                     //   a type expression for a property or variable declaration (or even a method
-                    //   declaration); regardless, it has to be reparsed as a single exception from
+                    //   declaration); regardless, it has to be re-parsed as a single exception from
                     //   the beginning, because there must have been a reason to have the
                     //   parenthesis there in the first place
                     if (exprs.size() == 1)
@@ -813,7 +813,7 @@ public class Parser
                         }
                     }
 
-                // if it wasn't a method, reparse as a property
+                // if it wasn't a method, re-parse as a property
                 assert returns == null || returns.size() == 1;
                 TypeExpression type = returns == null ? parseTypeExpression() : returns.get(0);
                 Token          name = expect(Id.IDENTIFIER);
@@ -1062,7 +1062,7 @@ public class Parser
     StatementBlock parseStatementBlock()
         {
         expect(Id.L_CURLY);
-        return parseBlockStatementRemainder(new ArrayList<Statement>());
+        return parseBlockStatementRemainder(new ArrayList<>());
         }
 
     /**
@@ -1259,7 +1259,7 @@ public class Parser
                     }
                 else
                     {
-                    putback(name);
+                    putBack(name);
                     }
                 }
                 // fall through
@@ -1360,7 +1360,7 @@ public class Parser
         expect(Id.L_PAREN);
         
         // figure out if we're parsing for the conditional declaration or the three-part "for"
-        List<Statement> init = null;
+        List<Statement> init;
         if (peek().getId() != Id.SEMICOLON)
             {
             init = new ArrayList<>();
@@ -2183,7 +2183,7 @@ s     *
         }
 
     /**
-     * Parse an addition or substraction expression.
+     * Parse an addition or subtraction expression.
      *
      * <p/><code><pre>
      * AdditiveExpression
@@ -2445,7 +2445,7 @@ s     *
      *       RelationalExpression rule if we miss handling it here. Unfortunately, that means that the
      *       TypeParameterList is parsed speculatively if the '<' opening token is encountered after
      *       a name, because it could (might/will occasionally) still be a "less than sign" and not a
-     *       parametized type.
+     *       parameterized type.
      * </li></ul>
      * <p/><code><pre>
      * PrimaryExpression
@@ -2516,7 +2516,7 @@ s     *
                     Token name = match(Id.IDENTIFIER);
                     if (name == null)
                         {
-                        putback(dot);
+                        putBack(dot);
                         return new NameExpression(names, null);
                         }
                     else
@@ -2557,7 +2557,7 @@ s     *
                         }
                     else
                         {
-                        putback(colon);
+                        putBack(colon);
                         }
                     }
 
@@ -2708,7 +2708,7 @@ s     *
 
             // unfortunately, we have to pretend that the "end of line" T0D0 is followed by a
             // semicolon
-            putback(new Token(keyword.getEndPosition(), keyword.getEndPosition(), Id.SEMICOLON));
+            putBack(new Token(keyword.getEndPosition(), keyword.getEndPosition(), Id.SEMICOLON));
             }
         return new TodoExpression(keyword, message);
         }
@@ -3138,7 +3138,7 @@ s     *
             listParam = parseParameterTypeList(true);
 
             // pretend the name is the next token (as if we didn't eat it
-            putback(name);
+            putBack(name);
             }
 
         return new FunctionTypeExpression(function, listReturn, listParam);
@@ -3224,14 +3224,19 @@ s     *
      *     AccessModifier "/" AccessModifier
      * </pre></code>
      *
+     * Also verifies that modifiers are not repeated or obviously conflicting.
+     *
      * @param couldBeProperty
      *
-     * @return a List&lt;Token | Annotation&gt;
+     * @return a List&lt;Token | Annotation | '/'&gt; (in the case of a property, there could be
+     *         something like "static, public, '/', private")
      */
     List[] parseModifiers(boolean couldBeProperty)
         {
         List<Token>      modifiers   = null;
         List<Annotation> annotations = null;
+        boolean          err         = false;
+        Token            access      = null;
         while (true)
             {
             switch (peek().getId())
@@ -3240,11 +3245,25 @@ s     *
                 case PUBLIC:
                 case PROTECTED:
                 case PRIVATE:
+                    Token   modifier = current();
+                    boolean isAccess = modifier.getId() != Id.STATIC;
                     if (modifiers == null)
                         {
                         modifiers = new ArrayList<>();
                         }
-                    modifiers.add(current());
+                    else if (!err && modifiers.contains(modifier))
+                        {
+                        err = true;
+                        log(Severity.ERROR, REPEAT_MODIFIER, new Object[] {modifier},
+                                modifier.getStartPosition(), modifier.getEndPosition());
+                        }
+                    else if (!err && isAccess && access != null)
+                        {
+                        err = true;
+                        log(Severity.ERROR, MODIFIER_CONFLICT, new Object[] {access, modifier},
+                                modifier.getStartPosition(), modifier.getEndPosition());
+                        }
+                    modifiers.add(modifier);
                     if (couldBeProperty && peek().getId() == Id.DIV)
                         {
                         modifiers.add(expect(Id.DIV));
@@ -3256,8 +3275,24 @@ s     *
                                 {
                                 second = expect(Id.PRIVATE);
                                 }
+                            else if (modifier.getId() == Id.PRIVATE)
+                                {
+                                // cannot be private/protected
+                                log(Severity.ERROR, MODIFIER_CONFLICT, new Object[] {modifier, second},
+                                        modifier.getStartPosition(), modifier.getEndPosition());
+                                }
+                            }
+                        else if (modifier.getId() != Id.PUBLIC)
+                            {
+                            // cannot be protected/public or private/public
+                            log(Severity.ERROR, MODIFIER_CONFLICT, new Object[] {modifier, second},
+                                    modifier.getStartPosition(), modifier.getEndPosition());
                             }
                         modifiers.add(second);
+                        }
+                    if (isAccess)
+                        {
+                        access = modifier;
                         }
                     break;
 
@@ -3285,7 +3320,7 @@ s     *
      *     "@" NamedTypeExpression ArgumentList-opt
      * </pre></code>
      *
-     * @param required  true iff the annnotation is required
+     * @param required  true iff the annotation is required
      *
      * @return an annotation, or null if no annotation was encountered
      */
@@ -3594,7 +3629,7 @@ s     *
                     if (match(Id.ASN) == null)
                         {
                         // oops, it wasn't a "name=value" argument
-                        putback(name);
+                        putBack(name);
                         }
                     else
                         {
@@ -3873,7 +3908,7 @@ s     *
 
     protected Token peek()
         {
-        return m_tokenPutback == null ? m_token : m_tokenPutback;
+        return m_tokenPutBack == null ? m_token : m_tokenPutBack;
         }
 
     /**
@@ -3895,9 +3930,9 @@ s     *
      */
     protected Token next()
         {
-        if (m_tokenPutback != null)
+        if (m_tokenPutBack != null)
             {
-            m_tokenPutback = null;
+            m_tokenPutBack = null;
             return m_token;
             }
 
@@ -3935,19 +3970,19 @@ s     *
         throw new CompilerException("unexpected EOF");
         }
 
-    protected void putback(Token token)
+    protected void putBack(Token token)
         {
-        assert m_tokenPutback == null;
-        m_tokenPutback = token;
+        assert m_tokenPutBack == null;
+        m_tokenPutBack = token;
         }
 
     private class Mark
         {
         long    pos;
         Token   token;
-        Token   putback;
+        Token   putBack;
         Token   doc;
-        boolean norec;
+        boolean noRec;
         }
 
     protected Mark mark()
@@ -3955,9 +3990,9 @@ s     *
         Mark mark = new Mark();
         mark.pos     = m_lexer.getPosition();
         mark.token   = m_token;
-        mark.putback = m_tokenPutback;
+        mark.putBack = m_tokenPutBack;
         mark.doc     = m_doc;
-        mark.norec   = m_fAvoidRecovery;
+        mark.noRec   = m_fAvoidRecovery;
         return mark;
         }
 
@@ -3965,9 +4000,9 @@ s     *
         {
         m_lexer.setPosition(mark.pos);
         m_token           = mark.token;
-        m_tokenPutback    = mark.putback;
+        m_tokenPutBack = mark.putBack;
         m_doc             = mark.doc;
-        m_fAvoidRecovery  = mark.norec;
+        m_fAvoidRecovery  = mark.noRec;
         }
 
     /**
@@ -4217,6 +4252,14 @@ s     *
      * Statements not allowed outside of module declaration.
      */
     public static final String MODULE_NOT_ROOT  = "PARSER-18";
+    /**
+     * Modifier (like "static" or "public") is repeated.
+     */
+    public static final String REPEAT_MODIFIER  = "PARSER-19";
+    /**
+     * Modifiers conflict (like "private" and "public").
+     */
+    public static final String MODIFIER_CONFLICT= "PARSER-20";
 
 
     // ----- data members ------------------------------------------------------
@@ -4239,7 +4282,7 @@ s     *
     /**
      * The "put back" token.
      */
-    private Token m_tokenPutback;
+    private Token m_tokenPutBack;
 
     /**
      * The current token.
@@ -4255,7 +4298,7 @@ s     *
      * The top-most (outer-most) type declaration of the compilation unit, such
      * as a module.
      */
-    private Statement m_root;
+    private StatementBlock m_root;
 
     /**
      * True once parsing has occurred.

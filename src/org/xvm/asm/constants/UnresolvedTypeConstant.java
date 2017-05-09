@@ -101,11 +101,7 @@ public class UnresolvedTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        if (m_resolved == null)
-            {
-            throw new IllegalStateException();
-            }
-        else
+        if (m_resolved != null)
             {
             m_resolved.registerConstants(pool);
             }

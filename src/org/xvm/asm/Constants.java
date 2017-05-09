@@ -34,7 +34,7 @@ public interface Constants
 
     public enum Access
         {
-        PUBLIC, PROTECTED, PRIVATE, STRUCT;
+        STRUCT, PUBLIC, PROTECTED, PRIVATE;
 
         /**
          * Look up a Access enum by its ordinal.

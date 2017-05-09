@@ -146,7 +146,7 @@ ImportClause
     "import:embedded"
     "import:required"
     "import:desired"
-    "import:optional"
+    "import:optional"       // TODO "supported"?
 
 VersionRequirement
     Version VersionOverrides-opt

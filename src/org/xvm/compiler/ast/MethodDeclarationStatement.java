@@ -1,10 +1,20 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.StructureContainer;
+import org.xvm.asm.StructureContainer.MethodContainer;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.xvm.util.Handy.appendString;
@@ -48,6 +58,15 @@ public class MethodDeclarationStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public Access getDefaultAccess()
+        {
+        Access access = getAccess(modifiers);
+        return access == null
+                ? super.getDefaultAccess()
+                : access;
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
@@ -56,80 +75,69 @@ public class MethodDeclarationStatement
 
     // ----- compile phases ------------------------------------------------------------------------
 
-//    @Override
-//    protected void registerStructures(AstNode parent, ErrorList errs)
-//        {
-//        setParent(parent);
-//
-//        // create the structure for this method
-//        if (getStructure() == null)
-//            {
-//            // create a structure for this type
-//            StructureContainer container = parent.getStructure();
-//            if (container instanceof StructureContainer.MethodContainer)
-//                {
-//                ConstantPool.MethodConstant.Builder builder = ((StructureContainer.MethodContainer)
-//                        container).methodBuilder((String) name.getValue());
-//                if (params != null)
-//                    {
-//                    for (Parameter parameter : params)
-//                        {
-//                        // TODO chicken and egg problem: need a type constant
-//                        // TODO look at TypeName
-//                        // builder.addParameter(, parameter.getName());
-//                        }
-//                    }
-//                if (returns != null)
-//                    {
-//                    for (TypeExpression type : returns)
-//                        {
-//                        // TODO chicken and egg problem: need a type constant
-//                        // builder.addReturnValue() // also TODO get rid of name on return value
-//                        }
-//                    }
-//                setStructure(builder.ensureMethod());
-//                }
-//            else
-//                {
-//                // TODO log error
-//                throw new UnsupportedOperationException("not a method container: " + container);
-//                }
-//            }
-//
-//        // recurse to children
-//        // TODO what if one of them changes?
-//        if (annotations != null)
-//            {
-//            for (Annotation annotation : annotations)
-//                {
-//                annotation.registerStructures(this, errs);
-//                }
-//            }
-//        if (returns != null)
-//            {
-//            for (TypeExpression type : returns)
-//                {
-//                type.registerStructures(this, errs);
-//                }
-//            }
-//        if (params != null)
-//            {
-//            for (Parameter parameter : params)
-//                {
-//                parameter.registerStructures(this, errs);
-//                }
-//            }
-//        if (body != null)
-//            {
-//            body.registerStructures(this, errs);
-//            }
-//        if (continuation != null)
-//            {
-//            continuation.registerStructures(this, errs);
-//            }
-//
-//        return this;
-//        }
+    @Override
+    protected void registerStructures(AstNode parent, ErrorListener errs)
+        {
+        setParent(parent);
+
+        // create the structure for this method
+        if (getStructure() == null)
+            {
+            // create a structure for this type
+            StructureContainer possibleContainer = parent.getStructure();
+            if (possibleContainer instanceof MethodContainer)
+                {
+                MethodContainer container   = (MethodContainer) possibleContainer;
+                boolean         fFunction   = isStatic(modifiers);
+                Access          access      = getDefaultAccess();
+                TypeConstant[]  returnTypes = toTypeConstants(returns);
+                String          sName       = (String) name.getValue();
+                TypeConstant[]  paramTypes  = toTypeConstants(toTypeExpressions(params));
+                MethodStructure method      = container.createMethod(fFunction, access, returnTypes,
+                                                                     sName, paramTypes);
+                setStructure(method);
+                }
+            else
+                {
+                // TODO log error
+                throw new UnsupportedOperationException("not a method container: " + possibleContainer);
+                }
+            }
+
+        super.registerStructures(parent, errs);
+        }
+
+    protected List<TypeExpression> toTypeExpressions(List<Parameter> params)
+        {
+        if (params == null || params.isEmpty())
+            {
+            return Collections.EMPTY_LIST;
+            }
+
+        List<TypeExpression> list = new ArrayList<>(params.size());
+        for (Parameter param : params)
+            {
+            list.add(param.getType());
+            }
+        return list;
+        }
+
+    protected TypeConstant[] toTypeConstants(List<TypeExpression> types)
+        {
+        if (types == null || types.isEmpty())
+            {
+            return ConstantPool.NO_TYPES;
+            }
+
+        int i = 0;
+        TypeConstant[] array = new TypeConstant[types.size()];
+        StructureContainer container = parent.getStructure();
+        for (TypeExpression type : types)
+            {
+            array[i++] = container.createUnresolvedType(type.toString());
+            }
+        return array;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------

@@ -32,11 +32,11 @@ public class PropertyStructure
      * @param structParent    the XvmStructure (a ModuleStructure, a PackageStructure, a
      *                        ClassStructure, or a MethodStructure) that contains this
      *                        PropertyStructure
-     * @param constproperty   the constant that specifies the identity of the property
+     * @param constProperty   the constant that specifies the identity of the property
      */
-    public PropertyStructure(XvmStructure structParent, PropertyConstant constproperty)
+    public PropertyStructure(XvmStructure structParent, PropertyConstant constProperty)
         {
-        super(structParent, constproperty);
+        super(structParent, constProperty);
         }
 
     public PropertyStructure(XvmStructure structParent, PropertyConstant constproperty,

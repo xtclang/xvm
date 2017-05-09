@@ -26,8 +26,8 @@ import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.UnresolvedTypeConstant;
+
 import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 
@@ -43,13 +43,13 @@ import static org.xvm.util.Handy.writePackedLong;
  * Containment model, with container type on the left and containee type across the top:
  * <p/>
  * <code><pre>
- *           Module  Package  Class  Method  Property
- * File        x
- * Module              x       x       x       x
- * Package             x       x       x       x
- * Class                       x       x       x
- * Property                            x
- * Method                      x       x       x
+ *           Module  Package  Class  Method  Property  |  Conditional
+ * File        x                                       |
+ * Module              x       x       x       x       |       x (ver)
+ * Package             x       x       x       x       |       x
+ * Class                       x       x       x       |       x
+ * Property                            x               |       x
+ * Method                      x       x       x       |       x
  * </pre></code>
  * <p/>
  * Based on the containment model, of these types, there are three groups of containment:
@@ -109,6 +109,18 @@ public abstract class StructureContainer
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Create a new TypeConstant whose exact type will eventually be resolved.
+     *
+     * @param sType  the String representation of the type
+     *
+     * @return a new UnresolvedTypeConstant
+     */
+    public UnresolvedTypeConstant createUnresolvedType(String sType)
+        {
+        return getConstantPool().createUnresolvedTypeConstant(sType);
+        }
 
     /**
      * Helper method to read a collection of XVM sub-structures from the DataInput stream.
@@ -303,7 +315,9 @@ public abstract class StructureContainer
     // ----- inner class: MethodContainer ----------------------------------------------------------
 
     /**
-     * An XVM structure that can contain MultiMethodStructure and thus MethodStructure objects.
+     * An XVM structure that can contain MultiMethodStructure (and thus MethodStructure) objects.
+     * Despite its name, the MethodContainer does not directly contain methods; instead it contains
+     * Multi-Methods, which are (like properties and other structures) identified simply by name.
      */
     public abstract static class MethodContainer
             extends StructureContainer
@@ -444,26 +458,24 @@ public abstract class StructureContainer
             }
 
         /**
-         * Create a MethodStructure with the specified name, but whose identity is not yet fully
+         * Create a MethodStructure with the specified name, but whose identity may not yet be fully
          * realized / resolved.
          *
-         * @param sName  the method name
+         * @param fFunction    true if the method is actually a function (not a method)
+         * @param access       the access flag for the method
+         * @param returnTypes  the return types of the method
+         * @param sName        the method name, or null if the name is unknown
+         * @param paramTypes   the parameter types for the method
+         *
+         * @return a new MethodStructure
          */
-        protected MethodStructure createMethod(String sName, Access access, TypeConstant[] returnTypes, TypeConstant[] paramTypes)
+        public MethodStructure createMethod(boolean fFunction, Access access, TypeConstant[] returnTypes, String sName, TypeConstant[] paramTypes)
             {
             assert sName != null;
             assert access != null;
-//          TODO
-//            MultiMethodConstant multimethod = getConstantPool().ensureMultiMethodConstant(this, sName);
-//
-//            MethodStructure method = new MethodStructure()
-//            Map<MethodConstant, MethodStructure> mapMethod = ensureMultiMethodMap();
-//            assert !mapMethod.containsKey(constMethod);
-//
-//            final MethodStructure method = new MethodStructure(this, constMethod);
-//            mapMethod.put(constMethod, method);
-//            return method;
-            return null;
+
+            MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
+            return multimethod.createMethod(fFunction, access, returnTypes, paramTypes);
             }
 
         // ----- XvmStructure methods ------------------------------------------
@@ -883,27 +895,14 @@ public abstract class StructureContainer
             }
 
         /**
-         * Create and register a PropertyStructure with an unresolved type and the specified name.
-         *
-         * @param fStatic  true if the property is defined as static
-         * @param access   the accessibility of the property to create
-         * @param sType    the string representation of the unresolved type
-         * @param sName    the simple (unqualified) property name to create
-         */
-        public PropertyStructure createProperty(boolean fStatic, Access access, String sType, String sName)
-            {
-            return createProperty(fStatic, access, new UnresolvedTypeConstant(getConstantPool(), sType), sName);
-            }
-
-        /**
          * Create and register a PropertyStructure with the specified property type and name.
          *
-         * @param fStatic  true if the property is defined as static
-         * @param access   the accessibility of the property to create
-         * @param type     the type of the property to create
-         * @param sName    the simple (unqualified) property name to create
+         * @param fConst  true if the property is a constant
+         * @param access  the accessibility of the property to create
+         * @param type    the type of the property to create
+         * @param sName   the simple (unqualified) property name to create
          */
-        public PropertyStructure createProperty(boolean fStatic, Access access, TypeConstant type, String sName)
+        public PropertyStructure createProperty(boolean fConst, Access access, TypeConstant type, String sName)
             {
             assert access != null;
             assert type != null;
@@ -915,7 +914,7 @@ public abstract class StructureContainer
             ConstantPool pool = getConstantPool();
             Constant constThis = getIdentityConstant();
             PropertyConstant constproperty = pool.ensurePropertyConstant(constThis, sName);
-            PropertyStructure structproperty = new PropertyStructure(this, constproperty, fStatic, access, type);
+            PropertyStructure structproperty = new PropertyStructure(this, constproperty, fConst, access, type);
 
             mapProperty.put(sName, structproperty);
             return structproperty;

@@ -57,9 +57,9 @@ public class FileStructure
             }
 
         this.pool       = new ConstantPool(this);
-        this.module = new ModuleStructure(this, pool.ensureModuleConstant(sModule));
-        this.nMajorVer = VERSION_MAJOR_CUR;
-        this.nMinorVer = VERSION_MINOR_CUR;
+        this.module     = new ModuleStructure(this, pool.ensureModuleConstant(sModule));
+        this.nMajorVer  = VERSION_MAJOR_CUR;
+        this.nMinorVer  = VERSION_MINOR_CUR;
         this.modulesByName.put(sModule, module);
         }
 

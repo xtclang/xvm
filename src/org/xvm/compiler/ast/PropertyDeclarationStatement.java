@@ -132,7 +132,7 @@ public class PropertyDeclarationStatement
                 if (propContainer.getProperty(sName) == null)
                     {
                     PropertyStructure prop = propContainer.createProperty(isStatic(), getAccess(),
-                            type.toString(), (String) name.getValue());
+                            propContainer.createUnresolvedType(type.toString()), (String) name.getValue());
                     setStructure(prop);
                     }
                 else

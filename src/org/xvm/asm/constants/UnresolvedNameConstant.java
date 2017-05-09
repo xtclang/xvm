@@ -84,10 +84,6 @@ public class UnresolvedNameConstant
             {
             super.registerConstants(pool);
             }
-        else
-            {
-            throw new IllegalStateException();
-            }
         }
 
     @Override

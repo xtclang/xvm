@@ -1,7 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.StructureContainer;
+import org.xvm.compiler.Token;
+
+import java.util.List;
 
 
 /**
@@ -24,6 +28,43 @@ public abstract class StructureContainerStatement
         this.struct = struct;
         }
 
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    public static boolean isStatic(List<Token> modifiers)
+        {
+        if (modifiers != null && !modifiers.isEmpty())
+            {
+            for (Token modifier : modifiers)
+                {
+                if (modifier.getId() == Token.Id.STATIC)
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
+    public static Access getAccess(List<Token> modifiers)
+        {
+        if (modifiers != null && !modifiers.isEmpty())
+            {
+            for (Token modifier : modifiers)
+                {
+                switch (modifier.getId())
+                    {
+                    case PUBLIC:
+                        return Access.PUBLIC;
+                    case PROTECTED:
+                        return Access.PROTECTED;
+                    case PRIVATE:
+                        return Access.PRIVATE;
+                    }
+                }
+            }
+        return null;
+        }
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -15,13 +15,18 @@ import java.util.Map;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * An XVM Structure that represents a multi-method, which is a group of methods.
+ * An XVM Structure that represents a multi-method, which is a group of methods that share a name.
+ * The multi-method does not have a corresponding development-time analogy; a developer does NOT
+ * declare or define a multi-method. Instead, it is a compile-time construction, used to collect
+ * together methods that share a name into a group, within which they are identified by a more
+ * exacting set of attributes, namely their accessibility and their parameter/return types.
  *
  * @author cp 2016.04.26
  */
@@ -67,6 +72,23 @@ public class MultiMethodStructure
         return coll;
         }
 
+    /**
+     * TODO
+     *
+     * @param fFunction
+     * @param access
+     * @param returnTypes
+     * @param paramTypes
+     * @return
+     */
+    public MethodStructure createMethod(boolean fFunction, Access access, TypeConstant[] returnTypes, TypeConstant[] paramTypes)
+        {
+        MethodConstant constant = getConstantPool().ensureMethodConstant(getIdentityConstant(), getName(), access, returnTypes, paramTypes);
+        MethodStructure method = new MethodStructure(this, constant);
+        methods.put(constant, method);
+        return method;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -94,6 +116,7 @@ public class MultiMethodStructure
             {
             methods.put(struct.getMethodConstant(), struct);
             }
+        assert methods.size() == list.size();
 
         super.disassemble(in);
         }

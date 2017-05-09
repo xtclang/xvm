@@ -252,6 +252,14 @@ public class ErrorList
         public String toString()
             {
             StringBuilder sb = new StringBuilder();
+
+            String sFile = m_source.getFileName();
+            if (sFile != null)
+                {
+                sb.append(sFile)
+                  .append(' ');
+                }
+
             sb.append("[")
               .append(getLine() + 1)
               .append(':')

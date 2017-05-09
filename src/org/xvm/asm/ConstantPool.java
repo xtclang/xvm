@@ -461,21 +461,28 @@ public class ConstantPool
         {
         assert constParent != null;
 
+        MultiMethodConstant constMultiMethod;
         switch (constParent.getFormat())
             {
+            case MultiMethod:
+                constMultiMethod = (MultiMethodConstant) constParent;
+                break;
+
             case Module:
             case Package:
             case Class:
             case Method:
             case Property:
-                MultiMethodConstant constMultiMethod = ensureMultiMethodConstant(constParent, sName);
-                return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access,
-                        aconstReturns, aconstParams));
+                constMultiMethod = ensureMultiMethodConstant(constParent, sName);
+                break;
 
             default:
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
                         + " is not a Module, Package, Class, Method, or Property");
             }
+
+        return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access,
+                aconstReturns, aconstParams));
         }
 
     /**
@@ -522,9 +529,20 @@ public class ConstantPool
                 throw new IllegalArgumentException("constant " + constClass.getFormat()
                         + " is not a Module, Package, or Class");
             }
-
-
         }
+
+    /**
+     * Create a new TypeConstant whose exact type will eventually be resolved.
+     *
+     * @param sType  the String representation of the type
+     *
+     * @return a new TypeConstant
+     */
+    public UnresolvedTypeConstant createUnresolvedTypeConstant(String sType)
+        {
+        return new UnresolvedTypeConstant(this, sType);
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
