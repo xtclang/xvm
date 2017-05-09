@@ -509,7 +509,7 @@ public class ConstantPool
             case Package:
             case Class:
                 ClassTypeConstant constant = null;
-                if (access == Access.PUBLIC)
+                if (access == Access.PUBLIC && constTypes == null)
                     {
                     constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constClass);
                     }
