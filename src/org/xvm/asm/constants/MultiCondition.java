@@ -7,8 +7,10 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
+import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -88,7 +90,28 @@ public abstract class MultiCondition
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- ConditionalConstant functionality -----------------------------------------------------
+
+    @Override
+    public Set<ConditionalConstant> terminals()
+        {
+        Set<ConditionalConstant> terminals = new HashSet<>();
+        ConditionalConstant[] aconst = m_aconstCond;
+
+        }
+
+    @Override
+    public boolean containsTerminal(ConditionalConstant that)
+        {
+        // while "this" is technically not a terminal, there is nothing that guarantees that "that"
+        // is either
+        if (this == that)
+            {
+            return true;
+            }
+
+        return m_constCond.containsTerminal(that);
+        }
 
     /**
      * @return a list of the multiple conditions represented by this condition

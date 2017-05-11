@@ -1,9 +1,11 @@
 package org.xvm.asm.constants;
 
 
+import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
+
 import org.xvm.util.ListMap;
 
 
@@ -49,8 +51,6 @@ import org.xvm.util.ListMap;
  *     evaluate to true, i.e. an "and" condition;</li>
  * <li>{@link AnyCondition AnyCondition} - evaluates to false iff each of the specified conditions
  *     evaluate to false, i.e. an "or" condition;</li>
- * <li>{@link Only1Condition Only1Condition} - evaluates to true iff exactly one of the specified
- *     conditions evaluates to true, i.e. an"xor" condition;</li>
  * </ul>
  */
 public abstract class ConditionalConstant
@@ -79,6 +79,31 @@ public abstract class ConditionalConstant
      * @return true whether this condition is met in the container
      */
     public abstract boolean evaluate(LinkerContext ctx);
+
+    /**
+     * @return true iff this is a terminal ConditionalConstant
+     */
+    public boolean isTerminal()
+        {
+        return false;
+        }
+
+    /**
+     * Determine the set of terminal conditions that make up this ConditionalConstant.
+     *
+     * @return a set of terminals that are referenced by this ConditionalConstant
+     */
+    public abstract Set<ConditionalConstant> terminals();
+
+    /**
+     * Determine if the specified terminal ConditionalConstant is present in this
+     * ConditionalConstant.
+     *
+     * @param that  a ConditionalConstant
+     *
+     * @return true iff the specified ConditionalConstant is found inside this ConditionalConstant
+     */
+    public abstract boolean containsTerminal(ConditionalConstant that);
 
     /**
      * Obtain a ConditionalConstant that represents the union of {@code this} and {@code that}

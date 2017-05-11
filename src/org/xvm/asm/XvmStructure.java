@@ -95,7 +95,7 @@ public abstract class XvmStructure
      */
     protected XvmStructure(XvmStructure xsParent)
         {
-        f_xsParent = xsParent;
+        m_xsParent = xsParent;
         }
 
 
@@ -109,7 +109,17 @@ public abstract class XvmStructure
      */
     public XvmStructure getContaining()
         {
-        return f_xsParent;
+        return m_xsParent;
+        }
+
+    /**
+     * Modify the containing XVM structure.
+     *
+     * @param xsParent  the XvmStructure that will contain this XvmStructure
+     */
+    protected void setContaining(XvmStructure  xsParent)
+        {
+        m_xsParent = xsParent;
         }
 
     /**
@@ -206,7 +216,7 @@ public abstract class XvmStructure
      */
     public boolean isConditional()
         {
-        return getCondition() != null || f_xsParent.isConditional();
+        return getCondition() != null || m_xsParent.isConditional();
         }
 
     /**
@@ -263,7 +273,7 @@ public abstract class XvmStructure
      */
     public boolean isPresent(LinkerContext ctx)
         {
-        if (!f_xsParent.isPresent(ctx))
+        if (!m_xsParent.isPresent(ctx))
             {
             return false;
             }
@@ -561,5 +571,5 @@ public abstract class XvmStructure
     /**
      * The containing XVM structure.
      */
-    private final XvmStructure f_xsParent;
+    private XvmStructure m_xsParent;
     }

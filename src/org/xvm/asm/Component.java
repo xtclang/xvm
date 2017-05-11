@@ -2,6 +2,9 @@
 package org.xvm.asm;
 
 
+import java.util.ArrayList;
+import java.util.List;
+import org.xvm.asm.constants.AnyCondition;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NamedConstant;
@@ -463,8 +466,8 @@ public abstract class Component
      *   --------            -------        ------
      *   F1                                 F1
      *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
-     *        |- P1            |- P1             |- P1
-     *          |- C1            |- C1             |- C1
+     *       |- P1             |- P1            |- P1
+     *         |- C1             |- C1            |- C1
      * </pre></code>
      * <p/>
      * Now if P1 is modified:
@@ -474,8 +477,8 @@ public abstract class Component
      *   --------            -------        ------
      *   F1                                 F1
      *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
-     *        |- P1            |- P1'            |- P1 (V1), P1' (V2)
-     *          |- C1            |- C1             |- C1
+     *       |- P1             |- P1'           |- P1 (V1), P1' (V2)
+     *         |- C1             |- C1            |- C1
      * </pre></code>
      * <p/>
      * Now if C1 is modified:
@@ -485,8 +488,8 @@ public abstract class Component
      *   --------            -------        ------
      *   F1                                 F1
      *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
-     *        |- P1            |- P1             |- P1
-     *          |- C1            |- C1'            |- C1 (V1), C1' (V2)
+     *       |- P1             |- P1            |- P1
+     *         |- C1             |- C1'           |- C1 (V1), C1' (V2)
      * </pre></code>
      * <p/>
      * Now a more complex example:
@@ -496,10 +499,91 @@ public abstract class Component
      *   --------                   -------         ------
      *   F1                                         F1
      *     |- M1 (V1), M1' (V2)     M1'' (V3)         |- M1 (V1), M1' (V2), M1'' (V3)
-     *        |- P1 (V1), P1' (V2)    |- P1'            |- P1 (V1), P1' (V2 | V3)
-     *          |- C1                   |- C1'             |- C1 (V1 | V2), C1' (V3)
-     *                                  |- C2              |- C2 (V3)
-     *                                    |- C3              |- C3
+     *       |- P1 (V1), P1' (V2)     |- P1'            |- P1 (V1), P1' (V2 | V3)
+     *         |- C1                    |- C1'            |- C1 (V1 | V2), C1' (V3)
+     *                                  |- C2             |- C2 (V3)
+     *                                    |- C3             |- C3
+     * </pre></code>
+     * <p/>
+     * Adding in a conditional dependency:
+     * <p/>
+     * <code><pre>
+     *   Original                   Adoptee               Result
+     *   --------                   -------               ------
+     *   F1                                               F1
+     *     |- M1 (V1)               M1' (V2)                |- M1 (V1), M1' (V2)
+     *       |- P1 (V1)               |- P1'                  |- P1 (V1), P1' (V2)
+     *         |- C1 (Spring)           |- C1 (Spring)          |- C1 (Spring)
+     *
+     *
+     * </pre></code>
+     * <p/>
+     * Previous example continued for another version:
+     * <p/>
+     * <code><pre>
+     *   Original                   Adoptee             Result
+     *   --------                   -------             ------
+     *   F1                                             F1
+     *     |- M1 (V1), M1' (V2)     M1'' (V3)             |- M1 (V1), M1' (V2), M1'' (V3)
+     *       |- P1 (V1), P1' (V2)     |- P1'                |- P1 (V1), P1' (V2 | V3)
+     *         |- C1 (Spring)           |- C1' (Spring)       |- C1 (Spring & (V1 | V2)), C1' (Spring & V3)
+     *                                  |- C2                 |- C2 (V3)
+     *                                    |- C3                 |- C3
+     * </pre></code>
+     * <p/>
+     * Previous example modified to contrast exclusive-or style condition with dependency
+     * requirement-style condition:
+     * <p/>
+     * <code><pre>
+     *   Original                   Adoptee             Result
+     *   --------                   -------             ------
+     *   F1                                             F1
+     *     |- M1 (V1), M1' (V2)     M1'' (V3)             |- M1 (V1), M1' (V2), M1'' (V3)
+     *       |- P1 (V1), P1' (V2)     |- P1'                |- P1 (V1), P1' (V2 | V3)
+     *         |- C1 (Spring)           |- C1'                |- C1 (Spring & (V1 | V2)), C1' (V3)
+     *                                  |- C2                 |- C2 (V3)
+     *                                    |- C3                 |- C3
+     * </pre></code>
+     * <p/>
+     * Previous example modified further to show overlaying conditions:
+     * <p/>
+     * <code><pre>
+     *   Original                   Adoptee             Result
+     *   --------                   -------             ------
+     *   F1                                             F1
+     *     |- M1 (V1), M1' (V2)     M1'' (V3)             |- M1 (V1), M1' (V2), M1'' (V3)
+     *       |- P1 (V1), P1' (V2)     |- P1'                |- P1 (V1), P1' (V2 | V3)
+     *         |- C1 (Spring)           |- C1                 |- C1 (Spring | V3)
+     *                                  |- C2                 |- C2 (V3)
+     *                                    |- C3                 |- C3
+     * </pre></code>
+     * <p/>
+     * Adding in a complication where part of the initial condition is lost:
+     * <p/>
+     * <code><pre>
+     *   Original              Adoptee             Result
+     *   --------              -------             ------
+     *   F1                                        F1
+     *     |- M1 (V1 | V2)     M1 (V3)               |- M1 (V1 | V2 | V3)
+     *       |- P1               |- P1'                |- P1 (V1 | V2), P1' (V3)
+     *         |- C1               |- C1'                |- C1 (V1 | V2), C1' (V3)
+     *         |- C2 (V2)          |- C2                 |- C2 (V2 | V3)
+     *           |- C3               |- C3'                |- C3 (V2), V3' (V3)
+     * </pre></code>
+     * <p/>
+     * Adding in a further complication (in this case, the "Spring & V2" condition is considered to
+     * be a refinement of the original "V1 | V2" condition, because they both reference a common
+     * terminal "V2"):
+     * <p/>
+     * <code><pre>
+     *   Original                   Adoptee             Result
+     *   --------                   -------             ------
+     *   F1                                        F1
+     *     |- M1 (V1 | V2)          M1 (V3)               |- M1 (V1 | V2 | V3)
+     *       |- P1                    |- P1'                |- P1 (V1 | V2), P1' (V3)
+     *         |- C1                    |- C1'                |- C1 (V1 | V2), C1' (V3)
+     *         |- C2 (Spring & V2)      |- C2                 |- C2 (Spring & V2) | V3)
+     *           |- C3                    |- C3'                |- C3 (V2), V3' (V3)
      * </pre></code>
      * <p/>
      *
@@ -511,7 +595,7 @@ public abstract class Component
         }
 
     /**
-     * TODO
+     * Adopt the specified component as a child of this component.
      *
      * @param kid      the child component to adopt
      * @param condOld  the condition that implicitly applies to existing children of this component
@@ -532,57 +616,124 @@ public abstract class Component
             id   = kid.getName();
             }
 
-        Component sibling = kids.get(id);
-        if (sibling == null)
+        // the simplest case is if there's no child by the id that is being adopted, in which case
+        // the child gets adopted as is
+        Component firstSibling = kids.get(id);
+        if (firstSibling == null)
             {
-            // the only extra thing that needs to be done is to decorate the kid with the implicit
-            // condition
+            kid.setContaining(this);
             kid.addAndCondition(condKid);
             kids.put(id, kid);
-            // TODO set parent
+            return;
+            }
+
+        // can't have two kids with the same identity unless they have conditions declared
+        if ((condOld == null && firstSibling.m_cond == null) || (condKid == null && kid.m_cond == null))
+            {
+            throw new IllegalStateException("cannot adopt unless existing child and adoptee are both conditional");
+            }
+
+        // collect all of the conditions of the existing siblings, and look to see if any of the
+        // siblings is identical to the new kid
+        List<ConditionalConstant> listCond         = new ArrayList<>();
+        Component                 eachSibling      = firstSibling;
+        Component                 identicalSibling = null;
+        Component                 lastSibling      = null;
+        int                       cSiblings        = 0;
+        while (eachSibling != null)
+            {
+            if (eachSibling.isBodyIdentical(kid))
+                {
+                // this assertion is not technically correct, but this particular implementation
+                // avoids duplicate identical bodies
+                assert identicalSibling == null;
+
+                identicalSibling = eachSibling;
+                }
+
+            ConditionalConstant cond = eachSibling.m_cond;
+            if (cond != null)
+                {
+                listCond.add(cond);
+                }
+
+            lastSibling = eachSibling;
+            eachSibling = eachSibling.m_sibling;
+            ++cSiblings;
+            }
+
+        // if there's one existing sibling and they're identical, then ... TODO
+        if (cSiblings == 1 && identicalSibling != null)
+            {
+            // TODO
+            }
+
+        // if there were multiple siblings, then each of the siblings should have its own condition
+        assert cSiblings == 1 || cSiblings == listCond.size();
+
+        // all children MUST have a condition
+        // - children that are not present within the new kid need to be assigned the condition that
+        //   was passed in (condOld) or the condition
+        // - all of the children from the new kid need to be adopted
+        ConditionalConstant condNot = listCond.isEmpty() ? condOld : new AnyCondition(
+                getConstantPool(), listCond.toArray(new ConditionalConstant[listCond.size()]));
+
+        if (identicalSibling == null)
+            {
+            // each of the siblings (including the new kid) needs to have a condition
+            // TODO
+
+            // add the kid to the end of the sibling chain
+            kid.setContaining(this);
+            kid.addAndCondition(condKid);
+            eachSibling.m_sibling = kid;
             }
         else
             {
-            // can't have two kids with the same identity unless they have conditions declared
-            if ((condOld == null && sibling.m_cond == null) || (condKid == null && kid.m_cond == null))
-                {
-                throw new IllegalStateException("cannot adopt unless existing child and adoptee are both conditional");
-                }
-
-            // since there's a collision/overlap in the sibling namespace, we need to take the kid's
-            // condition and replicate it onto each of its kids, so that when we merge the trees,
-            // the grandkids don't accidentally get fathered by their siblings (insert joke here)
-            // TODO
-
-            // it's possible that the kid to adopt is identical to another kid (and by "identical",
-            // we're not talking identical twins -- we're talking about being "one and the same
-            // kid") ... if that's true, the only thing that needs to change is the conditional on
-            // the kid to reflect both the existing kid's conditional and the one we're adopting;
-            // however, if that is the case, then we'll have to move the kid's kids over too, and to
-            // do that, we'll have to first change their conditions to "and" with the condition of
-            // their parent, aka "the kid"
-            Component eachSibling = sibling;
-            while (true)
-                {
-                if (eachSibling.isBodyIdentical(kid))
-                    {
-                    eachSibling.addOrCondition(condKid);
-                    break;
-                    }
-
-                Component nextSibling = eachSibling.m_sibling;
-                if (nextSibling == null)
-                    {
-                    // add the kid to the end of the sibling chain
-                    eachSibling.m_sibling = kid;
-                    break;
-                    }
-
-                eachSibling = nextSibling;
-                }
-
-            // TODO kids
+            // first merge the carried condition into the kid, and then merge the combined condition
+            // into the identical sibling (i.e. adopt the kid just by adopting its condition); the
+            // kid itself will be discarded
+            kid.addAndCondition(condKid);
+            identicalSibling.addOrCondition(kid.m_cond);
             }
+
+        eachSibling = nextSibling;
+
+
+
+        // since there's a collision/overlap in the sibling namespace, we need to take the kid's
+        // condition and replicate it onto each of its kids, so that when we merge the trees,
+        // the grandkids don't accidentally get fathered by their siblings (insert joke here)
+        // TODO
+
+        // it's possible that the kid to adopt is identical to another kid (and by "identical",
+        // we're not talking identical twins -- we're talking about being "one and the same
+        // kid") ... if that's true, the only thing that needs to change is the conditional on
+        // the kid to reflect both the existing kid's conditional and the one we're adopting;
+        // however, if that is the case, then we'll have to move the kid's kids over too, and to
+        // do that, we'll have to first change their conditions to "and" with the condition of
+        // their parent, aka "the kid"
+        Component eachSibling = firstSibling;
+        while (true)
+            {
+            if (eachSibling.isBodyIdentical(kid))
+                {
+                eachSibling.addOrCondition(condKid);
+                break;
+                }
+
+            Component nextSibling = eachSibling.m_sibling;
+            if (nextSibling == null)
+                {
+                // add the kid to the end of the sibling chain
+                eachSibling.m_sibling = kid;
+                break;
+                }
+
+            eachSibling = nextSibling;
+            }
+
+        // TODO kids
         }
 
     protected void addAndCondition(ConditionalConstant cond)

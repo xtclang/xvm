@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
@@ -78,6 +79,25 @@ public class NotCondition
     public boolean evaluate(LinkerContext ctx)
         {
         return !m_constCond.evaluate(ctx);
+        }
+
+    @Override
+    public Set<ConditionalConstant> terminals()
+        {
+        return m_constCond.terminals();
+        }
+
+    @Override
+    public boolean containsTerminal(ConditionalConstant that)
+        {
+        // while "this" is technically not a terminal, there is nothing that guarantees that "that"
+        // is either
+        if (this == that)
+            {
+            return true;
+            }
+
+        return m_constCond.containsTerminal(that);
         }
 
 
