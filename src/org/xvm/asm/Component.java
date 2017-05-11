@@ -539,6 +539,7 @@ public abstract class Component
             // condition
             kid.addAndCondition(condKid);
             kids.put(id, kid);
+            // TODO set parent
             }
         else
             {
