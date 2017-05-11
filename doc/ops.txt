@@ -34,18 +34,18 @@
 
 // variables and refs
 +VAR        TYPE_CONST                              ; next register is an uninitialized anonymous variable
-+IVAR       TYPE_CONST, CONST_*                    ; next register is an initialized anonymous variable
-+NVAR       TYPE_CONST, CONST_STRING               ; next register is an uninitialized named variable
-+INVAR      TYPE_CONST, CONST_STRING, CONST_*      ; next register is an initialized named variable
++IVAR       TYPE_CONST, rvalue-src                  ; next register is an initialized anonymous variable
++NVAR       TYPE_CONST, CONST_STRING                ; next register is an uninitialized named variable
++INVAR      TYPE_CONST, CONST_STRING, rvalue-src    ; next register is an initialized named variable
 +DVAR       CONST_REF_CLASS                         ; next register is an anonymous "dynamic reference" variable
 +DNVAR      CONST_REF_CLASS, CONST_STRING           ; next register is a named "dynamic reference" variable
 +REF        lvalue                                  ; next register represents the Variable ref for the specified variable
  CREF       rvalue                                  ; next register represents the @ro Variable ref for the specified variable
- CAST       rvalue, TYPE_CONST                     ; next register holds the type-casted value
+ CAST       rvalue, TYPE_CONST                      ; next register holds the type-casted value
 +MOV        rvalue-src, lvalue-dest                 ; move source value to destination
 +MOV_REF    lvalue-src, lvalue-dest                 ; move reference-to-source to destination
  MOV_CREF   rvalue-src, lvalue-dest                 ; move reference-to-source to destination
- MOV_CAST   rvalue-src, lvalue-dest, TYPE_CONST    ; move type-casted source reference to destination
+ MOV_CAST   rvalue-src, lvalue-dest, TYPE_CONST     ; move type-casted source reference to destination
  SWAP       lvalue, lvalue                          ; swap source and destination values
 
 // local property based

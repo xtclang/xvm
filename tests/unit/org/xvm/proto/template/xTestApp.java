@@ -46,7 +46,7 @@ public class xTestApp extends xModule
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
             new INVar(adapter.getClassTypeConstId("x:String"),
                       adapter.ensureValueConstantId("s"),
-                      adapter.ensureValueConstantId("Hello world!")), // #0 (s)
+                      -adapter.ensureValueConstantId("Hello world!")), // #0 (s)
             new X_Print(0),
 
             new NVar(adapter.getClassTypeConstId("x:Int64"),
@@ -57,7 +57,7 @@ public class xTestApp extends xModule
             new NVar(adapter.getClassTypeConstId("x:Int64"),
                      adapter.ensureValueConstantId("of")), // #2 (of)
             new IVar(adapter.getClassTypeConstId("x:String"),
-                     adapter.ensureValueConstantId("world")), // #3
+                     -adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(0, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
 
             new Var(adapter.getClassTypeConstId("x:Int64")), // #4
@@ -176,7 +176,7 @@ public class xTestApp extends xModule
             new MoveRef(6, 5),
 
             new IVar(adapter.getClassTypeConstId("x:Function"),
-                     adapter.getMethodConstId("x:TestApp", "lambda$1")), // #7
+                     -adapter.getMethodConstId("x:TestApp", "lambda$1")), // #7
             new FBind(7, new int[] {0}, new int[] {1}, 7),
             new Invoke_10(5, adapter.getMethodConstId("x:FutureRef", "whenComplete"), 7),
 
@@ -217,11 +217,14 @@ public class xTestApp extends xModule
         ftTestRef.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testRef() #")),
-            new NVar(adapter.getClassTypeConstId("x:Ref"), adapter.ensureValueConstantId("ri")), // #0 (ri)
+            new NVar(adapter.getClassTypeConstId("x:Ref"),
+                     adapter.ensureValueConstantId("ri")), // #0 (ri)
             new Enter(),
             new INVar(adapter.getClassTypeConstId("x:Int64"),
-                    adapter.ensureValueConstantId("i"), adapter.ensureValueConstantId(1)), // #1 (i)
-            new NVar(adapter.getClassTypeConstId("x:Ref"), adapter.ensureValueConstantId("ri2")), // #2 (ri2)
+                      adapter.ensureValueConstantId("i"),
+                      -adapter.ensureValueConstantId(1)), // #1 (i)
+            new NVar(adapter.getClassTypeConstId("x:Ref"),
+                     adapter.ensureValueConstantId("ri2")), // #2 (ri2)
             new MoveRef(1, 2),
             new MoveRef(1, 0),
 
@@ -252,7 +255,7 @@ public class xTestApp extends xModule
         ftLambda$2.m_aop = new Op[]
             { // #0 = i
             new IVar(adapter.getClassTypeConstId("x:String"),
-                     adapter.ensureValueConstantId("value ")), // #1
+                     -adapter.ensureValueConstantId("value ")), // #1
             new Var(adapter.getClassTypeConstId("x:String")), // #2
             new Invoke_01(0, adapter.getMethodConstId("x:Int64", "x:String to(Void)"), 2),
             new Add(1, 2, 1),

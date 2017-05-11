@@ -1,24 +1,26 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
 /**
- * IVAR CONST_CLASS ; (next register is an initialized anonymous variable)
+ * IVAR CONST_CLASS, rvalue-src ; (next register is an initialized anonymous variable)
  *
  * @author gg 2017.03.08
  */
 public class IVar extends Op
     {
     final private int f_nClassConstId;
-    final private int f_nValueConstId;
+    final private int f_nArgValue;
 
-    public IVar(int nClassConstId, int nValueConstId)
+    public IVar(int nClassConstId, int nValue)
         {
         f_nClassConstId = nClassConstId;
-        f_nValueConstId = nValueConstId;
+        f_nArgValue = nValue;
         }
 
     @Override
@@ -32,12 +34,26 @@ public class IVar extends Op
 
         frame.f_aInfo[nNextVar] = new Frame.VarInfo(clazz, false);
 
-        // constant assignment must not fail
-        frame.assignValue(nNextVar, context.f_heapGlobal.ensureConstHandle(f_nValueConstId));
+        ExceptionHandle hException;
+        try
+            {
+            hException = frame.assignValue(nNextVar, frame.getArgument(f_nArgValue));
+            }
+        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
+            }
 
-        frame.f_anNextVar[iScope] = nNextVar + 1;
-
-        return iPC + 1;
+        if (hException == null)
+            {
+            frame.f_anNextVar[iScope] = nNextVar + 1;
+            return iPC + 1;
+            }
+        else
+            {
+            frame.m_hException = hException;
+            return RETURN_EXCEPTION;
+            }
         }
 
     }

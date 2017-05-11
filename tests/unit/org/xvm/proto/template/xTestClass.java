@@ -61,7 +61,7 @@ public class xTestClass extends TypeCompositionTemplate
             new NVar(adapter.getClassTypeConstId("x:Int64"),
                      adapter.ensureValueConstantId("of")), // #2 (of)
             new IVar(adapter.getClassTypeConstId("x:String"),
-                     adapter.ensureValueConstantId("world")), // #3
+                     -adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(1, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
             new Var(adapter.getClassTypeConstId("x:Int64")), // #4
             new PGet(1, adapter.getPropertyConstId("x:String", "length"), 4),

@@ -3,12 +3,14 @@ package org.xvm.proto.op;
 import org.xvm.asm.constants.CharStringConstant;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
 /**
- * INVAR CONST_CLASS, CONST_STRING, CONST_* ; (next register is an initialized named variable)
+ * INVAR CONST_CLASS, CONST_STRING, rvalue-src ; (next register is an initialized named variable)
  *
  * @author gg 2017.03.08
  */
@@ -16,13 +18,13 @@ public class INVar extends Op
     {
     final private int f_nClassConstId;
     final private int f_nNameConstId;
-    final private int f_nValueConstId;
+    final private int f_nArgValue;
 
-    public INVar(int nClassConstId, int nNamedConstId, int nValueConstId)
+    public INVar(int nClassConstId, int nNamedConstId, int nValue)
         {
         f_nClassConstId = nClassConstId;
         f_nNameConstId = nNamedConstId;
-        f_nValueConstId = nValueConstId;
+        f_nArgValue = nValue;
         }
 
     @Override
@@ -39,12 +41,25 @@ public class INVar extends Op
 
         frame.f_aInfo[nNextVar] = new Frame.VarInfo(clazz, constName.getValue(), false);
 
-        // constant assignment must not fail
-        frame.assignValue(nNextVar,
-                frame.f_context.f_heapGlobal.ensureConstHandle(f_nValueConstId));
+        ExceptionHandle hException;
+        try
+            {
+            hException = frame.assignValue(nNextVar, frame.getArgument(f_nArgValue));
+            }
+        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+            {
+            hException = e.getExceptionHandle();
+            }
 
-        frame.f_anNextVar[iScope] = nNextVar + 1;
-
-        return iPC + 1;
+        if (hException == null)
+            {
+            frame.f_anNextVar[iScope] = nNextVar + 1;
+            return iPC + 1;
+            }
+        else
+            {
+            frame.m_hException = hException;
+            return RETURN_EXCEPTION;
+            }
         }
     }
