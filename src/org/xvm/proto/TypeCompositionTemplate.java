@@ -6,7 +6,6 @@ import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
@@ -55,6 +54,8 @@ public abstract class TypeCompositionTemplate
     protected Map<String, MultiMethodTemplate> m_mapMultiMethods = new TreeMap<>();
 
     protected Map<String, MultiFunctionTemplate> m_mapMultiFunctions = new TreeMap<>(); // class level child functions
+
+    protected boolean m_fAutoRegister = false;
 
     // ----- caches ------
 
@@ -114,7 +115,6 @@ public abstract class TypeCompositionTemplate
     public PropertyTemplate ensurePropertyTemplate(String sPropertyName, String sTypeName)
         {
         PropertyTemplate propThis = new PropertyTemplate(sPropertyName, sTypeName);
-        propThis.f_typeName.resolveDependencies(this);
 
         return addPropertyTemplate(sPropertyName, propThis);
         }
@@ -157,7 +157,6 @@ public abstract class TypeCompositionTemplate
         {
         MethodTemplate templateM = m_mapMultiMethods.computeIfAbsent(sMethodName, s -> new MultiMethodTemplate()).
                 add(new MethodTemplate(sMethodName, asArgTypes, asRetTypes));
-        templateM.resolveTypes(this);
 
         return templateM;
         }
@@ -186,8 +185,17 @@ public abstract class TypeCompositionTemplate
         {
         MultiMethodTemplate mmt = m_mapMultiMethods.get(constMethod.getName());
 
-        // TODO: when MethodConstant is done
-        return mmt == null ? null : mmt.m_mapMethods.values().iterator().next();
+        List<TypeConstant> listParams = constMethod.getParams();
+        List<TypeConstant> listReturns = constMethod.getReturns();
+
+        for (MethodTemplate mt : mmt.m_mapMethods.values())
+            {
+            if (mt.isMatch(listParams, listReturns))
+                {
+                return mt;
+                }
+            }
+        return null;
         }
 
     public void forEachMethod(Consumer<MethodTemplate> consumer)
@@ -219,8 +227,6 @@ public abstract class TypeCompositionTemplate
         m_mapMultiFunctions.computeIfAbsent(templateC.f_sName, s -> new MultiFunctionTemplate()).
                 add(templateC);
 
-        templateC.resolveTypes(this);
-
         return templateC;
         }
 
@@ -231,8 +237,6 @@ public abstract class TypeCompositionTemplate
 
         m_mapMultiFunctions.computeIfAbsent(sFunctionName, s -> new MultiFunctionTemplate()).
                 add(templateF);
-
-        templateF.resolveTypes(this);
 
         return templateF;
         }
@@ -266,8 +270,17 @@ public abstract class TypeCompositionTemplate
         {
         MultiFunctionTemplate mft = m_mapMultiFunctions.get(constMethod.getName());
 
-        // TODO: when MethodConstant is done
-        return mft == null ? null : mft.m_mapFunctions.values().iterator().next();
+        List<TypeConstant> listParams = constMethod.getParams();
+        List<TypeConstant> listReturns = constMethod.getReturns();
+
+        for (FunctionTemplate ft : mft.m_mapFunctions.values())
+            {
+            if (ft.isMatch(listParams, listReturns))
+                {
+                return ft;
+                }
+            }
+        return null;
         }
 
     public void forEachFunction(Consumer<FunctionTemplate> consumer)
@@ -323,20 +336,21 @@ public abstract class TypeCompositionTemplate
         if (m_templateSuper != null)
             {
             m_templateSuper.forEachProperty(propSuper ->
-            {
-            if (propSuper.m_accessGet != Constants.Access.PRIVATE || propSuper.m_accessSet != Constants.Access.PRIVATE)
                 {
-                derivePropertyTemplateFrom(propSuper);
-                }
-            });
+                if (propSuper.m_accessGet != Constants.Access.PRIVATE ||
+                    propSuper.m_accessSet != Constants.Access.PRIVATE)
+                    {
+                    derivePropertyTemplateFrom(propSuper);
+                    }
+                });
 
             m_templateSuper.forEachMethod(methodSuper ->
-            {
-            if (methodSuper.m_access != Constants.Access.PRIVATE)
                 {
-                deriveMethodTemplateFrom(methodSuper);
-                }
-            });
+                if (methodSuper.m_access != Constants.Access.PRIVATE)
+                    {
+                    deriveMethodTemplateFrom(methodSuper);
+                    }
+                });
             }
         }
 
@@ -566,7 +580,7 @@ public abstract class TypeCompositionTemplate
         return hProp;
         }
 
-    // Increment and place the result into the specified frame register
+    // increment the property value and place the result into the specified frame register
     public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget,
                                         PropertyTemplate property, int iReturn)
         {
@@ -590,7 +604,7 @@ public abstract class TypeCompositionTemplate
         return frame.assignValue(iReturn, hPropNew);
         }
 
-    // PostIncrement operation; place the result into the specified frame register
+    // place the property value into the specified frame register and increment it
     public ExceptionHandle invokePostInc(Frame frame, ObjectHandle hTarget,
                                          PropertyTemplate property, int iReturn)
         {
@@ -728,15 +742,15 @@ public abstract class TypeCompositionTemplate
     // ----- Op-code support: array operations -----
 
     // get a handle to an array for the specified class
-    public ExceptionHandle createArrayHandle(Frame frame,
-                TypeComposition clazz, long cCapacity, boolean fFixed, int iReturn)
+    public ExceptionHandle createArrayStruct(Frame frame, TypeComposition clazz,
+                                             long cCapacity, int iReturn)
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
             return xException.makeHandle("Invalid array size: " + cCapacity);
             }
 
-        return frame.assignValue(iReturn, xArray.makeInstance(cCapacity, fFixed));
+        return frame.assignValue(iReturn, xArray.makeInstance(cCapacity));
         }
 
     // ----- debugging support -----
@@ -781,17 +795,11 @@ public abstract class TypeCompositionTemplate
 
         sb.append("\nMethods:");
         m_mapMultiMethods.values().forEach(
-            mmt ->
-                {
-                mmt.m_mapMethods.values().forEach(mt -> sb.append("\n  ").append(mt));
-                });
+            mmt -> mmt.m_mapMethods.values().forEach(mt -> sb.append("\n  ").append(mt)));
 
         sb.append("\nFunctions:");
         m_mapMultiFunctions.values().forEach(
-            mft ->
-                {
-                mft.m_mapFunctions.values().forEach(ft -> sb.append("\n  ").append(ft));
-                });
+            mft -> mft.m_mapFunctions.values().forEach(ft -> sb.append("\n  ").append(ft)));
 
         return sb.toString();
         }
@@ -1059,6 +1067,32 @@ public abstract class TypeCompositionTemplate
             return TypeName.getFunctionSignature(f_sName, m_argTypeName, m_retTypeName);
             }
 
+        public boolean isMatch(List<TypeConstant> listParams, List<TypeConstant> listReturns)
+            {
+            if (listParams.size() == m_cArgs && listReturns.size() == m_cReturns)
+                {
+                int i = 0;
+                for (TypeConstant constType : listParams)
+                    {
+                    if (!m_argTypeName[i++].isMatch(constType))
+                        {
+                        return false;
+                        }
+                    }
+                i = 0;
+                for (TypeConstant constType : listReturns)
+                    {
+                    if (!m_retTypeName[i++].isMatch(constType))
+                        {
+                        return false;
+                        }
+                    }
+                return true;
+                }
+            return false;
+            }
+
+
         @Override
         public String toString()
             {
@@ -1081,7 +1115,10 @@ public abstract class TypeCompositionTemplate
             MethodTemplate methodSuper = m_mapMethods.put(method.getSignature(), method);
             if (methodSuper == null)
                 {
-                f_types.f_adapter.registerInvocable(TypeCompositionTemplate.this, method);
+                if (m_fAutoRegister)
+                    {
+                    f_types.f_adapter.registerInvocable(TypeCompositionTemplate.this, method);
+                    }
                 }
             else
                 {
@@ -1099,7 +1136,10 @@ public abstract class TypeCompositionTemplate
             {
             if (m_mapFunctions.put(function.getSignature(), function) == null)
                 {
-                f_types.f_adapter.registerInvocable(TypeCompositionTemplate.this, function);
+                if (m_fAutoRegister)
+                    {
+                    f_types.f_adapter.registerInvocable(TypeCompositionTemplate.this, function);
+                    }
                 }
             else
                 {

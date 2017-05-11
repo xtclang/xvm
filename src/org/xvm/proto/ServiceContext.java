@@ -69,7 +69,7 @@ public class ServiceContext
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         return new Frame(this, framePrev, template, hTarget, ahVar,
-                iReturn < 0 ? Utils.ARGS_NONE : new int[] {iReturn});
+                iReturn == Frame.R_UNUSED ? Utils.ARGS_NONE : new int[] {iReturn});
         }
 
     public Frame createFrameN(Frame framePrev, InvocationTemplate template,

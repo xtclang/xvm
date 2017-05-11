@@ -1,5 +1,7 @@
 package org.xvm.proto;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,6 +28,16 @@ public interface TypeName
     // return a resolved Type based on the actual types
     Type resolveFormalTypes(TypeComposition clz);
 
+    default boolean isMatch(TypeConstant constType)
+        {
+        if (isResolved())
+            {
+            return getSimpleName().equals(constType.getValueString());
+            }
+        // assume a match for now
+        return true;
+        }
+
     // ----- helpers -----
 
     static String format(TypeName[] at)
@@ -44,8 +56,8 @@ public interface TypeName
         return format(tnRet) + ' ' + sName + "(" + format(tnArg) + ')';
         }
 
-
-    String[] NON_GENERIC = new String[0];
+    static String[] NON_GENERIC = new String[0];
+    static String THIS_TYPE = "this.Type";
 
     // any depth and mis of formal/actual is allowed
     static TypeName parseName(String sName)
@@ -226,8 +238,9 @@ public interface TypeName
         @Override
         public void resolveDependencies(TypeCompositionTemplate template)
             {
-            if (m_sName.equals("this.Type"))
+            if (m_sName.equals(THIS_TYPE))
                 {
+                m_sName = template.f_sName;
                 m_template = template;
                 m_fActual = true;
                 }
@@ -361,6 +374,12 @@ public interface TypeName
             throw new UnsupportedOperationException("TODO: create a union clazz");
             }
 
+        @Override
+        public boolean isMatch(TypeConstant constType)
+            {
+            // TODO: wait for TypeConstant support
+            return true;
+            }
 
         @Override
         public String toString()
@@ -380,6 +399,13 @@ public interface TypeName
         public Type resolveFormalTypes(TypeComposition clz)
             {
             throw new UnsupportedOperationException("TODO: create an intersection clazz");
+            }
+
+        @Override
+        public boolean isMatch(TypeConstant constType)
+            {
+            // TODO: wait for TypeConstant support
+            return true;
             }
 
         @Override

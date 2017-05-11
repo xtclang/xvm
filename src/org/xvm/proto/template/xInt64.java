@@ -49,15 +49,15 @@ public class xInt64
         }
 
     @Override
-    public ExceptionHandle createArrayHandle(Frame frame,
-                TypeComposition clazz, long cCapacity, boolean fFixed, int iReturn)
+    public ExceptionHandle createArrayStruct(Frame frame, TypeComposition clazz,
+                                             long cCapacity, int iReturn)
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
             return xException.makeHandle("Invalid array size: " + cCapacity);
             }
 
-        return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity, fFixed));
+        return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity));
         }
 
     @Override
@@ -106,5 +106,23 @@ public class xInt64
                                          PropertyTemplate property, int iReturn)
         {
         return invokePreInc(frame, hTarget, property, iReturn);
+        }
+
+    @Override
+    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
+                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+        switch (ahArg.length)
+            {
+            case 0:
+                if (method.f_sName.equals("to"))
+                    {
+                    // how to differentiate; check the method's return type?
+                    frame.assignValue(iReturn, xString.makeHandle(String.valueOf(hThis.getValue())));
+                    return null;
+                    }
+            }
+        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
         }
     }

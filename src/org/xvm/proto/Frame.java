@@ -2,6 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.IntConstant;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
@@ -11,6 +12,7 @@ import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.ObjectHandle.JavaLong;
 
 /**
  * A call stack frame.
@@ -282,6 +284,20 @@ public class Frame
     public ObjectHandle getFrameLocal()
         {
         return m_hFrameLocal;
+        }
+
+    public long getIndex(int iArg)
+                throws ExceptionHandle.WrapperException
+        {
+        if (iArg >= 0)
+            {
+            JavaLong hLong = (JavaLong) getArgument(iArg);
+            return hLong.m_lValue;
+            }
+
+        IntConstant constant = (IntConstant)
+                f_context.f_heapGlobal.f_constantPool.getConstantValue(-iArg);
+        return constant.getValue().getLong();
         }
 
     public ObjectHandle getArgument(int iArg)

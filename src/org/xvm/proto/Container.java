@@ -8,8 +8,6 @@ import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
-import org.xvm.proto.template.xService;
-import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.HashSet;
 import java.util.Set;

@@ -12,22 +12,22 @@ import org.xvm.proto.template.xClass.ClassHandle;
 import org.xvm.proto.template.xService;
 
 /**
- * NEW_1G CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
+ *  NEW_NG CONST-CONSTRUCT, rvalue-type, #params:(rvalue), lvalue-return
  *
  * @author gg 2017.03.08
  */
-public class New_1G extends OpCallable
+public class New_NG extends OpCallable
     {
     private final int f_nConstructId;
     private final int f_nTypeValue;
-    private final int f_nArgValue;
+    private final int[] f_anArgValue;
     private final int f_nRetValue;
 
-    public New_1G(int nConstructorId, int nType, int nArg, int nRet)
+    public New_NG(int nConstructorId, int nType, int[] anArg, int nRet)
         {
         f_nConstructId = nConstructorId;
         f_nTypeValue = nType;
-        f_nArgValue = nArg;
+        f_anArgValue = anArg;
         f_nRetValue = nRet;
         }
 
@@ -50,8 +50,7 @@ public class New_1G extends OpCallable
                 clzTarget = frame.f_context.f_types.ensureConstComposition(-f_nTypeValue);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
-            ahVar[1] = frame.getArgument(f_nArgValue);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount(), 1);
 
             if (template.isService())
                 {

@@ -10,6 +10,7 @@ import org.xvm.util.Handy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 
 /**
@@ -28,7 +29,7 @@ public class ConstantPoolAdapter
     private Map<String, Integer> m_mapProperties = new HashMap<>();
 
     // the method template fully qualified name (x:collections.Map#get[KeyType]) -> the corresponding MethodConstant id
-    private Map<String, Integer> m_mapMethods = new HashMap<>();
+    private Map<String, Integer> m_mapMethods = new TreeMap<>();
 
     public void registerTemplate(TypeCompositionTemplate template)
         {
@@ -75,16 +76,30 @@ public class ConstantPoolAdapter
 
     public void registerInvocable(TypeCompositionTemplate templateClazz, InvocationTemplate templateMethod)
         {
-        // TODO: params; returns
         String sName    = templateMethod.f_sName;
         String sClzName = templateClazz.f_sName;
 
         ClassTypeConstant constClass = getClassTypeConstant(getClassTypeConstId(sClzName));
 
+        TypeName[] atnArg = templateMethod.m_argTypeName;
+        TypeConstant[] atcArg = new TypeConstant[atnArg.length];
+        for (int i = 0, c = atnArg.length; i < c; i++)
+            {
+            atcArg[i] = getTypeConstant(atnArg[i], templateClazz);
+            }
+
+        TypeName[] atnRet = templateMethod.m_retTypeName;
+        TypeConstant[] atcRet = new TypeConstant[atnRet.length];
+        for (int i = 0, c = atnRet.length; i < c; i++)
+            {
+            atcRet[i] = getTypeConstant(atnRet[i], templateClazz);
+            }
+
         MethodConstant constMethod = m_constantPool.ensureMethodConstant(
-                constClass.getClassConstant(), sName, templateMethod.m_access, null, null);
+                constClass.getClassConstant(), sName, templateMethod.m_access, atcArg, atcRet);
 
         m_mapMethods.put(sClzName + '#' + sName, constMethod.getPosition());
+        m_mapMethods.put(sClzName + '#' + templateMethod.getSignature(), constMethod.getPosition());
         }
 
     public int getClassTypeConstId(String sName)
@@ -100,11 +115,9 @@ public class ConstantPoolAdapter
             String sParam = sName.substring(ofTypeParam + 1, sName.length() - 1);
             String sSimpleName = sName.substring(0, ofTypeParam);
 
-            if (m_mapClasses.containsKey(sSimpleName))
+            ClassTypeConstant constType = getClassTypeConstant(sSimpleName);
+            if (constType != null)
                 {
-                int nClass = m_mapClasses.get(sSimpleName);
-                ClassConstant constClass = getClassTypeConstant(nClass).getClassConstant();
-
                 String[] asType = Handy.parseDelimitedString(sParam, ',');
                 int cTypes = asType.length;
                 TypeConstant[] aType = new TypeConstant[cTypes];
@@ -114,7 +127,8 @@ public class ConstantPoolAdapter
                     aType[i] = getClassTypeConstant(getClassTypeConstId(sType));
                     }
 
-                int nTypeId = m_constantPool.ensureClassTypeConstant(constClass, null, aType).getPosition();
+                int nTypeId = m_constantPool.ensureClassTypeConstant(
+                        constType.getClassConstant(), null, aType).getPosition();
 
                 m_mapClasses.put(sName, nTypeId);
 
@@ -123,6 +137,30 @@ public class ConstantPoolAdapter
             }
 
         throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
+        }
+
+    protected TypeConstant getTypeConstant(TypeName tn, TypeCompositionTemplate template)
+        {
+        String sName = tn.getSimpleName();
+        TypeConstant constType = getClassTypeConstant(sName);
+        if (constType != null)
+            {
+            return constType;
+            }
+
+        if (sName.equals(TypeName.THIS_TYPE))
+            {
+            return getClassTypeConstant(template.f_sName);
+            }
+
+        // TODO: composite types (e.g.) T1 | T2
+        return getClassTypeConstant("x:Object");
+        }
+
+    protected ClassTypeConstant getClassTypeConstant(String sName)
+        {
+        Integer IClass = m_mapClasses.get(sName);
+        return IClass == null ? null : getClassTypeConstant(IClass.intValue());
         }
 
     public ClassTypeConstant getClassTypeConstant(int nConstId)
@@ -147,7 +185,6 @@ public class ConstantPoolAdapter
         return (PropertyConstant) m_constantPool.getConstant(nConstId);
         }
 
-    // TODO: parameters, returns
     public int getMethodConstId(String sClassName, String sMethName)
         {
         try

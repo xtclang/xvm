@@ -25,6 +25,8 @@ public class xTestClass2 extends TypeCompositionTemplate
     @Override
     public void initDeclared()
         {
+        m_fAutoRegister = true;
+
         ensurePropertyTemplate("prop2", "x:Int");
 
         ConstructTemplate construct = ensureConstructTemplate(new String[]{"x:TestClass2", "x:Int64", "x:String"});

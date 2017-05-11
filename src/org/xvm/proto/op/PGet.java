@@ -8,7 +8,7 @@ import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 /**
- * P_GET rvalue-target, CONST_PROPERTY, lvalue
+ * P_GET rvalue-target, CONST_PROPERTY, lvalue-return
  *
  * @author gg 2017.03.08
  */

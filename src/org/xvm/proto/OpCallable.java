@@ -14,10 +14,18 @@ import org.xvm.proto.TypeCompositionTemplate.PropertyAccessTemplate;
  */
 public abstract class OpCallable extends Op
     {
+    private int m_nFunctionId;           // cached function id
+    private FunctionTemplate m_function; // cached function
+
     // get the template for the function constant
     protected FunctionTemplate getFunctionTemplate(Frame frame, int nFunctionConstantId)
         {
         assert nFunctionConstantId >= 0;
+
+        if (m_function != null && m_nFunctionId == nFunctionConstantId)
+            {
+            return m_function;
+            }
 
         MethodConstant constFunction =
                 frame.f_context.f_constantPool.getMethodConstant(nFunctionConstantId);
@@ -26,7 +34,15 @@ public abstract class OpCallable extends Op
 
         TypeCompositionTemplate template = frame.f_context.f_types.getTemplate(sClass);
 
-        return template.getFunctionTemplate(constFunction);
+        FunctionTemplate function = template.getFunctionTemplate(constFunction);
+        if (function == null)
+            {
+            System.out.println("Missing function " + constFunction + " on " + template);
+            }
+
+        m_nFunctionId = nFunctionConstantId;
+        m_function = function;
+        return function;
         }
 
     // call super() method or "getProperty", placing the return value into the specified frame slot

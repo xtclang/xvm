@@ -30,21 +30,6 @@ public class xIntArray
         {
         }
 
-    public static class IntArrayHandle
-            extends ArrayHandle
-        {
-        public long[] m_alValue;
-        public int m_cSize;
-
-        protected IntArrayHandle(TypeComposition clzArray, long cCapacity, boolean fFixed)
-            {
-            super(clzArray, fFixed);
-
-            m_alValue = new long[(int) cCapacity];
-            m_cSize = 0;
-            }
-        }
-
     @Override
     public ExceptionHandle getArrayValue(Frame frame, ArrayHandle hTarget, long lIndex, int iReturn)
         {
@@ -91,8 +76,42 @@ public class xIntArray
         return null;
         }
 
-    public static IntArrayHandle makeIntArrayInstance(long cCapacity, boolean fFixed)
+    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
-        return new IntArrayHandle(INSTANCE.f_clazzCanonical, cCapacity, fFixed);
+        IntArrayHandle hArray = (IntArrayHandle) hTarget;
+        int cSize = hArray.m_cSize;
+
+        if (lIndex < 0 || lIndex >= cSize)
+            {
+            return outOfRange(lIndex, cSize);
+            }
+
+        return frame.assignValue(iReturn,
+                 xInt64.makeHandle(++hArray.m_alValue[(int) lIndex]));
+        }
+
+    public static IntArrayHandle makeIntArrayInstance(long cCapacity)
+        {
+        return new IntArrayHandle(INSTANCE.f_clazzCanonical, cCapacity);
+        }
+
+    public static class IntArrayHandle
+            extends ArrayHandle
+        {
+        public long[] m_alValue;
+
+        protected IntArrayHandle(TypeComposition clzArray, long cCapacity)
+            {
+            super(clzArray);
+
+            m_alValue = new long[(int) cCapacity];
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + (m_fFixed ? "fixed" : "capacity=" + m_alValue.length)
+                    + ", size=" + m_cSize;
+            }
         }
     }

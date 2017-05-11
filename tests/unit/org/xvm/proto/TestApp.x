@@ -17,11 +17,15 @@ module TestApp
 
     static Void test1()
         {
-        String s = "Hello World";
+        String s = "Hello world";
         print(s);
 
         Int i = getIntValue();
         print(i);
+
+        Int of = s.indexOf("world");
+        print(of + s.length);
+        print(of.toString());
         }
 
     static Void test2()
@@ -206,5 +210,16 @@ module TestApp
     static Void testArray()
         {
         Int[] ai = new Int[]; // mutable Array<Int>
+        ai[0] = 1;
+        ai[1] = 2;
+        print(ai);
+        print(ai[0]);
+        print(++ai[1]);
+
+        String[] as = new Array<String>(5, i -> "value " + i);
+        print(as);
+        print(as[4]);
+
+        Ref<String> rs = &as[0];
         }
     }

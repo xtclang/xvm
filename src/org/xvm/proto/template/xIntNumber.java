@@ -67,6 +67,6 @@ public class xIntNumber
         ensureMethodTemplate("reverseBits", VOID, THIS);
         ensureMethodTemplate("reverseBytes", VOID, THIS);
         ensureMethodTemplate("to", THIS, new String[]{"x:Range<x:Int>"});
-        ensureMethodTemplate("to", new String[]{"x:collections.Array<x:Boolean>"}, new String[]{"x:collections.Array<x:Boolean>"});
+        ensureMethodTemplate("to", VOID, new String[]{"x:collections.Array<x:Boolean>"});
         }
     }

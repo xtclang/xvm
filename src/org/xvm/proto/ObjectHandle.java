@@ -192,13 +192,12 @@ public class ObjectHandle
     public abstract static class ArrayHandle
             extends ObjectHandle
         {
-        public final boolean m_fFixed;
+        public boolean m_fFixed;
+        public int m_cSize;
 
-        protected ArrayHandle(TypeComposition clzArray, boolean fFixed)
+        protected ArrayHandle(TypeComposition clzArray)
             {
             super(clzArray);
-
-            m_fFixed = fFixed;
             }
         }
 

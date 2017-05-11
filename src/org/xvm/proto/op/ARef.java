@@ -7,17 +7,17 @@ import org.xvm.proto.Op;
 import org.xvm.proto.template.xArray;
 
 /**
- * A_GET rvalue-target, rvalue-index, lvalue-return ; T = T[Ti]
+ * A_REF rvalue-target, rvalue-index, lvalue-return ; Ref<T> = &T[Ti]
  *
  * @author gg 2017.03.08
  */
-public class AGet extends Op
+public class ARef extends Op
     {
     private final int f_nTargetValue;
     private final int f_nIndexValue;
     private final int f_nRetValue;
 
-    public AGet(int nTarget, int nIndex, int nRet)
+    public ARef(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
         f_nIndexValue = nIndex;

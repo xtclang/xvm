@@ -25,6 +25,8 @@ public class xTestApp extends xModule
     @Override
     public void initDeclared()
         {
+        m_fAutoRegister = true;
+
         f_types.ensureTemplate("x:TestClass");
         f_types.ensureTemplate("x:TestClass2");
         f_types.ensureTemplate("x:TestService");
@@ -43,17 +45,18 @@ public class xTestApp extends xModule
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
             new INVar(adapter.getClassTypeConstId("x:String"),
-                        adapter.ensureValueConstantId("s"),
-                     adapter.ensureValueConstantId("Hello world!")), // #0 (s)
+                      adapter.ensureValueConstantId("s"),
+                      adapter.ensureValueConstantId("Hello world!")), // #0 (s)
             new X_Print(0),
 
-            new Var(adapter.getClassTypeConstId("x:Int64")), // #1 (i)
+            new NVar(adapter.getClassTypeConstId("x:Int64"),
+                     adapter.ensureValueConstantId("i")), // #1 (i)
             new Call_01(-adapter.getMethodConstId("x:TestApp", "getIntValue"), 1),
             new X_Print(1),
 
-            new Var(adapter.getClassTypeConstId("x:Int64")), // #2 (of)
-            new INVar(adapter.getClassTypeConstId("x:String"),
-                     adapter.ensureValueConstantId("of"),
+            new NVar(adapter.getClassTypeConstId("x:Int64"),
+                     adapter.ensureValueConstantId("of")), // #2 (of)
+            new IVar(adapter.getClassTypeConstId("x:String"),
                      adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(0, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
 
@@ -62,9 +65,13 @@ public class xTestApp extends xModule
             new Add(4, 2, 4),
             new X_Print(4),
 
+            new Var(adapter.getClassTypeConstId("x:String")), // #5
+            new Invoke_01(2, adapter.getMethodConstId("x:Int64", "x:String to(Void)"), 5),
+            new X_Print(5),
+
             new Return_0(),
             };
-        ftTest1.m_cVars = 5;
+        ftTest1.m_cVars = 6;
 
         // --- test2()
 
@@ -210,15 +217,15 @@ public class xTestApp extends xModule
         ftTestRef.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testRef() #")),
-            new NVar(adapter.getClassTypeConstId("x:Ref"), adapter.ensureValueConstantId("ri")),     // #0 (ri)
+            new NVar(adapter.getClassTypeConstId("x:Ref"), adapter.ensureValueConstantId("ri")), // #0 (ri)
             new Enter(),
             new INVar(adapter.getClassTypeConstId("x:Int64"),
-                    adapter.ensureValueConstantId("i"), adapter.ensureValueConstantId(1)),     // #1 (i)
-            new NVar(adapter.getClassTypeConstId("x:Ref"), adapter.ensureValueConstantId("ri2")),  // #2 (ri2)
+                    adapter.ensureValueConstantId("i"), adapter.ensureValueConstantId(1)), // #1 (i)
+            new NVar(adapter.getClassTypeConstId("x:Ref"), adapter.ensureValueConstantId("ri2")), // #2 (ri2)
             new MoveRef(1, 2),
             new MoveRef(1, 0),
 
-            new Var(adapter.getClassTypeConstId("x:Int64")), // #3 (temp)
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #3
             new Invoke_01(0, adapter.getMethodConstId("x:Ref", "get"), 3),
             new X_Print(3),
 
@@ -230,7 +237,7 @@ public class xTestApp extends xModule
             new X_Print(2),
             new Exit(),
 
-            new Var(adapter.getClassTypeConstId("x:Int64")), // #1 (temp)
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #1
             new Invoke_01(0, adapter.getMethodConstId("x:Ref", "get"), 1),
             new X_Print(1),
             new Return_0()
@@ -239,6 +246,19 @@ public class xTestApp extends xModule
         ftTestRef.m_cScopes = 2;
 
         // --- testArray()
+
+        FunctionTemplate ftLambda$2 = ensureFunctionTemplate("lambda$2", INT, STRING);
+        ftLambda$2.setAccess(Constants.Access.PRIVATE);
+        ftLambda$2.m_aop = new Op[]
+            { // #0 = i
+            new IVar(adapter.getClassTypeConstId("x:String"),
+                     adapter.ensureValueConstantId("value ")), // #1
+            new Var(adapter.getClassTypeConstId("x:String")), // #2
+            new Invoke_01(0, adapter.getMethodConstId("x:Int64", "x:String to(Void)"), 2),
+            new Add(1, 2, 1),
+            new Return_1(1)
+            };
+        ftLambda$2.m_cVars = 3;
 
         FunctionTemplate ftTestArray = ensureFunctionTemplate("testArray", VOID, VOID);
         ftTestArray.m_aop = new Op[]
@@ -249,7 +269,28 @@ public class xTestApp extends xModule
             new New_1G(adapter.getMethodConstId("x:collections.Array", "construct"),
                        -adapter.getClassTypeConstId("x:collections.Array<x:Int64>"),
                        -adapter.ensureValueConstantId(0), 0),
-            new X_Print(0),
+            new ASet(0, -adapter.ensureValueConstantId(0), -adapter.ensureValueConstantId(1)),
+            new ASet(0, -adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(2)),
+                    new X_Print(0),
+
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #1
+            new AGet(0, -adapter.ensureValueConstantId(0), 1),
+            new X_Print(1),
+
+            new APreInc(0, -adapter.ensureValueConstantId(1), 1),
+            new X_Print(1),
+
+            new NVar(adapter.getClassTypeConstId("x:collections.Array<x:String>"),
+                     adapter.ensureValueConstantId("as")),   // #2 (as)
+            new New_NG(adapter.getMethodConstId("x:collections.Array", "construct"),
+                       -adapter.getClassTypeConstId("x:collections.Array<x:String>"),
+                       new int[] {-adapter.ensureValueConstantId(5),
+                                  -adapter.getMethodConstId("x:TestApp", "lambda$2")}, 2),
+            new X_Print(2),
+
+            new Var(adapter.getClassTypeConstId("x:String")), // #3
+            new AGet(2, -adapter.ensureValueConstantId(4), 3),
+            new X_Print(3),
             new Return_0()
             };
         ftTestArray.m_cVars = 4;

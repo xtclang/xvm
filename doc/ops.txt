@@ -91,17 +91,17 @@
  XOR_ASGN   lvalue-target, rvalue-second                                            ; T ^= T
 
 // property ops
-+P_GET        rvalue-target, CONST_PROPERTY, lvalue         ; get property
++P_GET        rvalue-target, CONST_PROPERTY, lvalue-return  ; get property
 +P_SET        rvalue-target, CONST_PROPERTY, rvalue         ; set property
  P_REF        rvalue-target, CONST_PROPERTY                 ; next register represents the Property ref for the specified property
  P_CREF       rvalue-target, CONST_PROPERTY                 ; next register represents the @ro Property ref for the specified property
 
  P_INC        rvalue-target, CONST_PROPERTY                 ; in-place increment; no result
  P_DEC        rvalue-target, CONST_PROPERTY                 ; ditto
-+P_POSTINC    rvalue-target, CONST_PROPERTY, lvalue         ; same as POSTINC for a register
- P_POSTDEC    rvalue-target, CONST_PROPERTY, lvalue         ; ditto
-+P_PREINC     rvalue-target, CONST_PROPERTY, lvalue
- P_PREDEC     rvalue-target, CONST_PROPERTY, lvalue
++P_POSTINC    rvalue-target, CONST_PROPERTY, lvalue-return  ; same as POSTINC for a register
+ P_POSTDEC    rvalue-target, CONST_PROPERTY, lvalue-return  ; ditto
++P_PREINC     rvalue-target, CONST_PROPERTY, lvalue-return
+ P_PREDEC     rvalue-target, CONST_PROPERTY, lvalue-return
  P_ADD_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
  P_SUB_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
  P_MUL_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
@@ -152,16 +152,16 @@
  INVOKE_TT  rvalue-target, CONST-METHOD, rvalue-params-tuple, lvalue-return-tuple
 
 // array ops
- A_GET        rvalue-target, rvalue-index, lvalue-return        ; T = T[Ti]
- A_SET        rvalue-target, rvalue-index, rvalue-new-value     ; T[Ti] = T
++A_GET        rvalue-target, rvalue-index, lvalue-return        ; T = T[Ti]
++A_SET        rvalue-target, rvalue-index, rvalue-new-value     ; T[Ti] = T
  A_REF        rvalue-target, rvalue-index, lvalue-return        ; Ref<T> = &T[Ti]
  A_CREF       rvalue-target, rvalue-index, lvalue-return        ; @ro Ref<T> = &T[Ti]
  A_INC        rvalue-target, rvalue-index                       ; same as INC for a property
  A_DEC        rvalue-target, rvalue-index                       ; same as DEC for a property
- A_POSTINC    rvalue-target, rvalue-index, lvalue               ; same as POSTINC for a property
- A_POSTDEC    rvalue-target, rvalue-index, lvalue               ; ditto
- A_PREINC     rvalue-target, rvalue-index, lvalue
- A_PREDEC     rvalue-target, rvalue-index, lvalue
+ A_POSTINC    rvalue-target, rvalue-index, lvalue-return        ; same as POSTINC for a property
+ A_POSTDEC    rvalue-target, rvalue-index, lvalue-return        ; ditto
++A_PREINC     rvalue-target, rvalue-index, lvalue-return
+ A_PREDEC     rvalue-target, rvalue-index, lvalue-return
  A_ADD_ASGN   lvalue-target, rvalue-index, rvalue-second
  A_SUB_ASGN   lvalue-target, rvalue-index, rvalue-second
  A_MUL_ASGN   lvalue-target, rvalue-index, rvalue-second

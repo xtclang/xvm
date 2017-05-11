@@ -116,19 +116,24 @@ public abstract class NamedConstant
             {
             case Module:
                 sParent = ((ModuleConstant) constParent).getUnqualifiedName();
-                break;
+                return sParent + ':' + m_constName.getValue();
+
             case Package:
             case Class:
+                sParent = constParent.getValueString();
+                return sParent + '.' + m_constName.getValue();
+
             case Property:
                 sParent = ((NamedConstant) constParent).getName();
-                break;
+                return sParent + '#' + m_constName.getValue();
+
             case Method:
                 sParent = ((MethodConstant) constParent).getName() + "(?)";
-                break;
+                return sParent + '#' + m_constName.getValue();
+
             default:
                 throw new IllegalStateException();
             }
-        return sParent + '.' + m_constName.getValue();
         }
 
     @Override

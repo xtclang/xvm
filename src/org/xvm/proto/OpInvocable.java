@@ -13,17 +13,35 @@ import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
  */
 public abstract class OpInvocable extends Op
     {
-    protected MethodTemplate getMethodTemplate(Frame frame, TypeCompositionTemplate template, int nMethodConstId)
+    private int m_nMethodId;         // cached method id
+    private MethodTemplate m_method; // cached method
+
+    protected MethodTemplate getMethodTemplate(Frame frame,
+                                               TypeCompositionTemplate template, int nMethodConstId)
         {
         assert(nMethodConstId >= 0);
 
+        if (m_method != null && nMethodConstId == m_nMethodId)
+            {
+            return m_method;
+            }
+
         MethodConstant constMethod =
                 frame.f_context.f_constantPool.getMethodConstant(nMethodConstId);
-        // TODO parameters, returns
-        return template.getMethodTemplate(constMethod);
+
+        MethodTemplate method = template.getMethodTemplate(constMethod);
+        if (method == null)
+            {
+            throw new IllegalStateException("Missing method " + constMethod + " on " + template);
+            }
+
+        m_nMethodId = nMethodConstId;
+        m_method = method;
+        return method;
         }
 
-    protected PropertyTemplate getPropertyTemplate(Frame frame, TypeCompositionTemplate template, int nPropValue)
+    protected PropertyTemplate getPropertyTemplate(Frame frame,
+                                                   TypeCompositionTemplate template, int nPropValue)
         {
         assert (nPropValue >= 0);
 

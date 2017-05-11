@@ -61,11 +61,16 @@ public class xArray
         //
         //    private Element<ElementType>? head;
         //    private class Element<RefType>(ElementType value)
+        //
+        //    Array.Type<ElementType> ensureMutable()
+        //    Array.Type<ElementType> ensureFixedSize();
+        //    Array.Type<ElementType> ensurePersistent();
+        //    Const+Array.Type<ElementType> ensureConst();
 
-        ConstructTemplate const1 = ensureConstructTemplate(INT);
+        ConstructTemplate const1 = ensureConstructTemplate(new String[] {"x:collections.Array", "x:Int64"});
         const1.markNative();
 
-        ConstructTemplate const2 = ensureConstructTemplate(new String[] {"x:Int64", "x:Function"});
+        ConstructTemplate const2 = ensureConstructTemplate(new String[] {"x:collections.Array", "x:Int64", "x:Function"});
         const2.markNative();
 
         PropertyTemplate ptCap = ensurePropertyTemplate("capacity", "x:Int");
@@ -91,54 +96,49 @@ public class xArray
         Type typeEl = clazz.f_atGenericActual[0];
         String sTemplate = typeEl.f_sName;
 
-        long cCapacity = ((JavaLong) ahVar[0]).getValue();
-        FunctionHandle hSupplier;
-
-        if (ahVar.length == 1)
-            {
-            hSupplier = null;
-            }
-        else
-            {
-            hSupplier = (FunctionHandle) ahVar[1];
-            }
-
         TypeCompositionTemplate templateEl = sTemplate == null ?
                 xObject.INSTANCE : f_types.getTemplate(sTemplate);
 
-        if (hSupplier == null)
-            {
-            return templateEl.createArrayHandle(frame, clazz, cCapacity, false, iReturn);
-            }
+        // argument [0] is reserved for this:struct
+        long cCapacity = ((JavaLong) ahVar[1]).getValue();
 
-        ExceptionHandle hException = templateEl.createArrayHandle(
-                frame, clazz, cCapacity, true, Frame.R_FRAME);
+        ExceptionHandle hException = templateEl.createArrayStruct(frame, clazz, cCapacity, Frame.R_FRAME);
         if (hException != null)
             {
             return hException;
             }
 
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
-        TypeCompositionTemplate templateArray = hArray.f_clazz.f_template;
 
-        ObjectHandle[] ahArg = new ObjectHandle[1];
-        for (int i = 0; i < cCapacity; i++)
+        if (ahVar.length == 2)
             {
-            ahArg[0] = xInt64.makeHandle(i);
+            hArray.m_fFixed = true;
+            }
+        else
+            {
+            FunctionHandle hSupplier = (FunctionHandle) ahVar[2];
 
-            hException = hSupplier.call1(frame, ahArg, Frame.R_FRAME);
+            xArray array = (xArray) hArray.f_clazz.f_template;
 
-            if (hException == null)
+            ObjectHandle[] ahArg = new ObjectHandle[1];
+            for (int i = 0; i < cCapacity; i++)
                 {
-                hException = ((xArray) templateArray).
-                        setArrayValue(frame, hArray, i, frame.getFrameLocal());
-                }
+                ahArg[0] = xInt64.makeHandle(i);
 
-            if (hException != null)
-                {
-                return hException;
+                hException = hSupplier.call1(frame, ahArg, Frame.R_FRAME);
+
+                if (hException == null)
+                    {
+                    hException = array.setArrayValue(frame, hArray, i, frame.getFrameLocal());
+                    }
+
+                if (hException != null)
+                    {
+                    return hException;
+                    }
                 }
             }
+
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -150,7 +150,7 @@ public class xArray
 
         if (lIndex < 0 || lIndex >= cSize)
             {
-            outOfRange(lIndex, cSize);
+            return outOfRange(lIndex, cSize);
             }
 
         return frame.assignValue(iReturn, hArray.m_ahValue[(int) lIndex]);
@@ -166,7 +166,7 @@ public class xArray
             {
             if (hArray.m_fFixed || lIndex != cSize)
                 {
-                outOfRange(lIndex, cSize);
+                return outOfRange(lIndex, cSize);
                 }
 
             // check the capacity
@@ -187,15 +187,40 @@ public class xArray
         return null;
         }
 
+    // increment the element value and place the result into the specified frame register
+    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+        int cSize = hArray.m_cSize;
+
+        if (lIndex < 0 || lIndex >= cSize)
+            {
+            return outOfRange(lIndex, cSize);
+            }
+
+        ObjectHandle hValue = hArray.m_ahValue[(int) lIndex];
+
+        ExceptionHandle hException = hValue.f_clazz.f_template.invokePreInc(frame, hValue, null, Frame.R_FRAME);
+        if (hException != null)
+            {
+            return hException;
+            }
+
+        ObjectHandle hValueNew = frame.getFrameLocal();
+        hArray.m_ahValue[(int) lIndex] = hValueNew;
+
+        return frame.assignValue(iReturn, hValueNew);
+        }
+
     // helpers
     protected static ExceptionHandle outOfRange(long lIndex, long cSize)
         {
         return xException.makeHandle("Array index " + lIndex + " out of range 0.." + cSize);
         }
 
-    public static GenericArrayHandle makeInstance(long cCapacity, boolean fFixed)
+    public static GenericArrayHandle makeInstance(long cCapacity)
         {
-        return new GenericArrayHandle(INSTANCE.f_clazzCanonical, cCapacity, fFixed);
+        return new GenericArrayHandle(INSTANCE.f_clazzCanonical, cCapacity);
         }
 
     // generic array handle
@@ -203,14 +228,19 @@ public class xArray
             extends ArrayHandle
         {
         public ObjectHandle[] m_ahValue;
-        public int m_cSize;
 
-        protected GenericArrayHandle(TypeComposition clzArray, long cCapacity, boolean fFixed)
+        protected GenericArrayHandle(TypeComposition clzArray, long cCapacity)
             {
-            super(clzArray, fFixed);
+            super(clzArray);
 
             m_ahValue = new ObjectHandle[(int) cCapacity];
-            m_cSize = 0;
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + (m_fFixed ? "fixed" : "capacity=" + m_ahValue.length)
+                    + ", size=" + m_cSize;
             }
         }
     }

@@ -92,8 +92,13 @@ public class TypeSet
 
         f_adapter.registerTemplate(template);
 
-        template.resolveDependencies();
         template.initDeclared();
+        template.resolveDependencies();
+        template.forEachMethod(m -> m.resolveTypes(template));
+        template.forEachMethod(m -> f_adapter.registerInvocable(template, m));
+        template.forEachProperty(p -> p.f_typeName.resolveDependencies(template));
+        template.forEachFunction(f -> f.resolveTypes(template));
+        template.forEachFunction(f -> f_adapter.registerInvocable(template, f));
         }
 
     public TypeCompositionTemplate ensureTemplate(String sName)

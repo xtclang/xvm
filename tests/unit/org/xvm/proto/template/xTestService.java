@@ -27,6 +27,8 @@ public class xTestService extends xService
     @Override
     public void initDeclared()
         {
+        m_fAutoRegister = true;
+
         PropertyTemplate ptCounter = ensurePropertyTemplate("counter", "x:Int64");
         MethodTemplate mtGetCounter = ptCounter.addGet();
         mtGetCounter.m_aop = new Op[]
@@ -41,6 +43,8 @@ public class xTestService extends xService
         MethodTemplate mtSetCounter = ptCounter.addSet();
         mtSetCounter.m_aop = new Op[]
             {
+            new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.set #")),
+            new X_Print(1),
             new Call_10(Op.A_SUPER, 1),
             new Return_0(),
             };

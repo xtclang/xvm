@@ -93,6 +93,15 @@ public class xString
         }
 
     @Override
+    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        StringHandle hThis = (StringHandle) hTarget;
+        StringHandle hThat = (StringHandle) hArg;
+
+        return frame.assignValue(iReturn, makeHandle(hThis.m_sValue + hThat.m_sValue));
+        }
+
+    @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
         return new StringHandle(clazz);

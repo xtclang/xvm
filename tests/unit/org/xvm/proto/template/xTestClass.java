@@ -23,6 +23,8 @@ public class xTestClass extends TypeCompositionTemplate
     @Override
     public void initDeclared()
         {
+        m_fAutoRegister = true;
+
         ensurePropertyTemplate("prop1", "x:String");
 
         // --- constructor()
@@ -33,7 +35,7 @@ public class xTestClass extends TypeCompositionTemplate
 
         construct.m_aop = new Op[]
             { // #0 = this:struct; #1 = s
-            new X_Print(-adapter.ensureValueConstantId("# in constructor: TestClass #")),
+            new X_Print(-adapter.ensureValueConstantId("\n# in constructor: TestClass #")),
             new PSet(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
             new Return_0(),
             };
@@ -53,10 +55,13 @@ public class xTestClass extends TypeCompositionTemplate
         mtMethod1.m_aop = new Op[]
             { // #0 (this)
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
-            new Var(adapter.getClassTypeConstId("x:String")), // #1 (s)
+            new NVar(adapter.getClassTypeConstId("x:String"),
+                     adapter.ensureValueConstantId("s")), // #1 (s)
             new LGet(adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
-            new Var(adapter.getClassTypeConstId("x:Int64")), // #2 (of)
-            new IVar(adapter.getClassTypeConstId("x:String"), adapter.ensureValueConstantId("world")), // #3
+            new NVar(adapter.getClassTypeConstId("x:Int64"),
+                     adapter.ensureValueConstantId("of")), // #2 (of)
+            new IVar(adapter.getClassTypeConstId("x:String"),
+                     adapter.ensureValueConstantId("world")), // #3
             new Invoke_11(1, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
             new Var(adapter.getClassTypeConstId("x:Int64")), // #4
             new PGet(1, adapter.getPropertyConstId("x:String", "length"), 4),
