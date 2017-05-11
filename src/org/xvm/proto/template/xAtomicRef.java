@@ -78,7 +78,7 @@ public class xAtomicRef
 
         protected AtomicHandle(TypeComposition clazz, ObjectHandle hValue)
             {
-            super(clazz, null);
+            super(clazz);
 
             if (hValue != null)
                 {

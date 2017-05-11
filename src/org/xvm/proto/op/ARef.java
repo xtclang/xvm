@@ -4,7 +4,10 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
-import org.xvm.proto.template.xArray;
+import org.xvm.proto.Type;
+import org.xvm.proto.TypeComposition;
+
+import org.xvm.proto.template.xRef;
 
 /**
  * A_REF rvalue-target, rvalue-index, lvalue-return ; Ref<T> = &T[Ti]
@@ -31,12 +34,15 @@ public class ARef extends Op
 
         try
             {
-            ArrayHandle hTarget = (ArrayHandle) frame.getArgument(f_nTargetValue);
-            xArray template = (xArray) hTarget.f_clazz.f_template;
+            ArrayHandle hArray = (ArrayHandle) frame.getArgument(f_nTargetValue);
+            Type typeReferent = hArray.f_clazz.f_atGenericActual[0];
 
-            long lIndex = frame.getIndex(f_nIndexValue);
+            TypeComposition clzRef = xRef.INSTANCE.resolve(new Type[]{typeReferent});
 
-            hException = template.getArrayValue(frame, hTarget, lIndex, f_nRetValue);
+            xRef.ArrayRefHandle hRef = new xRef.ArrayRefHandle(clzRef,
+                    hArray, frame.getIndex(f_nIndexValue));
+
+            hException = frame.assignValue(f_nRetValue, hRef);
             }
         catch (ExceptionHandle.WrapperException e)
             {

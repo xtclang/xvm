@@ -1,6 +1,9 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
+
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
@@ -25,24 +28,26 @@ public class Ref extends OpInvocable
         int nNextVar = frame.f_anNextVar[iScope];
 
         Frame.VarInfo infoSrc = frame.f_aInfo[f_nSrcValue];
+        TypeComposition clzReferent = infoSrc.f_clazz;
 
         if (infoSrc.m_fDynamicRef)
             {
             // the "dynamic ref" register must contain a RefHandle itself
             RefHandle hRef = (RefHandle) frame.f_ahVar[f_nSrcValue];
 
-            frame.f_aInfo[nNextVar] = new Frame.VarInfo(infoSrc.f_clazz, false);
+            frame.f_aInfo[nNextVar] = new Frame.VarInfo(clzReferent, false);
             frame.f_ahVar[nNextVar] = hRef;
             }
         else
             {
-            TypeComposition clzRef = xRef.INSTANCE.resolve(new TypeComposition[]{infoSrc.f_clazz});
+            TypeComposition clzRef = xRef.INSTANCE.resolve(new TypeComposition[]{clzReferent});
 
             RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);
 
             frame.f_aInfo[nNextVar] = new Frame.VarInfo(clzRef, false);
             frame.f_ahVar[nNextVar] = hRef;
             }
+
         return iPC + 1;
         }
     }

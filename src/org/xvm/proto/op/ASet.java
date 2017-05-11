@@ -1,7 +1,6 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
@@ -32,13 +31,11 @@ public class ASet extends Op
 
         try
             {
-            ArrayHandle hTarget = (ArrayHandle) frame.getArgument(f_nTargetValue);
-            xArray template = (xArray) hTarget.f_clazz.f_template;
+            ArrayHandle hArray = (ArrayHandle) frame.getArgument(f_nTargetValue);
+            xArray array = (xArray) hArray.f_clazz.f_template;
 
-            long lIndex = frame.getIndex(f_nIndexValue);
-            ObjectHandle hValue = frame.getArgument(f_nValue);
-
-            hException = template.setArrayValue(frame, hTarget, lIndex, hValue);
+            hException = array.setArrayValue(frame, hArray,
+                    frame.getIndex(f_nIndexValue), frame.getArgument(f_nValue));
             }
         catch (ExceptionHandle.WrapperException e)
             {

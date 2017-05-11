@@ -101,7 +101,7 @@ public class xRef
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new RefHandle(clazz, null);
+        return new RefHandle(clazz);
         }
 
     // a simple reference handle
@@ -119,11 +119,9 @@ public class xRef
         // indicates ath the the m_hDelegate field holds a Ref that this Ref is "chained" to
         private static final int REF_REF = -2;
 
-        public RefHandle(TypeComposition clazz, ObjectHandle handle)
+        public RefHandle(TypeComposition clazz)
             {
             super(clazz);
-
-            m_hDelegate = handle;
             }
 
         public RefHandle(TypeComposition clazz, Frame frame, int iVar)
@@ -218,8 +216,38 @@ public class xRef
             }
         }
 
-    public static RefHandle makeHandle(ObjectHandle handle)
+    public static class ArrayRefHandle
+            extends RefHandle
         {
-        return new RefHandle(INSTANCE.f_clazzCanonical, handle);
+        protected final ArrayHandle f_hArray;
+        protected final long f_lIndex;
+
+        public ArrayRefHandle(TypeComposition clazz, ArrayHandle hArray, long lIndex)
+            {
+            super(clazz);
+
+            f_hArray = hArray;
+            f_lIndex = lIndex;
+            }
+
+        @Override
+        public ObjectHandle get()
+                throws ExceptionHandle.WrapperException
+            {
+            return ((xArray) f_hArray.f_clazz.f_template).extractArrayValue(f_hArray, f_lIndex);
+            }
+
+        @Override
+        public ExceptionHandle set(ObjectHandle handle)
+            {
+            return ((xArray) f_hArray.f_clazz.f_template).assignArrayValue(f_hArray, f_lIndex, handle);
+            }
+
+        @Override
+        public void dereference()
+            {
+            // no op
+            }
         }
+
     }

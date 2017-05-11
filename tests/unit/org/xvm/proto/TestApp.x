@@ -221,5 +221,8 @@ module TestApp
         print(as[4]);
 
         Ref<String> rs = &as[0];
+        print(rs.get());
+        rs.set("zero");
+        print(as[0]);
         }
     }

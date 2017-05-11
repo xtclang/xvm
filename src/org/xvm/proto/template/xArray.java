@@ -91,9 +91,9 @@ public class xArray
 
     @Override
     public ExceptionHandle construct(Frame frame, ConstructTemplate constructor,
-                                     TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
+                                     TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
-        Type typeEl = clazz.f_atGenericActual[0];
+        Type typeEl = clzArray.f_atGenericActual[0];
         String sTemplate = typeEl.f_sName;
 
         TypeCompositionTemplate templateEl = sTemplate == null ?
@@ -102,7 +102,7 @@ public class xArray
         // argument [0] is reserved for this:struct
         long cCapacity = ((JavaLong) ahVar[1]).getValue();
 
-        ExceptionHandle hException = templateEl.createArrayStruct(frame, clazz, cCapacity, Frame.R_FRAME);
+        ExceptionHandle hException = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.R_FRAME);
         if (hException != null)
             {
             return hException;
@@ -145,45 +145,66 @@ public class xArray
     // @op get
     public ExceptionHandle getArrayValue(Frame frame, ArrayHandle hTarget, long lIndex, int iReturn)
         {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-        int cSize = hArray.m_cSize;
+        int cSize = hTarget.m_cSize;
 
         if (lIndex < 0 || lIndex >= cSize)
             {
             return outOfRange(lIndex, cSize);
             }
 
-        return frame.assignValue(iReturn, hArray.m_ahValue[(int) lIndex]);
+        return frame.assignValue(iReturn, extractArrayValue(hTarget, lIndex));
+        }
+
+    protected ObjectHandle extractArrayValue(ArrayHandle hArray, long lIndex)
+        {
+        return ((GenericArrayHandle) hArray).m_ahValue[(int) lIndex];
         }
 
     // @op set
     public ExceptionHandle setArrayValue(Frame frame, ArrayHandle hTarget, long lIndex, ObjectHandle hValue)
         {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-        int cSize = hArray.m_cSize;
+        int cSize = hTarget.m_cSize;
 
         if (lIndex < 0 || lIndex >= cSize)
             {
-            if (hArray.m_fFixed || lIndex != cSize)
+            if (hTarget.m_fFixed || lIndex != cSize)
                 {
                 return outOfRange(lIndex, cSize);
                 }
 
-            // check the capacity
-            int cCapacity = hArray.m_ahValue.length;
-            if (cCapacity <= cSize)
+            ExceptionHandle hException = ensureCapacity(hTarget, cSize);
+            if (hException != null)
                 {
-                // resize (TODO: we should be much smarter here)
-                cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
-
-                ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
-                System.arraycopy(hArray.m_ahValue, 0, ahNew, 0, cSize);
-                hArray.m_ahValue = ahNew;
+                return hException;
                 }
-            hArray.m_cSize++;
+
+            hTarget.m_cSize++;
             }
 
-        hArray.m_ahValue[(int) lIndex] = hValue;
+        assignArrayValue(hTarget, lIndex, hValue);
+        return null;
+        }
+
+    protected ExceptionHandle ensureCapacity(ArrayHandle hTarget, int cSize)
+        {
+        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+
+        int cCapacity = hArray.m_ahValue.length;
+        if (cCapacity <= cSize)
+            {
+            // resize (TODO: we should be much smarter here)
+            cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
+
+            ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
+            System.arraycopy(hArray.m_ahValue, 0, ahNew, 0, cSize);
+            hArray.m_ahValue = ahNew;
+            }
+        return null;
+        }
+
+    protected ExceptionHandle assignArrayValue(ArrayHandle hTarget, long lIndex, ObjectHandle hValue)
+        {
+        ((GenericArrayHandle) hTarget).m_ahValue[(int) lIndex] = hValue;
         return null;
         }
 

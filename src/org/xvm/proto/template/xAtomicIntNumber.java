@@ -93,7 +93,7 @@ public class xAtomicIntNumber
 
         protected AtomicIntRefHandle(TypeComposition clazz)
             {
-            super(clazz, null);
+            super(clazz);
             }
 
         @Override

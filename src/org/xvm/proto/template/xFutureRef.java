@@ -83,9 +83,10 @@ public class xFutureRef
         public final boolean f_fSynthetic;
         public CompletableFuture<ObjectHandle> m_future;
 
-        protected FutureHandle(TypeComposition clazz, CompletableFuture<ObjectHandle> future, boolean fSynthetic)
+        protected FutureHandle(TypeComposition clazz,
+                               CompletableFuture<ObjectHandle> future, boolean fSynthetic)
             {
-            super(clazz, null);
+            super(clazz);
 
             f_fSynthetic = fSynthetic;
             m_future = future;

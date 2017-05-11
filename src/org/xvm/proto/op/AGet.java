@@ -31,12 +31,11 @@ public class AGet extends Op
 
         try
             {
-            ArrayHandle hTarget = (ArrayHandle) frame.getArgument(f_nTargetValue);
-            xArray template = (xArray) hTarget.f_clazz.f_template;
+            ArrayHandle hArray = (ArrayHandle) frame.getArgument(f_nTargetValue);
+            xArray array = (xArray) hArray.f_clazz.f_template;
 
-            long lIndex = frame.getIndex(f_nIndexValue);
-
-            hException = template.getArrayValue(frame, hTarget, lIndex, f_nRetValue);
+            hException = array.getArrayValue(frame, hArray,
+                    frame.getIndex(f_nIndexValue), f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

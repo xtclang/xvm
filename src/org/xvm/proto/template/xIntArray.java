@@ -31,48 +31,34 @@ public class xIntArray
         }
 
     @Override
-    public ExceptionHandle getArrayValue(Frame frame, ArrayHandle hTarget, long lIndex, int iReturn)
+    protected ObjectHandle extractArrayValue(ArrayHandle hArray, long lIndex)
         {
-        IntArrayHandle hArray = (IntArrayHandle) hTarget;
-
-        if (lIndex < 0 || lIndex >= hArray.m_cSize)
-            {
-            return outOfRange(lIndex, hArray.m_cSize);
-            }
-        return frame.assignValue(iReturn,
-                xInt64.makeHandle(hArray.m_alValue[(int) lIndex]));
+        return xInt64.makeHandle(((IntArrayHandle) hArray).m_alValue[(int) lIndex]);
         }
 
     @Override
-    public ExceptionHandle setArrayValue(Frame frame, ArrayHandle hTarget, long lIndex, ObjectHandle hValue)
+    protected ExceptionHandle ensureCapacity(ArrayHandle hTarget, int cSize)
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
-        int cSize = hArray.m_cSize;
 
-        if (lIndex < 0 || lIndex >= cSize)
+        int cCapacity = hArray.m_alValue.length;
+        if (cCapacity <= cSize)
             {
-            if (hArray.m_fFixed || lIndex != cSize)
-                {
-                outOfRange(lIndex, cSize);
-                }
+            // resize (TODO: we should be much smarter here)
+            cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
 
-            // check the capacity
-            int cCapacity = hArray.m_alValue.length;
-            if (cCapacity <= cSize)
-                {
-                // resize (TODO: we should be much smarter here)
-                cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
-
-                long[] alNew = new long[cCapacity];
-                System.arraycopy(hArray.m_alValue, 0, alNew, 0, cSize);
-                hArray.m_alValue = alNew;
-                }
-            hArray.m_cSize++;
+            long[] alNew = new long[cCapacity];
+            System.arraycopy(hArray.m_alValue, 0, alNew, 0, cSize);
+            hArray.m_alValue = alNew;
             }
 
-        long lValue = ((JavaLong) hValue).getValue();
+        return null;
+        }
 
-        hArray.m_alValue[(int) lIndex] = lValue;
+    @Override
+    protected ExceptionHandle assignArrayValue(ArrayHandle hTarget, long lIndex, ObjectHandle hValue)
+        {
+        ((IntArrayHandle) hTarget).m_alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
         return null;
         }
 

@@ -294,9 +294,19 @@ public class xTestApp extends xModule
             new Var(adapter.getClassTypeConstId("x:String")), // #3
             new AGet(2, -adapter.ensureValueConstantId(4), 3),
             new X_Print(3),
+
+            new Var(adapter.getClassTypeConstId("x:Ref<x:String>")), // #4
+            new ARef(2, -adapter.ensureValueConstantId(0), 4),
+            new Invoke_01(4, adapter.getMethodConstId("x:Ref", "get"), 3),
+            new X_Print(3),
+            new Invoke_10(4, adapter.getMethodConstId("x:Ref", "set"),
+                             -adapter.ensureValueConstantId("zero")),
+            new AGet(2, -adapter.ensureValueConstantId(0), 3),
+            new X_Print(3),
+
             new Return_0()
             };
-        ftTestArray.m_cVars = 4;
+        ftTestArray.m_cVars = 5;
 
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);
