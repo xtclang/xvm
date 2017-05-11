@@ -62,7 +62,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.09.22
  */
 public abstract class StructureContainer
-        extends XvmStructure
+        extends Component // TODO replace StructureContainer with Component
     {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -4,15 +4,12 @@ package org.xvm.asm;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.NamedConstant;
 
 import java.io.DataInput;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.xvm.util.Handy.readIndex;
@@ -28,6 +25,30 @@ import static org.xvm.util.Handy.readMagnitude;
  * a Component can differ dramatically from this model, in that it can have any number of parent
  * Conponents (only one of which at most is valid for a given condition), and it can have any number
  * of child Components, of which only some are (perhaps none is) appropriate for a given condition.
+ * <p/>
+ * The Component also tracks modifications.
+ * <p/>
+ * Here is the Component containment model, with container type on the left and containee type
+ * across the top:
+ * <p/>
+ * <code><pre>
+ *           Module  Package  Class  MultiMethod  Method  Property  |  Conditional
+ * File        x                                                    |
+ * Module              x       x       x                    x       |    x (version only)
+ * Package             x       x       x                    x       |    x
+ * Class                       x       x                    x       |    x
+ * Property                            x                            |    x
+ * MultiMethod                                      x               |
+ * Method                      x       x                    x       |    x
+ * </pre></code>
+ * <p/>
+ * Based on the containment model, of these types, there are three groups of containment:
+ * <ul>
+ * <li><i>(Multi-)Method</i> - the {@link MethodContainer MethodContainer}</li>
+ * <li><i>(Multi-)Method + Property + Class</i> - the {@link ClassContainer ClassContainer}</li>
+ * <li><i>(Multi-)Method + Property + Class + Package</i> - the {@link PackageContainer
+ *     PackageContainer}</li>
+ * </ul>
  *
  * @author cp 2017.05.02
  */
@@ -36,41 +57,63 @@ public abstract class Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct a component.
+     *
+     * @param xsParent    the parent, or null if this is a file structure
+     * @param access      the accessibility of this component
+     * @param fAbstract   the abstractness of this component
+     * @param fStatic     the staticness of this component
+     * @param fSynthetic  the syntheticness of this component
+     * @param format      the format (meta type for the structure) of this component
+     * @param constId     the constant that identifies this component, or null if this is a file
+     *                    structure
+     * @param condition   the optional condition that mandates the existence of this structure
+     */
     protected Component(XvmStructure xsParent, Access access, boolean fAbstract, boolean fStatic,
                         boolean fSynthetic, Format format, Constant constId, ConditionalConstant condition)
         {
-        super(xsParent);
+        this(xsParent, (format.ordinal() << FORMAT_SHIFT) | (access.ordinal() << ACCESS_SHIFT)
+                | (fAbstract ? ABSTRACT_BIT : 0) | (fStatic ? STATIC_BIT : 0) | (fSynthetic ? SYNTHETIC_BIT : 0),
+                constId, condition);
+        }
 
-        int nFlags = format.ordinal(); 
-        nFlags |= access.ordinal() << 8;
-        if (fAbstract)
-            {
-            nFlags |= ABSTRACT_BIT;
-            }
-        if (fStatic)
-            {
-            nFlags |= STATIC_BIT;
-            }
-        if (fSynthetic)
-            {
-            nFlags |= SYNTHETIC_BIT;
-            }
+    /**
+     * Construct a component.
+     *
+     * @param xsParent    the parent, or null if this is a file structure
+     * @param nFlags      the flags specifying the accessibility, abstractness, staticness,
+     *                    syntheticness, and the format of this component
+     * @param constId     the constant that identifies this component, or null if this is a file
+     *                    structure
+     * @param condition   the optional condition that mandates the existence of this structure
+     */
+    protected Component(XvmStructure xsParent, int nFlags, Constant constId, ConditionalConstant condition)
+        {
+        super(xsParent);
+        assert (xsParent == null) == (this instanceof FileStructure);   // file doesn't have parent
+        assert (constId == null) == (this instanceof FileStructure);    // file doesn't have constid
+        assert condition == null || !(this instanceof FileStructure);   // file can't be conditional
 
         m_nFlags  = (short) nFlags;
         m_constId = constId;
         m_cond    = condition;
         }
 
-    protected Component(XvmStructure xsParent, int nFlags, Constant constId, ConditionalConstant condition)
-        {
-        this(xsParent, Access.valueOf((nFlags & ACCESS_MASK) >>> ACCESS_SHIFT),
-                (nFlags & ABSTRACT_BIT) != 0, (nFlags & STATIC_BIT) != 0, (nFlags & SYNTHETIC_BIT) != 0,
-                Format.fromFlags(nFlags), constId, condition);
-        }
-
 
     // ----- I/O -----------------------------------------------------------------------------------
 
+    /**
+     * Read a component from the stream. This abstracts out all of the various component types that
+     * could be encountered in the stream, and all of the complexity surrounding conditions.
+     *
+     * @param xsParent
+     * @param in
+     *
+     * @return
+     *
+     * @throws IOException  if there's a problem reading the component
+     */
     public static Component readComponent(XvmStructure xsParent, DataInput in)
             throws IOException
         {
@@ -114,11 +157,13 @@ public abstract class Component
         }
 
     /**
-     * Read the child components. For a given identity, there may be more than one child component
-     * if the child components are conditional. For all components (except multi-methods), the
-     * children are identified by name.
+     * Read any child components. For a given identity, there may be more than one child component
+     * if the child components are conditional. For all components (except for methods i.e. within
+     * multi-methods), the children are identified by name.
      *
      * @param in  the DataInput to read from.
+     *
+     * @throws IOException  if there's a problem reading the component's children
      */
     protected void readComponentChildren(DataInput in)
             throws IOException
@@ -127,13 +172,10 @@ public abstract class Component
         int cKids = readMagnitude(in);
         if (cKids > 0)
             {
-            Map<String, Component> kids = new HashMap<>(cKids + (cKids >>> 1));
             for (int i = 0; i < cKids; ++i)
                 {
-                Component kid  = readComponent(this, in);
-//                String    sKid = kid.getName();                   // TODO what about methods?
-//                if (kids.containsKey())
-//                    kids.put(kid.getName(), )
+                Component kid = readComponent(this, in);
+                adopt(kid);
                 }
             }
         }
@@ -301,37 +343,267 @@ public abstract class Component
         return ((NamedConstant) getIdentityConstant()).getName();
         }
 
+    /**
+     * @return assuming that this is one of any number of siblings, obtain a reference to the first
+     *         sibling (which may be this); never null
+     */
+    protected Component getEldestSibling()
+        {
+        Component parent = getParent();
+        if (parent == null)
+            {
+            return this;
+            }
+
+        // this component is either known by its name or by its identity constant (methods only)
+        Component sibling;
+        if (this instanceof MethodStructure)
+            {
+            sibling = parent.getMethodByConstantMap().get(getIdentityConstant());
+            }
+        else
+            {
+            sibling = parent.getChildByNameMap().get(getName());
+            }
+
+        assert sibling != null;
+        return sibling;
+        }
+
+    /**
+     * Obtain a read-only map of all children identified by name.
+     * <p/>
+     * Note: the returned map does not contain any of the child methods.
+     *
+     * @return a read-only map from name to child component; never null, even if there are no
+     *         children
+     */
     protected Map<String, Component> getChildByNameMap()
         {
         Map<String, Component> map = m_childByName;
         return map == null ? Collections.EMPTY_MAP : map;
         }
 
+    /**
+     * Obtain the actual read/write map of all children that are identified by name.
+     * <p/>
+     * Note: the returned map does not contain any of the child methods.
+     *
+     * @return obtain the actual map from name to child component, creating the map if necessary
+     */
     protected Map<String, Component> ensureChildByNameMap()
         {
         Map<String, Component> map = m_childByName;
         if (map == null)
             {
-            m_childByName = map = new HashMap<>(7);
+            map = new HashMap<>(7);
+
+            Component sibling = getEldestSibling();
+            while (sibling != null)
+                {
+                sibling.m_childByName = map;
+                sibling = sibling.m_sibling;
+                }
+
+            // the corresponding field on this component should now be initialized
+            assert m_childByName == map;
             }
         return map;
         }
 
+    /**
+     * Obtain a read-only map of all method children identified by method signature constant.
+     * <p/>
+     * Note: the returned map contains only methods
+     *
+     * @return a read-only map from method constant to method component; never null, even if there
+     *         are no child methods
+     */
     protected Map<MethodConstant, MethodStructure> getMethodByConstantMap()
         {
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
         return map == null ? Collections.EMPTY_MAP : map;
         }
 
+    /**
+     * Obtain the actual read/write map of all method children identified by method signature
+     * constant.
+     * <p/>
+     * Note: the returned map contains only methods
+     *
+     * @return obtain the actual map from method constant to method component, creating the map if
+     *         necessary
+     */
     protected Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
         {
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
         if (map == null)
             {
-            m_methodByConstant = map = new HashMap<>(7);
+            map = new HashMap<>(7);
+
+            Component sibling = getEldestSibling();
+            while (sibling != null)
+                {
+                sibling.m_methodByConstant = map;
+                sibling = sibling.m_sibling;
+                }
+
+            assert m_methodByConstant == map;
             }
         return map;
         }
+
+    /**
+     * Adopt the specified component as a child of this component.
+     * <p/>
+     * Imagine the simplest case, of two identical hierarchies, differing only by version:
+     * <p/>
+     * <code><pre>
+     *   Original            Adoptee        Result
+     *   --------            -------        ------
+     *   F1                                 F1
+     *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
+     *        |- P1            |- P1             |- P1
+     *          |- C1            |- C1             |- C1
+     * </pre></code>
+     * <p/>
+     * Now if P1 is modified:
+     * <p/>
+     * <code><pre>
+     *   Original            Adoptee        Result
+     *   --------            -------        ------
+     *   F1                                 F1
+     *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
+     *        |- P1            |- P1'            |- P1 (V1), P1' (V2)
+     *          |- C1            |- C1             |- C1
+     * </pre></code>
+     * <p/>
+     * Now if C1 is modified:
+     * <p/>
+     * <code><pre>
+     *   Original            Adoptee        Result
+     *   --------            -------        ------
+     *   F1                                 F1
+     *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
+     *        |- P1            |- P1             |- P1
+     *          |- C1            |- C1'            |- C1 (V1), C1' (V2)
+     * </pre></code>
+     * <p/>
+     * Now a more complex example:
+     * <p/>
+     * <code><pre>
+     *   Original                   Adoptee         Result
+     *   --------                   -------         ------
+     *   F1                                         F1
+     *     |- M1 (V1), M1' (V2)     M1'' (V3)         |- M1 (V1), M1' (V2), M1'' (V3)
+     *        |- P1 (V1), P1' (V2)    |- P1'            |- P1 (V1), P1' (V2 | V3)
+     *          |- C1                   |- C1'             |- C1 (V1 | V2), C1' (V3)
+     *                                  |- C2              |- C2 (V3)
+     *                                    |- C3              |- C3
+     * </pre></code>
+     * <p/>
+     *
+     * @param kid  the component to adopt
+     */
+    protected void adopt(Component kid)
+        {
+        adopt(kid, null, null);
+        }
+
+    /**
+     * TODO
+     *
+     * @param kid      the child component to adopt
+     * @param condOld  the condition that implicitly applies to existing children of this component
+     * @param condKid  the condition that implicitly applies to the {@code kid}
+     */
+    protected void adopt(Component kid, ConditionalConstant condOld, ConditionalConstant condKid)
+        {
+        Map<Object, Component> kids;
+        Object id;
+        if (kid instanceof MethodStructure)
+            {
+            kids = (Map<Object, Component>) (Map) ensureMethodByConstantMap();
+            id   = kid.getIdentityConstant();
+            }
+        else
+            {
+            kids = (Map<Object, Component>) (Map) ensureChildByNameMap();
+            id   = kid.getName();
+            }
+
+        Component sibling = kids.get(id);
+        if (sibling == null)
+            {
+            // the only extra thing that needs to be done is to decorate the kid with the implicit
+            // condition
+            kid.addAndCondition(condKid);
+            kids.put(id, kid);
+            }
+        else
+            {
+            // can't have two kids with the same identity unless they have conditions declared
+            if ((condOld == null && sibling.m_cond == null) || (condKid == null && kid.m_cond == null))
+                {
+                throw new IllegalStateException("cannot adopt unless existing child and adoptee are both conditional");
+                }
+
+            // since there's a collision/overlap in the sibling namespace, we need to take the kid's
+            // condition and replicate it onto each of its kids, so that when we merge the trees,
+            // the grandkids don't accidentally get fathered by their siblings (insert joke here)
+            // TODO
+
+            // it's possible that the kid to adopt is identical to another kid (and by "identical",
+            // we're not talking identical twins -- we're talking about being "one and the same
+            // kid") ... if that's true, the only thing that needs to change is the conditional on
+            // the kid to reflect both the existing kid's conditional and the one we're adopting;
+            // however, if that is the case, then we'll have to move the kid's kids over too, and to
+            // do that, we'll have to first change their conditions to "and" with the condition of
+            // their parent, aka "the kid"
+            Component eachSibling = sibling;
+            while (true)
+                {
+                if (eachSibling.isBodyIdentical(kid))
+                    {
+                    eachSibling.addOrCondition(condKid);
+                    break;
+                    }
+
+                Component nextSibling = eachSibling.m_sibling;
+                if (nextSibling == null)
+                    {
+                    // add the kid to the end of the sibling chain
+                    eachSibling.m_sibling = kid;
+                    break;
+                    }
+
+                eachSibling = nextSibling;
+                }
+
+            // TODO kids
+            }
+        }
+
+    protected void addAndCondition(ConditionalConstant cond)
+        {
+        if (cond != null)
+            {
+            ConditionalConstant condOld = m_cond;
+            m_cond = condOld == null ? cond : condOld.addAnd(cond);
+            }
+        }
+
+    protected void addOrCondition(ConditionalConstant cond)
+        {
+        if (cond != null)
+            {
+            ConditionalConstant condOld = m_cond;
+            m_cond = condOld == null ? cond : condOld.addOr(cond);
+            }
+        }
+
+
+    abstract boolean isBodyIdentical(Component kid);
 
     // TODO evaluate removal of this
 //    /**

@@ -37,7 +37,7 @@ import static org.xvm.util.Handy.toInputStream;
  * @author cp 2015.12.04
  */
 public class FileStructure
-        extends StructureContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ public class FileStructure
      */
     public FileStructure(String sModule)
         {
-        super(null);
+        super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
         // validate the combination of passed names
         if (sModule == null)
@@ -60,6 +60,8 @@ public class FileStructure
         this.module     = new ModuleStructure(this, pool.ensureModuleConstant(sModule));
         this.nMajorVer  = VERSION_MAJOR_CUR;
         this.nMinorVer  = VERSION_MINOR_CUR;
+
+        // TODO
         this.modulesByName.put(sModule, module);
         }
 

@@ -37,9 +37,9 @@ public class AnyCondition
      * @param pool        the ConstantPool that will contain this Constant
      * @param aconstCond  an array of underlying conditions to evaluate
      */
-    public AnyCondition(ConstantPool pool, ConditionalConstant[] aconstCond)
+    public AnyCondition(ConstantPool pool, ConditionalConstant... aconstCond)
         {
-        super(pool, aconstCond);
+        super(pool, mergeOrs(aconstCond));
         }
 
 
@@ -71,5 +71,65 @@ public class AnyCondition
     public Format getFormat()
         {
         return Format.ConditionAny;
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Merge all of the nested "or" conditions into one bigger array of conditions.
+     *
+     * @param aconstCond  an array of conditional constants, some of which may be AnyConditions
+     *
+     * @return a potentially larger array of conditional constants, logically equivalent to those
+     *         passed in, and of which none should be an AnyCondition
+     */
+    protected static ConditionalConstant[] mergeOrs(ConditionalConstant[] aconstCond)
+        {
+        assert aconstCond != null;
+        assert aconstCond.length > 1;
+
+        // scan the underlying conditions to see if there is anything to merge
+        boolean fOrs   = false;
+        int     cConds = 0;
+        for (ConditionalConstant cond : aconstCond)
+            {
+            if (cond instanceof AnyCondition)
+                {
+                fOrs    = true;
+                cConds += mergeOrs(((AnyCondition) cond).m_aconstCond).length;
+                }
+            else
+                {
+                ++cConds;
+                }
+            }
+
+        if (!fOrs)
+            {
+            // nothing to merge
+            return aconstCond;
+            }
+
+        // merge the "ors"
+        ConditionalConstant[] aconstMerged = new ConditionalConstant[cConds];
+        int ofNew = 0;
+        for (ConditionalConstant cond : aconstCond)
+            {
+            if (cond instanceof AnyCondition)
+                {
+                ConditionalConstant[] aconstCopy = mergeOrs(((AnyCondition) cond).m_aconstCond);
+                int cCopy = aconstCopy.length;
+                System.arraycopy(aconstCopy, 0, aconstMerged, ofNew, cCopy);
+                ofNew += cCopy;
+                }
+            else
+                {
+                aconstMerged[ofNew++] = cond;
+                }
+            }
+        assert ofNew == cConds;
+
+        return aconstMerged;
         }
     }

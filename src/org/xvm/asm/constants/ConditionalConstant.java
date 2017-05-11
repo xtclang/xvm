@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
+import org.xvm.util.ListMap;
 
 
 /**
@@ -78,6 +79,114 @@ public abstract class ConditionalConstant
      * @return true whether this condition is met in the container
      */
     public abstract boolean evaluate(LinkerContext ctx);
+
+    /**
+     * Obtain a ConditionalConstant that represents the union of {@code this} and {@code that}
+     * condition.
+     * 
+     * @param that  another condition
+     * 
+     * @return a condition representing the "and" of the {@code this} and {@code that} conditions
+     */
+    public ConditionalConstant addAnd(ConditionalConstant that)
+        {
+        if (this.equals(that))
+            {
+            return this;
+            }
+        
+        if (this instanceof AllCondition || that instanceof AllCondition)
+            {
+            // collect a unique set of conditions
+            ListMap<ConditionalConstant, ConditionalConstant> conds = new ListMap<>();
+            if (this instanceof AllCondition)
+                {
+                for (ConditionalConstant cond : ((AllCondition) this).m_aconstCond)
+                    {
+                    conds.putIfAbsent(cond, cond);
+                    }
+                }
+            else
+                {
+                conds.put(this, this);
+                }
+            
+            if (that instanceof AllCondition)
+                {
+                for (ConditionalConstant cond : ((AllCondition) that).m_aconstCond)
+                    {
+                    conds.putIfAbsent(cond, cond);
+                    }
+                }
+            else
+                {
+                conds.putIfAbsent(that, that);
+                }
+            
+            if (conds.size() == 1)
+                {
+                return conds.keySet().iterator().next();
+                }
+            
+            return new AllCondition(getConstantPool(), conds.keySet().toArray(new ConditionalConstant[conds.size()]));
+            }
+        
+        return new AllCondition(getConstantPool(), this, that);
+        }
+
+    /**
+     * Obtain a ConditionalConstant that represents the option of {@code this} or {@code that}
+     * condition.
+     *
+     * @param that  another condition
+     *
+     * @return a condition representing the "or" of the {@code this} and {@code that} conditions
+     */
+    public ConditionalConstant addOr(ConditionalConstant that)
+        {
+        if (this.equals(that))
+            {
+            return this;
+            }
+
+        if (this instanceof AnyCondition || that instanceof AnyCondition)
+            {
+            // collect a unique set of conditions
+            ListMap<ConditionalConstant, ConditionalConstant> conds = new ListMap<>();
+            if (this instanceof AnyCondition)
+                {
+                for (ConditionalConstant cond : ((AnyCondition) this).m_aconstCond)
+                    {
+                    conds.putIfAbsent(cond, cond);
+                    }
+                }
+            else
+                {
+                conds.put(this, this);
+                }
+
+            if (that instanceof AnyCondition)
+                {
+                for (ConditionalConstant cond : ((AnyCondition) that).m_aconstCond)
+                    {
+                    conds.putIfAbsent(cond, cond);
+                    }
+                }
+            else
+                {
+                conds.putIfAbsent(that, that);
+                }
+
+            if (conds.size() == 1)
+                {
+                return conds.keySet().iterator().next();
+                }
+
+            return new AnyCondition(getConstantPool(), conds.keySet().toArray(new ConditionalConstant[conds.size()]));
+            }
+
+        return new AnyCondition(getConstantPool(), this, that);
+        }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
