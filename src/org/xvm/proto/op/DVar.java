@@ -1,7 +1,6 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 
 import org.xvm.proto.template.xRef.RefHandle;
@@ -26,14 +25,9 @@ public class DVar extends Op
         int iScope   = frame.f_aiIndex[I_SCOPE];
         int nNextVar = frame.f_anNextVar[iScope];
 
-        ObjectHandle hRef = frame.f_context.f_heapGlobal.ensureHandle(f_nClassConstId);
+        RefHandle hRef = (RefHandle) frame.f_context.f_heapGlobal.ensureHandle(f_nClassConstId);
 
-        assert hRef instanceof RefHandle;
-
-        Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz, null, true);
-
-        frame.f_aInfo[nNextVar] = info;
-        frame.f_ahVar[nNextVar] = hRef;
+        frame.introduceVar(nNextVar, hRef.f_clazz, null, VAR_DYNAMIC, hRef);
 
         frame.f_anNextVar[iScope] = nNextVar + 1;
 

@@ -2,7 +2,6 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
@@ -32,26 +31,17 @@ public class IVar extends Op
         ServiceContext context = frame.f_context;
         TypeComposition clazz = context.f_types.ensureConstComposition(f_nClassConstId);
 
-        frame.f_aInfo[nNextVar] = new Frame.VarInfo(clazz, false);
-
-        ExceptionHandle hException;
         try
             {
-            hException = frame.assignValue(nNextVar, frame.getArgument(f_nArgValue));
-            }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
-            {
-            hException = e.getExceptionHandle();
-            }
+            frame.introduceVar(nNextVar, clazz, null, VAR_STANDARD,
+                    frame.getArgument(f_nArgValue));
 
-        if (hException == null)
-            {
             frame.f_anNextVar[iScope] = nNextVar + 1;
             return iPC + 1;
             }
-        else
+        catch (ObjectHandle.ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = hException;
+            frame.m_hException = e.getExceptionHandle();
             return RETURN_EXCEPTION;
             }
         }

@@ -154,7 +154,7 @@
 // array ops
 +A_GET        rvalue-target, rvalue-index, lvalue-return        ; T = T[Ti]
 +A_SET        rvalue-target, rvalue-index, rvalue-new-value     ; T[Ti] = T
- A_REF        rvalue-target, rvalue-index, lvalue-return        ; Ref<T> = &T[Ti]
++A_REF        rvalue-target, rvalue-index, lvalue-return        ; Ref<T> = &T[Ti]
  A_CREF       rvalue-target, rvalue-index, lvalue-return        ; @ro Ref<T> = &T[Ti]
  A_INC        rvalue-target, rvalue-index                       ; same as INC for a property
  A_DEC        rvalue-target, rvalue-index                       ; same as DEC for a property

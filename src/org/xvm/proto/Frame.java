@@ -159,8 +159,8 @@ public class Frame
 
                         CharStringConstant constVarName = (CharStringConstant)
                                 f_context.f_constantPool.getConstantValue(guard.f_anNameConstId[iCatch]);
-                        f_ahVar[nNextVar] = hException;
-                        f_aInfo[nNextVar] = new VarInfo(clzException, constVarName.getValue(), false);
+
+                        introduceVar(nNextVar, clzException, constVarName.getValue(), Op.VAR_STANDARD, hException);
 
                         f_anNextVar[nScope] = nNextVar + 1;
 
@@ -244,13 +244,14 @@ public class Frame
 
         for (int i = iVarFrom; i <= iVarTo; i++)
             {
-            Frame.VarInfo info = f_aInfo[i];
+            VarInfo info = f_aInfo[i];
 
             if (info != null)
                 {
                 info.release();
 
                 f_aInfo[i] = null;
+                f_ahVar[i] = null;
                 }
             }
         }
@@ -263,13 +264,14 @@ public class Frame
 
         for (int i = iVarFrom; i <= iVarTo; i++)
             {
-            Frame.VarInfo info = f_aInfo[i];
+            VarInfo info = f_aInfo[i];
 
             if (info != null)
                 {
                 info.release();
 
                 f_aInfo[i] = null;
+                f_ahVar[i] = null;
                 }
             }
         }
@@ -305,17 +307,17 @@ public class Frame
         {
         if (iArg >= 0)
             {
-            Frame.VarInfo info = f_aInfo[iArg];
+            VarInfo info = f_aInfo[iArg];
             ObjectHandle hValue = f_ahVar[iArg];
 
             if (info != null)
                 {
-                if (info.m_fDynamicRef)
+                if (info.f_nStyle == Op.VAR_DYNAMIC)
                     {
                     return ((RefHandle) hValue).get();
                     }
 
-                if (info.m_fDeferrable && hValue instanceof FutureHandle
+                if (info.f_nStyle == Op.VAR_DEFERRABLE && hValue instanceof FutureHandle
                         && ((FutureHandle) hValue).f_fSynthetic)
                     {
                     return ((FutureHandle) hValue).get();
@@ -347,6 +349,46 @@ public class Frame
         return ahArg;
         }
 
+    public void introduceVar(int nVar, TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)
+        {
+        f_aInfo[nVar] = new VarInfo(clz, sName, nStyle);
+
+        if (hValue != null)
+            {
+            f_ahVar[nVar] = hValue;
+            }
+        }
+
+    public VarInfo getVarInfo(int nVar)
+        {
+        VarInfo info = f_aInfo[nVar];
+        if (info == null)
+            {
+            int cArgs;
+            String sName;
+
+            if (f_hTarget == null)
+                {
+                cArgs = f_function.m_cArgs;
+                sName = "<arg " + nVar + ">";
+                }
+            else
+                {
+                cArgs = f_function.m_cArgs + 1;
+                sName = nVar == 0 ? "<this>" : "<arg " + (nVar - 1) + ">";
+                }
+
+            if (nVar < cArgs)
+                {
+                introduceVar(nVar, f_ahVar[nVar].f_clazz, sName, Op.VAR_STANDARD, null);
+                return f_aInfo[nVar];
+                }
+
+            throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
+            }
+        return info;
+        }
+
     public ExceptionHandle assignValue(int nVar, ObjectHandle hValue)
         {
         switch (nVar)
@@ -361,12 +403,12 @@ public class Frame
             default:
                 VarInfo info = f_aInfo[nVar];
 
-                if (info.m_fDynamicRef)
+                if (info.f_nStyle == Op.VAR_DYNAMIC)
                     {
                     return ((RefHandle) f_ahVar[nVar]).set(hValue);
                     }
 
-                if (!info.m_fDeferrable && hValue instanceof FutureHandle)
+                if (info.f_nStyle != Op.VAR_DEFERRABLE && hValue instanceof FutureHandle)
                     {
                     FutureHandle hFuture = (FutureHandle) hValue;
                     if (hFuture.f_fSynthetic)
@@ -437,24 +479,14 @@ public class Frame
         {
         public final TypeComposition f_clazz;
         public final String f_sVarName;
-        public final boolean m_fDynamicRef; // true iff this register is a "dynamic" ref
-        public final boolean m_fDeferrable; // true iff this register is "deferrable"
+        public final int f_nStyle; // one of the Op.VAR_* values
         public RefHandle m_ref; // an "active" reference to this register
 
-        public VarInfo(TypeComposition clazz, boolean fDeferrable)
-            {
-            f_clazz = clazz;
-            f_sVarName = null;
-            m_fDynamicRef = false; // unnamed register is never dynamic
-            m_fDeferrable = fDeferrable;
-            }
-
-        public VarInfo(TypeComposition clazz, String sName, boolean fDynamic)
+        public VarInfo(TypeComposition clazz, String sName, int nStyle)
             {
             f_clazz = clazz;
             f_sVarName = sName;
-            m_fDynamicRef = fDynamic;
-            m_fDeferrable = false; // named or dynamic register is never deferrable
+            f_nStyle = nStyle;
             }
 
         // this VarInfo goes out of scope

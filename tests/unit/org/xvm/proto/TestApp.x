@@ -6,7 +6,7 @@ module TestApp
         test1();
         test2();
         testService();
-        testRef();
+        testRef("hi");
         testArray();
         }
 
@@ -188,8 +188,13 @@ module TestApp
             }
         }
 
-    static Void testRef()
+    static Void testRef(String arg)
         {
+        Ref<String> ra = &arg;
+        print(ra.get());
+        ra.set("bye");
+        print(arg);
+
         Ref<Int> ri;
             {
             Int i = 1;

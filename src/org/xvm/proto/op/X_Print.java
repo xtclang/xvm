@@ -7,7 +7,8 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.Utils;
-import org.xvm.proto.template.xRef;
+
+import org.xvm.proto.template.xRef.RefHandle;
 
 /**
  * Debugging only.
@@ -34,24 +35,27 @@ public class X_Print extends Op
             {
             try
                 {
-                Frame.VarInfo info = frame.f_aInfo[nValue];
-                if (info != null)
+                Frame.VarInfo info = frame.getVarInfo(nValue);
+
+                switch (info.f_nStyle)
                     {
-                    if (info.m_fDynamicRef)
-                        {
+                    case VAR_DYNAMIC:
                         sb.append("<dynamic> ");
-                        }
+                        break;
 
-                    if (info.m_fDeferrable && frame.f_ahVar[nValue] instanceof xRef.RefHandle)
-                        {
-                        sb.append("<deferred> ");
-                        }
-
-                    if (info.f_sVarName != null)
-                        {
-                        sb.append(info.f_sVarName).append("=");
-                        }
+                    case VAR_DEFERRABLE:
+                        if (frame.f_ahVar[nValue] instanceof RefHandle)
+                            {
+                            sb.append("<deferred> ");
+                            }
+                        break;
                     }
+
+                if (info.f_sVarName != null)
+                    {
+                    sb.append(info.f_sVarName).append("=");
+                    }
+
                 sb.append(frame.getArgument(nValue));
                 }
             catch (ObjectHandle.ExceptionHandle.WrapperException e)

@@ -2,7 +2,6 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 
@@ -32,17 +31,12 @@ public class DNVar extends Op
 
         ServiceContext context = frame.f_context;
 
-        ObjectHandle hRef = context.f_heapGlobal.ensureHandle(f_nClassConstId);
-
-        assert hRef instanceof RefHandle;
+        RefHandle hRef = (RefHandle) context.f_heapGlobal.ensureHandle(f_nClassConstId);
 
         CharStringConstant constName =
                 (CharStringConstant) context.f_constantPool.getConstantValue(f_nNameConstId);
 
-        Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz, constName.getValue(), true);
-
-        frame.f_aInfo[nNextVar] = info;
-        frame.f_ahVar[nNextVar] = hRef;
+        frame.introduceVar(nNextVar, hRef.f_clazz, constName.getValue(), VAR_DYNAMIC, hRef);
 
         frame.f_anNextVar[iScope] = nNextVar + 1;
 

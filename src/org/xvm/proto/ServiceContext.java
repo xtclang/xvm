@@ -89,16 +89,13 @@ public class ServiceContext
 
         Frame frame = createFrame1(null, null, null, ahVar, Frame.R_UNUSED);
 
-        for (int i = 0; i < cReturns; i++)
+        for (int iVar = 0; iVar < cReturns; iVar++)
             {
             // create a "dynamic ref" for all return values
             // (see DVar op-code)
             FutureHandle hRef = xFutureRef.makeHandle(new CompletableFuture<>());
 
-            Frame.VarInfo info = new Frame.VarInfo(hRef.f_clazz, null, true);
-
-            frame.f_aInfo[i] = info;
-            frame.f_ahVar[i] = hRef;
+            frame.introduceVar(iVar, hRef.f_clazz, null, Op.VAR_DYNAMIC, hRef);
             }
         return frame;
         }

@@ -42,7 +42,7 @@ public class xTestService extends xService
 
         MethodTemplate mtSetCounter = ptCounter.addSet();
         mtSetCounter.m_aop = new Op[]
-            {
+            { // #0 = this; #1 = newValue
             new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.set #")),
             new X_Print(1),
             new Call_10(Op.A_SUPER, 1),

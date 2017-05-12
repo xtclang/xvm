@@ -130,7 +130,7 @@ public class xRef
 
             assert iVar >= 0;
 
-            Frame.VarInfo infoSrc = frame.f_aInfo[iVar];
+            Frame.VarInfo infoSrc = frame.getVarInfo(iVar);
 
             RefHandle refCurrent = infoSrc.m_ref;
             if (refCurrent == null)

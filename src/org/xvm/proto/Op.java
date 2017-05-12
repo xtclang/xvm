@@ -31,6 +31,10 @@ public abstract class Op
     public static final int RETURN_NORMAL = -1;
     public static final int RETURN_EXCEPTION = -2;
 
+    public static final int VAR_STANDARD = 0;
+    public static final int VAR_DYNAMIC = 1;
+    public static final int VAR_DEFERRABLE = 2;
+
     // returns a positive iPC or a negative RETURN_*
     public abstract int process(Frame frame, int iPC);
     }

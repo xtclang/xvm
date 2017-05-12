@@ -25,10 +25,10 @@ public class MoveRef extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        Frame.VarInfo infoSrc = frame.f_aInfo[f_nSrcValue];
+        Frame.VarInfo infoSrc = frame.getVarInfo(f_nSrcValue);
         RefHandle hRef;
 
-        if (infoSrc.m_fDynamicRef)
+        if (infoSrc.f_nStyle == VAR_DYNAMIC)
             {
             // the "dynamic ref" register must contain a RefHandle itself
             hRef = (RefHandle) frame.f_ahVar[f_nSrcValue];
