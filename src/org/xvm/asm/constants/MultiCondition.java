@@ -9,8 +9,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-
 import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -103,13 +103,22 @@ public abstract class MultiCondition
     @Override
     public boolean containsTerminal(ConditionalConstant that)
         {
-        // while "this" is technically not a terminal, there is nothing that guarantees that "that"
-        // is either
-        if (this == that)
+        if (this.getClass() == that.getClass())
             {
-            return true;
+            // while "this" is technically not a terminal, there is nothing that guarantees that "that"
+            // is either
+            if (this.equals(that))
+                {
+                return true;
+                }
+
+            // compare contents
+            ConditionalConstant[] aconstThis = this.m_aconstCond;
+            ConditionalConstant[] aconstThat = ((MultiCondition) that).m_aconstCond;
+            // TODO contains
             }
 
+        // TODO delegate to each
         return m_constCond.containsTerminal(that);
         }
 

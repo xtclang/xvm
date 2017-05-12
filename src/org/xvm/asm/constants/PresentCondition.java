@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
@@ -110,6 +113,18 @@ public class PresentCondition
         return constVer == null
                 ? ctx.isVisible(m_constStruct)
                 : ctx.isVisible(m_constStruct, m_constVer, m_fExactVer);
+        }
+
+    @Override
+    public boolean isTerminal()
+        {
+        return true;
+        }
+
+    @Override
+    public Set<ConditionalConstant> terminals()
+        {
+        return Collections.singleton(this);
         }
 
 

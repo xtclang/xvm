@@ -4,7 +4,6 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.Set;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
 

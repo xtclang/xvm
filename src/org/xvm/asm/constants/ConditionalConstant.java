@@ -103,7 +103,10 @@ public abstract class ConditionalConstant
      *
      * @return true iff the specified ConditionalConstant is found inside this ConditionalConstant
      */
-    public abstract boolean containsTerminal(ConditionalConstant that);
+    public boolean containsTerminal(ConditionalConstant that)
+        {
+        return this.equals(that);
+        }
 
     /**
      * Obtain a ConditionalConstant that represents the union of {@code this} and {@code that}
