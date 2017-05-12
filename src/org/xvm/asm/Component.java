@@ -103,6 +103,16 @@ public abstract class Component
         m_cond    = condition;
         }
 
+    /**
+     * Package private constructor used by the CompositeComponent.
+     *
+     * @param parent  the parent of the composite component
+     */
+    Component(Component parent)
+        {
+        super(parent);
+        }
+
 
     // ----- I/O -----------------------------------------------------------------------------------
 
@@ -457,285 +467,10 @@ public abstract class Component
         }
 
     /**
-     * Adopt the specified component as a child of this component.
-     * <p/>
-     * Imagine the simplest case, of two identical hierarchies, differing only by version:
-     * <p/>
-     * <code><pre>
-     *   Original            Adoptee        Result
-     *   --------            -------        ------
-     *   F1                                 F1
-     *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
-     *       |- P1             |- P1            |- P1
-     *         |- C1             |- C1            |- C1
-     * </pre></code>
-     * <p/>
-     * Now if P1 is modified:
-     * <p/>
-     * <code><pre>
-     *   Original            Adoptee        Result
-     *   --------            -------        ------
-     *   F1                                 F1
-     *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
-     *       |- P1             |- P1'           |- P1 (V1), P1' (V2)
-     *         |- C1             |- C1            |- C1
-     * </pre></code>
-     * <p/>
-     * Now if C1 is modified:
-     * <p/>
-     * <code><pre>
-     *   Original            Adoptee        Result
-     *   --------            -------        ------
-     *   F1                                 F1
-     *     |- M1 (V1)        M1 (V2)          |- M1 (V1 | V2)
-     *       |- P1             |- P1            |- P1
-     *         |- C1             |- C1'           |- C1 (V1), C1' (V2)
-     * </pre></code>
-     * <p/>
-     * Now a more complex example:
-     * <p/>
-     * <code><pre>
-     *   Original                   Adoptee         Result
-     *   --------                   -------         ------
-     *   F1                                         F1
-     *     |- M1 (V1), M1' (V2)     M1'' (V3)         |- M1 (V1), M1' (V2), M1'' (V3)
-     *       |- P1 (V1), P1' (V2)     |- P1'            |- P1 (V1), P1' (V2 | V3)
-     *         |- C1                    |- C1'            |- C1 (V1 | V2), C1' (V3)
-     *                                  |- C2             |- C2 (V3)
-     *                                    |- C3             |- C3
-     * </pre></code>
-     * <p/>
-     * Adding in a conditional dependency:
-     * <p/>
-     * <code><pre>
-     *   Original                   Adoptee               Result
-     *   --------                   -------               ------
-     *   F1                                               F1
-     *     |- M1 (V1)               M1' (V2)                |- M1 (V1), M1' (V2)
-     *       |- P1 (V1)               |- P1'                  |- P1 (V1), P1' (V2)
-     *         |- C1 (Spring)           |- C1 (Spring)          |- C1 (Spring)
+     * Modify the condition on this component by adding another required condition.
      *
-     *
-     * </pre></code>
-     * <p/>
-     * Previous example continued for another version:
-     * <p/>
-     * <code><pre>
-     *   Original                   Adoptee             Result
-     *   --------                   -------             ------
-     *   F1                                             F1
-     *     |- M1 (V1), M1' (V2)     M1'' (V3)             |- M1 (V1), M1' (V2), M1'' (V3)
-     *       |- P1 (V1), P1' (V2)     |- P1'                |- P1 (V1), P1' (V2 | V3)
-     *         |- C1 (Spring)           |- C1' (Spring)       |- C1 (Spring & (V1 | V2)), C1' (Spring & V3)
-     *                                  |- C2                 |- C2 (V3)
-     *                                    |- C3                 |- C3
-     * </pre></code>
-     * <p/>
-     * Previous example modified to contrast exclusive-or style condition with dependency
-     * requirement-style condition:
-     * <p/>
-     * <code><pre>
-     *   Original                   Adoptee             Result
-     *   --------                   -------             ------
-     *   F1                                             F1
-     *     |- M1 (V1), M1' (V2)     M1'' (V3)             |- M1 (V1), M1' (V2), M1'' (V3)
-     *       |- P1 (V1), P1' (V2)     |- P1'                |- P1 (V1), P1' (V2 | V3)
-     *         |- C1 (Spring)           |- C1'                |- C1 (Spring & (V1 | V2)), C1' (V3)
-     *                                  |- C2                 |- C2 (V3)
-     *                                    |- C3                 |- C3
-     * </pre></code>
-     * <p/>
-     * Previous example modified further to show overlaying conditions:
-     * <p/>
-     * <code><pre>
-     *   Original                   Adoptee             Result
-     *   --------                   -------             ------
-     *   F1                                             F1
-     *     |- M1 (V1), M1' (V2)     M1'' (V3)             |- M1 (V1), M1' (V2), M1'' (V3)
-     *       |- P1 (V1), P1' (V2)     |- P1'                |- P1 (V1), P1' (V2 | V3)
-     *         |- C1 (Spring)           |- C1                 |- C1 (Spring | V3)
-     *                                  |- C2                 |- C2 (V3)
-     *                                    |- C3                 |- C3
-     * </pre></code>
-     * <p/>
-     * Adding in a complication where part of the initial condition is lost:
-     * <p/>
-     * <code><pre>
-     *   Original              Adoptee             Result
-     *   --------              -------             ------
-     *   F1                                        F1
-     *     |- M1 (V1 | V2)     M1 (V3)               |- M1 (V1 | V2 | V3)
-     *       |- P1               |- P1'                |- P1 (V1 | V2), P1' (V3)
-     *         |- C1               |- C1'                |- C1 (V1 | V2), C1' (V3)
-     *         |- C2 (V2)          |- C2                 |- C2 (V2 | V3)
-     *           |- C3               |- C3'                |- C3 (V2), V3' (V3)
-     * </pre></code>
-     * <p/>
-     * Adding in a further complication (in this case, the "Spring & V2" condition is considered to
-     * be a refinement of the original "V1 | V2" condition, because they both reference a common
-     * terminal "V2"):
-     * <p/>
-     * <code><pre>
-     *   Original                   Adoptee             Result
-     *   --------                   -------             ------
-     *   F1                                        F1
-     *     |- M1 (V1 | V2)          M1 (V3)               |- M1 (V1 | V2 | V3)
-     *       |- P1                    |- P1'                |- P1 (V1 | V2), P1' (V3)
-     *         |- C1                    |- C1'                |- C1 (V1 | V2), C1' (V3)
-     *         |- C2 (Spring & V2)      |- C2                 |- C2 (Spring & V2) | V3)
-     *           |- C3                    |- C3'                |- C3 (V2), V3' (V3)
-     * </pre></code>
-     * <p/>
-     *
-     * @param kid  the component to adopt
+     * @param cond  the condition to require
      */
-    protected void adopt(Component kid)
-        {
-        adopt(kid, null, null);
-        }
-
-    /**
-     * Adopt the specified component as a child of this component.
-     *
-     * @param kid      the child component to adopt
-     * @param condOld  the condition that implicitly applies to existing children of this component
-     * @param condKid  the condition that implicitly applies to the {@code kid}
-     */
-    protected void adopt(Component kid, ConditionalConstant condOld, ConditionalConstant condKid)
-        {
-        Map<Object, Component> kids;
-        Object id;
-        if (kid instanceof MethodStructure)
-            {
-            kids = (Map<Object, Component>) (Map) ensureMethodByConstantMap();
-            id   = kid.getIdentityConstant();
-            }
-        else
-            {
-            kids = (Map<Object, Component>) (Map) ensureChildByNameMap();
-            id   = kid.getName();
-            }
-
-        // the simplest case is if there's no child by the id that is being adopted, in which case
-        // the child gets adopted as is
-        Component firstSibling = kids.get(id);
-        if (firstSibling == null)
-            {
-            kid.setContaining(this);
-            kid.addAndCondition(condKid);
-            kids.put(id, kid);
-            return;
-            }
-
-        // can't have two kids with the same identity unless they have conditions declared
-        if ((condOld == null && firstSibling.m_cond == null) || (condKid == null && kid.m_cond == null))
-            {
-            throw new IllegalStateException("cannot adopt unless existing child and adoptee are both conditional");
-            }
-
-        // collect all of the conditions of the existing siblings, and look to see if any of the
-        // siblings is identical to the new kid
-        List<ConditionalConstant> listCond         = new ArrayList<>();
-        Component                 eachSibling      = firstSibling;
-        Component                 identicalSibling = null;
-        Component                 lastSibling      = null;
-        int                       cSiblings        = 0;
-        while (eachSibling != null)
-            {
-            if (eachSibling.isBodyIdentical(kid))
-                {
-                // this assertion is not technically correct, but this particular implementation
-                // avoids duplicate identical bodies
-                assert identicalSibling == null;
-
-                identicalSibling = eachSibling;
-                }
-
-            ConditionalConstant cond = eachSibling.m_cond;
-            if (cond != null)
-                {
-                listCond.add(cond);
-                }
-
-            lastSibling = eachSibling;
-            eachSibling = eachSibling.m_sibling;
-            ++cSiblings;
-            }
-
-        // if there's one existing sibling and they're identical, then ... TODO
-        if (cSiblings == 1 && identicalSibling != null)
-            {
-            // TODO
-            }
-
-        // if there were multiple siblings, then each of the siblings should have its own condition
-        assert cSiblings == 1 || cSiblings == listCond.size();
-
-        // all children MUST have a condition
-        // - children that are not present within the new kid need to be assigned the condition that
-        //   was passed in (condOld) or the condition
-        // - all of the children from the new kid need to be adopted
-        ConditionalConstant condNot = listCond.isEmpty() ? condOld : new AnyCondition(
-                getConstantPool(), listCond.toArray(new ConditionalConstant[listCond.size()]));
-
-        if (identicalSibling == null)
-            {
-            // each of the siblings (including the new kid) needs to have a condition
-            // TODO
-
-            // add the kid to the end of the sibling chain
-            kid.setContaining(this);
-            kid.addAndCondition(condKid);
-            eachSibling.m_sibling = kid;
-            }
-        else
-            {
-            // first merge the carried condition into the kid, and then merge the combined condition
-            // into the identical sibling (i.e. adopt the kid just by adopting its condition); the
-            // kid itself will be discarded
-            kid.addAndCondition(condKid);
-            identicalSibling.addOrCondition(kid.m_cond);
-            }
-
-        eachSibling = nextSibling;
-
-
-
-        // since there's a collision/overlap in the sibling namespace, we need to take the kid's
-        // condition and replicate it onto each of its kids, so that when we merge the trees,
-        // the grandkids don't accidentally get fathered by their siblings (insert joke here)
-        // TODO
-
-        // it's possible that the kid to adopt is identical to another kid (and by "identical",
-        // we're not talking identical twins -- we're talking about being "one and the same
-        // kid") ... if that's true, the only thing that needs to change is the conditional on
-        // the kid to reflect both the existing kid's conditional and the one we're adopting;
-        // however, if that is the case, then we'll have to move the kid's kids over too, and to
-        // do that, we'll have to first change their conditions to "and" with the condition of
-        // their parent, aka "the kid"
-        Component eachSibling = firstSibling;
-        while (true)
-            {
-            if (eachSibling.isBodyIdentical(kid))
-                {
-                eachSibling.addOrCondition(condKid);
-                break;
-                }
-
-            Component nextSibling = eachSibling.m_sibling;
-            if (nextSibling == null)
-                {
-                // add the kid to the end of the sibling chain
-                eachSibling.m_sibling = kid;
-                break;
-                }
-
-            eachSibling = nextSibling;
-            }
-
-        // TODO kids
-        }
-
     protected void addAndCondition(ConditionalConstant cond)
         {
         if (cond != null)
@@ -745,6 +480,11 @@ public abstract class Component
             }
         }
 
+    /**
+     * Modify the condition on this component by adding an alternative condition.
+     *
+     * @param cond  the alternative condition
+     */
     protected void addOrCondition(ConditionalConstant cond)
         {
         if (cond != null)
@@ -754,67 +494,82 @@ public abstract class Component
             }
         }
 
-
-    abstract boolean isBodyIdentical(Component kid);
-
-    // TODO evaluate removal of this
-//    /**
-//     * This method obtains a list of all of the child Components of this Component. If there are any
-//     * conditions to evaluate, the current assembler context is used to evaluate those conditions.
-//     * @return
-//     */
-//    public List<Component> getChildren()
-//        {
-//        Map<String, Component> kids = m_childByName;
-//        if (kids.isEmpty())
-//            {
-//            return Collections.EMPTY_LIST;
-//            }
-//
-//        List<Component>  list = new ArrayList<>(kids.size());
-//        AssemblerContext ctx  = getFileStructure().getContext();
-//        for (Component kid : kids.values())
-//            {
-//            // if the child is unconditional, then put it into the list
-//            if (kid.getCondition() == null)
-//                {
-//                assert kid.m_sibling == null;
-//                list.add(kid);
-//                continue;
-//                }
-//
-//            // if the child is conditional, then it (or one of its siblings) only goes in the list
-//            // if the kid's condition matches the current context
-//            do
-//                {
-//                if (kid.getCondition().evaluate(ctx))
-//
-//                kid = kid.m_sibling;
-//                }
-//            while (kid != null);
-//            }
-//
-//        }
+    /**
+     * Without comparing the child components, compare this component to another component to
+     * determine if their state is identical. This method must be overridden by components that
+     * have state in addition to that represented by the identity constant and the component's
+     * bit flags.
+     *
+     * @param that  another component to compare to
+     *
+     * @return true iff this component's "body" is identical to that component's "body"
+     */
+    protected boolean isBodyIdentical(Component that)
+        {
+        return this.m_nFlags == that.m_nFlags
+            && this.m_constId.equals(that.m_constId);
+        }
 
     /**
-     * TODO
+     * Obtain the child that is identified by the specified identity. If more than one child is
+     * a match, then a component representing the multiple siblings is created to represent the
+     * result.
      *
      * @param constId  the constant identifying the child
      *
-     * @return the child component
+     * @return the child component, or null
      */
     public Component getChild(Constant constId)
         {
+        Component firstSibling = null;
         if (constId instanceof MethodConstant)
             {
-            // TODO
-            throw new UnsupportedOperationException("look up method");
+            Map<MethodConstant, MethodStructure> map = m_methodByConstant;
+            if (map != null)
+                {
+                firstSibling = m_methodByConstant.get(constId);
+                }
             }
         else
             {
-            // TODO Component child = getFormat().getChild(constId)
-            throw new UnsupportedOperationException("look up child by name");
+            Map<String, Component> map = m_childByName;
+            if (map != null)
+                {
+                firstSibling = map.get(((NamedConstant) constId).getName());
+                }
             }
+
+        // common result: nothing for that constant
+        if (firstSibling == null)
+            {
+            return null;
+            }
+
+        // common result: exactly one non-conditional match
+        if (firstSibling.m_sibling == null
+                && firstSibling.getIdentityConstant().equals(constId)
+                && firstSibling.m_cond == null)
+            {
+            return firstSibling;
+            }
+
+        AssemblerContext ctx     = getFileStructure().getContext();
+        List<Component>  matches = new ArrayList<>();
+
+        // TODO see which siblings match, i.e. they have to be children of "this" and they have to
+        //      match the constId and they have to have conditions that match the assembly context
+
+        if (matches.isEmpty())
+            {
+            return null;
+            }
+
+        if (matches.size() == 1)
+            {
+            return matches.get(0);
+            }
+
+        return new CompositeComponent(this, matches);
         }
 
     /**
@@ -833,19 +588,43 @@ public abstract class Component
         // 3) a number of children by that name, but no conditions match - return null
         // 4) a number of children by that name, one condition matches - return that child
         // 5) a number of children by that name, multiple conditions match - return a composite child
-        Component child = m_childByName.get(sName);
-        if (child == null)
+
+        // most common result: no child by that name
+        Component firstSibling = m_childByName.get(sName);
+        if (firstSibling == null)
             {
             return null;
             }
 
-        if (child.m_sibling == null && child.m_cond == null)
+        // common result: exactly one non-conditional match
+        if (firstSibling.m_sibling == null && firstSibling.m_cond == null)
             {
-            return child;
+            return firstSibling;
             }
 
-        // TODO - handle conditions
-        throw new UnsupportedOperationException("TODO conditions");
+
+        if (firstSibling.m_sibling == null && firstSibling.m_cond == null)
+            {
+            return firstSibling;
+            }
+
+        AssemblerContext ctx     = getFileStructure().getContext();
+        List<Component>  matches = new ArrayList<>();
+
+        // TODO see which siblings match, i.e. they have to be children of "this" and they have to
+        //      match the constId and they have to have conditions that match the assembly context
+
+        if (matches.isEmpty())
+            {
+            return null;
+            }
+
+        if (matches.size() == 1)
+            {
+            return matches.get(0);
+            }
+
+        return new CompositeComponent(this, matches);
         }
 
     protected void registerChild(Component child)
@@ -1045,5 +824,8 @@ public abstract class Component
      */
     private Map<String, Component> m_childByName;
 
+    /**
+     * This holds all of the method children. See the explanation of {@link #m_childByName}.
+     */
     private Map<MethodConstant, MethodStructure> m_methodByConstant;
     }

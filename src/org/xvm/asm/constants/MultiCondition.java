@@ -96,30 +96,32 @@ public abstract class MultiCondition
     public Set<ConditionalConstant> terminals()
         {
         Set<ConditionalConstant> terminals = new HashSet<>();
-        ConditionalConstant[] aconst = m_aconstCond;
-
+        for (ConditionalConstant cond : m_aconstCond)
+            {
+            if (cond.isTerminal())
+                {
+                terminals.add(cond);
+                }
+            else
+                {
+                terminals.addAll(cond.terminals());
+                }
+            }
+        return terminals;
         }
 
     @Override
     public boolean containsTerminal(ConditionalConstant that)
         {
-        if (this.getClass() == that.getClass())
+        for (ConditionalConstant cond : m_aconstCond)
             {
-            // while "this" is technically not a terminal, there is nothing that guarantees that "that"
-            // is either
-            if (this.equals(that))
+            if (cond.containsTerminal(that))
                 {
                 return true;
                 }
-
-            // compare contents
-            ConditionalConstant[] aconstThis = this.m_aconstCond;
-            ConditionalConstant[] aconstThat = ((MultiCondition) that).m_aconstCond;
-            // TODO contains
             }
 
-        // TODO delegate to each
-        return m_constCond.containsTerminal(that);
+        return false;
         }
 
     /**

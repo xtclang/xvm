@@ -1,11 +1,14 @@
 package org.xvm.asm.constants;
 
 
+import java.util.Collections;
 import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
 
+import org.xvm.asm.Version;
 import org.xvm.util.ListMap;
 
 
@@ -106,6 +109,23 @@ public abstract class ConditionalConstant
     public boolean containsTerminal(ConditionalConstant that)
         {
         return this.equals(that);
+        }
+
+    /**
+     * Determine the versions specified for the ConditionalConstant, if any.
+     * <p/>
+     * A conditional can include a version in one of three ways:
+     * <ul>
+     * <li>A VersionCondition;</li>
+     * <li>An AnyCondition that contains one or more VersionConditions; or</li>
+     * <li>An AllCondition that contains exactly one of the above.</li>
+     * </ul>
+     *
+     * @return a Set of Version objects
+     */
+    public Set<Version> versions()
+        {
+        return Collections.emptySet();
         }
 
     /**

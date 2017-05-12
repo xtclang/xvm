@@ -4,8 +4,13 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
+import org.xvm.asm.Version;
 
 
 /**
@@ -46,12 +51,6 @@ public class AnyCondition
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
     @Override
-    protected String getOperatorString()
-        {
-        return "||";
-        }
-
-    @Override
     public boolean evaluate(LinkerContext ctx)
         {
         for (ConditionalConstant constCond : m_aconstCond)
@@ -62,6 +61,32 @@ public class AnyCondition
                 }
             }
         return false;
+        }
+
+    @Override
+    public Set<Version> versions()
+        {
+        Set<Version> setVers = null;
+
+        for (ConditionalConstant cond : m_aconstCond)
+            {
+            if (cond instanceof VersionCondition || cond instanceof AnyCondition)
+                {
+                if (setVers == null)
+                    {
+                    setVers = new TreeSet<>();
+                    }
+                setVers.addAll(cond.versions());
+                }
+            }
+
+        return setVers == null ? Collections.EMPTY_SET : setVers;
+        }
+
+    @Override
+    protected String getOperatorString()
+        {
+        return "||";
         }
 
 

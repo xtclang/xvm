@@ -4,8 +4,12 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.Set;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
+import org.xvm.asm.Version;
 
 
 /**
@@ -56,6 +60,31 @@ public class AllCondition
                 }
             }
         return true;
+        }
+
+    @Override
+    public Set<Version> versions()
+        {
+        Set<Version> setVers = null;
+
+        for (ConditionalConstant cond : m_aconstCond)
+            {
+            Set<Version> setNew = cond.versions();
+            if (!setNew.isEmpty())
+                {
+                if (setVers == null)
+                    {
+                    setVers = setNew;
+                    }
+                else
+                    {
+                    throw new IllegalStateException("can't have two version conditions in an AllCondition: "
+                            + setVers + ", " + setNew);
+                    }
+                }
+            }
+
+        return setVers == null ? Collections.EMPTY_SET : setVers;
         }
 
     @Override

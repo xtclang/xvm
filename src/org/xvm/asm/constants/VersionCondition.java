@@ -5,9 +5,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
+import org.xvm.asm.Version;
 
 import org.xvm.util.Handy;
 
@@ -44,7 +48,6 @@ public class VersionCondition
         {
         super(pool);
         m_iVer      = readMagnitude(in);
-        m_fExactVer = in.readBoolean();
         }
 
     /**
@@ -52,13 +55,11 @@ public class VersionCondition
      *
      * @param pool       the ConstantPool that will contain this Constant
      * @param constVer   the version of this Module to evaluate
-     * @param fExactVer  true if the version has to match exactly
      */
-    public VersionCondition(ConstantPool pool, VersionConstant constVer, boolean fExactVer)
+    public VersionCondition(ConstantPool pool, VersionConstant constVer)
         {
         super(pool);
         m_constVer  = constVer;
-        m_fExactVer = fExactVer;
         }
 
 
@@ -74,24 +75,31 @@ public class VersionCondition
         return m_constVer;
         }
 
-    /**
-     * Determine if the exact specified version is required, or if subsequent versions are
-     * acceptable.
-     *
-     * @return true iff the exact version specified is required
-     */
-    public boolean isExactVersion()
-        {
-        return m_fExactVer;
-        }
-
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
     @Override
     public boolean evaluate(LinkerContext ctx)
         {
-        return ctx.isVersionMatch(m_constVer, m_fExactVer);
+        return ctx.isVersionMatch(m_constVer, true);
+        }
+
+    @Override
+    public boolean isTerminal()
+        {
+        return true;
+        }
+
+    @Override
+    public Set<ConditionalConstant> terminals()
+        {
+        return Collections.singleton(this);
+        }
+
+    @Override
+    public Set<Version> versions()
+        {
+        return Collections.singleton(m_constVer.getVersion());
         }
 
 
@@ -107,13 +115,7 @@ public class VersionCondition
     protected int compareDetails(Constant that)
         {
         org.xvm.asm.constants.VersionCondition constThat = (org.xvm.asm.constants.VersionCondition) that;
-        int nResult = m_constVer.compareTo(constThat.m_constVer);
-        if (nResult == 0)
-            {
-            nResult = Boolean.valueOf(m_fExactVer).compareTo(Boolean.valueOf(constThat.m_fExactVer));
-            }
-
-        return nResult;
+        return m_constVer.compareTo(constThat.m_constVer);
         }
 
     @Override
@@ -123,11 +125,6 @@ public class VersionCondition
 
         sb.append("isVersion(")
           .append(m_constVer.getValueString());
-
-        if (m_fExactVer)
-            {
-            sb.append(", EXACT");
-            }
 
         return sb.append(')').toString();
         }
@@ -154,7 +151,6 @@ public class VersionCondition
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constVer.getPosition());
-        out.writeBoolean(m_fExactVer);
         }
 
 
@@ -178,9 +174,4 @@ public class VersionCondition
      * A ModuleConstant, PackageConstant, ClassConstant, PropertyConstant, or MethodConstant.
      */
     private VersionConstant m_constVer;
-
-    /**
-     * True if the version has to match exactly.
-     */
-    private boolean m_fExactVer;
     }
