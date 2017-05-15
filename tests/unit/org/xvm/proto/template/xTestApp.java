@@ -321,6 +321,24 @@ public class xTestApp extends xModule
             };
         ftTestArray.m_cVars = 5;
 
+        FunctionTemplate ftTestTuple = ensureFunctionTemplate("testTuple", VOID, VOID);
+        ftTestTuple.m_aop = new Op[]
+            {
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")),
+            new INVar(adapter.getClassTypeConstId("x:Tuple"), adapter.ensureValueConstantId("t"),
+                      -adapter.ensureValueConstantId(new Object[] {"zero", Integer.valueOf(0)})), // #0 (t)
+            new Var(adapter.getClassTypeConstId("x:String")), // #1
+            new AGet(0, -adapter.ensureValueConstantId(0), 1),
+            new X_Print(1),
+
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #2
+            new AGet(0, -adapter.ensureValueConstantId(1), 2),
+            new X_Print(2),
+
+            new Return_0()
+            };
+        ftTestTuple.m_cVars = 3;
+
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);
         mtRun.m_aop = new Op[]
@@ -331,6 +349,7 @@ public class xTestApp extends xModule
             new Call_10(-adapter.getMethodConstId("x:TestApp", "testRef"),
                         -adapter.ensureValueConstantId("hi")),
             new Call_00(-adapter.getMethodConstId("x:TestApp", "testArray")),
+            new Call_00(-adapter.getMethodConstId("x:TestApp", "testTuple")),
             new Return_0()
             };
         mtRun.m_cVars = 2;

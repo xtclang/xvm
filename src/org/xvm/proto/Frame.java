@@ -378,13 +378,13 @@ public class Frame
                 sName = nVar == 0 ? "<this>" : "<arg " + (nVar - 1) + ">";
                 }
 
-            if (nVar < cArgs)
+            if (nVar >= cArgs)
                 {
-                introduceVar(nVar, f_ahVar[nVar].f_clazz, sName, Op.VAR_STANDARD, null);
-                return f_aInfo[nVar];
+                throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
                 }
 
-            throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
+            introduceVar(nVar, f_ahVar[nVar].f_clazz, sName, Op.VAR_STANDARD, null);
+            info = f_aInfo[nVar];
             }
         return info;
         }

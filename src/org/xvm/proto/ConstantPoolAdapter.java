@@ -215,25 +215,39 @@ public class ConstantPoolAdapter
 
     public int ensureValueConstantId(Object oValue)
         {
-        Constant constant;
+        return ensureValueConstant(oValue).getPosition();
+        }
+
+    protected Constant ensureValueConstant(Object oValue)
+        {
         if (oValue instanceof Integer || oValue instanceof Long)
             {
-            constant = m_constantPool.ensureIntConstant(((Number) oValue).longValue());
-            }
-        else if (oValue instanceof String)
-            {
-            constant = m_constantPool.ensureCharStringConstant((String) oValue);
-            }
-        else if (oValue instanceof Character)
-            {
-            constant = m_constantPool.ensureCharConstant(((Character) oValue).charValue());
-            }
-        else
-            {
-            throw new IllegalArgumentException();
+            return m_constantPool.ensureIntConstant(((Number) oValue).longValue());
             }
 
-        return constant.getPosition();
+        if (oValue instanceof String)
+            {
+            return m_constantPool.ensureCharStringConstant((String) oValue);
+            }
+
+        if (oValue instanceof Character)
+            {
+            return m_constantPool.ensureCharConstant(((Character) oValue).charValue());
+            }
+
+        if (oValue instanceof Object[])
+            {
+            Object[] ao = (Object[]) oValue;
+            int c = ao.length;
+            Constant[] aconst = new Constant[c];
+            for (int i = 0; i < c; i++)
+                {
+                aconst[i] = ensureValueConstant(ao[i]);
+                }
+            return m_constantPool.ensureTupleConstant(aconst);
+            }
+
+        throw new IllegalArgumentException();
         }
 
     // helper methods

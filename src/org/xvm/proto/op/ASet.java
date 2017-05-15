@@ -1,10 +1,10 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle.ArrayHandle;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
-import org.xvm.proto.template.xArray;
+import org.xvm.proto.template.IndexSupport;
 
 /**
  * A_SET rvalue-target, rvalue-index, rvalue-new-value ; T[Ti] = T
@@ -31,10 +31,11 @@ public class ASet extends Op
 
         try
             {
-            ArrayHandle hArray = (ArrayHandle) frame.getArgument(f_nTargetValue);
-            xArray array = (xArray) hArray.f_clazz.f_template;
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
 
-            hException = array.setArrayValue(frame, hArray,
+            IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
+
+            hException = template.assignArrayValue(hTarget,
                     frame.getIndex(f_nIndexValue), frame.getArgument(f_nValue));
             }
         catch (ExceptionHandle.WrapperException e)

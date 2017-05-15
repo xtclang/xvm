@@ -138,19 +138,19 @@ public class TypeComposition
         return false;
         }
 
+    // create a type by resolving the specified formal type parameter, which must be defined
+    // by this class's template with a corresponding actual type of this class
     public Type resolveFormalType(String sFormalName)
         {
-        TypeCompositionTemplate template = f_template;
-        String[] asFormalName = template.f_asFormalType;
-
-        for (int i = 0, c = asFormalName.length; i < c; i++)
+        try
             {
-            if (asFormalName[i].equals(sFormalName))
-                {
-                return f_atGenericActual[i];
-                }
+            return f_atGenericActual[f_template.f_listFormalType.indexOf(sFormalName)];
             }
-        throw new IllegalArgumentException("Invalid formal name: " + sFormalName);
+        catch (ArrayIndexOutOfBoundsException e)
+            {
+            throw new IllegalArgumentException(
+                    "Invalid formal name: " + sFormalName + " for " + f_template);
+            }
         }
 
     // create an un-initialized handle for this class

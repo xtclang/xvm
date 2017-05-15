@@ -19,9 +19,9 @@
 
 + Refs to array elements
 
-- Refs to method arguments
++ Refs to method arguments
 
-- Tuple
+- Tuple, ConditionalTuple
 
 - Property and Method
 
@@ -31,7 +31,9 @@
     -- invoke
     -- return
 
+- native Service methods
 
+- Class, Type
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 

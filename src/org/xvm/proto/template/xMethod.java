@@ -30,7 +30,7 @@ public class xMethod
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant)
+    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         if (constant instanceof MethodConstant)
             {

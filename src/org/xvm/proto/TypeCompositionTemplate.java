@@ -8,6 +8,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.TypeName.GenericTypeName;
+import org.xvm.proto.TypeName.SimpleTypeName;
 
 import org.xvm.proto.template.xArray;
 import org.xvm.proto.template.xException;
@@ -17,12 +19,7 @@ import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -37,7 +34,7 @@ public abstract class TypeCompositionTemplate
     protected final TypeSet f_types;
 
     protected final String f_sName; // globally known type composition name (e.g. x:Boolean or x:annotation.AtomicRef)
-    protected final String[] f_asFormalType;
+    protected final List<String> f_listFormalType;
     protected final String f_sSuper; // super composition name; always x:Object for interfaces
     public final Shape f_shape;
 
@@ -75,7 +72,7 @@ public abstract class TypeCompositionTemplate
         if (ofBracket < 0)
             {
             f_sName = sName;
-            f_asFormalType = TypeName.NON_GENERIC;
+            f_listFormalType = Collections.EMPTY_LIST;
             f_clazzCanonical = new TypeComposition(this, Utils.TYPE_NONE);
             }
         else
@@ -91,12 +88,17 @@ public abstract class TypeCompositionTemplate
                 assert (!types.existsTemplate(sFormalType)); // must not be know
                 }
             f_sName = sName.substring(0, ofBracket);
-            f_asFormalType = asFormalType;
+            f_listFormalType = Arrays.asList(asFormalType);
             f_clazzCanonical = new TypeComposition(this, xObject.getTypeArray(cTypes));
             }
 
         f_sSuper = sSuper;
         f_shape = shape;
+        }
+
+    public boolean isRootObject()
+        {
+        return m_templateSuper == null;
         }
 
     // add an "implement"
@@ -156,15 +158,15 @@ public abstract class TypeCompositionTemplate
     public MethodTemplate ensureMethodTemplate(String sMethodName, String[] asArgTypes, String[] asRetTypes)
         {
         MethodTemplate templateM = m_mapMultiMethods.computeIfAbsent(sMethodName, s -> new MultiMethodTemplate()).
-                add(new MethodTemplate(sMethodName, asArgTypes, asRetTypes));
+                add(new MethodTemplate(sMethodName, asArgTypes, asRetTypes), null);
 
         return templateM;
         }
 
-    public MethodTemplate deriveMethodTemplateFrom(MethodTemplate templateM)
+    public MethodTemplate deriveMethodTemplateFrom(MethodTemplate templateM, TypeName tnIface)
         {
         m_mapMultiMethods.computeIfAbsent(templateM.f_sName, s -> new MultiMethodTemplate()).
-                add(templateM);
+                add(templateM, tnIface);
         return templateM;
         }
 
@@ -190,7 +192,7 @@ public abstract class TypeCompositionTemplate
 
         for (MethodTemplate mt : mmt.m_mapMethods.values())
             {
-            if (mt.isMatch(listParams, listReturns))
+            if (mt.isSignatureMatch(listParams, listReturns))
                 {
                 return mt;
                 }
@@ -213,8 +215,6 @@ public abstract class TypeCompositionTemplate
 
         m_mapMultiFunctions.computeIfAbsent(templateD.f_sName, s -> new MultiFunctionTemplate()).
                 add(templateD);
-
-        templateD.resolveTypes(this);
 
         return templateD;
         }
@@ -275,7 +275,7 @@ public abstract class TypeCompositionTemplate
 
         for (FunctionTemplate ft : mft.m_mapFunctions.values())
             {
-            if (ft.isMatch(listParams, listReturns))
+            if (ft.isSignatureMatch(listParams, listReturns))
                 {
                 return ft;
                 }
@@ -327,7 +327,7 @@ public abstract class TypeCompositionTemplate
 
             templateIface.forEachProperty(this::derivePropertyTemplateFrom);
 
-            templateIface.forEachMethod(this::deriveMethodTemplateFrom);
+            templateIface.forEachMethod(m -> deriveMethodTemplateFrom(m, tnIface));
             }
         }
 
@@ -335,6 +335,15 @@ public abstract class TypeCompositionTemplate
         {
         if (m_templateSuper != null)
             {
+            if (m_templateSuper.isRootObject() &&
+                    (f_shape == Shape.Interface ||
+                     f_shape == Shape.Mixin ||
+                     f_shape == Shape.Trait))
+                {
+                // don't resolve interfaces, mixins and traits down to the root object
+                return;
+                }
+
             m_templateSuper.forEachProperty(propSuper ->
                 {
                 if (propSuper.m_accessGet != Constants.Access.PRIVATE ||
@@ -348,7 +357,7 @@ public abstract class TypeCompositionTemplate
                 {
                 if (methodSuper.m_access != Constants.Access.PRIVATE)
                     {
-                    deriveMethodTemplateFrom(methodSuper);
+                    deriveMethodTemplateFrom(methodSuper, null);
                     }
                 });
             }
@@ -466,7 +475,7 @@ public abstract class TypeCompositionTemplate
     @Override
     public String toString()
         {
-        return f_shape + " " + f_sName + Utils.formatArray(f_asFormalType, "<", ">", ", ");
+        return f_shape + " " + f_sName + Utils.formatArray(f_listFormalType.toArray(), "<", ">", ", ");
         }
 
     // ---- OpCode support: construction and initialization -----
@@ -479,7 +488,7 @@ public abstract class TypeCompositionTemplate
 
     // assign (Int i = 5;)
     // @return null if this type doesn't take that constant
-    public ObjectHandle createConstHandle(Constant constant)
+    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         return null;
         }
@@ -487,7 +496,7 @@ public abstract class TypeCompositionTemplate
     // return a handle with this:struct access
     protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        assert f_asFormalType.length == 0;
+        assert f_listFormalType.isEmpty();
         assert f_shape == Shape.Class || f_shape == Shape.Const;
 
         return new GenericHandle(clazz, clazz.ensureStructType());
@@ -759,7 +768,7 @@ public abstract class TypeCompositionTemplate
         {
         StringBuilder sb = new StringBuilder();
         sb.append(f_shape).append(' ').append(f_sName)
-          .append(Utils.formatArray(f_asFormalType, "<", ">", ", "));
+          .append(Utils.formatArray(f_listFormalType.toArray(), "<", ">", ", "));
 
         switch (f_shape)
             {
@@ -937,7 +946,7 @@ public abstract class TypeCompositionTemplate
                 // check for the "super" implementations
                 if (that.m_templateGet != null)
                     {
-                    this.m_templateGet = deriveMethodTemplateFrom(that.m_templateGet);
+                    this.m_templateGet = deriveMethodTemplateFrom(that.m_templateGet, null);
                     }
                 }
 
@@ -948,15 +957,9 @@ public abstract class TypeCompositionTemplate
                 // check for the "super" implementations
                 if (that.m_templateSet != null)
                     {
-                    this.m_templateSet = deriveMethodTemplateFrom(that.m_templateSet);
+                    this.m_templateSet = deriveMethodTemplateFrom(that.m_templateSet, null);
                     }
                 }
-            }
-
-        // get the property type in the context of the specified parent class
-        public Type getType(TypeComposition clzParent)
-            {
-            return f_typeName.resolveFormalTypes(clzParent);
             }
 
         @Override
@@ -1018,16 +1021,16 @@ public abstract class TypeCompositionTemplate
             m_cReturns = atRet.length;
             }
 
-        protected void resolveTypes(TypeCompositionTemplate template)
+        protected void loadTypes(TypeCompositionTemplate template)
             {
             for (TypeName t : m_argTypeName)
                 {
-                t.resolveDependencies(template);
+                t.loadDependencies(template);
                 }
 
             for (TypeName t : m_retTypeName)
                 {
-                t.resolveDependencies(template);
+                t.loadDependencies(template);
                 }
             }
 
@@ -1067,7 +1070,8 @@ public abstract class TypeCompositionTemplate
             return TypeName.getFunctionSignature(f_sName, m_argTypeName, m_retTypeName);
             }
 
-        public boolean isMatch(List<TypeConstant> listParams, List<TypeConstant> listReturns)
+        // check if the signature of this InvocationTemplate matches the specified parameters/returns
+        public boolean isSignatureMatch(List<TypeConstant> listParams, List<TypeConstant> listReturns)
             {
             if (listParams.size() == m_cArgs && listReturns.size() == m_cReturns)
                 {
@@ -1110,8 +1114,13 @@ public abstract class TypeCompositionTemplate
         {
         Map<String, MethodTemplate> m_mapMethods = new HashMap<>();
 
-        public MethodTemplate add(MethodTemplate method)
+        public MethodTemplate add(MethodTemplate method, TypeName tnIface)
             {
+            if (tnIface != null)
+                {
+                method = method.resolveGenericTypes(tnIface);
+                }
+
             MethodTemplate methodSuper = m_mapMethods.put(method.getSignature(), method);
             if (methodSuper == null)
                 {
@@ -1186,6 +1195,51 @@ public abstract class TypeCompositionTemplate
                 }
 
             return m_methodSuper;
+            }
+
+        // resolve the generic types for this method that come from the specified interface
+        protected MethodTemplate resolveGenericTypes(TypeName tnIface)
+            {
+            if (tnIface instanceof SimpleTypeName)
+                {
+                return this;
+                }
+
+            List<String> listFormalNames = getClazzTemplate().f_listFormalType;
+            if (listFormalNames.isEmpty())
+                {
+                return this;
+                }
+
+            List<TypeName> listActualTypes = ((GenericTypeName) tnIface).m_listTypeName;
+
+            TypeName[] argTypes = new TypeName[m_argTypeName.length];
+            int i = 0;
+            boolean fChanged = false;
+            for (TypeName tn : m_argTypeName)
+                {
+                TypeName tnReplace = tn.replaceFormalTypes(listFormalNames, listActualTypes);
+                fChanged |= tnReplace != tn;
+                argTypes[i++] = tnReplace;
+                }
+
+            TypeName[] retTypes = new TypeName[m_retTypeName.length];
+            i = 0;
+            for (TypeName tn : m_retTypeName)
+                {
+                TypeName tnReplace = tn.replaceFormalTypes(listFormalNames, listActualTypes);
+                fChanged |= tnReplace != tn;
+                retTypes[i++] = tnReplace;
+                }
+
+            if (fChanged)
+                {
+                MethodTemplate method = new MethodTemplate(f_sName, argTypes, retTypes);
+                method.copyCodeAttributes(this);
+
+                return method;
+                }
+            return this;
             }
         }
 

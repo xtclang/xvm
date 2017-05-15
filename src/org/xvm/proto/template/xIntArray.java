@@ -20,7 +20,7 @@ public class xIntArray
 
     public xIntArray(TypeSet types)
         {
-        super(types, "x:collections.IntArray", "x:collections.Array", Shape.Class);
+        super(types, "x:collections.IntArray", "x:collections.Array<x:Int64>", Shape.Class);
 
         INSTANCE = this;
         }
@@ -31,33 +31,47 @@ public class xIntArray
         }
 
     @Override
-    protected ObjectHandle extractArrayValue(ArrayHandle hArray, long lIndex)
-        {
-        return xInt64.makeHandle(((IntArrayHandle) hArray).m_alValue[(int) lIndex]);
-        }
-
-    @Override
-    protected ExceptionHandle ensureCapacity(ArrayHandle hTarget, int cSize)
+    public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
+            throws ExceptionHandle.WrapperException
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
 
-        int cCapacity = hArray.m_alValue.length;
-        if (cCapacity <= cSize)
+        int cSize = hArray.m_cSize;
+        if (lIndex < 0 || lIndex >= cSize)
             {
-            // resize (TODO: we should be much smarter here)
-            cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
-
-            long[] alNew = new long[cCapacity];
-            System.arraycopy(hArray.m_alValue, 0, alNew, 0, cSize);
-            hArray.m_alValue = alNew;
+            throw IndexSupport.outOfRange(lIndex, cSize).getException();
             }
-
-        return null;
+        return xInt64.makeHandle(hArray.m_alValue[(int) lIndex]);
         }
 
     @Override
-    protected ExceptionHandle assignArrayValue(ArrayHandle hTarget, long lIndex, ObjectHandle hValue)
+    public ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
+        IntArrayHandle hArray = (IntArrayHandle) hTarget;
+
+        int cSize = hArray.m_cSize;
+
+        if (lIndex < 0 || lIndex >= cSize)
+            {
+            if (hArray.m_fFixed || lIndex != cSize)
+                {
+                return IndexSupport.outOfRange(lIndex, cSize);
+                }
+
+            int cCapacity = hArray.m_alValue.length;
+            if (cCapacity <= cSize)
+                {
+                // resize (TODO: we should be much smarter here)
+                cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
+
+                long[] alNew = new long[cCapacity];
+                System.arraycopy(hArray.m_alValue, 0, alNew, 0, cSize);
+                hArray.m_alValue = alNew;
+                }
+
+            hArray.m_cSize++;
+            }
+
         ((IntArrayHandle) hTarget).m_alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
         return null;
         }
@@ -69,7 +83,7 @@ public class xIntArray
 
         if (lIndex < 0 || lIndex >= cSize)
             {
-            return outOfRange(lIndex, cSize);
+            return IndexSupport.outOfRange(lIndex, cSize);
             }
 
         return frame.assignValue(iReturn,

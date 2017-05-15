@@ -94,10 +94,10 @@ public class TypeSet
 
         template.initDeclared();
         template.resolveDependencies();
-        template.forEachMethod(m -> m.resolveTypes(template));
+        template.forEachMethod(m -> m.loadTypes(template));
         template.forEachMethod(m -> f_adapter.registerInvocable(template, m));
-        template.forEachProperty(p -> p.f_typeName.resolveDependencies(template));
-        template.forEachFunction(f -> f.resolveTypes(template));
+        template.forEachProperty(p -> p.f_typeName.loadDependencies(template));
+        template.forEachFunction(f -> f.loadTypes(template));
         template.forEachFunction(f -> f_adapter.registerInvocable(template, f));
         }
 

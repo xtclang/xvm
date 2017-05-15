@@ -216,17 +216,18 @@ public class xRef
             }
         }
 
-    public static class ArrayRefHandle
+    // Ref handle for an indexed element
+    public static class IndexedRefHandle
             extends RefHandle
         {
-        protected final ArrayHandle f_hArray;
+        protected final ObjectHandle f_hTarget;
         protected final long f_lIndex;
 
-        public ArrayRefHandle(TypeComposition clazz, ArrayHandle hArray, long lIndex)
+        public IndexedRefHandle(TypeComposition clazz, ObjectHandle hTarget, long lIndex)
             {
             super(clazz);
 
-            f_hArray = hArray;
+            f_hTarget = hTarget;
             f_lIndex = lIndex;
             }
 
@@ -234,13 +235,15 @@ public class xRef
         public ObjectHandle get()
                 throws ExceptionHandle.WrapperException
             {
-            return ((xArray) f_hArray.f_clazz.f_template).extractArrayValue(f_hArray, f_lIndex);
+            return ((IndexSupport) f_hTarget.f_clazz.f_template).
+                    extractArrayValue(f_hTarget, f_lIndex);
             }
 
         @Override
         public ExceptionHandle set(ObjectHandle handle)
             {
-            return ((xArray) f_hArray.f_clazz.f_template).assignArrayValue(f_hArray, f_lIndex, handle);
+            return ((IndexSupport) f_hTarget.f_clazz.f_template).
+                    assignArrayValue(f_hTarget, f_lIndex, handle);
             }
 
         @Override

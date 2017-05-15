@@ -21,6 +21,7 @@ import org.xvm.proto.template.xFunction.FunctionHandle;
  */
 public class xArray
         extends TypeCompositionTemplate
+        implements IndexSupport
     {
     public static xArray INSTANCE;
 
@@ -129,7 +130,7 @@ public class xArray
 
                 if (hException == null)
                     {
-                    hException = array.setArrayValue(frame, hArray, i, frame.getFrameLocal());
+                    hException = array.assignArrayValue(hArray, i, frame.getFrameLocal());
                     }
 
                 if (hException != null)
@@ -142,73 +143,54 @@ public class xArray
         return frame.assignValue(iReturn, hArray);
         }
 
-    // @op get
-    public ExceptionHandle getArrayValue(Frame frame, ArrayHandle hTarget, long lIndex, int iReturn)
-        {
-        int cSize = hTarget.m_cSize;
-
-        if (lIndex < 0 || lIndex >= cSize)
-            {
-            return outOfRange(lIndex, cSize);
-            }
-
-        return frame.assignValue(iReturn, extractArrayValue(hTarget, lIndex));
-        }
-
-    protected ObjectHandle extractArrayValue(ArrayHandle hArray, long lIndex)
-        {
-        return ((GenericArrayHandle) hArray).m_ahValue[(int) lIndex];
-        }
-
-    // @op set
-    public ExceptionHandle setArrayValue(Frame frame, ArrayHandle hTarget, long lIndex, ObjectHandle hValue)
-        {
-        int cSize = hTarget.m_cSize;
-
-        if (lIndex < 0 || lIndex >= cSize)
-            {
-            if (hTarget.m_fFixed || lIndex != cSize)
-                {
-                return outOfRange(lIndex, cSize);
-                }
-
-            ExceptionHandle hException = ensureCapacity(hTarget, cSize);
-            if (hException != null)
-                {
-                return hException;
-                }
-
-            hTarget.m_cSize++;
-            }
-
-        assignArrayValue(hTarget, lIndex, hValue);
-        return null;
-        }
-
-    protected ExceptionHandle ensureCapacity(ArrayHandle hTarget, int cSize)
+    @Override
+    public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
+            throws ExceptionHandle.WrapperException
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
-        int cCapacity = hArray.m_ahValue.length;
-        if (cCapacity <= cSize)
+        int cSize = hArray.m_cSize;
+        if (lIndex < 0 || lIndex >= cSize)
             {
-            // resize (TODO: we should be much smarter here)
-            cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
-
-            ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
-            System.arraycopy(hArray.m_ahValue, 0, ahNew, 0, cSize);
-            hArray.m_ahValue = ahNew;
+            throw IndexSupport.outOfRange(lIndex, cSize).getException();
             }
-        return null;
+
+        return hArray.m_ahValue[(int) lIndex];
         }
 
-    protected ExceptionHandle assignArrayValue(ArrayHandle hTarget, long lIndex, ObjectHandle hValue)
+    @Override
+    public ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
-        ((GenericArrayHandle) hTarget).m_ahValue[(int) lIndex] = hValue;
+        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+
+        int cSize = hArray.m_cSize;
+
+        if (lIndex < 0 || lIndex >= cSize)
+            {
+            if (hArray.m_fFixed || lIndex != cSize)
+                {
+                return IndexSupport.outOfRange(lIndex, cSize);
+                }
+
+            int cCapacity = hArray.m_ahValue.length;
+            if (cCapacity <= cSize)
+                {
+                // resize (TODO: we should be much smarter here)
+                cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
+
+                ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
+                System.arraycopy(hArray.m_ahValue, 0, ahNew, 0, cSize);
+                hArray.m_ahValue = ahNew;
+                }
+
+            hArray.m_cSize++;
+            }
+
+        hArray.m_ahValue[(int) lIndex] = hValue;
         return null;
         }
 
-    // increment the element value and place the result into the specified frame register
+    @Override
     public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
@@ -216,7 +198,7 @@ public class xArray
 
         if (lIndex < 0 || lIndex >= cSize)
             {
-            return outOfRange(lIndex, cSize);
+            return IndexSupport.outOfRange(lIndex, cSize);
             }
 
         ObjectHandle hValue = hArray.m_ahValue[(int) lIndex];
@@ -231,12 +213,6 @@ public class xArray
         hArray.m_ahValue[(int) lIndex] = hValueNew;
 
         return frame.assignValue(iReturn, hValueNew);
-        }
-
-    // helpers
-    protected static ExceptionHandle outOfRange(long lIndex, long cSize)
-        {
-        return xException.makeHandle("Array index " + lIndex + " out of range 0.." + cSize);
         }
 
     public static GenericArrayHandle makeInstance(long cCapacity)

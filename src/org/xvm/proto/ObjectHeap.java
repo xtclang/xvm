@@ -1,17 +1,21 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constant;
+
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.TupleConstant;
+
 import org.xvm.proto.template.xClass;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xMethod;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xString;
+import org.xvm.proto.template.xTuple;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -51,41 +55,52 @@ public class ObjectHeap
             {
             Constant constValue = f_constantPool.getConstantValue(nValueConstId); // must exist
 
-            if (constValue instanceof CharStringConstant)
-                {
-                handle = xString.INSTANCE.createConstHandle(constValue);
-                }
-            else if (constValue instanceof IntConstant)
-                {
-                handle = xInt64.INSTANCE.createConstHandle(constValue);
-                }
-            else if (constValue instanceof MethodConstant)
-                {
-                handle = xMethod.INSTANCE.createConstHandle(constValue);
-                if (handle == null)
-                    {
-                    // TODO: replace with function when implemented
-                    handle = xFunction.INSTANCE.createConstHandle(constValue);
-                    }
-                }
-            else if (constValue instanceof ClassTypeConstant)
-                {
-                handle = xClass.INSTANCE.createConstHandle(constValue);
-                }
-            else if (constValue instanceof ModuleConstant)
-                {
-                handle = xModule.INSTANCE.createConstHandle(constValue);
-                }
-
-            if (handle == null)
-                {
-                throw new UnsupportedOperationException("Unknown constant " + constValue);
-                }
+            handle = ensureConstHandle(constValue);
 
             registerConstHandle(nValueConstId, handle);
             }
 
         return handle;
+        }
+
+    public ObjectHandle ensureConstHandle(Constant constValue)
+        {
+        if (constValue instanceof CharStringConstant)
+            {
+            return xString.INSTANCE.createConstHandle(constValue, this);
+            }
+
+        if (constValue instanceof IntConstant)
+            {
+            return xInt64.INSTANCE.createConstHandle(constValue, this);
+            }
+
+        if (constValue instanceof ClassTypeConstant)
+            {
+            return xClass.INSTANCE.createConstHandle(constValue, this);
+            }
+
+        if (constValue instanceof ModuleConstant)
+            {
+            return xModule.INSTANCE.createConstHandle(constValue, this);
+            }
+
+        if (constValue instanceof TupleConstant)
+            {
+            return xTuple.INSTANCE.createConstHandle(constValue, this);
+            }
+
+        if (constValue instanceof MethodConstant)
+            {
+            ObjectHandle hValue = xMethod.INSTANCE.createConstHandle(constValue, this);
+            if (hValue == null)
+                {
+                // TODO: replace with function when implemented
+                return xFunction.INSTANCE.createConstHandle(constValue, this);
+                }
+            }
+
+        throw new UnsupportedOperationException("Unknown constant " + constValue);
         }
 
     public String getPropertyName(int nValueConstId)
@@ -97,9 +112,9 @@ public class ObjectHeap
         {
         return m_mapConstants.get(nValueConstId);
         }
+
     protected void registerConstHandle(int nValueConstId, ObjectHandle handle)
         {
         m_mapConstants.put(nValueConstId, handle);
         }
-
     }

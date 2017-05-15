@@ -3,12 +3,9 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.CharStringConstant;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
+import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -24,7 +21,9 @@ public class xString
         {
         super(types, "x:String", "x:Object", Shape.Const);
 
-        addImplement("x:collections.Sequence<x:Char>");
+        // TODO: this is not processing correctly at the moment since it needs to recurse
+        // a type name resolution of Sequence<x:Char> -> UniformIndex<x:Int,x:Char>
+        // addImplement("x:collections.Sequence<x:Char>");
 
         INSTANCE = this;
         }
@@ -45,7 +44,7 @@ public class xString
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant)
+    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         return constant instanceof CharStringConstant ? new StringHandle(f_clazzCanonical,
                 ((CharStringConstant) constant).getValue()) : null;
@@ -66,6 +65,20 @@ public class xString
                         ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
                         return frame.assignValue(iReturn, hResult);
                     }
+                break;
+
+            case 2:
+                switch (method.f_sName)
+                    {
+                    case "indexOf": // indexOf(String s, Int n)
+                        String s = ((StringHandle) ahArg[0]).getValue();
+                        int n = (int) ((JavaLong) ahArg[1]).getValue();
+
+                        ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.indexOf(s, n));
+                        return frame.assignValue(iReturn, hResult);
+                    }
+                break;
+
             }
 
         return super.invokeNative(frame, hTarget, method, ahArg, iReturn);

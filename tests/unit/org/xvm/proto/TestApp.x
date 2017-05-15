@@ -230,4 +230,30 @@ module TestApp
         rs.set("zero");
         print(as[0]);
         }
+
+     static testTuple()
+        {
+        Tuple t = ("zero", 0);
+        print(t[0]);
+        print(t[1]);
+
+        t[0] = "t";
+        t[1] = 2;
+
+        Tuple<String, Int> t2 = t;
+        int of = "the test".indexOf(t2); // same as "the test".indexOf("t", 2);
+        print(of);
+
+        print(test(1));
+        print(test(-1));
+
+        static conditional String test(Int i)
+             {
+             if (i > 0)
+                {
+                return true, "positive"
+                }
+             return false;
+             }
+        }
     }

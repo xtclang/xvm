@@ -2,6 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,11 +24,17 @@ public interface TypeName
 
     // load the dependant classes of the type for the specified template
     // (some elements may stay "formal" (unresolved)
-    void resolveDependencies(TypeCompositionTemplate template);
+    void loadDependencies(TypeCompositionTemplate template);
 
     // return a resolved Type based on the actual types
     Type resolveFormalTypes(TypeComposition clz);
 
+    default TypeName replaceFormalTypes(List<String> listFormalNames, List<TypeName> listActualTypes)
+        {
+        return this;
+        }
+
+    // check if the this TypeName matches the specified TypeConstant
     default boolean isMatch(TypeConstant constType)
         {
         if (isResolved())
@@ -236,7 +243,7 @@ public interface TypeName
             }
 
         @Override
-        public void resolveDependencies(TypeCompositionTemplate template)
+        public void loadDependencies(TypeCompositionTemplate template)
             {
             if (m_sName.equals(THIS_TYPE))
                 {
@@ -244,7 +251,7 @@ public interface TypeName
                 m_template = template;
                 m_fActual = true;
                 }
-            else if (!Arrays.asList(template.f_asFormalType).contains(m_sName))
+            else if (!template.f_listFormalType.contains(m_sName))
                 {
                 m_sName = template.f_types.replaceAlias(m_sName);
 
@@ -271,6 +278,22 @@ public interface TypeName
             }
 
         @Override
+        public TypeName replaceFormalTypes(List<String> listFormalNames, List<TypeName> listActualTypes)
+            {
+            int index = listFormalNames.indexOf(m_sName);
+
+            if (index >= 0 && index < listActualTypes.size())
+                {
+                SimpleTypeName tnReplace = (SimpleTypeName) listActualTypes.get(index);
+                if (!tnReplace.m_sName.equals(m_sName))
+                    {
+                    return tnReplace;
+                    }
+                }
+            return this;
+            }
+
+        @Override
         public String toString()
             {
             return m_sName;
@@ -293,11 +316,11 @@ public interface TypeName
             }
 
         @Override
-        public void resolveDependencies(TypeCompositionTemplate template)
+        public void loadDependencies(TypeCompositionTemplate template)
             {
             for (TypeName t : m_listTypeName)
                 {
-                t.resolveDependencies(template);
+                t.loadDependencies(template);
                 }
             }
 
@@ -327,13 +350,13 @@ public interface TypeName
             }
 
         @Override
-        public void resolveDependencies(TypeCompositionTemplate template)
+        public void loadDependencies(TypeCompositionTemplate template)
             {
             m_sActualName = template.f_types.replaceAlias(m_sActualName);
 
             m_template = template.f_types.ensureTemplate(m_sActualName);
 
-            super.resolveDependencies(template);
+            super.loadDependencies(template);
             }
 
         @Override
@@ -352,6 +375,28 @@ public interface TypeName
         public String getSimpleName()
             {
             return m_sActualName;
+            }
+
+        @Override
+        public TypeName replaceFormalTypes(List<String> listFormalNames, List<TypeName> listActualTypes)
+            {
+            TypeName[] atnReplace = new TypeName[m_listTypeName.size()];
+            int i = 0;
+            boolean fChanged = false;
+            for (TypeName tn : m_listTypeName)
+                {
+                TypeName tnReplace = tn.replaceFormalTypes(listFormalNames, listActualTypes);
+                fChanged |= tnReplace != tn;
+                atnReplace[i++] = tnReplace;
+                }
+
+            if (fChanged)
+                {
+                GenericTypeName tnReplace = new GenericTypeName(m_sActualName);
+                tnReplace.m_listTypeName = Arrays.asList(atnReplace);
+                return tnReplace;
+                }
+            return this;
             }
 
         @Override

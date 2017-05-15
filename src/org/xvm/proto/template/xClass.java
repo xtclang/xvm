@@ -59,7 +59,7 @@ public class xClass
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant)
+    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         if (constant instanceof ClassTypeConstant)
             {
@@ -70,7 +70,7 @@ public class xClass
             TypeCompositionTemplate target = f_types.getTemplate(sTarget);
             if (target.isSingleton())
                 {
-                return target.createConstHandle(constant);
+                return target.createConstHandle(constant, heap);
                 }
 
             TypeComposition clzTarget = target.resolve(constClass);

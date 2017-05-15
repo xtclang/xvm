@@ -370,7 +370,8 @@ public abstract class Constant
         Method,
         Parameter,
         Unresolved,
-        ClassType;
+        ClassType,
+        Tuple;
 
         /**
          * Determine if structures of the type are length-encoded when assembled.

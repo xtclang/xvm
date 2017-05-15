@@ -86,7 +86,7 @@ public class Container
                 throw new IllegalArgumentException("Missing run() method for " + m_constModule);
                 }
 
-            ModuleHandle hModule = (ModuleHandle) module.createConstHandle(m_constModule);
+            ModuleHandle hModule = (ModuleHandle) module.createConstHandle(m_constModule, f_heapGlobal);
             FunctionHandle hFunction = xFunction.makeHandle(mtRun);
 
             f_contextMain.start("main");

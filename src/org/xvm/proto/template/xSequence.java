@@ -15,7 +15,7 @@ public class xSequence
         {
         super(types, "x:collections.Sequence<ElementType>", "x:Object", Shape.Interface);
 
-        addImplement("x:UniformIndex<x:Int, ElementType>");
+        addImplement("x:UniformIndex<x:Int,ElementType>");
         addImplement("x:Iterable<ElementType>");
         }
 

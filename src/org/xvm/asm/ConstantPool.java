@@ -251,6 +251,20 @@ public class ConstantPool
         }
 
     /**
+     * Given an array of constants, obtain a TupleConstant that represents the corresponding tuple.
+     *
+     * @param aconst  an array of conditions
+     *
+     * @return a TupleConstant
+     */
+    public TupleConstant ensureTupleConstant(Constant[] aconst)
+        {
+        checkElementsNonNull(aconst);
+
+        return (TupleConstant) register(new TupleConstant(this, aconst.clone()));
+        }
+
+    /**
      * Given the specified name, obtain a NamedCondition that represents a test for the name being
      * specified.
      *
@@ -315,7 +329,7 @@ public class ConstantPool
         }
 
     /**
-     * Given the two conditions, obtain an AllCondition that represents them.
+     * Given an array of conditions, obtain an AllCondition that represents them.
      *
      * @param acondition  an array of conditions
      *

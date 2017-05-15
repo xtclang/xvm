@@ -2,13 +2,9 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -42,7 +38,7 @@ public class xInt64
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant)
+    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
             (((IntConstant) constant).getValue().getLong())) : null;

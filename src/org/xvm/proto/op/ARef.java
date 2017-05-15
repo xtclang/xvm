@@ -1,7 +1,7 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle.ArrayHandle;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.Type;
@@ -34,12 +34,12 @@ public class ARef extends Op
 
         try
             {
-            ArrayHandle hArray = (ArrayHandle) frame.getArgument(f_nTargetValue);
+            ObjectHandle hArray = frame.getArgument(f_nTargetValue);
             Type typeReferent = hArray.f_clazz.f_atGenericActual[0];
 
             TypeComposition clzRef = xRef.INSTANCE.resolve(new Type[]{typeReferent});
 
-            xRef.ArrayRefHandle hRef = new xRef.ArrayRefHandle(clzRef,
+            xRef.IndexedRefHandle hRef = new xRef.IndexedRefHandle(clzRef,
                     hArray, frame.getIndex(f_nIndexValue));
 
             hException = frame.assignValue(f_nRetValue, hRef);
