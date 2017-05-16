@@ -50,7 +50,7 @@ public class FileStructure
         {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
-        // validate the combination of passed names
+        // module name required
         if (sModule == null)
             {
             throw new IllegalArgumentException("module name required");
@@ -60,6 +60,7 @@ public class FileStructure
         this.module     = new ModuleStructure(this, pool.ensureModuleConstant(sModule));
         this.nMajorVer  = VERSION_MAJOR_CUR;
         this.nMinorVer  = VERSION_MINOR_CUR;
+
 
         // TODO
         this.modulesByName.put(sModule, module);

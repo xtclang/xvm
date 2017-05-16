@@ -5,7 +5,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.StructureContainer;
-import org.xvm.asm.StructureContainer.ClassContainer;
+import org.xvm.asm.ClassContainer;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;

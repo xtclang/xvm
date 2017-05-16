@@ -2,11 +2,10 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.StructureContainer;
-import org.xvm.asm.StructureContainer.MethodContainer;
+import org.xvm.asm.MethodContainer;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;

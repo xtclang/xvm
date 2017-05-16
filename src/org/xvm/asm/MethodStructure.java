@@ -2,7 +2,6 @@ package org.xvm.asm;
 
 
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.StructureContainer.ClassContainer;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
@@ -41,60 +40,39 @@ public class MethodStructure
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    /**
-     * Obtain the MethodConstant that holds the identity of this Method.
-     *
-     * @return the MethodConstant representing the identity of this
-     *         MethodStructure
-     */
-    public MethodConstant getMethodConstant()
+    // TODO
+
+
+    // ----- Component methods ---------------------------------------------------------------------
+
+    @Override
+    public String getName()
         {
-        return (MethodConstant) getIdentityConstant();
+        return getIdentityConstant().getName();
         }
 
-    /**
-     * When the property is created, if it does not have a known type, one can be temporarily
-     * created that represents an eventually-resolved type.
-     *
-     * @param sType  the type string to use for the time being
-     */
-    public void provideTemporaryType(String sType)
+    @Override
+    protected Component getEldestSibling()
         {
-        assert m_type == null;
-        m_type = new UnresolvedTypeConstant(getConstantPool(), sType);
-        }
+        Component parent = getParent();
+        assert parent != null;
 
-    public void resolveType(TypeConstant type)
-        {
-        assert type != null;
-        assert m_type instanceof UnresolvedTypeConstant;
-        assert !((UnresolvedTypeConstant) m_type).isTypeResolved();
+        Component sibling = parent.getMethodByConstantMap().get(getIdentityConstant());
+        assert sibling != null;
 
-        ((UnresolvedTypeConstant) m_type).resolve(type);
-        m_type = type;
-        }
-
-    /**
-     * Obtain the PropertyConstant that holds the identity of this Property.
-     *
-     * @return the PropertyConstant representing the identity of this
-     *         PropertyStructure
-     */
-    public PropertyConstant getPropertyConstant()
-        {
-        return (PropertyConstant) getIdentityConstant();
-        }
-
-    /**
-     * @return the TypeConstant representing the data type of the property value
-     */
-    public TypeConstant getTypeConstant()
-        {
-        return m_type;
+        return sibling;
         }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public MethodConstant getIdentityConstant()
+        {
+        return (MethodConstant) super.getIdentityConstant();
+        }
+
+    // TODO review section
 
     @Override
     protected void disassemble(DataInput in)
@@ -137,5 +115,8 @@ public class MethodStructure
 
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * TODO this seems wrong like it was copied from Property
+     */
     private TypeConstant m_type;
     }

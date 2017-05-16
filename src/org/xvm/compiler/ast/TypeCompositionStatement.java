@@ -1,8 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ClassContainer;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.PackageContainer;
 import org.xvm.asm.StructureContainer;
 
 import org.xvm.compiler.Compiler;
@@ -151,10 +152,10 @@ public class TypeCompositionStatement
                     break;
 
                 case PACKAGE:
-                    if (container instanceof StructureContainer.PackageContainer)
+                    if (container instanceof PackageContainer)
                         {
                         // TODO check for duplicate
-                        setStructure(((StructureContainer.PackageContainer) container).ensurePackage((String) name.getValue()));
+                        setStructure(((PackageContainer) container).ensurePackage((String) name.getValue()));
                         }
                     else
                         {
@@ -170,10 +171,10 @@ public class TypeCompositionStatement
                 case ENUM:
                 case TRAIT:
                 case MIXIN:
-                    if (container instanceof StructureContainer.ClassContainer)
+                    if (container instanceof ClassContainer)
                         {
                         // TODO check for duplicate
-                        setStructure(((StructureContainer.ClassContainer) container).ensureClass((String) name.getValue()));
+                        setStructure(((ClassContainer) container).ensureClass((String) name.getValue()));
                         }
                     else
                         {

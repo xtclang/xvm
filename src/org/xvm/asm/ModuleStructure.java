@@ -11,7 +11,6 @@ import java.util.TreeSet;
 
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.VersionConstant;
-import org.xvm.asm.StructureContainer.PackageContainer;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;

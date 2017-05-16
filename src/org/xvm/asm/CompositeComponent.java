@@ -1,8 +1,17 @@
-
 package org.xvm.asm;
 
 
+import java.io.PrintWriter;
+
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.util.IdentityArrayList;
 
 
 /**
@@ -29,6 +38,18 @@ public class CompositeComponent
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return a read-only list of components that are represented by this composite component
+     */
+    public List<Component> components()
+        {
+        List<Component> list = m_siblings;
+        assert (list = Collections.unmodifiableList(list)) != null;
+        return list;
+        }
+
+    // ----- Component methods ---------------------------------------------------------------------
 
     @Override
     public Constant getIdentityConstant()
@@ -223,9 +244,262 @@ public class CompositeComponent
         }
 
     @Override
+    protected Map<String, Component> getChildByNameMap()
+        {
+        return m_siblings.get(0).getChildByNameMap();
+        }
+
+    @Override
+    protected Map<String, Component> ensureChildByNameMap()
+        {
+        return m_siblings.get(0).ensureChildByNameMap();
+        }
+
+    @Override
+    protected Map<MethodConstant, MethodStructure> getMethodByConstantMap()
+        {
+        return m_siblings.get(0).getMethodByConstantMap();
+        }
+
+    @Override
+    protected Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
+        {
+        return m_siblings.get(0).ensureMethodByConstantMap();
+        }
+
+    @Override
+    protected void addChild(Component child)
+        {
+        // TODO - figure out how to add a child to multiple components
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    protected void addAndCondition(ConditionalConstant cond)
+        {
+        for (Component sibling : m_siblings)
+            {
+            sibling.addAndCondition(cond);
+            }
+        }
+
+    @Override
+    protected void addOrCondition(ConditionalConstant cond)
+        {
+        for (Component sibling : m_siblings)
+            {
+            sibling.addOrCondition(cond);
+            }
+        }
+
+    @Override
     protected boolean isBodyIdentical(Component that)
         {
+        if (that instanceof CompositeComponent)
+            {
+            List<Component> listThis = this.m_siblings;
+            List<Component> listThat = ((CompositeComponent) that).m_siblings;
+            if (listThis.size() == listThat.size())
+                {
+                for (int i = 0, c = listThis.size(); i < c; ++i)
+                    {
+                    if (!listThis.get(i).isBodyIdentical(listThat.get(i)))
+                        {
+                        return false;
+                        }
+                    }
+                return true;
+                }
+            }
+
         return false;
+        }
+
+    @Override
+    public Component getChild(Constant constId)
+        {
+        IdentityArrayList<Component> listChild = new IdentityArrayList<>();
+        for (Component sibling : m_siblings)
+            {
+            Component child = sibling.getChild(constId);
+            if (child != null)
+                {
+                if (child instanceof CompositeComponent)
+                    {
+                    for (Component eachChild : ((CompositeComponent) child).m_siblings)
+                        {
+                        listChild.addIfAbsent(eachChild);
+                        }
+                    }
+                else
+                    {
+                    listChild.addIfAbsent(child);
+                    }
+                }
+            }
+
+        if (listChild.isEmpty())
+            {
+            return null;
+            }
+
+        if (listChild.size() == 1)
+            {
+            return listChild.get(0);
+            }
+
+        return new CompositeComponent(this, listChild);
+        }
+
+    @Override
+    public Component getChild(String sName)
+        {
+        IdentityArrayList<Component> listChild = new IdentityArrayList<>();
+        for (Component sibling : m_siblings)
+            {
+            Component child = sibling.getChild(sName);
+            if (child != null)
+                {
+                if (child instanceof CompositeComponent)
+                    {
+                    for (Component eachChild : ((CompositeComponent) child).m_siblings)
+                        {
+                        listChild.addIfAbsent(eachChild);
+                        }
+                    }
+                else
+                    {
+                    listChild.addIfAbsent(child);
+                    }
+                }
+            }
+
+        if (listChild.isEmpty())
+            {
+            return null;
+            }
+
+        if (listChild.size() == 1)
+            {
+            return listChild.get(0);
+            }
+
+        return new CompositeComponent(this, listChild);
+        }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public Iterator<? extends XvmStructure> getContained()
+        {
+        // TODO this is not correct, if some of the structures have additional "contained" structures, i.e. need Component.getBodyContained()
+        return m_siblings.get(0).getContained();
+        }
+
+    @Override
+    public boolean isModified()
+        {
+        for (Component sibling : m_siblings)
+            {
+            if (sibling.isModified())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
+    protected boolean isBodyModified()
+        {
+        for (Component sibling : m_siblings)
+            {
+            if (sibling.isBodyModified())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
+    protected void markModified()
+        {
+        for (Component sibling : m_siblings)
+            {
+            sibling.markModified();
+            }
+        }
+
+    @Override
+    protected void resetModified()
+        {
+        for (Component sibling : m_siblings)
+            {
+            sibling.resetModified();
+            }
+        }
+
+    @Override
+    protected void dump(PrintWriter out, String sIndent)
+        {
+        out.print(sIndent);
+        out.println(toString());
+
+        for (Component sibling : m_siblings)
+            {
+            sibling.dump(out, nextIndent(sIndent));
+            }
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public int hashCode()
+        {
+        int n = 0;
+        for (Component sibling : m_siblings)
+            {
+            n ^= sibling.hashCode();
+            }
+        return n;
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        if (obj instanceof CompositeComponent)
+            {
+            CompositeComponent that = (CompositeComponent) obj;
+            return this.m_siblings.equals(that.m_siblings);
+            }
+        return false;
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+        sb.append("CompositeComponent{");
+
+        List<Component> list = m_siblings;
+        for (int i = 0, c = list.size(); i < c; ++i)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+
+            sb.append('[')
+              .append(i)
+              .append("]=")
+              .append(list.get(i));
+            }
+
+        sb.append('}');
+        return sb.toString();
         }
 
 

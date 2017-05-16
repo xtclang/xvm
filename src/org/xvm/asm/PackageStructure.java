@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
-import org.xvm.asm.StructureContainer.PackageContainer;
 
 import org.xvm.util.Handy;
 

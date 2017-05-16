@@ -11,8 +11,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.StructureContainer.ClassContainer;
-
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
 

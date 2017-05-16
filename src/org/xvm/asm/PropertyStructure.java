@@ -3,8 +3,6 @@ package org.xvm.asm;
 
 import org.xvm.asm.constants.PropertyConstant;
 
-import org.xvm.asm.StructureContainer.MethodContainer;
-
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 

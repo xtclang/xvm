@@ -1,22 +1,28 @@
-
 package org.xvm.asm;
 
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.IOException;
+
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-import org.xvm.asm.constants.AnyCondition;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NamedConstant;
 
-import java.io.DataInput;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import org.xvm.util.LinkedIterator;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+
 
 /**
  * The Component data structure is the base class for the module, package, class, property, method,
@@ -24,12 +30,8 @@ import static org.xvm.util.Handy.readMagnitude;
  * Component encapsulates a number of complex aspects of the XVM module format, most notably the
  * conditional structure of XVM modules.
  * <p/>
- * Normally, an XVM structure has a single parent structure and any number of child structures, but
- * a Component can differ dramatically from this model, in that it can have any number of parent
- * Conponents (only one of which at most is valid for a given condition), and it can have any number
- * of child Components, of which only some are (perhaps none is) appropriate for a given condition.
- * <p/>
- * The Component also tracks modifications.
+ * The Component has an identity, tracks some standard flags / settings, and keeps track of whether
+ * it has been modified.
  * <p/>
  * Here is the Component containment model, with container type on the left and containee type
  * across the top:
@@ -52,6 +54,23 @@ import static org.xvm.util.Handy.readMagnitude;
  * <li><i>(Multi-)Method + Property + Class + Package</i> - the {@link PackageContainer
  *     PackageContainer}</li>
  * </ul>
+ * <p/>
+ * Normally, an XVM structure has a single parent structure and any number of child structures, but
+ * a Component can differ dramatically from this model, in that it can have any number of parent
+ * Conponents (only one of which at most is valid for a given condition), and it can have any number
+ * of child Components, of which only some are (perhaps none is) appropriate for a given condition.
+ * <p/>
+ * The persistent form of a Component is relatively complicated, in order to handle the potentially
+ * conditional nature of the component, the ability to have several components (called siblings)
+ * that share the same spot in the namespace (based on condition), and the ability to defer the
+ * deserialization of the component's children. The first byte of the persistent component either
+ * has the {@link #CONDITIONAL_BIT} set or it doesn't; if the bit is not set, then the first byte
+ * is actually the first byte of the component's "body", but if it is set, then the next value in
+ * the stream is the number of siblings, followed by pairs of condition constant id and component
+ * body. After the component body (or after the last component body, if the condition bit was set),
+ * there is a length-encoded "children" section, which contains all of the nested components; a
+ * length of 0 indicates that there are no children. The children section is composed of the number
+ * of child components, followed by a sequence of that many components.
  *
  * @author cp 2017.05.02
  */
@@ -77,8 +96,8 @@ public abstract class Component
                         boolean fSynthetic, Format format, Constant constId, ConditionalConstant condition)
         {
         this(xsParent, (format.ordinal() << FORMAT_SHIFT) | (access.ordinal() << ACCESS_SHIFT)
-                | (fAbstract ? ABSTRACT_BIT : 0) | (fStatic ? STATIC_BIT : 0) | (fSynthetic ? SYNTHETIC_BIT : 0),
-                constId, condition);
+                | (fAbstract ? ABSTRACT_BIT : 0) | (fStatic ? STATIC_BIT : 0)
+                | (fSynthetic ? SYNTHETIC_BIT : 0), constId, condition);
         }
 
     /**
@@ -118,16 +137,18 @@ public abstract class Component
 
     /**
      * Read a component from the stream. This abstracts out all of the various component types that
-     * could be encountered in the stream, and all of the complexity surrounding conditions.
+     * could be encountered in the stream, and all of the complexity surrounding conditions and
+     * lazy deserialization.
      *
-     * @param xsParent
-     * @param in
+     * @param xsParent  the parent XvmStructure
+     * @param in        the DataInput to read from
+     * @param fLazy     true to defer the child deserialization until necessary
      *
-     * @return
+     * @return the Component that was read
      *
      * @throws IOException  if there's a problem reading the component
      */
-    public static Component readComponent(XvmStructure xsParent, DataInput in)
+    public static Component readComponent(XvmStructure xsParent, DataInput in, boolean fLazy)
             throws IOException
         {
         Component component = null;
@@ -165,7 +186,27 @@ public abstract class Component
                 }
             }
 
-        component.readComponentChildren(in);
+        int cb = readMagnitude(in);
+        if (cb > 0)
+            {
+            if (fLazy)
+                {
+                // just read the bytes for the children and store it off for later
+                byte[] ab = new byte[cb];
+                in.readFully(ab);
+                for (Component eachSibling = component; eachSibling != null; eachSibling = eachSibling.m_sibling)
+                    {
+                    // note that every sibling has a copy of all of the children; this is because
+                    // the byte[] serves as both the storage of those children and an indicator that
+                    // the deserialization of the children has been deferred
+                    eachSibling.m_abChildren = ab;
+                    }
+                }
+            else
+                {
+                component.readComponentChildren(in, fLazy);
+                }
+            }
         return component;
         }
 
@@ -174,11 +215,12 @@ public abstract class Component
      * if the child components are conditional. For all components (except for methods i.e. within
      * multi-methods), the children are identified by name.
      *
-     * @param in  the DataInput to read from.
+     * @param in     the DataInput to read from
+     * @param fLazy  true to defer the child deserialization until necessary
      *
      * @throws IOException  if there's a problem reading the component's children
      */
-    protected void readComponentChildren(DataInput in)
+    protected void readComponentChildren(DataInput in, boolean fLazy)
             throws IOException
         {
         // read component children
@@ -187,11 +229,12 @@ public abstract class Component
             {
             for (int i = 0; i < cKids; ++i)
                 {
-                Component kid = readComponent(this, in);
-                adopt(kid);
+                Component kid = readComponent(this, in, fLazy);
+                addChild(kid);
                 }
             }
         }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -239,7 +282,10 @@ public abstract class Component
         assert parent.getFormat() != Format.FILE;
 
         // need to get the grandparent and ask it for the parent
-        return parent.getParent().getChild(parent.getName());
+        Component grandparent = parent.getParent();
+        return parent instanceof MethodStructure
+                ? grandparent.getChild(parent.getIdentityConstant())
+                : grandparent.getChild(parent.getName());
         }
 
     /**
@@ -351,8 +397,6 @@ public abstract class Component
      */
     public String getName()
         {
-        // this will need to be overridden by File (file name), Module (qualified module name), and
-        // Method (which has a signature for its identity)
         return ((NamedConstant) getIdentityConstant()).getName();
         }
 
@@ -368,19 +412,41 @@ public abstract class Component
             return this;
             }
 
-        // this component is either known by its name or by its identity constant (methods only)
-        Component sibling;
-        if (this instanceof MethodStructure)
-            {
-            sibling = parent.getMethodByConstantMap().get(getIdentityConstant());
-            }
-        else
-            {
-            sibling = parent.getChildByNameMap().get(getName());
-            }
-
+        Component sibling = parent.getChildByNameMap().get(getName());
         assert sibling != null;
         return sibling;
+        }
+
+    /**
+     * Iterate all of the siblings of this component, including this component.
+     *
+     * @return an Iterator of sibling components, including this component
+     */
+    protected Iterator<Component> siblings()
+        {
+        return new Iterator<Component>()
+            {
+            private Component nextSibling = getEldestSibling();
+
+            @Override
+            public boolean hasNext()
+                {
+                return nextSibling != null;
+                }
+
+            @Override
+            public Component next()
+                {
+                Component sibling = nextSibling;
+                if (sibling == null)
+                    {
+                    throw new NoSuchElementException();
+                    }
+
+                nextSibling = sibling.m_sibling;
+                return sibling;
+                }
+            };
         }
 
     /**
@@ -393,6 +459,7 @@ public abstract class Component
      */
     protected Map<String, Component> getChildByNameMap()
         {
+        ensureChildren();
         Map<String, Component> map = m_childByName;
         return map == null ? Collections.EMPTY_MAP : map;
         }
@@ -406,16 +473,16 @@ public abstract class Component
      */
     protected Map<String, Component> ensureChildByNameMap()
         {
+        ensureChildren();
         Map<String, Component> map = m_childByName;
         if (map == null)
             {
             map = new HashMap<>(7);
 
-            Component sibling = getEldestSibling();
-            while (sibling != null)
+            // store the map on every one of the siblings (including this component)
+            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
                 {
-                sibling.m_childByName = map;
-                sibling = sibling.m_sibling;
+                siblings.next().m_childByName = map;
                 }
 
             // the corresponding field on this component should now be initialized
@@ -434,6 +501,7 @@ public abstract class Component
      */
     protected Map<MethodConstant, MethodStructure> getMethodByConstantMap()
         {
+        ensureChildren();
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
         return map == null ? Collections.EMPTY_MAP : map;
         }
@@ -449,21 +517,118 @@ public abstract class Component
      */
     protected Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
         {
+        ensureChildren();
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
         if (map == null)
             {
             map = new HashMap<>(7);
 
-            Component sibling = getEldestSibling();
-            while (sibling != null)
+            // store the map on every one of the siblings (including this component)
+            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
                 {
-                sibling.m_methodByConstant = map;
-                sibling = sibling.m_sibling;
+                siblings.next().m_methodByConstant = map;
                 }
 
+            // the corresponding field on this component should now be initialized
             assert m_methodByConstant == map;
             }
         return map;
+        }
+
+    /**
+     * Make sure that any deferred child deserialization is complete
+     */
+    private void ensureChildren()
+        {
+        if (m_abChildren != null)
+            {
+            // first grab the deferred deserialization bytes and then make sure neither this nor any
+            // sibling retains hold of it (since it indicates that deserialization is deferred)
+            byte[] ab = m_abChildren;
+            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
+                {
+                siblings.next().m_abChildren = null;
+                }
+
+            // now read in the children
+            DataInput in = new DataInputStream(new ByteArrayInputStream(ab));
+            try
+                {
+                readComponentChildren(in, true);
+                }
+            catch (IOException e)
+                {
+                throw new IllegalStateException("IOException occurred in " + getIdentityConstant()
+                        + " during deferred read of child components", e);
+                }
+            }
+        }
+
+    /**
+     * Adopt the specified child.
+     *
+     * @param child  the new child of this component
+     */
+    protected void addChild(Component child)
+        {
+        ensureChildren();
+
+        // if the child is a method, it will be stored by its signature; otherwise, it is stored by
+        // its name
+        Map<Object, Component> kids;
+        Object id;
+        if (child instanceof MethodStructure)
+            {
+            kids = (Map) ensureMethodByConstantMap();
+            id   = child.getIdentityConstant();
+            }
+        else
+            {
+            kids = (Map) ensureChildByNameMap();
+            id   = child.getName();
+            }
+
+        Component sibling = kids.get(id);
+        if (sibling == null)
+            {
+            kids.put(id, child);
+            }
+        else
+            {
+            // there has to be a condition that sets the new kid apart from its siblings
+            // TODO eventually we need to evaluate the conditions to make sure that they are mut-ex
+            if (child.m_cond == null)
+                {
+                throw new IllegalStateException("cannot add child with same ID (" + id
+                        + ") if condition == null");
+                }
+            if (sibling.m_cond == null)
+                {
+                throw new IllegalStateException("cannot add child if sibling with same ID (" + id
+                        + ") has condition == null");
+                }
+
+            // make sure that the parent is set correctly
+            child.setContaining(this);
+
+            // the new kid gets put at the end of the linked list of siblings
+            Component lastSibling = sibling;
+            while (lastSibling.m_sibling != null)
+                {
+                lastSibling = lastSibling.m_sibling;
+                }
+            lastSibling.m_sibling = child;
+
+            // TODO what if the child we're adding already has children of it's own?
+            assert child.m_abChildren       == null;
+            assert child.m_childByName      == null;
+            assert child.m_methodByConstant == null;
+
+            // make sure that the various sibling-shared fields are configured
+            child.m_abChildren       = sibling.m_abChildren;
+            child.m_childByName      = sibling.m_childByName;
+            child.m_methodByConstant = sibling.m_methodByConstant;
+            }
         }
 
     /**
@@ -521,23 +686,9 @@ public abstract class Component
      */
     public Component getChild(Constant constId)
         {
-        Component firstSibling = null;
-        if (constId instanceof MethodConstant)
-            {
-            Map<MethodConstant, MethodStructure> map = m_methodByConstant;
-            if (map != null)
-                {
-                firstSibling = m_methodByConstant.get(constId);
-                }
-            }
-        else
-            {
-            Map<String, Component> map = m_childByName;
-            if (map != null)
-                {
-                firstSibling = map.get(((NamedConstant) constId).getName());
-                }
-            }
+        Component firstSibling = constId instanceof MethodConstant
+                ? getMethodByConstantMap().get(constId)
+                : getChildByNameMap().get(((NamedConstant) constId).getName());
 
         // common result: nothing for that constant
         if (firstSibling == null)
@@ -602,12 +753,6 @@ public abstract class Component
             return firstSibling;
             }
 
-
-        if (firstSibling.m_sibling == null && firstSibling.m_cond == null)
-            {
-            return firstSibling;
-            }
-
         AssemblerContext ctx     = getFileStructure().getContext();
         List<Component>  matches = new ArrayList<>();
 
@@ -627,11 +772,66 @@ public abstract class Component
         return new CompositeComponent(this, matches);
         }
 
-    protected void registerChild(Component child)
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public Iterator<? extends XvmStructure> getContained()
         {
-        // TODO need a way to merge if there's already a child by the same name:
-        // 1) validate that there are no collisions, i.e. conditions must not overlap
-        // 2) the child maps will need to be merged, and children will need to
+        Iterator<? extends XvmStructure> iter = null;
+
+        if (m_childByName != null)
+            {
+            iter = m_childByName.values().iterator();
+            }
+
+        if (m_methodByConstant != null)
+            {
+            Iterator<? extends XvmStructure> iter2 = m_methodByConstant.values().iterator();
+            iter = iter == null ? iter2 : new LinkedIterator(iter, iter2);
+            }
+
+        return iter == null ? Collections.emptyIterator() : iter;
+        }
+
+    @Override
+    public boolean isModified()
+        {
+        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.m_sibling)
+            {
+            if (eachSibling.isBodyModified())
+                {
+                return true;
+                }
+            }
+        return super.isModified();
+        }
+
+    protected boolean isBodyModified()
+        {
+        return m_fModified;
+        }
+
+    @Override
+    protected void markModified()
+        {
+        m_fModified = true;
+        }
+
+    @Override
+    protected void resetModified()
+        {
+        for (Component eachSibling = this; eachSibling != null; eachSibling = eachSibling.m_sibling)
+            {
+            eachSibling.m_fModified = false;
+            }
+        super.resetModified();
+        }
+
+    @Override
+    public String getDescription()
+        {
+        return "modified=" + m_fModified;
         }
 
 
@@ -656,6 +856,13 @@ public abstract class Component
         MULTIMETHOD,
         FILE;
 
+        /**
+         * Determine the format from a component's bit-flags value.
+         *
+         * @param nFlags  the 2-byte component bit-flags value
+         *
+         * @return the Format specified by the bit flags
+         */
         static Format fromFlags(int nFlags)
             {
             return valueOf((nFlags & FORMAT_MASK) >>> FORMAT_SHIFT);
@@ -696,13 +903,11 @@ public abstract class Component
                     throw new IOException("file is not instantiable");
 
                 case MODULE:
-                    component = null;
-                    // TODO ModuleStructure
+                    component = new ModuleStructure(xsParent, );
                     break;
 
                 case PACKAGE:
-                    component = null;
-                    // TODO PackageStructure
+                    component = new PackageStructure();
                     break;
 
                 case INTERFACE:
@@ -712,23 +917,19 @@ public abstract class Component
                 case MIXIN:
                 case TRAIT:
                 case SERVICE:
-                    component = null;
-                    // TODO ClassStructure
+                    component = new ClassStructure();
                     break;
 
                 case PROPERTY:
-                    component = null;
-                    // TODO PropertyStructure
+                    component = new PropertyStructure();
                     break;
 
                 case MULTIMETHOD:
-                    component = null;
-                    // TODO MultiMethodStructure
+                    component = new MultiMethodStructure();
                     break;
 
                 case METHOD:
-                    component = null;
-                    // TODO MethodStructure
+                    component = new MethodStructure();
                     break;
 
                 default:
@@ -814,6 +1015,13 @@ public abstract class Component
     private short m_nFlags;
 
     /**
+     * This is a non-deserialized form of all of the children. When a Component is read from disk,
+     * it can optionally lazily deserialize its children. This is possible because the "children"
+     * block is length-encoded.
+     */
+    private byte[] m_abChildren;
+
+    /**
      * This holds all of the children of all of the siblings, except for methods (because they are
      * identified by signature, not by name). Because a single child may turn out to be a child of
      * more than one sibling (based on which condition applies), the child can only determine its
@@ -828,4 +1036,10 @@ public abstract class Component
      * This holds all of the method children. See the explanation of {@link #m_childByName}.
      */
     private Map<MethodConstant, MethodStructure> m_methodByConstant;
+
+    /**
+     * For XVM structures that can be modified, this flag tracks whether or not
+     * a modification has occurred.
+     */
+    private boolean m_fModified;
     }
