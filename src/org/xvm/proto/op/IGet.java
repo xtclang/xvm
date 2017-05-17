@@ -4,24 +4,25 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
+
 import org.xvm.proto.template.IndexSupport;
 
 /**
- * A_SET rvalue-target, rvalue-index, rvalue-new-value ; T[Ti] = T
+ * A_GET rvalue-target, rvalue-index, lvalue-return ; T = T[Ti]
  *
  * @author gg 2017.03.08
  */
-public class ASet extends Op
+public class IGet extends Op
     {
     private final int f_nTargetValue;
     private final int f_nIndexValue;
-    private final int f_nValue;
+    private final int f_nRetValue;
 
-    public ASet(int nTarget, int nIndex, int nValue)
+    public IGet(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
         f_nIndexValue = nIndex;
-        f_nValue = nValue;
+        f_nRetValue = nRet;
         }
 
     @Override
@@ -35,8 +36,8 @@ public class ASet extends Op
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            hException = template.assignArrayValue(hTarget,
-                    frame.getIndex(f_nIndexValue), frame.getArgument(f_nValue));
+            hException = frame.assignValue(f_nRetValue,
+                    template.extractArrayValue(hTarget, frame.getIndex(f_nIndexValue)));
             }
         catch (ExceptionHandle.WrapperException e)
             {

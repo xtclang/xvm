@@ -285,15 +285,15 @@ public class xTestApp extends xModule
             new New_1G(adapter.getMethodConstId("x:collections.Array", "construct"),
                        -adapter.getClassTypeConstId("x:collections.Array<x:Int64>"),
                        -adapter.ensureValueConstantId(0), 0),
-            new ASet(0, -adapter.ensureValueConstantId(0), -adapter.ensureValueConstantId(1)),
-            new ASet(0, -adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(2)),
+            new ISet(0, -adapter.ensureValueConstantId(0), -adapter.ensureValueConstantId(1)),
+            new ISet(0, -adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(2)),
                     new X_Print(0),
 
             new Var(adapter.getClassTypeConstId("x:Int64")), // #1
-            new AGet(0, -adapter.ensureValueConstantId(0), 1),
+            new IGet(0, -adapter.ensureValueConstantId(0), 1),
             new X_Print(1),
 
-            new APreInc(0, -adapter.ensureValueConstantId(1), 1),
+            new IPreInc(0, -adapter.ensureValueConstantId(1), 1),
             new X_Print(1),
 
             new NVar(adapter.getClassTypeConstId("x:collections.Array<x:String>"),
@@ -305,16 +305,16 @@ public class xTestApp extends xModule
             new X_Print(2),
 
             new Var(adapter.getClassTypeConstId("x:String")), // #3
-            new AGet(2, -adapter.ensureValueConstantId(4), 3),
+            new IGet(2, -adapter.ensureValueConstantId(4), 3),
             new X_Print(3),
 
             new Var(adapter.getClassTypeConstId("x:Ref<x:String>")), // #4
-            new ARef(2, -adapter.ensureValueConstantId(0), 4),
+            new IRef(2, -adapter.ensureValueConstantId(0), 4),
             new Invoke_01(4, adapter.getMethodConstId("x:Ref", "get"), 3),
             new X_Print(3),
             new Invoke_10(4, adapter.getMethodConstId("x:Ref", "set"),
                              -adapter.ensureValueConstantId("zero")),
-            new AGet(2, -adapter.ensureValueConstantId(0), 3),
+            new IGet(2, -adapter.ensureValueConstantId(0), 3),
             new X_Print(3),
 
             new Return_0()
@@ -327,17 +327,27 @@ public class xTestApp extends xModule
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")),
             new INVar(adapter.getClassTypeConstId("x:Tuple"), adapter.ensureValueConstantId("t"),
                       -adapter.ensureValueConstantId(new Object[] {"zero", Integer.valueOf(0)})), // #0 (t)
+
             new Var(adapter.getClassTypeConstId("x:String")), // #1
-            new AGet(0, -adapter.ensureValueConstantId(0), 1),
+            new IGet(0, -adapter.ensureValueConstantId(0), 1),
             new X_Print(1),
 
             new Var(adapter.getClassTypeConstId("x:Int64")), // #2
-            new AGet(0, -adapter.ensureValueConstantId(1), 2),
+            new IGet(0, -adapter.ensureValueConstantId(1), 2),
             new X_Print(2),
+
+//            new NVar(adapter.getClassTypeConstId("x:Tuple"), adapter.ensureValueConstantId("t2")), // #3 (t2)
+//
+//            new IVar(adapter.getClassTypeConstId("x:String"), -adapter.ensureValueConstantId("t")), // #4
+//            new ISet(3, -adapter.ensureValueConstantId(0), 4),
+//
+//            new IVar(adapter.getClassTypeConstId("x:Int64"), adapter.ensureValueConstantId(2)), // #6
+//            new ISet(3, -adapter.ensureValueConstantId(1), 4),
+//            new X_Print(3),
 
             new Return_0()
             };
-        ftTestTuple.m_cVars = 3;
+        ftTestTuple.m_cVars = 10;
 
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);

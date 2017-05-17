@@ -11,10 +11,7 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeName.GenericTypeName;
 import org.xvm.proto.TypeName.SimpleTypeName;
 
-import org.xvm.proto.template.xArray;
-import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xObject;
+import org.xvm.proto.template.*;
 import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
@@ -86,6 +83,7 @@ public abstract class TypeCompositionTemplate
                 {
                 String sFormalType = asFormalType[i];
                 assert (!types.existsTemplate(sFormalType)); // must not be know
+                addGenericTypePropertyTemplate(sFormalType);
                 }
             f_sName = sName.substring(0, ofBracket);
             f_listFormalType = Arrays.asList(asFormalType);
@@ -142,6 +140,12 @@ public abstract class TypeCompositionTemplate
             propThis.deriveFrom(propPrev);
             }
         return propThis;
+        }
+
+    // add generic type property (TODO: type constraint)
+    protected PropertyTemplate addGenericTypePropertyTemplate(String sPropertyName)
+        {
+        return new GenericTypeTemplate(sPropertyName);
         }
 
     public PropertyTemplate getPropertyTemplate(String sPropertyName)
@@ -487,7 +491,7 @@ public abstract class TypeCompositionTemplate
         }
 
     // assign (Int i = 5;)
-    // @return null if this type doesn't take that constant
+    // @return an immutable handle or null if this type doesn't take that constant
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         return null;
@@ -674,12 +678,20 @@ public abstract class TypeCompositionTemplate
             }
 
         GenericHandle hThis = (GenericHandle) hTarget;
+        String sName = property.f_sName;
 
-        ObjectHandle hProp = hThis.m_mapFields.get(property.f_sName);
+        if (property instanceof GenericTypeTemplate)
+            {
+            Type type = hThis.f_clazz.resolveFormalType(sName);
+
+            return frame.assignValue(iReturn, xType.makeHandle(type));
+            }
+
+        ObjectHandle hProp = hThis.m_mapFields.get(sName);
 
         if (hProp == null)
             {
-            throw new IllegalStateException((hThis.m_mapFields.containsKey(property.f_sName) ?
+            throw new IllegalStateException((hThis.m_mapFields.containsKey(sName) ?
                     "Un-initialized property " : "Invalid property ") + property);
             }
 
@@ -707,7 +719,15 @@ public abstract class TypeCompositionTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        // TODO: check the access rights
+        if (!hTarget.isMutable())
+            {
+            return xException.makeHandle("Immutable object: " + hTarget);
+            }
+
+        if (property.isReadOnly())
+            {
+            return xException.makeHandle("Read-only property: " + property.f_sName);
+            }
 
         MethodTemplate method = hTarget.isStruct() ? null : property.m_templateSet;
 
@@ -834,11 +854,11 @@ public abstract class TypeCompositionTemplate
         public final String f_sName;
         public final TypeName f_typeName;
 
-        // indicate that the property is represented by a RefHandle
+        // indicates that the property is represented by a RefHandle
         private TypeCompositionTemplate m_templateRef;
 
-        // indicates that the property is represented by an AtomicRef
-        private boolean m_fAtomic = false;
+        // indicates that the property is safe to access from out-of-service-context
+        protected boolean m_fAtomic = false;
 
         public Constant.Access m_accessGet = Constants.Access.PUBLIC;
         public Constant.Access m_accessSet = Constants.Access.PUBLIC;
@@ -870,12 +890,18 @@ public abstract class TypeCompositionTemplate
             return m_accessSet == null;
             }
 
-        public void makeAtomic()
+        public void makeAtomicRef()
             {
             m_fAtomic = true;
-            m_templateRef = f_typeName.getSimpleName().equals("x:Int64")
-                ? f_types.ensureTemplate("x:AtomicIntNumber")
-                : f_types.ensureTemplate("x:AtomicRef");
+
+            if (f_typeName.getSimpleName().equals("x:Int64"))
+                {
+                makeRef("x:AtomicIntNumber");
+                }
+            else
+                {
+                makeRef("x:AtomicRef");
+                }
             }
 
         public boolean isAtomic()
@@ -985,6 +1011,19 @@ public abstract class TypeCompositionTemplate
                 }
             sb.append(' ').append(f_typeName).append(' ').append(f_sName);
             return sb.toString();
+            }
+        }
+
+    public class GenericTypeTemplate
+            extends PropertyTemplate
+        {
+        public GenericTypeTemplate(String sName)
+            {
+            super(sName, new SimpleTypeName("x:Type"));
+
+            makeReadOnly();
+
+            m_fAtomic = true;
             }
         }
 

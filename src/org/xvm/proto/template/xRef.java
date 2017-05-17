@@ -122,11 +122,15 @@ public class xRef
         public RefHandle(TypeComposition clazz)
             {
             super(clazz);
+
+            m_fMutable = true;
             }
 
         public RefHandle(TypeComposition clazz, Frame frame, int iVar)
             {
             super(clazz);
+
+            m_fMutable = true;
 
             assert iVar >= 0;
 

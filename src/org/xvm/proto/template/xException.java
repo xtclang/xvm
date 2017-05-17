@@ -56,11 +56,19 @@ public class xException
         return makeHandle(null, null);
         }
 
+    // ---- ObjectHandle helpers -----
+
+    public static ExceptionHandle immutable()
+        {
+        return xException.makeHandle("Immutable object");
+        }
+
     public static ExceptionHandle makeHandle(String sMessage)
         {
         ExceptionHandle hException = makeHandle(null, null);
 
-        INSTANCE.setFieldValue(hException, INSTANCE.getPropertyTemplate("text"), xString.makeHandle(sMessage));
+        INSTANCE.setFieldValue(hException,
+                INSTANCE.getPropertyTemplate("text"), xString.makeHandle(sMessage));
 
         return hException;
         }

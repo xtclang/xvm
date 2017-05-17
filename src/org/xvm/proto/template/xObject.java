@@ -84,9 +84,9 @@ public class xObject
         {
         return s_mapCanonical.computeIfAbsent(c, x ->
             {
-            Type[] at = new Type[c];
-            Arrays.fill(at, CLASS.ensurePublicType());
-            return at;
+            Type[] aType = new Type[c];
+            Arrays.fill(aType, CLASS.ensurePublicType());
+            return aType;
             });
         }
     }

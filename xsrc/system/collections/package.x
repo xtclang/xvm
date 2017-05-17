@@ -108,7 +108,7 @@ package collections
          * will simply return {@code this}.
          *
          * If the class implements the {@link Const} interface, and {@link inPlace} is specified as
-         * true, then a conveivable implementation of this method would be:
+         * true, then a conceivable implementation of this method would be:
          *
          *   meta.immutable = true;
          *   return this;

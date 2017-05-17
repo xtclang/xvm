@@ -65,7 +65,7 @@ public class xService
         //    Void registerShuttingDownNotification(function Void notify());
         //    Void registerUnhandledExceptionNotification(function Void notify(Exception));
 
-        ensurePropertyTemplate("serviceName", "x:String").makeAtomic();
+        ensurePropertyTemplate("serviceName", "x:String").makeAtomicRef();
         }
 
     @Override

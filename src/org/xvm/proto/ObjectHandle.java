@@ -1,6 +1,7 @@
 package org.xvm.proto;
 
 import org.xvm.proto.template.xRef.RefHandle;
+
 import org.xvm.util.ListMap;
 
 import java.util.Map;
@@ -17,6 +18,7 @@ public class ObjectHandle
     {
     final public TypeComposition f_clazz;
     public Type m_type;
+    protected boolean m_fMutable = false;
 
     protected ObjectHandle(TypeComposition clazz)
         {
@@ -39,6 +41,16 @@ public class ObjectHandle
             {
             throw new IllegalStateException();
             }
+        }
+
+    public boolean isMutable()
+        {
+        return m_fMutable;
+        }
+
+    public void makeImmutable()
+        {
+        m_fMutable = false;
         }
 
     public boolean isStruct()
@@ -66,6 +78,8 @@ public class ObjectHandle
         public GenericHandle(TypeComposition clazz, Type type)
             {
             super(clazz, type);
+
+            m_fMutable = true;
 
             createFields();
             }
@@ -198,6 +212,8 @@ public class ObjectHandle
         protected ArrayHandle(TypeComposition clzArray)
             {
             super(clzArray);
+
+            m_fMutable = true;
             }
         }
 

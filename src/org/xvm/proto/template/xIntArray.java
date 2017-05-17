@@ -36,10 +36,9 @@ public class xIntArray
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
 
-        int cSize = hArray.m_cSize;
-        if (lIndex < 0 || lIndex >= cSize)
+        if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            throw IndexSupport.outOfRange(lIndex, cSize).getException();
+            throw IndexSupport.outOfRange(lIndex, hArray.m_cSize).getException();
             }
         return xInt64.makeHandle(hArray.m_alValue[(int) lIndex]);
         }
@@ -79,11 +78,10 @@ public class xIntArray
     public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
-        int cSize = hArray.m_cSize;
 
-        if (lIndex < 0 || lIndex >= cSize)
+        if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            return IndexSupport.outOfRange(lIndex, cSize);
+            return IndexSupport.outOfRange(lIndex, hArray.m_cSize);
             }
 
         return frame.assignValue(iReturn,

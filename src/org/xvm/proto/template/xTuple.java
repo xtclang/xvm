@@ -2,10 +2,11 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.TupleConstant;
-import org.xvm.proto.Frame;
+
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
@@ -72,43 +73,6 @@ public class xTuple
         }
 
     @Override
-    public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
-            throws ExceptionHandle.WrapperException
-        {
-        TupleHandle hTuple = (TupleHandle) hTarget;
-
-        int cSize = hTuple.m_ahValue.length;
-        if (lIndex < 0 || lIndex >= cSize)
-            {
-            throw IndexSupport.outOfRange(lIndex, cSize).getException();
-            }
-
-        return hTuple.m_ahValue[(int) lIndex];
-        }
-
-    @Override
-    public ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
-        {
-        TupleHandle hTuple = (TupleHandle) hTarget;
-
-        int cSize = hTuple.m_ahValue.length;
-
-        if (lIndex < 0 || lIndex >= cSize)
-            {
-            return IndexSupport.outOfRange(lIndex, cSize);
-            }
-
-        hTuple.m_ahValue[(int) lIndex] = hValue;
-        return null;
-        }
-
-    @Override
-    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         TupleConstant constTuple = (TupleConstant) constant;
@@ -120,18 +84,75 @@ public class xTuple
             {
             ahValue[i] = heap.ensureConstHandle(list.get(i));
             }
-        return new TupleHandle(INSTANCE.f_clazzCanonical, ahValue);
+
+        TupleHandle hTuple = new TupleHandle(INSTANCE.f_clazzCanonical, ahValue);
+        hTuple.makeImmutable();
+        return hTuple;
         }
 
-    public static class TupleHandle
-        extends ObjectHandle
+    // ----- IndexSupport methods -----
+
+    @Override
+    public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
+            throws ExceptionHandle.WrapperException
         {
+        TupleHandle hTuple = (TupleHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hTuple.m_ahValue.length)
+            {
+            throw IndexSupport.outOfRange(lIndex, hTuple.m_ahValue.length).getException();
+            }
+
+        return hTuple.m_ahValue[(int) lIndex];
+        }
+
+    @Override
+    public ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
+        {
+        TupleHandle hTuple = (TupleHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hTuple.m_ahValue.length)
+            {
+            return IndexSupport.outOfRange(lIndex, hTuple.m_ahValue.length);
+            }
+
+        if (!hTuple.isMutable())
+            {
+
+            }
+
+        hTuple.m_ahValue[(int) lIndex] = hValue;
+        return null;
+        }
+
+    @Override
+    public Type getElementType(ObjectHandle hTarget, long lIndex)
+                throws ExceptionHandle.WrapperException
+        {
+        TupleHandle hTuple = (TupleHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hTuple.m_aType.length)
+            {
+            throw IndexSupport.outOfRange(lIndex, hTuple.m_aType.length).getException();
+            }
+        return hTuple.m_aType[(int) lIndex];
+        }
+
+    // ----- ObjectHandle helpers -----
+
+    public static class TupleHandle
+            extends ObjectHandle
+        {
+        public Type[] m_aType;
         public ObjectHandle[] m_ahValue;
+        public boolean m_fFixedSize;
+        public boolean m_fPersistent;
 
         protected TupleHandle(TypeComposition clazz, ObjectHandle[] ahValue)
             {
             super(clazz);
 
+            m_fMutable = true;
             m_ahValue = ahValue;
             }
 
@@ -140,6 +161,5 @@ public class xTuple
             {
             return super.toString() + Arrays.toString(m_ahValue);
             }
-
         }
     }

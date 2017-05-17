@@ -17,9 +17,12 @@ i = 5;
 i = (IntegerLiteral:"5").to<Int>();
 
 // bad -  but you get the idea
-map = {{x:5
-        y:8
-        z:9}}
+Map<String, Int> map =
+        {
+        "one":1,
+        "two":2,
+        "three":3,
+        }
 
 
 // let's mock up a new Collection implementation

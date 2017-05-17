@@ -50,6 +50,7 @@ public class Container
         types.addAlias("x:Int", "x:Int64");
         types.addAlias("x:UInt", "x:UInt64");
 
+        types.ensureTemplate("x:Type"); // this must come first (see TCT constructor)
         types.ensureTemplate("x:Object");
         types.ensureTemplate("x:Exception");
         types.ensureTemplate("x:Service");

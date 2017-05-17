@@ -35,7 +35,7 @@ public class DefaultMap<K, V>
 
     public V getOrDefault(K key, V valueDefault) {
         V v;
-        return (((v = get(key)) != null)) ? v : valueDefault;
+        return ((v = get(key)) != null) ? v : valueDefault;
         }
 
     public void putAll(Map<K, V> map)

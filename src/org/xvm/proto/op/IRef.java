@@ -4,23 +4,21 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
-import org.xvm.proto.Type;
-import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.IndexSupport;
 
 /**
  * A_REF rvalue-target, rvalue-index, lvalue-return ; Ref<T> = &T[Ti]
  *
  * @author gg 2017.03.08
  */
-public class ARef extends Op
+public class IRef extends Op
     {
     private final int f_nTargetValue;
     private final int f_nIndexValue;
     private final int f_nRetValue;
 
-    public ARef(int nTarget, int nIndex, int nRet)
+    public IRef(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
         f_nIndexValue = nIndex;
@@ -34,15 +32,12 @@ public class ARef extends Op
 
         try
             {
-            ObjectHandle hArray = frame.getArgument(f_nTargetValue);
-            Type typeReferent = hArray.f_clazz.f_atGenericActual[0];
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
 
-            TypeComposition clzRef = xRef.INSTANCE.resolve(new Type[]{typeReferent});
+            IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            xRef.IndexedRefHandle hRef = new xRef.IndexedRefHandle(clzRef,
-                    hArray, frame.getIndex(f_nIndexValue));
-
-            hException = frame.assignValue(f_nRetValue, hRef);
+            hException = template.makeRef(frame, hTarget,
+                    frame.getIndex(f_nIndexValue), f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

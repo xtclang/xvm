@@ -221,7 +221,8 @@ module TestApp
         print(ai[0]);
         print(++ai[1]);
 
-        String[] as = new Array<String>(5, i -> "value " + i);
+        String[] as = new Array<String>(5, i -> "value " + i); // fixed size
+        String[] as = new String[5] (i -> "value " + i); // alternative syntax
         print(as);
         print(as[4]);
 
@@ -233,25 +234,25 @@ module TestApp
 
      static testTuple()
         {
-        Tuple t = ("zero", 0);
+        Tuple t = ("zero", 0); // literal, therefore constant
         print(t[0]);
         print(t[1]);
 
-        t[0] = "t";
-        t[1] = 2;
+        Tuple<String, Int> t2 = new Tuple("", 0); // fixed-size (rigid)
+        t2[0] = "t";
+        t2[1] = 2;
 
-        Tuple<String, Int> t2 = t;
         int of = "the test".indexOf(t2); // same as "the test".indexOf("t", 2);
         print(of);
 
-        print(test(1));
-        print(test(-1));
+        print(testConditional(1));
+        print(testConditional(-1));
 
-        static conditional String test(Int i)
+        static conditional String testConditional(Int i)
              {
              if (i > 0)
                 {
-                return true, "positive"
+                return true, "positive";
                 }
              return false;
              }

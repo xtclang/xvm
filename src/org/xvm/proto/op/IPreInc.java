@@ -4,6 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
+
 import org.xvm.proto.template.IndexSupport;
 
 /**
@@ -11,13 +12,13 @@ import org.xvm.proto.template.IndexSupport;
  *
  * @author gg 2017.03.08
  */
-public class APreInc extends Op
+public class IPreInc extends Op
     {
     private final int f_nTargetValue;
     private final int f_nIndexValue;
     private final int f_nRetValue;
 
-    public APreInc(int nTarget, int nIndex, int nRet)
+    public IPreInc(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
         f_nIndexValue = nIndex;

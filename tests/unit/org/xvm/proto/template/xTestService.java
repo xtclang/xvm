@@ -51,7 +51,7 @@ public class xTestService extends xService
         mtSetCounter.m_cVars = 2;
 
         PropertyTemplate ptCounter2 = ensurePropertyTemplate("counter2", "x:Int64");
-        ptCounter2.makeAtomic();
+        ptCounter2.makeAtomicRef();
 
         FunctionTemplate ftDefault = ensureDefaultConstructTemplate();
         ftDefault.m_aop = new Op[]

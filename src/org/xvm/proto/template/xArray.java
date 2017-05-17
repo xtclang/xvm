@@ -143,16 +143,17 @@ public class xArray
         return frame.assignValue(iReturn, hArray);
         }
 
+    // ----- IndexSupport methods -----
+
     @Override
     public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
-        int cSize = hArray.m_cSize;
-        if (lIndex < 0 || lIndex >= cSize)
+        if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            throw IndexSupport.outOfRange(lIndex, cSize).getException();
+            throw IndexSupport.outOfRange(lIndex, hArray.m_cSize).getException();
             }
 
         return hArray.m_ahValue[(int) lIndex];
@@ -191,29 +192,14 @@ public class xArray
         }
 
     @Override
-    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+    public Type getElementType(ObjectHandle hTarget, long lIndex)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-        int cSize = hArray.m_cSize;
 
-        if (lIndex < 0 || lIndex >= cSize)
-            {
-            return IndexSupport.outOfRange(lIndex, cSize);
-            }
-
-        ObjectHandle hValue = hArray.m_ahValue[(int) lIndex];
-
-        ExceptionHandle hException = hValue.f_clazz.f_template.invokePreInc(frame, hValue, null, Frame.R_FRAME);
-        if (hException != null)
-            {
-            return hException;
-            }
-
-        ObjectHandle hValueNew = frame.getFrameLocal();
-        hArray.m_ahValue[(int) lIndex] = hValueNew;
-
-        return frame.assignValue(iReturn, hValueNew);
+        return hArray.f_clazz.f_atGenericActual[0];
         }
+
+    // ----- ObjectHandle helpers -----
 
     public static GenericArrayHandle makeInstance(long cCapacity)
         {
