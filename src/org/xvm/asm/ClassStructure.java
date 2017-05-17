@@ -13,8 +13,9 @@ import java.util.Map;
 
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
-
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -30,25 +31,23 @@ import static org.xvm.util.Handy.writePackedLong;
 public class ClassStructure
         extends ClassContainer
     {
-    // ----- constructors ------------------------------------------------------
-    
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a ClassStructure with the specified identity.
      *
-     * @param structParent  the XvmStructure (probably a FileStructure, a
-     *                      ModuleStructure, a PackageStructure, a
-     *                      ClassStructure, or a MethodStructure) that
-     *                      contains this ClassStructure
-     * @param constclass    the constant that specifies the identity of the
-     *                      Class
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
      */
-    public ClassStructure(XvmStructure structParent, ClassConstant constclass)
+    protected ClassStructure(XvmStructure xsParent, int nFlags, ClassConstant constId, ConditionalConstant condition)
         {
-        super(structParent, constclass);
+        super(xsParent, nFlags, constId, condition);
         }
 
 
-    // ----- XvmStructure methods ----------------------------------------------
+    // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void disassemble(DataInput in)

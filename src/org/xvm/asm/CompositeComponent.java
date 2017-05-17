@@ -1,6 +1,9 @@
 package org.xvm.asm;
 
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.Collections;
@@ -387,6 +390,26 @@ public class CompositeComponent
         return new CompositeComponent(this, listChild);
         }
 
+    @Override
+    protected void disassembleChildren(DataInput in)
+            throws IOException
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    protected void registerChildrenConstants(ConstantPool pool)
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    protected void assembleChildren(DataOutput out)
+            throws IOException
+        {
+        throw new UnsupportedOperationException();
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -439,6 +462,26 @@ public class CompositeComponent
             {
             sibling.resetModified();
             }
+        }
+
+    @Override
+    protected void disassemble(DataInput in)
+            throws IOException
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        throw new UnsupportedOperationException();
         }
 
     @Override

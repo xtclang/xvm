@@ -62,12 +62,6 @@ public class PropertyConstant
         return Format.Property;
         }
 
-    @Override
-    protected PropertyStructure instantiate(XvmStructure xsParent)
-        {
-        return new PropertyStructure(xsParent, this);
-        }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

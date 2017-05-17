@@ -131,9 +131,6 @@ public abstract class NamedConstant
         return sParent + '.' + m_constName.getValue();
         }
 
-    @Override
-    protected abstract StructureContainer instantiate(XvmStructure xsParent);
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

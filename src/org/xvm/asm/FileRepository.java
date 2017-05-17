@@ -243,7 +243,7 @@ public class FileRepository
         try
             {
             FileStructure struct = new FileStructure(file);
-            XvmStructure top = struct.getMainModule();
+            XvmStructure top = struct.getModule();
             if (top instanceof ModuleStructure)
                 {
                 return (ModuleStructure) top;

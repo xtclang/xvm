@@ -4,7 +4,9 @@ package org.xvm.asm;
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,9 +16,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.NamedConstant;
+import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.util.LinkedIterator;
 
@@ -130,109 +137,6 @@ public abstract class Component
     Component(Component parent)
         {
         super(parent);
-        }
-
-
-    // ----- I/O -----------------------------------------------------------------------------------
-
-    /**
-     * Read a component from the stream. This abstracts out all of the various component types that
-     * could be encountered in the stream, and all of the complexity surrounding conditions and
-     * lazy deserialization.
-     *
-     * @param xsParent  the parent XvmStructure
-     * @param in        the DataInput to read from
-     * @param fLazy     true to defer the child deserialization until necessary
-     *
-     * @return the Component that was read
-     *
-     * @throws IOException  if there's a problem reading the component
-     */
-    public static Component readComponent(XvmStructure xsParent, DataInput in, boolean fLazy)
-            throws IOException
-        {
-        Component component = null;
-
-        // read component body (or bodies)
-        int n = in.readUnsignedByte();
-        if ((n & CONDITIONAL_BIT) == 0)
-            {
-            // there isn't a conditional multiple-component list, so this is just the first byte of
-            // the two-byte FLAGS value (which is the start of the body) for a single component
-            n = (n << 8) | in.readUnsignedByte();
-            component = Format.fromFlags(n).instantiate(xsParent, null, n, in);
-            }
-        else
-            {
-            // some number of components, each with a condition
-            ConstantPool pool        = xsParent.getConstantPool();
-            Component    prevSibling = null;
-            int          cSiblings   = readMagnitude(in);
-            assert cSiblings > 0;
-            for (int i = 0; i < cSiblings; ++i)
-                {
-                ConditionalConstant condition  = (ConditionalConstant) pool.getConstant(readIndex(in));
-                int                 nFlags     = in.readUnsignedShort();
-                Component           curSibling = Format.fromFlags(nFlags).instantiate(xsParent, condition, nFlags, in);
-                if (prevSibling == null)
-                    {
-                    component = curSibling;
-                    }
-                else
-                    {
-                    prevSibling.m_sibling = curSibling;
-                    }
-                prevSibling = curSibling;
-                }
-            }
-
-        int cb = readMagnitude(in);
-        if (cb > 0)
-            {
-            if (fLazy)
-                {
-                // just read the bytes for the children and store it off for later
-                byte[] ab = new byte[cb];
-                in.readFully(ab);
-                for (Component eachSibling = component; eachSibling != null; eachSibling = eachSibling.m_sibling)
-                    {
-                    // note that every sibling has a copy of all of the children; this is because
-                    // the byte[] serves as both the storage of those children and an indicator that
-                    // the deserialization of the children has been deferred
-                    eachSibling.m_abChildren = ab;
-                    }
-                }
-            else
-                {
-                component.readComponentChildren(in, fLazy);
-                }
-            }
-        return component;
-        }
-
-    /**
-     * Read any child components. For a given identity, there may be more than one child component
-     * if the child components are conditional. For all components (except for methods i.e. within
-     * multi-methods), the children are identified by name.
-     *
-     * @param in     the DataInput to read from
-     * @param fLazy  true to defer the child deserialization until necessary
-     *
-     * @throws IOException  if there's a problem reading the component's children
-     */
-    protected void readComponentChildren(DataInput in, boolean fLazy)
-            throws IOException
-        {
-        // read component children
-        int cKids = readMagnitude(in);
-        if (cKids > 0)
-            {
-            for (int i = 0; i < cKids; ++i)
-                {
-                Component kid = readComponent(this, in, fLazy);
-                addChild(kid);
-                }
-            }
         }
 
 
@@ -554,7 +458,7 @@ public abstract class Component
             DataInput in = new DataInputStream(new ByteArrayInputStream(ab));
             try
                 {
-                readComponentChildren(in, true);
+                disassembleChildren(in, true);
                 }
             catch (IOException e)
                 {
@@ -773,6 +677,160 @@ public abstract class Component
         }
 
 
+    /**
+     * Read zero or more child components from the DataInput stream. For a given identity, there may
+     * be more than one child component if the child components are conditional. For all components
+     * (except for methods i.e. within multi-methods), the children are identified by name.
+     *
+     * @param in     the DataInput containing the components
+     * @param fLazy  true to defer the child deserialization until necessary
+     *
+     * @throws IOException  if an I/O exception occurs during disassembly from the provided
+     *                      DataInput stream, or if there is invalid data in the stream
+     */
+    protected void disassembleChildren(DataInput in, boolean fLazy)
+            throws IOException
+        {
+        // read component children
+        int cKids = readMagnitude(in);
+        if (cKids > 0)
+            {
+            while (cKids-- > 0)
+                {
+                Component kid = null;
+
+                // read component body (or bodies)
+                int n = in.readUnsignedByte();
+                if ((n & CONDITIONAL_BIT) == 0)
+                    {
+                    // there isn't a conditional multiple-component list, so this is just the first byte of
+                    // the two-byte FLAGS value (which is the start of the body) for a single component
+                    n = (n << 8) | in.readUnsignedByte();
+                    kid = Format.fromFlags(n).instantiate(this, null, n, in);
+                    }
+                else
+                    {
+                    // some number of components, each with a condition
+                    ConstantPool pool        = getConstantPool();
+                    Component    prevSibling = null;
+                    int          cSiblings   = readMagnitude(in);
+                    assert cSiblings > 0;
+                    for (int i = 0; i < cSiblings; ++i)
+                        {
+                        ConditionalConstant condition  = (ConditionalConstant) pool.getConstant(readIndex(in));
+                        int                 nFlags     = in.readUnsignedShort();
+                        Component           curSibling = Format.fromFlags(nFlags).instantiate(this, condition, nFlags, in);
+                        if (prevSibling == null)
+                            {
+                            kid = curSibling;
+                            }
+                        else
+                            {
+                            prevSibling.m_sibling = curSibling;
+                            }
+                        prevSibling = curSibling;
+                        }
+                    }
+                kid.disassemble(in);
+
+                int cb = readMagnitude(in);
+                if (cb > 0)
+                    {
+                    if (fLazy)
+                        {
+                        // just read the bytes for the children and store it off for later
+                        byte[] ab = new byte[cb];
+                        in.readFully(ab);
+                        for (Component eachSibling = kid; eachSibling != null; eachSibling = eachSibling.m_sibling)
+                            {
+                            // note that every sibling has a copy of all of the children; this is because
+                            // the byte[] serves as both the storage of those children and an indicator that
+                            // the deserialization of the children has been deferred
+                            eachSibling.m_abChildren = ab;
+                            }
+                        }
+                    else
+                        {
+                        kid.disassembleChildren(in, fLazy);
+                        }
+                    }
+
+                addChild(kid);
+                }
+            }
+        }
+
+    /**
+     * Register all constants used by the child components.
+     *
+     * @param pool  the ConstantPool with which to register each constant referenced by the child
+     *              components
+     */
+    protected void registerChildrenConstants(ConstantPool pool)
+        {
+        // TODO
+        }
+
+    /**
+     * Write any child components to the DataOutput stream.
+     *
+     * @param out  the DataOutput to write the child components to
+     *
+     * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
+     *                      stream
+     */
+    protected void assembleChildren(DataOutput out)
+            throws IOException
+        {
+        // TODO
+        }
+
+    /**
+     * Dump all the children of this component, recursively.
+     *
+     * @param out      the PrintWriter to dump to
+     * @param sIndent  the indentation to use for this level
+     */
+    protected void dumpChildren(PrintWriter out, String sIndent)
+        {
+        // go through each named and constant-identified child, and dump it, and its siblings
+        if (m_childByName != null)
+            {
+            for (Component child : m_childByName.values())
+                {
+                dumpChild(child, out, sIndent);
+                }
+            }
+
+        if (m_methodByConstant != null)
+            {
+            for (Component child : m_methodByConstant.values())
+                {
+                dumpChild(child, out, sIndent);
+                }
+            }
+        }
+
+    /**
+     * Dump a child and all of its siblings, and then its children under it.
+     *
+     * @param child    a child (an eldest sibling)
+     * @param out      the PrintWriter to dump to
+     * @param sIndent  the indentation to use for this level
+     */
+    private void dumpChild(Component child, PrintWriter out, String sIndent)
+        {
+        // dump all of the siblings
+        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+            {
+            eachSibling.dump(out, sIndent);
+            }
+
+        // dump the shared children
+        child.dumpChildren(out, nextIndent(sIndent));
+        }
+
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -834,6 +892,86 @@ public abstract class Component
         return "modified=" + m_fModified;
         }
 
+    /**
+     * {@inheritDoc}
+     * <p/>
+     * For all but the FileStructure Component, this method applies only to the body of the
+     * component and not to its children.
+     *
+     * @see #disassembleChildren(DataInput, boolean)
+     */
+    @Override
+    protected void disassemble(DataInput in)
+            throws IOException
+        {
+        assert getContaining() == null || getContaining() instanceof Component;
+        // there's nothing to do here, since the disassembly of the common body parts that all
+        // Component's share is done by the readComponent() and Format.instantiate() methods
+        }
+
+    /**
+     * {@inheritDoc}
+     * <p/>
+     * For all but the FileStructure Component, this method applies only to the body of the
+     * component and not to its children.
+     *
+     * @see #registerChildrenConstants(ConstantPool)
+     */
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        assert getContaining() == null || getContaining() instanceof Component;
+
+        // TODO
+        }
+
+    /**
+     * {@inheritDoc}
+     * <p/>
+     * For all but the FileStructure Component, this method applies only to the body of the
+     * component and not to its children.
+     *
+     * @see #assembleChildren(DataOutput)
+     */
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        assert getContaining() == null || getContaining() instanceof Component;
+
+        // TODO
+        }
+
+    /**
+     * {@inheritDoc}
+     * <p/>
+     * For all but the FileStructure Component, this method applies only to the body of the
+     * component and not to its children.
+     *
+     * @see #dumpChildren(PrintWriter, String)
+     */
+    @Override
+    protected void dump(PrintWriter out, String sIndent)
+        {
+        out.print(sIndent);
+        out.println(toString());
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        // TODO
+        }
+
+    @Override
+    public int hashCode()
+        {
+        return getIdentityConstant().hashCode();
+        }
+
 
     // ----- inner class: Format -------------------------------------------------------------------
 
@@ -884,31 +1022,22 @@ public abstract class Component
         Component instantiate(XvmStructure xsParent, ConditionalConstant condition, int nFlags, DataInput in)
                 throws IOException
             {
-            Component component;
-            // TODO sub-classes
-//            return new Component(xsParent,
-//                    (nFlags & ACCESS_MASK) >>> ACCESS_SHIFT,
-//                    (nFlags & ABSTRACT_BIT) != 0,
-//                    (nFlags & STATIC_BIT) != 0,
-//                    (nFlags & SYNTHETIC_BIT) != 0,
-//                    this,
-//                    xsParent.getConstantPool().getConstant(readIndex(in)),
-//                    condition);
-// or ...
-//          protected Component(XvmStructure xsParent, int nFlags, Constant constId, ConditionalConstant condition)
+            if (xsParent == null)
+                {
+                throw new IOException("parent required");
+                }
 
+            Constant constId = xsParent.getConstantPool().getConstant(readMagnitude(in));
             switch (this)
                 {
                 case FILE:
                     throw new IOException("file is not instantiable");
 
                 case MODULE:
-                    component = new ModuleStructure(xsParent, );
-                    break;
+                    return new ModuleStructure(xsParent, nFlags, (ModuleConstant) constId, condition);
 
                 case PACKAGE:
-                    component = new PackageStructure();
-                    break;
+                    return new PackageStructure(xsParent, nFlags, (PackageConstant) constId, condition);
 
                 case INTERFACE:
                 case CLASS:
@@ -917,27 +1046,20 @@ public abstract class Component
                 case MIXIN:
                 case TRAIT:
                 case SERVICE:
-                    component = new ClassStructure();
-                    break;
+                    return new ClassStructure(xsParent, nFlags, (ClassConstant) constId, condition);
 
                 case PROPERTY:
-                    component = new PropertyStructure();
-                    break;
+                    return new PropertyStructure(xsParent, nFlags, (PropertyConstant) constId, condition);
 
                 case MULTIMETHOD:
-                    component = new MultiMethodStructure();
-                    break;
+                    return new MultiMethodStructure(xsParent, nFlags, (MultiMethodConstant) constId, condition);
 
                 case METHOD:
-                    component = new MethodStructure();
-                    break;
+                    return new MethodStructure(xsParent, nFlags, (MethodConstant) constId, condition);
 
                 default:
                     throw new IOException("uninstantiable format: " + this);
                 }
-
-            component.disassemble(in);
-            return component;
             }
 
         /**

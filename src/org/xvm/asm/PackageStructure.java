@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
 
@@ -22,22 +23,23 @@ import static org.xvm.util.Handy.writePackedLong;
 public class PackageStructure
         extends PackageContainer
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a PackageStructure with the specified identity.
      *
-     * @param structParent  the XvmStructure (probably a FileStructure, a
-     *                      ModuleStructure, or a PackageStructure) that
-     *                      contains this PackageStructure
-     * @param constpackage  the constant that specifies the identity of the
-     *                      Package
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
      */
-    public PackageStructure(XvmStructure structParent, PackageConstant constpackage)
+    protected PackageStructure(XvmStructure xsParent, int nFlags, PackageConstant constId, ConditionalConstant condition)
         {
-        super(structParent, constpackage);
+        super(xsParent, nFlags, constId, condition);
         }
 
 
-    // ----- XvmStructure methods ----------------------------------------------
+    // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void disassemble(DataInput in)

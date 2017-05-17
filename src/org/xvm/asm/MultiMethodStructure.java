@@ -1,24 +1,15 @@
 package org.xvm.asm;
 
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-
-import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -31,165 +22,56 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.26
  */
 public class MultiMethodStructure
-        extends StructureContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a MultiMethodStructure with the specified identity.
      *
-     * @param structParent  the XvmStructure (a ModuleStructure, a PackageStructure, a
-     *                      ClassStructure, a PropertyStructure, or a MethodStructure) that
-     *                      contains this MultiMethodStructure
-     * @param constMulti    the constant that specifies the identity of the property
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
      */
-    public MultiMethodStructure(XvmStructure structParent, MultiMethodConstant constMulti)
+    protected MultiMethodStructure(XvmStructure xsParent, int nFlags, MultiMethodConstant constId, ConditionalConstant condition)
         {
-        super(structParent);
-
-        this.constMulti = constMulti;
+        super(xsParent, nFlags, constId, condition);
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * @return the name of the multi-method
-     */
-    public String getName()
-        {
-        return constMulti.getName();
-        }
-
-    /**
-     * @return a collection of methods contained within this MultiMethodStructure; the caller must
-     *         treat the collection as a read-only object
-     */
-    public Collection<MethodStructure> methods()
-        {
-        Collection coll = methods.values();
-        assert (coll = Collections.unmodifiableCollection(coll)) != null;
-        return coll;
-        }
-
-    /**
-     * TODO
+     * Create the method with the specified attributes.
      *
-     * @param fFunction
-     * @param access
-     * @param returnTypes
-     * @param paramTypes
-     * @return
+     * @param fFunction    true if the structure being created is a function; false means a method
+     * @param access       an access specifier
+     * @param returnTypes  the types of the return values (zero or more)
+     * @param paramTypes   the types of the parameters (zero or more)
+     *
+     * @return a method structure
      */
     public MethodStructure createMethod(boolean fFunction, Access access, TypeConstant[] returnTypes, TypeConstant[] paramTypes)
         {
-        MethodConstant constant = getConstantPool().ensureMethodConstant(getIdentityConstant(), getName(), access, returnTypes, paramTypes);
-        MethodStructure method = new MethodStructure(this, constant);
-        methods.put(constant, method);
+        int                 nFlags   = access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
+        MethodConstant      constant = getConstantPool().ensureMethodConstant(
+                getIdentityConstant(), getName(), access, returnTypes, paramTypes);
+        ConditionalConstant cond     = null; // TODO get condition from assembler context
+        MethodStructure     method   = new MethodStructure(this, nFlags, constant, cond);
+        addChild(method);
         return method;
         }
 
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    public MultiMethodConstant getIdentityConstant()
-        {
-        return constMulti;
-        }
-
-    @Override
-    public Iterator<? extends XvmStructure> getContained()
-        {
-        return methods.values().iterator();
-        }
-
-    @Override
-    protected void disassemble(DataInput in)
-    throws IOException
-        {
-        constMulti = (MultiMethodConstant) getConstantPool().getConstant(readIndex(in));
-
-        List<MethodStructure> list = (List<MethodStructure>) disassembleSubStructureCollection(in);
-        methods.clear();
-        for (MethodStructure struct : list)
-            {
-            methods.put(struct.getMethodConstant(), struct);
-            }
-        assert methods.size() == list.size();
-
-        super.disassemble(in);
-        }
-
-    @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        ((Constant) constMulti).registerConstants(pool);
-        super.registerConstants(pool);
-        }
-
-    @Override
-    protected void assemble(DataOutput out)
-    throws IOException
-        {
-        writePackedLong(out, constMulti.getPosition());
-        assembleSubStructureCollection(methods.values(), out);
-        super.assemble(out);
-        }
-
-    @Override
-    public String getDescription()
-        {
-        return new StringBuilder()
-                .append("name=")
-                .append(constMulti.getName())
-                .append(", method-count=")
-                .append(methods.size())
-                .append(", ")
-                .append(super.getDescription())
-                .toString();
-        }
-
-    @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
-        out.print(sIndent);
-        out.println(toString());
-
-        dumpStructureMap(out, sIndent, "Methods", methods);
-        }
-
-
-    // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    public boolean equals(Object obj)
-        {
-        if (obj == this)
-            {
-            return true;
-            }
-
-        if (!(obj instanceof MultiMethodStructure))
-            {
-            return false;
-            }
-
-        MultiMethodStructure that = (MultiMethodStructure) obj;
-        return this.constMulti.equals(that.constMulti)
-                && equalMaps(this.methods, that.methods);
-        }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * The identity constant for the MultiMethodStructure.
-     */
-    private MultiMethodConstant constMulti;
-
-    /**
-     * The methods contained within the multi-method, keyed by method constant.
-     */
-    private Map<MethodConstant, MethodStructure> methods = new HashMap<>(3);
+    // TOODO do we want a helper function like this that collects together the children of the desired format?
+//    /**
+//     * @return a collection of methods contained within this MultiMethodStructure; the caller must
+//     *         treat the collection as a read-only object
+//     */
+//    public Collection<MethodStructure> methods()
+//        {
+//        Collection coll = methods.values();
+//        assert (coll = Collections.unmodifiableCollection(coll)) != null;
+//        return coll;
+//        }
     }

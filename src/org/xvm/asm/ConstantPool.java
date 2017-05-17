@@ -446,8 +446,8 @@ public class ConstantPool
     /**
      * Obtain a Constant that represents the specified method.
      *
-     * @param constParent    specifies the module, package, class, method, or property that contains
-     *                       the method
+     * @param constParent    specifies the module, package, class, multi-method, method, or property
+     *                       that contains the method
      * @param sName          the method name
      * @param access         the method accessibility
      * @param aconstReturns  the return values from the method

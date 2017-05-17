@@ -1,10 +1,9 @@
 package org.xvm.asm;
 
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -22,19 +21,19 @@ import static org.xvm.util.Handy.writePackedLong;
 public class MethodStructure
         extends ClassContainer
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a MethodStructure with the specified identity.
      *
-     * @param structParent  the XvmStructure (probably a FileStructure, a
-     *                      ModuleStructure, a PackageStructure, a
-     *                      ClassStructure, a PropertyStructure, or a
-     *                      MethodStructure) that contains this MethodStructure
-     * @param constmethod   the constant that specifies the identity of the
-     *                      method
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
      */
-    MethodStructure(XvmStructure structParent, MethodConstant constmethod)
+    protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId, ConditionalConstant condition)
         {
-        super(structParent, constmethod);
+        super(xsParent, nFlags, constId, condition);
         }
 
 

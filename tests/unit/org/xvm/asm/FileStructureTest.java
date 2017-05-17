@@ -36,7 +36,7 @@ public class FileStructureTest
             throws IOException
         {
         FileStructure structfile = new FileStructure("test");
-        structfile.getMainModule().ensurePackage("x").setImportedModule(structfile.getConstantPool().ensureModuleConstant("ecstasy.xtclang.org"));
+        structfile.getModule().ensurePackage("x").setImportedModule(structfile.getConstantPool().ensureModuleConstant("ecstasy.xtclang.org"));
         testFileStructure(structfile);
         }
 
@@ -45,7 +45,7 @@ public class FileStructureTest
             throws IOException
         {
         FileStructure structfile = new FileStructure(Constants.ECSTASY_MODULE);
-        structfile.getMainModule().ensureClass(Constants.CLASS_OBJECT);
+        structfile.getModule().ensureClass(Constants.CLASS_OBJECT);
         testFileStructure(structfile);
         }
 
@@ -54,8 +54,8 @@ public class FileStructureTest
             throws IOException
         {
         FileStructure structfile = new FileStructure(Constants.ECSTASY_MODULE);
-        ClassStructure structobj = structfile.getMainModule().ensureClass(Constants.CLASS_OBJECT);
-        PackageStructure structpkg =structfile.getMainModule().ensurePackage("collections");
+        ClassStructure structobj = structfile.getModule().ensureClass(Constants.CLASS_OBJECT);
+        PackageStructure structpkg =structfile.getModule().ensurePackage("collections");
         ClassStructure structclz = structpkg.ensureClass("List");
         structclz.setCategory(ClassStructure.Category.Interface);
         structclz.addTypeParam("T", structobj.getClassConstant().asTypeConstant());
@@ -67,7 +67,7 @@ public class FileStructureTest
             throws IOException
         {
         FileStructure    file    = new FileStructure(Constants.ECSTASY_MODULE);
-        ModuleStructure  module  = file.getMainModule();
+        ModuleStructure  module  = file.getModule();
         ClassStructure   clzObj  = module.ensureClass(Constants.CLASS_OBJECT);
         PackageStructure pkgColl = module.ensurePackage("collections");
         ClassStructure   clzHash = module.ensureClass("Hashable");
@@ -93,7 +93,7 @@ public class FileStructureTest
         FileStructure structfile = new FileStructure("test");
         Assert.assertEquals("test", structfile.getModuleName());
 
-        ModuleStructure  structmodule  = (ModuleStructure) structfile.getMainModule();
+        ModuleStructure  structmodule  = (ModuleStructure) structfile.getModule();
         PackageStructure structpackage = structmodule.ensurePackage("classes");
         ClassStructure   structclass   = structpackage.ensureClass("Test");
 

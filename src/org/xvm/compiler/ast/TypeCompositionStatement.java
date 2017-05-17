@@ -128,7 +128,7 @@ public class TypeCompositionStatement
         assert getStructure() == null;
 
         FileStructure struct = new FileStructure(getName());
-        setStructure(struct.getMainModule());
+        setStructure(struct.getModule());
 
         super.registerStructures(null, errorList);
 
