@@ -391,7 +391,7 @@ public class CompositeComponent
         }
 
     @Override
-    protected void disassembleChildren(DataInput in)
+    protected void disassembleChildren(DataInput in, boolean fLazy)
             throws IOException
         {
         throw new UnsupportedOperationException();

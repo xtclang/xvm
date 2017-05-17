@@ -564,16 +564,10 @@ public class FileStructure
             return this.nMajorVer == that.nMajorVer
                 && this.nMinorVer == that.nMinorVer
                 && this.moduleName.equals(that.moduleName)
-                && this.getChildByNameMap().equals(that.getChildByNameMap());
+                && this.getChildByNameMap().equals(that.getChildByNameMap()); // TODO need "childrenEquals()"?
             }
 
         return false;
-        }
-
-    @Override
-    public String toString()
-        {
-        return "FileStructure{" + getDescription() + "}";
         }
 
 

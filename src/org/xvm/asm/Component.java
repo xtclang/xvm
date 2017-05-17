@@ -580,6 +580,57 @@ public abstract class Component
         }
 
     /**
+     * Comparing only the child components (recursively), determine if this component's children
+     * are identical to that component's children.
+     *
+     * @param that
+     *
+     * @return
+     */
+    protected boolean areChildrenIdentical(Component that)
+        {
+        ensureChildren();
+        return  equalChildMaps(this.getChildByNameMap(), that.getChildByNameMap()) &&
+                equalChildMaps(this.getMethodByConstantMap(), that.getMethodByConstantMap());
+        }
+
+    private boolean equalChildMaps(Map<? extends Object, ? extends Component> mapThis,
+                                   Map<? extends Object, ? extends Component> mapThat)
+        {
+        if (mapThis.size() != mapThat.size())
+            {
+            return false;
+            }
+
+        if (mapThis.isEmpty())
+            {
+            return true;
+            }
+
+        for (Object key : mapThis.keySet())
+            {
+            Component childThis = mapThis.get(key);
+            Component childThat = mapThat.get(key);
+
+            for (Component eachThis = childThis, eachThat = childThat;
+                    eachThis != null || eachThat != null;
+                    eachThis = eachThis.m_sibling, eachThat = eachThat.m_sibling)
+                {
+                if (eachThis == null || eachThat == null)
+                    {
+                    return false;
+                    }
+                }
+            if (childThat == null)
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    /**
      * Obtain the child that is identified by the specified identity. If more than one child is
      * a match, then a component representing the multiple siblings is created to represent the
      * result.
@@ -693,69 +744,74 @@ public abstract class Component
         {
         // read component children
         int cKids = readMagnitude(in);
-        if (cKids > 0)
+        while (cKids-- > 0)
             {
-            while (cKids-- > 0)
+            ConstantPool pool = getConstantPool();
+            Component    kid  = null;
+
+            // read component body (or bodies)
+            int n = in.readUnsignedByte();
+            if ((n & CONDITIONAL_BIT) == 0)
                 {
-                Component kid = null;
+                // there isn't a conditional multiple-component list, so this is just the first byte of
+                // the two-byte FLAGS value (which is the start of the body) for a single component
+                n = (n << 8) | in.readUnsignedByte();
+                kid = Format.fromFlags(n).instantiate(this, pool.getConstant(readMagnitude(in)), n, null);
+                }
+            else
+                {
+                // some number of components, each with a condition
+                Component    prevSibling = null;
+                int          cSiblings   = readMagnitude(in);
+                assert cSiblings > 0;
+                for (int i = 0; i < cSiblings; ++i)
+                    {
+                    ConditionalConstant condition  = (ConditionalConstant) pool.getConstant(readIndex(in));
+                    int                 nFlags     = in.readUnsignedShort();
+                    Component           curSibling = Format.fromFlags(nFlags).instantiate(
+                            this, pool.getConstant(readMagnitude(in)), nFlags, condition);
 
-                // read component body (or bodies)
-                int n = in.readUnsignedByte();
-                if ((n & CONDITIONAL_BIT) == 0)
-                    {
-                    // there isn't a conditional multiple-component list, so this is just the first byte of
-                    // the two-byte FLAGS value (which is the start of the body) for a single component
-                    n = (n << 8) | in.readUnsignedByte();
-                    kid = Format.fromFlags(n).instantiate(this, null, n, in);
-                    }
-                else
-                    {
-                    // some number of components, each with a condition
-                    ConstantPool pool        = getConstantPool();
-                    Component    prevSibling = null;
-                    int          cSiblings   = readMagnitude(in);
-                    assert cSiblings > 0;
-                    for (int i = 0; i < cSiblings; ++i)
-                        {
-                        ConditionalConstant condition  = (ConditionalConstant) pool.getConstant(readIndex(in));
-                        int                 nFlags     = in.readUnsignedShort();
-                        Component           curSibling = Format.fromFlags(nFlags).instantiate(this, condition, nFlags, in);
-                        if (prevSibling == null)
-                            {
-                            kid = curSibling;
-                            }
-                        else
-                            {
-                            prevSibling.m_sibling = curSibling;
-                            }
-                        prevSibling = curSibling;
-                        }
-                    }
-                kid.disassemble(in);
+                    // the remainder of the body of the current sibling is at the current point of
+                    // the stream (but do NOT disassemble the children)
+                    curSibling.disassemble(in);
 
-                int cb = readMagnitude(in);
-                if (cb > 0)
-                    {
-                    if (fLazy)
+                    if (prevSibling == null)
                         {
-                        // just read the bytes for the children and store it off for later
-                        byte[] ab = new byte[cb];
-                        in.readFully(ab);
-                        for (Component eachSibling = kid; eachSibling != null; eachSibling = eachSibling.m_sibling)
-                            {
-                            // note that every sibling has a copy of all of the children; this is because
-                            // the byte[] serves as both the storage of those children and an indicator that
-                            // the deserialization of the children has been deferred
-                            eachSibling.m_abChildren = ab;
-                            }
+                        kid = curSibling;
                         }
                     else
                         {
-                        kid.disassembleChildren(in, fLazy);
+                        prevSibling.m_sibling = curSibling;
+                        }
+                    prevSibling = curSibling;
+                    }
+                }
+
+            // register the eldest sibling in the namespace of this component; this has to be done
+            // before recursing to the children for disassembly so that the parent/child refs are
+            // already in place, just in case a child asks e.g. for its eldest sibling
+            addChild(kid);
+
+            int cb = readMagnitude(in);
+            if (cb > 0)
+                {
+                if (fLazy)
+                    {
+                    // just read the bytes for the children and store it off for later
+                    byte[] ab = new byte[cb];
+                    in.readFully(ab);
+                    for (Component eachSibling = kid; eachSibling != null; eachSibling = eachSibling.m_sibling)
+                        {
+                        // note that every sibling has a copy of all of the children; this is because
+                        // the byte[] serves as both the storage of those children and an indicator that
+                        // the deserialization of the children has been deferred
+                        eachSibling.m_abChildren = ab;
                         }
                     }
-
-                addChild(kid);
+                else
+                    {
+                    kid.disassembleChildren(in, fLazy);
+                    }
                 }
             }
         }
@@ -963,7 +1019,13 @@ public abstract class Component
     @Override
     public boolean equals(Object obj)
         {
-        // TODO
+        if (obj instanceof Component)
+            {
+            Component that = (Component) obj;
+            return isBodyIdentical(that) && areChildrenIdentical(that);
+            }
+
+        return false;
         }
 
     @Override
@@ -1011,27 +1073,25 @@ public abstract class Component
          * children).
          *
          * @param xsParent   the parent component
-         * @param condition  the condition under which the component is present, or null
+         * @param constId    the constant for the new component's identity
          * @param nFlags     the flags that define the common attributes of the component
-         * @param in         the stream from which the component is being read from
+         * @param condition  the condition under which the component is present, or null
          *
          * @return the component
          *
          * @throws IOException if something goes wrong reading from the stream
          */
-        Component instantiate(XvmStructure xsParent, ConditionalConstant condition, int nFlags, DataInput in)
-                throws IOException
+        Component instantiate(XvmStructure xsParent, Constant constId, int nFlags, ConditionalConstant condition)
             {
             if (xsParent == null)
                 {
-                throw new IOException("parent required");
+                throw new IllegalStateException("parent required");
                 }
 
-            Constant constId = xsParent.getConstantPool().getConstant(readMagnitude(in));
             switch (this)
                 {
                 case FILE:
-                    throw new IOException("file is not instantiable");
+                    throw new IllegalStateException("file is not instantiable");
 
                 case MODULE:
                     return new ModuleStructure(xsParent, nFlags, (ModuleConstant) constId, condition);
@@ -1058,7 +1118,7 @@ public abstract class Component
                     return new MethodStructure(xsParent, nFlags, (MethodConstant) constId, condition);
 
                 default:
-                    throw new IOException("uninstantiable format: " + this);
+                    throw new IllegalStateException("uninstantiable format: " + this);
                 }
             }
 
