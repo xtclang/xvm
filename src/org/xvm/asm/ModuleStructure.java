@@ -299,7 +299,7 @@ public class ModuleStructure
     @Override
     public String getName()
         {
-        return getModuleConstant().getQualifiedName();
+        return getModuleConstant().getName();
         }
 
 

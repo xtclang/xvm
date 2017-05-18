@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Constant;
@@ -14,8 +15,6 @@ import org.xvm.asm.LinkerContext;
 
 import org.xvm.util.Handy;
 
-import static org.xvm.util.Handy.compareObjects;
-import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -33,19 +32,15 @@ public class PresentCondition
      *
      * @param pool    the ConstantPool that will contain this Constant
      * @param format  the format of the Constant in the stream
-     * @param in      the DataInput stream to read the Constant value
-     *                from
+     * @param in      the DataInput stream to read the Constant value from
      *
-     * @throws IOException  if an issue occurs reading the Constant
-     *                      value
+     * @throws IOException  if an issue occurs reading the Constant value
      */
     public PresentCondition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
         m_iStruct   = readMagnitude(in);
-        m_iVer      = readIndex(in);
-        m_fExactVer = in.readBoolean();
         }
 
     /**
@@ -53,54 +48,25 @@ public class PresentCondition
      *
      * @param pool           the ConstantPool that will contain this Constant
      * @param constVMStruct  the Module, Package, Class, Property or Method
-     * @param constVer       the optional specific version of the Module, Package, Class, Property
-     *                       or Method
-     * @param fExactVer      true if the version has to match exactly
      */
-    public PresentCondition(ConstantPool pool, Constant constVMStruct, VersionConstant constVer, boolean fExactVer)
+    public PresentCondition(ConstantPool pool, IdentityConstant constVMStruct)
         {
         super(pool);
         m_constStruct = constVMStruct;
-        m_constVer    = constVer;
-        m_fExactVer   = fExactVer;
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * Obtain the constant of the XVM Structure that this conditional
-     * constant represents the conditional presence of.
+     * Obtain the constant of the XVM Structure that this conditional constant represents the
+     * conditional presence of.
      *
-     * @return the constant representing the XVM Structure to be tested
-     *         for
+     * @return the constant representing the XVM Structure to be tested for
      */
-    public Constant getPresentConstant()
+    public IdentityConstant getPresentConstant()
         {
         return m_constStruct;
-        }
-
-    /**
-     * Obtain the version of the XVM Structure that must exist, or null
-     * if the test does not evaluate the version.
-     *
-     * @return the version that is required, or null if any version is
-     *         acceptable
-     */
-    public VersionConstant getVersionConstant()
-        {
-        return m_constVer;
-        }
-
-    /**
-     * Determine if the exact specified version is required, or if
-     * subsequent versions are acceptable.
-     *
-     * @return true if the exact version specified is required
-     */
-    public boolean isExactVersion()
-        {
-        return m_fExactVer;
         }
 
 
@@ -109,10 +75,7 @@ public class PresentCondition
     @Override
     public boolean evaluate(LinkerContext ctx)
         {
-        final VersionConstant constVer = m_constVer;
-        return constVer == null
-                ? ctx.isVisible(m_constStruct)
-                : ctx.isVisible(m_constStruct, m_constVer, m_fExactVer);
+        return ctx.isPresent(m_constStruct);
         }
 
     @Override
@@ -127,6 +90,59 @@ public class PresentCondition
         return Collections.singleton(this);
         }
 
+    @Override
+    public Relation calcRelation(ConditionalConstant that)
+        {
+        if (that instanceof PresentCondition)
+            {
+            IdentityConstant constThis = this.m_constStruct;
+            IdentityConstant constThat = ((PresentCondition) that).m_constStruct;
+            if (constThis.equals(constThat))
+                {
+                // they're testing the same thing
+                return Relation.EQUIV;
+                }
+
+            if (constThis.getModuleConstant().equals(constThat.getModuleConstant()))
+                {
+                // they're testing two things from the same module, so they could be related
+                List<IdentityConstant> listThis = constThis.getIdentityConstantPath();
+                List<IdentityConstant> listThat = constThat.getIdentityConstantPath();
+                int cThis = listThis.size();
+                int cThat = listThat.size();
+                for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i)
+                    {
+                    if (!listThis.get(i).equals(listThat.get(i)))
+                        {
+                        return Relation.INDEP;
+                        }
+                    }
+
+                // we already checked if they are equal, and they weren't so they had better have
+                // different length paths
+                assert cThis != cThat;
+
+                return cThis > cThat
+                    ? Relation.IMPLIES
+                    : Relation.IMPLIED;
+                }
+            }
+        else if (that instanceof VersionMatchesCondition && this.m_constStruct instanceof ModuleConstant)
+            {
+            ModuleConstant constThisModule = (ModuleConstant) this.m_constStruct;
+            ModuleConstant constThatModule = ((VersionMatchesCondition) that).getModuleConstant();
+            if (constThisModule.equals(constThatModule))
+                {
+                // so "this" is checking that the module is present at all, and "that" is checking
+                // the version of the same module, so they are related, because if "that" version
+                // passes, then it's implied that "this" presence check will always pass
+                return Relation.IMPLIED;
+                }
+            }
+
+        return Relation.INDEP;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -139,43 +155,13 @@ public class PresentCondition
     @Override
     protected int compareDetails(Constant that)
         {
-        org.xvm.asm.constants.PresentCondition constThat = (org.xvm.asm.constants.PresentCondition) that;
-        int nResult = m_constStruct.compareTo(constThat.m_constStruct);
-        if (nResult == 0)
-            {
-            nResult = compareObjects(m_constVer, constThat.m_constVer);
-            if (nResult == 0)
-                {
-                nResult = Boolean.valueOf(m_fExactVer).compareTo(Boolean.valueOf(constThat.m_fExactVer));
-                }
-            }
-
-        return nResult;
+        return m_constStruct.compareTo(((PresentCondition) that).m_constStruct);
         }
 
     @Override
     public String getValueString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("isPresent(")
-          .append(m_constStruct);
-
-        final VersionConstant constVer = m_constVer;
-        if (constVer != null)
-            {
-            sb.append(", ")
-              .append(m_constVer.getValueString());
-
-            if (m_fExactVer)
-                {
-                sb.append(", EXACT");
-                }
-            }
-
-        sb.append(')');
-
-        return sb.toString();
+        return "isPresent(" + m_constStruct + ')';
         }
 
 
@@ -185,27 +171,18 @@ public class PresentCondition
     protected void disassemble(DataInput in)
             throws IOException
         {
-        final ConstantPool pool = getConstantPool();
-
-        m_constStruct = pool.getConstant(m_iStruct);
+        m_constStruct = (IdentityConstant) getConstantPool().getConstant(m_iStruct);
         assert     m_constStruct instanceof ModuleConstant
-                || m_constStruct instanceof PropertyConstant
+                || m_constStruct instanceof PackageConstant
                 || m_constStruct instanceof ClassConstant
                 || m_constStruct instanceof PropertyConstant
                 || m_constStruct instanceof MethodConstant;
-
-        final int iVer = m_iVer;
-        if (iVer >= 0)
-            {
-            m_constVer = (VersionConstant) pool.getConstant(iVer);
-            }
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constStruct = pool.register(m_constStruct);
-        m_constVer    = (VersionConstant) pool.register(m_constVer);
+        m_constStruct = (IdentityConstant) pool.register(m_constStruct);
         }
 
     @Override
@@ -214,8 +191,6 @@ public class PresentCondition
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constStruct.getPosition());
-        writePackedLong(out, m_constVer == null ? -1 : m_constVer.getPosition());
-        out.writeBoolean(m_fExactVer);
         }
 
 
@@ -224,7 +199,7 @@ public class PresentCondition
     @Override
     public int hashCode()
         {
-        return Handy.hashCode(m_constStruct) ^ Handy.hashCode(m_constVer);
+        return 61 * Handy.hashCode(m_constStruct);
         }
 
 
@@ -236,22 +211,7 @@ public class PresentCondition
     private transient int m_iStruct;
 
     /**
-     * During disassembly, this holds the index of the version or -1.
-     */
-    private transient int m_iVer;
-
-    /**
      * A ModuleConstant, PackageConstant, ClassConstant, PropertyConstant, or MethodConstant.
      */
-    private Constant m_constStruct;
-
-    /**
-     * The optional version identifier for the VMStructure that must be present.
-     */
-    private VersionConstant m_constVer;
-
-    /**
-     * True if the version has to match exactly.
-     */
-    private boolean m_fExactVer;
+    private IdentityConstant m_constStruct;
     }

@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Evaluates if the module is of a specified version. The VersionCondition applies to (tests for)
+ * Evaluates if the module is of a specified version. The VersionedCondition applies to (tests for)
  * the version of the current module only; in other words, the VersionConsant is used to
  * conditionally include or exclude VMStructures within <b>this</b> module based on the version of
  * <b>this</b> module. This allows multiple versions of a module to be colocated within a single
@@ -29,7 +29,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * To evaluate if another module (or component thereof) is of a specified version, a {@link
  * PresentCondition} is used.
  */
-public class VersionCondition
+public class VersionedCondition
         extends ConditionalConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -43,7 +43,7 @@ public class VersionCondition
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public VersionCondition(ConstantPool pool, Format format, DataInput in)
+    public VersionedCondition(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -51,12 +51,12 @@ public class VersionCondition
         }
 
     /**
-     * Construct a VersionCondition.
+     * Construct a VersionedCondition.
      *
      * @param pool       the ConstantPool that will contain this Constant
      * @param constVer   the version of this Module to evaluate
      */
-    public VersionCondition(ConstantPool pool, VersionConstant constVer)
+    public VersionedCondition(ConstantPool pool, VersionConstant constVer)
         {
         super(pool);
         m_constVer  = constVer;
@@ -81,7 +81,7 @@ public class VersionCondition
     @Override
     public boolean evaluate(LinkerContext ctx)
         {
-        return ctx.isVersionMatch(m_constVer, true);
+        return ctx.isVersion(m_constVer);
         }
 
     @Override
@@ -102,19 +102,34 @@ public class VersionCondition
         return Collections.singleton(m_constVer.getVersion());
         }
 
+    @Override
+    public Relation calcRelation(ConditionalConstant that)
+        {
+        if (that instanceof VersionedCondition)
+            {
+            Version verThis = this.m_constVer.getVersion();
+            Version verThat = ((VersionedCondition) that).m_constVer.getVersion();
+
+            return verThis.isSameAs(verThat)
+                    ? Relation.EQUIV
+                    : Relation.MUTEX;
+            }
+
+        return Relation.INDEP;
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     public Format getFormat()
         {
-        return Format.ConditionVersion;
+        return Format.ConditionVersioned;
         }
 
     @Override
     protected int compareDetails(Constant that)
         {
-        org.xvm.asm.constants.VersionCondition constThat = (org.xvm.asm.constants.VersionCondition) that;
+        VersionedCondition constThat = (VersionedCondition) that;
         return m_constVer.compareTo(constThat.m_constVer);
         }
 

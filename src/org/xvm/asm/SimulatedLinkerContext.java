@@ -13,11 +13,11 @@ import org.xvm.asm.constants.VersionConstant;
  * the AssemblerContext -- and only that information! Specifically, it takes the conditions that
  * have (for a given code path) already been tested (specified), and thus are known to be true.
  * <p/>
- * For example, if a Module is marked as version 1 (using a VersionCondition) and the package under
+ * For example, if a Module is marked as version 1 (using a VersionedCondition) and the package under
  * it is conditional on "debug" being defined, then the AssemblerContext at that point in the
  * hierarchy implies a LinkerContext that returns true for {@link #isSpecified(String)
  * isSpecified("debug")} and true for {@link #isVersionMatch(VersionConstant, boolean)
- * isVersionMatch(1, true)}.
+ * isVersion(1, true)}.
  *
  * @author cp 2017.05.17
  */
@@ -69,6 +69,7 @@ public class SimulatedLinkerContext
             }
         }
 
+
     // ----- LinkerContext methods -----------------------------------------------------------------
 
     @Override
@@ -84,7 +85,7 @@ public class SimulatedLinkerContext
         }
 
     @Override
-    public boolean isVisible(Constant constVMStruct)
+    public boolean isVersionMatch(Constant constVMStruct)
         {
         if (cond == null)
             {
@@ -96,7 +97,8 @@ public class SimulatedLinkerContext
         }
 
     @Override
-    public boolean isVisible(Constant constVMStruct, VersionConstant constVer, boolean fExactVer)
+    public boolean isPresent(Constant constVMStruct, VersionConstant constVer,
+            boolean fExactVer)
         {
         if (cond == null)
             {
@@ -140,6 +142,18 @@ public class SimulatedLinkerContext
         return "SimulatedLinkerContext{" + cond + "}"
         }
 
+
+    // ----- inner class: Tester --
+
+    class BruteForceTester
+        {
+        public BruteForceTester(ConditionalConstant cond)
+            {
+            // build a table
+            cond.terminals()
+            }
+
+        }
 
     // ----- fields --------------------------------------------------------------------------
 

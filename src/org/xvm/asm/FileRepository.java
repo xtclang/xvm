@@ -122,7 +122,7 @@ public class FileRepository
             this.err = true;
             }
 
-        this.name      = module.getModuleConstant().getQualifiedName();
+        this.name      = module.getModuleConstant().getName();
         this.versions  = module.getVersions();
         this.timestamp = file.lastModified();
         this.size      = file.length();
@@ -186,7 +186,7 @@ public class FileRepository
             }
         else
             {
-            this.name     = module.getModuleConstant().getQualifiedName();
+            this.name     = module.getModuleConstant().getName();
             this.versions = module.getVersions();
             }
 

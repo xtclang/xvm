@@ -90,6 +90,20 @@ public class NamedCondition
         return Collections.singleton(this);
         }
 
+    @Override
+    public Relation calcRelation(ConditionalConstant that)
+        {
+        assert that.isTerminal();
+
+        if (that instanceof NamedCondition)
+            {
+            return this.m_constName.equals(((NamedCondition) that).m_constName)
+                    ? Relation.EQUIV
+                    : Relation.INDEP;
+            }
+
+        return Relation.INDEP;
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

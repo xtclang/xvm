@@ -70,7 +70,7 @@ public class AnyCondition
 
         for (ConditionalConstant cond : m_aconstCond)
             {
-            if (cond instanceof VersionCondition || cond instanceof AnyCondition)
+            if (cond instanceof VersionedCondition || cond instanceof AnyCondition)
                 {
                 if (setVers == null)
                     {

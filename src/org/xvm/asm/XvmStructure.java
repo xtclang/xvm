@@ -251,7 +251,7 @@ public abstract class XvmStructure
      * condition. One example use of this method is to remove code that is tagged as only being used
      * for "test" or "debug".
      *
-     * @param condition a NamedCondition, a PresentCondition, or a VersionCondition, or a
+     * @param condition a NamedCondition, a PresentCondition, or a VersionedCondition, or a
      *                  NotCondition of any of the above
      */
     protected void purgeCondition(ConditionalConstant condition)

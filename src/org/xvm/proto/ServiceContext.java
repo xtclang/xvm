@@ -105,7 +105,7 @@ public class ServiceContext
 
     public ExceptionHandle start(String sServiceName)
         {
-        String sThreadName = f_container.m_constModule.getQualifiedName() + "/" + sServiceName;
+        String sThreadName = f_container.m_constModule.getName() + "/" + sServiceName;
 
         // TODO: we need to be able to share native threads across services
         ServiceDaemon daemon = m_daemon = new ServiceDaemon(sThreadName, this);

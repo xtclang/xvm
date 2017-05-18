@@ -455,7 +455,7 @@ public class FileStructure
         this.pool = pool;
         pool.disassemble(in);
 
-        moduleName = ((ModuleConstant) pool.getConstant(readIndex(in))).getQualifiedName();
+        moduleName = ((ModuleConstant) pool.getConstant(readIndex(in))).getName();
         disassembleChildren(in, fLazyDeser);
 
         // must be at least one module (the first module is considered to be the "main" module)

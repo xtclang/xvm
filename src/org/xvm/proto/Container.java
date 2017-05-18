@@ -8,8 +8,6 @@ import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
-import org.xvm.proto.template.xService;
-import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -79,7 +77,7 @@ public class Container
 
         try
             {
-            String sModule = m_constModule.getQualifiedName();
+            String sModule = m_constModule.getName();
             xModule module = (xModule) f_types.ensureTemplate(sModule);
 
             InvocationTemplate mtRun = module.getMethodTemplate("run", xModule.VOID, xModule.VOID);

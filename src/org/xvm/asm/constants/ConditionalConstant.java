@@ -42,7 +42,7 @@ import org.xvm.util.ListMap;
  * <li>{@link PresentCondition PresentCondition} - evaluates to true iff the specified VM structure
  *     (and optionally a particular version of that VM structure) is present at runtime, allowing
  *     optional dependencies to be supported;</li>
- * <li>{@link VersionCondition VersionCondition} - evaluates to true iff the version of this module
+ * <li>{@link VersionedCondition VersionedCondition} - evaluates to true iff the version of this module
  *     is of a specified version.</li>
  * </ul>
  * <p/>
@@ -84,14 +84,6 @@ public abstract class ConditionalConstant
     public abstract boolean evaluate(LinkerContext ctx);
 
     /**
-     * @return true iff this is a terminal ConditionalConstant
-     */
-    public boolean isTerminal()
-        {
-        return false;
-        }
-
-    /**
      * Determine the set of terminal conditions that make up this ConditionalConstant.
      *
      * @return a set of terminals that are referenced by this ConditionalConstant
@@ -112,11 +104,32 @@ public abstract class ConditionalConstant
         }
 
     /**
+     * @return true iff this is a terminal ConditionalConstant
+     */
+    public boolean isTerminal()
+        {
+        return false;
+        }
+
+    /**
+     * Determine the relation between two terminal ConditionalConstant objects.
+     *
+     * @param that
+     *
+     * @return
+     */
+    public Relation calcRelation(ConditionalConstant that)
+        {
+        assert !isTerminal();
+        throw new UnsupportedOperationException("on terminal ConditionalConstants are supported");
+        }
+
+    /**
      * Determine the versions specified for the ConditionalConstant, if any.
      * <p/>
      * A conditional can include a version in one of three ways:
      * <ul>
-     * <li>A VersionCondition;</li>
+     * <li>A VersionedCondition;</li>
      * <li>An AnyCondition that contains one or more VersionConditions; or</li>
      * <li>An AllCondition that contains exactly one of the above.</li>
      * </ul>
@@ -246,5 +259,128 @@ public abstract class ConditionalConstant
     public String getDescription()
         {
         return "condition=" + getValueString();
+        }
+
+
+    // ----- Relation enum -------------------------------------------------------------------------
+
+    /**
+     * Given that a condition must be able to evaluate to either false or to true, two conditions
+     * can be related in one of seven ways:
+     *
+     * <ul>
+     * <li><b>Independent:</b> <i>(Unrelated)</i> This condition is independent of that
+     *     condition;</li>
+     *     <code><pre>
+     *                this
+     *                F   T
+     *              ╔═══╤═══╗
+     *            F ║ x │ x ║
+     *       that   ╟───┼───╢
+     *            T ║ x │ x ║
+     *              ╚═══╧═══╝
+     *      </pre></code>
+     * <li><b>Equivalent:</b> This condition is equivalent to that condition;</li>
+     *     <code><pre>
+     *                this
+     *                F   T
+     *              ╔═══╤═══╗
+     *            F ║ x │   ║
+     *       that   ╟───┼───╢
+     *            T ║   │ x ║
+     *              ╚═══╧═══╝
+     *      </pre></code>
+     * <li><b>Inverse:</b> This condition is the inverse of that condition;</li>
+     *     <code><pre>
+     *                this
+     *                F   T
+     *              ╔═══╤═══╗
+     *            F ║   │ x ║
+     *       that   ╟───┼───╢
+     *            T ║ x │   ║
+     *              ╚═══╧═══╝
+     *      </pre></code>
+     * <li><b>Mutual-Exclusion:</b> This condition is mutually exclusive with that condition;</li>
+     *     <code><pre>
+     *                this
+     *                F   T
+     *              ╔═══╤═══╗
+     *            F ║ x │ x ║
+     *       that   ╟───┼───╢
+     *            T ║ x │   ║
+     *              ╚═══╧═══╝
+     *      </pre></code>
+     * <li><b>Mutual-Inclusion:</b> This condition is mutually inclusive with that condition;</li>
+     *     <code><pre>
+     *                this
+     *                F   T
+     *              ╔═══╤═══╗
+     *            F ║   │ x ║
+     *       that   ╟───┼───╢
+     *            T ║ x │ x ║
+     *              ╚═══╧═══╝
+     *      </pre></code>
+     * <li><b>Implies:</b> If this is true, it implies that is true;</li>
+     *     <code><pre>
+     *                this
+     *                F   T
+     *              ╔═══╤═══╗
+     *            F ║ x │   ║
+     *       that   ╟───┼───╢
+     *            T ║ x │ x ║
+     *              ╚═══╧═══╝
+     *      </pre></code>
+     * <li><b>Implied:</b> If that is true, this is implied to be true.</li>
+     *     <code><pre>
+     *                this
+     *                F   T
+     *              ╔═══╤═══╗
+     *            F ║ x │ x ║
+     *       that   ╟───┼───╢
+     *            T ║   │ x ║
+     *              ╚═══╧═══╝
+     *      </pre></code>
+     * </ul>
+     */
+    public enum Relation
+        {
+        INDEP, EQUIV, INVERSE, MUTEX, MUTIN, IMPLIES, IMPLIED;
+
+        /**
+         * Swap the "this" and "that" relationship. This flips the table over the "\" diagonal.
+         *
+         * @return the relationship between "that" and "this"
+         */
+        public Relation reverse()
+            {
+            switch (this)
+                {
+                case IMPLIES:
+                    return IMPLIED;
+                case IMPLIED:
+                    return IMPLIES;
+                default:
+                    return this;
+                }
+            }
+
+        /**
+         * Swap the true and false results. This flips the table over the "/" diagonal.
+         *
+         * @return the relationship that represents inverted results
+         */
+        public Relation inverse()
+            {
+            switch (this)
+                {
+                case MUTEX:
+                    return MUTIN;
+                case MUTIN:
+                    return MUTEX;
+                default:
+                    return this;
+                }
+            }
+
         }
     }
