@@ -1,11 +1,19 @@
 package org.xvm.asm;
 
 
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.ConditionalConstant.Relation;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.VersionConstant;
+import org.xvm.util.ListMap;
+import org.xvm.util.LongList;
 
 
 /**
@@ -27,19 +35,20 @@ public class SimulatedLinkerContext
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a SimulatedLinkerContext from the current configuration of an AssemblerContext.
-     * @param ctx
+     * Construct a SimulatedLinkerContext using the specified condition.
+     * 
+     * @param cond  a conditional constant, or null (meaning unconditional)
      */
-    public SimulatedLinkerContext(AssemblerContext ctx)
-        {
-        // TODO
-        }
-
     public SimulatedLinkerContext(ConditionalConstant cond)
         {
         this.cond = cond;
         }
 
+    /**
+     * Construct a SimulatedLinkerContext using the specified conditions.
+     * 
+     * @param conds  any number of conditions, which will be treated as if they all need to be met
+     */
     public SimulatedLinkerContext(ConditionalConstant... conds)
         {
         this(toCondition(conds));
@@ -85,7 +94,7 @@ public class SimulatedLinkerContext
         }
 
     @Override
-    public boolean isVersionMatch(Constant constVMStruct)
+    public boolean isPresent(IdentityConstant constVMStruct)
         {
         if (cond == null)
             {
@@ -97,8 +106,7 @@ public class SimulatedLinkerContext
         }
 
     @Override
-    public boolean isPresent(Constant constVMStruct, VersionConstant constVer,
-            boolean fExactVer)
+    public boolean isVersionMatch(ModuleConstant constModule, VersionConstant constVer)
         {
         if (cond == null)
             {
@@ -110,7 +118,7 @@ public class SimulatedLinkerContext
         }
 
     @Override
-    public boolean isVersionMatch(VersionConstant constVer, boolean fExactVer)
+    public boolean isVersion(VersionConstant constVer)
         {
         if (cond == null)
             {
@@ -143,22 +151,173 @@ public class SimulatedLinkerContext
         }
 
 
-    // ----- inner class: Tester --
+    // ----- inner class: BruteForceTester ---------------------------------------------------------
 
-    class BruteForceTester
+    public static class BruteForceTester
         {
         public BruteForceTester(ConditionalConstant cond)
             {
-            // build a table
-            cond.terminals()
+            assert cond != null;
+            this.cond = cond;
+            
+            Set<ConditionalConstant> terminals  = cond.terminals();
+            int                      cTerminals = terminals.size();
+
+            ConditionalConstant[] acond     = new ConditionalConstant[cTerminals];
+            LongList              skipMasks = new LongList();
+            LongList              skipPtrns = new LongList();
+            int                   cConds    = 0;
+
+            NextTerminal: for (ConditionalConstant terminal : terminals)
+                {
+                Map<Integer, Relation> conflicts = null;
+                for (int i = 0; i < cConds; ++i)
+                    {
+                    Relation rel = acond[i].calcRelation(terminal);
+                    switch (rel)
+                        {
+                        case INDEP:
+                            break;
+
+                        case EQUIV:
+                            terminal.iTest = i;
+                            continue NextTerminal;
+
+                        case INVERSE:
+                            terminal.iTest = -1 - i;
+                            continue NextTerminal;
+
+                        case MUTEX:
+                        case MUTIN:
+                        case IMPLIES:
+                        case IMPLIED:
+                            if (conflicts == null)
+                                {
+                                conflicts = new ListMap<>();
+                                }
+                            conflicts.put(i, rel);
+                            break;
+                        }
+                    }
+
+                int iCondThis    = cConds++;
+                terminal.iTest   = iCondThis;
+                acond[iCondThis] = terminal;
+
+                if (conflicts != null)
+                    {
+                    for (Map.Entry<Integer, Relation> entry : conflicts)
+                        {
+                        int iCondThat = entry.getKey();
+                        skipMasks.add((1L << iCondThat) | (1L << iCondThis));
+                        switch (entry.getValue())
+                            {
+                            case MUTEX:
+                                // can't both be true
+                                skipPtrns.add((1L << iCondThat) | (1L << iCondThis))
+                                break;
+
+                            case MUTIN:
+                                // can't both be false
+                                skipPtrns.add(0L);
+                                break;
+
+                            case IMPLIES:
+                                // if that is true, then this can't be false (that implies this to
+                                // be true, i.e. this is implied to be true by that being true)
+                                skipPtrns.add(1L << iCondThat);
+                                break;
+
+                            case IMPLIED:
+                                // that can't be false if this is true (that is implied to be true
+                                // by this being true)
+                                skipPtrns.add(1L << iCondThis);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+            assert cConds > 0;
+            boolean fSkips    = !skipMasks.isEmpty();
+            int     cSkips    = skipMasks.size();
+            long[]  amaskSkip = skipMasks.toArray();
+            long[]  aptrnSkip = skipPtrns.toArray();
+            long[]  aResultFF = new long[cConds];
+            long[]  aResultFT = new long[cConds];
+            long[]  aResultTF = new long[cConds];
+            long[]  aResultTT = new long[cConds];
+            int     cTrue     = 0;
+            int     cFalse    = 0;
+            NextTest: for (long nTest = 0L, cIters = (1L << cConds); nTest < cIters; ++nTest)
+                {
+                if (fSkips)
+                    {
+                    for (int iSkip = 0; iSkip < cSkips; ++iSkip)
+                        {
+                        if ((nTest & amaskSkip[iSkip]) == aptrnSkip[iSkip])
+                            {
+                            continue NextTest;
+                            }
+                        }
+                    }
+
+                if (cond.testEvaluate(nTest))
+                    {
+                    // result is true
+                    ++cTrue;
+                    for (int iCond = 0; iCond < cConds; ++iCond)
+                        {
+                        if ((nTest | (1L << iCond)) != 0)
+                            {
+                            // input is true, result is true
+                            ++aResultTT[iCond];
+                            }
+                        else
+                            {
+                            // input is false, result is true
+                            ++aResultFT[iCond];
+                            }
+                        }
+                    }
+                else
+                    {
+                    // result is false
+                    ++cFalse;
+                    for (int iCond = 0; iCond < cConds; ++iCond)
+                        {
+                        if ((nTest | (1L << iCond)) != 0)
+                            {
+                            // input is true, result is false
+                            ++aResultTF[iCond];
+                            }
+                        else
+                            {
+                            // input is false, result is false
+                            ++aResultFF[iCond];
+                            }
+                        }
+                    }
+                }
+
+            for (ConditionalConstant terminal : terminals)
+                {
+                int     iCond   = terminal.iTest;
+                boolean fInvert = iCond < 0;
+                if (fInvert)
+                    {
+                    iCond = -1 - iCond;
+                    }
+
+                }
             }
 
+        
+        
+        private ConditionalConstant cond;
         }
 
-    // ----- fields --------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
     private ConditionalConstant cond;
-
-    private Set<String> defines;
-    private
     }

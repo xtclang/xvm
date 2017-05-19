@@ -2,14 +2,18 @@ package org.xvm.asm.constants;
 
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
-
 import org.xvm.asm.Version;
+
 import org.xvm.util.ListMap;
+import org.xvm.util.LongList;
 
 
 /**
@@ -84,11 +88,48 @@ public abstract class ConditionalConstant
     public abstract boolean evaluate(LinkerContext ctx);
 
     /**
+     * Used to brute-force evaluate every possible condition without using a LinkerContext.
+     * 
+     * @param n  the test number
+     *           
+     * @return the result for this condition
+     */
+    public boolean testEvaluate(long n)
+        {
+        assert isTerminal();
+        return iTest < 0
+                ? (n & (1L << (-1 - iTest))) == 0
+                : (n & (1L << iTest)) != 0; 
+        }
+
+    /**
      * Determine the set of terminal conditions that make up this ConditionalConstant.
      *
      * @return a set of terminals that are referenced by this ConditionalConstant
      */
-    public abstract Set<ConditionalConstant> terminals();
+    public Set<ConditionalConstant> terminals()
+        {
+        if (isTerminal())
+            {
+            return Collections.singleton(this);
+            }
+
+        Set<ConditionalConstant> terminals = new HashSet<>();
+        collectTerminals(terminals);
+        return terminals;
+        }
+
+    /**
+     * Determine the set of terminal conditions that make up this ConditionalConstant.
+     *
+     * @return a set of terminals that are referenced by this ConditionalConstant
+     * @param terminals
+     */
+    protected void collectTerminals(Set<ConditionalConstant> terminals)
+        {
+        assert isTerminal();
+        terminals.add(this);
+        }
 
     /**
      * Determine if the specified terminal ConditionalConstant is present in this
@@ -249,6 +290,247 @@ public abstract class ConditionalConstant
         return new AnyCondition(getConstantPool(), this, that);
         }
 
+    /**
+     * @return true if the ConditionalConstant will use brute force to determine the influences of
+     *         the terminal conditions
+     */
+    public boolean isTerminalInfluenceBruteForce()
+        {
+        assert isTerminal();
+        return false;
+        }
+
+    /**
+     * Try to figure out if the combination of logic is "finessable" such that brute force isn't
+     * necessary.
+     *
+     * @param fInNot      true if we're nested under a NotCondition
+     * @param setSimple   (input/output) collect the terminals that occur outside of NotConditions
+     * @param setComplex  (input/output) collect the terminals that occur inside a NotCondition
+     *
+     * @return
+     */
+    protected boolean isTerminalInfluenceFinessable(boolean fInNot,
+            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)
+        {
+        assert isTerminal();
+        if (fInNot)
+            {
+            // we're inside some convoluted logic, with at least one negation going on, so if this
+            // condition is already referenced at all, then give up on the hope to finesse
+            if (setSimple.contains(this) || setComplex.contains(this))
+                {
+                return false;
+                }
+
+            setComplex.add(this);
+            return true;
+            }
+
+        // we're not inside convoluted logic, so as long as this condition isn't already in the
+        // convoluted list, we're ok
+        if (setComplex.contains(this))
+            {
+            return false;
+            }
+
+        // this is finessable; register this condition in the non-convoluted list
+        setSimple.add(this);
+        return true;
+        }
+
+    /**
+     * Calculate the influence of each terminal condition on the result of the conditional.
+     * <p/>
+     * This is the <a href="https://en.wikipedia.org/wiki/Boolean_satisfiability_problem">Boolean
+     * Satisfiability Problem</a>.
+     *
+     * @return
+     */
+    public Map<ConditionalConstant, Influence> terminalInfluences()
+        {
+        if (isTerminal())
+            {
+            return Collections.singletonMap(this, Influence.IDENTITY);
+            }
+
+        Set<ConditionalConstant> terminals  = terminals();
+        int                      cTerminals = terminals.size();
+
+        ConditionalConstant[] acond     = new ConditionalConstant[cTerminals];
+        LongList              skipMasks = new LongList();
+        LongList              skipPtrns = new LongList();
+        int                   cConds    = 0;
+
+        NextTerminal: for (ConditionalConstant terminal : terminals)
+            {
+            Map<Integer, Relation> conflicts = null;
+            for (int i = 0; i < cConds; ++i)
+                {
+                Relation rel = acond[i].calcRelation(terminal);
+                switch (rel)
+                    {
+                    case INDEP:
+                        break;
+
+                    case EQUIV:
+                        terminal.iTest = i;
+                        continue NextTerminal;
+
+                    case INVERSE:
+                        terminal.iTest = -1 - i;
+                        continue NextTerminal;
+
+                    case MUTEX:
+                    case MUTIN:
+                    case IMPLIES:
+                    case IMPLIED:
+                        if (conflicts == null)
+                            {
+                            conflicts = new ListMap<>();
+                            }
+                        conflicts.put(i, rel);
+                        break;
+                    }
+                }
+
+            int iCondThis    = cConds++;
+            terminal.iTest   = iCondThis;
+            acond[iCondThis] = terminal;
+
+            if (conflicts != null)
+                {
+                for (Map.Entry<Integer, Relation> entry : conflicts.entrySet())
+                    {
+                    int iCondThat = entry.getKey();
+                    skipMasks.add((1L << iCondThat) | (1L << iCondThis));
+                    switch (entry.getValue())
+                        {
+                        case MUTEX:
+                            // can't both be true
+                            skipPtrns.add((1L << iCondThat) | (1L << iCondThis));
+                            break;
+
+                        case MUTIN:
+                            // can't both be false
+                            skipPtrns.add(0L);
+                            break;
+
+                        case IMPLIES:
+                            // if that is true, then this can't be false (that implies this to
+                            // be true, i.e. this is implied to be true by that being true)
+                            skipPtrns.add(1L << iCondThat);
+                            break;
+
+                        case IMPLIED:
+                            // that can't be false if this is true (that is implied to be true
+                            // by this being true)
+                            skipPtrns.add(1L << iCondThis);
+                            break;
+                        }
+                    }
+                }
+            }
+
+        long[] aResultFF = new long[cConds];
+        long[] aResultFT = new long[cConds];
+        long[] aResultTF = new long[cConds];
+        long[] aResultTT = new long[cConds];
+        bruteForce(cConds, skipMasks.toArray(), skipPtrns.toArray(), aResultFF, aResultFT, aResultTF, aResultTT);
+
+        Map<ConditionalConstant, Influence> influences = new HashMap<>();
+        for (ConditionalConstant terminal : terminals)
+            {
+            int     iCond   = terminal.iTest;
+            boolean fInvert = iCond < 0;
+            if (fInvert)
+                {
+                iCond = -1 - iCond;
+                }
+
+            Influence influence = Influence.translate(
+                    aResultFF[iCond], aResultFT[iCond], aResultTF[iCond], aResultTT[iCond]);
+            influences.put(terminal, fInvert ? influence.inverse() : influence);
+            }
+
+        return influences;
+        }
+
+    /**
+     * Brute force test every single possible input on this condition.
+     * <p/>
+     * This is broken out in a hope that it will be easier for the JVM to optimize.
+     * 
+     * @param cConds     the number of input conditions being tested
+     * @param amaskSkip  the masks to check for skipping specific tests
+     * @param aptrnSkip  the patterns associated with the masks for determining which tests to skip
+     * @param aResultFF  the number of tests with a false condition input and a false result;
+     *                   this is an output parameter, indexed by condition
+     * @param aResultFT  the number of tests with a false condition input and a true result;
+     *                   this is an output parameter, indexed by condition
+     * @param aResultTF  the number of tests with a true condition input and a false result;
+     *                   this is an output parameter, indexed by condition
+     * @param aResultTT  the number of tests with a true condition input and a true result;
+     *                   this is an output parameter, indexed by condition
+     * 
+     * @return the number of tests run
+     */
+    private final void bruteForce(int cConds, long[] amaskSkip, long[] aptrnSkip,
+            long[] aResultFF,  long[] aResultFT, long[] aResultTF, long[] aResultTT)
+        {
+        assert cConds > 0;
+        int     cSkips    = amaskSkip.length;
+        boolean fSkips    = cSkips > 0;
+        NextTest: for (long nTest = 0L, cIters = (1L << cConds); nTest < cIters; ++nTest)
+            {
+            if (fSkips)
+                {
+                for (int iSkip = 0; iSkip < cSkips; ++iSkip)
+                    {
+                    if ((nTest & amaskSkip[iSkip]) == aptrnSkip[iSkip])
+                        {
+                        continue NextTest;
+                        }
+                    }
+                }
+
+            if (testEvaluate(nTest))
+                {
+                // result is true
+                for (int iCond = 0; iCond < cConds; ++iCond)
+                    {
+                    if ((nTest | (1L << iCond)) != 0)
+                        {
+                        // input is true, result is true
+                        ++aResultTT[iCond];
+                        }
+                    else
+                        {
+                        // input is false, result is true
+                        ++aResultFT[iCond];
+                        }
+                    }
+                }
+            else
+                {
+                // result is false
+                for (int iCond = 0; iCond < cConds; ++iCond)
+                    {
+                    if ((nTest | (1L << iCond)) != 0)
+                        {
+                        // input is true, result is false
+                        ++aResultTF[iCond];
+                        }
+                    else
+                        {
+                        // input is false, result is false
+                        ++aResultFF[iCond];
+                        }
+                    }
+                }
+            }
+        }
+    
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -383,4 +665,138 @@ public abstract class ConditionalConstant
             }
 
         }
+
+
+    // ----- Influence enum ------------------------------------------------------------------------
+    
+    /**
+     * Represents a 3x3 truth table:
+     * <p/>
+     * <code><pre>
+     *                          Input of True
+     *                          Result is ...
+     *                          
+     *                          Mixed       False       True
+     *                         ╔══════════╤══════════╤══════════╗
+     *                  Mixed  ║ CONTRIB  │ INV_AND  │ OR       ║
+     * Input of False          ╟──────────┼──────────┼──────────╢
+     * Result is ...    False  ║ AND      │ ALWAYS_F │ IDENTITY ║
+     *                         ╟──────────┼──────────┼──────────╢
+     *                  True   ║ INV_OR   │ INVERSE  │ ALWAYS_T ║
+     *                         ╚══════════╧══════════╧══════════╝
+     * </pre></code>
+     * <code><pre>
+     *                          Input of True
+     *                          Result is ...
+     *
+     *                           False      Mixed        True
+     *                         ╔══════════╤══════════╤══════════╗
+     *                  False  ║ ALWAYS_F │ AND      │ IDENTITY ║
+     * Input of False          ╟──────────┼──────────┼──────────╢
+     * Result is ...    Mixed  ║ INV_AND  │ CONTRIB  │ OR       ║
+     *                         ╟──────────┼──────────┼──────────╢
+     *                  True   ║ INVERSE  │ INV_OR   │ ALWAYS_T ║
+     *                         ╚══════════╧══════════╧══════════╝
+     * </pre></code>
+     * <p/>
+     * The NONE influence is used to indicate that an input is not related to, and thus does not
+     * influence, the result of a condition. 
+     */
+    public enum Influence
+        {
+        NONE, ALWAYS_F, AND, IDENTITY, INV_AND, CONTRIB, OR, INVERSE, INV_OR, ALWAYS_T;
+
+// TODO review
+        public Influence inverse()
+            {
+            switch (this)
+                {
+                default:
+                case NONE:
+                case CONTRIB:
+                    return this;
+
+                case INV_AND:
+                    return OR;
+
+                case OR:
+                    return INV_AND;
+
+                case AND:
+                    return INV_OR;
+
+                case ALWAYS_F:
+                    return ALWAYS_T;
+
+                case IDENTITY:
+                    return INVERSE;
+
+                case INV_OR:
+                    return AND;
+
+                case INVERSE:
+                    return IDENTITY;
+                            
+                case ALWAYS_T:
+                    return ALWAYS_F;
+                }
+            }
+        
+        public static Influence translate(long cFalseInFalseOut, long cFalseInTrueOut,
+                                          long cTrueInFalseOut,  long cTrueInTrueOut)
+            {
+            switch ((cFalseInFalseOut == 0 ? 0b0000 : 0b1000)
+                  | (cFalseInTrueOut  == 0 ? 0b0000 : 0b0100)
+                  | (cTrueInFalseOut  == 0 ? 0b0000 : 0b0010)
+                  | (cTrueInTrueOut   == 0 ? 0b0000 : 0b0001))
+                {
+                case 0b0000:
+                    // there were no test results? not sure here whether to assert, throw, or NONE
+                    return NONE;
+                
+                case 0b0001:
+                case 0b0100:
+                case 0b0101:
+                    return ALWAYS_T;
+                
+                case 0b0010:
+                case 0b1000:
+                case 0b1010:
+                    return ALWAYS_F;
+                                     
+                case 0b0110:
+                    return INVERSE;
+                
+                case 0b0111:
+                    return INV_OR;
+                    
+                case 0b1001:
+                    return IDENTITY;
+                
+                case 0b1011:
+                    return AND;
+                
+                case 0b1101:
+                    return OR;
+                
+                case 0b1110:
+                    return INV_AND;
+
+                case 0b0011:
+                case 0b1100:
+                case 0b1111:
+                default:
+                    // some of each
+                    return CONTRIB;
+                }
+            }
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Used by SimulatedLinkerContext.
+     */
+    public transient int iTest;
     }

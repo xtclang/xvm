@@ -100,12 +100,6 @@ public class VersionMatchesCondition
         }
 
     @Override
-    public Set<ConditionalConstant> terminals()
-        {
-        return Collections.singleton(this);
-        }
-
-    @Override
     public Relation calcRelation(ConditionalConstant that)
         {
         if (that instanceof VersionMatchesCondition)

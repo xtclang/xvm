@@ -5,6 +5,10 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
@@ -63,6 +67,19 @@ public class AllCondition
         }
 
     @Override
+    public boolean testEvaluate(long n)
+        {
+        for (ConditionalConstant constCond : m_aconstCond)
+            {
+            if (!constCond.testEvaluate(n))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    @Override
     public Set<Version> versions()
         {
         Set<Version> setVers = null;
@@ -85,6 +102,107 @@ public class AllCondition
             }
 
         return setVers == null ? Collections.EMPTY_SET : setVers;
+        }
+
+    @Override
+    public boolean isTerminalInfluenceBruteForce()
+        {
+        return !isTerminalInfluenceFinessable(false, new HashSet<>(), new HashSet<>());
+        }
+
+    @Override
+    protected boolean isTerminalInfluenceFinessable(boolean fInNot,
+            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)
+        {
+        // unfortunately the "else" of an ANDed conditional can't be finessed, because the result
+        // is the equivalent of an ORed list of NOTs
+        if (fInNot)
+            {
+            return false;
+            }
+
+        for (Iterator<ConditionalConstant> iter = flatIterator(); iter.hasNext(); )
+            {
+            if (!iter.next().isTerminalInfluenceFinessable(fInNot, setSimple, setComplex))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    @Override
+    public Map<ConditionalConstant, Influence> terminalInfluences()
+        {
+        if (isTerminalInfluenceBruteForce())
+            {
+            return super.terminalInfluences();
+            }
+
+        Map<ConditionalConstant, Influence> influences  = new HashMap<>();
+        Set<VersionedCondition>             setVerConds = new HashSet<>();
+        Set<Version>                        setVers     = null;
+        for (Iterator<ConditionalConstant> iter = flatIterator(); iter.hasNext(); )
+            {
+            ConditionalConstant cond = iter.next();
+            if (cond instanceof VersionedCondition || cond instanceof AnyCondition)
+                {
+                // keep track of what versions survive the conditional(s)
+                if (setVers == null)
+                    {
+                    setVers = new HashSet<>(cond.versions());
+                    }
+                else
+                    {
+                    setVers.retainAll(cond.versions());
+                    }
+
+                // collect the terminal VersionedConditions
+                if (cond instanceof VersionedCondition)
+                    {
+                    setVerConds.add((VersionedCondition) cond);
+                    }
+                else
+                    {
+                    for (Iterator<ConditionalConstant> iterVerCond = ((AnyCondition) cond).flatIterator();
+                            iterVerCond.hasNext(); )
+                        {
+                        setVerConds.add((VersionedCondition) iterVerCond.next());
+                        }
+                    }
+                }
+            else
+                {
+                for (Map.Entry<ConditionalConstant, Influence> entry : cond.terminalInfluences().entrySet())
+                    {
+                    ConditionalConstant cond
+                    if (influences.containsKey())
+                    // TODO all other conditions - ask for their influences
+                    influences.put(terminal, Influence.OR);
+                    }
+                }
+            }
+
+        if (setVers != null)
+            {
+            // there were version conditions
+            if (setVers.isEmpty())
+                {
+                // the version conditions are impossible to meet; this condition is unsatisfiable
+                for (Map.Entry<ConditionalConstant, Influence> entry : influences.entrySet())
+                    {
+                    entry.setValue(Influence.ALWAYS_F);
+                    }
+                }
+            else
+                {
+                // factor in the version condition into the existing set of influences
+                // TODO
+                }
+            }
+
+        return influences;
         }
 
     @Override

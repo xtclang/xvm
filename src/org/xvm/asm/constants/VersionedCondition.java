@@ -91,12 +91,6 @@ public class VersionedCondition
         }
 
     @Override
-    public Set<ConditionalConstant> terminals()
-        {
-        return Collections.singleton(this);
-        }
-
-    @Override
     public Set<Version> versions()
         {
         return Collections.singleton(m_constVer.getVersion());
@@ -117,6 +111,16 @@ public class VersionedCondition
 
         return Relation.INDEP;
         }
+
+    @Override
+    protected boolean isTerminalInfluenceFinessable(boolean fInNot,
+            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)
+        {
+        // versions are only finessed when they are in simple ANDs/ORs; no attempt is made to
+        // finesse them under a NOT
+        return !fInNot && super.isTerminalInfluenceFinessable(fInNot, setSimple, setComplex);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

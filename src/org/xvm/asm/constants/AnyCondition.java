@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -64,23 +67,84 @@ public class AnyCondition
         }
 
     @Override
+    public boolean testEvaluate(long n)
+        {
+        for (ConditionalConstant constCond : m_aconstCond)
+            {
+            if (constCond.testEvaluate(n))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
     public Set<Version> versions()
         {
         Set<Version> setVers = null;
 
-        for (ConditionalConstant cond : m_aconstCond)
+        for (Iterator<ConditionalConstant> iter = flatIterator(); iter.hasNext(); )
             {
-            if (cond instanceof VersionedCondition || cond instanceof AnyCondition)
+            ConditionalConstant cond = iter.next();
+            if (cond instanceof VersionedCondition)
                 {
                 if (setVers == null)
                     {
                     setVers = new TreeSet<>();
                     }
-                setVers.addAll(cond.versions());
+                setVers.add(((VersionedCondition) cond).getVersionConstant().getVersion());
                 }
             }
 
         return setVers == null ? Collections.EMPTY_SET : setVers;
+        }
+
+    /**
+     * @return true iff the AnyCondition contains only VersionedConditions
+     */
+    public boolean isOnlyVersions()
+        {
+        for (Iterator<ConditionalConstant> iter = flatIterator(); iter.hasNext(); )
+            {
+            if (!(iter.next() instanceof VersionedCondition))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    @Override
+    public boolean isTerminalInfluenceBruteForce()
+        {
+        // unless the entire condition is just checking versions, then the whole thing needs to be
+        // brute forced
+        return !isOnlyVersions();
+        }
+
+    @Override
+    protected boolean isTerminalInfluenceFinessable(boolean fInNot,
+            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)
+        {
+        return !fInNot && isOnlyVersions();
+        }
+
+    @Override
+    public Map<ConditionalConstant, Influence> terminalInfluences()
+        {
+        if (isOnlyVersions())
+            {
+            // these are all VersionedCondition
+            Map<ConditionalConstant, Influence> influences = new HashMap<>();
+            for (Iterator<ConditionalConstant> iter = flatIterator(); iter.hasNext(); )
+                {
+                influences.put(iter.next(), Influence.OR);
+                }
+            return influences;
+            }
+
+        return super.terminalInfluences();
         }
 
     @Override

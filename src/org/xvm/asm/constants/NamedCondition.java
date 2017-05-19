@@ -85,12 +85,6 @@ public class NamedCondition
         }
 
     @Override
-    public Set<ConditionalConstant> terminals()
-        {
-        return Collections.singleton(this);
-        }
-
-    @Override
     public Relation calcRelation(ConditionalConstant that)
         {
         assert that.isTerminal();
