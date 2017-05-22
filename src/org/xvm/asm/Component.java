@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -24,11 +25,14 @@ import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.LinkedIterator;
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -56,10 +60,9 @@ import static org.xvm.util.Handy.readMagnitude;
  * <p/>
  * Based on the containment model, of these types, there are three groups of containment:
  * <ul>
- * <li><i>(Multi-)Method</i> - the {@link MethodContainer MethodContainer}</li>
- * <li><i>(Multi-)Method + Property + Class</i> - the {@link ClassContainer ClassContainer}</li>
- * <li><i>(Multi-)Method + Property + Class + Package</i> - the {@link PackageContainer
- *     PackageContainer}</li>
+ * <li><i>(Multi-)Method</i></li>
+ * <li><i>(Multi-)Method + Property + Class</i></li>
+ * <li><i>(Multi-)Method + Property + Class + Package</i></li>
  * </ul>
  * <p/>
  * Normally, an XVM structure has a single parent structure and any number of child structures, but
@@ -226,7 +229,13 @@ public abstract class Component
      */
     protected void setAccess(Access access)
         {
-        m_nFlags = (short) ((m_nFlags & ~ACCESS_MASK) | (access.ordinal() << ACCESS_SHIFT));
+        int nFlagsOld = m_nFlags;
+        int nFlagsNew = (nFlagsOld & ~ACCESS_MASK) | (access.ordinal() << ACCESS_SHIFT);
+        if (nFlagsNew != nFlagsOld)
+            {
+            m_nFlags = (short) nFlagsNew;
+            markModified();
+            }
         }
 
     /**
@@ -244,7 +253,13 @@ public abstract class Component
      */
     protected void setAbstract(boolean fAbstract)
         {
-        m_nFlags = (short) ((m_nFlags & ~ABSTRACT_BIT) | (fAbstract ? ABSTRACT_BIT : 0));
+        int nFlagsOld = m_nFlags;
+        int nFlagsNew = (nFlagsOld & ~ABSTRACT_BIT) | (fAbstract ? ABSTRACT_BIT : 0);
+        if (nFlagsNew != nFlagsOld)
+            {
+            m_nFlags = (short) nFlagsNew;
+            markModified();
+            }
         }
     
     /**
@@ -262,7 +277,13 @@ public abstract class Component
      */
     protected void setStatic(boolean fStatic)
         {
-        m_nFlags = (short) ((m_nFlags & ~STATIC_BIT) | (fStatic ? STATIC_BIT : 0));
+        int nFlagsOld = m_nFlags;
+        int nFlagsNew = (nFlagsOld & ~STATIC_BIT) | (fStatic ? STATIC_BIT : 0);
+        if (nFlagsNew != nFlagsOld)
+            {
+            m_nFlags = (short) nFlagsNew;
+            markModified();
+            }
         }
 
     /**
@@ -280,7 +301,13 @@ public abstract class Component
      */
     protected void setSynthetic(boolean fSynthetic)
         {
-        m_nFlags = (short) ((m_nFlags & ~SYNTHETIC_BIT) | (fSynthetic ? SYNTHETIC_BIT : 0));
+        int nFlagsOld = m_nFlags;
+        int nFlagsNew = (nFlagsOld & ~SYNTHETIC_BIT) | (fSynthetic ? SYNTHETIC_BIT : 0);
+        if (nFlagsNew != nFlagsOld)
+            {
+            m_nFlags = (short) nFlagsNew;
+            markModified();
+            }
         }
 
     /**
@@ -533,6 +560,51 @@ public abstract class Component
             child.m_childByName      = sibling.m_childByName;
             child.m_methodByConstant = sibling.m_methodByConstant;
             }
+
+        markModified();
+        }
+
+    /**
+     * @return true if this component can contain packages
+     */
+    public boolean isPackageContainer()
+        {
+        return false;
+        }
+
+    /**
+     * Create and register a PackageStructure with the specified package name.
+     *
+     * @param sName  the simple (unqualified) package name to create
+     */
+    public PackageStructure createPackage(String sName)
+        {
+        assert sName != null;
+        assert getChild(sName) == null;
+
+        final ConstantPool     pool         = getConstantPool();
+        sfinal Constant         constthis    = getIdentityConstant();
+        final PackageConstant constpackage = pool.ensurePackageConstant(constthis, sName);
+        final PackageStructure structpackage = new PackageStructure(this, constpackage);
+
+        mapPackage.put(sName, structpackage);
+        return structpackage;
+        }
+
+    /**
+     * @return true if this component can contain classes and properties
+     */
+    public boolean isClassContainer()
+        {
+        return false;
+        }
+
+    /**
+     * @return true if this component can contain multi-methods
+     */
+    public boolean isMethodContainer()
+        {
+        return false;
         }
 
     /**
@@ -546,6 +618,7 @@ public abstract class Component
             {
             ConditionalConstant condOld = m_cond;
             m_cond = condOld == null ? cond : condOld.addAnd(cond);
+            markModified();
             }
         }
 
@@ -560,6 +633,7 @@ public abstract class Component
             {
             ConditionalConstant condOld = m_cond;
             m_cond = condOld == null ? cond : condOld.addOr(cond);
+            markModified();
             }
         }
 
@@ -1138,6 +1212,122 @@ public abstract class Component
          * All of the Format enums.
          */
         private static final Format[] FORMATS = Format.values();
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Helper method to read a collection of type parameters.
+     *
+     * @param in  the DataInput containing the type parameters
+     *
+     * @return null if there are no type parameters, otherwise a map from CharStringConstant to the
+     *         type constraint for each parameter
+     *
+     * @throws IOException  if an I/O exception occurs during disassembly from the provided
+     *                      DataInput stream, or if there is invalid data in the stream
+     */
+    protected ListMap<CharStringConstant, TypeConstant> disassembleTypeParams(DataInput in)
+            throws IOException
+        {
+        int c = readMagnitude(in);
+        if (c <= 0)
+            {
+            assert c == 0;
+            return null;
+            }
+
+        final ListMap<CharStringConstant, TypeConstant> map = new ListMap<>();
+        final ConstantPool pool = getConstantPool();
+        for (int i = 0; i < c; ++i)
+            {
+            CharStringConstant constName = (CharStringConstant) pool.getConstant(readIndex(in));
+            TypeConstant       constType = (TypeConstant)       pool.getConstant(readIndex(in));
+            assert !map.containsKey(constName);
+            map.put(constName, constType);
+            }
+        return map;
+        }
+
+    /**
+     * Register all of the constants associated with a list of type parameters.
+     *
+     * @param mapOld  the map containing the type parameters
+     *
+     * @return the map of registered type parameters (might be different from the map passed in)
+     */
+    protected ListMap<CharStringConstant, TypeConstant> registerTypeParams(ListMap<CharStringConstant, TypeConstant> mapOld)
+        {
+        if (mapOld == null || mapOld.isEmpty())
+            {
+            return mapOld;
+            }
+
+        final ConstantPool pool = getConstantPool();
+        ListMap<CharStringConstant, TypeConstant> mapNew = mapOld;
+        for (Map.Entry<CharStringConstant, TypeConstant> entry : mapOld.entrySet())
+            {
+            CharStringConstant constOldKey = entry.getKey();
+            CharStringConstant constNewKey = (CharStringConstant) pool.register(constOldKey);
+
+            TypeConstant       constOldVal = entry.getValue();
+            TypeConstant       constNewVal = (TypeConstant) pool.register(constOldVal);
+
+            if (mapNew != mapOld || constOldKey != constNewKey)
+                {
+                if (mapNew == mapOld)
+                    {
+                    // up to this point, we've been using the old map, but now we need to change a
+                    // key (which map does not support), so create a new map, and copy the old map
+                    // to the new map, but only up to (but not including!) the current entry
+                    mapNew = new ListMap<>();
+                    for (Map.Entry<CharStringConstant, TypeConstant> entryCopy : mapOld.entrySet())
+                        {
+                        if (entryCopy.getKey() == constOldKey)
+                            {
+                            break;
+                            }
+
+                        mapNew.put(entryCopy.getKey(), entryCopy.getValue());
+                        }
+                    }
+
+                mapNew.put(constNewKey, constNewVal);
+                }
+            else if (constOldVal != constNewVal)
+                {
+                entry.setValue(constNewVal);
+                }
+            }
+        return mapNew;
+        }
+
+    /**
+     * Helper method to write type parameters to the DataOutput stream.
+     *
+     * @param map  the type parameters
+     * @param out  the DataOutput to write the XVM structure to
+     *
+     * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
+     *                      stream
+     */
+    protected void assembleTypeParams(ListMap<CharStringConstant, TypeConstant> map, DataOutput out)
+            throws IOException
+        {
+        int c = map == null ? 0 : map.size();
+        writePackedLong(out, c);
+
+        if (c == 0)
+            {
+            return;
+            }
+
+        for (Map.Entry<CharStringConstant, TypeConstant> entry : map.entrySet())
+            {
+            writePackedLong(out, entry.getKey().getPosition());
+            writePackedLong(out, entry.getValue().getPosition());
+            }
         }
 
 

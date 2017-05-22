@@ -401,7 +401,7 @@ public class FileStructure
         }
 
     @Override
-    protected ConstantPool getConstantPool()
+    public ConstantPool getConstantPool()
         {
         return pool;
         }

@@ -21,7 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.14
  */
 public class PackageStructure
-        extends PackageContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -36,6 +36,57 @@ public class PackageStructure
     protected PackageStructure(XvmStructure xsParent, int nFlags, PackageConstant constId, ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
+        }
+
+
+    // ----- accessors --------------------------------------------------------------------------------------
+
+    /**
+     * Obtain the PackageConstant that holds the identity of this Package.
+     *
+     * @return the PackageConstant representing the identity of this PackageStructure
+     */
+    public PackageConstant getPackageConstant()
+        {
+        return (PackageConstant) getIdentityConstant();
+        }
+
+    public ModuleConstant getImportedModule()
+        {
+        return m_constModule;
+        }
+
+    /**
+     *
+     * @param constModule
+     */
+    public void setImportedModule(ModuleConstant constModule)
+        {
+        // TODO
+
+        m_constModule = constModule;
+        markModified();
+        }
+
+
+    // ----- component methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean isPackageContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isClassContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return true;
         }
 
 
@@ -67,8 +118,6 @@ public class PackageStructure
         super.assemble(out);
         }
 
-    // TODO validate
-
     @Override
     public String getDescription()
         {
@@ -80,7 +129,7 @@ public class PackageStructure
         }
 
 
-    // ----- Object methods ----------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public boolean equals(Object obj)
@@ -101,42 +150,11 @@ public class PackageStructure
         }
 
 
-    // ----- accessors ---------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Obtain the PackageConstant that holds the identity of this Package.
-     *
-     * @return the PackageConstant representing the identity of this
-     *         PackageStructure
-     */
-    public PackageConstant getPackageConstant()
-        {
-        return (PackageConstant) getIdentityConstant();
-        }
-
-    public ModuleConstant getImportedModule()
-        {
-        return m_constModule;
-        }
-
-    /**
-     *
-     * @param constModule
-     */
-    public void setImportedModule(ModuleConstant constModule)
-        {
-        // TODO
-
-        m_constModule = constModule;
-        markModified();
-        }
-
-
-    // ----- data members ------------------------------------------------------
-
-    /**
-     * If this package is a placeholder in the namespace for an imported module,
-     * this is the module that the package imports.
+     * If this package is a placeholder in the namespace for an imported module, this is the module
+     * that the package imports.
      */
     private ModuleConstant m_constModule;
     }

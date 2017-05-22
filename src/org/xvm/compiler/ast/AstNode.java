@@ -1,8 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.StructureContainer;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
@@ -87,17 +87,16 @@ public abstract class AstNode
         }
 
     /**
-     * Obtain the StructureContainer for this AstNode, if any. By default, a node uses the container
-     * for its parent.
+     * Obtain the Component for this AstNode, if any.
      *
-     * @return a StructureContainer
+     * @return the Component containing this AstNode
      */
-    public StructureContainer getStructure()
+    public Component getComponent()
         {
         AstNode parent = getParent();
         return parent == null
                 ? null
-                : parent.getStructure();
+                : parent.getComponent();
         }
 
     /**

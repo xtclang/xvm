@@ -114,13 +114,30 @@ public class AllCondition
     protected boolean isTerminalInfluenceFinessable(boolean fInNot,
             Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)
         {
-        // unfortunately the "else" of an ANDed conditional can't be finessed, because the result
-        // is the equivalent of an ORed list of NOTs
-        if (fInNot)
+        // none of the non-version terminals can be related
+        Set<ConditionalConstant> terminals  = terminals();
+        int                      cTerminals = terminals.size();
+        ConditionalConstant[]    aTerminals = terminals.toArray(new ConditionalConstant[cTerminals]);
+        for (int iThis = 0; iThis < cTerminals; ++iThis)
             {
-            return false;
+            ConditionalConstant condThis = aTerminals[iThis];
+            if (!(condThis instanceof VersionedCondition))
+                {
+                for (int iThat = iThis + 1; iThat < cTerminals; ++iThat)
+                    {
+                    ConditionalConstant condThat = aTerminals[iThat];
+                    if (!(condThat instanceof VersionedCondition))
+                        {
+                        if (condThis.calcRelation(condThat) != Relation.INDEP)
+                            {
+                            return false;
+                            }
+                        }
+                    }
+                }
             }
 
+        // each of the AND-ed conditions needs to be finessable as well
         for (Iterator<ConditionalConstant> iter = flatIterator(); iter.hasNext(); )
             {
             if (!iter.next().isTerminalInfluenceFinessable(fInNot, setSimple, setComplex))
@@ -172,14 +189,21 @@ public class AllCondition
                         }
                     }
                 }
+            else if (cond.isTerminal())
+                {
+                influences.put(cond, Influence.AND);
+                }
             else
                 {
+                // we've already handled the only allowable possibility of "OR" (the versions), and
+                // the possibility of "AND" (via flattening the iterator), and the terminals, so the
+                // only thing left should be "NOT"
+                assert cond instanceof NotCondition;
+
+                // the influences are already inverted; just add them with an "AND" result
                 for (Map.Entry<ConditionalConstant, Influence> entry : cond.terminalInfluences().entrySet())
                     {
-                    ConditionalConstant cond
-                    if (influences.containsKey())
-                    // TODO all other conditions - ask for their influences
-                    influences.put(terminal, Influence.OR);
+                    influences.put(entry.getKey(), entry.getValue().and());
                     }
                 }
             }
@@ -194,11 +218,28 @@ public class AllCondition
                     {
                     entry.setValue(Influence.ALWAYS_F);
                     }
+                for (VersionedCondition cond : setVerConds)
+                    {
+                    influences.put(cond, Influence.ALWAYS_F);
+                    }
                 }
             else
                 {
-                // factor in the version condition into the existing set of influences
-                // TODO
+                for (VersionedCondition cond : setVerConds)
+                    {
+                    // three cases: this version is impossible, in which case it should be ALWAYS_F;
+                    // this version is the only version, in which case it should be AND; or this
+                    // version is one of several versions, in which case it should be CONTRIB
+                    Version   ver       = cond.getVersionConstant().getVersion();
+                    Influence influence = Influence.ALWAYS_F;
+                    if (setVers.contains(ver))
+                        {
+                        influence = setVers.size() == 1
+                                ? Influence.AND
+                                : Influence.CONTRIB;
+                        }
+                    influences.put(cond, influence);
+                    }
                 }
             }
 

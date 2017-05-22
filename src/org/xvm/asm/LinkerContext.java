@@ -29,12 +29,12 @@ public interface LinkerContext
     /**
      * Determine if the XVM Structure specified by the passed constant is present in this context.
      *
-     * @param constVMStruct  a ModuleConstant, PackageConstant, ClassConstant, PropertyConstant, or
+     * @param constId  a ModuleConstant, PackageConstant, ClassConstant, PropertyConstant, or
      *                       MethodConstant.
      *
      * @return true iff the specified structure is present in this context
      */
-    boolean isPresent(IdentityConstant constVMStruct);
+    boolean isPresent(IdentityConstant constId);
 
     /**
      * Determine if the module specified by the passed constant is present in this context and of

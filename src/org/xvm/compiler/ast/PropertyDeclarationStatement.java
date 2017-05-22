@@ -1,10 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.StructureContainer;
+import org.xvm.asm.Component;
 import org.xvm.asm.ClassContainer;
 
 import org.xvm.compiler.Compiler;
@@ -27,7 +28,7 @@ import static org.xvm.util.Handy.indentLines;
  * @author cp 2017.04.04
  */
 public class PropertyDeclarationStatement
-        extends StructureContainerStatement
+        extends ComponentStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -58,7 +59,7 @@ public class PropertyDeclarationStatement
         {
         // properties inside a method are ALWAYS specified as static, but NEVER actually static (in
         // the "constant property" sense)
-        if (getParent().getStructure() instanceof MethodStructure)
+        if (getParent().getComponent() instanceof MethodStructure)
             {
             return false;
             }
@@ -120,19 +121,20 @@ public class PropertyDeclarationStatement
         setParent(parent);
 
         // create the structure for this property
-        if (getStructure() == null)
+        if (getComponent() == null)
             {
             // create a structure for this type
             String sName = (String) name.getValue();
-            StructureContainer container = parent.getStructure();
+            Component container = parent.getComponent();
             if (container instanceof ClassContainer)
                 {
                 ClassContainer propContainer = (ClassContainer) container;
                 // another property by the same name should not already exist
                 if (propContainer.getProperty(sName) == null)
                     {
+                    ConstantPool pool = propContainer.getConstantPool();
                     PropertyStructure prop = propContainer.createProperty(isStatic(), getAccess(),
-                            propContainer.createUnresolvedType(type.toString()), (String) name.getValue());
+                            pool.createUnresolvedTypeConstant(type.toString()), (String) name.getValue());
                     setStructure(prop);
                     }
                 else

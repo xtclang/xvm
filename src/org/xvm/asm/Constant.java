@@ -164,7 +164,7 @@ public abstract class Constant
     // ----- XvmStructure operations ---------------------------------------------------------------
 
     @Override
-    protected ConstantPool getConstantPool()
+    public ConstantPool getConstantPool()
         {
         return (ConstantPool) getContaining();
         }

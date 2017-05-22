@@ -1,11 +1,6 @@
 package org.xvm.asm;
 
 
-import java.io.PrintWriter;
-
-import java.util.Collection;
-import java.util.Collections;
-
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;

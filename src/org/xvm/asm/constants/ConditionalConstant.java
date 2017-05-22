@@ -732,6 +732,41 @@ public abstract class ConditionalConstant
                     return this;
                 }
             }
+
+        /**
+         * Collapse the true influences down to mixed influences, as will naturally occur when a
+         * condition's influence is ANDed with another condition.
+         *
+         * @return the result of ANDing this influence with another
+         */
+        public Influence and()
+            {
+            switch (this)
+                {
+                case OR:
+                case INV_OR:
+                case ALWAYS_T:
+                    return CONTRIB;
+
+                case INVERSE:
+                    return INV_AND;
+
+                case IDENTITY:
+                    return AND;
+
+                default:
+                    return this;
+                }
+            }
+
+        /**
+         * @return true if the influence implies that the condition is required in order for the
+         *         result to be true
+         */
+        public boolean isRequired()
+            {
+            return this == AND || this == IDENTITY;
+            }
         
         public static Influence translate(long cFalseInFalseOut, long cFalseInTrueOut,
                                           long cTrueInFalseOut,  long cTrueInTrueOut)

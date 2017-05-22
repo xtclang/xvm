@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.25
  */
 public class PropertyStructure
-        extends MethodContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -67,27 +67,20 @@ public class PropertyStructure
         }
 
     /**
-     * @return true iff the property is declared as static
-     */
-    public boolean isStatic()
-        {
-        return m_fStatic;
-        }
-
-    /**
-     * @return the accessibility of the property
-     */
-    public Access getAccess()
-        {
-        return m_access;
-        }
-
-    /**
      * @return the TypeConstant representing the data type of the property value
      */
     public TypeConstant getType()
         {
         return m_type;
+        }
+
+
+    // ----- component methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return true;
         }
 
 
@@ -133,7 +126,5 @@ public class PropertyStructure
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private boolean      m_fStatic;
-    private Access       m_access;
     private TypeConstant m_type;
     }

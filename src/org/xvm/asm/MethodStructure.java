@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.25
  */
 public class MethodStructure
-        extends ClassContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -60,6 +60,18 @@ public class MethodStructure
         assert sibling != null;
 
         return sibling;
+        }
+
+    @Override
+    public boolean isClassContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return true;
         }
 
 

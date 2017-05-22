@@ -39,11 +39,11 @@ public class ConstantPool
     /**
      * Construct a ConstantPool.
      *
-     * @param fstruct  the FileStructure that contains this ConstantPool
+     * @param fileStructure  the FileStructure that contains this ConstantPool
      */
-    public ConstantPool(FileStructure fstruct)
+    public ConstantPool(FileStructure fileStructure)
         {
-        super(fstruct);
+        super(fileStructure);
         }
 
 
@@ -330,7 +330,7 @@ public class ConstantPool
         // avoid double-negatives
         if (cond instanceof NotCondition)
             {
-            return ((NotCondition) cond).getCondition();
+            return ((NotCondition) cond).getUnderlyingCondition();
             }
 
         NotCondition condNot = (NotCondition) ensureLocatorLookup(Format.ConditionNot).get(cond);
@@ -345,37 +345,37 @@ public class ConstantPool
     /**
      * Given the multiple conditions, obtain an AnyCondition that represents them.
      *
-     * @param acondition  an array of conditions
+     * @param aCondition  an array of conditions
      *
      * @return an AnyCondition
      */
-    public AnyCondition ensureAnyCondition(ConditionalConstant... acondition)
+    public AnyCondition ensureAnyCondition(ConditionalConstant... aCondition)
         {
-        checkElementsNonNull(acondition);
-        if (acondition.length < 2)
+        checkElementsNonNull(aCondition);
+        if (aCondition.length < 2)
             {
             throw new IllegalArgumentException("at least 2 conditions required");
             }
 
-        return (AnyCondition) register(new AnyCondition(this, acondition));
+        return (AnyCondition) register(new AnyCondition(this, aCondition));
         }
 
     /**
      * Given the multiple conditions, obtain an AllCondition that represents them.
      *
-     * @param acondition  an array of conditions
+     * @param aCondition  an array of conditions
      *
      * @return an AllCondition
      */
-    public AllCondition ensureAllCondition(ConditionalConstant... acondition)
+    public AllCondition ensureAllCondition(ConditionalConstant... aCondition)
         {
-        checkElementsNonNull(acondition);
-        if (acondition.length < 2)
+        checkElementsNonNull(aCondition);
+        if (aCondition.length < 2)
             {
             throw new IllegalArgumentException("at least 2 conditions required");
             }
 
-        return (AllCondition) register(new AllCondition(this, acondition));
+        return (AllCondition) register(new AllCondition(this, aCondition));
         }
 
     /**
@@ -595,7 +595,7 @@ public class ConstantPool
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ConstantPool getConstantPool()
+    public ConstantPool getConstantPool()
         {
         return this;
         }

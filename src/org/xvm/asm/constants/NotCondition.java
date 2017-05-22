@@ -71,7 +71,7 @@ public class NotCondition
     /**
      * @return the condition that this condition negates
      */
-    public ConditionalConstant getCondition()
+    public ConditionalConstant getUnderlyingCondition()
         {
         return m_constCond;
         }

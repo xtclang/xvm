@@ -667,7 +667,7 @@ public class CommandLine
             {
             if (repoResult != null)
                 {
-                repoResult.storeModule((ModuleStructure) module.getType().getStructure());
+                repoResult.storeModule((ModuleStructure) module.getType().getComponent());
                 }
             else
                 {
@@ -691,7 +691,7 @@ public class CommandLine
                     file = new File(file, sName + ".xtc");
                     }
 
-                FileStructure struct = module.getType().getStructure().getFileStructure();
+                FileStructure struct = module.getType().getComponent().getFileStructure();
 // TODO this won't work until we start resolving types
 //                try
 //                    {

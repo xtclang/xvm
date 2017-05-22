@@ -247,6 +247,45 @@ public class CompositeComponent
         }
 
     @Override
+    public boolean isPackageContainer()
+        {
+        for (Component sibling : m_siblings)
+            {
+            if (!sibling.isPackageContainer())
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    @Override
+    public boolean isClassContainer()
+        {
+        for (Component sibling : m_siblings)
+            {
+            if (!sibling.isClassContainer())
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        for (Component sibling : m_siblings)
+            {
+            if (!sibling.isMethodContainer())
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    @Override
     protected Map<String, Component> getChildByNameMap()
         {
         return m_siblings.get(0).getChildByNameMap();

@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.14
  */
 public class ModuleStructure
-        extends PackageContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -302,6 +302,24 @@ public class ModuleStructure
         return getModuleConstant().getName();
         }
 
+    @Override
+    public boolean isPackageContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isClassContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return true;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -355,8 +373,6 @@ public class ModuleStructure
 
         super.assemble(out);
         }
-
-    // TODO validate
 
     @Override
     public String getDescription()

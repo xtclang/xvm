@@ -138,7 +138,7 @@ public abstract class XvmStructure
      *
      * @return  the ConstantPool
      */
-    protected ConstantPool getConstantPool()
+    public ConstantPool getConstantPool()
         {
         return getContaining().getConstantPool();
         }

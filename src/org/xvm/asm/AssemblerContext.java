@@ -3,12 +3,13 @@ package org.xvm.asm;
 
 import java.util.ArrayList;
 
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.PresentCondition;
-
-import org.xvm.util.Handy;
+import org.xvm.asm.constants.VersionMatchesCondition;
 
 
 /**
@@ -38,139 +39,61 @@ public class AssemblerContext
         }
 
 
-    // ----- conditional scopes --------------------------------------------------------------------
-
-    /**
-     * Start a section of the assembly that applies only if the specified name is <i>defined</i>.
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
-     * corresponding "end".
-     *
-     * @param sName  the name that must be <i>defined</i>
-     */
-    public void beginIfSpecified(String sName)
-        {
-        push(m_pool.ensureNamedCondition(sName));
-        }
-
-    /**
-     * End a section of the assembly that applies only if the specified name is <i>defined</i>. This
-     * call must correspond to a previous call to {@link #beginIfSpecified}.
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
-     * corresponding "end".
-     *
-     * @param sName  the name previously passed to {@link #beginIfSpecified}
-     */
-    public void endIfSpecified(String sName)
-        {
-        ConditionalConstant condition = pop();
-        if (!(condition instanceof NamedCondition && sName.equals(((NamedCondition) condition).getName())))
-            {
-            throw new IllegalStateException("expected NamedCondition(\"" + sName + "\"); found: " + condition);
-            }
-        }
-
-    /**
-     * Start a section of the assembly that applies only if the specified XVM Constant is visible
-     * (available to be used).
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
-     * corresponding "end".
-     *
-     * @param constVMStruct  the identity of the XVM Structure that must be
-     *                       visible
-     */
-    public void beginIfVisible(Constant constVMStruct)
-        {
-        push(m_pool.ensurePresentCondition(constVMStruct));
-        }
-
-    /**
-     * End a section of the assembly that applies only if the specified XVM Constant is visible
-     * (available to be used). This call must correspond to a previous call to
-     * {@link #beginIfVisible(Constant)}.
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
-     * corresponding "end".
-     *
-     * @param constVMStruct  the identity of the XVM Structure tpreviously
-     *                       passed to {@link #beginIfVisible(Constant)}
-     */
-    public void endIfVisible(Constant constVMStruct)
-        {
-        ConditionalConstant condition = pop();
-
-        boolean fMatch = false;
-        if (condition instanceof PresentCondition)
-            {
-            PresentCondition condPresent = (PresentCondition) condition;
-            if (condPresent.getPresentConstant().equals(constVMStruct) && condPresent.getVersionConstant() == null)
-                {
-                fMatch = true;
-                }
-            }
-        if (!fMatch)
-            {
-            throw new IllegalStateException("expected PresentCondition(\"" + constVMStruct + "\"); found: " + condition);
-            }
-        }
-
-    /**
-     * Start a section of the assembly that applies only if the specified version of the specified
-     * XVM Constant is visible (available to be used).
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
-     * corresponding "end".
-     *
-     * @param constVMStruct  the identity of the XVM Structure that must be visible
-     * @param constVer       the required version of the module containing the specified XVM
-     *                       Structure
-     * @param fIdentical     true if the required version must be exact; false allows derived
-     *                       versions to be used
-     */
-    public void beginIfVisible(Constant constVMStruct, VersionConstant constVer, boolean fIdentical)
-        {
-        push(m_pool.ensurePresentCondition(constVMStruct, constVer, fIdentical));
-        }
-
-    /**
-     * End a section of the assembly that applies only if the specified version of the specified XVM
-     * Constant is visible (available to be used). This call must correspond to a previous call to
-     * {@link #beginIfVisible(Constant, VersionConstant, boolean)}.
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
-     * corresponding "end".
-     *
-     * @param constVMStruct  the identity of the XVM Structure previously passed to {@link
-     *                       #beginIfVisible(Constant)}
-     * @param constVer       the required version of the module containing the specified XVM
-     *                       Structure
-     * @param fIdentical     true if the required version must be exact; false allows derived
-     *                       versions to be used
-     */
-    public void endIfVisible(Constant constVMStruct, VersionConstant constVer, boolean fIdentical)
-        {
-        ConditionalConstant condition = pop();
-
-        boolean fMatch = false;
-        if (condition instanceof PresentCondition)
-            {
-            PresentCondition condPresent = (PresentCondition) condition;
-            if (condPresent.getPresentConstant().equals(constVMStruct)
-                    && Handy.equals(constVer, condPresent.getVersionConstant()) && fIdentical == condPresent.isExactVersion())
-                {
-                fMatch = true;
-                }
-            }
-        if (!fMatch)
-            {
-            throw new IllegalStateException("expected PresentCondition(\"" + constVMStruct + "\"); found: " + condition);
-            }
-        }
-
-
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * Push a condition onto the stack.
+     *
+     * @param condition  a ConditionalConstant
+     */
+    public void push(ConditionalConstant condition)
+        {
+        // store the condition
+        m_listCondition.add(condition);
+
+        // if recursing to a new depth for the first time (i.e. under the specific parent
+        // condition), store off the modification count so that a subsequent pop() will restore the
+        // current indicator value
+        if (m_listCondition.size() > m_listIndicators.size())
+            {
+            m_listIndicators.add(m_nIndicator);
+            }
+
+        // update the modification counter and the modification indicator
+        m_nIndicator = ++m_cMods;
+        }
+
+    /**
+     * Pop a condition off of the stack.
+     *
+     * @return the ConditionalConstant that was on the top of the stack, or null if the stack is
+     *         empty
+     */
+    public ConditionalConstant pop()
+        {
+        final int cOldDepth = m_listCondition.size();
+        if (cOldDepth == 0)
+            {
+            return null;
+            }
+
+        final int cNewDepth = cOldDepth - 1;
+        final ConditionalConstant condition = m_listCondition.remove(cNewDepth);
+
+        int cIndicators = m_listIndicators.size();
+        if (cOldDepth > cIndicators)
+            {
+            // more than one pop() has occurred in a row, so the topmost modification indicator
+            // corresponds to a branch that no longer exists
+            m_listIndicators.remove(--cIndicators);
+            }
+
+        // restore the indicator from before the corresponding push() occurred
+        m_nIndicator = m_listIndicators.get(cIndicators - 1);
+
+        ++m_cMods;
+        return condition;
+        }
 
     /**
      * Obtain the modification count for the data structure. This allows the caller to determine if
@@ -271,60 +194,119 @@ public class AssemblerContext
         }
 
 
-    // ----- internal ------------------------------------------------------------------------------
+    // ----- public helpers ------------------------------------------------------------------------
 
     /**
-     * Push a condition onto the stack.
+     * Start a section of the assembly that applies only if the specified name is <i>defined</i>.
+     * <p/>
+     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     * corresponding "end".
      *
-     * @param condition  a ConditionalConstant
+     * @param sName  the name that must be <i>defined</i>
      */
-    private void push(ConditionalConstant condition)
+    public void beginIfSpecified(String sName)
         {
-        // store the condition
-        m_listCondition.add(condition);
-
-        // if recursing to a new depth for the first time (i.e. under the specific parent
-        // condition), store off the modification count so that a subsequent pop() will restore the
-        // current indicator value
-        if (m_listCondition.size() > m_listIndicators.size())
-            {
-            m_listIndicators.add(m_nIndicator);
-            }
-
-        // update the modification counter and the modification indicator
-        m_nIndicator = ++m_cMods;
+        push(m_pool.ensureNamedCondition(sName));
         }
 
     /**
-     * Pop a condition off of the stack.
+     * End a section of the assembly that applies only if the specified name is <i>defined</i>. This
+     * call must correspond to a previous call to {@link #beginIfSpecified}.
+     * <p/>
+     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     * corresponding "end".
      *
-     * @return the ConditionalConstant that was on the top of the stack, or null if the stack is
-     *         empty
+     * @param sName  the name previously passed to {@link #beginIfSpecified}
      */
-    private ConditionalConstant pop()
+    public void endIfSpecified(String sName)
         {
-        final int cOldDepth = m_listCondition.size();
-        if (cOldDepth == 0)
+        ConditionalConstant condition = pop();
+        if (!(condition instanceof NamedCondition && sName.equals(((NamedCondition) condition).getName())))
             {
-            return null;
+            throw new IllegalStateException("expected NamedCondition(\"" + sName + "\"); found: " + condition);
             }
+        }
 
-        final int cNewDepth = cOldDepth - 1;
-        final ConditionalConstant condition = m_listCondition.remove(cNewDepth);
+    /**
+     * Start a section of the assembly that applies only if the specified XVM Constant is visible
+     * (available to be used).
+     * <p/>
+     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     * corresponding "end".
+     *
+     * @param constId  the identity of the XVM Structure that must be visible
+     */
+    public void beginIfVisible(IdentityConstant constId)
+        {
+        push(m_pool.ensurePresentCondition(constId));
+        }
 
-        int cIndicators = m_listIndicators.size();
-        if (cOldDepth > cIndicators)
+    /**
+     * End a section of the assembly that applies only if the specified XVM Constant is visible
+     * (available to be used). This call must correspond to a previous call to
+     * {@link #beginIfVisible}.
+     * <p/>
+     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     * corresponding "end".
+     *
+     * @param constId  the identity of the XVM Structure previously passed to
+     *                 {@link #beginIfVisible}
+     */
+    public void endIfVisible(Constant constId)
+        {
+        ConditionalConstant condition = pop();
+
+        if (!(condition instanceof PresentCondition
+                && constId.equals(((PresentCondition) condition).getPresentConstant())))
             {
-            // more than one pop() has occurred in a row, so the topmost modification indicator
-            // corresponds to a branch that no longer exists
-            m_listIndicators.remove(--cIndicators);
+            throw new IllegalStateException("expected PresentCondition(\"" + constId + "\"); found: " + condition);
             }
+        }
 
-        // restore the indicator from before the corresponding push() occurred
-        m_nIndicator = m_listIndicators.get(cIndicators - 1);
+    /**
+     * Start a section of the assembly that applies only if the specified version of the specified
+     * module is visible (available to be used).
+     * <p/>
+     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     * corresponding "end".
+     *
+     * @param constModule  the identity of the required module
+     * @param constVer     the required version of the module
+     */
+    public void beginIfVersion(ModuleConstant constModule, VersionConstant constVer)
+        {
+        push(m_pool.ensureImportVersionCondition(constModule, constVer));
+        }
 
-        ++m_cMods;
-        return condition;
+    /**
+     * End a section of the assembly that applies only if the specified version of the specified
+     * module is visible (available to be used). This call must correspond to a previous call to
+     * {@link #beginIfVersion}.
+     * <p/>
+     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     * corresponding "end".
+     *
+     * @param constModule  the identity of the module previously passed to {@link #beginIfVersion}
+     * @param constVer     the required version of the module
+     */
+    public void endIfVersion(ModuleConstant constModule, VersionConstant constVer)
+        {
+        ConditionalConstant condRaw = pop();
+
+        boolean fMatch = false;
+        if (condRaw instanceof VersionMatchesCondition)
+            {
+            VersionMatchesCondition cond = (VersionMatchesCondition) condRaw;
+            if (cond.getModuleConstant().equals(constModule) && cond.getVersionConstant().equals(constVer))
+                {
+                fMatch = true;
+                }
+            }
+        if (!fMatch)
+            {
+            throw new IllegalStateException("expected VersionMatchesCondition(\"" + constModule
+                    + ", " + constVer + "\"); found: " + condRaw);
+            }
         }
 
 

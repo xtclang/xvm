@@ -1,31 +1,32 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.StructureContainer;
+
 import org.xvm.compiler.Token;
 
 import java.util.List;
 
 
 /**
- * Represents a statement that corresponds to a StructureContainer in an Ecstasy FileStructure.
+ * Represents a statement that corresponds to a Component in an Ecstasy FileStructure.
  *
  * @author cp 2017.04.12
  */
-public abstract class StructureContainerStatement
+public abstract class ComponentStatement
         extends Statement
     {
     // ----- accessors -----------------------------------------------------------------------------
 
-    public StructureContainer getStructure()
+    public Component getComponent()
         {
-        return struct;
+        return component;
         }
 
-    protected void setStructure(StructureContainer struct)
+    protected void setStructure(Component component)
         {
-        this.struct = struct;
+        this.component = component;
         }
 
 
@@ -68,5 +69,5 @@ public abstract class StructureContainerStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected StructureContainer struct;
+    protected Component component;
     }

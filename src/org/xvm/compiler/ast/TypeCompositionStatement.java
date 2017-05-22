@@ -1,10 +1,8 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.ClassContainer;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.PackageContainer;
-import org.xvm.asm.StructureContainer;
+import org.xvm.asm.Component;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
@@ -28,7 +26,7 @@ import static org.xvm.util.Handy.indentLines;
  * @author cp 2017.03.28
  */
 public class TypeCompositionStatement
-        extends StructureContainerStatement
+        extends ComponentStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -125,7 +123,7 @@ public class TypeCompositionStatement
     public FileStructure createModuleStructure(ErrorListener errorList)
         {
         assert category.getId() == Token.Id.MODULE;
-        assert getStructure() == null;
+        assert getComponent() == null;
 
         FileStructure struct = new FileStructure(getName());
         setStructure(struct.getModule());
@@ -138,12 +136,12 @@ public class TypeCompositionStatement
     @Override
     protected void registerStructures(AstNode parent, ErrorListener errs)
         {
-        if (parent.getStructure() != null)
+        if (parent.getComponent() != null)
             {
             // create the structure for this package or class (etc.)
-            assert getStructure() == null;
+            assert getComponent() == null;
 
-            StructureContainer container = parent.getStructure();
+            Component container = parent.getComponent();
             switch (category.getId())
                 {
                 case MODULE:

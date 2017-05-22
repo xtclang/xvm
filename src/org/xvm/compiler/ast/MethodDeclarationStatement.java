@@ -1,12 +1,13 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.StructureContainer;
 import org.xvm.asm.MethodContainer;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
@@ -26,7 +27,7 @@ import static org.xvm.util.Handy.indentLines;
  * @author cp 2017.04.03
  */
 public class MethodDeclarationStatement
-        extends StructureContainerStatement
+        extends ComponentStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -80,10 +81,10 @@ public class MethodDeclarationStatement
         setParent(parent);
 
         // create the structure for this method
-        if (getStructure() == null)
+        if (getComponent() == null)
             {
             // create a structure for this type
-            StructureContainer possibleContainer = parent.getStructure();
+            Component possibleContainer = parent.getComponent();
             if (possibleContainer instanceof MethodContainer)
                 {
                 MethodContainer container   = (MethodContainer) possibleContainer;
@@ -129,11 +130,11 @@ public class MethodDeclarationStatement
             }
 
         int i = 0;
-        TypeConstant[] array = new TypeConstant[types.size()];
-        StructureContainer container = parent.getStructure();
+        TypeConstant[] array     = new TypeConstant[types.size()];
+        Component      container = parent.getComponent();
         for (TypeExpression type : types)
             {
-            array[i++] = container.createUnresolvedType(type.toString());
+            array[i++] = container.getConstantPool().createUnresolvedTypeConstant(type.toString());
             }
         return array;
         }
