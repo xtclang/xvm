@@ -675,19 +675,6 @@ public abstract class ConditionalConstant
      * <code><pre>
      *                          Input of True
      *                          Result is ...
-     *                          
-     *                          Mixed       False       True
-     *                         ╔══════════╤══════════╤══════════╗
-     *                  Mixed  ║ CONTRIB  │ INV_AND  │ OR       ║
-     * Input of False          ╟──────────┼──────────┼──────────╢
-     * Result is ...    False  ║ AND      │ ALWAYS_F │ IDENTITY ║
-     *                         ╟──────────┼──────────┼──────────╢
-     *                  True   ║ INV_OR   │ INVERSE  │ ALWAYS_T ║
-     *                         ╚══════════╧══════════╧══════════╝
-     * </pre></code>
-     * <code><pre>
-     *                          Input of True
-     *                          Result is ...
      *
      *                           False      Mixed        True
      *                         ╔══════════╤══════════╤══════════╗
@@ -706,15 +693,17 @@ public abstract class ConditionalConstant
         {
         NONE, ALWAYS_F, AND, IDENTITY, INV_AND, CONTRIB, OR, INVERSE, INV_OR, ALWAYS_T;
 
-// TODO review
+        /**
+         * Determine the inverse (the "not") of the Influence.
+         *
+         * @return the inverse Influence of this Influence
+         */
         public Influence inverse()
             {
             switch (this)
                 {
-                default:
-                case NONE:
-                case CONTRIB:
-                    return this;
+                case AND:
+                    return INV_OR;
 
                 case INV_AND:
                     return OR;
@@ -722,23 +711,25 @@ public abstract class ConditionalConstant
                 case OR:
                     return INV_AND;
 
-                case AND:
-                    return INV_OR;
-
-                case ALWAYS_F:
-                    return ALWAYS_T;
+                case INV_OR:
+                    return AND;
 
                 case IDENTITY:
                     return INVERSE;
 
-                case INV_OR:
-                    return AND;
-
                 case INVERSE:
                     return IDENTITY;
-                            
+
+                case ALWAYS_F:
+                    return ALWAYS_T;
+
                 case ALWAYS_T:
                     return ALWAYS_F;
+
+                default:
+                case NONE:
+                case CONTRIB:
+                    return this;
                 }
             }
         
