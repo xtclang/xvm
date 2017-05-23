@@ -32,6 +32,7 @@ public class MultiMethodStructure
     protected MultiMethodStructure(XvmStructure xsParent, int nFlags, MultiMethodConstant constId, ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
+        assert Format.fromFlags(nFlags) == Format.MULTIMETHOD;
         }
 
 
@@ -49,24 +50,11 @@ public class MultiMethodStructure
      */
     public MethodStructure createMethod(boolean fFunction, Access access, TypeConstant[] returnTypes, TypeConstant[] paramTypes)
         {
-        int                 nFlags   = access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
-        MethodConstant      constant = getConstantPool().ensureMethodConstant(
+        int nFlags = Format.METHOD.ordinal() | access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
+        MethodConstant constId = getConstantPool().ensureMethodConstant(
                 getIdentityConstant(), getName(), access, returnTypes, paramTypes);
-        ConditionalConstant cond     = null; // TODO get condition from assembler context
-        MethodStructure     method   = new MethodStructure(this, nFlags, constant, cond);
-        addChild(method);
-        return method;
+        MethodStructure struct = new MethodStructure(this, nFlags, constId, null);
+        addChild(struct);
+        return struct;
         }
-
-    // TOODO do we want a helper function like this that collects together the children of the desired format?
-//    /**
-//     * @return a collection of methods contained within this MultiMethodStructure; the caller must
-//     *         treat the collection as a read-only object
-//     */
-//    public Collection<MethodStructure> methods()
-//        {
-//        Collection coll = methods.values();
-//        assert (coll = Collections.unmodifiableCollection(coll)) != null;
-//        return coll;
-//        }
     }

@@ -526,18 +526,20 @@ public abstract class Component
             }
         else
             {
-            // there has to be a condition that sets the new kid apart from its siblings
-            // TODO eventually we need to evaluate the conditions to make sure that they are mut-ex
-            if (child.m_cond == null)
-                {
-                throw new IllegalStateException("cannot add child with same ID (" + id
-                        + ") if condition == null");
-                }
-            if (sibling.m_cond == null)
-                {
-                throw new IllegalStateException("cannot add child if sibling with same ID (" + id
-                        + ") has condition == null");
-                }
+            // there has to be a condition that sets the new kid apart from its siblings, but that
+            // condition might not be available (resolved) when the kid is created, so defer the
+            // check for the existence of the condition and the mutual exclusivity of the condition
+            // until much later in the assembly
+            // if (child.m_cond == null)
+            //     {
+            //     throw new IllegalStateException("cannot add child with same ID (" + id
+            //             + ") if condition == null");
+            //     }
+            // if (sibling.m_cond == null)
+            //     {
+            //     throw new IllegalStateException("cannot add child if sibling with same ID (" + id
+            //             + ") has condition == null");
+            //     }
 
             // make sure that the parent is set correctly
             child.setContaining(this);
@@ -550,7 +552,8 @@ public abstract class Component
                 }
             lastSibling.m_sibling = child;
 
-            // TODO what if the child we're adding already has children of it's own?
+            // the child can't have any of its own children; that "merge" functionality is simply
+            // not supported by this operation
             assert child.m_abChildren       == null;
             assert child.m_childByName      == null;
             assert child.m_methodByConstant == null;
@@ -575,20 +578,35 @@ public abstract class Component
     /**
      * Create and register a PackageStructure with the specified package name.
      *
-     * @param sName  the simple (unqualified) package name to create
+     * @param access  the accessibility of the package to create
+     * @param sName   the simple (unqualified) package name to create
      */
-    public PackageStructure createPackage(String sName)
+    public PackageStructure createPackage(Access access, String sName)
         {
         assert sName != null;
-        assert getChild(sName) == null;
+        assert access != null;
 
-        final ConstantPool     pool         = getConstantPool();
-        sfinal Constant         constthis    = getIdentityConstant();
-        final PackageConstant constpackage = pool.ensurePackageConstant(constthis, sName);
-        final PackageStructure structpackage = new PackageStructure(this, constpackage);
+        if (!isPackageContainer())
+            {
+            throw new IllegalStateException("this (" + this + ") cannot contain a package");
+            }
 
-        mapPackage.put(sName, structpackage);
-        return structpackage;
+        // the check for duplicates is deferred, since it is possible (thanks to the complexity of
+        // conditionals) to have multiple components occupying the same location within the
+        // namespace at this point in the compilation
+        // Component component = getChild(sName);
+        // if (component != null)
+        //     {
+        //     throw new IllegalStateException("cannot add a package \"" + sName
+        //             + "\" because a child with that name already exists: " + component);
+        //     }
+
+        int              nFlags  = Format.PACKAGE.ordinal() | access.FLAGS;
+        PackageConstant  constId = getConstantPool().ensurePackageConstant(getIdentityConstant(), sName);
+        PackageStructure struct  = new PackageStructure(this, nFlags, constId, null);
+        addChild(struct);
+
+        return struct;
         }
 
     /**
@@ -600,11 +618,125 @@ public abstract class Component
         }
 
     /**
+     * Create and register a ClassStructure with the specified class name.
+     *
+     * @param access  the accessibility of the class to create
+     * @param format  the category format of the class
+     * @param sName   the simple (unqualified) class name to create
+     */
+    public ClassStructure createClass(Access access, Format format, String sName)
+        {
+        assert sName != null;
+        assert access != null;
+
+        if (!isClassContainer())
+            {
+            throw new IllegalStateException("this (" + this + ") cannot contain a class");
+            }
+
+        // the check for duplicates is deferred, since it is possible (thanks to the complexity of
+        // conditionals) to have multiple components occupying the same location within the
+        // namespace at this point in the compilation
+        // Component component = getChild(sName);
+        // if (component != null)
+        //     {
+        //     throw new IllegalStateException("cannot add a class \"" + sName
+        //             + "\" because a child with that name already exists: " + component);
+        //     }
+
+        int            nFlags  = format.ordinal() | access.FLAGS;
+        ClassConstant  constId = getConstantPool().ensureClassConstant(getIdentityConstant(), sName);
+        ClassStructure struct  = new ClassStructure(this, nFlags, constId, null);
+        addChild(struct);
+
+        return struct;
+        }
+
+    /**
+     * Create and register a PropertyStructure with the specified name.
+     *
+     * @param fStatic    true if the property is marked as static
+     * @param access     the accessibility of the class to create
+     * @param constType  the category format of the class
+     * @param sName      the simple (unqualified) class name to create
+     */
+    public PropertyStructure createProperty(boolean fStatic, Access access, TypeConstant constType, String sName)
+        {
+        assert sName != null;
+        assert access != null;
+        assert constType != null;
+
+        if (!isClassContainer())
+            {
+            throw new IllegalStateException("this (" + this + ") cannot contain a property");
+            }
+
+        // the check for duplicates is deferred, since it is possible (thanks to the complexity of
+        // conditionals) to have multiple components occupying the same location within the
+        // namespace at this point in the compilation
+        // Component component = getChild(sName);
+        // if (component != null)
+        //     {
+        //     throw new IllegalStateException("cannot add a class \"" + sName
+        //             + "\" because a child with that name already exists: " + component);
+        //     }
+
+        int               nFlags  = Format.PROPERTY.ordinal() | access.FLAGS;
+        PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
+        PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null);
+        addChild(struct);
+
+        return struct;
+        }
+
+    /**
      * @return true if this component can contain multi-methods
      */
     public boolean isMethodContainer()
         {
         return false;
+        }
+
+    /**
+     * Create a MethodStructure with the specified name, but whose identity may not yet be fully
+     * realized / resolved.
+     *
+     * @param fFunction    true if the method is actually a function (not a method)
+     * @param access       the access flag for the method
+     * @param returnTypes  the return types of the method
+     * @param sName        the method name, or null if the name is unknown
+     * @param paramTypes   the parameter types for the method
+     *
+     * @return a new MethodStructure
+     */
+    public MethodStructure createMethod(boolean fFunction, Access access,
+            TypeConstant[] returnTypes, String sName, TypeConstant[] paramTypes)
+        {
+        assert sName != null;
+        assert access != null;
+
+        MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
+        return multimethod.createMethod(fFunction, access, returnTypes, paramTypes);
+        }
+
+    public MultiMethodStructure ensureMultiMethodStructure(String sName)
+        {
+        Component sibling = getChildByNameMap().get(sName);
+        while (sibling != null)
+            {
+            if (sibling instanceof MultiMethodStructure)
+                {
+                return (MultiMethodStructure) sibling;
+                }
+
+            sibling = sibling.m_sibling;
+            }
+
+        MultiMethodConstant  constId = getConstantPool().ensureMultiMethodConstant(getIdentityConstant(), sName);
+        MultiMethodStructure struct  = new MultiMethodStructure(this, Format.MULTIMETHOD.ordinal(), constId, null);
+        addChild(struct);
+
+        return struct;
         }
 
     /**
@@ -1113,6 +1245,7 @@ public abstract class Component
 
     public enum Format
         {
+        NONE,
         INTERFACE,
         CLASS,
         CONST,
@@ -1120,7 +1253,6 @@ public abstract class Component
         MIXIN,
         TRAIT,
         SERVICE,
-        RSVD_7,
         PACKAGE,
         MODULE,
         PROPERTY,

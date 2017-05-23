@@ -1,8 +1,10 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.FileStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.FileStructure;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
@@ -31,6 +33,7 @@ public class TypeCompositionStatement
     // ----- constructors --------------------------------------------------------------------------
 
     public TypeCompositionStatement(Source            source,
+                                    Expression        condition,
                                     List<Token>       modifiers,
                                     List<Annotation>  annotations,
                                     Token             category,
@@ -43,6 +46,7 @@ public class TypeCompositionStatement
                                     Token             doc)
         {
         this.source            = source;
+        this.condition         = condition;
         this.modifiers         = modifiers;
         this.annotations       = annotations;
         this.category          = category;
@@ -57,6 +61,15 @@ public class TypeCompositionStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public Access getDefaultAccess()
+        {
+        Access access = getAccess(modifiers);
+        return access == null
+                ? super.getDefaultAccess()
+                : access;
+        }
 
     public Token getCategory()
         {
@@ -136,11 +149,14 @@ public class TypeCompositionStatement
     @Override
     protected void registerStructures(AstNode parent, ErrorListener errs)
         {
-        if (parent.getComponent() != null)
+        Component componentParent = parent.getComponent();
+        if (componentParent != null)
             {
             // create the structure for this package or class (etc.)
             assert getComponent() == null;
 
+            String    sName     = (String) name.getValue();
+            Access    access    = getDefaultAccess();
             Component container = parent.getComponent();
             switch (category.getId())
                 {
@@ -150,14 +166,17 @@ public class TypeCompositionStatement
                     break;
 
                 case PACKAGE:
-                    if (container instanceof PackageContainer)
+                    if (container.isPackageContainer())
                         {
-                        // TODO check for duplicate
-                        setStructure(((PackageContainer) container).ensurePackage((String) name.getValue()));
+                        // the check for duplicates is deferred, since it is possible (thanks to
+                        // the complexity of conditionals) to have multiple components occupying
+                        // the same location within the namespace at this point in the compilation
+                        setStructure(container.createPackage(access, sName));
                         }
                     else
                         {
-                        errs.log(Severity.ERROR, Compiler.PACKAGE_UNEXPECTED, new String[] {container.toString()},
+                        errs.log(Severity.ERROR, Compiler.PACKAGE_UNEXPECTED,
+                                new String[] {container.toString()},
                                 getSource(), category.getStartPosition(), category.getEndPosition());
                         }
                     break;
@@ -169,20 +188,56 @@ public class TypeCompositionStatement
                 case ENUM:
                 case TRAIT:
                 case MIXIN:
-                    if (container instanceof ClassContainer)
+                    if (container.isClassContainer())
                         {
-                        // TODO check for duplicate
-                        setStructure(((ClassContainer) container).ensureClass((String) name.getValue()));
+                        Format format;
+                        switch (category.getId())
+                            {
+                            case CLASS:
+                                format = Format.CLASS;
+                                break;
+
+                            case INTERFACE:
+                                format = Format.INTERFACE;
+                                break;
+
+                            case SERVICE:
+                                format = Format.SERVICE;
+                                break;
+
+                            case CONST:
+                                format = Format.CONST;
+                                break;
+
+                            case ENUM:
+                                format = Format.ENUM;
+                                break;
+
+                            case TRAIT:
+                                format = Format.TRAIT;
+                                break;
+
+                            case MIXIN:
+                                format = Format.MIXIN;
+                                break;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+
+                        setStructure(container.createClass(getDefaultAccess(), format, sName));
                         }
                     else
                         {
-                        errs.log(Severity.ERROR, Compiler.CLASS_UNEXPECTED, new String[] {container.toString()},
+                        errs.log(Severity.ERROR, Compiler.CLASS_UNEXPECTED,
+                                new String[] {container.toString()},
                                 getSource(), category.getStartPosition(), category.getEndPosition());
                         }
                     break;
 
                 default:
-                    throw new UnsupportedOperationException("unable to guess structure for: " + category.getId().TEXT);
+                    throw new UnsupportedOperationException("unable to guess structure for: "
+                            + category.getId().TEXT);
                 }
             }
 
@@ -333,18 +388,19 @@ public class TypeCompositionStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Source             source;
-    protected List<Token>        modifiers;
-    protected List<Annotation>   annotations;
-    protected Token              category;
-    protected Token              name;
-    protected List<Token>        qualified;
-    protected List<Parameter>    typeParams;
-    protected List<Parameter>    constructorParams;
-    protected List<Composition>  composition;
-    protected StatementBlock     body;
-    protected Token              doc;
-    protected StatementBlock     enclosed;
+    protected Source            source;
+    protected Expression        condition;
+    protected List<Token>       modifiers;
+    protected List<Annotation>  annotations;
+    protected Token             category;
+    protected Token             name;
+    protected List<Token>       qualified;
+    protected List<Parameter>   typeParams;
+    protected List<Parameter>   constructorParams;
+    protected List<Composition> composition;
+    protected StatementBlock    body;
+    protected Token             doc;
+    protected StatementBlock    enclosed;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "annotations", "typeParams", "constructorParams", "composition", "body");

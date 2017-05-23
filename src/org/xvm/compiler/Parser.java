@@ -153,14 +153,14 @@ public class Parser
             annotations = twoLists[1];
             }
 
-        return parseTypeDeclarationStatementAfterModifiers(doc, modifiers, annotations);
+        return parseTypeDeclarationStatementAfterModifiers(null, doc, modifiers, annotations);
         }
 
     /**
      * (This is just a continuation of the above method.)
      */
-    TypeCompositionStatement parseTypeDeclarationStatementAfterModifiers
-            (Token doc, List<Token> modifiers, List<Annotation> annotations)
+    TypeCompositionStatement parseTypeDeclarationStatementAfterModifiers(Expression exprCondition,
+            Token doc, List<Token> modifiers, List<Annotation> annotations)
         {
         // category & name
         Token category;
@@ -207,7 +207,7 @@ public class Parser
             expect(Id.SEMICOLON);
             }
 
-        return new TypeCompositionStatement(m_source, modifiers, annotations, category, name,
+        return new TypeCompositionStatement(m_source, exprCondition, modifiers, annotations, category, name,
                 qualified, typeParams, constructorParams, compositions, body, doc);
         }
 
@@ -591,8 +591,7 @@ public class Parser
      * </pre></code>
      *
      *
-     *
-     * @param exprCondition
+     * @param exprCondition  the condition applying to this composition component, or null
      * @param fInMethod      pass true to allow parsing of an expression statement, a variable
      *                       declaration statement (almost the same syntax as a property), or an
      *                       assignment statement
@@ -601,6 +600,10 @@ public class Parser
      */
     Statement parseTypeCompositionComponent(Expression exprCondition, boolean fInMethod)
         {
+        // if this is inside a method, there shouldn't be a conditional; that would be handled by
+        // an enclosing "if" statement instead
+        assert !(fInMethod && exprCondition != null);
+
         Token doc = takeDoc();
 
         // constant starts with "static" (a modifier)
@@ -638,7 +641,7 @@ public class Parser
             case TRAIT:
             case MIXIN:
                 // it's definitely a type composition
-                return parseTypeDeclarationStatementAfterModifiers(doc, modifiers, annotations);
+                return parseTypeDeclarationStatementAfterModifiers(exprCondition, doc, modifiers, annotations);
 
             case L_PAREN:
                 {
@@ -808,7 +811,7 @@ public class Parser
 
                     if (returns != null)
                         {
-                        return parseMethodDeclarationAfterName(doc, modifiers, annotations,
+                        return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations,
                                 null, returns, null, expect(Id.IDENTIFIER));
                         }
                     }
@@ -825,7 +828,7 @@ public class Parser
                     return parseVariableDeclarationAfterName(annotations, type, name);
                     }
 
-                return parsePropertyDeclarationFinish(doc, modifiers, annotations, type, name);
+                return parsePropertyDeclarationFinish(exprCondition, doc, modifiers, annotations, type, name);
                 }
 
             case COMP_LT:
@@ -834,7 +837,7 @@ public class Parser
                 List<Token>          typeVars = parseTypeVariableList(true);
                 List<TypeExpression> returns  = parseReturnList();
                 Token                name     = expect(Id.IDENTIFIER);
-                return parseMethodDeclarationAfterName(doc, modifiers, annotations, typeVars, returns, null, name);
+                return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations, typeVars, returns, null, name);
                 }
 
             case CONSTRUCT:
@@ -849,7 +852,7 @@ public class Parser
 
                 Token keyword = expect(Id.CONSTRUCT);
                 Token name    = expect(Id.IDENTIFIER);
-                return parseMethodDeclarationAfterName(doc, modifiers, annotations, null, null, keyword, name);
+                return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations, null, null, keyword, name);
                 }
 
             default:
@@ -878,7 +881,7 @@ public class Parser
                     {
                     // '<' indicates redundant return type list
                     // '(' indicates parameters
-                    return parseMethodDeclarationAfterName(doc, modifiers, annotations,
+                    return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations,
                             null, Collections.singletonList(type), null, name);
                     }
                 else if (!fInMethod && peek().getId() == Id.ASN && modifiers != null
@@ -898,7 +901,7 @@ public class Parser
                         }
 
                     // it's a property
-                    return parsePropertyDeclarationFinish(doc, modifiers, annotations, type, name);
+                    return parsePropertyDeclarationFinish(exprCondition, doc, modifiers, annotations, type, name);
                     }
                 }
             }
@@ -954,8 +957,7 @@ public class Parser
      * 
      * @return a VariableDeclarationStatement
      */
-    Statement parseVariableDeclarationAfterName(
-            List<Annotation> annotations, TypeExpression type, Token name)
+    Statement parseVariableDeclarationAfterName(List<Annotation> annotations, TypeExpression type, Token name)
         {
         Expression value = null;
         if (match(Id.ASN) != null)
@@ -987,9 +989,9 @@ public class Parser
      *
      * @return a MethodDeclarationStatement
      */
-    MethodDeclarationStatement parseMethodDeclarationAfterName(Token doc, List<Token> modifiers,
-            List<Annotation> annotations, List<Token> typeVars, List<TypeExpression> returns,
-            Token keyword, Token name)
+    MethodDeclarationStatement parseMethodDeclarationAfterName(Expression exprCondition, Token doc,
+            List<Token> modifiers, List<Annotation> annotations, List<Token> typeVars,
+            List<TypeExpression> returns, Token keyword, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
         List<Parameter>      params           = parseParameterList(true);
@@ -1002,7 +1004,7 @@ public class Parser
             stmtFinally = parseStatementBlock();
             }
 
-        return new MethodDeclarationStatement(modifiers, annotations, typeVars, returns, name,
+        return new MethodDeclarationStatement(exprCondition, modifiers, annotations, typeVars, returns, name,
                 redundantReturns, params, body, stmtFinally, doc);
         }
 
@@ -1018,8 +1020,8 @@ public class Parser
      *
      * @return a StatementBlock
      */
-    PropertyDeclarationStatement parsePropertyDeclarationFinish(Token doc, List<Token> modifiers,
-            List<Annotation> annotations, TypeExpression type, Token name)
+    PropertyDeclarationStatement parsePropertyDeclarationFinish(Expression exprCondition, Token doc,
+            List<Token> modifiers, List<Annotation> annotations, TypeExpression type, Token name)
         {
         Expression     value = null;
         StatementBlock body  = null;
@@ -1034,7 +1036,7 @@ public class Parser
             // "." Name Parameters MethodBody
             Token           methodName = expect(Id.IDENTIFIER);
             List<Parameter> params     = parseParameterList(true);
-            MethodDeclarationStatement method = new MethodDeclarationStatement(null, null, null, null,
+            MethodDeclarationStatement method = new MethodDeclarationStatement(null, null, null, null, null,
                     methodName, null, params, parseStatementBlock(), null, null);
             body = new StatementBlock(Collections.singletonList(method));
             }
@@ -1048,7 +1050,7 @@ public class Parser
             expect(Id.SEMICOLON);
             }
 
-        return new PropertyDeclarationStatement(modifiers, annotations, type, name, value, body, doc);
+        return new PropertyDeclarationStatement(exprCondition, modifiers, annotations, type, name, value, body, doc);
         }
 
     /**

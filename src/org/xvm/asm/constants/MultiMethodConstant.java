@@ -3,8 +3,6 @@ package org.xvm.asm.constants;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.XvmStructure;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -61,12 +59,6 @@ public class MultiMethodConstant
     public Format getFormat()
         {
         return Format.MultiMethod;
-        }
-
-    @Override
-    protected MultiMethodStructure instantiate(XvmStructure xsParent)
-        {
-        return new MultiMethodStructure(xsParent, this);
         }
 
 
