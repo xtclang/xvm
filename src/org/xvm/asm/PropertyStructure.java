@@ -1,10 +1,8 @@
 package org.xvm.asm;
 
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
-
-import org.xvm.asm.StructureContainer.MethodContainer;
-
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
@@ -22,30 +20,21 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.25
  */
 public class PropertyStructure
-        extends MethodContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a PropertyStructure with the specified identity.
      *
-     * @param structParent    the XvmStructure (a ModuleStructure, a PackageStructure, a
-     *                        ClassStructure, or a MethodStructure) that contains this
-     *                        PropertyStructure
-     * @param constProperty   the constant that specifies the identity of the property
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
      */
-    public PropertyStructure(XvmStructure structParent, PropertyConstant constProperty)
+    protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId, ConditionalConstant condition)
         {
-        super(structParent, constProperty);
-        }
-
-    public PropertyStructure(XvmStructure structParent, PropertyConstant constproperty,
-                             boolean fStatic, Access access, TypeConstant type)
-        {
-        this(structParent, constproperty);
-        m_fStatic = fStatic;
-        m_access  = access;
-        m_type    = type;
+        super(xsParent, nFlags, constId, condition);
         }
 
 
@@ -78,27 +67,20 @@ public class PropertyStructure
         }
 
     /**
-     * @return true iff the property is declared as static
-     */
-    public boolean isStatic()
-        {
-        return m_fStatic;
-        }
-
-    /**
-     * @return the accessibility of the property
-     */
-    public Access getAccess()
-        {
-        return m_access;
-        }
-
-    /**
      * @return the TypeConstant representing the data type of the property value
      */
     public TypeConstant getType()
         {
         return m_type;
+        }
+
+
+    // ----- component methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return true;
         }
 
 
@@ -144,7 +126,5 @@ public class PropertyStructure
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private boolean      m_fStatic;
-    private Access       m_access;
     private TypeConstant m_type;
     }

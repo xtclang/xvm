@@ -6,8 +6,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.PackageStructure;
-import org.xvm.asm.XvmStructure;
 
 
 /**
@@ -62,12 +60,6 @@ public class PackageConstant
     public Format getFormat()
         {
         return Format.Package;
-        }
-
-    @Override
-    protected PackageStructure instantiate(XvmStructure xsParent)
-        {
-        return new PackageStructure(xsParent, this);
         }
 
 

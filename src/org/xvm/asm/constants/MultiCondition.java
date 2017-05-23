@@ -7,7 +7,11 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -88,14 +92,81 @@ public abstract class MultiCondition
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- ConditionalConstant functionality -----------------------------------------------------
+
+    @Override
+    public void collectTerminals(Set<ConditionalConstant> terminals)
+        {
+        for (ConditionalConstant cond : m_aconstCond)
+            {
+            cond.collectTerminals(terminals);
+            }
+        }
+
+    @Override
+    public boolean containsTerminal(ConditionalConstant that)
+        {
+        for (ConditionalConstant cond : m_aconstCond)
+            {
+            if (cond.containsTerminal(that))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
 
     /**
-     * @return a list of the multiple conditions represented by this condition
+     * Flatten any nested conditions, as long as the conditions are all of the same type ("and" or
+     * "or", but not a mix of both).
+     *
+     * @return an iterator of the multiple conditions represented by this condition
      */
-    public List<ConditionalConstant> conditions()
+    public Iterator<ConditionalConstant> flatIterator()
         {
-        return Collections.unmodifiableList(Arrays.asList(m_aconstCond));
+        return new Iterator<ConditionalConstant>()
+            {
+            ConditionalConstant[]         acond   = m_aconstCond;
+            int                           iNext   = 0;
+            Iterator<ConditionalConstant> iterSub = null;
+
+            @Override
+            public boolean hasNext()
+                {
+                return iNext < acond.length || iterSub != null;
+                }
+
+            @Override
+            public ConditionalConstant next()
+                {
+                if (iterSub != null)
+                    {
+                    ConditionalConstant cond = iterSub.next();
+                    if (!iterSub.hasNext())
+                        {
+                        iterSub = null;
+                        }
+                    return cond;
+                    }
+
+                if (iNext < acond.length)
+                    {
+                    ConditionalConstant cond = acond[iNext++];
+                    if (cond.getClass() == MultiCondition.this.getClass())
+                        {
+                        iterSub = ((MultiCondition) cond).flatIterator();
+                        return next(); // recurse max one level to this method
+                        }
+                    else
+                        {
+                        return cond;
+                        }
+                    }
+
+                throw new NoSuchElementException();
+                }
+            };
         }
 
     /**
@@ -120,14 +191,14 @@ public abstract class MultiCondition
 
         StringBuilder sb = new StringBuilder();
         sb.append('(')
-          .append(m_aconstCond[0].getValueString());
+                .append(m_aconstCond[0].getValueString());
 
         for (int i = 1, c = aconstCond.length; i < c; ++i)
             {
             sb.append(' ')
-              .append(getOperatorString())
-              .append(' ')
-              .append(aconstCond[i].getValueString());
+                    .append(getOperatorString())
+                    .append(' ')
+                    .append(aconstCond[i].getValueString());
             }
 
         return sb.append(')').toString();

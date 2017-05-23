@@ -34,7 +34,15 @@ public interface Constants
 
     public enum Access
         {
-        STRUCT, PUBLIC, PROTECTED, PRIVATE;
+        STRUCT(0),
+        PUBLIC(Component.ACCESS_PUBLIC),
+        PROTECTED(Component.ACCESS_PROTECTED),
+        PRIVATE(Component.ACCESS_PRIVATE);
+
+        private Access(int flags)
+            {
+            this.FLAGS = flags;
+            }
 
         /**
          * Look up a Access enum by its ordinal.
@@ -54,5 +62,7 @@ public interface Constants
         private static final Access[] VALUES = Access.values();
 
         public final String KEYWORD = name().toLowerCase();
+
+        public final int FLAGS;
         }
     }

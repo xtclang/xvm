@@ -89,6 +89,12 @@ public class ClassTypeConstant
         return m_constClass;
         }
 
+    @Override
+    public boolean isEcstasyObject()
+        {
+        return m_constClass.isEcstasyObject() && m_access == Access.PUBLIC;
+        }
+
     /**
      * @return the access modifier for the class (public, private, etc.)
      */

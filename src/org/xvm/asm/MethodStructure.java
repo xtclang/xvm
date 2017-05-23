@@ -1,11 +1,9 @@
 package org.xvm.asm;
 
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.StructureContainer.ClassContainer;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -21,80 +19,71 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.25
  */
 public class MethodStructure
-        extends ClassContainer
+        extends Component
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a MethodStructure with the specified identity.
      *
-     * @param structParent  the XvmStructure (probably a FileStructure, a
-     *                      ModuleStructure, a PackageStructure, a
-     *                      ClassStructure, a PropertyStructure, or a
-     *                      MethodStructure) that contains this MethodStructure
-     * @param constmethod   the constant that specifies the identity of the
-     *                      method
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
      */
-    MethodStructure(XvmStructure structParent, MethodConstant constmethod)
+    protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId, ConditionalConstant condition)
         {
-        super(structParent, constmethod);
+        super(xsParent, nFlags, constId, condition);
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    /**
-     * Obtain the MethodConstant that holds the identity of this Method.
-     *
-     * @return the MethodConstant representing the identity of this
-     *         MethodStructure
-     */
-    public MethodConstant getMethodConstant()
+    // TODO
+
+
+    // ----- Component methods ---------------------------------------------------------------------
+
+    @Override
+    public String getName()
         {
-        return (MethodConstant) getIdentityConstant();
+        return getIdentityConstant().getName();
         }
 
-    /**
-     * When the property is created, if it does not have a known type, one can be temporarily
-     * created that represents an eventually-resolved type.
-     *
-     * @param sType  the type string to use for the time being
-     */
-    public void provideTemporaryType(String sType)
+    @Override
+    protected Component getEldestSibling()
         {
-        assert m_type == null;
-        m_type = new UnresolvedTypeConstant(getConstantPool(), sType);
+        Component parent = getParent();
+        assert parent != null;
+
+        Component sibling = parent.getMethodByConstantMap().get(getIdentityConstant());
+        assert sibling != null;
+
+        return sibling;
         }
 
-    public void resolveType(TypeConstant type)
+    @Override
+    public boolean isClassContainer()
         {
-        assert type != null;
-        assert m_type instanceof UnresolvedTypeConstant;
-        assert !((UnresolvedTypeConstant) m_type).isTypeResolved();
-
-        ((UnresolvedTypeConstant) m_type).resolve(type);
-        m_type = type;
+        return true;
         }
 
-    /**
-     * Obtain the PropertyConstant that holds the identity of this Property.
-     *
-     * @return the PropertyConstant representing the identity of this
-     *         PropertyStructure
-     */
-    public PropertyConstant getPropertyConstant()
+    @Override
+    public boolean isMethodContainer()
         {
-        return (PropertyConstant) getIdentityConstant();
-        }
-
-    /**
-     * @return the TypeConstant representing the data type of the property value
-     */
-    public TypeConstant getTypeConstant()
-        {
-        return m_type;
+        return true;
         }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public MethodConstant getIdentityConstant()
+        {
+        return (MethodConstant) super.getIdentityConstant();
+        }
+
+    // TODO review section
 
     @Override
     protected void disassemble(DataInput in)
@@ -137,5 +126,8 @@ public class MethodStructure
 
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * TODO this seems wrong like it was copied from Property
+     */
     private TypeConstant m_type;
     }

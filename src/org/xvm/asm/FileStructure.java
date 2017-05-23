@@ -13,19 +13,18 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.constants.ModuleConstant;
 
-import org.xvm.util.ListMap;
+import org.xvm.util.LinkedIterator;
 
 import static org.xvm.util.Handy.intToHexString;
+import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.toInputStream;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -37,7 +36,7 @@ import static org.xvm.util.Handy.toInputStream;
  * @author cp 2015.12.04
  */
 public class FileStructure
-        extends StructureContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -48,19 +47,23 @@ public class FileStructure
      */
     public FileStructure(String sModule)
         {
-        super(null);
+        super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
-        // validate the combination of passed names
+        // module name required
         if (sModule == null)
             {
             throw new IllegalArgumentException("module name required");
             }
 
-        this.pool       = new ConstantPool(this);
-        this.module     = new ModuleStructure(this, pool.ensureModuleConstant(sModule));
+        // create and register the main module
+        ConstantPool    pool   = new ConstantPool(this);
+        ModuleStructure module = new ModuleStructure(this, pool.ensureModuleConstant(sModule));
+        addChild(module);
+
+        this.pool       = pool;
+        this.moduleName = sModule;
         this.nMajorVer  = VERSION_MAJOR_CUR;
         this.nMinorVer  = VERSION_MINOR_CUR;
-        this.modulesByName.put(sModule, module);
         }
 
     /**
@@ -73,7 +76,22 @@ public class FileStructure
     public FileStructure(File file)
             throws IOException
         {
-        this(toInputStream(file), true);
+        this(file, true);
+        }
+
+    /**
+     * Construct a file structure for an existing file.
+     *
+     * @param file   the file that contains the existing FileStructure
+     * @param fLazy  true to defer the module deserialization until necessary
+     *
+     * @throws IOException  if an IOException occurs while reading the FileStructure
+     */
+    public FileStructure(File file, boolean fLazy)
+            throws IOException
+        {
+        this(toInputStream(file), true, fLazy);
+        this.file = file;
         }
 
     /**
@@ -87,7 +105,7 @@ public class FileStructure
     public FileStructure(InputStream in)
             throws IOException
         {
-        this(in, false);
+        this(in, false, true);
         }
 
     /**
@@ -95,14 +113,16 @@ public class FileStructure
      *
      * @param in          a stream that contains a FileStructure
      * @param fAutoClose  true to close the stream; false to leave the stream open
+     * @param fLazy       true to defer the module deserialization until necessary
      *
      * @throws IOException  if an IOException occurs while reading the FileStructure
      */
-    public FileStructure(InputStream in, boolean fAutoClose)
+    public FileStructure(InputStream in, boolean fAutoClose, boolean fLazy)
             throws IOException
         {
         super(null);
 
+        fLazyDeser = fLazy;
         try
             {
             disassemble(new DataInputStream(in));
@@ -134,6 +154,7 @@ public class FileStructure
             throws IOException
         {
         FileOutputStream fos = new FileOutputStream(file);
+        this.file = file;
         try
             {
             BufferedOutputStream bos = new BufferedOutputStream(fos);
@@ -187,6 +208,71 @@ public class FileStructure
         }
 
 
+    // ----- module containment --------------------------------------------------------------------
+
+    /**
+     * Obtain the primary module that the FileStructure represents.
+     *
+     * @return the ModuleStructure that this FileStructure represents; never null
+     */
+    public ModuleStructure getModule()
+        {
+        return (ModuleStructure) getChild(moduleName);
+        }
+
+    /**
+     * Determine the Module name.
+     *
+     * @return the name of the Module
+     */
+    public String getModuleName()
+        {
+        return moduleName;
+        }
+
+    /**
+     * @return a set of qualified module names contained within this FileStructure; the caller must
+     *         treat the set as a read-only object
+     */
+    public Set<String> moduleNames()
+        {
+        Set<String> names = getChildByNameMap().keySet();
+        assert (names = Collections.unmodifiableSet(names)) != null;
+        return names;
+        }
+
+    /**
+     * Obtain the specified module from the FileStructure.
+     *
+     * @param sName  the qualified module name
+     *
+     * @return the specified module, or null if it does not exist in this FileStructure
+     */
+    public ModuleStructure getModule(String sName)
+        {
+        return (ModuleStructure) getChild(sName);
+        }
+
+    /**
+     * Obtain the specified module from the FileStructure, creating it if it does not already
+     * exist in the FileStructure.
+     *
+     * @param sName  the qualified module name
+     *
+     * @return the specified module
+     */
+    ModuleStructure ensureModule(String sName)
+        {
+        ModuleStructure module = getModule(sName);
+        if (module == null)
+            {
+            module = new ModuleStructure(this, pool.ensureModuleConstant(sName));
+            addChild(module);
+            }
+        return module;
+        }
+
+
     // ----- FileStructure methods -----------------------------------------------------------------
 
     /**
@@ -214,89 +300,6 @@ public class FileStructure
             this.ctx = ctx = new AssemblerContext(getConstantPool());
             }
         return ctx;
-        }
-
-    /**
-     * Obtain the main module that the FileStructure represents.
-     *
-     * @return the ModuleStructure that this FileStructure represents; never null
-     */
-    public ModuleStructure getMainModule()
-        {
-        return module;
-        }
-
-    /**
-     * Obtain the ModuleConstant for the main module in this FileStructure.
-     *
-     * @return the ModuleConstant; never null
-     */
-    ModuleConstant getModuleConstant()
-        {
-        return module.getModuleConstant();
-        }
-
-    /**
-     * Determine the Module name.
-     *
-     * @return the name of the Module
-     */
-    public String getModuleName()
-        {
-        return getModuleConstant().getQualifiedName();
-        }
-
-    /**
-     * @return a set of qualified module names contained within this FileStructure; the caller must
-     *         treat the set as a read-only object
-     */
-    public Set<String> moduleNames()
-        {
-        Set<String> names = modulesByName.keySet();
-        // if assertions are enabled, wrap it as unmodifiable
-        assert (names = Collections.unmodifiableSet(names)) != null;
-        return names;
-        }
-
-    /**
-     * Obtain the specified module from the FileStructure.
-     *
-     * @param sName  the qualified module name
-     *
-     * @return the specified module, or null if it does not exist in this FileStructure
-     */
-    ModuleStructure getModule(String sName)
-        {
-        return modulesByName.get(sName);
-        }
-
-    /**
-     * Obtain the specified module from the FileStructure, creating it if it does not already
-     * exist in the FileStructure.
-     *
-     * @param sName  the qualified module name
-     *
-     * @return the specified module
-     */
-    ModuleStructure ensureModule(String sName)
-        {
-        ModuleStructure module = getModule(sName);
-        if (module == null)
-            {
-            module = new ModuleStructure(this, pool.ensureModuleConstant(sName));
-            modulesByName.put(module.getModuleConstant().getQualifiedName(), module);
-            }
-        return module;
-        }
-
-    /**
-     * Remove the specified module from the FileStructure.
-     *
-     * @param sName  the qualified module name
-     */
-    void removeModule(String sName)
-        {
-        modulesByName.remove(sName);
         }
 
     /**
@@ -378,6 +381,17 @@ public class FileStructure
         }
 
 
+    // ----- Component methods ---------------------------------------------------------------------
+
+    @Override
+    public String getName()
+        {
+        return file == null
+                ? getModule().getModuleConstant().getUnqualifiedName() + ".xtc"
+                : file.getName();
+        }
+
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -387,7 +401,7 @@ public class FileStructure
         }
 
     @Override
-    protected ConstantPool getConstantPool()
+    public ConstantPool getConstantPool()
         {
         return pool;
         }
@@ -395,7 +409,9 @@ public class FileStructure
     @Override
     public Iterator<? extends XvmStructure> getContained()
         {
-        return Arrays.asList(pool, module).iterator();
+        return new LinkedIterator(
+                Collections.singleton(pool).iterator(),
+                getChildByNameMap().values().iterator());
         }
 
     @Override
@@ -420,7 +436,7 @@ public class FileStructure
         int nMagic = in.readInt();
         if (nMagic != FILE_MAGIC)
             {
-            throw new IOException("invalid magic header: " + intToHexString(nMagic));
+            throw new IOException("not an .xtc format file; invalid magic header: " + intToHexString(nMagic));
             }
 
         // validate the version; this is rather simple in the beginning (before there is a long
@@ -439,25 +455,21 @@ public class FileStructure
         this.pool = pool;
         pool.disassemble(in);
 
-        // read in the modules
-        List<ModuleStructure> modules = (List<ModuleStructure>) disassembleSubStructureCollection(in);
-        Map<String, ModuleStructure> modulesByName = this.modulesByName;
-        modulesByName.clear();
-        module = null;
-        for (ModuleStructure struct : modules)
-            {
-            modulesByName.put(struct.getModuleConstant().getQualifiedName(), struct);
-            if (module == null)
-                {
-                module = struct;
-                }
-            }
+        moduleName = ((ModuleConstant) pool.getConstant(readIndex(in))).getName();
+        disassembleChildren(in, fLazyDeser);
 
         // must be at least one module (the first module is considered to be the "main" module)
-        if (module == null)
+        if (getModule() == null)
             {
-            throw new IOException("the file does not contain a module");
+            throw new IOException("the file does not contain a primary module");
             }
+        }
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        pool.registerConstants(pool);
+        registerChildrenConstants(pool);
         }
 
     @Override
@@ -468,22 +480,48 @@ public class FileStructure
         out.writeShort(VERSION_MAJOR_CUR);
         out.writeShort(VERSION_MINOR_CUR);
         pool.assemble(out);
-        assembleSubStructureCollection(modulesByName.values(), out);
+        writePackedLong(out, getModule().getModuleConstant().getPosition());
+        assembleChildren(out);
         }
 
     @Override
     public String getDescription()
         {
-        return new StringBuilder()
-                .append("module=")
-                .append(getModuleName())
-                .append(", xvm-version=")
-                .append(getFileMajorVersion())
-                .append('.')
-                .append(getFileMinorVersion())
-                .append(", ")
-                .append(super.getDescription())
-                .toString();
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("main-module=")
+          .append(getModuleName());
+
+        boolean first = true;
+        for (String name : moduleNames())
+            {
+            if (!name.equals(moduleName))
+                {
+                if (first)
+                    {
+                    sb.append("other-modules={");
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(name);
+                }
+            }
+        if (!first)
+            {
+            sb.append('}');
+            }
+
+        sb.append(", xvm-version=")
+          .append(getFileMajorVersion())
+          .append('.')
+          .append(getFileMinorVersion())
+          .append(", ")
+          .append(super.getDescription());
+
+        return sb.toString();
         }
 
     @Override
@@ -498,7 +536,7 @@ public class FileStructure
             pool.dump(out, nextIndent(sIndent));
             }
 
-        dumpStructureMap(out, sIndent, "Modules", modulesByName);
+        dumpChildren(out, sIndent);
         }
 
 
@@ -507,7 +545,7 @@ public class FileStructure
     @Override
     public int hashCode()
         {
-        return module.hashCode();
+        return getModule().hashCode();
         }
 
     @Override
@@ -523,43 +561,34 @@ public class FileStructure
             FileStructure that = (FileStructure) obj;
             // ignore the constant pool, since its only purpose is to be
             // referenced from the nested XVM structures
-            if (this.nMajorVer == that.nMajorVer &&
-                this.nMinorVer == that.nMinorVer &&
-                this.module.equals(that.module))
-                {
-                boolean first = true;
-                for (ModuleStructure moduleThis : this.modulesByName.values())
-                    {
-                    // the first module is the "main" module, and we already compared the "main"
-                    // module
-                    if (first)
-                        {
-                        first = false;
-                        }
-                    else
-                        {
-                        ModuleStructure moduleThat = that.getModule(moduleThis.getModuleConstant().getQualifiedName());
-                        if (moduleThat == null || !moduleThis.equals(moduleThat))
-                            {
-                            return false;
-                            }
-                        }
-                    }
-                return true;
-                }
+            return this.nMajorVer == that.nMajorVer
+                && this.nMinorVer == that.nMinorVer
+                && this.moduleName.equals(that.moduleName)
+                && this.getChildByNameMap().equals(that.getChildByNameMap()); // TODO need "childrenEquals()"?
             }
 
         return false;
         }
 
-    @Override
-    public String toString()
-        {
-        return "FileStructure{" + getDescription() + "}";
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The file that the file structure was loaded from.
+     */
+    private File file;
+
+    /**
+     * The indicator that deserialization of components should be done lazily (deferred).
+     */
+    private boolean fLazyDeser;
+
+    /**
+     * The name of the main module that the FileStructure represents. There may be additional
+     * modules in the FileStructure, but generally, they only represent imports (included embedded
+     * modules) of the main module.
+     */
+    private String moduleName;
 
     /**
      * The ConstantPool for the FileStructure.
@@ -567,16 +596,9 @@ public class FileStructure
     private ConstantPool pool;
 
     /**
-     * The main module that the FileStructure represents. There may be additional modules in the
-     * FileStructure, but generally, they only represent imports (included embedded modules) of the
-     * main module.
+     * The AssemblerContext that is associated with this FileStructure.
      */
-    private ModuleStructure module;
-
-    /**
-     * The map of module names to modules. The first module in the map is the main module.
-     */
-    private Map<String, ModuleStructure> modulesByName = new ListMap<>();
+    private AssemblerContext ctx;
 
     /**
      * If the structure was disassembled from a binary, this is the major version of the Ecstasy/XVM
@@ -589,9 +611,4 @@ public class FileStructure
      * specification that the binary was assembled with. Otherwise, it is the current version.
      */
     private int nMinorVer;
-
-    /**
-     * The AssemblerContext that is associated with this FileStructure.
-     */
-    private AssemblerContext ctx;
     }

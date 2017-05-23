@@ -35,7 +35,7 @@ public class BuildRepository
     @Override
     public void storeModule(ModuleStructure module)
         {
-        modulesByName.put(module.getModuleConstant().getQualifiedName(), module);
+        modulesByName.put(module.getModuleConstant().getName(), module);
         }
 
 

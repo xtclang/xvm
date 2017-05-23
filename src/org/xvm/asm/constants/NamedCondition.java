@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
@@ -75,6 +78,26 @@ public class NamedCondition
         return ctx.isSpecified(m_constName.getValue());
         }
 
+    @Override
+    public boolean isTerminal()
+        {
+        return true;
+        }
+
+    @Override
+    public Relation calcRelation(ConditionalConstant that)
+        {
+        assert that.isTerminal();
+
+        if (that instanceof NamedCondition)
+            {
+            return this.m_constName.equals(((NamedCondition) that).m_constName)
+                    ? Relation.EQUIV
+                    : Relation.INDEP;
+            }
+
+        return Relation.INDEP;
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

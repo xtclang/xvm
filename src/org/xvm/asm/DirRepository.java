@@ -82,7 +82,7 @@ public class DirRepository
             throw new IllegalStateException("repository is read-only: " + this);
             }
 
-        String name = module.getModuleConstant().getQualifiedName();
+        String name = module.getModuleConstant().getName();
         ModuleInfo info = modulesByName.get(name);
         File file = (info == null)
                 ? new File(m_dir, module.getModuleConstant().getUnqualifiedName() + ".xtc")
@@ -233,7 +233,7 @@ public class DirRepository
                 }
             else
                 {
-                this.name     = module.getModuleConstant().getQualifiedName();
+                this.name     = module.getModuleConstant().getName();
                 this.versions = module.getVersions();
                 this.err      = false;
                 }
@@ -244,7 +244,7 @@ public class DirRepository
             try
                 {
                 FileStructure struct = new FileStructure(file);
-                XvmStructure top = struct.getMainModule();
+                XvmStructure top = struct.getModule();
                 if (top instanceof ModuleStructure)
                     {
                     return (ModuleStructure) top;

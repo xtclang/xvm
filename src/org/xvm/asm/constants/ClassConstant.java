@@ -4,10 +4,8 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.XvmStructure;
 
 
 /**
@@ -37,8 +35,7 @@ public class ClassConstant
      * Construct a constant whose value is a class identifier.
      *
      * @param pool         the ConstantPool that will contain this Constant
-     * @param constParent  the module, package, class, or method that
-     *                     contains this class
+     * @param constParent  the module, package, class, or method that contains this class
      * @param sName        the unqualified class name
      */
     public ClassConstant(ConstantPool pool, Constant constParent, String sName)
@@ -84,12 +81,6 @@ public class ClassConstant
     public Format getFormat()
         {
         return Format.Class;
-        }
-
-    @Override
-    protected ClassStructure instantiate(XvmStructure xsParent)
-        {
-        return new ClassStructure(xsParent, this);
         }
 
 

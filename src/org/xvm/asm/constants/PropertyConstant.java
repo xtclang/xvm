@@ -6,8 +6,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.XvmStructure;
 
 
 /**
@@ -60,12 +58,6 @@ public class PropertyConstant
     public Format getFormat()
         {
         return Format.Property;
-        }
-
-    @Override
-    protected PropertyStructure instantiate(XvmStructure xsParent)
-        {
-        return new PropertyStructure(xsParent, this);
         }
 
 

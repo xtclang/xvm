@@ -5,9 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
-import org.xvm.asm.StructureContainer.PackageContainer;
 
 import org.xvm.util.Handy;
 
@@ -21,24 +21,76 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.14
  */
 public class PackageStructure
-        extends PackageContainer
+        extends Component
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a PackageStructure with the specified identity.
      *
-     * @param structParent  the XvmStructure (probably a FileStructure, a
-     *                      ModuleStructure, or a PackageStructure) that
-     *                      contains this PackageStructure
-     * @param constpackage  the constant that specifies the identity of the
-     *                      Package
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
      */
-    public PackageStructure(XvmStructure structParent, PackageConstant constpackage)
+    protected PackageStructure(XvmStructure xsParent, int nFlags, PackageConstant constId, ConditionalConstant condition)
         {
-        super(structParent, constpackage);
+        super(xsParent, nFlags, constId, condition);
         }
 
 
-    // ----- XvmStructure methods ----------------------------------------------
+    // ----- accessors --------------------------------------------------------------------------------------
+
+    /**
+     * Obtain the PackageConstant that holds the identity of this Package.
+     *
+     * @return the PackageConstant representing the identity of this PackageStructure
+     */
+    public PackageConstant getPackageConstant()
+        {
+        return (PackageConstant) getIdentityConstant();
+        }
+
+    public ModuleConstant getImportedModule()
+        {
+        return m_constModule;
+        }
+
+    /**
+     *
+     * @param constModule
+     */
+    public void setImportedModule(ModuleConstant constModule)
+        {
+        // TODO
+
+        m_constModule = constModule;
+        markModified();
+        }
+
+
+    // ----- component methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean isPackageContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isClassContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return true;
+        }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void disassemble(DataInput in)
@@ -66,8 +118,6 @@ public class PackageStructure
         super.assemble(out);
         }
 
-    // TODO validate
-
     @Override
     public String getDescription()
         {
@@ -79,7 +129,7 @@ public class PackageStructure
         }
 
 
-    // ----- Object methods ----------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public boolean equals(Object obj)
@@ -100,42 +150,11 @@ public class PackageStructure
         }
 
 
-    // ----- accessors ---------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Obtain the PackageConstant that holds the identity of this Package.
-     *
-     * @return the PackageConstant representing the identity of this
-     *         PackageStructure
-     */
-    public PackageConstant getPackageConstant()
-        {
-        return (PackageConstant) getIdentityConstant();
-        }
-
-    public ModuleConstant getImportedModule()
-        {
-        return m_constModule;
-        }
-
-    /**
-     *
-     * @param constModule
-     */
-    public void setImportedModule(ModuleConstant constModule)
-        {
-        // TODO
-
-        m_constModule = constModule;
-        markModified();
-        }
-
-
-    // ----- data members ------------------------------------------------------
-
-    /**
-     * If this package is a placeholder in the namespace for an imported module,
-     * this is the module that the package imports.
+     * If this package is a placeholder in the namespace for an imported module, this is the module
+     * that the package imports.
      */
     private ModuleConstant m_constModule;
     }

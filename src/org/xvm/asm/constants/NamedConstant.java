@@ -3,8 +3,6 @@ package org.xvm.asm.constants;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.StructureContainer;
-import org.xvm.asm.XvmStructure;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -19,7 +17,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * exists within its parent structure.
  */
 public abstract class NamedConstant
-        extends Constant
+        extends IdentityConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -67,24 +65,15 @@ public abstract class NamedConstant
         }
 
 
-    // ----- NamedConstant methods -----------------------------------------------------------------
+    // ----- IdentityConstant methods --------------------------------------------------------------
 
-    /**
-     * Obtain the constant for the module, package, class, property or method that this constant
-     * identifies a structure within.
-     *
-     * @return the containing constant
-     */
-    public Constant getNamespace()
+    @Override
+    public IdentityConstant getParentConstant()
         {
-        return m_constParent;
+        return (IdentityConstant) m_constParent;
         }
 
-    /**
-     * Get the name of the structure identified by this constant.
-     *
-     * @return the structure name
-     */
+    @Override
     public String getName()
         {
         return m_constName.getValue();
@@ -135,9 +124,6 @@ public abstract class NamedConstant
                 throw new IllegalStateException();
             }
         }
-
-    @Override
-    protected abstract StructureContainer instantiate(XvmStructure xsParent);
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------

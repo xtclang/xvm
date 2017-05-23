@@ -47,6 +47,16 @@ public abstract class TypeConstant
 
     // ----- type-specific functionality -----------------------------------------------------------
 
+    /**
+     * Determine if this TypeConstant is the "Object" type.
+     *
+     * @return true iff this TypeConstant represents the type of the Ecstasy root Object class
+     */
+    public boolean isEcstasyObject()
+        {
+        return false;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

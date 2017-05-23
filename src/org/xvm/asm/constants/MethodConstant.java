@@ -5,14 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.StructureContainer;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -20,10 +17,11 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a Method constant. A method constant uniquely identifies a method, but
+ * Represent a Method constant. A method constant uniquely identifies a method within a named
+ * multi-method (a group of methods by the same name).
  */
 public class MethodConstant
-        extends Constant
+        extends IdentityConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -80,30 +78,6 @@ public class MethodConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * @return the containing MultiMethodConstant
-     */
-    public MultiMethodConstant getParent()
-        {
-        return m_constParent;
-        }
-
-    /**
-     * @return the constant for the namespace containing the method name
-     */
-    public Constant getNamespace()
-        {
-        return getParent().getNamespace();
-        }
-
-    /**
-     * @return the method's name
-     */
-    public String getName()
-        {
-        return getParent().getName();
-        }
-
-    /**
      * @return the method's accessibility
      */
     public Access getAccess()
@@ -125,6 +99,27 @@ public class MethodConstant
     public List<TypeConstant> getParams()
         {
         return Arrays.asList(m_aconstParams);
+        }
+
+
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public MultiMethodConstant getParentConstant()
+        {
+        return m_constParent;
+        }
+
+    @Override
+    public IdentityConstant getNamespace()
+        {
+        return getParentConstant().getNamespace();
+        }
+
+    @Override
+    public String getName()
+        {
+        return getParentConstant().getName();
         }
 
 

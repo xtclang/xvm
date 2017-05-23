@@ -1,12 +1,13 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.StructureContainer;
-import org.xvm.asm.StructureContainer.ClassContainer;
+import org.xvm.asm.Component;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -27,11 +28,12 @@ import static org.xvm.util.Handy.indentLines;
  * @author cp 2017.04.04
  */
 public class PropertyDeclarationStatement
-        extends StructureContainerStatement
+        extends ComponentStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public PropertyDeclarationStatement(List<Token>      modifiers,
+    public PropertyDeclarationStatement(Expression       condition,
+                                        List<Token>      modifiers,
                                         List<Annotation> annotations,
                                         TypeExpression   type,
                                         Token            name,
@@ -39,6 +41,7 @@ public class PropertyDeclarationStatement
                                         StatementBlock   body,
                                         Token            doc)
         {
+        this.condition   = condition;
         this.modifiers   = modifiers;
         this.annotations = annotations;
         this.type        = type;
@@ -58,7 +61,7 @@ public class PropertyDeclarationStatement
         {
         // properties inside a method are ALWAYS specified as static, but NEVER actually static (in
         // the "constant property" sense)
-        if (getParent().getStructure() instanceof MethodStructure)
+        if (getParent().getComponent() instanceof MethodStructure)
             {
             return false;
             }
@@ -78,31 +81,13 @@ public class PropertyDeclarationStatement
         return false;
         }
 
-    /**
-     * @return the access specifier for the property
-     */
-    public Access getAccess()
+    @Override
+    public Access getDefaultAccess()
         {
-        List<Token> list = modifiers;
-        if (list != null && list.isEmpty())
-            {
-            for (Token token : list)
-                {
-                switch (token.getId())
-                    {
-                    case PUBLIC:
-                        return Access.PUBLIC;
-
-                    case PROTECTED:
-                        return Access.PROTECTED;
-
-                    case PRIVATE:
-                        return Access.PRIVATE;
-                    }
-                }
-            }
-
-        return Access.PUBLIC;           // TODO get the parent's access
+        Access access = getAccess(modifiers);
+        return access == null
+                ? super.getDefaultAccess()
+                : access;
         }
 
     @Override
@@ -120,26 +105,24 @@ public class PropertyDeclarationStatement
         setParent(parent);
 
         // create the structure for this property
-        if (getStructure() == null)
+        if (getComponent() == null)
             {
             // create a structure for this type
             String sName = (String) name.getValue();
-            StructureContainer container = parent.getStructure();
-            if (container instanceof ClassContainer)
+            Component container = parent.getComponent();
+            if (container.isClassContainer())
                 {
-                ClassContainer propContainer = (ClassContainer) container;
-                // another property by the same name should not already exist
-                if (propContainer.getProperty(sName) == null)
-                    {
-                    PropertyStructure prop = propContainer.createProperty(isStatic(), getAccess(),
-                            propContainer.createUnresolvedType(type.toString()), (String) name.getValue());
-                    setStructure(prop);
-                    }
-                else
-                    {
-                    errs.log(Severity.ERROR, Compiler.PROP_DUPLICATE, new Object[] {sName},
-                            getSource(), name.getStartPosition(), name.getEndPosition());
-                    }
+                // another property by the same name should not already exist, but  the check for
+                // duplicates is deferred, since it is possible (thanks to the complexity of
+                // conditionals) to have multiple components occupying the same location within the
+                // namespace at this point in the compilation
+                // if (container.getProperty(sName) != null) ...
+
+                ConstantPool      pool      = container.getConstantPool();
+                TypeConstant      constType = pool.createUnresolvedTypeConstant(type.toString());
+                PropertyStructure prop      = container.createProperty(isStatic(), getDefaultAccess(),
+                                                                       constType, sName);
+                setStructure(prop);
                 }
             else
                 {
@@ -237,6 +220,7 @@ public class PropertyDeclarationStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Expression         condition;
     protected List<Token>        modifiers;
     protected List<Annotation>   annotations;
     protected TypeExpression     type;

@@ -5,6 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
@@ -66,7 +71,7 @@ public class NotCondition
     /**
      * @return the condition that this condition negates
      */
-    public ConditionalConstant getCondition()
+    public ConditionalConstant getUnderlyingCondition()
         {
         return m_constCond;
         }
@@ -78,6 +83,61 @@ public class NotCondition
     public boolean evaluate(LinkerContext ctx)
         {
         return !m_constCond.evaluate(ctx);
+        }
+
+    @Override
+    public boolean testEvaluate(long n)
+        {
+        return !m_constCond.testEvaluate(n);
+        }
+
+    @Override
+    public void collectTerminals(Set<ConditionalConstant> terminals)
+        {
+        m_constCond.collectTerminals(terminals);
+        }
+
+    @Override
+    public boolean containsTerminal(ConditionalConstant that)
+        {
+        // while "this" is technically not a terminal, there is nothing that guarantees that "that"
+        // is either
+        if (this.equals(that))
+            {
+            return true;
+            }
+
+        return m_constCond.containsTerminal(that);
+        }
+
+    @Override
+    public boolean isTerminalInfluenceBruteForce()
+        {
+        return !isTerminalInfluenceFinessable(true, new HashSet<>(), new HashSet<>());
+        }
+
+    @Override
+    protected boolean isTerminalInfluenceFinessable(boolean fInNot,
+            Set<ConditionalConstant> setSimple, Set<ConditionalConstant> setComplex)
+        {
+        return m_constCond.isTerminalInfluenceFinessable(true, setSimple, setComplex);
+        }
+
+    @Override
+    public Map<ConditionalConstant, Influence> terminalInfluences()
+        {
+        if (isTerminalInfluenceBruteForce())
+            {
+            return super.terminalInfluences();
+            }
+
+        Map<ConditionalConstant, Influence> mapRaw = m_constCond.terminalInfluences();
+        Map<ConditionalConstant, Influence> mapInv = new HashMap<>();
+        for (Map.Entry<ConditionalConstant, Influence> entry : mapRaw.entrySet())
+            {
+            mapInv.put(entry.getKey(), entry.getValue().inverse());
+            }
+        return mapInv;
         }
 
 

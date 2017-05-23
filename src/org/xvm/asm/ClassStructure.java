@@ -11,12 +11,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.StructureContainer.ClassContainer;
-
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
-
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -30,37 +31,161 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.14
  */
 public class ClassStructure
-        extends ClassContainer
+        extends Component
     {
-    // ----- constructors ------------------------------------------------------
-    
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a ClassStructure with the specified identity.
      *
-     * @param structParent  the XvmStructure (probably a FileStructure, a
-     *                      ModuleStructure, a PackageStructure, a
-     *                      ClassStructure, or a MethodStructure) that
-     *                      contains this ClassStructure
-     * @param constclass    the constant that specifies the identity of the
-     *                      Class
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
      */
-    public ClassStructure(XvmStructure structParent, ClassConstant constclass)
+    protected ClassStructure(XvmStructure xsParent, int nFlags, ClassConstant constId, ConditionalConstant condition)
         {
-        super(structParent, constclass);
+        super(xsParent, nFlags, constId, condition);
         }
 
 
-    // ----- XvmStructure methods ----------------------------------------------
+    // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * Obtain the ClassConstant that holds the identity of this Class.
+     *
+     * @return the ClassConstant representing the identity of this ClassStructure
+     */
+    public ClassConstant getClassConstant()
+        {
+        return (ClassConstant) getIdentityConstant();
+        }
+
+    /**
+     * Obtain the type parameters for the class as an ordered read-only map, keyed by name and with
+     * a corresponding value of the type constraint for the parameter.
+     *
+     * @return a read-only map of type parameter name to type
+     */
+    public Map<CharStringConstant, TypeConstant> getTypeParams()
+        {
+        Map<CharStringConstant, TypeConstant> map = m_mapParams;
+        if (map == null)
+            {
+            return Collections.EMPTY_MAP;
+            }
+        assert (map = Collections.unmodifiableMap(map)) != null;
+        return map;
+        }
+
+    /**
+     * Obtain the type parameters for the class as a list of map entries from name to type.
+     *
+     * @return a read-only list of map entries from type parameter name to type
+     */
+    public List<Map.Entry<CharStringConstant, TypeConstant>> getTypeParamsAsList()
+        {
+        final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
+        return map == null ? Collections.EMPTY_LIST : map.asList();
+        }
+
+    /**
+     * Add a type parameter.
+     *
+     * @param sName  the type parameter name
+     * @param clz    the type parameter type
+     */
+    public void addTypeParam(String sName, TypeConstant clz)
+        {
+        ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
+        if (map == null)
+            {
+            m_mapParams = map = new ListMap<>();
+            }
+
+        map.put(getConstantPool().ensureCharStringConstant(sName), clz);
+        markModified();
+        }
+
+    /**
+     * Obtain the class contributions as a list.
+     *
+     * @return a read-only list of class contributions
+     */
+    public List<Contribution> getContributionsAsList()
+        {
+        List<Contribution> list = m_listContribs;
+        if (list == null)
+            {
+            return Collections.EMPTY_LIST;
+            }
+        assert (list = Collections.unmodifiableList(m_listContribs)) != null;
+        return list;
+        }
+
+    /**
+     * Add a class contribution.
+     *
+     * @param composition  the contribution type
+     * @param constClass   the contribution class
+     */
+    public void addContribution(Composition composition, ClassConstant constClass)
+        {
+        addContribution(new Contribution(composition, constClass));
+        }
+
+    /**
+     * Add an interface delegation.
+     *
+     * @param constClass  the type to delegate
+     * @param constProp   the property specifying the reference to delegate to
+     */
+    public void addContribution(ClassConstant constClass, PropertyConstant constProp)
+        {
+        addContribution(new Contribution(Composition.Delegates, constClass, constProp));
+        }
+
+    /**
+     * Helper to add a contribution to the lazily-instantiated list of contributions.
+     *
+     * @param contrib  the contribution to add to the end of the list
+     */
+    protected void addContribution(Contribution contrib)
+        {
+        List<Contribution> list = m_listContribs;
+        if (list == null)
+            {
+            m_listContribs = list = new ArrayList<>();
+            }
+
+        list.add(contrib);
+        markModified();
+        }
+
+
+    // ----- component methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean isClassContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return true;
+        }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     protected void disassemble(DataInput in)
             throws IOException
         {
-        final int nCategory = in.readUnsignedByte();
-        m_fSingleton = (nCategory & SINGLETON) != 0;
-        m_fSynthetic = (nCategory & SYNTHETIC) != 0;
-        m_category   = Category.valueOf(nCategory & CATEGORY);
-        m_mapParams  = disassembleTypeParams(in);
+        // read in the type parameters
+        m_mapParams = disassembleTypeParams(in);
 
         // read in the "contributions"
         int c = readMagnitude(in);
@@ -70,9 +195,10 @@ public class ClassStructure
             final ConstantPool       pool = getConstantPool();
             for (int i = 0; i < c; ++i)
                 {
-                final Composition   composition = Composition.valueOf(in.readUnsignedByte());
-                final ClassConstant constant    = (ClassConstant) pool.getConstant(readIndex(in));
-                list.add(new Contribution(composition, constant));
+                final Composition      composition = Composition.valueOf(in.readUnsignedByte());
+                final ClassConstant    constClass  = (ClassConstant) pool.getConstant(readIndex(in));
+                final PropertyConstant constProp   = (PropertyConstant) pool.getConstant(readIndex(in));
+                list.add(new Contribution(composition, constClass, constProp));
                 }
             m_listContribs = list;
             }
@@ -83,26 +209,20 @@ public class ClassStructure
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        final ListMap<CharStringConstant, TypeConstant> mapOld = m_mapParams;
-        if (mapOld != null && mapOld.size() > 0)
-            {
-            final ListMap<CharStringConstant, TypeConstant> mapNew = new ListMap<>();
-            for (Map.Entry<CharStringConstant, TypeConstant> entry : mapOld.entrySet())
-                {
-                mapNew.put((CharStringConstant) pool.register(entry.getKey()),
-                           (TypeConstant      ) pool.register(entry.getValue()));
-                }
-            m_mapParams = mapNew;
-            }
+        // register the type parameters
+        m_mapParams = registerTypeParams(m_mapParams);
 
+        // register the contributions
         final List<Contribution> listOld = m_listContribs;
         if (listOld != null && listOld.size() > 0)
             {
             final List<Contribution> listNew = new ArrayList<>();
             for (Contribution contribution : listOld)
                 {
-                listNew.add(new Contribution(contribution.getComposition(),
-                        (ClassConstant) pool.register(contribution.getClassConstant())));
+                listNew.add(new Contribution(
+                        contribution.getComposition(),
+                        (ClassConstant) pool.register(contribution.getClassConstant()),
+                        (PropertyConstant) pool.register(contribution.getDelegatePropertyConstant())));
                 }
             m_listContribs = listNew;
             }
@@ -114,7 +234,7 @@ public class ClassStructure
     protected void assemble(DataOutput out)
             throws IOException
         {
-        out.writeByte(m_category.ordinal() | (m_fSingleton ?SINGLETON : 0) | (m_fSynthetic ? SYNTHETIC : 0));
+        // write out the type parameters
         assembleTypeParams(m_mapParams, out);
 
         // write out the contributions
@@ -123,17 +243,17 @@ public class ClassStructure
         writePackedLong(out, cContribs);
         if (cContribs > 0)
             {
+            final ConstantPool pool = getConstantPool();
             for (Contribution contribution : listContribs)
                 {
                 out.writeByte(contribution.getComposition().ordinal());
                 writePackedLong(out, contribution.getClassConstant().getPosition());
+                writePackedLong(out, Constant.indexOf(contribution.getDelegatePropertyConstant()));
                 }
             }
 
         super.assemble(out);
         }
-
-    // TODO validate
 
     @Override
     public String getDescription()
@@ -165,19 +285,15 @@ public class ClassStructure
                 sb.append(entry.getKey().getValue());
 
                 TypeConstant constType = entry.getValue();
-// TODO if (!constType.isEcstasyObject())
+                if (!constType.isEcstasyObject())
                     {
                     sb.append(" extends ")
-                      .append(entry.getValue());
+                      .append(constType);
                     }
                 }
             sb.append('>');
             }
 
-        sb.append(", singleton=")
-          .append(m_fSingleton)
-          .append(", synthetic=")
-          .append(m_fSynthetic);
         return sb.toString();
         }
 
@@ -198,14 +314,10 @@ public class ClassStructure
                 out.println(sIndent + '[' + i + "]=" + listContribs.get(i));
                 }
             }
-
-        dumpStructureMap(out, sIndent, "Classes", getClassMap());
-        dumpStructureMap(out, sIndent, "Properties", getPropertyMap());
-        dumpStructureMap(out, sIndent, "Methods", getMethodMap());
         }
 
 
-    // ----- Object methods ----------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public boolean equals(Object obj)
@@ -215,262 +327,38 @@ public class ClassStructure
             return true;
             }
 
-        if (!(obj instanceof ClassStructure && super.equals(obj)))
+        if (!(obj instanceof ClassStructure) || !super.equals(obj))
             {
             return false;
             }
 
         ClassStructure that = (ClassStructure) obj;
-        if (! (this.m_category   == that.m_category
-            && this.m_fSingleton == that.m_fSingleton
-            && this.m_fSynthetic == that.m_fSynthetic))
+
+        // type parameters
+        final Map mapThisParams = this.m_mapParams;
+        final Map mapThatParams = that.m_mapParams;
+        final int cThisParams = mapThisParams == null ? 0 : mapThisParams.size();
+        final int cThatParams = mapThatParams == null ? 0 : mapThatParams.size();
+        if (cThisParams != cThatParams || (cThisParams > 0 && !mapThisParams.equals(mapThatParams)))
             {
-            return false;
+            return  false;
             }
 
-        final Map mapThis = this.m_mapParams;
-        final Map mapThat = that.m_mapParams;
-        final int cThis = mapThis == null ? 0 : mapThis.size();
-        final int cThat = mapThat == null ? 0 : mapThat.size();
-        return cThis == cThat && (cThis == 0 || mapThis.equals(mapThat));
-        // TODO list of contributions
-        }
-
-
-    // ----- accessors ---------------------------------------------------------
-
-    /**
-     * Obtain the ClassConstant that holds the identity of this Class.
-     *
-     * @return the ClassConstant representing the identity of this
-     *         ClassStructure
-     */
-    public ClassConstant getClassConstant()
-        {
-        return (ClassConstant) getIdentityConstant();
-        }
-
-    /**
-     * TODO
-     *
-     * @return
-     */
-    public Category getCategory()
-        {
-        return m_category;
-        }
-
-    /**
-     * TODO
-     *
-     * @param category
-     */
-    public void setCategory(Category category)
-        {
-        m_category = category;
-        markModified();
-        }
-
-    /**
-     * TODO
-     *
-     * @return
-     */
-    public boolean isSingleton()
-        {
-        return m_fSingleton;
-        }
-
-    /**
-     * TODO
-     *
-     * @param fSingleton
-     */
-    public void setSingleton(boolean fSingleton)
-        {
-        m_fSingleton = fSingleton;
-        markModified();
-        }
-
-    /**
-     * TODO
-     *
-     * @return
-     */
-    public boolean isSynthetic()
-        {
-        return m_fSynthetic;
-        }
-
-    /**
-     * TODO
-     *
-     * @param fSynthetic
-     */
-    public void setSynthetic(boolean fSynthetic)
-        {
-        m_fSynthetic = fSynthetic;
-        markModified();
-        }
-
-    /**
-     * TODO
-     *
-     * @return
-     */
-    public Map<CharStringConstant, TypeConstant> getTypeParams()
-        {
-        final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
-        return map == null ? Collections.EMPTY_MAP : Collections.unmodifiableMap(map);
-        }
-
-    /**
-     * TODO
-     *
-     * @return
-     */
-    public List<Map.Entry<CharStringConstant, TypeConstant>> getTypeParamsAsList()
-        {
-        final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
-        return map == null ? Collections.EMPTY_LIST : map.asList();
-        }
-
-    /**
-     * TODO
-     *
-     * @param sName
-     * @param clz
-     */
-    public void addTypeParam(String sName, TypeConstant clz)
-        {
-        ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
-        if (map == null)
+        // contributions (order is considered important)
+        final List<Contribution> listThisContribs = this.m_listContribs;
+        final List<Contribution> listThatContribs = that.m_listContribs;
+        final int cThisContribs = listThisContribs == null ? 0 : listThisContribs.size();
+        final int cThatContribs = listThatContribs == null ? 0 : listThatContribs.size();
+        if (cThisContribs != cThatContribs || (cThisContribs > 0 && !listThisContribs.equals(listThatContribs)))
             {
-            m_mapParams = map = new ListMap<>();
+            return  false;
             }
 
-        map.put(getConstantPool().ensureCharStringConstant(sName), clz);
-        }
-
-    /**
-     * TODO
-     *
-     * @param sName
-     */
-    public void removeTypeParam(String sName)
-        {
-        final ListMap<CharStringConstant, ? extends Constant> map = m_mapParams;
-        if (map != null)
-            {
-            map.remove(getConstantPool().ensureCharStringConstant(sName));
-            }
-        }
-
-    /**
-     * TODO
-     *
-     * @return
-     */
-    public List<Contribution> getContributionsAsList()
-        {
-        return m_listContribs == null ? Collections.EMPTY_LIST : Collections.unmodifiableList(m_listContribs);
-        }
-
-    /**
-     * TODO
-     *
-     * @param composition
-     * @param constant
-     */
-    public void addContribution(Composition composition, ClassConstant constant)
-        {
-        List<Contribution> list = m_listContribs;
-        if (list == null)
-            {
-            m_listContribs = list = new ArrayList<>();
-            }
-
-        list.add(new Contribution(composition, constant));
-        }
-
-    /**
-     * TODO
-     *
-     * @param i
-     */
-    public void removeContribution(int i)
-        {
-        assert m_listContribs != null;
-
-        m_listContribs.remove(i);
+        return true;
         }
 
 
-    // ----- enumeration: class categories -------------------------------------
-
-    /**
-     * Types of classes.
-     */
-    public enum Category
-        {
-        /**
-         * A type that is identified only by its members.
-         */
-        Type,
-        /**
-         * A type that is itself a reference to a type parameter. (The exact
-         * type is unknown at compile time.)
-         */
-        TypeParam,
-        /**
-         * An <tt>interface</tt> type.
-         */
-        Interface,
-        /**
-         * A <tt>trait</tt> type.
-         */
-        Trait,
-        /**
-         * A <tt>mixin</tt> type.
-         */
-        Mixin,
-        /**
-         * A <tt>class</tt> type.
-         */
-        Class,
-        /**
-         * A <tt>service</tt> type.
-         */
-        Service,
-        /**
-         * A <tt>value</tt> type.
-         */
-        Value,
-        /**
-         * An <tt>enum</tt> type.
-         */
-        Enum,;
-
-        /**
-         * Look up a Category enum by its ordinal.
-         *
-         * @param i  the ordinal
-         *
-         * @return the Category enum for the specified ordinal
-         */
-        public static Category valueOf(int i)
-            {
-            return CATEGORIES[i];
-            }
-
-        /**
-         * All of the Category enums.
-         */
-        private static final Category[] CATEGORIES = Category.values();
-        }
-
-
-    // ----- enumeration: class composition ------------------------------------
+    // ----- enumeration: class composition --------------------------------------------------------
 
     /**
      * Types of composition.
@@ -486,12 +374,15 @@ public class ClassStructure
          */
         Implements,
         /**
+         * Represents interface inheritance plus default delegation of interface functionality.
+         */
+        Delegates,
+        /**
          * Represents the combining-in of a trait or mix-in.
          */
         Incorporates,
         /**
-         * Represents that the class being composed is one of the enumeration of
-         * a specified type.
+         * Represents that the class being composed is one of the enumeration of a specified type.
          */
         Enumerates,;
 
@@ -514,10 +405,9 @@ public class ClassStructure
         }
 
     /**
-     * Represents one contribution to the definition of a class. A class (with
-     * the term used in the abstract sense, meaning any class, interface, mixin,
-     * trait, value, enum, or service) can be composed of any number of
-     * contributing components.
+     * Represents one contribution to the definition of a class. A class (with the term used in the
+     * abstract sense, meaning any class, interface, mixin, trait, value, enum, or service) can be
+     * composed of any number of contributing components.
      */
     public static class Contribution
         {
@@ -529,10 +419,24 @@ public class ClassStructure
          */
         protected Contribution(Composition composition, ClassConstant constant)
             {
+            this(composition, constant, null);
+            }
+
+        /**
+         * Construct a delegation Contribution.
+         *
+         * @param composition  specifies the type of composition
+         * @param constant     specifies the class being contributed
+         * @param delegate     for a Delegates composition, this is the property that provides the
+         *                     delegate reference
+         */
+        protected Contribution(Composition composition, ClassConstant constant, PropertyConstant delegate)
+            {
             assert composition != null && constant != null;
+            assert (composition == Composition.Delegates) == (delegate != null);
 
             m_composition = composition;
-            m_constant    = constant;
+            m_constClass = constant;
             }
 
         /**
@@ -552,77 +456,66 @@ public class ClassStructure
          */
         public ClassConstant getClassConstant()
             {
-            return m_constant;
+            return m_constClass;
+            }
+
+        /**
+         * @return the PropertyConstant specifying the reference to delegate to, or null
+         */
+        public PropertyConstant getDelegatePropertyConstant()
+            {
+            return m_constProp;
             }
 
         @Override
         public boolean equals(Object obj)
             {
+            if (this == obj)
+                {
+                return true;
+                }
+
             if (!(obj instanceof Contribution))
                 {
                 return false;
                 }
 
             Contribution that = (Contribution) obj;
-            return this == that ||
-                    (this.m_composition == that.m_composition && this.m_constant.equals(that.m_constant));
+            return this.m_composition == that.m_composition
+                && this.m_constClass.equals(that.m_constClass)
+                && Handy.equals(this.m_constProp, that.m_constProp);
             }
 
         @Override
         public String toString()
             {
-            return m_composition.toString().toLowerCase() + ' ' + m_constant.getDescription();
+            String s = m_composition.toString().toLowerCase() + ' ' + m_constClass.getDescription();
+            return m_constProp == null ? s : s + '(' + m_constProp.getDescription() + ')';
             }
 
         /**
-         * Defines the form of composition that this component contributes to
-         * the class.
+         * Defines the form of composition that this component contributes to the class.
          */
-        private Composition   m_composition;
+        private Composition m_composition;
+
         /**
          * Defines the class that was used as part of the composition.
          */
-        private ClassConstant m_constant;
+        private ClassConstant m_constClass;
+
+        /**
+         * The property specifying the delegate, if this Composition represents a "delegates"
+         * clause.
+         */
+        private PropertyConstant m_constProp;
         }
 
-    // ----- constants ---------------------------------------------------------
+
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * A mask for the various class category indicators.
-     */
-    public static final int CATEGORY = 0x0F;
-
-    /**
-     * A mask for specifying that the class is a singleton.
-     */
-    public static final int SINGLETON = 0x80;
-
-    /**
-     * A mask for specifying that the class is synthetic.
-     */
-    public static final int SYNTHETIC = 0x40;
-
-
-    // ----- data members ------------------------------------------------------
-
-    /**
-     * The category of the class.
-     */
-    private Category m_category = Category.Class;
-
-    /**
-     * True if the class is a singleton within its module/container at runtime.
-     */
-    private boolean m_fSingleton;
-
-    /**
-     * True if the class is synthetic (created by the compiler, not explicitly
-     * specified by the developer.
-     */
-    private boolean m_fSynthetic;
-
-    /**
-     * The name-to-type information for type parameters.
+     * The name-to-type information for type parameters. The type constant is used to specify a
+     * type constraint for the parameter.
      */
     private ListMap<CharStringConstant, TypeConstant> m_mapParams;
 

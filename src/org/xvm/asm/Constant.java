@@ -160,24 +160,11 @@ public abstract class Constant
         return m_cRefs > 0;
         }
 
-    /**
-     * If this constant acts as an identity for an XVM structure, then instantiate that XVM
-     * Structure using this constant as its identity.
-     *
-     * @param xsParent  the parent of the XVM structure to instantiate
-     *
-     * @return the new XVM structure
-     */
-    protected XvmStructure instantiate(XvmStructure xsParent)
-        {
-        throw new UnsupportedOperationException();
-        }
-
 
     // ----- XvmStructure operations ---------------------------------------------------------------
 
     @Override
-    protected ConstantPool getConstantPool()
+    public ConstantPool getConstantPool()
         {
         return (ConstantPool) getContaining();
         }
@@ -358,10 +345,10 @@ public abstract class Constant
         ConditionNot,
         ConditionAll,
         ConditionAny,
-        ConditionOnly1,
         ConditionNamed,
         ConditionPresent,
-        ConditionVersion,
+        ConditionVersionMatches,
+        ConditionVersioned,
         Module,
         Package,
         Class,

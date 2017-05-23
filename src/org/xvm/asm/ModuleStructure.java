@@ -9,9 +9,9 @@ import java.io.PrintWriter;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.VersionConstant;
-import org.xvm.asm.StructureContainer.PackageContainer;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -23,136 +23,36 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.14
  */
 public class ModuleStructure
-        extends PackageContainer
+        extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a ModuleStructure with the specified identity.
      *
-     * @param structParent  the XvmStructure (probably a FileStructure) that
-     *                      contains this ModuleStructure
-     * @param constmodule   the constant that specifies the identity of the
-     *                      Module
+     * @param xsParent  the XvmStructure (probably a FileStructure) that contains this structure
+     * @param constId   the constant that specifies the identity of the Module
      */
-    public ModuleStructure(XvmStructure structParent, ModuleConstant constmodule)
+    protected ModuleStructure(XvmStructure xsParent, ModuleConstant constId)
         {
-        super(structParent, constmodule);
+        this(xsParent, (Format.MODULE.ordinal() << FORMAT_SHIFT) | ACCESS_PUBLIC | STATIC_BIT, constId, null);
+        }
+
+    /**
+     * Construct a ModuleStructure with the specified identity.
+     *
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
+     */
+    protected ModuleStructure(XvmStructure xsParent, int nFlags, ModuleConstant constId, ConditionalConstant condition)
+        {
+        super(xsParent, nFlags, constId, condition);
         }
 
 
-    // -----
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        final int cVers = readMagnitude(in);
-        if (cVers > 0)
-            {
-            final SortedSet<VersionConstant> setVer = m_setVer;
-            final ConstantPool               pool   = getConstantPool();
-            for (int i = 0; i < cVers; ++i)
-                {
-                setVer.add((VersionConstant) pool.getConstant(readMagnitude(in)));
-                }
-            }
-
-        super.disassemble(in);
-        }
-
-    @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        final TreeSet<VersionConstant> setOld = m_setVer;
-        if (!setOld.isEmpty())
-            {
-            final TreeSet<VersionConstant> setNew = new TreeSet<>();
-
-            for (VersionConstant ver : setOld)
-                {
-                setNew.add((VersionConstant) pool.register(ver));
-                }
-
-            m_setVer = setNew;
-            }
-
-        super.registerConstants(pool);
-        }
-
-    @Override
-    protected void assemble(DataOutput out)
-            throws IOException
-        {
-        final TreeSet<VersionConstant> setVer = m_setVer;
-        writePackedLong(out, setVer.size());
-        for (VersionConstant ver : setVer)
-            {
-            writePackedLong(out, ver.getPosition());
-            }
-
-        super.assemble(out);
-        }
-
-    // TODO validate
-
-    @Override
-    public String getDescription()
-        {
-        final TreeSet<VersionConstant> setVer = m_setVer;
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(super.getDescription())
-          .append(", version=");
-
-        switch (setVer.size())
-            {
-            case 0:
-                sb.append("none");
-                break;
-            case 1:
-                sb.append(setVer.iterator().next().getValueString());
-                break;
-            default:
-                sb.append("multiple");
-                break;
-            }
-
-        return sb.toString();
-        }
-
-    @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
-        super.dump(out, sIndent);
-        dumpStructureCollection(out, sIndent, "Versions", m_setVer);
-        }
-
-
-    // ----- Object methods ----------------------------------------------------
-
-    @Override
-    public boolean equals(Object obj)
-        {
-        if (obj == this)
-            {
-            return true;
-            }
-
-        if (!(obj instanceof ModuleStructure && super.equals(obj)))
-            {
-            return false;
-            }
-
-        // compare versions
-        ModuleStructure that = (ModuleStructure) obj;
-        return this.m_setVer.equals(that.m_setVer);
-        }
-
-
-    // ----- accessors ---------------------------------------------------------
+    // ----- accessors -----------------------------------------------------------------------------
 
     /**
      * Obtain the ModuleConstant that holds the identity of this Module.
@@ -393,7 +293,142 @@ public class ModuleStructure
         return ver == null ? null : ver.getVersion();
         }
 
-    // ----- data members ------------------------------------------------------
+
+    // ----- Component methods ---------------------------------------------------------------------
+
+    @Override
+    public String getName()
+        {
+        return getModuleConstant().getName();
+        }
+
+    @Override
+    public boolean isPackageContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isClassContainer()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return true;
+        }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void disassemble(DataInput in)
+            throws IOException
+        {
+        final int cVers = readMagnitude(in);
+        if (cVers > 0)
+            {
+            final SortedSet<VersionConstant> setVer = m_setVer;
+            final ConstantPool               pool   = getConstantPool();
+            for (int i = 0; i < cVers; ++i)
+                {
+                setVer.add((VersionConstant) pool.getConstant(readMagnitude(in)));
+                }
+            }
+
+        super.disassemble(in);
+        }
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        final TreeSet<VersionConstant> setOld = m_setVer;
+        if (!setOld.isEmpty())
+            {
+            final TreeSet<VersionConstant> setNew = new TreeSet<>();
+
+            for (VersionConstant ver : setOld)
+                {
+                setNew.add((VersionConstant) pool.register(ver));
+                }
+
+            m_setVer = setNew;
+            }
+
+        super.registerConstants(pool);
+        }
+
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        final TreeSet<VersionConstant> setVer = m_setVer;
+        writePackedLong(out, setVer.size());
+        for (VersionConstant ver : setVer)
+            {
+            writePackedLong(out, ver.getPosition());
+            }
+
+        super.assemble(out);
+        }
+
+    @Override
+    public String getDescription()
+        {
+        final TreeSet<VersionConstant> setVer = m_setVer;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(super.getDescription())
+          .append(", version=");
+
+        switch (setVer.size())
+            {
+            case 0:
+                sb.append("none");
+                break;
+            case 1:
+                sb.append(setVer.iterator().next().getValueString());
+                break;
+            default:
+                sb.append("multiple");
+                break;
+            }
+
+        return sb.toString();
+        }
+
+    @Override
+    protected void dump(PrintWriter out, String sIndent)
+        {
+        super.dump(out, sIndent);
+        dumpStructureCollection(out, sIndent, "Versions", m_setVer);
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        if (obj == this)
+            {
+            return true;
+            }
+
+        if (!(obj instanceof ModuleStructure && super.equals(obj)))
+            {
+            return false;
+            }
+
+        // compare versions
+        ModuleStructure that = (ModuleStructure) obj;
+        return this.m_setVer.equals(that.m_setVer);
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
      * Set of versions held by this module.

@@ -1,21 +1,20 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.StructureContainer;
-import org.xvm.asm.StructureContainer.MethodContainer;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.compiler.ErrorListener;
-import org.xvm.compiler.Token;
+
+import org.xvm.compiler.*;
 
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
@@ -27,21 +26,23 @@ import static org.xvm.util.Handy.indentLines;
  * @author cp 2017.04.03
  */
 public class MethodDeclarationStatement
-        extends StructureContainerStatement
+        extends ComponentStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public MethodDeclarationStatement(List<Token> modifiers,
-                                      List<Annotation> annotations,
-                                      List<Token> typeVars,
+    public MethodDeclarationStatement(Expression           condition,
+                                      List<Token>          modifiers,
+                                      List<Annotation>     annotations,
+                                      List<Token>          typeVars,
                                       List<TypeExpression> returns,
-                                      Token name,
+                                      Token                name,
                                       List<TypeExpression> redundant,
-                                      List<Parameter> params,
-                                      StatementBlock body,
-                                      StatementBlock continuation,
-                                      Token doc)
+                                      List<Parameter>      params,
+                                      StatementBlock       body,
+                                      StatementBlock       continuation,
+                                      Token                doc)
         {
+        this.condition    = condition;
         this.modifiers    = modifiers;
         this.annotations  = annotations;
         this.typeVars     = typeVars;
@@ -81,17 +82,16 @@ public class MethodDeclarationStatement
         setParent(parent);
 
         // create the structure for this method
-        if (getStructure() == null)
+        if (getComponent() == null)
             {
             // create a structure for this type
-            StructureContainer possibleContainer = parent.getStructure();
-            if (possibleContainer instanceof MethodContainer)
+            Component container = parent.getComponent();
+            String    sName     = (String) name.getValue();
+            if (container.isMethodContainer())
                 {
-                MethodContainer container   = (MethodContainer) possibleContainer;
                 boolean         fFunction   = isStatic(modifiers);
                 Access          access      = getDefaultAccess();
                 TypeConstant[]  returnTypes = toTypeConstants(returns);
-                String          sName       = (String) name.getValue();
                 TypeConstant[]  paramTypes  = toTypeConstants(toTypeExpressions(params));
                 MethodStructure method      = container.createMethod(fFunction, access, returnTypes,
                                                                      sName, paramTypes);
@@ -99,8 +99,11 @@ public class MethodDeclarationStatement
                 }
             else
                 {
-                // TODO log error
-                throw new UnsupportedOperationException("not a method container: " + possibleContainer);
+                // TODO need a "method unexpected" error code
+                errs.log(Severity.ERROR, org.xvm.compiler.Compiler.PROP_UNEXPECTED, new Object[] {sName, container},
+                        getSource(), name.getStartPosition(), name.getEndPosition());
+
+                throw new UnsupportedOperationException("not a method container: " + container);
                 }
             }
 
@@ -130,11 +133,11 @@ public class MethodDeclarationStatement
             }
 
         int i = 0;
-        TypeConstant[] array = new TypeConstant[types.size()];
-        StructureContainer container = parent.getStructure();
+        TypeConstant[] array     = new TypeConstant[types.size()];
+        Component      container = parent.getComponent();
         for (TypeExpression type : types)
             {
-            array[i++] = container.createUnresolvedType(type.toString());
+            array[i++] = container.getConstantPool().createUnresolvedTypeConstant(type.toString());
             }
         return array;
         }
@@ -318,6 +321,7 @@ public class MethodDeclarationStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Expression           condition;
     protected List<Token>          modifiers;
     protected List<Annotation>     annotations;
     protected List<Token>          typeVars;

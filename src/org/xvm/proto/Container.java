@@ -88,7 +88,7 @@ public class Container
 
         try
             {
-            String sModule = m_constModule.getQualifiedName();
+            String sModule = m_constModule.getName();
             xModule module = (xModule) f_types.ensureTemplate(sModule);
 
             InvocationTemplate mtRun = module.getMethodTemplate("run", xModule.VOID, xModule.VOID);

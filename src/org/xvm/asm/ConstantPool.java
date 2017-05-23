@@ -39,11 +39,11 @@ public class ConstantPool
     /**
      * Construct a ConstantPool.
      *
-     * @param fstruct  the FileStructure that contains this ConstantPool
+     * @param fileStructure  the FileStructure that contains this ConstantPool
      */
-    public ConstantPool(FileStructure fstruct)
+    public ConstantPool(FileStructure fileStructure)
         {
-        super(fstruct);
+        super(fileStructure);
         }
 
 
@@ -274,76 +274,122 @@ public class ConstantPool
      */
     public NamedCondition ensureNamedCondition(String sName)
         {
-        NamedCondition constant = (NamedCondition) ensureLocatorLookup(Format.ConditionNamed).get(sName);
-        if (constant == null)
+        NamedCondition cond = (NamedCondition) ensureLocatorLookup(Format.ConditionNamed).get(sName);
+        if (cond == null)
             {
-            constant = new NamedCondition(this, ensureCharStringConstant(sName));
+            cond = new NamedCondition(this, ensureCharStringConstant(sName));
             }
-        return constant;
+        return cond;
         }
 
     /**
      * Given a constant for a particular XVM structure, obtain a PresentCondition that represents a
      * test for the structure's existence.
      *
-     * @param constVMStruct   a constant specifying a particular XVM structure
+     * @param constId   a constant specifying a particular XVM structure
      *
      * @return a PresentCondition
      */
-    public PresentCondition ensurePresentCondition(Constant constVMStruct)
+    public PresentCondition ensurePresentCondition(IdentityConstant constId)
         {
-        return ensurePresentCondition(constVMStruct, null, false);
+        PresentCondition cond = (PresentCondition) ensureLocatorLookup(Format.ConditionPresent).get(constId);
+        if (cond == null)
+            {
+            cond = new PresentCondition(this, constId);
+            }
+        return cond;
         }
 
     /**
      * Given a constant for a particular XVM structure and version, obtain a PresentCondition that
      * represents a test for the structure's existence of the specified version.
      *
-     * @param constVMStruct   a constant specifying a particular XVM structure
-     * @param constVer        the version of that structure to test for
-     * @param fExactVer       true iff the version must match exactly
+     * @param constModule  the constant specifying the module
+     * @param constVer     the version of that module to test for
      *
-     * @return a PresentCondition
+     * @return a VersionMatchesCondition
      */
-    public PresentCondition ensurePresentCondition(Constant constVMStruct, VersionConstant constVer, boolean fExactVer)
+    public VersionMatchesCondition ensureImportVersionCondition(ModuleConstant constModule, VersionConstant constVer)
         {
-        return new PresentCondition(this, constVMStruct, constVer, fExactVer);
+        return new VersionMatchesCondition(this, constModule, constVer);
         }
 
     /**
-     * Given the two conditions, obtain an AllCondition that represents them.
+     * Given a version constant, obtain a VersionedCondition that represents a test for that version
+     * of this module.
      *
-     * @param condition1   the first condition
-     * @param condition2   the second condition
+     * @param constVer  the version of this module to test for
      *
-     * @return an AllCondition
+     * @return a VersionedCondition
      */
-    public AllCondition ensureAllCondition(ConditionalConstant condition1, ConditionalConstant condition2)
+    public VersionedCondition ensureVersionedCondition(VersionConstant constVer)
         {
-        if (condition1 == null || condition2 == null)
+        VersionedCondition cond = (VersionedCondition) ensureLocatorLookup(Format.ConditionVersioned).get(constVer);
+        if (cond == null)
             {
-            throw new IllegalArgumentException("conditions required");
+            cond = new VersionedCondition(this, constVer);
+            }
+        return cond;
+        }
+
+    /**
+     * Given a condition, obtain the inverse of that condition.
+     *
+     * @param cond   a condition
+     *
+     * @return a Condition representing the inverse
+     */
+    public ConditionalConstant ensureNotCondition(ConditionalConstant cond)
+        {
+        // avoid double-negatives
+        if (cond instanceof NotCondition)
+            {
+            return ((NotCondition) cond).getUnderlyingCondition();
             }
 
-        return (AllCondition) register(new AllCondition(this, new ConditionalConstant[] {condition1, condition2}));
+        NotCondition condNot = (NotCondition) ensureLocatorLookup(Format.ConditionNot).get(cond);
+        if (condNot == null)
+            {
+            condNot = new NotCondition(this, cond);
+            }
+        return condNot;
         }
 
+
     /**
-     * Given an array of conditions, obtain an AllCondition that represents them.
+     * Given the multiple conditions, obtain an AnyCondition that represents them.
      *
-     * @param acondition  an array of conditions
+     * @param aCondition  an array of conditions
      *
-     * @return an AllCondition
+     * @return an AnyCondition
      */
-    public AllCondition ensureAllCondition(ConditionalConstant[] acondition)
+    public AnyCondition ensureAnyCondition(ConditionalConstant... aCondition)
         {
-        checkElementsNonNull(acondition);
-        if (acondition.length < 2)
+        checkElementsNonNull(aCondition);
+        if (aCondition.length < 2)
             {
             throw new IllegalArgumentException("at least 2 conditions required");
             }
 
-        return (AllCondition) register(new AllCondition(this, acondition.clone()));
+        return (AnyCondition) register(new AnyCondition(this, aCondition));
+        }
+
+    /**
+     * Given the multiple conditions, obtain an AllCondition that represents them.
+     *
+     * @param aCondition  an array of conditions
+     *
+     * @return an AllCondition
+     */
+    public AllCondition ensureAllCondition(ConditionalConstant... aCondition)
+        {
+        checkElementsNonNull(aCondition);
+        if (aCondition.length < 2)
+            {
+            throw new IllegalArgumentException("at least 2 conditions required");
+            }
+
+        return (AllCondition) register(new AllCondition(this, aCondition));
         }
 
     /**
@@ -460,8 +506,8 @@ public class ConstantPool
     /**
      * Obtain a Constant that represents the specified method.
      *
-     * @param constParent    specifies the module, package, class, method, or property that contains
-     *                       the method
+     * @param constParent    specifies the module, package, class, multi-method, method, or property
+     *                       that contains the method
      * @param sName          the method name
      * @param access         the method accessibility
      * @param aconstReturns  the return values from the method
@@ -563,7 +609,7 @@ public class ConstantPool
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected ConstantPool getConstantPool()
+    public ConstantPool getConstantPool()
         {
         return this;
         }
@@ -677,6 +723,10 @@ public class ConstantPool
                     constant = new PropertyConstant(this, format, in);
                     break;
 
+                case MultiMethod:
+                    constant = new MultiMethodConstant(this, format, in);
+                    break;
+
                 case Method:
                     constant = new MethodConstant(this, format, in);
                     break;
@@ -697,10 +747,6 @@ public class ConstantPool
                     constant = new AnyCondition(this, format, in);
                     break;
 
-                case ConditionOnly1:
-                    constant = new Only1Condition(this, format, in);
-                    break;
-
                 case ConditionNamed:
                     constant = new NamedCondition(this, format, in);
                     break;
@@ -709,8 +755,12 @@ public class ConstantPool
                     constant = new PresentCondition(this, format, in);
                     break;
 
-                case ConditionVersion:
-                    constant = new VersionCondition(this, format, in);
+                case ConditionVersionMatches:
+                    constant = new VersionMatchesCondition(this, format, in);
+                    break;
+
+                case ConditionVersioned:
+                    constant = new VersionedCondition(this, format, in);
                     break;
 
                 case ClassType:

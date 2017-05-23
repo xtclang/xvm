@@ -5,10 +5,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.XvmStructure;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -21,7 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * qualified module name of "ecstasy.xtclang.org".
  */
 public class ModuleConstant
-        extends Constant
+        extends IdentityConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -58,26 +61,13 @@ public class ModuleConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * Get the qualified name of the Module.
-     * <p/>
-     * The qualified name for the module is constructed by combining the unqualified module name, a
-     * separating '.', and the domain name.
-     *
-     * @return the qualified Module name
-     */
-    public String getQualifiedName()
-        {
-        return m_constName.getValue();
-        }
-
-    /**
      * Extract the unqualified name of the module.
      *
      * @return the unqualified module name
      */
     public String getUnqualifiedName()
         {
-        String sName = getQualifiedName();
+        String sName = getName();
         int ofDot = sName.indexOf('.');
         return ofDot < 0 ? sName : sName.substring(0, ofDot);
         }
@@ -90,7 +80,7 @@ public class ModuleConstant
      */
     public String getDomainName()
         {
-        String sName = getQualifiedName();
+        String sName = getName();
         int ofDot = sName.indexOf('.');
         return ofDot < 0 ? null : sName.substring(ofDot + 1);
         }
@@ -103,7 +93,56 @@ public class ModuleConstant
      */
     public boolean isEcstasyModule()
         {
-        return getQualifiedName().equals(ECSTASY_MODULE);
+        return getName().equals(ECSTASY_MODULE);
+        }
+
+
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public IdentityConstant getParentConstant()
+        {
+        return null;
+        }
+
+    /**
+     * Get the qualified name of the Module.
+     * <p/>
+     * The qualified name for the module is constructed by combining the unqualified module name, a
+     * separating '.', and the domain name.
+     *
+     * @return the qualified Module name
+     */
+    @Override
+    public String getName()
+        {
+        return m_constName.getValue();
+        }
+
+    @Override
+    public ModuleConstant getModuleConstant()
+        {
+        return this;
+        }
+
+    @Override
+    public List<IdentityConstant> getIdentityConstantPath()
+        {
+        List<IdentityConstant> list = new ArrayList<>();
+        list.add(this);
+        return list;
+        }
+
+    @Override
+    public Component getComponent()
+        {
+        String          sName  = getName();
+        ModuleStructure struct = getFileStructure().getModule(sName);
+        if (struct == null)
+            {
+            throw new IllegalStateException("could not find module: " + sName);
+            }
+        return struct;
         }
 
 
@@ -144,12 +183,6 @@ public class ModuleConstant
     public String getValueString()
         {
         return m_constName.getValue();
-        }
-
-    @Override
-    protected ModuleStructure instantiate(XvmStructure xsParent)
-        {
-        return new ModuleStructure(xsParent, this);
         }
 
 

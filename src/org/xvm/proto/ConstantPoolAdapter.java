@@ -282,7 +282,7 @@ public class ConstantPoolAdapter
                 {
                 case Module:
                     sb.insert(0, ':')
-                      .insert(0, ((ModuleConstant) constParent).getQualifiedName());
+                      .insert(0, ((ModuleConstant) constParent).getName());
                     return sb.toString();
 
                 case Package:
