@@ -19,6 +19,7 @@ import java.util.NoSuchElementException;
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
@@ -103,7 +104,7 @@ public abstract class Component
      * @param condition   the optional condition that mandates the existence of this structure
      */
     protected Component(XvmStructure xsParent, Access access, boolean fAbstract, boolean fStatic,
-                        boolean fSynthetic, Format format, Constant constId, ConditionalConstant condition)
+                        boolean fSynthetic, Format format, IdentityConstant constId, ConditionalConstant condition)
         {
         this(xsParent, (format.ordinal() << FORMAT_SHIFT) | (access.ordinal() << ACCESS_SHIFT)
                 | (fAbstract ? ABSTRACT_BIT : 0) | (fStatic ? STATIC_BIT : 0)
@@ -120,7 +121,7 @@ public abstract class Component
      *                    structure
      * @param condition   the optional condition that mandates the existence of this structure
      */
-    protected Component(XvmStructure xsParent, int nFlags, Constant constId, ConditionalConstant condition)
+    protected Component(XvmStructure xsParent, int nFlags, IdentityConstant constId, ConditionalConstant condition)
         {
         super(xsParent);
         assert (xsParent == null) == (this instanceof FileStructure);   // file doesn't have parent
@@ -1030,7 +1031,41 @@ public abstract class Component
      */
     protected void registerChildrenConstants(ConstantPool pool)
         {
-        // TODO
+        ensureChildren();
+
+        if (m_childByName != null)
+            {
+            for (Component child : m_childByName.values())
+                {
+                registerChildConstants(pool, child);
+                }
+            }
+
+        if (m_methodByConstant != null)
+            {
+            for (Component child : m_methodByConstant.values())
+                {
+                registerChildConstants(pool, child);
+                }
+            }
+        }
+
+    /**
+     * Register the constants for a child AND all of its siblings, and then recursively for the
+     * various children of those siblings.
+     *
+     * @param pool   the constant pool
+     * @param child  the eldest sibling of the siblings to recursively register the constants for
+     */
+    private void registerChildConstants(ConstantPool pool, Component child)
+        {
+        for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+            {
+            eachSibling.registerConstants(pool);
+            }
+
+        // now register the grand-children (the children of the various siblings we just iterated)
+        child.registerChildrenConstants(pool);
         }
 
     /**
@@ -1044,7 +1079,77 @@ public abstract class Component
     protected void assembleChildren(DataOutput out)
             throws IOException
         {
-        // TODO
+        int cKids = (m_childByName      != null ? m_childByName     .size() : 0)
+                  + (m_methodByConstant != null ? m_methodByConstant.size() : 0);
+        writePackedLong(out, cKids);
+
+        if (cKids > 0)
+            {
+            int cActual = 0;
+
+            if (m_childByName != null)
+                {
+                for (Component child : m_childByName.values())
+                    {
+                    assembleChild(out, child);
+                    ++cActual;
+                    }
+                }
+
+            if (m_methodByConstant != null)
+                {
+                for (Component child : m_methodByConstant.values())
+                    {
+                    assembleChild(out, child);
+                    ++cActual;
+                    }
+                }
+
+            assert cActual == cKids;
+            }
+        }
+
+    /**
+     * Write a child AND all of its siblings to the DataOutput stream, and then recursively for the
+     * various children of those siblings.
+     *
+     * @param out    the DataOutput to write the child components to
+     * @param child  the eldest sibling of the siblings to recursively assemble
+     *
+     * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
+     *                      stream
+     */
+    private void assembleChild(DataOutput out, Component child)
+            throws IOException
+        {
+        if (child.m_sibling != null || child.m_cond != null)
+            {
+            // multiple child / conditional format:
+            // first is an indicator that we're using the conditional format
+            out.writeByte(CONDITIONAL_BIT);
+
+            // second is the number of kids
+            int cSiblings = 0;
+            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+                {
+                ++cSiblings;
+                }
+            writePackedLong(out, cSiblings);
+
+            // last comes a sequence of siblings, each preceded by its condition
+            for (Component eachSibling = child; eachSibling != null; eachSibling = eachSibling.m_sibling)
+                {
+                writePackedLong(out, Constant.indexOf(eachSibling.m_cond));
+                eachSibling.assemble(out);
+                }
+            }
+        else
+            {
+            // single child format
+            child.assemble(out);
+            }
+
+        child.assembleChildren(out);
         }
 
     /**
@@ -1151,7 +1256,10 @@ public abstract class Component
     @Override
     public String getDescription()
         {
-        return "modified=" + m_fModified;
+        return "name=" + getName() + ", format=" + getFormat() + ", access=" + getAccess()
+                + ", abstract=" + isAbstract()+ ", static=" + isStatic()
+                + ", synthetic=" + isSynthetic() + ", next-sibling=" + (m_sibling != null)
+                + ", modified=" + m_fModified;
         }
 
     /**
@@ -1184,7 +1292,8 @@ public abstract class Component
         {
         assert getContaining() == null || getContaining() instanceof Component;
 
-        // TODO
+        m_constId = (IdentityConstant   ) pool.register(m_constId);
+        m_cond    = (ConditionalConstant) pool.register(m_cond);
         }
 
     /**
@@ -1201,7 +1310,8 @@ public abstract class Component
         {
         assert getContaining() == null || getContaining() instanceof Component;
 
-        // TODO
+        out.writeShort(m_nFlags);
+        writePackedLong(out, m_constId.getPosition());
         }
 
     /**
@@ -1474,7 +1584,7 @@ public abstract class Component
      * for the conditional constant ID followed by the body of the component. (The children that go
      * with the various conditional components occur in the stream after the <b>last</b> body.)
      */
-    public static final int CONDITIONAL_BIT = 0x80;
+    public static final int CONDITIONAL_BIT =   0x80;
 
     public static final int FORMAT_MASK     = 0x000F, FORMAT_SHIFT    = 0;
     public static final int ACCESS_MASK     = 0x0300, ACCESS_SHIFT    = 8;
@@ -1504,7 +1614,7 @@ public abstract class Component
      * certain type (e.g. package, class, ...), it may not be shared by all of the siblings with
      * the same name, if they are of different formats.
      */
-    private Constant m_constId;
+    private IdentityConstant m_constId;
 
     /**
      * The condition for this component that specifies under which conditions this component will

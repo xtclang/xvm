@@ -25,8 +25,13 @@ public class FileStructureTest
     public void testEmptyModule()
             throws IOException
         {
-        FileStructure structfile = new FileStructure("test");
-        Assert.assertEquals("test", structfile.getModuleName());
+        FileStructure structfile = new FileStructure("Test");
+        Assert.assertEquals("Test", structfile.getModuleName());
+        Assert.assertEquals("Test", structfile.getModule().getName());
+        Assert.assertTrue(structfile.getModule().isPackageContainer());
+        Assert.assertTrue(structfile.getModule().isClassContainer());
+        Assert.assertTrue(structfile.getModule().isMethodContainer());
+        Assert.assertEquals(Constants.Access.PUBLIC, structfile.getModule().getAccess());
 
         testFileStructure(structfile);
         }

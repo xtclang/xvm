@@ -184,6 +184,8 @@ public class ClassStructure
     protected void disassemble(DataInput in)
             throws IOException
         {
+        super.disassemble(in);
+
         // read in the type parameters
         m_mapParams = disassembleTypeParams(in);
 
@@ -202,13 +204,13 @@ public class ClassStructure
                 }
             m_listContribs = list;
             }
-
-        super.disassemble(in);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
+        super.registerConstants(pool);
+
         // register the type parameters
         m_mapParams = registerTypeParams(m_mapParams);
 
@@ -226,14 +228,14 @@ public class ClassStructure
                 }
             m_listContribs = listNew;
             }
-
-        super.registerConstants(pool);
         }
 
     @Override
     protected void assemble(DataOutput out)
             throws IOException
         {
+        super.assemble(out);
+
         // write out the type parameters
         assembleTypeParams(m_mapParams, out);
 
@@ -251,8 +253,6 @@ public class ClassStructure
                 writePackedLong(out, Constant.indexOf(contribution.getDelegatePropertyConstant()));
                 }
             }
-
-        super.assemble(out);
         }
 
     @Override

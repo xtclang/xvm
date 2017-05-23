@@ -89,26 +89,26 @@ public class MethodStructure
     protected void disassemble(DataInput in)
     throws IOException
         {
-        m_type = (TypeConstant) getConstantPool().getConstant(readIndex(in));
-
         super.disassemble(in);
+
+        m_type = (TypeConstant) getConstantPool().getConstant(readIndex(in));
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        ((Constant) m_type).registerConstants(pool);
-
         super.registerConstants(pool);
+
+        ((Constant) m_type).registerConstants(pool);
         }
 
     @Override
     protected void assemble(DataOutput out)
     throws IOException
         {
-        writePackedLong(out, m_type.getPosition());
-
         super.assemble(out);
+
+        writePackedLong(out, m_type.getPosition());
         }
 
 
