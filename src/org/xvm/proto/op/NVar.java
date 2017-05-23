@@ -35,7 +35,7 @@ public class NVar extends Op
         CharStringConstant constName = (CharStringConstant)
                 context.f_constantPool.getConstantValue(f_nNameConstId);
 
-        frame.introduceVar(nNextVar, clazz, constName.getValue(), VAR_STANDARD, null);
+        frame.introduceVar(nNextVar, clazz, constName.getValue(), Frame.VAR_STANDARD, null);
 
         frame.f_anNextVar[iScope] = nNextVar+1;
 

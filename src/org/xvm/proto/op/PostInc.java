@@ -26,15 +26,18 @@ public class PostInc extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             if (f_nArgValue >= 0)
                 {
                 // operation on a register
                 ObjectHandle hTarget = frame.getArgument(f_nArgValue);
+                if (hTarget == null)
+                    {
+                    return R_WAIT;
+                    }
 
-                hException = hTarget.f_clazz.f_template.
+                return hTarget.f_clazz.f_template.
                         invokePostInc(frame, hTarget, null, f_nRetValue);
                 }
             else
@@ -45,23 +48,14 @@ public class PostInc extends OpInvocable
 
                 PropertyTemplate property = getPropertyTemplate(frame, template, -f_nArgValue);
 
-                hException = hTarget.f_clazz.f_template.
+                return hTarget.f_clazz.f_template.
                         invokePostInc(frame, hTarget, property, f_nRetValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

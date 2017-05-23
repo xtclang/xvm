@@ -5,6 +5,8 @@ import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Shape;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
+import java.util.function.Supplier;
+
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String>)
  *
@@ -160,27 +162,41 @@ public class TypeComposition
         return f_template.createHandle(this);
         }
 
-    // TODO: this needs to be dramatically improved
-    public ExceptionHandle callDefaultConstructors(Frame frame, ObjectHandle[] ahVar)
+    // TODO: this needs to be improved
+    // create a sequence of frames to be called in the inverse order (the base super first)
+    public Frame callDefaultConstructors(Frame frame, ObjectHandle[] ahVar, Supplier<Frame> continuation)
         {
         TypeCompositionTemplate template = f_template;
+        FunctionTemplate ftDefault = template.getDefaultConstructTemplate();
         TypeCompositionTemplate templateSuper = template.m_templateSuper;
 
-        // just call the super chain for now
+        Frame frameDefault;
+        if (ftDefault == null)
+            {
+            frameDefault = null;
+            }
+        else
+            {
+            frameDefault = frame.f_context.createFrame1(frame, ftDefault,
+                                ahVar[0], ahVar, Frame.R_UNUSED);
+            frameDefault.m_continuation = continuation;
+            continuation = null;
+            }
+
+        Frame frameSuper = null;
         if (templateSuper != null)
             {
             TypeComposition clazzSuper = templateSuper.resolve(f_atGenericActual);
-            ExceptionHandle hException = clazzSuper.callDefaultConstructors(frame, ahVar);
-
-            if (hException != null)
-                {
-                return hException;
-                }
+            frameSuper = clazzSuper.callDefaultConstructors(frame, ahVar, continuation);
             }
 
-        FunctionTemplate ftDefault = template.getDefaultConstructTemplate();
+        if (frameSuper == null)
+            {
+            return frameDefault;
+            }
 
-        return ftDefault == null ? null : frame.call1(ftDefault, ahVar[0], ahVar, Frame.R_UNUSED);
+        frameSuper.m_continuation = () -> frameDefault;
+        return frameSuper;
         }
 
     @Override

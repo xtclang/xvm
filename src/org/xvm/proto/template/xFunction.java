@@ -4,9 +4,11 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.proto.*;
+
 import org.xvm.proto.template.xService.ServiceHandle;
 
-import org.xvm.proto.*;
+import java.util.function.Supplier;
 
 /**
  * TODO:
@@ -92,38 +94,8 @@ public class xFunction
         // ----- FunctionHandle interface -----
 
         // call with one return value to be placed into the specified slot
-        // this method is simply a helper - it shouldn't be overridden
-        // it simply collects ths specified arguments off the frame's vars
-        final public ExceptionHandle call1(Frame frame, int[] anArg, int iReturn)
-            {
-            try
-                {
-                return call1(frame, frame.getArguments(anArg, m_invoke.m_cVars, 0), iReturn);
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return e.getExceptionHandle();
-                }
-            }
-
-        // calls with multiple return values // TODO: replace with the int[]
-        // this method is simply a helper - it shouldn't be overridden
-        // it simply collects ths specified arguments off the frame's vars
-        final public ExceptionHandle callN(Frame frame, int[] anArg, int[] aiReturn)
-            {
-            try
-                {
-                return callN(frame, frame.getArguments(anArg, m_invoke.m_cVars, 0), aiReturn);
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return e.getExceptionHandle();
-                }
-            }
-
-        // call with one return value to be placed into the specified slot
-        // this method is overridden by the "bound" handle to inject the arguments
-        public ExceptionHandle call1(Frame frame, ObjectHandle[] ahArg, int iReturn)
+        // return either R_CALL or R_NEXT
+        public int call1(Frame frame, ObjectHandle[] ahArg, int iReturn)
             {
             ObjectHandle[] ahVar = prepareVars(ahArg);
 
@@ -132,9 +104,8 @@ public class xFunction
             return call1Impl(frame, ahVar, iReturn);
             }
 
-        // calls with multiple return values // TODO: replace with the int[]
-        // this method is overridden by the "bound" handle
-        public ExceptionHandle callN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
+        // calls with multiple return values
+        public int callN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
             {
             ObjectHandle[] ahVar = prepareVars(ahArg);
 
@@ -178,7 +149,7 @@ public class xFunction
             }
 
         // invoke with zero or one return to be placed into the specified register;
-        protected ExceptionHandle call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
+        protected int call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
             {
             ObjectHandle hTarget = m_invoke instanceof MethodTemplate ? ahVar[0] : null;
 
@@ -186,11 +157,11 @@ public class xFunction
             }
 
         // invoke with multiple return values;
-        protected ExceptionHandle callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
+        protected int callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
             {
             ObjectHandle hTarget = m_invoke instanceof MethodTemplate ? ahVar[0] : null;
 
-            return frame.f_context.createFrameN(frame, m_invoke, hTarget, ahVar, aiReturn).execute();
+            return frame.callN(m_invoke, hTarget, ahVar, aiReturn);
             }
 
         public FunctionHandle bind(int iArg, ObjectHandle hArg)
@@ -227,13 +198,13 @@ public class xFunction
             }
 
         @Override
-        protected ExceptionHandle call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
+        protected int call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
             {
             return m_hDelegate.call1Impl(frame, ahVar, iReturn);
             }
 
         @Override
-        protected ExceptionHandle callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
+        protected int callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
             {
             return m_hDelegate.callNImpl(frame, ahVar, aiReturn);
             }
@@ -307,12 +278,16 @@ public class xFunction
 
         public FullyBoundHandle chain(FullyBoundHandle handle)
             {
-            m_next = handle;
+            if (handle != NO_OP)
+                {
+                m_next = handle;
+                }
             return this;
             }
 
         // @param access - if specified, apply to "this"
-        public ExceptionHandle callChain(Frame frame, Constants.Access access)
+        // @return the very first frame to be called
+        public Frame callChain(Frame frame, Constants.Access access, Supplier<Frame> continuation)
             {
             if (access != null)
                 {
@@ -320,26 +295,35 @@ public class xFunction
                 m_ahArg[0] = hThis.f_clazz.ensureAccess(hThis, access);
                 }
 
-            ExceptionHandle hException = call1(frame, Utils.OBJECTS_NONE, Frame.R_UNUSED);
-            if (m_next != null)
+            Frame frameSave = frame.m_frameNext;
+
+            call1(frame, Utils.OBJECTS_NONE, Frame.R_UNUSED);
+
+            // TODO: what if this function is async and frameThis is null
+            Frame frameThis = frame.m_frameNext;
+
+            frame.m_frameNext = frameSave;
+
+            if (m_next == null)
                 {
-                ExceptionHandle hExNext = m_next.callChain(frame, access);
-                if (hException == null)
-                    {
-                    hException = hExNext;
-                    }
+                frameThis.m_continuation = continuation;
+                return frameThis;
                 }
-            return hException;
+
+            Frame frameNext = m_next.callChain(frame, access, continuation);
+            frameThis.m_continuation = () -> frameNext;
+            return frameThis;
             }
 
-        // construct-finally support
-        public static FullyBoundHandle resolveFinalizer(
-                FullyBoundHandle hfnFirst, FullyBoundHandle hfnSecond)
+        public static FullyBoundHandle NO_OP = new FullyBoundHandle(
+                INSTANCE.f_clazzCanonical, null, null)
             {
-            return hfnFirst == null  ? hfnSecond :
-                   hfnSecond == null ? hfnFirst :
-                                       hfnFirst.chain(hfnSecond);
-            }
+            @Override
+            public Frame callChain(Frame frame, Constants.Access access, Supplier<Frame> continuation)
+                {
+                return null;
+                }
+            };
         }
 
     public static class AsyncHandle
@@ -353,7 +337,7 @@ public class xFunction
         // ----- FunctionHandle interface -----
 
         @Override
-        protected ExceptionHandle call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
+        protected int call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
             {
             ServiceHandle hService = (ServiceHandle) ahVar[0];
 
@@ -364,11 +348,14 @@ public class xFunction
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();
-            return service.asyncInvoke1(frame, hService, this, ahVar, iReturn);
+
+            service.asyncInvoke1(frame, hService, this, ahVar, iReturn);
+
+            return Op.R_NEXT;
             }
 
         @Override
-        protected ExceptionHandle callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
+        protected int callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
             {
             ServiceHandle hService = (ServiceHandle) ahVar[0];
 
@@ -379,7 +366,9 @@ public class xFunction
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();
-            return service.asyncInvokeN(frame, hService, this, ahVar, aiReturn);
+            service.asyncInvokeN(frame, hService, this, ahVar, aiReturn);
+
+            return Op.R_NEXT;
             }
         }
 

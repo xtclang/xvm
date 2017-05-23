@@ -14,6 +14,8 @@ import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 
+import java.util.function.Supplier;
+
 /**
  * A call stack frame.
  *
@@ -21,9 +23,10 @@ import org.xvm.proto.ObjectHandle.JavaLong;
  */
 public class Frame
     {
+    // VarInfo semantics
     public final ServiceContext f_context;
     public final InvocationTemplate f_function;
-
+    public final Op[]           f_aOp;          // the op-codes
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVar;        // arguments/local var registers
     public final VarInfo[]      f_aInfo;        // optional info for var registers
@@ -37,9 +40,16 @@ public class Frame
     public ExceptionHandle      m_hException;   // an exception
     public FullyBoundHandle     m_hfnFinally;   // a "finally" method for the constructors
     public ObjectHandle         m_hFrameLocal;  // a "frame local" holding area; assigned by
+    public int                  m_iPC;          // the program counter
+    public Frame                m_frameNext;    // the next frame to call
+    public Supplier<Frame>      m_continuation; // a frame supplier to call after this frame returns
 
     public final static int R_UNUSED = -1; // an register index for an "unused return value"
     public final static int R_FRAME  = -2; // an register index for the "frame local value"
+
+    public static final int VAR_STANDARD = 0;
+    public static final int VAR_DYNAMIC_REF = 1;
+    public static final int VAR_DEFERRABLE = 2;
 
     protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
@@ -47,6 +57,7 @@ public class Frame
         f_context = context;
         f_framePrev = framePrev;
         f_function = function;
+        f_aOp = function == null ? Op.STUB : function.m_aop;
         f_hTarget = hTarget;
         f_ahVar = ahVar; // [0] - target:private for methods
         f_aInfo = new VarInfo[ahVar.length];
@@ -58,12 +69,8 @@ public class Frame
         f_aiReturn = aiReturn;
         }
 
-    public ExceptionHandle execute()
+    public void init()
         {
-        f_context.m_frameCurrent = this;
-
-        Op[] abOps = f_function.m_aop;
-
         if (f_hTarget == null)
             {
             f_anNextVar[0] = f_function.m_cArgs;
@@ -73,64 +80,27 @@ public class Frame
             f_ahVar[0]     = f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PRIVATE);
             f_anNextVar[0] = 1 + f_function.m_cArgs;
             }
-
-        for (int iPC = 0; true; )
-            {
-            Op op = abOps[iPC];
-
-            try
-                {
-                iPC = op.process(this, iPC);
-                }
-            catch (RuntimeException e)
-                {
-                System.out.println("!!! frame " + this); // TODO: remove
-                throw e;
-                }
-
-            if (iPC < 0)
-                {
-                if (iPC == Op.RETURN_NORMAL)
-                    {
-                    f_context.m_frameCurrent = f_framePrev;
-                    return null;
-                    }
-
-                // Op.RETURN_EXCEPTION:
-                assert m_hException != null;
-
-                iPC = findGuard(m_hException);
-                if (iPC >= 0)
-                    {
-                    // handled exception; go to the handler
-                    m_hException = null;
-                    continue;
-                    }
-
-                // not handled by this frame
-                f_context.m_frameCurrent = f_framePrev;
-                return m_hException;
-                }
-            }
         }
 
     // a convenience method; ahVar - prepared variables
-    public ExceptionHandle call1(InvocationTemplate template, ObjectHandle hTarget,
+    public int call1(InvocationTemplate template, ObjectHandle hTarget,
                                  ObjectHandle[] ahVar, int iReturn)
         {
-        return f_context.createFrame1(this, template, hTarget, ahVar, iReturn).execute();
+        m_frameNext = f_context.createFrame1(this, template, hTarget, ahVar, iReturn);
+        return Op.R_CALL;
         }
 
     // a convenience method
-    public ExceptionHandle callN(InvocationTemplate template, ObjectHandle hTarget,
+    public int callN(InvocationTemplate template, ObjectHandle hTarget,
                                  ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return f_context.createFrameN(this, template, hTarget, ahVar, aiReturn).execute();
+        m_frameNext = f_context.createFrameN(this, template, hTarget, ahVar, aiReturn);
+        return Op.R_CALL;
         }
 
     // find a first matching guard; unwind the scope and initialize the next var with the exception
-    // return the PC of the catch
-    private int findGuard(ExceptionHandle hException)
+    // return the PC of the catch or the R_EXCEPTION value
+    protected int findGuard(ExceptionHandle hException)
         {
         Guard[] aGuard = m_aGuard;
         if (aGuard != null)
@@ -160,16 +130,17 @@ public class Frame
                         CharStringConstant constVarName = (CharStringConstant)
                                 f_context.f_constantPool.getConstantValue(guard.f_anNameConstId[iCatch]);
 
-                        introduceVar(nNextVar, clzException, constVarName.getValue(), Op.VAR_STANDARD, hException);
+                        introduceVar(nNextVar, clzException, constVarName.getValue(), VAR_STANDARD, hException);
 
                         f_anNextVar[nScope] = nNextVar + 1;
+                        m_hException = null;
 
                         return guard.f_nStartAddress + guard.f_anCatchRelAddress[iCatch];
                         }
                     }
                 }
             }
-        return -1;
+        return Op.R_EXCEPTION;
         }
 
     // return one of the pre-defined arguments
@@ -288,20 +259,63 @@ public class Frame
         return m_hFrameLocal;
         }
 
-    public long getIndex(int iArg)
-                throws ExceptionHandle.WrapperException
+    public void forceValue(int nVar, ObjectHandle hValue)
         {
-        if (iArg >= 0)
+        int nResult = assignValue(nVar, hValue);
+        if (nResult == Op.R_EXCEPTION)
             {
-            JavaLong hLong = (JavaLong) getArgument(iArg);
-            return hLong.m_lValue;
+            // TODO: call an error handler?
+            System.out.println("Out-of-context exception: " + m_hException);
             }
-
-        IntConstant constant = (IntConstant)
-                f_context.f_heapGlobal.f_constantPool.getConstantValue(-iArg);
-        return constant.getValue().getLong();
         }
 
+    // return Op.R_NEXT or Op.R_EXCEPTION
+    public int assignValue(int nVar, ObjectHandle hValue)
+        {
+        switch (nVar)
+            {
+            case R_FRAME:
+                m_hFrameLocal = hValue;
+                // fall through
+
+            case R_UNUSED:
+                return Op.R_NEXT;
+
+            default:
+                VarInfo info = f_aInfo[nVar];
+
+                switch (info.m_nStyle)
+                    {
+                    case VAR_DYNAMIC_REF:
+                        ExceptionHandle hException = ((RefHandle) f_ahVar[nVar]).set(hValue);
+                        if (hException != null)
+                            {
+                            m_hException = hException;
+                            return Op.R_EXCEPTION;
+                            }
+                        return Op.R_NEXT;
+
+                    case VAR_DEFERRABLE:
+                        // take as is
+                        break;
+
+                    case VAR_STANDARD:
+                        if (hValue instanceof FutureHandle && ((FutureHandle) hValue).f_fSynthetic)
+                            {
+                            // defer the read
+                            info.m_nStyle = VAR_DEFERRABLE;
+                            }
+                        break;
+                    }
+
+                f_ahVar[nVar] = hValue;
+                return Op.R_NEXT;
+            }
+        }
+
+
+    // return the ObjectHandle, or null if the value is "pending future", or
+    // throw if the async assignment has failed
     public ObjectHandle getArgument(int iArg)
                 throws ExceptionHandle.WrapperException
         {
@@ -312,26 +326,32 @@ public class Frame
 
             if (info != null)
                 {
-                if (info.f_nStyle == Op.VAR_DYNAMIC)
+                switch (info.m_nStyle)
                     {
-                    return ((RefHandle) hValue).get();
-                    }
+                    case VAR_DYNAMIC_REF:
+                        return ((RefHandle) hValue).get();
 
-                if (info.f_nStyle == Op.VAR_DEFERRABLE && hValue instanceof FutureHandle
-                        && ((FutureHandle) hValue).f_fSynthetic)
-                    {
-                    return ((FutureHandle) hValue).get();
+                    case VAR_DEFERRABLE:
+                        if (hValue instanceof FutureHandle)
+                            {
+                            FutureHandle hFuture = (FutureHandle) hValue;
+                            if (hFuture.f_fSynthetic)
+                                {
+                                return hFuture.get();
+                                }
+                            }
+                        break;
                     }
                 }
             return hValue;
             }
-        else
-            {
-            return iArg < -Op.MAX_CONST_ID ? getPredefinedArgument(iArg) :
-                f_context.f_heapGlobal.ensureConstHandle(-iArg);
-            }
+
+        return iArg < -Op.MAX_CONST_ID ? getPredefinedArgument(iArg) :
+            f_context.f_heapGlobal.ensureConstHandle(-iArg);
         }
 
+    // return the ObjectHandle[] or null if the value is "pending future", or
+    // throw if the async assignment has failed
     public ObjectHandle[] getArguments(int[] aiArg, int cVars, int ofStart)
                 throws ExceptionHandle.WrapperException
         {
@@ -343,10 +363,36 @@ public class Frame
 
         for (int i = 0, c = cArgs; i < c; i++)
             {
-            ahArg[ofStart + i] = getArgument(aiArg[i]);
+            ObjectHandle hArg = getArgument(aiArg[i]);
+            if (hArg == null)
+                {
+                return null;
+                }
+
+            ahArg[ofStart + i] = hArg;
             }
 
         return ahArg;
+        }
+
+    // return a non-negative value or -1 if the value is "pending future", or
+    // throw if the async assignment has failed
+    public long getIndex(int iArg)
+            throws ExceptionHandle.WrapperException
+        {
+        if (iArg >= 0)
+            {
+            JavaLong hLong = (JavaLong) getArgument(iArg);
+            if (hLong == null)
+                {
+                return -1l;
+                }
+            return hLong.m_lValue;
+            }
+
+        IntConstant constant = (IntConstant)
+                f_context.f_heapGlobal.f_constantPool.getConstantValue(-iArg);
+        return constant.getValue().getLong();
         }
 
     public void introduceVar(int nVar, TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)
@@ -383,49 +429,23 @@ public class Frame
                 throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
                 }
 
-            introduceVar(nVar, f_ahVar[nVar].f_clazz, sName, Op.VAR_STANDARD, null);
+            introduceVar(nVar, f_ahVar[nVar].f_clazz, sName, VAR_STANDARD, null);
             info = f_aInfo[nVar];
             }
         return info;
         }
 
-    public ExceptionHandle assignValue(int nVar, ObjectHandle hValue)
+    // construct-finally support
+    public void chainFinalizer(FullyBoundHandle hFinalizer)
         {
-        switch (nVar)
+        if (hFinalizer != null)
             {
-            case R_FRAME:
-                m_hFrameLocal = hValue;
-                // fall through
-
-            case R_UNUSED:
-                return null;
-
-            default:
-                VarInfo info = f_aInfo[nVar];
-
-                if (info.f_nStyle == Op.VAR_DYNAMIC)
-                    {
-                    return ((RefHandle) f_ahVar[nVar]).set(hValue);
-                    }
-
-                if (info.f_nStyle != Op.VAR_DEFERRABLE && hValue instanceof FutureHandle)
-                    {
-                    FutureHandle hFuture = (FutureHandle) hValue;
-                    if (hFuture.f_fSynthetic)
-                        {
-                        try
-                            {
-                            hValue = hFuture.get();
-                            }
-                        catch (ExceptionHandle.WrapperException e)
-                            {
-                            return e.getExceptionHandle();
-                            }
-                        }
-                    }
-
-                f_ahVar[nVar] = hValue;
-                return null;
+            Frame frameTop = this;
+            while (frameTop.m_hfnFinally == null)
+                {
+                frameTop = frameTop.f_framePrev;
+                }
+            frameTop.m_hfnFinally = hFinalizer.chain(frameTop.m_hfnFinally);
             }
         }
 
@@ -479,14 +499,14 @@ public class Frame
         {
         public final TypeComposition f_clazz;
         public final String f_sVarName;
-        public final int f_nStyle; // one of the Op.VAR_* values
+        public int m_nStyle; // one of the Op.VAR_* values
         public RefHandle m_ref; // an "active" reference to this register
 
         public VarInfo(TypeComposition clazz, String sName, int nStyle)
             {
             f_clazz = clazz;
             f_sVarName = sName;
-            f_nStyle = nStyle;
+            m_nStyle = nStyle;
             }
 
         // this VarInfo goes out of scope

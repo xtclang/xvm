@@ -25,28 +25,22 @@ public class Neg extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nArgValue);
+            if (hTarget == null)
+                {
+                return R_WAIT;
+                }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
-            hException = template.invokeNeg(frame, hTarget, f_nRetValue);
+            return template.invokeNeg(frame, hTarget, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

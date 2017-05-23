@@ -33,8 +33,12 @@ public class IVar extends Op
 
         try
             {
-            frame.introduceVar(nNextVar, clazz, null, VAR_STANDARD,
-                    frame.getArgument(f_nArgValue));
+            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            if (hArg == null)
+                {
+                return R_WAIT;
+                }
+            frame.introduceVar(nNextVar, clazz, null, Frame.VAR_STANDARD, hArg);
 
             frame.f_anNextVar[iScope] = nNextVar + 1;
             return iPC + 1;
@@ -42,7 +46,7 @@ public class IVar extends Op
         catch (ObjectHandle.ExceptionHandle.WrapperException e)
             {
             frame.m_hException = e.getExceptionHandle();
-            return RETURN_EXCEPTION;
+            return R_EXCEPTION;
             }
         }
 

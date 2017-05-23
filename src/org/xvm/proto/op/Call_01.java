@@ -28,42 +28,34 @@ public class Call_01 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-
         if (f_nFunctionValue == A_SUPER)
             {
-            hException = callSuper01(frame, f_nRetValue);
+            return callSuper01(frame, f_nRetValue);
             }
-        else if (f_nFunctionValue >= 0)
-            {
-            try
-                {
-                FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
-                hException = function.call1(frame, Utils.OBJECTS_NONE, f_nRetValue);
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                hException = e.getExceptionHandle();
-                }
-            }
-        else
+        if (f_nFunctionValue < 0)
             {
             FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
 
             ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
 
-            hException = frame.call1(function, null, ahVar, f_nRetValue);
+            return frame.call1(function, null, ahVar, f_nRetValue);
             }
 
-        if (hException == null)
+        try
             {
-            return iPC + 1;
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            if (hFunction == null)
+                {
+                return R_WAIT;
+                }
+
+            return hFunction.call1(frame, Utils.OBJECTS_NONE, f_nRetValue);
             }
-        else
+        catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

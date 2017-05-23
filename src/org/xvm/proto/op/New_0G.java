@@ -30,13 +30,17 @@ public class New_0G extends OpCallable
         ConstructTemplate constructor = (ConstructTemplate) getFunctionTemplate(frame, f_nConstructId);
         TypeCompositionTemplate template = constructor.getClazzTemplate();
 
-        ExceptionHandle hException;
         try
             {
             TypeComposition clzTarget;
             if (f_nTypeValue >= 0)
                 {
-                clzTarget = ((ClassHandle) frame.getArgument(f_nTypeValue)).f_clazz;
+                ClassHandle hClass = (ClassHandle) frame.getArgument(f_nTypeValue);
+                if (hClass == null)
+                    {
+                    return R_WAIT;
+                    }
+                clzTarget = hClass.f_clazz;
                 }
             else
                 {
@@ -45,30 +49,15 @@ public class New_0G extends OpCallable
 
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
 
-            if (template.isService())
-                {
-                hException = ((xService) template).asyncConstruct(
-                        frame, constructor, clzTarget, ahVar, f_nRetValue);
-                }
-            else
-                {
-                hException = template.construct(
-                        frame, constructor, clzTarget, ahVar, f_nRetValue);
-                }
+            return template.isService() ?
+                ((xService) template).
+                        asyncConstruct(frame, constructor, clzTarget, ahVar, f_nRetValue) :
+                template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

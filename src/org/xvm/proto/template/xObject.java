@@ -5,6 +5,7 @@ import org.xvm.asm.Constants;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
@@ -64,8 +65,8 @@ public class xObject
         }
 
     @Override
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
         {
         switch (ahArg.length)
             {
@@ -73,8 +74,7 @@ public class xObject
                 if (method.f_sName.equals("to"))
                     {
                     // how to differentiate; check the method's return type?
-                    frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
-                    return null;
+                    return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
                     }
             }
         return super.invokeNative(frame, hTarget, method, ahArg, iReturn);

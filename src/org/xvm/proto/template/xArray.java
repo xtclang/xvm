@@ -2,17 +2,14 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.Constants;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.Type;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
+
+import java.util.function.Supplier;
 
 /**
  * TODO:
@@ -91,8 +88,8 @@ public class xArray
         }
 
     @Override
-    public ExceptionHandle construct(Frame frame, ConstructTemplate constructor,
-                                     TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
+    public int construct(Frame frame, ConstructTemplate constructor,
+                         TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
         Type typeEl = clzArray.f_atGenericActual[0];
         String sTemplate = typeEl.f_sName;
@@ -103,10 +100,9 @@ public class xArray
         // argument [0] is reserved for this:struct
         long cCapacity = ((JavaLong) ahVar[1]).getValue();
 
-        ExceptionHandle hException = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.R_FRAME);
-        if (hException != null)
+        if (templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.R_FRAME) < 0)
             {
-            return hException;
+            return Op.R_EXCEPTION;
             }
 
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
@@ -121,22 +117,46 @@ public class xArray
 
             xArray array = (xArray) hArray.f_clazz.f_template;
 
-            ObjectHandle[] ahArg = new ObjectHandle[1];
-            for (int i = 0; i < cCapacity; i++)
+            if (cCapacity > 0)
                 {
-                ahArg[0] = xInt64.makeHandle(i);
+                int[] ai = new int[]{0};
+                ObjectHandle[] ahArg = new ObjectHandle[1];
+                ahArg[0] = xInt64.makeHandle(ai[0]);
 
-                hException = hSupplier.call1(frame, ahArg, Frame.R_FRAME);
+                // TODO: what if supplier is a "future" result
+                hSupplier.call1(frame, ahArg, Frame.R_FRAME);
+                Frame frame0 = frame.m_frameNext;
 
-                if (hException == null)
+                frame0.m_continuation = new Supplier<Frame>()
                     {
-                    hException = array.assignArrayValue(hArray, i, frame.getFrameLocal());
-                    }
+                    public Frame get()
+                        {
+                        int i = ai[0]++;
+                        ExceptionHandle hException =
+                                array.assignArrayValue(hArray, i, frame.getFrameLocal());
+                        if (hException != null)
+                            {
+                            frame.m_hException = hException;
+                            return null;
+                            }
 
-                if (hException != null)
-                    {
-                    return hException;
-                    }
+                        if (++i < cCapacity)
+                            {
+                            ahArg[0] = xInt64.makeHandle(i);
+                            // TODO: ditto
+                            hSupplier.call1(frame, ahArg, Frame.R_FRAME);
+                            Frame frameNext = frame.m_frameNext;
+                            frameNext.m_continuation = this;
+                            return frameNext;
+                            }
+
+                        frame.assignValue(iReturn, hArray);
+                        return null;
+                        }
+                    };
+
+                frame.m_frameNext = frame0;
+                return Op.R_CALL;
                 }
             }
 

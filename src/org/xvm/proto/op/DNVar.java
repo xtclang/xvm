@@ -36,7 +36,7 @@ public class DNVar extends Op
         CharStringConstant constName =
                 (CharStringConstant) context.f_constantPool.getConstantValue(f_nNameConstId);
 
-        frame.introduceVar(nNextVar, hRef.f_clazz, constName.getValue(), VAR_DYNAMIC, hRef);
+        frame.introduceVar(nNextVar, hRef.f_clazz, constName.getValue(), Frame.VAR_DYNAMIC_REF, hRef);
 
         frame.f_anNextVar[iScope] = nNextVar + 1;
 

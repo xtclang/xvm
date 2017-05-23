@@ -27,43 +27,44 @@ public class Call_10 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
+        if (f_nFunctionValue == A_SUPER)
+            {
+            return callSuper10(frame, f_nArgValue);
+            }
 
         try
             {
-            if (f_nFunctionValue == A_SUPER)
+            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            if (hArg == null)
                 {
-                hException = callSuper10(frame, f_nArgValue);
+                return R_WAIT;
                 }
-            else if (f_nFunctionValue >= 0)
-                {
-                FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
-                hException = function.call1(frame, new int[]{f_nArgValue}, Frame.R_UNUSED);
-                }
-            else
+            if (f_nFunctionValue < 0)
                 {
                 FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
+
                 ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
+                ahVar[0] = hArg;
 
-                ahVar[0] = frame.getArgument(f_nArgValue);
-
-                hException = frame.call1(function, null, ahVar, Frame.R_UNUSED);
+                return frame.call1(function, null, ahVar, Frame.R_UNUSED);
                 }
+
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            if (hFunction == null)
+                {
+                return R_WAIT;
+                }
+
+            ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
+            ahVar[0] = hArg;
+
+            return hFunction.call1(frame, ahVar, Frame.R_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

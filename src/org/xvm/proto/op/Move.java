@@ -24,28 +24,22 @@ public class Move extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             ObjectHandle hValue = frame.getArgument(f_nFromValue);
+            if (hValue == null)
+                {
+                return R_WAIT;
+                }
 
             // TODO: validate the source/destination compatibility?
 
-            hException = frame.assignValue(f_nToValue, hValue);
+            return frame.assignValue(f_nToValue, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

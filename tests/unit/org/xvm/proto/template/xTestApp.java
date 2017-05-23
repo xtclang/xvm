@@ -78,6 +78,7 @@ public class xTestApp extends xModule
         FunctionTemplate ftTest2 = ensureFunctionTemplate("test2", VOID, VOID);
         ftTest2.m_aop = new Op[]
             {
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test2() #")),
             new NVar(adapter.getClassTypeConstId("x:TestClass"), adapter.ensureValueConstantId("t")),  // #0 (t)
             new New_1(adapter.getMethodConstId("x:TestClass", "construct"),
                      -adapter.ensureValueConstantId("Hello World!"), 0),
@@ -136,6 +137,7 @@ public class xTestApp extends xModule
         FunctionTemplate ftTestService = ensureFunctionTemplate("testService", VOID, VOID);
         ftTestService.m_aop = new Op[]
             {
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testService() #")),
             new NVar(adapter.getClassTypeConstId("x:TestService"),
                     adapter.ensureValueConstantId("svc")),     // #0
             new New_1(adapter.getMethodConstId("x:TestService", "construct"),

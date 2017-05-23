@@ -5,7 +5,6 @@ import org.xvm.asm.constants.CharStringConstant;
 
 import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 /**
  * TODO:
@@ -51,8 +50,8 @@ public class xString
         }
 
     @Override
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                        ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+                            ObjectHandle[] ahArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -85,8 +84,8 @@ public class xString
         }
 
     @Override
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method,
-                                        ObjectHandle hArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+                            ObjectHandle hArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -106,7 +105,7 @@ public class xString
         }
 
     @Override
-    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
         StringHandle hThat = (StringHandle) hArg;

@@ -29,42 +29,39 @@ public class Call_N1 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-
         try
             {
             if (f_nFunctionValue == A_SUPER)
                 {
-                hException = callSuperN(frame, f_anArgValue, f_nRetValue);
+                return callSuperN(frame, f_anArgValue, f_nRetValue);
                 }
-            else if (f_nFunctionValue >= 0)
-                {
-                FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
-                hException = function.call1(frame, f_anArgValue, f_nRetValue);
-                }
-            else
+            if (f_nFunctionValue < 0)
                 {
                 FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
 
                 ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.m_cVars, 0);
+                if (ahVar == null)
+                    {
+                    return R_WAIT;
+                    }
 
-                hException = frame.call1(function, null, ahVar, f_nRetValue);
+                return frame.call1(function, null, ahVar, f_nRetValue);
                 }
+
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount(), 0);
+            if (hFunction == null || ahVar == null)
+                {
+                return R_WAIT;
+                }
+
+            return hFunction.call1(frame, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

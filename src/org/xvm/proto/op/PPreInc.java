@@ -28,30 +28,24 @@ public class PPreInc extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTarget);
+            if (hTarget == null)
+                {
+                return R_WAIT;
+                }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
             PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
 
-            hException = template.invokePreInc(frame, hTarget, property, f_nRetValue);
+            return template.invokePreInc(frame, hTarget, property, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

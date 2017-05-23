@@ -4,8 +4,10 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
+import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
+
 import org.xvm.proto.template.xService;
 
 /**
@@ -36,17 +38,17 @@ public class New_N extends OpCallable
         try
             {
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount(), 1);
+            if (ahVar == null)
+                {
+                return R_WAIT;
+                }
 
-            if (template.isService())
-                {
-                hException = ((xService) template).asyncConstruct(frame, constructor,
-                        template.f_clazzCanonical, ahVar, f_nRetValue);
-                }
-            else
-                {
-                hException = template.construct(frame, constructor,
-                        template.f_clazzCanonical, ahVar, f_nRetValue);
-                }
+            TypeComposition clzTarget = template.f_clazzCanonical;
+
+            return template.isService() ?
+                ((xService) template).
+                        asyncConstruct(frame, constructor, clzTarget, ahVar, f_nRetValue) :
+                template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -57,10 +59,8 @@ public class New_N extends OpCallable
             {
             return iPC + 1;
             }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
-            }
+
+        frame.m_hException = hException;
+        return R_EXCEPTION;
         }
     }

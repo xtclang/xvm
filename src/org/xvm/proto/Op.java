@@ -1,6 +1,8 @@
 package org.xvm.proto;
 
 
+import org.xvm.proto.op.Return_0;
+
 /**
  * The ops.
  *
@@ -27,13 +29,15 @@ public abstract class Op
     public static final int A_TYPE      = -MAX_CONST_ID - 9;   // this:type
     public static final int A_SUPER     = -MAX_CONST_ID - 10;  // super (function)
 
-    // return values
-    public static final int RETURN_NORMAL = -1;
-    public static final int RETURN_EXCEPTION = -2;
+    // return values from the process()
+    public static final int R_NEXT = -1;
+    public static final int R_RETURN = -2;
+    public static final int R_EXCEPTION = -3;
+    public static final int R_CALL = -4;
+    public static final int R_WAIT = -5;
 
-    public static final int VAR_STANDARD = 0;
-    public static final int VAR_DYNAMIC = 1;
-    public static final int VAR_DEFERRABLE = 2;
+    // an stub for an op-code
+    public static final Op[] STUB = new Op[] {Return_0.INSTANCE};
 
     // returns a positive iPC or a negative RETURN_*
     public abstract int process(Frame frame, int iPC);

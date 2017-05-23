@@ -28,7 +28,7 @@ public class MoveRef extends OpInvocable
         Frame.VarInfo infoSrc = frame.getVarInfo(f_nSrcValue);
         RefHandle hRef;
 
-        if (infoSrc.f_nStyle == VAR_DYNAMIC)
+        if (infoSrc.m_nStyle == Frame.VAR_DYNAMIC_REF)
             {
             // the "dynamic ref" register must contain a RefHandle itself
             hRef = (RefHandle) frame.f_ahVar[f_nSrcValue];

@@ -37,13 +37,13 @@ public class X_Print extends Op
                 {
                 Frame.VarInfo info = frame.getVarInfo(nValue);
 
-                switch (info.f_nStyle)
+                switch (info.m_nStyle)
                     {
-                    case VAR_DYNAMIC:
+                    case Frame.VAR_DYNAMIC_REF:
                         sb.append("<dynamic> ");
                         break;
 
-                    case VAR_DEFERRABLE:
+                    case Frame.VAR_DEFERRABLE:
                         if (frame.f_ahVar[nValue] instanceof RefHandle)
                             {
                             sb.append("<deferred> ");
@@ -56,12 +56,19 @@ public class X_Print extends Op
                     sb.append(info.f_sVarName).append("=");
                     }
 
-                sb.append(frame.getArgument(nValue));
+                ObjectHandle hValue = frame.getArgument(nValue);
+                if (hValue == null)
+                    {
+                    sb.append("<waiting>...");
+                    Utils.log(sb.toString());
+                    return R_WAIT;
+                    }
+                sb.append(hValue);
                 }
             catch (ObjectHandle.ExceptionHandle.WrapperException e)
                 {
                 frame.m_hException = e.getExceptionHandle();
-                return RETURN_EXCEPTION;
+                return R_EXCEPTION;
                 }
             }
         else

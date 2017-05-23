@@ -5,7 +5,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
-import org.xvm.proto.template.xFunction.FullyBoundHandle;
 
 /**
  * CONSTR_N CONST-CONSTRUCT, #params:(rvalue)
@@ -26,36 +25,24 @@ public class Construct_N extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-        FullyBoundHandle hfnFinally = null;
-
         try
             {
             ConstructTemplate constructor = (ConstructTemplate) getFunctionTemplate(frame, f_nConstructId);
 
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount(), 1);
-            ahVar[0] = frame.getArgument(0);
+            if (ahVar == null)
+                {
+                return R_WAIT;
+                }
 
-            hfnFinally = constructor.makeFinalizer(ahVar);
+            frame.chainFinalizer(constructor.makeFinalizer(ahVar));
 
-            hException = frame.call1(constructor, null, ahVar, Frame.R_UNUSED);
+            return frame.call1(constructor, null, ahVar, Frame.R_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        frame.f_framePrev.m_hfnFinally =
-                FullyBoundHandle.resolveFinalizer(frame.m_hfnFinally, hfnFinally);
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

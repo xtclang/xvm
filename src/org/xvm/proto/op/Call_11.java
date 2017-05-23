@@ -5,7 +5,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -30,48 +29,43 @@ public class Call_11 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-
         try
             {
             if (f_nFunctionValue == A_SUPER)
                 {
-                MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
-
-                ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
-                ahVar[1] = frame.getArgument(f_nArgValue);
-
-                hException = frame.call1(methodSuper, frame.getThis(), ahVar, f_nRetValue);
+                return callSuperN(frame, new int[]{f_nArgValue}, f_nRetValue);
                 }
-            else if (f_nFunctionValue >= 0)
-                {
-                FunctionHandle function = (FunctionHandle) frame.getArgument(f_nFunctionValue);
 
-                hException = function.call1(frame, new int[]{f_nArgValue}, f_nRetValue);
-                }
-            else
+            if (f_nFunctionValue < 0)
                 {
                 InvocationTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
 
-                ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
-                ahVar[0] = frame.getArgument(f_nArgValue);
+                ObjectHandle hArg = frame.getArgument(f_nArgValue);
+                if (hArg == null)
+                    {
+                    return R_WAIT;
+                    }
 
-                hException = frame.call1(function, null, ahVar, f_nRetValue);
+                ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
+                ahVar[0] = hArg;
+
+                return frame.call1(function, null, ahVar, f_nRetValue);
                 }
+
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            ObjectHandle[] ahVars = frame.getArguments(new int[]{f_nArgValue}, hFunction.getVarCount(), 0);
+
+            if (hFunction == null || ahVars == null)
+                {
+                return R_WAIT;
+                }
+
+            return hFunction.call1(frame, ahVars, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

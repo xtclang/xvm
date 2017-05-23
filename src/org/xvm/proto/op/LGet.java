@@ -32,16 +32,6 @@ public class LGet extends OpInvocable
 
         PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
 
-        ExceptionHandle hException = template.getPropertyValue(frame, hTarget, property, f_nRetValue);
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
-            }
+        return template.getPropertyValue(frame, hTarget, property, f_nRetValue);
         }
     }

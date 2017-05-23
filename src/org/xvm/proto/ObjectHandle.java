@@ -116,7 +116,7 @@ public class ObjectHandle
     public static class ExceptionHandle
             extends GenericHandle
         {
-        protected Throwable m_exception;
+        protected WrapperException m_exception;
 
         public ExceptionHandle(TypeComposition clazz, boolean fInitialize, Throwable eCause)
             {

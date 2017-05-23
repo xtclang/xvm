@@ -9,7 +9,10 @@ public class TestDriver
     {
     public static void main(String[] asArg) throws Exception
         {
-        Container container = new Container();
+        DaemonPool daemons = new DaemonPool("Worker");
+        daemons.start();
+
+        Container container = new Container(daemons);
 
         container.start(container.f_constantPoolAdapter.ensureModuleConstant("TestApp"));
 

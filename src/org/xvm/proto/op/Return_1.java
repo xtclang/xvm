@@ -25,12 +25,12 @@ public class Return_1 extends Op
         int[] aiRet = frame.f_aiReturn;
         if (aiRet.length > 0) // it's possible that the caller doesn't care about the return value
             {
-            frame.f_framePrev.assignValue(aiRet[0],
+            frame.f_framePrev.forceValue(aiRet[0],
                 iArg >= 0 ? frame.f_ahVar[f_nArgValue] :
                 iArg < -Op.MAX_CONST_ID ?
                     frame.getPredefinedArgument(iArg) :
                     frame.f_context.f_heapGlobal.ensureConstHandle(-iArg));
             }
-        return RETURN_NORMAL;
+        return R_RETURN;
         }
     }

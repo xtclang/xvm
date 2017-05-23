@@ -59,8 +59,8 @@ public class xRef
         }
 
     @Override
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
@@ -76,7 +76,8 @@ public class xRef
                             }
                         catch (ExceptionHandle.WrapperException e)
                             {
-                            return e.getExceptionHandle();
+                            frame.m_hException = e.getExceptionHandle();
+                            return Op.R_EXCEPTION;
                             }
                     }
             }
@@ -85,15 +86,21 @@ public class xRef
         }
 
     @Override
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle hArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle hArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
         switch (method.f_sName)
             {
             case "set":
-                return hThis.set(hArg);
+                ExceptionHandle hException = hThis.set(hArg);
+                if (hException != null)
+                    {
+                    frame.m_hException = hException;
+                    return Op.R_EXCEPTION;
+                    }
+                return Op.R_NEXT;
             }
         return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }

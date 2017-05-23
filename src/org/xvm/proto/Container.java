@@ -19,6 +19,7 @@ import java.util.Set;
  */
 public class Container
     {
+    final public DaemonPool f_daemons;
     final public TypeSet f_types;
     final public ConstantPoolAdapter f_constantPoolAdapter;
     final public ObjectHeap f_heapGlobal;
@@ -26,14 +27,15 @@ public class Container
 
     protected ModuleConstant m_constModule;
 
-    Set<ServiceContext> m_setServices = new HashSet<>();
+    final Set<ServiceContext> f_setServices = new HashSet<>();
 
-    public Container()
+    public Container(DaemonPool daemons)
         {
+        f_daemons = daemons;
         f_constantPoolAdapter = new ConstantPoolAdapter();
         f_types = new TypeSet(f_constantPoolAdapter);
         f_heapGlobal = new ObjectHeap(f_constantPoolAdapter, f_types);
-        f_contextMain = new ServiceContext(this);
+        f_contextMain = createServiceContext();
 
         initTypes();
         }
@@ -60,11 +62,19 @@ public class Container
         // container.m_typeSet.dumpTemplates();
         }
 
-    public ServiceContext createContext()
+    public ServiceContext createServiceContext()
         {
-        ServiceContext ctx = new ServiceContext(this);
-        m_setServices.add(ctx);
-        return ctx;
+        ServiceContext context = new ServiceContext(this);
+
+        f_setServices.add(context);
+        f_daemons.addService(context);
+
+        return context;
+        }
+
+    public void removeServiceContext(ServiceContext context)
+        {
+        f_setServices.remove(context);
         }
 
     public void start(ModuleConstant constModule)
@@ -110,6 +120,6 @@ public class Container
     public boolean isRunning()
         {
         // TODO: consider all services
-        return f_contextMain.isContended();
+        return f_contextMain.isContended() || !f_daemons.m_fWaiting;
         }
     }

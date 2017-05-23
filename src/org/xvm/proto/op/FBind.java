@@ -1,6 +1,7 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 
@@ -29,32 +30,30 @@ public class FBind extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-
         try
             {
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            if (hFunction == null)
+                {
+                return R_WAIT;
+                }
 
             for (int i = 0, c = f_anParamIx.length; i < c; i++)
                 {
-                hFunction = hFunction.bind(f_anParamIx[i], frame.getArgument(f_anParamValue[i]));
+                ObjectHandle hArg = frame.getArgument(f_anParamValue[i]);
+                if (hArg == null)
+                    {
+                    return R_WAIT;
+                    }
+                hFunction = hFunction.bind(f_anParamIx[i], hArg);
                 }
 
-            hException = frame.assignValue(f_nResultValue, hFunction);
+            return frame.assignValue(f_nResultValue, hFunction);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

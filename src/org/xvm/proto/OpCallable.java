@@ -46,7 +46,7 @@ public abstract class OpCallable extends Op
         }
 
     // call super() method or "getProperty", placing the return value into the specified frame slot
-    protected ExceptionHandle callSuper01(Frame frame, int iRet)
+    protected int callSuper01(Frame frame, int iRet)
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
@@ -67,7 +67,7 @@ public abstract class OpCallable extends Op
         }
 
     // call super() method or "setProperty"
-    protected ExceptionHandle callSuper10(Frame frame, int nArgValue)
+    protected int callSuper10(Frame frame, int nArgValue)
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
@@ -76,17 +76,29 @@ public abstract class OpCallable extends Op
         try
             {
             hArg = frame.getArgument(nArgValue);
+            if (hArg == null)
+                {
+                return R_WAIT;
+                }
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            return e.getExceptionHandle();
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
 
         if (methodSuper instanceof PropertyAccessTemplate)
             {
             PropertyAccessTemplate propertyAccess = (PropertyAccessTemplate) methodSuper;
             TypeCompositionTemplate template = propertyAccess.getClazzTemplate();
-            return template.setFieldValue(hThis, propertyAccess.f_property, hArg);
+
+            ExceptionHandle hException = template.setFieldValue(hThis, propertyAccess.f_property, hArg);
+            if (hException != null)
+                {
+                frame.m_hException = hException;
+                return R_EXCEPTION;
+                }
+            return R_NEXT;
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
@@ -97,19 +109,24 @@ public abstract class OpCallable extends Op
 
     // call super() methods with multiple arguments and no more than one return
     // (cannot be properties)
-    protected ExceptionHandle callSuperN(Frame frame, int[] anArgValue, int iReturn)
+    protected int callSuperN(Frame frame, int[] anArgValue, int iReturn)
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
         try
             {
             ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.m_cVars, 1);
+            if (ahVar == null)
+                {
+                return R_WAIT;
+                }
 
             return frame.call1(methodSuper, frame.getThis(), ahVar, iReturn);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            return e.getExceptionHandle();
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

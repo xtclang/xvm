@@ -27,28 +27,22 @@ public class Add extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
 
-            hException = hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, f_nRetValue);
+            if (hTarget == null || hArg == null)
+                {
+                return R_WAIT;
+                }
+
+            return hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

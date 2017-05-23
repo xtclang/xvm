@@ -4,13 +4,14 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-
+import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.Utils;
+
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
 import java.util.concurrent.CompletableFuture;
@@ -80,31 +81,34 @@ public class xService
         ServiceHandle hService = new ServiceHandle(
                 f_clazzCanonical, f_clazzCanonical.ensureStructType(), frame.f_context);
 
-        setFieldValue(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
-
         frame.f_context.setService(hService);
+
+        setFieldValue(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
 
         return hService;
         }
 
-    public ExceptionHandle asyncConstruct(Frame frame, ConstructTemplate constructor,
+    public int asyncConstruct(Frame frame, ConstructTemplate constructor,
                                           TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
         ServiceContext contextCur = frame.f_context;
-        ServiceContext contextNew = contextCur.f_container.createContext();
+        ServiceContext contextNew = contextCur.f_container.createServiceContext();
 
         ExceptionHandle hException = contextNew.start(f_sName);
 
-        if (hException == null)
+        if (hException != null)
             {
-            CompletableFuture cfService =
-                    contextCur.sendConstructRequest(contextNew, constructor, clazz, ahArg);
-            hException = frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
+            frame.m_hException = hException;
+            return Op.R_EXCEPTION;
             }
-        return hException;
+
+        CompletableFuture cfService =
+                contextCur.sendConstructRequest(contextNew, constructor, clazz, ahArg);
+        frame.forceValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
+        return Op.R_NEXT;
         }
 
-    public ExceptionHandle asyncInvoke1(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
+    public int asyncInvoke1(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
                                         ObjectHandle[] ahArg, int iReturn)
         {
         // TODO: validate that all the arguments are immutable or ImmutableAble
@@ -117,22 +121,19 @@ public class xService
             {
             return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
             }
-        else
-            {
-            cfResult.whenComplete((r, x) ->
-                {
-                if (x != null)
-                    {
-                    // TODO: call UnhandledExceptionNotification handler
-                    Utils.log("\nUnhandled exception " + x + "\n  by " + hService);
-                    }
-                });
-            }
 
-        return null;
+        cfResult.whenComplete((r, x) ->
+            {
+            if (x != null)
+                {
+                // TODO: call UnhandledExceptionNotification handler
+                Utils.log("\nUnhandled exception " + x + "\n  by " + hService);
+                }
+            });
+        return Op.R_NEXT;
         }
 
-    public ExceptionHandle asyncInvokeN(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
+    public int asyncInvokeN(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
                                         ObjectHandle[] ahArg, int[] aiReturn)
         {
         // TODO: validate that all the arguments are immutable or ImmutableAble
@@ -150,7 +151,10 @@ public class xService
                 CompletableFuture<ObjectHandle> cfReturn =
                         cfResult.thenApply(ahResult -> ahResult[iRet]);
 
-                frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
+                if (frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn)) < 0)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
                 }
             }
         else
@@ -165,11 +169,11 @@ public class xService
                 });
             }
 
-        return null;
+        return Op.R_NEXT;
         }
 
     @Override
-    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -185,7 +189,7 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle invokePostInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -201,7 +205,7 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -217,7 +221,7 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle getFieldValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -229,8 +233,8 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
-                                            ObjectHandle hValue)
+    public int setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                                ObjectHandle hValue)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -251,7 +255,7 @@ public class xService
                 }
             });
 
-        return null;
+        return Op.R_NEXT;
         }
 
     @Override
@@ -298,8 +302,7 @@ public class xService
     public interface PropertyOperation01
             extends PropertyOperation
         {
-        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
-                               int iReturn);
+        int invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn);
         }
 
     // an operation against a property that takes one parameter and returns zero values
@@ -307,8 +310,8 @@ public class xService
     public interface PropertyOperation10
             extends PropertyOperation
         {
-        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
-                               ObjectHandle hValue);
+        int invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                   ObjectHandle hValue);
         }
 
     // an operation against a property that takes one parameter and returns one value
@@ -316,7 +319,7 @@ public class xService
     public interface PropertyOperation11
             extends PropertyOperation
         {
-        ExceptionHandle invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
-                               ObjectHandle hValue, int iReturn);
+        int invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+                   ObjectHandle hValue, int iReturn);
         }
     }

@@ -27,7 +27,7 @@ public class DVar extends Op
 
         RefHandle hRef = (RefHandle) frame.f_context.f_heapGlobal.ensureHandle(f_nClassConstId);
 
-        frame.introduceVar(nNextVar, hRef.f_clazz, null, VAR_DYNAMIC, hRef);
+        frame.introduceVar(nNextVar, hRef.f_clazz, null, Frame.VAR_DYNAMIC_REF, hRef);
 
         frame.f_anNextVar[iScope] = nNextVar + 1;
 

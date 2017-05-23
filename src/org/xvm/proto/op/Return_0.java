@@ -10,6 +10,8 @@ import org.xvm.proto.Op;
  */
 public class Return_0 extends Op
     {
+    public static final Return_0 INSTANCE = new Return_0();
+
     public Return_0()
         {
         }
@@ -17,6 +19,6 @@ public class Return_0 extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        return RETURN_NORMAL;
+        return R_RETURN;
         }
     }

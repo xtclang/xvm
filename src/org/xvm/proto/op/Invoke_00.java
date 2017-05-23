@@ -1,9 +1,15 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+import org.xvm.proto.Utils;
+
 import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xService.ServiceHandle;
 
 /**
  * INVOKE_00 rvalue-target, rvalue-method
@@ -24,10 +30,13 @@ public class Invoke_00 extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            if (hTarget == null)
+                {
+                return R_WAIT;
+                }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
@@ -35,33 +44,25 @@ public class Invoke_00 extends OpInvocable
 
             if (method.isNative())
                 {
-                hException = template.invokeNative(frame, hTarget, method, Utils.OBJECTS_NONE, Frame.R_UNUSED);
+                return template.invokeNative(frame, hTarget, method,
+                        Utils.OBJECTS_NONE, Frame.R_UNUSED);
                 }
-            else if (template.isService())
-                {
-                hException = xFunction.makeAsyncHandle(method).
-                        call1(frame, new ObjectHandle[]{hTarget}, Frame.R_UNUSED);
-                }
-            else
-                {
-                ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
 
-                hException = frame.call1(method, hTarget, ahVar, Frame.R_UNUSED);
+            if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+                {
+                xFunction.makeAsyncHandle(method).
+                        call1(frame, new ObjectHandle[]{hTarget}, Frame.R_UNUSED);
+                return iPC + 1;
                 }
+
+            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+
+            return frame.call1(method, hTarget, ahVar, Frame.R_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

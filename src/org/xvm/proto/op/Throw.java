@@ -25,12 +25,16 @@ public class Throw extends Op
             {
             // there are no "const" exceptions
             frame.m_hException = (ExceptionHandle) frame.getArgument(f_nArgValue);
+            if (frame.m_hException == null)
+                {
+                return R_WAIT;
+                }
             }
         catch (ExceptionHandle.WrapperException e)
             {
             frame.m_hException = e.getExceptionHandle();
             }
 
-        return RETURN_EXCEPTION;
+        return R_EXCEPTION;
         }
     }

@@ -53,16 +53,16 @@ public class xTestService extends xService
         PropertyTemplate ptCounter2 = ensurePropertyTemplate("counter2", "x:Int64");
         ptCounter2.makeAtomicRef();
 
-        FunctionTemplate ftDefault = ensureDefaultConstructTemplate();
+        FunctionTemplate ftDefault = ensureDefaultConstructTemplate(); // "default"
         ftDefault.m_aop = new Op[]
             {
-            new LSet(adapter.getPropertyConstId("x:TestService", "counter2"),
+            new PSet(0, adapter.getPropertyConstId("x:TestService", "counter2"),
                     -adapter.ensureValueConstantId(5)),
             new Return_0(),
             };
         ftDefault.m_cVars = 1;
 
-        ConstructTemplate constructor = ensureConstructTemplate(
+        ConstructTemplate constructor = ensureConstructTemplate(        // "construct"
                 new String[]{"x:TestService", "x:Int64"});
         constructor.m_aop = new Op[]
             {

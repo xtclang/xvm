@@ -2,7 +2,6 @@ package org.xvm.proto.template;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -44,8 +43,8 @@ public class xAtomicRef
         }
 
     @Override
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
         {
         AtomicHandle hThis = (AtomicHandle) hTarget;
 

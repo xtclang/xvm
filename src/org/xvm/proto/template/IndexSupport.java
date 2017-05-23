@@ -3,9 +3,10 @@ package org.xvm.proto.template;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-
+import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
+
 import org.xvm.proto.template.xRef.IndexedRefHandle;
 
 /**
@@ -27,7 +28,7 @@ public interface IndexSupport
             throws ExceptionHandle.WrapperException;
 
     // @op "elementAt" support - place a Ref to the element value into the specified register
-    default ExceptionHandle makeRef(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+    default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         try
             {
@@ -41,29 +42,26 @@ public interface IndexSupport
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            return e.getExceptionHandle();
+            frame.m_hException = e.getExceptionHandle();
+            return Op.R_EXCEPTION;
             }
         }
 
     // @op "preInc" support - increment the element value and place the result into the specified register
-    default ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+    // return one of the Op.R_ values or zero
+    default int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         try
             {
             ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
 
-            ExceptionHandle hException = hValue.f_clazz.f_template.
-                    invokePreInc(frame, hValue, null, Frame.R_FRAME);
-            if (hException != null)
-                {
-                return hException;
-                }
-
-            return frame.assignValue(iReturn, frame.getFrameLocal());
+            return hValue.f_clazz.f_template.
+                    invokePreInc(frame, hValue, null, iReturn);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            return e.getExceptionHandle();
+            frame.m_hException = e.getExceptionHandle();
+            return Op.R_EXCEPTION;
             }
         }
 

@@ -33,15 +33,21 @@ public class ISet extends Op
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            ObjectHandle hArg = frame.getArgument(f_nValue);
+            if (hTarget == null || hArg == null)
+                {
+                return R_WAIT;
+                }
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
             hException = template.assignArrayValue(hTarget,
-                    frame.getIndex(f_nIndexValue), frame.getArgument(f_nValue));
+                    frame.getIndex(f_nIndexValue), hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
 
         if (hException == null)
@@ -51,7 +57,7 @@ public class ISet extends Op
         else
             {
             frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            return R_EXCEPTION;
             }
         }
     }

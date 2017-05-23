@@ -29,33 +29,26 @@ public class MBind extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            if (hTarget == null)
+                {
+                return R_WAIT;
+                }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
             MethodTemplate method = getMethodTemplate(frame, template, f_nMethodId);
 
-            hException = frame.assignValue(f_nResultValue, template.isService() ?
+            return frame.assignValue(f_nResultValue, template.isService() ?
                     xFunction.makeAsyncHandle(method).bind(0, hTarget) :
                     xFunction.makeHandle(method).bind(0, hTarget));
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

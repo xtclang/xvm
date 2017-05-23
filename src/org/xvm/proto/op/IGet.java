@@ -28,30 +28,23 @@ public class IGet extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            if (hTarget == null)
+                {
+                return R_WAIT;
+                }
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            hException = frame.assignValue(f_nRetValue,
+            return frame.assignValue(f_nRetValue,
                     template.extractArrayValue(hTarget, frame.getIndex(f_nIndexValue)));
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

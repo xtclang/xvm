@@ -1,12 +1,9 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -75,17 +72,18 @@ public class xIntArray
         return null;
         }
 
-    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            return IndexSupport.outOfRange(lIndex, hArray.m_cSize);
+            frame.m_hException = IndexSupport.outOfRange(lIndex, hArray.m_cSize);
+            return Op.R_EXCEPTION;
             }
 
         return frame.assignValue(iReturn,
-                 xInt64.makeHandle(++hArray.m_alValue[(int) lIndex]));
+                xInt64.makeHandle(++hArray.m_alValue[(int) lIndex]));
         }
 
     public static IntArrayHandle makeIntArrayInstance(long cCapacity)

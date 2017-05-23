@@ -26,7 +26,7 @@ public class Var extends Op
 
         TypeComposition clazz = frame.f_context.f_types.ensureConstComposition(f_nClassConstId);
 
-        frame.introduceVar(nNextVar, clazz, null, VAR_DEFERRABLE, null);
+        frame.introduceVar(nNextVar, clazz, null, Frame.VAR_DEFERRABLE, null);
 
         frame.f_anNextVar[iScope] = nNextVar+1;
         return iPC + 1;

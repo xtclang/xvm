@@ -28,31 +28,25 @@ public class PSet extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTarget);
             ObjectHandle hValue = frame.getArgument(f_nValue);
+            if (hTarget == null || hValue == null)
+                {
+                return R_WAIT;
+                }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
 
             PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
 
-            hException = template.setPropertyValue(frame, hTarget, property, hValue);
+            return template.setPropertyValue(frame, hTarget, property, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
-            }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-        else
-            {
-            frame.m_hException = hException;
-            return RETURN_EXCEPTION;
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
             }
         }
     }

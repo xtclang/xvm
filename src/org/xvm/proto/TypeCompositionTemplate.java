@@ -11,13 +11,19 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeName.GenericTypeName;
 import org.xvm.proto.TypeName.SimpleTypeName;
 
-import org.xvm.proto.template.*;
+import org.xvm.proto.template.xArray;
+import org.xvm.proto.template.xException;
+import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.xFunction.FullyBoundHandle;
+import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef.RefHandle;
 
+import org.xvm.proto.template.xType;
 import org.xvm.util.ListMap;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * TypeCompositionTemplate represents a design unit (e.g. Class, Interface, Mixin, etc) that
@@ -506,69 +512,88 @@ public abstract class TypeCompositionTemplate
         return new GenericHandle(clazz, clazz.ensureStructType());
         }
 
-    // call the default constructors, then the specified constructor,
+    // invoke the default constructors, then the specified constructor,
     // then finalizers; change this:struct handle to this:public
-    public ExceptionHandle construct(Frame frame, ConstructTemplate constructor,
-                                     TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
+    // return one of the Op.R_ values
+    public int construct(Frame frame, ConstructTemplate constructor,
+                         TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
         ahVar[0] = createStruct(frame, clazz); // this:struct
 
-        ExceptionHandle hException = clazz.callDefaultConstructors(frame, ahVar);
+        // assume that we have C1 extending C0 with default constructors (DC),
+        // regular constructors (RC), and finalizers (F);
+        // the call sequence should be:
+        //
+        //  ("new" op-code) => DC0 -> DC1 -> C1 => C0 -> F0 -> F1 -> "assign" (continuation)
+        //
+        // -> indicates a call via continuation
+        // => indicates a call via Construct op-cod
+        //
+        // we need to create the call chain in the revers order
+        // (note that the C0 and F0 are added by the Construct op-code)
+        //
+        // the very last frame should also assign the resulting new object
 
-        if (hException == null)
+        Supplier<Frame> contAssign = () ->
             {
-            hException = frame.call1(constructor, null, ahVar, Frame.R_UNUSED);
+            ObjectHandle hNew = ahVar[0];
+            frame.assignValue(iReturn,
+                    hNew.f_clazz.ensureAccess(hNew, Constants.Access.PUBLIC));
+            return null;
+            };
 
-            if (hException == null)
-                {
-                xFunction.FullyBoundHandle fnFinalize = xFunction.FullyBoundHandle.resolveFinalizer(
-                        frame.m_hfnFinally, constructor.makeFinalizer(ahVar));
-                if (fnFinalize != null)
-                    {
-                    // this:struct -> this:private
-                    hException = fnFinalize.callChain(frame, Constants.Access.PRIVATE);
-                    }
+        Frame frameRC = frame.f_context.createFrame1(frame, constructor, null, ahVar, Frame.R_UNUSED);
 
-                if (hException == null)
-                    {
-                    ObjectHandle hNew = ahVar[0];
-                    hException = frame.assignValue(iReturn,
-                            hNew.f_clazz.ensureAccess(hNew, Constants.Access.PUBLIC));
-                    }
-                }
-            }
+        Frame frameDC = clazz.callDefaultConstructors(frame, ahVar, () -> frameRC);
 
-        return hException;
+        // we need a non-null anchor (see Frame#chainFinalizer)
+        FullyBoundHandle hF1 = constructor.makeFinalizer(ahVar);
+        frameRC.m_hfnFinally = hF1 == null ? FullyBoundHandle.NO_OP : hF1;
+
+        frameRC.m_continuation = () ->
+            {
+            // this:struct -> this:private
+            FullyBoundHandle hF = frameRC.m_hfnFinally;
+            return hF == FullyBoundHandle.NO_OP ?
+                    contAssign == null ? null : contAssign.get() :
+                    hF.callChain(frame, Constants.Access.PRIVATE, contAssign);
+            };
+
+        frame.m_frameNext = frameDC == null ? frameRC : frameDC;
+        return Op.R_CALL;
         }
 
     // ----- OpCode support: register operations ------
 
     // invokeNative with one argument and zero or one return value
     // place the result into the specified frame register
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle hArg, int iReturn)
+    // return one of the Op.R_ values
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle hArg, int iReturn)
         {
         throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
         }
 
     // invokeNative with N arguments and zero or one return values
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+    // return one of the Op.R_ values
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
         {
         // many classes don't have native methods
         throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
         }
 
     // Add operation; place the result into the specified frame register
-    public ExceptionHandle invokeAdd(Frame frame, ObjectHandle hTarget,
-                                     ObjectHandle hArg, int iReturn)
+    // return one of the Op.R_ values
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         throw new IllegalStateException("Invalid op for " + f_sName);
 
         }
 
     // Neg operation
-    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+    // return one of the Op.R_ values
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         throw new IllegalStateException("Invalid op for " + f_sName);
         }
@@ -594,8 +619,9 @@ public abstract class TypeCompositionTemplate
         }
 
     // increment the property value and place the result into the specified frame register
-    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget,
-                                        PropertyTemplate property, int iReturn)
+    // return one of the Op.R_ values
+    public int invokePreInc(Frame frame, ObjectHandle hTarget,
+                            PropertyTemplate property, int iReturn)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
@@ -606,20 +632,21 @@ public abstract class TypeCompositionTemplate
             return property.getRefTemplate().invokePreInc(frame, hProp, null, iReturn);
             }
 
-        ExceptionHandle hException = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.R_FRAME);
-        if (hException != null)
+        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.R_FRAME);
+        if (nResult == Op.R_EXCEPTION)
             {
-            return hException;
+            return nResult;
             }
 
         ObjectHandle hPropNew = frame.getFrameLocal();
         hThis.m_mapFields.put(property.f_sName, hPropNew);
+
         return frame.assignValue(iReturn, hPropNew);
         }
 
     // place the property value into the specified frame register and increment it
-    public ExceptionHandle invokePostInc(Frame frame, ObjectHandle hTarget,
-                                         PropertyTemplate property, int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget,
+                             PropertyTemplate property, int iReturn)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
@@ -630,22 +657,24 @@ public abstract class TypeCompositionTemplate
             return property.getRefTemplate().invokePostInc(frame, hProp, null, iReturn);
             }
 
-        ExceptionHandle hException = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.R_FRAME);
-        if (hException != null)
+        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.R_FRAME);
+        if (nResult == Op.R_EXCEPTION)
             {
-            return hException;
+            return nResult;
             }
 
         ObjectHandle hPropNew = frame.getFrameLocal();
         hThis.m_mapFields.put(property.f_sName, hPropNew);
+
         return frame.assignValue(iReturn, hProp);
         }
 
     // ----- OpCode support: property operations -----
 
     // get a property value into the specified place in the array
-    public ExceptionHandle getPropertyValue(Frame frame, ObjectHandle hTarget,
-                                            PropertyTemplate property, int iReturn)
+
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget,
+                                PropertyTemplate property, int iReturn)
         {
         if (property == null)
             {
@@ -669,8 +698,8 @@ public abstract class TypeCompositionTemplate
         return frame.call1(method, hTarget, ahVar, iReturn);
         }
 
-    public ExceptionHandle getFieldValue(Frame frame, ObjectHandle hTarget,
-                                         PropertyTemplate property, int iReturn)
+    public int getFieldValue(Frame frame, ObjectHandle hTarget,
+                             PropertyTemplate property, int iReturn)
         {
         if (property == null)
             {
@@ -687,64 +716,79 @@ public abstract class TypeCompositionTemplate
             return frame.assignValue(iReturn, xType.makeHandle(type));
             }
 
-        ObjectHandle hProp = hThis.m_mapFields.get(sName);
+        ObjectHandle hValue = hThis.m_mapFields.get(sName);
+        ExceptionHandle hException;
 
-        if (hProp == null)
+        if (hValue == null)
             {
-            throw new IllegalStateException((hThis.m_mapFields.containsKey(sName) ?
-                    "Un-initialized property " : "Invalid property ") + property);
+            frame.m_hException = xException.makeHandle((hThis.m_mapFields.containsKey(sName) ?
+                    "Un-initialized property " : "Invalid property ") + property.f_sName);
+            return Op.R_EXCEPTION;
             }
 
         if (property.isRef())
             {
             try
                 {
-                hProp = ((RefHandle) hProp).get();
+                hValue = ((RefHandle) hValue).get();
                 }
             catch (ExceptionHandle.WrapperException e)
                 {
-                return e.getExceptionHandle();
+                frame.m_hException = e.getExceptionHandle();
+                return Op.R_EXCEPTION;
                 }
             }
 
-        return frame.assignValue(iReturn, hProp);
+        return frame.assignValue(iReturn, hValue);
         }
 
     // set a property value
-    public ExceptionHandle setPropertyValue(Frame frame, ObjectHandle hTarget,
-                                            PropertyTemplate property, ObjectHandle hValue)
+    public int setPropertyValue(Frame frame, ObjectHandle hTarget,
+                                PropertyTemplate property, ObjectHandle hValue)
         {
         if (property == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
+        ExceptionHandle hException = null;
         if (!hTarget.isMutable())
             {
-            return xException.makeHandle("Immutable object: " + hTarget);
+            hException = xException.makeHandle("Immutable object: " + hTarget);
             }
-
-        if (property.isReadOnly())
+        else if (property.isReadOnly())
             {
-            return xException.makeHandle("Read-only property: " + property.f_sName);
+            hException = xException.makeHandle("Read-only property: " + property.f_sName);
             }
 
-        MethodTemplate method = hTarget.isStruct() ? null : property.m_templateSet;
-
-        if (method == null)
+        if (hException == null)
             {
-            return setFieldValue(hTarget, property, hValue);
+            MethodTemplate method = hTarget.isStruct() ? null : property.m_templateSet;
+
+            if (method == null)
+                {
+                hException = setFieldValue(hTarget, property, hValue);
+                }
+            else
+                {
+                if (method.isNative())
+                    {
+                    return invokeNative(frame, hTarget, method, hValue, Frame.R_UNUSED);
+                    }
+
+                ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+                ahVar[1] = hValue;
+
+                return frame.call1(method, hTarget, ahVar, Frame.R_UNUSED);
+                }
             }
 
-        if (method.isNative())
+        if (hException != null)
             {
-            return invokeNative(frame, hTarget, method, hValue, Frame.R_UNUSED);
+            frame.m_hException = hException;
+            return Op.R_EXCEPTION;
             }
-
-        ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
-        ahVar[1] = hValue;
-
-        return frame.call1(method, hTarget, ahVar, Frame.R_UNUSED);
+        return Op.R_NEXT;
         }
 
     public ExceptionHandle setFieldValue(ObjectHandle hTarget,
@@ -771,12 +815,13 @@ public abstract class TypeCompositionTemplate
     // ----- Op-code support: array operations -----
 
     // get a handle to an array for the specified class
-    public ExceptionHandle createArrayStruct(Frame frame, TypeComposition clazz,
+    public int createArrayStruct(Frame frame, TypeComposition clazz,
                                              long cCapacity, int iReturn)
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
-            return xException.makeHandle("Invalid array size: " + cCapacity);
+            frame.m_hException = xException.makeHandle("Invalid array size: " + cCapacity);
+            return Op.R_EXCEPTION;
             }
 
         return frame.assignValue(iReturn, xArray.makeInstance(cCapacity));

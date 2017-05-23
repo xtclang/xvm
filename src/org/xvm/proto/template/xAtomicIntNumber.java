@@ -1,7 +1,6 @@
 package org.xvm.proto.template;
 
 import org.xvm.proto.*;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -45,31 +44,42 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public ExceptionHandle invokePreInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
-        {
-        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
-
-        return atomic == null ? xException.makeHandle("Unassigned reference") :
-                frame.assignValue(iReturn, xInt64.makeHandle(atomic.incrementAndGet()));
-        }
-
-    @Override
-    public ExceptionHandle invokePostInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
-        {
-        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
-
-        return atomic == null ? xException.makeHandle("Unassigned reference") :
-                frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndIncrement()));
-        }
-
-    @Override
-    public ExceptionHandle invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 
         if (atomic == null)
             {
-            return xException.makeHandle("Unassigned reference");
+            frame.m_hException = xException.makeHandle("Unassigned reference");
+            return Op.R_EXCEPTION;
+            }
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.incrementAndGet()));
+        }
+
+    @Override
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+        {
+        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+
+        if (atomic == null)
+            {
+            frame.m_hException = xException.makeHandle("Unassigned reference");
+            return Op.R_EXCEPTION;
+            }
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndIncrement()));
+        }
+
+    @Override
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+
+        if (atomic == null)
+            {
+            frame.m_hException = xException.makeHandle("Unassigned reference");
+            return Op.R_EXCEPTION;
             }
 
         long lValue = atomic.get();

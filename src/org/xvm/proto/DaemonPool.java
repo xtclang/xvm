@@ -3,47 +3,41 @@ package org.xvm.proto;
 import org.xvm.util.Notifier;
 import org.xvm.util.SimpleNotifier;
 
-import org.xvm.proto.ServiceContext.Message;
-
-import java.util.Queue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * A single thread Service daemon.
+ * A simple daemon pool.
  *
  * @author gg 2017.03.31
  */
-public class ServiceDaemon
+public class DaemonPool
         implements Runnable
     {
     protected String m_sName;
-
-    protected final ServiceContext f_context;
-
     protected Thread m_thread;
-
-    protected final Queue<Message> f_queue = new ConcurrentLinkedQueue<>();
 
     protected final Notifier f_notifier = new SimpleNotifier();
 
     private volatile State m_state = State.Initial;
 
-    private volatile boolean m_fWaiting = false;
-
-    final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
+    public volatile boolean m_fWaiting = false;
 
     enum State {Initial, Starting, Running, Stopping, Stopped;};
 
+    private List<ServiceContext> f_listServices = new CopyOnWriteArrayList<>();
+
     /**
-    * Create a ServiceDaemon with the specified name.
+    * Create a DaemonPool with the specified name.
     */
-    public ServiceDaemon(String sName, ServiceContext context)
+    public DaemonPool(String sName)
         {
         m_sName = sName;
-        f_context = context;
         }
     /**
-    * Start the ServiceDaemon.
+    * Start the DaemonPool.
     */
     public synchronized void start()
         {
@@ -54,9 +48,32 @@ public class ServiceDaemon
 
         setState(State.Starting);
 
-        Thread thread = m_thread = new Thread(this, m_sName);
+        Thread thread = m_thread = new Thread(new ThreadGroup(m_sName), this);
         thread.setDaemon(true);
         thread.start();
+
+        while (!isStarted())
+            {
+            // TODO: timeout
+            try
+                {
+                wait(100);
+                }
+            catch (InterruptedException e)
+                {
+                throw new IllegalStateException("Failed to start");
+                }
+            }
+        }
+
+    public void addService(ServiceContext context)
+        {
+        f_listServices.add(context);
+        }
+
+    public void removeService(ServiceContext context)
+        {
+        f_listServices.remove(context);
         }
 
     // ----- Runnable interface -----
@@ -64,8 +81,6 @@ public class ServiceDaemon
     @Override
     public void run()
         {
-        s_tloContext.set(f_context);
-
         setState(State.Running);
 
         synchronized (this)
@@ -74,30 +89,47 @@ public class ServiceDaemon
             }
 
         Notifier notifier = f_notifier;
-        Queue<Message> queue = f_queue;
+
         try
             {
+            boolean fNothingToDo = false;
+
             while (m_state == State.Running)
                 {
-                m_fWaiting = true;
-                notifier.await(1000);
-                m_fWaiting = false;
-
-                Message message = queue.poll();
-                while (message != null)
+                if (fNothingToDo)
                     {
-                    try
+                    m_fWaiting = true;
+                    notifier.await(1000);
+                    m_fWaiting = false;
+                    }
+                else
+                    {
+                    fNothingToDo = true;
+                    }
+
+                for (ServiceContext context : f_listServices)
+                    {
+                    Frame frame = context.nextFiber();
+
+                    if (frame != null)
                         {
-                        message.process(f_context);
+                        fNothingToDo = false;
+                        try
+                            {
+                            frame = context.execute(frame);
+                            if (frame != null)
+                                {
+                                context.suspendFiber(frame);
+                                }
+                            }
+                        catch (Throwable e)
+                            {
+                            // TODO
+                            Utils.log("\nUnhandled exception: " + e);
+                            e.printStackTrace(System.out);
+                            System.exit(-1);
+                            }
                         }
-                    catch (Throwable e)
-                        {
-                        // TODO
-                        Utils.log("\nUnhandled exception: " + e);
-                        e.printStackTrace(System.out);
-                        System.exit(-1);
-                        }
-                    message = queue.poll();
                     }
                 }
             }
@@ -107,48 +139,19 @@ public class ServiceDaemon
             }
         catch (Throwable e)
             {
-            // TODO
+            e.printStackTrace(); // TODO:
+            System.exit(1);
             }
 
-        f_queue.clear();
         m_thread = null;
 
         setState(State.Stopped);
-
-        s_tloContext.set(null);
-        }
-
-    // ----- x:Service methods -----
-
-    public boolean isContended()
-        {
-        return !f_queue.isEmpty() || !m_fWaiting;
-        }
-
-    public void dispatch(long cMillis)
-        {
-        try
-            {
-            f_notifier.await(cMillis);
-
-            Message msg = f_queue.poll();
-            if (msg != null)
-                {
-                msg.process(f_context);
-                }
-            }
-        catch (Throwable e)
-            {
-            // TODO
-            throw new RuntimeException(e);
-            }
         }
 
     // ----- InterService Communications -----
 
-    public void add(Message call)
+    public void signal()
         {
-        f_queue.add(call);
         f_notifier.signal();
         }
 
@@ -163,12 +166,6 @@ public class ServiceDaemon
         f_notifier.signal();
         }
 
-    public void kill()
-        {
-        m_thread.interrupt();
-        }
-
-
     // ----- Helpers -----
 
     /**
@@ -177,14 +174,6 @@ public class ServiceDaemon
     public Thread getThread()
         {
         return m_thread;
-        }
-
-    /**
-    * @return true if the current thread is the service thread
-    */
-    public boolean isServiceThread()
-        {
-        return Thread.currentThread() == getThread();
         }
 
     public boolean isStarted()
@@ -203,7 +192,7 @@ public class ServiceDaemon
     @Override
     public String toString()
         {
-        return "ServiceDaemon{Thread=\"" + getThread() + '\"'
+        return "DaemonPool{Thread=\"" + getThread() + '\"'
             + ", State=" + m_state.name() + '}';
         }
     }

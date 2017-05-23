@@ -41,8 +41,8 @@ public class xFutureRef
         }
 
     @Override
-    public ExceptionHandle invokeNative(Frame frame, ObjectHandle hTarget,
-                                        MethodTemplate method, ObjectHandle hArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle hArg, int iReturn)
         {
         FutureHandle hThis = (FutureHandle) hTarget;
 
@@ -50,6 +50,7 @@ public class xFutureRef
             {
             case "whenComplete":
                 FunctionHandle hNotify = (FunctionHandle) hArg;
+
                 CompletableFuture<ObjectHandle> cf = hThis.m_future.whenComplete((r, x) ->
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[2];
@@ -57,16 +58,15 @@ public class xFutureRef
                     ahArg[1] = x == null ? xNullable.NULL :
                                 ((ExceptionHandle.WrapperException) x).getExceptionHandle();
 
-                    ExceptionHandle hException = hNotify.call1(frame, ahArg, Frame.R_UNUSED);
-
-                    if (hException != null)
-                        {
-                        // TODO: call the "Unhandled exception" handler
-                        Utils.log("Unhandled exception: " + hException);
-                        }
+                    // TODO: this is wrong; should be a new frame
+                    hNotify.call1(frame, ahArg, Frame.R_UNUSED);
                     });
-                return iReturn >= 0 ? frame.assignValue(iReturn, makeHandle(cf)) : null;
 
+                if (iReturn >= 0)
+                    {
+                    return frame.assignValue(iReturn, makeHandle(cf));
+                    }
+                return Op.R_NEXT;
             }
         return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }
@@ -82,6 +82,7 @@ public class xFutureRef
         {
         public final boolean f_fSynthetic;
         public CompletableFuture<ObjectHandle> m_future;
+        protected Frame m_frameNext;
 
         protected FutureHandle(TypeComposition clazz,
                                CompletableFuture<ObjectHandle> future, boolean fSynthetic)
@@ -96,27 +97,32 @@ public class xFutureRef
         protected ObjectHandle getInternal()
                 throws ExceptionHandle.WrapperException
             {
-            try
+            CompletableFuture<ObjectHandle> cf = m_future;
+            if (cf.isDone())
                 {
-                // TODO: use the timeout defined on the service
-                while (!m_future.isDone())
+                try
                     {
-                    ServiceContext.getCurrentContext().yield();
+                    return cf.get();
                     }
-                return m_future.get();
-                }
-            catch (InterruptedException e)
-                {
-                throw new UnsupportedOperationException("TODO");
-                }
-            catch (ExecutionException e)
-                {
-                Throwable eOrig = e.getCause();
-                if (eOrig instanceof ExceptionHandle.WrapperException)
+                catch (InterruptedException e)
                     {
-                    throw (ExceptionHandle.WrapperException) eOrig;
+                    throw new UnsupportedOperationException("TODO");
                     }
-                throw new UnsupportedOperationException("Unexpected exception", eOrig);
+                catch (ExecutionException e)
+                    {
+                    Throwable eOrig = e.getCause();
+                    if (eOrig instanceof ExceptionHandle.WrapperException)
+                        {
+                        throw (ExceptionHandle.WrapperException) eOrig;
+                        }
+                    throw new UnsupportedOperationException("Unexpected exception", eOrig);
+                    }
+                }
+            else
+                {
+                // wait for the completion;
+                // the service is responsible for timing out
+                return null;
                 }
             }
 
@@ -135,7 +141,7 @@ public class xFutureRef
                 FutureHandle that = (FutureHandle) handle;
                 assert that.f_fSynthetic;
 
-                m_future = that.m_future;
+                m_future = that.m_future.whenComplete((r, x) -> this.m_frameNext = that.m_frameNext);
                 return null;
                 }
 
@@ -145,6 +151,7 @@ public class xFutureRef
                 }
 
             m_future.complete(handle);
+
             return null;
             }
 
