@@ -3,9 +3,7 @@ package org.xvm.proto;
 import org.xvm.util.Notifier;
 import org.xvm.util.SimpleNotifier;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**

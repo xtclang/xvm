@@ -81,7 +81,6 @@ public class ServiceContext
             Frame frame = message.createFrame(this);
             if (frame != null)
                 {
-                frame.init();
                 return frame;
                 }
             message = f_queueMsg.poll();
@@ -138,7 +137,6 @@ public class ServiceContext
                     frame.m_iPC = iPCLast + 1;
                     frame.m_frameNext = null;
                     frame = m_frameCurrent;
-                    frame.init();
                     abOp = frame.f_aOp;
                     iPC = 0;
                     break;
@@ -178,30 +176,46 @@ public class ServiceContext
                     break;
 
                 case Op.R_EXCEPTION:
-                    Frame frameSrc = frame;
                     ExceptionHandle hException = frame.m_hException;
                     assert hException != null;
 
-                    iPC = frame.findGuard(hException);
-                    if (iPC >= 0)
+                    while (true)
                         {
-                        // handled exception; go to the handler
-                        break;
-                        }
+                        iPC = frame.findGuard(hException);
+                        if (iPC >= 0)
+                            {
+                            // handled exception; go to the handler
+                            m_frameCurrent = frame;
+                            abOp = frame.f_aOp;
+                            break;
+                            }
 
-                    // not handled by this frame
-                    frame = m_frameCurrent = frame.f_framePrev;
-                    if (frame != null)
-                        {
-                        // iPC == EXCEPTION
-                        frame.m_hException = hException;
-                        abOp = frame.f_aOp;
-                        break;
+                        // not handled by this frame
+                        Frame framePrev = frame.f_framePrev;
+                        if (framePrev == null)
+                            {
+                            // the frame is a synthetic "proto" frame; allow it to
+                            // process the exception
+                            if (frame.m_continuation != null)
+                                {
+                                frame.m_hException = hException;
+                                Frame frameNext = frame.m_continuation.get();
+                                if (frameNext != null)
+                                    {
+                                    frame = m_frameCurrent = frameNext;
+                                    abOp = frame.f_aOp;
+                                    iPC = frame.m_iPC;
+                                    break;
+                                    }
+                                return null;
+                                }
+                            // TODO: process unhandled exception
+                            Utils.log("\nUnhandled exception " + hException);
+                            return null;
+                            }
+                        frame = framePrev;
                         }
-
-                    // TODO: process unhandled exception
-                    System.out.println("Unhandled exception " + hException + " at " + frameSrc);
-                    return null;
+                    break;
 
                 case Op.R_WAIT:
                     m_frameCurrent = null;
@@ -362,7 +376,7 @@ public class ServiceContext
                         }
                     catch (Exception e) {}
                     }
-                else
+                else // has not finished yet, or completed exceptionally
                     {
                     cf.whenComplete((hR, x) ->
                         {

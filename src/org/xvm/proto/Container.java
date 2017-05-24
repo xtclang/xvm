@@ -103,7 +103,7 @@ public class Container
             f_contextMain.start("main");
 
             f_contextMain.sendInvoke1Request(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
-                .whenComplete((ah, x) ->
+                .whenComplete((r, x) ->
                     {
                     if (x != null)
                         {

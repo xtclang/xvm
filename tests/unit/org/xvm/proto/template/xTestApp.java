@@ -289,7 +289,7 @@ public class xTestApp extends xModule
                        -adapter.ensureValueConstantId(0), 0),
             new ISet(0, -adapter.ensureValueConstantId(0), -adapter.ensureValueConstantId(1)),
             new ISet(0, -adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(2)),
-                    new X_Print(0),
+            new X_Print(0),
 
             new Var(adapter.getClassTypeConstId("x:Int64")), // #1
             new IGet(0, -adapter.ensureValueConstantId(0), 1),
