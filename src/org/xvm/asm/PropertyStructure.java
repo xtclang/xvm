@@ -40,6 +40,31 @@ public class PropertyStructure
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public PropertyConstant getIdentityConstant()
+        {
+        return (PropertyConstant) super.getIdentityConstant();
+        }
+
+    /**
+     * @return the TypeConstant representing the data type of the property value
+     */
+    public TypeConstant getType()
+        {
+        return m_type;
+        }
+
+    /**
+     * Configure the property's type.
+     *
+     * @param type  the type constant that indicates the property's type
+     */
+    public void setType(TypeConstant type)
+        {
+        assert type != null;
+        m_type = type;
+        }
+
     /**
      * For a PropertyStructure whose type is unresolved, provide the type that the property will
      * be using. (If the PropertyStructure has a resolved type, this will fail.)
@@ -54,20 +79,6 @@ public class PropertyStructure
 
         ((UnresolvedTypeConstant) m_type).resolve(type);
         m_type = type;
-        }
-
-    @Override
-    public PropertyConstant getIdentityConstant()
-        {
-        return (PropertyConstant) super.getIdentityConstant();
-        }
-
-    /**
-     * @return the TypeConstant representing the data type of the property value
-     */
-    public TypeConstant getType()
-        {
-        return m_type;
         }
 
 

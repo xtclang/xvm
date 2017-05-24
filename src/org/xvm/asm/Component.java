@@ -2,9 +2,11 @@ package org.xvm.asm;
 
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -685,6 +687,7 @@ public abstract class Component
         int               nFlags  = Format.PROPERTY.ordinal() | access.FLAGS;
         PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null);
+        struct.setType(constType);
         addChild(struct);
 
         return struct;
@@ -964,6 +967,7 @@ public abstract class Component
                 // the two-byte FLAGS value (which is the start of the body) for a single component
                 n = (n << 8) | in.readUnsignedByte();
                 kid = Format.fromFlags(n).instantiate(this, pool.getConstant(readMagnitude(in)), n, null);
+                kid.disassemble(in);
                 }
             else
                 {
@@ -1149,7 +1153,21 @@ public abstract class Component
             child.assemble(out);
             }
 
-        child.assembleChildren(out);
+        // children nested under these siblings are length-encoded as a group
+        if (    child.m_childByName      != null && !child.m_childByName     .isEmpty() ||
+                child.m_methodByConstant != null && !child.m_methodByConstant.isEmpty()   )
+            {
+            ByteArrayOutputStream outNestedRaw = new ByteArrayOutputStream();
+            DataOutputStream outNestedData = new DataOutputStream(outNestedRaw);
+            child.assembleChildren(outNestedData);
+            byte[] abGrandChildren = outNestedRaw.toByteArray();
+            writePackedLong(out, abGrandChildren.length);
+            out.write(abGrandChildren);
+            }
+        else
+            {
+            writePackedLong(out, 0);
+            }
         }
 
     /**

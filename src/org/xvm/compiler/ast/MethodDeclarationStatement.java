@@ -1,19 +1,21 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.Component;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.compiler.*;
-
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.*;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;

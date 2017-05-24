@@ -34,6 +34,8 @@ public class MethodStructure
     protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId, ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
+        m_atypeParams  = constId.getRawParams();
+        m_atypeReturns = constId.getRawReturns();
         }
 
 
@@ -83,15 +85,12 @@ public class MethodStructure
         return (MethodConstant) super.getIdentityConstant();
         }
 
-    // TODO review section
-
     @Override
     protected void disassemble(DataInput in)
     throws IOException
         {
         super.disassemble(in);
-
-        m_type = (TypeConstant) getConstantPool().getConstant(readIndex(in));
+        // TODO params & returns .. m_type = (TypeConstant) getConstantPool().getConstant(readIndex(in));
         }
 
     @Override
@@ -99,7 +98,7 @@ public class MethodStructure
         {
         super.registerConstants(pool);
 
-        ((Constant) m_type).registerConstants(pool);
+        // TODO params & returns .. ((Constant) m_type).registerConstants(pool);
         }
 
     @Override
@@ -108,7 +107,7 @@ public class MethodStructure
         {
         super.assemble(out);
 
-        writePackedLong(out, m_type.getPosition());
+        // TODO params & returns .. writePackedLong(out, m_type.getPosition());
         }
 
 
@@ -116,9 +115,10 @@ public class MethodStructure
     public String getDescription()
         {
         return new StringBuilder()
-                .append("type=")
-                .append(m_type)
-                .append(", ")
+// TODO
+//                .append("type=")
+//                .append(m_type)
+//                .append(", ")
                 .append(super.getDescription())
                 .toString();
         }
@@ -127,7 +127,12 @@ public class MethodStructure
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * TODO this seems wrong like it was copied from Property
+     * The return value types.
      */
-    private TypeConstant m_type;
+    private TypeConstant[] m_atypeReturns;
+
+    /**
+     * The parameter types.
+     */
+    private TypeConstant[] m_atypeParams;
     }
