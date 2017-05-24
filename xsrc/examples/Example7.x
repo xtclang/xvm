@@ -107,3 +107,63 @@ bar(foo1());    // VAR Int              ; #1
 
 
 Array<@future Int> a = ...
+
+// ----
+
+Int[] ai = new Int[10](_->foo());
+
+Svc svc = new MyService();
+FutureRef<Int>[] afi  = new FutureRef<Int>[10](_->svc.inc());       // COMPILER ERROR
+FutureRef<Int>[] afi  = new FutureRef<Int>[10](_->&(svc.inc()));    // no disagreement
+
+SameIfaceAsSvcButNotNecessarilyAService iface = svc;
+FutureRef<Int>[] afi  = new FutureRef<Int>[10](_->&(iface.inc()));  // COMPILER ERROR?
+
+@future Int j = svc.inc()
+FutureRef<Int> rj = &j;
+
+af1[0] = j;
+af1[0] = rj;
+
+//
+
+@Soft Image    img = render();
+SoftRef<Image> ref = &img;
+
+// we liked this one
+SoftRef<Image> ref2 = (&render()).as(SoftRef<Image>);
+
+//
+
+    Void foo()
+        {
+        @future Int i = svc.foo();
+        (&i).whenComplete(()->...)
+        i = 4;      // either completes or throws a runtime error
+
+        FutureRef<Int> fi = &foo(); // same as: FutureRef<Int> fi = (&foo()).as(FutureRef<Int>);
+
+        SoftRef<Image> ref2 = (&render()).as(SoftRef<Image>);
+
+        @future Int[] afi1 = new @future Int[10];    // left does not match right
+        (@future Int)[] afi2 = new (@future Int)[10];
+        @future Int[] afi2 = foo();
+        FutureRef<Int[]> raf = &afi2;
+        }
+
+// question is: "how do we move between the '@future' and the FutureRef?"
+// question is: "how do you get an '@future' from a FutureRef?"
+
+@future Int i = svc.foo();
+FutureRef<Int> fi = &i;                 // this is OK
+@future Int i2 = fi;    // is this OK?
+
+@future Int i3 = fi.createContinuation(i -> i);
+
+
+// what should this do?
+
+@future Int i = svc.foo();
+
+@future Int j = i;
+

@@ -96,26 +96,26 @@ public class PackageStructure
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constModule = (ModuleConstant) getConstantPool().getConstant(readIndex(in));
-
         super.disassemble(in);
+
+        m_constModule = (ModuleConstant) getConstantPool().getConstant(readIndex(in));
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constModule = (ModuleConstant) pool.register(m_constModule);
-
         super.registerConstants(pool);
+
+        m_constModule = (ModuleConstant) pool.register(m_constModule);
         }
 
     @Override
     protected void assemble(DataOutput out)
             throws IOException
         {
-        writePackedLong(out, m_constModule == null ? -1 : m_constModule.getPosition());
-
         super.assemble(out);
+
+        writePackedLong(out, m_constModule == null ? -1 : m_constModule.getPosition());
         }
 
     @Override

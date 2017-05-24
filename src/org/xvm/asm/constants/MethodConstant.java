@@ -94,11 +94,27 @@ public class MethodConstant
         }
 
     /**
+     * @return the method's return types
+     */
+    public TypeConstant[] getRawReturns()
+        {
+        return m_aconstReturns;
+        }
+
+    /**
      * @return the method's parameter types
      */
     public List<TypeConstant> getParams()
         {
         return Arrays.asList(m_aconstParams);
+        }
+
+    /**
+     * @return the method's parameter types
+     */
+    public TypeConstant[] getRawParams()
+        {
+        return m_aconstParams;
         }
 
 

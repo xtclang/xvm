@@ -327,6 +327,8 @@ public class ModuleStructure
     protected void disassemble(DataInput in)
             throws IOException
         {
+        super.disassemble(in);
+
         final int cVers = readMagnitude(in);
         if (cVers > 0)
             {
@@ -337,13 +339,13 @@ public class ModuleStructure
                 setVer.add((VersionConstant) pool.getConstant(readMagnitude(in)));
                 }
             }
-
-        super.disassemble(in);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
+        super.registerConstants(pool);
+
         final TreeSet<VersionConstant> setOld = m_setVer;
         if (!setOld.isEmpty())
             {
@@ -356,22 +358,20 @@ public class ModuleStructure
 
             m_setVer = setNew;
             }
-
-        super.registerConstants(pool);
         }
 
     @Override
     protected void assemble(DataOutput out)
             throws IOException
         {
+        super.assemble(out);
+
         final TreeSet<VersionConstant> setVer = m_setVer;
         writePackedLong(out, setVer.size());
         for (VersionConstant ver : setVer)
             {
             writePackedLong(out, ver.getPosition());
             }
-
-        super.assemble(out);
         }
 
     @Override

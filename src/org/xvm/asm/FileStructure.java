@@ -120,7 +120,7 @@ public class FileStructure
     public FileStructure(InputStream in, boolean fAutoClose, boolean fLazy)
             throws IOException
         {
-        super(null);
+        super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
         fLazyDeser = fLazy;
         try
