@@ -927,6 +927,38 @@ public abstract class Component
         return new CompositeComponent(this, matches);
         }
 
+    /**
+     * Obtain a list of the child components contained within this Component. Note that this is a
+     * fairly expensive operation, because each potential child must be evaluated for inclusion as
+     * if it were requested explicitly via {@link #getChild(String)} or {@link #getChild(Constant)}.
+     *
+     * @return a list of the component's children
+     */
+    public List<Component> children()
+        {
+        List<Component> list = new ArrayList<>();
+
+        for (String sName : getChildByNameMap().keySet())
+            {
+            Component child = getChild(sName);
+            if (child != null)
+                {
+                list.add(child);
+                }
+            }
+
+        for (MethodConstant constId : getMethodByConstantMap().keySet())
+            {
+            Component child = getChild(constId);
+            if (child != null)
+                {
+                list.add(child);
+                }
+            }
+
+        return list;
+        }
+
     protected List<Component> selectMatchingSiblings(Component firstSibling)
         {
         AssemblerContext ctxAsm  = getFileStructure().getContext();

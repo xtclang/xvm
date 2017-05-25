@@ -167,7 +167,7 @@ public class SimulatedLinkerContext
                     IdentityConstant constIdParent = constIdPresent.getNamespace();
                     while (constIdPresent != null)
                         {
-                        if (constId.equals(constIdParent))
+                        if (constId.equals(constIdParent)) // TODO fix eventually - what if the parent is a composite?
                             {
                             present.put(constId, true);
                             return true;

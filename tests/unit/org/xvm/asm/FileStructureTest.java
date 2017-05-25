@@ -122,18 +122,22 @@ public class FileStructureTest
 
         byte[] ab = out.toByteArray();
 
-        // TODO remove
-        System.out.println("file " + structfile + ":");
-        System.out.println(byteArrayToHexDump(ab, 16));
+        if (DEBUG)
+            {
+            System.out.println("file " + structfile + ":");
+            System.out.println(byteArrayToHexDump(ab, 16));
+            }
 
         FileStructure structfile2 = new FileStructure(new ByteArrayInputStream(ab));
         Assert.assertEquals(structfile.getModuleName(), structfile2.getModuleName());
 
-        // TODO remove
-        System.out.println("structfile:");
-        structfile.dump(new PrintWriter(System.out, true));
-        System.out.println("structfile2:");
-        structfile2.dump(new PrintWriter(System.out, true));
+        if (DEBUG)
+            {
+            System.out.println("structfile:");
+            structfile.dump(new PrintWriter(System.out, true));
+            System.out.println("structfile2:");
+            structfile2.dump(new PrintWriter(System.out, true));
+            }
 
         Assert.assertEquals(structfile, structfile2);
 
@@ -141,18 +145,22 @@ public class FileStructureTest
         structfile2.writeTo(out);
         byte[] ab2 = out.toByteArray();
 
-        // TODO remove
-        if (!Arrays.equals(ab, ab2))
+        if (DEBUG)
             {
-            System.out.println("DIFF! re-assembled " + structfile + ":");
-            System.out.println(byteArrayToHexDump(ab2, 16));
+            if (!Arrays.equals(ab, ab2))
+                {
+                System.out.println("DIFF! re-assembled " + structfile + ":");
+                System.out.println(byteArrayToHexDump(ab2, 16));
 
-            FileStructure structfile3 = new FileStructure(new ByteArrayInputStream(ab2));
-            System.out.println("structfile3:");
-            structfile3.dump(new PrintWriter(System.out, true));
-            Assert.assertEquals(structfile.getModuleName(), structfile3.getModuleName());
+                FileStructure structfile3 = new FileStructure(new ByteArrayInputStream(ab2));
+                System.out.println("structfile3:");
+                structfile3.dump(new PrintWriter(System.out, true));
+                Assert.assertEquals(structfile.getModuleName(), structfile3.getModuleName());
+                }
             }
 
         Assert.assertTrue(Arrays.equals(ab, ab2));
         }
+
+    static final boolean DEBUG = true;
     }

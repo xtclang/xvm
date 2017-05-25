@@ -186,7 +186,7 @@ NonGAPrefix:
     "beta"
     "rc"
 
-# note: EnumList is only valid (and is not actually optional) for the "enum" category, but that
+# note: EnumBody is only valid (and is not actually optional) for the "enum" category, but that
 # check can be deferred to a syntactic or semantic analysis phase
 # note: an empty body is rare, but does occur e.g. "package x import ..", and simple classes
 # with constructors specified in the type composition e.g. "const Point(Int x, Int y);"

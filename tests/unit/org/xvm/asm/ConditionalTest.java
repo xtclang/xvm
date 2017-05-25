@@ -106,5 +106,8 @@ public class ConditionalTest
 
         Assert.assertTrue(pkg.getChild("foo") == clz.getChild("foo"));
         Assert.assertTrue(pkg.getChild("foo") instanceof MultiMethodStructure);
+
+        Assert.assertTrue(method.getParent() instanceof MultiMethodStructure);
+        Assert.assertTrue(method.getParent().getParent() instanceof CompositeComponent);
         }
     }
