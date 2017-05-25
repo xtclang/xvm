@@ -10,6 +10,7 @@ import java.util.Arrays;
 
 import org.junit.Assert;
 import org.junit.Test;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;
@@ -139,6 +140,19 @@ public class FileStructureTest
         out = new ByteArrayOutputStream();
         structfile2.writeTo(out);
         byte[] ab2 = out.toByteArray();
+
+        // TODO remove
+        if (!Arrays.equals(ab, ab2))
+            {
+            System.out.println("DIFF! re-assembled " + structfile + ":");
+            System.out.println(byteArrayToHexDump(ab2, 16));
+
+            FileStructure structfile3 = new FileStructure(new ByteArrayInputStream(ab2));
+            System.out.println("structfile3:");
+            structfile3.dump(new PrintWriter(System.out, true));
+            Assert.assertEquals(structfile.getModuleName(), structfile3.getModuleName());
+            }
+
         Assert.assertTrue(Arrays.equals(ab, ab2));
         }
     }

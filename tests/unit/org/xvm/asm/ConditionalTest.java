@@ -5,8 +5,11 @@ import java.io.IOException;
 
 import java.util.Map;
 import java.util.Set;
+
 import junit.framework.Assert;
+
 import org.junit.Test;
+
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -83,7 +86,7 @@ public class ConditionalTest
         AnyCondition        condVB = pool.ensureAnyCondition(condV1, condV2);
         ModuleStructure     module = file.getModule();
         ClassStructure      clz    = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Util");
-        PackageStructure    pkg    = module.createPackage(Constants.Access.PUBLIC, "util");
+        PackageStructure    pkg    = module.createPackage(Constants.Access.PUBLIC, "Util");
         MethodStructure     method = clz.createMethod(false, Constants.Access.PUBLIC,
                                                       new TypeConstant[]{}, "foo", new TypeConstant[]{});
 
@@ -100,5 +103,8 @@ public class ConditionalTest
         method.setCondition(condVB);
 
         FileStructureTest.testFileStructure(file);
+
+        Assert.assertTrue(pkg.getChild("foo") == clz.getChild("foo"));
+        Assert.assertTrue(pkg.getChild("foo") instanceof MultiMethodStructure);
         }
     }

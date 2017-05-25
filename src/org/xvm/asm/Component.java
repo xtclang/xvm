@@ -901,7 +901,7 @@ public abstract class Component
         // 5) a number of children by that name, multiple conditions match - return a composite child
 
         // most common result: no child by that name
-        Component firstSibling = m_childByName.get(sName);
+        Component firstSibling = getChildByNameMap().get(sName);
         if (firstSibling == null)
             {
             return null;
@@ -1047,22 +1047,14 @@ public abstract class Component
      */
     protected void registerChildrenConstants(ConstantPool pool)
         {
-        ensureChildren();
-
-        if (m_childByName != null)
+        for (Component child : getChildByNameMap().values())
             {
-            for (Component child : m_childByName.values())
-                {
-                registerChildConstants(pool, child);
-                }
+            registerChildConstants(pool, child);
             }
 
-        if (m_methodByConstant != null)
+        for (Component child : getMethodByConstantMap().values())
             {
-            for (Component child : m_methodByConstant.values())
-                {
-                registerChildConstants(pool, child);
-                }
+            registerChildConstants(pool, child);
             }
         }
 
@@ -1095,30 +1087,23 @@ public abstract class Component
     protected void assembleChildren(DataOutput out)
             throws IOException
         {
-        int cKids = (m_childByName      != null ? m_childByName     .size() : 0)
-                  + (m_methodByConstant != null ? m_methodByConstant.size() : 0);
+        int cKids = getChildByNameMap().size() + getMethodByConstantMap().size();
         writePackedLong(out, cKids);
 
         if (cKids > 0)
             {
             int cActual = 0;
 
-            if (m_childByName != null)
+            for (Component child : getChildByNameMap().values())
                 {
-                for (Component child : m_childByName.values())
-                    {
-                    assembleChild(out, child);
-                    ++cActual;
-                    }
+                assembleChild(out, child);
+                ++cActual;
                 }
 
-            if (m_methodByConstant != null)
+            for (Component child : getMethodByConstantMap().values())
                 {
-                for (Component child : m_methodByConstant.values())
-                    {
-                    assembleChild(out, child);
-                    ++cActual;
-                    }
+                assembleChild(out, child);
+                ++cActual;
                 }
 
             assert cActual == cKids;
@@ -1166,8 +1151,11 @@ public abstract class Component
             }
 
         // children nested under these siblings are length-encoded as a group
-        if (    child.m_childByName      != null && !child.m_childByName     .isEmpty() ||
-                child.m_methodByConstant != null && !child.m_methodByConstant.isEmpty()   )
+        if (child.getChildByNameMap().isEmpty() && child.getMethodByConstantMap().isEmpty())
+            {
+            writePackedLong(out, 0);
+            }
+        else
             {
             ByteArrayOutputStream outNestedRaw = new ByteArrayOutputStream();
             DataOutputStream outNestedData = new DataOutputStream(outNestedRaw);
@@ -1175,10 +1163,6 @@ public abstract class Component
             byte[] abGrandChildren = outNestedRaw.toByteArray();
             writePackedLong(out, abGrandChildren.length);
             out.write(abGrandChildren);
-            }
-        else
-            {
-            writePackedLong(out, 0);
             }
         }
 
@@ -1191,20 +1175,13 @@ public abstract class Component
     protected void dumpChildren(PrintWriter out, String sIndent)
         {
         // go through each named and constant-identified child, and dump it, and its siblings
-        if (m_childByName != null)
+        for (Component child : getChildByNameMap().values())
             {
-            for (Component child : m_childByName.values())
-                {
-                dumpChild(child, out, sIndent);
-                }
+            dumpChild(child, out, sIndent);
             }
-
-        if (m_methodByConstant != null)
+        for (Component child : getMethodByConstantMap().values())
             {
-            for (Component child : m_methodByConstant.values())
-                {
-                dumpChild(child, out, sIndent);
-                }
+            dumpChild(child, out, sIndent);
             }
         }
 
@@ -1235,6 +1212,7 @@ public abstract class Component
         {
         Iterator<? extends XvmStructure> iter = null;
 
+        ensureChildren();
         if (m_childByName != null)
             {
             iter = m_childByName.values().iterator();
