@@ -499,7 +499,7 @@ public abstract class ConditionalConstant
                 // result is true
                 for (int iCond = 0; iCond < cConds; ++iCond)
                     {
-                    if ((nTest | (1L << iCond)) != 0)
+                    if ((nTest & (1L << iCond)) != 0)
                         {
                         // input is true, result is true
                         ++aResultTT[iCond];
@@ -516,7 +516,7 @@ public abstract class ConditionalConstant
                 // result is false
                 for (int iCond = 0; iCond < cConds; ++iCond)
                     {
-                    if ((nTest | (1L << iCond)) != 0)
+                    if ((nTest & (1L << iCond)) != 0)
                         {
                         // input is true, result is false
                         ++aResultTF[iCond];

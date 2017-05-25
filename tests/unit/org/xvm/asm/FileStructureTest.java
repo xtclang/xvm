@@ -113,7 +113,7 @@ public class FileStructureTest
 
     // ----- internal -----
 
-    public void testFileStructure(FileStructure structfile)
+    public static void testFileStructure(FileStructure structfile)
             throws IOException
         {
         ByteArrayOutputStream out = new ByteArrayOutputStream();

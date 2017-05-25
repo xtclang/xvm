@@ -129,6 +129,7 @@ public class SimulatedLinkerContext
             }
         }
 
+
     // ----- LinkerContext methods -----------------------------------------------------------------
 
     @Override
@@ -227,6 +228,8 @@ public class SimulatedLinkerContext
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    public static final SimulatedLinkerContext EMPTY = new SimulatedLinkerContext((ConditionalConstant) null);
 
     private ConditionalConstant                 cond;
     private Map<ConditionalConstant, Influence> influences  = Collections.EMPTY_MAP;

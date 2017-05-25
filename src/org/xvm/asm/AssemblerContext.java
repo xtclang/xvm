@@ -2,6 +2,8 @@ package org.xvm.asm;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -51,6 +53,9 @@ public class AssemblerContext
         // store the condition
         m_listCondition.add(condition);
 
+        // associated (and lazily instantiated) SimulatedLinkerContext
+        m_listLinkerContexts.add(null);
+
         // if recursing to a new depth for the first time (i.e. under the specific parent
         // condition), store off the modification count so that a subsequent pop() will restore the
         // current indicator value
@@ -79,6 +84,7 @@ public class AssemblerContext
 
         final int cNewDepth = cOldDepth - 1;
         final ConditionalConstant condition = m_listCondition.remove(cNewDepth);
+        m_listLinkerContexts.remove(cNewDepth);
 
         int cIndicators = m_listIndicators.size();
         if (cOldDepth > cIndicators)
@@ -191,6 +197,53 @@ public class AssemblerContext
             }
 
         throw new IllegalStateException("condition indicator " + nIndicator + " no longer exists");
+        }
+
+    /**
+     * @return a ConditionalConstant iff the AssemblerContext has any conditions registered, or null
+     */
+    public ConditionalConstant asCondition()
+        {
+        ArrayList<ConditionalConstant> list = m_listCondition;
+
+        if (list.isEmpty())
+            {
+            return null;
+            }
+
+        if (list.size() == 1)
+            {
+            return list.get(0);
+            }
+
+        return m_pool.ensureAllCondition(list.toArray(new ConditionalConstant[list.size()]));
+        }
+
+    /**
+     * @return a LinkerContext that corresponds to the current conditions specified in the
+     *         AssemblerContext
+     */
+    public SimulatedLinkerContext getLinkerContext()
+        {
+        ArrayList<SimulatedLinkerContext> list = m_listLinkerContexts;
+        if (list.isEmpty())
+            {
+            return SimulatedLinkerContext.EMPTY;
+            }
+
+        SimulatedLinkerContext ctx = list.get(list.size() - 1);
+        if (ctx == null)
+            {
+            ConditionalConstant cond = asCondition();
+            ctx = m_mapContextCache.get(cond);
+            if (ctx == null)
+                {
+                ctx = new SimulatedLinkerContext(cond);
+                m_mapContextCache.put(cond, ctx);   // for now, just cache them all
+                }
+            list.set(list.size() - 1, ctx);
+            }
+        return ctx;
         }
 
 
@@ -328,6 +381,16 @@ public class AssemblerContext
      * invocation.
      */
     private final ArrayList<Long> m_listIndicators = new ArrayList<>();
+
+    /**
+     * Corresponding LinkerContexts for each condition; lazily populated.
+     */
+    private final ArrayList<SimulatedLinkerContext> m_listLinkerContexts = new ArrayList<>();
+
+    /**
+     * A cache of various SimulatedLinkerContext objects created, keyed by ConditionalConstant.
+     */
+    private final Map<ConditionalConstant, SimulatedLinkerContext> m_mapContextCache = new HashMap<>();
 
     /**
      * Modification counter.
