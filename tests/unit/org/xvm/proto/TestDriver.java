@@ -9,14 +9,11 @@ public class TestDriver
     {
     public static void main(String[] asArg) throws Exception
         {
-        DaemonPool daemons = new DaemonPool("Worker");
-        daemons.start();
+        Runtime runtime = new Runtime();
 
-        Container container = new Container(daemons);
+        runtime.createContainer("TestApp");
 
-        container.start(container.f_constantPoolAdapter.ensureModuleConstant("TestApp"));
-
-        while (container.isRunning())
+        while (runtime.isIdle())
             {
             Thread.sleep(500);
             }

@@ -21,7 +21,7 @@ public class Var extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.f_aiIndex[I_SCOPE];
+        int iScope = frame.m_iScope;
         int nNextVar = frame.f_anNextVar[iScope];
 
         TypeComposition clazz = frame.f_context.f_types.ensureConstComposition(f_nClassConstId);

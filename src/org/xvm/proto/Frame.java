@@ -3,11 +3,11 @@ package org.xvm.proto;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.IntConstant;
+
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 import org.xvm.proto.template.IndexSupport;
-import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
@@ -25,8 +25,8 @@ import java.util.function.Supplier;
  */
 public class Frame
     {
-    // VarInfo semantics
     public final ServiceContext f_context;
+    // public final long[]         f_alXid;       // fiber Xid; the
     public final InvocationTemplate f_function;
     public final Op[]           f_aOp;          // the op-codes
     public final ObjectHandle   f_hTarget;      // target
@@ -34,15 +34,15 @@ public class Frame
     public final VarInfo[]      f_aInfo;        // optional info for var registers
     public final int[]          f_aiReturn;     // the indexes for return values
     public final Frame          f_framePrev;    // the caller's frame
-    public final int[]          f_aiIndex;      // frame indexes
-                                                // [0] - current scope index (starts with 0)
-                                                // [1] - current guard index (-1 if none)
     public final int[]          f_anNextVar;    // at index i, the "next available" var register for scope i
+
+    public int                  m_iScope;       // current scope index (starts with 0)
+    public int                  m_iGuard = -1;  // current guard index (-1 if none)
+    public int                  m_iPC;          // the program counter
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
     public ExceptionHandle      m_hException;   // an exception
     public FullyBoundHandle     m_hfnFinally;   // a "finally" method for the constructors
     public ObjectHandle         m_hFrameLocal;  // a "frame local" holding area; assigned by
-    public int                  m_iPC;          // the program counter
     public Frame                m_frameNext;    // the next frame to call
     public Supplier<Frame>      m_continuation; // a frame supplier to call after this frame returns
     public boolean              m_fBlocked;     // indicates that the frame execution must be blocked
@@ -67,7 +67,6 @@ public class Frame
         f_hTarget = hTarget;
         f_ahVar = ahVar; // [0] - target:private for methods
         f_aInfo = new VarInfo[ahVar.length];
-        f_aiIndex = new int[] {0, -1};
 
         int cScopes = function == null ? 1 : function.m_cScopes;
         f_anNextVar = new int[cScopes];
@@ -110,7 +109,7 @@ public class Frame
             {
             TypeComposition clzException = hException.f_clazz;
 
-            for (int iGuard = f_aiIndex[Op.I_GUARD]; iGuard >= 0; iGuard--)
+            for (int iGuard = m_iGuard; iGuard >= 0; iGuard--)
                 {
                 Guard guard = aGuard[iGuard];
 
@@ -125,8 +124,8 @@ public class Frame
                         clearAllScopes(nScope - 1);
 
                         // implicit "enter" with an exception variable introduction
-                        f_aiIndex[Op.I_SCOPE] = nScope;
-                        f_aiIndex[Op.I_GUARD] = iGuard - 1;
+                        m_iScope = nScope;
+                        m_iGuard = iGuard - 1;
 
                         int nNextVar = f_anNextVar[nScope - 1];
 

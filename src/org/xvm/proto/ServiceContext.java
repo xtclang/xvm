@@ -17,8 +17,11 @@ import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.LinkedList;
 import java.util.Queue;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import java.util.function.Supplier;
 
 /**
@@ -35,20 +38,27 @@ public class ServiceContext
 
     private final Queue<Message> f_queueMsg;
 
-    String m_sName; // the service name
+    final int f_nId; // the service id
+    final String f_sName; // the service name
     ServiceHandle m_hService;
 
     Frame m_frameCurrent;
     Queue<Frame> f_queueSuspended = new LinkedList<>(); // suspended fibers
 
+    // fiber id producer
+    AtomicInteger f_idProducer = new AtomicInteger();
+
     enum Status {Idle, Busy, ShuttingDown, Terminated}
-    volatile Status m_status;
+    volatile Status m_status = Status.Idle;
 
     final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
 
-    ServiceContext(Container container)
+    ServiceContext(Container container, String sName, int nId)
         {
         f_container = container;
+        f_sName = sName;
+        f_nId = nId;
+
         f_heapGlobal = container.f_heapGlobal;
         f_types = container.f_types;
         f_constantPool = container.f_constantPoolAdapter;
@@ -137,8 +147,8 @@ public class ServiceContext
                     if (nOps > 10)
                         {
                         // swap context
-                        m_frameCurrent = null;
                         frame.m_iPC = iPC;
+                        m_frameCurrent = null;
                         return frame;
                         }
 
@@ -211,9 +221,14 @@ public class ServiceContext
                         Frame framePrev = frame.f_framePrev;
                         if (framePrev == null)
                             {
-                            // the frame is a synthetic "proto" frame; allow it to
-                            // process the exception
-                            if (frame.m_continuation != null)
+                            // the frame is a synthetic "proto" frame;
+                            // it should process the exception
+                            if (frame.m_continuation == null)
+                                {
+                                // TODO: this should never happen
+                                Utils.log("\nProto-frame is missing the continuation: " + hException);
+                                }
+                            else
                                 {
                                 frame.m_hException = hException;
                                 Frame frameNext = frame.m_continuation.get();
@@ -224,11 +239,9 @@ public class ServiceContext
                                     iPC = frame.m_iPC;
                                     break;
                                     }
-                                return null;
                                 }
 
-                            // TODO: this should never happen
-                            Utils.log("\nProto frame is missing the continuation: " + hException);
+                            m_frameCurrent = null;
                             return null;
                             }
                         frame = framePrev;
@@ -236,24 +249,17 @@ public class ServiceContext
                     break;
 
                 case Op.R_REPEAT:
-                    m_frameCurrent = null;
                     frame.m_iPC = iPCLast;
+                    m_frameCurrent = null;
                     return frame;
 
                 case Op.R_BLOCK:
-                    m_frameCurrent = null;
                     frame.m_iPC = iPCLast + 1;
                     frame.m_fBlocked = true;
+                    m_frameCurrent = null;
                     return frame;
                 }
             }
-        }
-
-
-    @Override
-    public String toString()
-        {
-        return "Service(" + m_sName + ')';
         }
 
     // create a new frame that returns zero or one value into the specified slot
@@ -292,13 +298,6 @@ public class ServiceContext
         return frame;
         }
 
-    public ExceptionHandle start(String sServiceName)
-        {
-        m_sName = sServiceName;
-        m_status = Status.Idle;
-        return null;
-        }
-
     // ----- x:Service methods -----
 
     public boolean isContended()
@@ -318,7 +317,8 @@ public class ServiceContext
             {
             if (x != null)
                 {
-                f_container.f_daemons.removeService(this);
+                // the construction failed; we need to kill the service
+                f_container.removeServiceContext(context);
                 }
             });
         }
@@ -357,14 +357,10 @@ public class ServiceContext
         }
 
     // send and asynchronous property operation message
-    public CompletableFuture<Void> sendProperty10Request(ServiceContext context,
+    public void sendProperty10Request(ServiceContext context,
             PropertyTemplate property, ObjectHandle hValue, PropertyOperation10 op)
         {
-        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
-
-        context.addMessage(new PropertyOpRequest(this, property, hValue, 0, future, op));
-
-        return (CompletableFuture) future;
+        context.addMessage(new PropertyOpRequest(this, property, hValue, 0, null, op));
         }
 
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
@@ -430,6 +426,12 @@ public class ServiceContext
             }
         }
 
+    @Override
+    public String toString()
+        {
+        return "Service(" + f_sName + ')';
+        }
+
     public interface Message
         {
         Frame createFrame(ServiceContext context);
@@ -462,9 +464,9 @@ public class ServiceContext
             {
             Frame frame0 = context.createServiceEntryFrame(1);
 
-            xService template = (xService) f_constructor.getClazzTemplate();
+            xService service = (xService) f_constructor.getClazzTemplate();
 
-            int nResult = template.construct(frame0, f_constructor, f_clazz, f_ahArg, 0);
+            int nResult = service.constructSync(frame0, f_constructor, f_clazz, f_ahArg, 0);
             if (nResult == Op.R_CALL)
                 {
                 frame0.m_continuation = () ->
@@ -475,6 +477,7 @@ public class ServiceContext
                 return frame0.m_frameNext;
                 }
 
+            // can only be an exception
             sendResponse1(f_contextCaller, frame0, f_future);
             return null;
             }
