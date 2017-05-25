@@ -818,8 +818,8 @@ public abstract class TypeCompositionTemplate
     // ----- Op-code support: array operations -----
 
     // get a handle to an array for the specified class
-    public int createArrayStruct(Frame frame, TypeComposition clazz,
-                                             long cCapacity, int iReturn)
+    public int createArrayStruct(Frame frame, TypeComposition clzArray,
+                                 long cCapacity, int iReturn)
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
@@ -827,7 +827,7 @@ public abstract class TypeCompositionTemplate
             return Op.R_EXCEPTION;
             }
 
-        return frame.assignValue(iReturn, xArray.makeInstance(cCapacity));
+        return frame.assignValue(iReturn, xArray.makeInstance(clzArray, cCapacity));
         }
 
     // ----- debugging support -----

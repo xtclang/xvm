@@ -45,7 +45,7 @@ public class New_1G extends OpCallable
                 ClassHandle hClass = (ClassHandle) frame.getArgument(f_nTypeValue);
                 if (hClass == null)
                     {
-                    return R_WAIT;
+                    return R_REPEAT;
                     }
                 clzTarget = hClass.f_clazz;
                 }
@@ -58,7 +58,7 @@ public class New_1G extends OpCallable
                     new int[] {f_nArgValue}, constructor.getVarCount(), 1);
             if (ahVar == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             return template.isService() ?

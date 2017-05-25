@@ -1,8 +1,10 @@
 package org.xvm.proto;
 
-import java.util.Date;
+import java.sql.Timestamp;
+
 import java.util.Iterator;
 import java.util.Map;
+
 import java.util.function.BiFunction;
 
 /**
@@ -102,6 +104,7 @@ public abstract class Utils
             System.out.println();
             sMsg = sMsg.substring(1);
             }
-        System.out.println(new Date().toString() + " " + ServiceContext.getCurrentContext() + ": " + sMsg);
+        System.out.println(new Timestamp(System.currentTimeMillis())
+                + " " + ServiceContext.getCurrentContext() + ": " + sMsg);
         }
     }

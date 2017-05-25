@@ -29,10 +29,8 @@ public class Move extends Op
             ObjectHandle hValue = frame.getArgument(f_nFromValue);
             if (hValue == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
-
-            // TODO: validate the source/destination compatibility?
 
             return frame.assignValue(f_nToValue, hValue);
             }

@@ -33,7 +33,7 @@ public class PPostInc extends OpInvocable
             ObjectHandle hTarget = frame.getArgument(f_nTarget);
             if (hTarget == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;

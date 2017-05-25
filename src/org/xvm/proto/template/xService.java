@@ -42,7 +42,7 @@ public class xService
     @Override
     public void initDeclared()
         {
-        //    @atomic String serviceName;
+        // +  @atomic String serviceName;
         //    enum StatusIndicator {Idle, Busy, ShuttingDown, Terminated};
         //    @ro @atomic StatusIndicator statusIndicator;
         //    @ro @atomic CriticalSection? criticalSection;
@@ -55,7 +55,7 @@ public class xService
         //    @ro @atomic Boolean contended;
         //    @ro @atomic Int backlogDepth;
         //    Void yield();
-        //    Void invokeLater(function Void doLater());
+        // +  Void invokeLater(function Void doLater());
         //    @ro @atomic Int bytesReserved;
         //    @ro @atomic Int bytesAllocated;
         //    Void gc();
@@ -67,6 +67,8 @@ public class xService
         //    Void registerUnhandledExceptionNotification(function Void notify(Exception));
 
         ensurePropertyTemplate("serviceName", "x:String").makeAtomicRef();
+
+        ensureMethodTemplate("invokeLater", new String[] {"x:Function"}, VOID).markNative();
         }
 
     @Override
@@ -88,89 +90,27 @@ public class xService
         return hService;
         }
 
-    public int asyncConstruct(Frame frame, ConstructTemplate constructor,
-                                          TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
+    @Override
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle hArg, int iReturn)
         {
-        ServiceContext contextCur = frame.f_context;
-        ServiceContext contextNew = contextCur.f_container.createServiceContext();
+        ServiceHandle hService = (ServiceHandle) hTarget;
 
-        ExceptionHandle hException = contextNew.start(f_sName);
-
-        if (hException != null)
+        switch (method.f_sName)
             {
-            frame.m_hException = hException;
-            return Op.R_EXCEPTION;
-            }
-
-        CompletableFuture cfService =
-                contextCur.sendConstructRequest(contextNew, constructor, clazz, ahArg);
-        frame.forceValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
-        return Op.R_NEXT;
-        }
-
-    public int asyncInvoke1(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
-                                        ObjectHandle[] ahArg, int iReturn)
-        {
-        // TODO: validate that all the arguments are immutable or ImmutableAble
-        int cReturns = iReturn < 0 ? 0 : 1;
-
-        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendInvoke1Request(
-                hService.m_context, hFunction, ahArg, cReturns);
-
-        if (cReturns == 1)
-            {
-            return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
-            }
-
-        cfResult.whenComplete((r, x) ->
-            {
-            if (x != null)
+            case "invokeLater":
                 {
-                // TODO: call UnhandledExceptionNotification handler
-                Utils.log("\nUnhandled async invoke exception " + x + "\n  by " + hService);
-                }
-            });
-        return Op.R_NEXT;
-        }
-
-    public int asyncInvokeN(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
-                                        ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        // TODO: validate that all the arguments are immutable or ImmutableAble
-
-        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeNRequest(
-                hService.m_context, hFunction, ahArg, aiReturn.length);
-
-        int cReturns = aiReturn.length;
-        if (cReturns > 0)
-            {
-            for (int i = 0; i < cReturns; i++)
-                {
-                final int iRet = i;
-
-                CompletableFuture<ObjectHandle> cfReturn =
-                        cfResult.thenApply(ahResult -> ahResult[iRet]);
-
-                int nR = frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
-                if (nR == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
+                return hService.m_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE);
                 }
             }
-        else
-            {
-            cfResult.whenComplete((r, x) ->
-                {
-                if (x != null)
-                    {
-                    // TODO: call UnhandledExceptionNotification handler
-                    Utils.log("\nUnhandled async invoke exception " + x + "\n  by " + hService);
-                    }
-                });
-            }
+        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
+        }
 
-        return Op.R_NEXT;
+    @Override
+    public int invokeNative(Frame frame, ObjectHandle hTarget,
+                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+        {
+        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
         }
 
     @Override
@@ -274,6 +214,71 @@ public class xService
 
         throw new IllegalStateException("Invalid context");
         }
+
+    // ----- Service API -----
+
+    public int asyncConstruct(Frame frame, ConstructTemplate constructor,
+                                          TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
+        {
+        ServiceContext contextCur = frame.f_context;
+        ServiceContext contextNew = contextCur.f_container.createServiceContext();
+
+        ExceptionHandle hException = contextNew.start(f_sName);
+
+        if (hException != null)
+            {
+            frame.m_hException = hException;
+            return Op.R_EXCEPTION;
+            }
+
+        CompletableFuture cfService =
+                contextCur.sendConstructRequest(contextNew, constructor, clazz, ahArg);
+        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
+        }
+
+    public int asyncInvoke1(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
+                                        ObjectHandle[] ahArg, int iReturn)
+        {
+        // TODO: validate that all the arguments are immutable or ImmutableAble
+        int cReturns = iReturn < 0 ? 0 : 1;
+
+        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendInvoke1Request(
+                hService.m_context, hFunction, ahArg, cReturns);
+
+        return cReturns == 0 ? Op.R_NEXT :
+            frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        }
+
+    public int asyncInvokeN(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
+                                        ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        // TODO: validate that all the arguments are immutable or ImmutableAble
+
+        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeNRequest(
+                hService.m_context, hFunction, ahArg, aiReturn.length);
+
+        int cReturns = aiReturn.length;
+        if (cReturns > 0)
+            {
+            for (int i = 0; i < cReturns; i++)
+                {
+                final int iRet = i;
+
+                CompletableFuture<ObjectHandle> cfReturn =
+                        cfResult.thenApply(ahResult -> ahResult[iRet]);
+
+                int nR = frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
+                if (nR == Op.R_EXCEPTION)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+                }
+            }
+
+        return Op.R_NEXT;
+        }
+
+    // ----- ObjectHandle -----
 
     public static class ServiceHandle
             extends GenericHandle

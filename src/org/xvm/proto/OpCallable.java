@@ -78,7 +78,7 @@ public abstract class OpCallable extends Op
             hArg = frame.getArgument(nArgValue);
             if (hArg == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
             }
         catch (ExceptionHandle.WrapperException e)
@@ -118,7 +118,7 @@ public abstract class OpCallable extends Op
             ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.m_cVars, 1);
             if (ahVar == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             return frame.call1(methodSuper, frame.getThis(), ahVar, iReturn);

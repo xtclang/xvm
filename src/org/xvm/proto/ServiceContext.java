@@ -32,7 +32,8 @@ public class ServiceContext
     public final TypeSet f_types;
     public final ObjectHeap f_heapGlobal;
     public final ConstantPoolAdapter f_constantPool;
-    public final Queue<Message> f_queueMsg;
+
+    private final Queue<Message> f_queueMsg;
 
     String m_sName; // the service name
     ServiceHandle m_hService;
@@ -40,7 +41,7 @@ public class ServiceContext
     Frame m_frameCurrent;
     Queue<Frame> f_queueSuspended = new LinkedList<>(); // suspended fibers
 
-    enum Status {Idle, Busy, ShuttingDown, Terminated;};
+    enum Status {Idle, Busy, ShuttingDown, Terminated}
     volatile Status m_status;
 
     final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
@@ -70,6 +71,11 @@ public class ServiceContext
         m_hService = hService;
         }
 
+    public void addMessage(Message msg)
+        {
+        f_queueMsg.add(msg);
+        }
+
     // get a next frame ready for execution
     public Frame nextFiber()
         {
@@ -97,11 +103,30 @@ public class ServiceContext
     // return null iff there the context popped up all frames
     public Frame execute(Frame frame)
         {
+        int iPC = frame.m_iPC;
+        int iPCLast = iPC;
+
+        if (frame.m_fBlocked)
+            {
+            switch (frame.checkWaitingRegisters())
+                {
+                case Op.R_BLOCK:
+                    // there are still some "waiting" registers
+                    return frame;
+
+                case Op.R_EXCEPTION:
+                    iPC = Op.R_EXCEPTION;
+                    break;
+
+                case Op.R_NEXT:
+                    // proceed as is
+                    break;
+                }
+            }
+
         m_frameCurrent = frame;
         s_tloContext.set(this);
 
-        int iPC = frame.m_iPC;
-        int iPCLast = iPC;
         Op[] abOp = frame.f_aOp;
 
         for (int nOps = 0; true; nOps++)
@@ -117,15 +142,7 @@ public class ServiceContext
                         return frame;
                         }
 
-                    try
-                        {
-                        iPC = abOp[iPC].process(frame, iPCLast = iPC);
-                        }
-                    catch (RuntimeException e)
-                        {
-                        System.out.println("!!! frame " + frame); // TODO: remove
-                        throw e;
-                        }
+                    iPC = abOp[iPC].process(frame, iPCLast = iPC);
                     break;
 
                 case Op.R_NEXT:
@@ -209,17 +226,24 @@ public class ServiceContext
                                     }
                                 return null;
                                 }
-                            // TODO: process unhandled exception
-                            Utils.log("\nUnhandled exception " + hException);
+
+                            // TODO: this should never happen
+                            Utils.log("\nProto frame is missing the continuation: " + hException);
                             return null;
                             }
                         frame = framePrev;
                         }
                     break;
 
-                case Op.R_WAIT:
+                case Op.R_REPEAT:
                     m_frameCurrent = null;
                     frame.m_iPC = iPCLast;
+                    return frame;
+
+                case Op.R_BLOCK:
+                    m_frameCurrent = null;
+                    frame.m_iPC = iPCLast + 1;
+                    frame.m_fBlocked = true;
                     return frame;
                 }
             }
@@ -288,7 +312,7 @@ public class ServiceContext
         {
         CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
 
-        context.f_queueMsg.add(new ConstructRequest(this, constructor, clazz, future, ahArg));
+        context.addMessage(new ConstructRequest(this, constructor, clazz, future, ahArg));
 
         return future.whenComplete((r, x) ->
             {
@@ -303,9 +327,9 @@ public class ServiceContext
     public CompletableFuture<ObjectHandle> sendInvoke1Request(
             ServiceContext context, FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
         {
-        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+        CompletableFuture<ObjectHandle> future = cReturns == 0 ? null : new CompletableFuture<>();
 
-        context.f_queueMsg.add(new Invoke1Request(this, hFunction, ahArg, cReturns, future));
+        context.addMessage(new Invoke1Request(this, hFunction, ahArg, cReturns, future));
 
         return future;
         }
@@ -316,7 +340,7 @@ public class ServiceContext
         {
         CompletableFuture<ObjectHandle[]> future = new CompletableFuture<>();
 
-        context.f_queueMsg.add(new InvokeNRequest(this, hFunction, ahArg, cReturns, future));
+        context.addMessage(new InvokeNRequest(this, hFunction, ahArg, cReturns, future));
 
         return future;
         }
@@ -327,7 +351,7 @@ public class ServiceContext
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        context.f_queueMsg.add(new PropertyOpRequest(this, property, null, 1, future, op));
+        context.addMessage(new PropertyOpRequest(this, property, null, 1, future, op));
 
         return future;
         }
@@ -338,9 +362,22 @@ public class ServiceContext
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        context.f_queueMsg.add(new PropertyOpRequest(this, property, hValue, 0, future, op));
+        context.addMessage(new PropertyOpRequest(this, property, hValue, 0, future, op));
 
         return (CompletableFuture) future;
+        }
+
+    public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
+        {
+        sendInvoke1Request(this, hFunction, ahArg, 0);
+        return Op.R_NEXT;
+        }
+
+    public Frame callUnhandledExceptionHandler(Frame frame)
+        {
+        // TODO:
+        Utils.log("Unhandled exception: " + frame.m_hException);
+        return null;
         }
 
     // ----- helpers ------
@@ -349,49 +386,42 @@ public class ServiceContext
     public static <T> void sendResponse(ServiceContext context, ExceptionHandle hException,
                                  T returnValue, CompletableFuture<T> future)
         {
-        context.f_queueMsg.add(new Response(hException, returnValue, future));
+        context.addMessage(new Response(hException, returnValue, future));
         }
 
     // send zero or one results back to the caller
     protected static void sendResponse1(ServiceContext contextCaller,
-                                        Frame frame, int cReturns, CompletableFuture future)
+                                        Frame frame, CompletableFuture future)
         {
         if (frame.m_hException == null)
             {
-            if (cReturns == 0)
-                {
-                sendResponse(contextCaller, null, null, future);
-                }
-            else
-                {
-                CompletableFuture<ObjectHandle> cf =
-                        ((FutureHandle) frame.f_ahVar[0]).m_future;
+            CompletableFuture<ObjectHandle> cf =
+                    ((FutureHandle) frame.f_ahVar[0]).m_future;
 
-                if (cf.isDone() && !cf.isCompletedExceptionally())
+            if (cf.isDone() && !cf.isCompletedExceptionally())
+                {
+                // common path
+                try
                     {
-                    // common path
-                    try
+                    sendResponse(contextCaller, null, cf.get(), future);
+                    }
+                catch (Exception e) {}
+                }
+            else // has not finished yet, or completed exceptionally
+                {
+                cf.whenComplete((hR, x) ->
+                    {
+                    if (x == null)
                         {
-                        sendResponse(contextCaller, null, cf.get(), future);
+                        sendResponse(contextCaller, null, hR, future);
                         }
-                    catch (Exception e) {}
-                    }
-                else // has not finished yet, or completed exceptionally
-                    {
-                    cf.whenComplete((hR, x) ->
+                    else
                         {
-                        if (x == null)
-                            {
-                            sendResponse(contextCaller, null, hR, future);
-                            }
-                        else
-                            {
-                            ExceptionHandle hX = ((ExceptionHandle.WrapperException) x).
-                                    getExceptionHandle();
-                            sendResponse(contextCaller, hX, null, future);
-                            }
-                        });
-                    }
+                        ExceptionHandle hX = ((ExceptionHandle.WrapperException) x).
+                                getExceptionHandle();
+                        sendResponse(contextCaller, hX, null, future);
+                        }
+                    });
                 }
             }
         else
@@ -439,13 +469,13 @@ public class ServiceContext
                 {
                 frame0.m_continuation = () ->
                     {
-                    sendResponse1(f_contextCaller, frame0, 1, f_future);
+                    sendResponse1(f_contextCaller, frame0, f_future);
                     return null;
                     };
                 return frame0.m_frameNext;
                 }
 
-            sendResponse1(f_contextCaller, frame0, 1, f_future);
+            sendResponse1(f_contextCaller, frame0, f_future);
             return null;
             }
         }
@@ -483,9 +513,20 @@ public class ServiceContext
 
             frame0.m_continuation = () ->
                 {
-                sendResponse1(f_contextCaller, frame0, f_cReturns, f_future);
+                if (f_cReturns == 0)
+                    {
+                    if (frame0.m_hException != null)
+                        {
+                        return context.callUnhandledExceptionHandler(frame0);
+                        }
+                    }
+                else
+                    {
+                    sendResponse1(f_contextCaller, frame0, f_future);
+                    }
                 return null;
                 };
+
             return frame0.m_frameNext;
             }
         }
@@ -584,7 +625,8 @@ public class ServiceContext
         private final PropertyOperation f_op;
 
         public PropertyOpRequest(ServiceContext contextCaller, PropertyTemplate property,
-                ObjectHandle hValue, int cReturns, CompletableFuture<ObjectHandle> future, PropertyOperation op)
+                                 ObjectHandle hValue, int cReturns,
+                                 CompletableFuture<ObjectHandle> future, PropertyOperation op)
             {
             f_contextCaller = contextCaller;
             f_property = property;
@@ -594,32 +636,44 @@ public class ServiceContext
             f_op = op;
             }
 
-
         @Override
         public Frame createFrame(ServiceContext context)
             {
             int cReturns = f_cReturns;
 
-            Frame frame = context.createServiceEntryFrame(cReturns);
+            Frame frame0 = context.createServiceEntryFrame(cReturns);
 
-            int nResult =
-                    cReturns == 0
-                        ? ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_property, f_hValue)
-                    : f_hValue == null
-                        ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_property, 0)
-                        : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_property, f_hValue, 0);
-
-            if (nResult == Op.R_CALL)
+            if (cReturns == 0)
                 {
-                frame.m_continuation = () ->
+                int nResult =
+                        ((PropertyOperation10) f_op).invoke(frame0, context.m_hService, f_property, f_hValue);
+                if (nResult == Op.R_CALL)
                     {
-                    sendResponse1(f_contextCaller, frame, cReturns, f_future);
-                    return null;
-                    };
-                return frame.m_frameNext;
+                    return frame0.m_frameNext;
+                    }
+                if (nResult == Op.R_EXCEPTION)
+                    {
+                    return context.callUnhandledExceptionHandler(frame0);
+                    }
                 }
+            else
+                {
+                int nResult = f_hValue == null
+                        ? ((PropertyOperation01) f_op).invoke(frame0, context.m_hService, f_property, 0)
+                        : ((PropertyOperation11) f_op).invoke(frame0, context.m_hService, f_property, f_hValue, 0);
 
-            sendResponse1(f_contextCaller, frame, cReturns, f_future);
+                if (nResult == Op.R_CALL)
+                    {
+                    frame0.m_continuation = () ->
+                        {
+                        sendResponse1(f_contextCaller, frame0, f_future);
+                        return null;
+                        };
+                    return frame0.m_frameNext;
+                    }
+
+                sendResponse1(f_contextCaller, frame0, f_future);
+                }
             return null;
             }
         }
@@ -651,7 +705,7 @@ public class ServiceContext
                 }
             else
                 {
-                f_future.completeExceptionally(f_hException.m_exception);
+                f_future.completeExceptionally(f_hException.getException());
                 }
             return null;
             }

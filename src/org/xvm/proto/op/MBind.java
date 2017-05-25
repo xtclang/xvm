@@ -6,6 +6,7 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+
 import org.xvm.proto.template.xFunction;
 
 /**
@@ -34,7 +35,7 @@ public class MBind extends OpInvocable
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
             if (hTarget == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;

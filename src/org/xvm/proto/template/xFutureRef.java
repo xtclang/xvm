@@ -58,16 +58,12 @@ public class xFutureRef
                     ahArg[1] = x == null ? xNullable.NULL :
                                 ((ExceptionHandle.WrapperException) x).getExceptionHandle();
 
-                    // TODO: this is wrong; should be a new frame
-                    hNotify.call1(frame, ahArg, Frame.R_UNUSED);
+                    frame.f_context.callLater(hNotify, ahArg);
                     });
 
-                if (iReturn >= 0)
-                    {
-                    return frame.assignValue(iReturn, makeHandle(cf));
-                    }
-                return Op.R_NEXT;
+                return frame.assignValue(iReturn, makeHandle(cf));
             }
+
         return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }
 
@@ -160,9 +156,21 @@ public class xFutureRef
             {
             return "(" + f_clazz + ") " + (
                     m_future == null ?  "Unassigned" :
-                    m_future.isDone() ? "Completed" :
+                    m_future.isDone() ? "Completed: "  + toSafeString():
                                         "Not completed"
                     );
+            }
+
+        private String toSafeString()
+            {
+            try
+                {
+                return String.valueOf(m_future.get());
+                }
+            catch (Exception e)
+                {
+                return e.toString();
+                }
             }
         }
 

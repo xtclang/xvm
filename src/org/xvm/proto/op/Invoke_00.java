@@ -35,7 +35,7 @@ public class Invoke_00 extends OpInvocable
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
             if (hTarget == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;
@@ -50,9 +50,8 @@ public class Invoke_00 extends OpInvocable
 
             if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
-                xFunction.makeAsyncHandle(method).
+                return xFunction.makeAsyncHandle(method).
                         call1(frame, new ObjectHandle[]{hTarget}, Frame.R_UNUSED);
-                return iPC + 1;
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];

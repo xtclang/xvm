@@ -27,7 +27,7 @@ public class Throw extends Op
             frame.m_hException = (ExceptionHandle) frame.getArgument(f_nArgValue);
             if (frame.m_hException == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
             }
         catch (ExceptionHandle.WrapperException e)

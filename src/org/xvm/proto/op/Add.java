@@ -34,7 +34,7 @@ public class Add extends Op
 
             if (hTarget == null || hArg == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             return hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, f_nRetValue);

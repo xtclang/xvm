@@ -69,6 +69,8 @@ public interface IndexSupport
 
     static ExceptionHandle outOfRange(long lIndex, long cSize)
         {
-        return xException.makeHandle("Array index " + lIndex + " out of range 0.." + cSize);
+        return xException.makeHandle(lIndex < 0 ?
+                "Negative index: " + lIndex :
+                "Array index " + lIndex + " out of range 0.." + cSize);
         }
     }

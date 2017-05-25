@@ -31,15 +31,17 @@ public class IGet extends Op
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            if (hTarget == null)
+            long lIndex = frame.getIndex(f_nIndexValue);
+
+            if (hTarget == null || lIndex == -1)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
             return frame.assignValue(f_nRetValue,
-                    template.extractArrayValue(hTarget, frame.getIndex(f_nIndexValue)));
+                    template.extractArrayValue(hTarget, lIndex));
             }
         catch (ExceptionHandle.WrapperException e)
             {
