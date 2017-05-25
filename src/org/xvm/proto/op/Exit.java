@@ -17,7 +17,7 @@ public class Exit extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.f_aiIndex[I_SCOPE]--;
+        int iScope = frame.m_iScope--;
 
         frame.clearScope(iScope);
 

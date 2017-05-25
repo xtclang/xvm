@@ -9,8 +9,10 @@ import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Map;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * TODO: for now Container == SecureContainer
@@ -19,23 +21,27 @@ import java.util.Set;
  */
 public class Container
     {
-    final public DaemonPool f_daemons;
+    final public Runtime f_runtime;
     final public TypeSet f_types;
     final public ConstantPoolAdapter f_constantPoolAdapter;
     final public ObjectHeap f_heapGlobal;
-    final public ServiceContext f_contextMain; // the service context for the container itself
 
-    protected ModuleConstant m_constModule;
+    final protected ModuleConstant f_constModule;
 
-    final Set<ServiceContext> f_setServices = new HashSet<>();
+    // context id producer
+    final AtomicInteger f_idProducer = new AtomicInteger();
+    // service context -> id
+    final Map<ServiceContext, ServiceContext> f_mapServices = new ConcurrentHashMap<>();
 
-    public Container(DaemonPool daemons)
+    private ServiceContext m_contextMain; // the service context for the container itself
+
+    public Container(Runtime runtime, String sName)
         {
-        f_daemons = daemons;
+        f_runtime = runtime;
         f_constantPoolAdapter = new ConstantPoolAdapter();
         f_types = new TypeSet(f_constantPoolAdapter);
         f_heapGlobal = new ObjectHeap(f_constantPoolAdapter, f_types);
-        f_contextMain = createServiceContext();
+        f_constModule = f_constantPoolAdapter.ensureModuleConstant(sName);
 
         initTypes();
         }
@@ -62,57 +68,69 @@ public class Container
         // container.m_typeSet.dumpTemplates();
         }
 
-    public ServiceContext createServiceContext()
+    public ServiceContext createServiceContext(String sName)
         {
-        ServiceContext context = new ServiceContext(this);
+        ServiceContext context = new ServiceContext(this, sName, f_idProducer.getAndIncrement());
 
-        f_setServices.add(context);
-        f_daemons.addService(context);
+        f_mapServices.put(context, context);
+        f_runtime.f_daemons.addService(context);
 
         return context;
         }
 
     public void removeServiceContext(ServiceContext context)
         {
-        f_setServices.remove(context);
+        f_runtime.f_daemons.removeService(context);
+        f_mapServices.remove(context);
         }
 
-    public void start(ModuleConstant constModule)
+    public void start()
         {
-        if (m_constModule != null)
+        if (m_contextMain != null)
             {
             throw new IllegalStateException("Already started");
             }
 
-        m_constModule = constModule;
+        m_contextMain = createServiceContext("main");
 
         try
             {
-            String sModule = m_constModule.getName();
+            String sModule = f_constModule.getName();
             xModule module = (xModule) f_types.ensureTemplate(sModule);
 
             InvocationTemplate mtRun = module.getMethodTemplate("run", xModule.VOID, xModule.VOID);
             if (mtRun == null)
                 {
-                throw new IllegalArgumentException("Missing run() method for " + m_constModule);
+                throw new IllegalArgumentException("Missing run() method for " + f_constModule);
                 }
 
-            ModuleHandle hModule = (ModuleHandle) module.createConstHandle(m_constModule, f_heapGlobal);
             FunctionHandle hFunction = xFunction.makeHandle(mtRun);
+            ModuleHandle hModule = (ModuleHandle) module.createConstHandle(f_constModule, f_heapGlobal);
 
-            f_contextMain.start("main");
-
-            f_contextMain.sendInvoke1Request(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0);
+            m_contextMain.callLater(hFunction, new ObjectHandle[]{hModule});
             }
         catch (Exception e)
             {
-            throw new RuntimeException("failed to run: " + m_constModule, e);
+            throw new RuntimeException("failed to run: " + f_constModule, e);
             }
         }
 
-    public boolean isRunning()
+    public boolean isIdle()
         {
-        // TODO: consider all services
-        return f_contextMain.isContended() || !f_daemons.m_fWaiting;
+        for (ServiceContext context : f_mapServices.keySet())
+            {
+            if (context.isContended())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
+    public String toString()
+        {
+        return "Container: " + f_constModule.getName();
         }
     }

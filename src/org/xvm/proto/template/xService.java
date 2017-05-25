@@ -80,10 +80,11 @@ public class xService
     @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        ServiceHandle hService = new ServiceHandle(
-                f_clazzCanonical, f_clazzCanonical.ensureStructType(), frame.f_context);
+        ServiceContext context = frame.f_context;
 
-        frame.f_context.setService(hService);
+        ServiceHandle hService = new ServiceHandle(clazz, clazz.ensureStructType(), context);
+
+        context.setService(hService);
 
         setFieldValue(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
 
@@ -184,17 +185,8 @@ public class xService
             return super.setPropertyValue(frame, hTarget, property, hValue);
             }
 
-        CompletableFuture<Void> cfResult = frame.f_context.sendProperty10Request(
+        frame.f_context.sendProperty10Request(
                 hService.m_context, property, hValue, this::setPropertyValue);
-
-        cfResult.whenComplete((r, x) ->
-            {
-            if (x != null)
-                {
-                // TODO: call UnhandledExceptionNotification handler
-                Utils.log("\nUnhandled async setProperty exception " + x + "\n  by " + hService);
-                }
-            });
 
         return Op.R_NEXT;
         }
@@ -215,68 +207,26 @@ public class xService
         throw new IllegalStateException("Invalid context");
         }
 
-    // ----- Service API -----
-
-    public int asyncConstruct(Frame frame, ConstructTemplate constructor,
-                                          TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
+    @Override
+    public int construct(Frame frame, ConstructTemplate constructor,
+                         TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
-        ServiceContext contextCur = frame.f_context;
-        ServiceContext contextNew = contextCur.f_container.createServiceContext();
+        ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
 
-        ExceptionHandle hException = contextNew.start(f_sName);
+        CompletableFuture cfService = frame.f_context.sendConstructRequest(
+                contextNew, constructor, clazz, ahArg);
 
-        if (hException != null)
-            {
-            frame.m_hException = hException;
-            return Op.R_EXCEPTION;
-            }
-
-        CompletableFuture cfService =
-                contextCur.sendConstructRequest(contextNew, constructor, clazz, ahArg);
         return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
         }
 
-    public int asyncInvoke1(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
-                                        ObjectHandle[] ahArg, int iReturn)
+    // ----- Service API -----
+
+    public int constructSync(Frame frame, ConstructTemplate constructor,
+                             TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
-        // TODO: validate that all the arguments are immutable or ImmutableAble
-        int cReturns = iReturn < 0 ? 0 : 1;
-
-        CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendInvoke1Request(
-                hService.m_context, hFunction, ahArg, cReturns);
-
-        return cReturns == 0 ? Op.R_NEXT :
-            frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        return super.construct(frame, constructor, clazz, ahArg, iReturn);
         }
 
-    public int asyncInvokeN(Frame frame, ServiceHandle hService, FunctionHandle hFunction,
-                                        ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        // TODO: validate that all the arguments are immutable or ImmutableAble
-
-        CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeNRequest(
-                hService.m_context, hFunction, ahArg, aiReturn.length);
-
-        int cReturns = aiReturn.length;
-        if (cReturns > 0)
-            {
-            for (int i = 0; i < cReturns; i++)
-                {
-                final int iRet = i;
-
-                CompletableFuture<ObjectHandle> cfReturn =
-                        cfResult.thenApply(ahResult -> ahResult[iRet]);
-
-                int nR = frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
-                if (nR == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-                }
-            }
-
-        return Op.R_NEXT;
-        }
 
     // ----- ObjectHandle -----
 

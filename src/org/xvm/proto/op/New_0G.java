@@ -9,7 +9,6 @@ import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 
 import org.xvm.proto.template.xClass.ClassHandle;
-import org.xvm.proto.template.xService;
 
 /**
  * NEW_1G CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
@@ -54,10 +53,7 @@ public class New_0G extends OpCallable
 
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
 
-            return template.isService() ?
-                ((xService) template).
-                        asyncConstruct(frame, constructor, clzTarget, ahVar, f_nRetValue) :
-                template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
+            return template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

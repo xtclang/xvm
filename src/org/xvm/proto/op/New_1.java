@@ -8,8 +8,6 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 
-import org.xvm.proto.template.xService;
-
 /**
  * NEW_1 CONST-CONSTRUCT, rvalue-param, lvalue-return
  *
@@ -45,10 +43,7 @@ public class New_1 extends OpCallable
 
             TypeComposition clzTarget = template.f_clazzCanonical;
 
-            return template.isService() ?
-                ((xService) template).
-                        asyncConstruct(frame, constructor, clzTarget, ahVar, f_nRetValue) :
-                template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
+            return template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -131,7 +131,7 @@ public class xArray
                 ObjectHandle[] ahArg = new ObjectHandle[1];
                 ahArg[0] = xInt64.makeHandle(ai[0]);
 
-                // TODO: what if supplier is a "future" result
+                // TODO: what if supplier produces a "future" result
                 hSupplier.call1(frame, ahArg, Frame.R_FRAME);
                 Frame frame0 = frame.m_frameNext;
 
@@ -163,7 +163,6 @@ public class xArray
                         }
                     };
 
-//                frame.m_frameNext = frame0;
                 return Op.R_CALL;
                 }
             }

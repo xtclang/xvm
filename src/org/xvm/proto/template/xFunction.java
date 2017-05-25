@@ -8,6 +8,7 @@ import org.xvm.proto.*;
 
 import org.xvm.proto.template.xService.ServiceHandle;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 /**
@@ -347,9 +348,14 @@ public class xFunction
                 return super.call1Impl(frame, ahVar, iReturn);
                 }
 
-            xService service = (xService) m_invoke.getClazzTemplate();
+            // TODO: validate that all the arguments are immutable or ImmutableAble
+            int cReturns = iReturn == Frame.R_UNUSED ? 0 : 1;
 
-            return service.asyncInvoke1(frame, hService, this, ahVar, iReturn);
+            CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendInvoke1Request(
+                    hService.m_context, this, ahVar, cReturns);
+
+            return cReturns == 0 ? Op.R_NEXT :
+                frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
             }
 
         @Override
@@ -363,9 +369,35 @@ public class xFunction
                 return super.callNImpl(frame, ahVar, aiReturn);
                 }
 
-            xService service = (xService) m_invoke.getClazzTemplate();
+            // TODO: validate that all the arguments are immutable or ImmutableAble
 
-            return service.asyncInvokeN(frame, hService, this, ahVar, aiReturn);
+            int cReturns = aiReturn.length;
+
+            CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeNRequest(
+                    hService.m_context, this, ahVar, cReturns);
+
+            boolean fBlock = false;
+            if (cReturns > 0)
+                {
+                for (int i = 0; i < cReturns; i++)
+                    {
+                    final int iRet = i;
+
+                    CompletableFuture<ObjectHandle> cfReturn =
+                            cfResult.thenApply(ahResult -> ahResult[iRet]);
+
+                    int nR = frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
+                    if (nR == Op.R_EXCEPTION)
+                        {
+                        return Op.R_EXCEPTION;
+                        }
+
+                    // if any of the assignments block, we need to block it all
+                    fBlock |= nR == Op.R_BLOCK;
+                    }
+                }
+
+            return fBlock ? Op.R_BLOCK : Op.R_NEXT;
             }
         }
 

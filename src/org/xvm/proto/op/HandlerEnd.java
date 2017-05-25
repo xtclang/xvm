@@ -21,7 +21,7 @@ public class HandlerEnd extends Op
     public int process(Frame frame, int iPC)
         {
         // ++ Exit
-        int iScope = frame.f_aiIndex[I_SCOPE]--;
+        int iScope = frame.m_iScope--;
 
         frame.clearScope(iScope);
         // --
