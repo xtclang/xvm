@@ -29,12 +29,26 @@ public abstract class Op
     public static final int A_TYPE      = -MAX_CONST_ID - 9;   // this:type
     public static final int A_SUPER     = -MAX_CONST_ID - 10;  // super (function)
 
-    // return values from the process()
+    // return values from the Op.process() method
+
+    // execute the next op-code
     public static final int R_NEXT = -1;
+
+    // resume the previous frame execution
     public static final int R_RETURN = -2;
+
+    // process the exception placed in frame.m_hException
     public static final int R_EXCEPTION = -3;
+
+    // call the frame placed in frame.m_frameNext
     public static final int R_CALL = -4;
-    public static final int R_WAIT = -5;
+
+    // some registers are not ready for a read; yield and repeat the same op-code
+    public static final int R_REPEAT = -5;
+
+    // some assignments were deferred; yield and check the "waiting" registers before
+    // executing the next op-code
+    public static final int R_BLOCK = -6;
 
     // an stub for an op-code
     public static final Op[] STUB = new Op[] {Return_0.INSTANCE};

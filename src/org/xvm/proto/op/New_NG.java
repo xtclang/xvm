@@ -45,7 +45,7 @@ public class New_NG extends OpCallable
                 ClassHandle hClass = (ClassHandle) frame.getArgument(f_nTypeValue);
                 if (hClass == null)
                     {
-                    return R_WAIT;
+                    return R_REPEAT;
                     }
                 clzTarget = hClass.f_clazz;
                 }
@@ -57,7 +57,7 @@ public class New_NG extends OpCallable
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount(), 1);
             if (ahVar == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             return template.isService() ?

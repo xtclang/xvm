@@ -37,7 +37,7 @@ public class Call_10 extends OpCallable
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
             if (hArg == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             if (f_nFunctionValue < 0)
@@ -53,7 +53,7 @@ public class Call_10 extends OpCallable
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
             if (hFunction == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];

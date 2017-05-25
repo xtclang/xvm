@@ -40,7 +40,7 @@ public class New_N extends OpCallable
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount(), 1);
             if (ahVar == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             TypeComposition clzTarget = template.f_clazzCanonical;

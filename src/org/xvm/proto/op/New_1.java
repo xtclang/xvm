@@ -1,8 +1,13 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpCallable;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
+
 import org.xvm.proto.template.xService;
 
 /**
@@ -35,7 +40,7 @@ public class New_1 extends OpCallable
                     new int[] {f_nArgValue}, constructor.getVarCount(), 1);
             if (ahVar == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             TypeComposition clzTarget = template.f_clazzCanonical;

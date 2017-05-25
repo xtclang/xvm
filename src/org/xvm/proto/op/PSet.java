@@ -34,7 +34,7 @@ public class PSet extends OpInvocable
             ObjectHandle hValue = frame.getArgument(f_nValue);
             if (hTarget == null || hValue == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;

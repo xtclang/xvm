@@ -31,15 +31,16 @@ public class IPreInc extends Op
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            if (hTarget == null)
+            long lIndex = frame.getIndex(f_nIndexValue);
+
+            if (hTarget == null || lIndex == -1)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            return template.invokePreInc(frame, hTarget,
-                    frame.getIndex(f_nIndexValue), f_nRetValue);
+            return template.invokePreInc(frame, hTarget,lIndex, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

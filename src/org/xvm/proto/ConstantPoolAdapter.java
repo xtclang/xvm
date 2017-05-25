@@ -68,7 +68,6 @@ public class ConstantPoolAdapter
         String sClzName = templateClazz.f_sName;
 
         ClassTypeConstant constClass = getClassTypeConstant(getClassTypeConstId(sClzName));
-        ClassTypeConstant constType  = getClassTypeConstant(getClassTypeConstId("x:Object")); // TODO
         PropertyConstant constProperty = m_constantPool.ensurePropertyConstant(constClass.getClassConstant(), sName);
 
         m_mapProperties.put(sClzName + '#' + sName, constProperty.getPosition());

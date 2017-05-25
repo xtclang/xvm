@@ -45,8 +45,8 @@ public class xInt64
         }
 
     @Override
-    public int createArrayStruct(Frame frame, TypeComposition clazz,
-                                             long cCapacity, int iReturn)
+    public int createArrayStruct(Frame frame, TypeComposition clzArray,
+                                 long cCapacity, int iReturn)
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {

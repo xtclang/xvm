@@ -102,14 +102,7 @@ public class Container
 
             f_contextMain.start("main");
 
-            f_contextMain.sendInvoke1Request(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0)
-                .whenComplete((r, x) ->
-                    {
-                    if (x != null)
-                        {
-                        Utils.log("Unhandled exception " + x);
-                        }
-                    });
+            f_contextMain.sendInvoke1Request(f_contextMain, hFunction, new ObjectHandle[]{hModule}, 0);
             }
         catch (Exception e)
             {

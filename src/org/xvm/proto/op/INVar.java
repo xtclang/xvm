@@ -43,7 +43,7 @@ public class INVar extends Op
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
             if (hArg == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             frame.introduceVar(nNextVar, clazz, constName.getValue(), Frame.VAR_STANDARD, hArg);

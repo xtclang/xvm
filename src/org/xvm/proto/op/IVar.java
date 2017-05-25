@@ -36,7 +36,7 @@ public class IVar extends Op
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
             if (hArg == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
             frame.introduceVar(nNextVar, clazz, null, Frame.VAR_STANDARD, hArg);
 

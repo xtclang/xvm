@@ -2,10 +2,17 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.Constants;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+
+import org.xvm.proto.Op;
+import org.xvm.proto.Type;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -225,6 +232,11 @@ public class xArray
     public static GenericArrayHandle makeInstance(long cCapacity)
         {
         return new GenericArrayHandle(INSTANCE.f_clazzCanonical, cCapacity);
+        }
+
+    public static GenericArrayHandle makeInstance(TypeComposition clzArray, long cCapacity)
+        {
+        return new GenericArrayHandle(clzArray, cCapacity);
         }
 
     // generic array handle

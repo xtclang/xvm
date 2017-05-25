@@ -349,9 +349,7 @@ public class xFunction
 
             xService service = (xService) m_invoke.getClazzTemplate();
 
-            service.asyncInvoke1(frame, hService, this, ahVar, iReturn);
-
-            return Op.R_NEXT;
+            return service.asyncInvoke1(frame, hService, this, ahVar, iReturn);
             }
 
         @Override
@@ -366,9 +364,8 @@ public class xFunction
                 }
 
             xService service = (xService) m_invoke.getClazzTemplate();
-            service.asyncInvokeN(frame, hService, this, ahVar, aiReturn);
 
-            return Op.R_NEXT;
+            return service.asyncInvokeN(frame, hService, this, ahVar, aiReturn);
             }
         }
 

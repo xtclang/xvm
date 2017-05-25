@@ -34,30 +34,28 @@ public class ISet extends Op
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
             ObjectHandle hArg = frame.getArgument(f_nValue);
-            if (hTarget == null || hArg == null)
+            long lIndex = frame.getIndex(f_nIndexValue);
+
+            if (hTarget == null || hArg == null || lIndex == -1)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            hException = template.assignArrayValue(hTarget,
-                    frame.getIndex(f_nIndexValue), hArg);
+            hException = template.assignArrayValue(hTarget, lIndex, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            hException = e.getExceptionHandle();
             }
 
         if (hException == null)
             {
             return iPC + 1;
             }
-        else
-            {
-            frame.m_hException = hException;
-            return R_EXCEPTION;
-            }
+
+        frame.m_hException = hException;
+        return R_EXCEPTION;
         }
     }

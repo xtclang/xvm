@@ -6,6 +6,8 @@ import org.xvm.asm.constants.IntConstant;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
+import org.xvm.proto.template.IndexSupport;
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
@@ -43,6 +45,8 @@ public class Frame
     public int                  m_iPC;          // the program counter
     public Frame                m_frameNext;    // the next frame to call
     public Supplier<Frame>      m_continuation; // a frame supplier to call after this frame returns
+    public boolean              m_fBlocked;     // indicates that the frame execution must be blocked
+                                                // until the "waiting" futures are completed
 
     public final static int R_UNUSED = -1; // an register index for an "unused return value"
     public final static int R_FRAME  = -2; // an register index for the "frame local value"
@@ -50,6 +54,7 @@ public class Frame
     public static final int VAR_STANDARD = 0;
     public static final int VAR_DYNAMIC_REF = 1;
     public static final int VAR_DEFERRABLE = 2;
+    public static final int VAR_WAITING = 3;
 
     protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
@@ -79,6 +84,7 @@ public class Frame
 
         f_aiReturn = aiReturn;
         }
+
     // a convenience method; ahVar - prepared variables
     public int call1(InvocationTemplate template, ObjectHandle hTarget,
                                  ObjectHandle[] ahVar, int iReturn)
@@ -266,7 +272,7 @@ public class Frame
             }
         }
 
-    // return Op.R_NEXT or Op.R_EXCEPTION
+    // return R_NEXT, R_EXCEPTION or R_BLOCK
     public int assignValue(int nVar, ObjectHandle hValue)
         {
         switch (nVar)
@@ -297,10 +303,32 @@ public class Frame
                         break;
 
                     case VAR_STANDARD:
-                        if (hValue instanceof FutureHandle && ((FutureHandle) hValue).f_fSynthetic)
+                        if (hValue instanceof FutureHandle)
                             {
-                            // defer the read
-                            info.m_nStyle = VAR_DEFERRABLE;
+                            FutureHandle hFuture = (FutureHandle) hValue;
+                            if (hFuture.f_fSynthetic)
+                                {
+                                if (hFuture.m_future.isDone())
+                                    {
+                                    try
+                                        {
+                                        hValue = hFuture.get();
+                                        }
+                                    catch (ExceptionHandle.WrapperException e)
+                                        {
+                                        m_hException = e.getExceptionHandle();
+                                        return Op.R_EXCEPTION;
+                                        }
+                                    }
+                                else
+                                    {
+                                    // mark the register as "waiting for a result",
+                                    // blocking the next op-code from being executed
+                                    f_ahVar[nVar] = hFuture;
+                                    info.m_nStyle = VAR_WAITING;
+                                    return Op.R_BLOCK;
+                                    }
+                                }
                             }
                         break;
                     }
@@ -310,6 +338,47 @@ public class Frame
             }
         }
 
+    public int checkWaitingRegisters()
+        {
+        ExceptionHandle hException = null;
+
+        VarInfo[] aInfo = f_aInfo;
+        for (int i = 0, c = aInfo.length; i < c; i++)
+            {
+            VarInfo info = aInfo[i];
+
+            if (info != null && info.m_nStyle == VAR_WAITING)
+                {
+                FutureHandle hFuture = (FutureHandle) f_ahVar[i];
+                if (hFuture.m_future.isDone())
+                    {
+                    try
+                        {
+                        f_ahVar[i] = hFuture.get();
+                        }
+                    catch (ExceptionHandle.WrapperException e)
+                        {
+                        // use just the last exception
+                        hException = e.getExceptionHandle();
+                        }
+                    info.m_nStyle = VAR_STANDARD;
+                    }
+                else
+                    {
+                    return Op.R_BLOCK;
+                    }
+                }
+            }
+
+        m_fBlocked = false;
+
+        if (hException != null)
+            {
+            m_hException = hException;
+            return Op.R_EXCEPTION;
+            }
+        return Op.R_NEXT;
+        }
 
     // return the ObjectHandle, or null if the value is "pending future", or
     // throw if the async assignment has failed
@@ -334,6 +403,7 @@ public class Frame
                             FutureHandle hFuture = (FutureHandle) hValue;
                             if (hFuture.f_fSynthetic)
                                 {
+                                // this can return null, indicating a "pending future"
                                 return hFuture.get();
                                 }
                             }
@@ -377,6 +447,7 @@ public class Frame
     public long getIndex(int iArg)
             throws ExceptionHandle.WrapperException
         {
+        long lIndex;
         if (iArg >= 0)
             {
             JavaLong hLong = (JavaLong) getArgument(iArg);
@@ -384,12 +455,20 @@ public class Frame
                 {
                 return -1l;
                 }
-            return hLong.m_lValue;
+            lIndex = hLong.m_lValue;
+            }
+        else
+            {
+            IntConstant constant = (IntConstant)
+                    f_context.f_heapGlobal.f_constantPool.getConstantValue(-iArg);
+            lIndex = constant.getValue().getLong();
             }
 
-        IntConstant constant = (IntConstant)
-                f_context.f_heapGlobal.f_constantPool.getConstantValue(-iArg);
-        return constant.getValue().getLong();
+        if (lIndex < 0)
+            {
+            throw IndexSupport.outOfRange(lIndex, 0).getException();
+            }
+        return lIndex;
         }
 
     public void introduceVar(int nVar, TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)

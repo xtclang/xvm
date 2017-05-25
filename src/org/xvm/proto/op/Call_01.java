@@ -10,7 +10,7 @@ import org.xvm.proto.Utils;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
 /**
- * CALL_01 rvalue-function, lvalue-return  ; TODO: return value can be into the next available register
+ * CALL_01 rvalue-function, lvalue-return
  *
  * @author gg 2017.03.08
  */
@@ -47,7 +47,7 @@ public class Call_01 extends OpCallable
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
             if (hFunction == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             return hFunction.call1(frame, Utils.OBJECTS_NONE, f_nRetValue);

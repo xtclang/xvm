@@ -35,7 +35,7 @@ public class FBind extends OpInvocable
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
             if (hFunction == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             for (int i = 0, c = f_anParamIx.length; i < c; i++)
@@ -43,7 +43,7 @@ public class FBind extends OpInvocable
                 ObjectHandle hArg = frame.getArgument(f_anParamValue[i]);
                 if (hArg == null)
                     {
-                    return R_WAIT;
+                    return R_REPEAT;
                     }
                 hFunction = hFunction.bind(f_anParamIx[i], hArg);
                 }

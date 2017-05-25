@@ -43,7 +43,7 @@ public class Call_11 extends OpCallable
                 ObjectHandle hArg = frame.getArgument(f_nArgValue);
                 if (hArg == null)
                     {
-                    return R_WAIT;
+                    return R_REPEAT;
                     }
 
                 ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
@@ -57,7 +57,7 @@ public class Call_11 extends OpCallable
 
             if (hFunction == null || ahVars == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             return hFunction.call1(frame, ahVars, f_nRetValue);

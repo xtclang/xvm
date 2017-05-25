@@ -131,6 +131,7 @@ public class xTestApp extends xModule
             new X_Print(0),
             new X_Print(1),
             new X_Print(2),
+            new Return_0(),
             };
         ftLambda$1.m_cVars = 3;
 

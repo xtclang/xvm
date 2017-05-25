@@ -34,7 +34,7 @@ public class PostInc extends OpInvocable
                 ObjectHandle hTarget = frame.getArgument(f_nArgValue);
                 if (hTarget == null)
                     {
-                    return R_WAIT;
+                    return R_REPEAT;
                     }
 
                 return hTarget.f_clazz.f_template.

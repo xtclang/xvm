@@ -49,6 +49,10 @@ public class X_Print extends Op
                             sb.append("<deferred> ");
                             }
                         break;
+
+                    case Frame.VAR_WAITING:
+                        // must not happen
+                        throw new IllegalStateException();
                     }
 
                 if (info.f_sVarName != null)
@@ -61,7 +65,7 @@ public class X_Print extends Op
                     {
                     sb.append("<waiting>...");
                     Utils.log(sb.toString());
-                    return R_WAIT;
+                    return R_REPEAT;
                     }
                 sb.append(hValue);
                 }

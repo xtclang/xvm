@@ -51,7 +51,7 @@ public class Call_00 extends OpCallable
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
             if (hFunction == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             return hFunction.call1(frame, Utils.OBJECTS_NONE, Frame.R_UNUSED);

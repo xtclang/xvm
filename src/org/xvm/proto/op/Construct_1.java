@@ -32,7 +32,7 @@ public class Construct_1 extends OpCallable
             ObjectHandle[] ahVar = frame.getArguments(new int[]{0, f_nArgValue}, constructor.getVarCount(), 0);
             if (ahVar == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             frame.chainFinalizer(constructor.makeFinalizer(ahVar));

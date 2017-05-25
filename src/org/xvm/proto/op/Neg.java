@@ -30,7 +30,7 @@ public class Neg extends OpInvocable
             ObjectHandle hTarget = frame.getArgument(f_nArgValue);
             if (hTarget == null)
                 {
-                return R_WAIT;
+                return R_REPEAT;
                 }
 
             TypeCompositionTemplate template = hTarget.f_clazz.f_template;

@@ -1,8 +1,13 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpCallable;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
+
 import org.xvm.proto.template.xClass.ClassHandle;
 import org.xvm.proto.template.xService;
 
@@ -38,7 +43,7 @@ public class New_0G extends OpCallable
                 ClassHandle hClass = (ClassHandle) frame.getArgument(f_nTypeValue);
                 if (hClass == null)
                     {
-                    return R_WAIT;
+                    return R_REPEAT;
                     }
                 clzTarget = hClass.f_clazz;
                 }

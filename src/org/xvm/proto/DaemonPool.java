@@ -122,7 +122,7 @@ public class DaemonPool
                             }
                         catch (Throwable e)
                             {
-                            // TODO
+                            // TODO:
                             Utils.log("\nUnhandled exception: " + e);
                             e.printStackTrace(System.out);
                             System.exit(-1);
@@ -137,7 +137,7 @@ public class DaemonPool
             }
         catch (Throwable e)
             {
-            e.printStackTrace(); // TODO:
+            e.printStackTrace();
             System.exit(1);
             }
 
