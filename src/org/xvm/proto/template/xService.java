@@ -127,7 +127,7 @@ public class xService
             if (x != null)
                 {
                 // TODO: call UnhandledExceptionNotification handler
-                Utils.log("\nUnhandled exception " + x + "\n  by " + hService);
+                Utils.log("\nUnhandled async invoke exception " + x + "\n  by " + hService);
                 }
             });
         return Op.R_NEXT;
@@ -151,7 +151,8 @@ public class xService
                 CompletableFuture<ObjectHandle> cfReturn =
                         cfResult.thenApply(ahResult -> ahResult[iRet]);
 
-                if (frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn)) < 0)
+                int nR = frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
+                if (nR == Op.R_EXCEPTION)
                     {
                     return Op.R_EXCEPTION;
                     }
@@ -164,7 +165,7 @@ public class xService
                 if (x != null)
                     {
                     // TODO: call UnhandledExceptionNotification handler
-                    Utils.log("\nUnhandled exception " + x + "\n  by " + hService);
+                    Utils.log("\nUnhandled async invoke exception " + x + "\n  by " + hService);
                     }
                 });
             }
@@ -251,7 +252,7 @@ public class xService
             if (x != null)
                 {
                 // TODO: call UnhandledExceptionNotification handler
-                Utils.log("\nUnhandled exception " + x + "\n  by " + hService);
+                Utils.log("\nUnhandled async setProperty exception " + x + "\n  by " + hService);
                 }
             });
 

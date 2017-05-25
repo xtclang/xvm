@@ -319,8 +319,11 @@ public abstract class TypeCompositionTemplate
 
             if (f_sSuper != null)
                 {
+                int of = f_sSuper.indexOf('<');
+
                 // this will recursively resolveDependencies on the super
-                m_templateSuper = f_types.ensureTemplate(f_sSuper);
+                m_templateSuper = f_types.ensureTemplate(
+                        of < 0 ? f_sSuper : f_sSuper.substring(0, of));
                 }
 
             resolveImplements();
@@ -571,7 +574,7 @@ public abstract class TypeCompositionTemplate
     public int invokeNative(Frame frame, ObjectHandle hTarget,
                             MethodTemplate method, ObjectHandle hArg, int iReturn)
         {
-        throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
+        throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
         }
 
     // invokeNative with N arguments and zero or one return values
@@ -580,7 +583,7 @@ public abstract class TypeCompositionTemplate
                             MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
         {
         // many classes don't have native methods
-        throw new IllegalStateException("Unknown method: " + f_sName + "." + method);
+        throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
         }
 
     // Add operation; place the result into the specified frame register

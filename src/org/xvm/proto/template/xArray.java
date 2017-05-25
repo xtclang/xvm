@@ -100,7 +100,8 @@ public class xArray
         // argument [0] is reserved for this:struct
         long cCapacity = ((JavaLong) ahVar[1]).getValue();
 
-        if (templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.R_FRAME) < 0)
+        int nR = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.R_FRAME);
+        if (nR == Op.R_EXCEPTION)
             {
             return Op.R_EXCEPTION;
             }
@@ -119,7 +120,7 @@ public class xArray
 
             if (cCapacity > 0)
                 {
-                int[] ai = new int[]{0};
+                int[] ai = new int[]{0}; // index holder
                 ObjectHandle[] ahArg = new ObjectHandle[1];
                 ahArg[0] = xInt64.makeHandle(ai[0]);
 
@@ -155,7 +156,7 @@ public class xArray
                         }
                     };
 
-                frame.m_frameNext = frame0;
+//                frame.m_frameNext = frame0;
                 return Op.R_CALL;
                 }
             }

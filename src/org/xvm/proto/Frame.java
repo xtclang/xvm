@@ -58,6 +58,7 @@ public class Frame
         f_framePrev = framePrev;
         f_function = function;
         f_aOp = function == null ? Op.STUB : function.m_aop;
+
         f_hTarget = hTarget;
         f_ahVar = ahVar; // [0] - target:private for methods
         f_aInfo = new VarInfo[ahVar.length];
@@ -66,22 +67,18 @@ public class Frame
         int cScopes = function == null ? 1 : function.m_cScopes;
         f_anNextVar = new int[cScopes];
 
-        f_aiReturn = aiReturn;
-        }
-
-    public void init()
-        {
-        if (f_hTarget == null)
+        if (hTarget == null)
             {
-            f_anNextVar[0] = f_function.m_cArgs;
+            f_anNextVar[0] = function == null ? 0 : function.m_cArgs;
             }
         else  // #0 - this:private
             {
-            f_ahVar[0]     = f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PRIVATE);
-            f_anNextVar[0] = 1 + f_function.m_cArgs;
+            f_ahVar[0]     = hTarget.f_clazz.ensureAccess(hTarget, Access.PRIVATE);
+            f_anNextVar[0] = 1 + function.m_cArgs;
             }
-        }
 
+        f_aiReturn = aiReturn;
+        }
     // a convenience method; ahVar - prepared variables
     public int call1(InvocationTemplate template, ObjectHandle hTarget,
                                  ObjectHandle[] ahVar, int iReturn)
