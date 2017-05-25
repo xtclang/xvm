@@ -86,7 +86,14 @@ public class ClassStructure
     public List<Map.Entry<CharStringConstant, TypeConstant>> getTypeParamsAsList()
         {
         final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
-        return map == null ? Collections.EMPTY_LIST : map.asList();
+        if (map == null || map.isEmpty())
+            {
+            return Collections.EMPTY_LIST;
+            }
+
+        List<Map.Entry<CharStringConstant, TypeConstant>> list = map.asList();
+        assert (list = Collections.unmodifiableList(list)) != null;
+        return list;
         }
 
     /**

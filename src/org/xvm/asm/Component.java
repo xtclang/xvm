@@ -869,12 +869,7 @@ public abstract class Component
             return firstSibling;
             }
 
-        AssemblerContext ctx     = getFileStructure().getContext();
-        List<Component>  matches = new ArrayList<>();
-
-        // TODO see which siblings match, i.e. they have to be children of "this" and they have to
-        //      match the constId and they have to have conditions that match the assembly context
-
+        List<Component>  matches = selectMatchingSiblings(firstSibling);
         if (matches.isEmpty())
             {
             return null;
@@ -918,12 +913,7 @@ public abstract class Component
             return firstSibling;
             }
 
-        AssemblerContext ctx     = getFileStructure().getContext();
-        List<Component>  matches = new ArrayList<>();
-
-        // TODO see which siblings match, i.e. they have to be children of "this" and they have to
-        //      match the constId and they have to have conditions that match the assembly context
-
+        List<Component>  matches = selectMatchingSiblings(firstSibling);
         if (matches.isEmpty())
             {
             return null;
@@ -937,6 +927,28 @@ public abstract class Component
         return new CompositeComponent(this, matches);
         }
 
+    protected List<Component> selectMatchingSiblings(Component firstSibling)
+        {
+        AssemblerContext ctxAsm  = getFileStructure().getContext();
+        LinkerContext    ctxLink = ctxAsm == null ? null : ctxAsm.getLinkerContext();
+        List<Component>  matches = null;
+
+        // see which siblings will be present based on what has been required in the current
+        // assembler context
+        for (Component eachSibling = firstSibling; eachSibling != null; eachSibling = eachSibling.m_sibling)
+            {
+            if (ctxLink == null || eachSibling.isPresent(ctxLink))
+                {
+                if (matches == null)
+                    {
+                    matches = new ArrayList<>();
+                    }
+                matches.add(eachSibling);
+                }
+            }
+
+        return matches == null ? Collections.EMPTY_LIST : matches;
+        }
 
     /**
      * Read zero or more child components from the DataInput stream. For a given identity, there may
@@ -1330,6 +1342,18 @@ public abstract class Component
 
         out.writeShort(m_nFlags);
         writePackedLong(out, m_constId.getPosition());
+        }
+
+    @Override
+    public ConditionalConstant getCondition()
+        {
+        return m_cond;
+        }
+
+    @Override
+    protected void setCondition(ConditionalConstant condition)
+        {
+        m_cond = condition;
         }
 
     /**

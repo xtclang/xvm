@@ -40,13 +40,13 @@ public class ListMap<K,V>
         }
 
     /**
-     * Obtain a read-only list of entries.
+     * Obtain a list of entries.
      *
      * @return the entries of the map in a List
      */
     public List<Entry<K,V>> asList()
         {
-        return Collections.unmodifiableList(m_list);
+        return m_list;
         }
 
     /**
