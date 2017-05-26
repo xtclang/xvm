@@ -7,11 +7,23 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.Compiler;
+
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.ErrorList;
+import org.xvm.compiler.Parser;
+import org.xvm.compiler.Source;
+import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;
 
@@ -111,8 +123,19 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-
     // ----- internal -----
+
+    public static FileStructure createFileStructure(String sCode)
+        {
+        Source                   source   = new Source(sCode);
+        ErrorList                errlist  = new ErrorList(10);
+        Parser                   parser   = new Parser(source, errlist);
+        List<Statement>          stmts    = parser.parseSource().getStatements();
+        TypeCompositionStatement module   = (TypeCompositionStatement) stmts.get(stmts.size() - 1);
+        Compiler                 compiler = new Compiler(new BuildRepository(), module, errlist);
+        Assert.assertTrue(errlist.getSeriousErrorCount() == 0);
+        return compiler.generateInitialFileStructure();
+        }
 
     public static void testFileStructure(FileStructure structfile)
             throws IOException
