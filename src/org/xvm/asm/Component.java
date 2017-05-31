@@ -89,6 +89,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public abstract class Component
         extends XvmStructure
+        implements Documentable
     {
     // ----- constructors --------------------------------------------------------------------------
 

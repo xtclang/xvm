@@ -4,6 +4,7 @@ package org.xvm.compiler;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import java.net.IDN;
 import java.util.Iterator;
 
 import java.util.NoSuchElementException;
@@ -1833,13 +1834,17 @@ public class Lexer
                 }
             }
 
-        // TODO should this check if it is a reserved word?
+        // check if it is a reserved word
+        if (Token.Id.valueByText(sName) != null)
+            {
+            return false;
+            }
 
         return true;
         }
 
     /**
-     * Validate the specified RFC1035 label. TODO internationalization support
+     * Validate the specified RFC1035 label.
      *
      * @param sName  the RFC1035 label
      *
@@ -1848,6 +1853,17 @@ public class Lexer
     public static boolean isValidRFC1035Label(String sName)
         {
         if (sName == null)
+            {
+            return false;
+            }
+
+        // internationalization support; see https://tools.ietf.org/html/rfc5894
+        // convert the label to an ASCII label
+        try
+            {
+            sName = IDN.toASCII(sName);
+            }
+        catch (IllegalArgumentException e)
             {
             return false;
             }
@@ -1896,23 +1912,23 @@ public class Lexer
             return false;
             }
 
-        boolean fIdentifierAllowed = true;
-        for (int i = 0; i < cNames; ++i)
+        // the first simple name must be a valid identifier
+        if (!isValidIdentifier(asName[0]))
             {
-            final String s = asName[i];
-            if (fIdentifierAllowed)
-                {
-                if (isValidIdentifier(s))
-                    {
-                    continue;
-                    }
-                else
-                    {
-                    fIdentifierAllowed = false;
-                    }
-                }
+            return false;
+            }
 
-            if (!isValidRFC1035Label(s))
+        // the identifier must be followed by a domain name, which is composed of at least two
+        // RFC1035 labels
+        if (cNames == 2)
+            {
+            return false;
+            }
+
+        // check the optional domain name
+        for (int i = 1; i < cNames; ++i)
+            {
+            if (!isValidRFC1035Label(asName[i]))
                 {
                 return false;
                 }

@@ -6,7 +6,9 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 
+import org.xvm.asm.ModuleStructure;
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -18,6 +20,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
@@ -108,6 +111,9 @@ public class TypeCompositionStatement
      * wrap the parsed type composition into a statement block, this method takes a Statement
      * instead of a TypeCompositionStatement, but the idea is the same: the argument to this method
      * should be an object that was returned from {@link org.xvm.compiler.Parser#parseSource()}.
+     * <p/>
+     * This method is used to combine multiple files that were parsed independently into a single
+     * parse tree -- a single "AST" for an entire module.
      *
      * @param stmt  a statement returned from {@link org.xvm.compiler.Parser#parseSource()}
      */
@@ -133,15 +139,115 @@ public class TypeCompositionStatement
      * @return  a new FileStructure for this module, with the module, packages, and classes
      *          registered
      */
-    public FileStructure createModuleStructure(ErrorListener errorList)
+    public FileStructure createModuleStructure(ErrorListener errs)
         {
-        assert category.getId() == Token.Id.MODULE;
-        assert getComponent() == null;
+        assert category.getId() == Token.Id.MODULE;     // it has to be a module!
+        assert condition == null;                       // module cannot be conditional
+        assert getComponent() == null;                  // it can't already have been created!
 
+        // validate the module name
+        String sName = getName();
+        if (!isValidQualifiedModule(sName))
+            {
+            errs.log(Severity.ERROR, Compiler.MODULE_BAD_NAME, new Object[] {sName}, source,
+                    qualified.get(0).getStartPosition(), qualified.get(qualified.size()-1).getEndPosition());
+            throw new CompilerException("unable to create module with illegal name: " + sName);
+            }
+
+        // create the FileStructure and "this" ModuleStructure
         FileStructure struct = new FileStructure(getName());
-        setStructure(struct.getModule());
+        ModuleStructure module = struct.getModule();
+        setStructure(module);
 
-        super.registerStructures(null, errorList);
+        // validate modifiers
+        if (modifiers != null && !modifiers.isEmpty())
+            {
+            boolean fFoundPublic = false;
+            for (int i = 0, c = modifiers.size(); i < c; ++i)
+                {
+                Token token = modifiers.get(i);
+                switch (token.getId())
+                    {
+                    case PUBLIC:
+                        if (fFoundPublic)
+                            {
+                            errs.log(Severity.ERROR, Compiler.DUPLICATE_MODIFIER, new Object[] {token.getId().TEXT},
+                                    source, token.getStartPosition(), token.getEndPosition());
+                            }
+                        else
+                            {
+                            fFoundPublic = true;
+                            }
+                        break;
+
+                    case PROTECTED:
+                    case PRIVATE:
+                    case STATIC:
+                        errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, new Object[] {token.getId().TEXT},
+                                source, token.getStartPosition(), token.getEndPosition());
+                        break;
+
+                    default:
+                        throw new IllegalStateException("token=" + token);
+                    }
+                }
+            }
+
+        // type parameters are not permitted
+        disallowTypeParams(errs);
+
+        // constructor parameters are not permitted unless they have default values
+        requireConstructorParamValues(errs);
+
+        // validate composition
+        boolean fAlreadyExtends = false;
+        for (Composition composition : this.composition)
+            {
+            switch (composition.getKeyword().getId())
+                {
+                case EXTENDS:
+                    // only one extends is allowed
+                    if (fAlreadyExtends)
+                        {
+                        Token token = composition.getKeyword();
+                        errs.log(Severity.ERROR, Compiler.MULTIPLE_EXTENDS, new Object[] {composition},
+                                source, token.getStartPosition(), token.getEndPosition());
+                        }
+                    else
+                        {
+                        fAlreadyExtends = true;
+                        }
+                    break;
+
+                case DELEGATES:
+                case IMPLEMENTS:
+                case INCORPORATES:
+                    // these are all OK; other checks will be done after the types are resolved
+                    break;
+
+                case IMPORT:
+                case IMPORT_EMBED:
+                case IMPORT_REQ:
+                case IMPORT_WANT:
+                case IMPORT_OPT:
+                case INTO:
+                    // "import" composition not allowed for modules (only used by packages)
+                    // "into" not allowed (only used by traits & mixins)
+                    Token token = composition.getKeyword();
+                    errs.log(Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, new Object[] {composition},
+                            source, token.getStartPosition(), token.getEndPosition());
+                    break;
+                }
+            }
+
+        if (doc != null)
+            {
+            module.setDocumentation(extractDocumentation(doc));
+            }
+
+        super.registerStructures(null, errs);
+
+        // TODO validate any constructor parameters and their default values, and transfer the info to the constructor
 
         return struct;
         }
@@ -242,6 +348,74 @@ public class TypeCompositionStatement
             }
 
         super.registerStructures(parent, errs);
+        }
+
+    private void disallowTypeParams(ErrorListener errs)
+        {
+        // type parameters are not permitted
+        if (typeParams != null && !typeParams.isEmpty())
+            {
+            // note: currently no way to determine the location of the parameters
+            // Parameter paramFirst = typeParams.get(0);
+            // Parameter paramLast  = typeParams.get(typeParams.size() - 1);
+
+            Token tokFirst = category == null ? name : category;
+            Token tokLast  = name == null ? category : name;
+            errs.log(Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED, null,
+                    getSource(), tokFirst.getStartPosition(), tokLast.getEndPosition());
+            }
+        }
+
+    private void disallowConstructorParams(ErrorListener errs)
+        {
+        // constructor parameters are not permitted
+        if (constructorParams != null && !constructorParams.isEmpty())
+            {
+            // note: currently no way to determine the location of the parameters
+            // Parameter paramFirst = constructorParams.get(0);
+            // Parameter paramLast  = constructorParams.get(constructorParams.size() - 1);
+
+            Token tokFirst = category == null ? name : category;
+            Token tokLast  = name == null ? category : name;
+            errs.log(Severity.ERROR, Compiler.CONSTRUCTOR_PARAMS_UNEXPECTED, null,
+                    getSource(), tokFirst.getStartPosition(), tokLast.getEndPosition());
+            }
+        }
+
+    private void requireConstructorParamValues(ErrorListener errs)
+        {
+        // constructor parameters are not permitted
+        if (constructorParams != null && !constructorParams.isEmpty())
+            {
+            for (Parameter param : constructorParams)
+                {
+                if (param.value == null)
+                    {
+                    // note: currently no way to determine the location of the parameter
+                    Token tokFirst = category == null ? name : category;
+                    Token tokLast  = name == null ? category : name;
+                    errs.log(Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_REQUIRED, null,
+                            getSource(), tokFirst.getStartPosition(), tokLast.getEndPosition());
+                    }
+                }
+            }
+        }
+
+    protected String extractDocumentation(Token token)
+        {
+        if (token == null)
+            {
+            return null;
+            }
+
+        String sDoc = (String) token.getValue();
+        if (sDoc == null || sDoc.length() <= 1 || sDoc.charAt(0) != '*')
+            {
+            return null;
+            }
+
+        // TODO - need to actually parse the documentation
+        return sDoc.substring(1);
         }
 
 

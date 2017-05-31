@@ -104,27 +104,59 @@ public class Compiler
     /**
      * Unknown fatal error.
      */
-    public static final String FATAL_ERROR          = "COMPILER-01";
+    public static final String FATAL_ERROR                          = "COMPILER-01";
     /**
      * Cannot nest a module.
      */
-    public static final String MODULE_UNEXPECTED    = "COMPILER-02";
+    public static final String MODULE_UNEXPECTED                    = "COMPILER-02";
     /**
      * Cannot nest a package.
      */
-    public static final String PACKAGE_UNEXPECTED   = "COMPILER-03";
+    public static final String PACKAGE_UNEXPECTED                   = "COMPILER-03";
     /**
      * Cannot nest a class etc.
      */
-    public static final String CLASS_UNEXPECTED     = "COMPILER-04";
+    public static final String CLASS_UNEXPECTED                     = "COMPILER-04";
     /**
      * Another property by the same name exists.
      */
-    public static final String PROP_DUPLICATE       = "COMPILER-05";
+    public static final String PROP_DUPLICATE                       = "COMPILER-05";
     /**
      * Cannot nest a property.
      */
-    public static final String PROP_UNEXPECTED = "COMPILER-04";
+    public static final String PROP_UNEXPECTED                      = "COMPILER-06"; // TODO update .properties file
+    /**
+     * Illegal module name.
+     */
+    public static final String MODULE_BAD_NAME                      = "COMPILER-07";
+    /**
+     * Duplicate modifier.
+     */
+    public static final String DUPLICATE_MODIFIER                   = "COMPILER-08";
+    /**
+     * Illegal modifier.
+     */
+    public static final String ILLEGAL_MODIFIER                     = "COMPILER-09";
+    /**
+     * More than one "extends" clause.
+     */
+    public static final String MULTIPLE_EXTENDS                     = "COMPILER-10";
+    /**
+     * Illegal / unexpected type parameters.
+     */
+    public static final String TYPE_PARAMS_UNEXPECTED               = "COMPILER-11";
+    /**
+     * Illegal / unexpected constructor parameters.
+     */
+    public static final String CONSTRUCTOR_PARAMS_UNEXPECTED        = "COMPILER-12";
+    /**
+     * Illegal / unexpected constructor parameters.
+     */
+    public static final String CONSTRUCTOR_PARAM_DEFAULT_REQUIRED   = "COMPILER-13";
+    /**
+     * Unexpected keyword.
+     */
+    public static final String KEYWORD_UNEXPECTED                   = "COMPILER-14";
 
 
     // ----- data members --------------------------------------------------------------------------
