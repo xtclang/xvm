@@ -16,14 +16,28 @@ public class Annotation
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public Annotation(NamedTypeExpression type, List<Expression> args)
+    public Annotation(NamedTypeExpression type, List<Expression> args, long lEndPos)
         {
-        this.type = type;
-        this.args = args;
+        this.type    = type;
+        this.args    = args;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return type.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -77,6 +91,7 @@ public class Annotation
 
     protected NamedTypeExpression type;
     protected List<Expression>    args;
+    protected long                lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(Annotation.class, "type", "args");
     }

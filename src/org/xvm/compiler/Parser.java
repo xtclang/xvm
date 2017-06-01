@@ -3344,7 +3344,8 @@ s     *
             args = parseArgumentList(true);
             }
 
-        return new Annotation(type, args);
+        long lEndPos = args == null ? type.getEndPosition() : getLastMatch().getEndPosition();
+        return new Annotation(type, args, lEndPos);
         }
 
     /**
@@ -4035,20 +4036,35 @@ s     *
         {
         if (peek().getId() == id)
             {
-            return current();
+            return m_tokenLastMatch = current();
             }
 
-        final Token token = m_token;
+        Token token = m_token;
         if (token.getId() == Id.IDENTIFIER && id.ContextSensitive && token.getValue().equals(id.TEXT))
             {
             // advance to the next token
             next();
 
             // return the previously "current" token
-            return token.convertToKeyword();
+            return m_tokenLastMatch = token.convertToKeyword();
             }
 
-        return token.peel(id, m_source);
+        token = token.peel(id, m_source);
+        if (token != null)
+            {
+            m_tokenLastMatch = token;
+            }
+        return token;
+        }
+
+    /**
+     * Return the most recently matched token.
+     *
+     * @return the token most recently returned from the match method
+     */
+    protected Token getLastMatch()
+        {
+        return m_tokenLastMatch;
         }
 
     /**
@@ -4285,6 +4301,11 @@ s     *
      * The "put back" token.
      */
     private Token m_tokenPutBack;
+
+    /**
+     * The most recently matched token.
+     */
+    private Token m_tokenLastMatch;
 
     /**
      * The current token.
