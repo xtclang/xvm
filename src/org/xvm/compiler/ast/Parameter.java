@@ -42,6 +42,18 @@ public class Parameter
         }
 
     @Override
+    public long getEndPosition()
+        {
+        return type.getStartPosition();
+        }
+
+    @Override
+    public long getStartPosition()
+        {
+        return value == null ? name.getEndPosition() : value.getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

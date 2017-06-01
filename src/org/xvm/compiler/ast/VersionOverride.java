@@ -26,9 +26,9 @@ public class VersionOverride
      *
      * @param version  the version required
      */
-    public VersionOverride(Version version)
+    public VersionOverride(Version version, long lStartPos, long lEndPos)
         {
-        this(null, version);
+        this(null, version, lStartPos, lEndPos);
         }
 
     /**
@@ -37,14 +37,29 @@ public class VersionOverride
      * @param verb     the overriding verb ("allow", "avoid", or "prefer")
      * @param version  the version associated with the verb
      */
-    public VersionOverride(Token verb, Version version)
+    public VersionOverride(Token verb, Version version, long lStartPos, long lEndPos)
         {
-        this.verb     = verb;
-        this.version = version;
+        this.verb      = verb;
+        this.version   = version;
+        this.lStartPos = lStartPos;
+        this.lEndPos   = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -87,6 +102,9 @@ public class VersionOverride
      * The version id.
      */
     protected Version version;
+
+    protected long lStartPos;
+    protected long lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "version");
     }

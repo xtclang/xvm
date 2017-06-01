@@ -171,6 +171,14 @@ public abstract class Composition
             }
 
         @Override
+        public long getEndPosition()
+            {
+            return condition == null && args != null && !args.isEmpty()
+                    ? args.get(args.size()-1).getEndPosition()
+                    : super.getEndPosition();
+            }
+
+        @Override
         protected Field[] getChildFields()
             {
             return CHILD_FIELDS;
@@ -229,10 +237,17 @@ public abstract class Composition
     public static class Delegates
             extends Composition
         {
-        public Delegates(Expression condition, Token keyword, TypeExpression type, Expression delegate)
+        public Delegates(Expression condition, Token keyword, TypeExpression type, Expression delegate, long lEndPos)
             {
             super(condition, keyword, type);
             this.delegate = delegate;
+            this.lEndPos  = lEndPos;
+            }
+
+        @Override
+        public long getEndPosition()
+            {
+            return lEndPos;
             }
 
         @Override
@@ -248,6 +263,7 @@ public abstract class Composition
             }
 
         protected Expression delegate;
+        protected long       lEndPos;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Delegates.class, "condition", "type", "delegate");
         }
@@ -270,10 +286,17 @@ public abstract class Composition
     public static class Import
             extends Composition
         {
-        public Import(Expression condition, Token keyword, NamedTypeExpression type, List<VersionOverride> vers)
+        public Import(Expression condition, Token keyword, NamedTypeExpression type, List<VersionOverride> vers, long lEndPos)
             {
             super(condition, keyword, type);
-            this.vers = vers;
+            this.vers    = vers;
+            this.lEndPos = lEndPos;
+            }
+
+        @Override
+        public long getEndPosition()
+            {
+            return lEndPos;
             }
 
         @Override
@@ -312,6 +335,7 @@ public abstract class Composition
             }
 
         protected List<VersionOverride> vers;
+        protected long                  lEndPos;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Import.class, "condition", "type", "vers");
         }

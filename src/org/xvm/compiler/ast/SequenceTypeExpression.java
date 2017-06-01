@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import org.xvm.compiler.Token;
 
 
 /**
@@ -14,13 +15,27 @@ public class SequenceTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SequenceTypeExpression(TypeExpression type)
+    public SequenceTypeExpression(TypeExpression type, Token tokDots)
         {
-        this.type = type;
+        this.type    = type;
+        this.lEndPos = tokDots.getEndPosition();
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return type.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -52,6 +67,7 @@ public class SequenceTypeExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression type;
+    protected long           lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SequenceTypeExpression.class, "type");
     }

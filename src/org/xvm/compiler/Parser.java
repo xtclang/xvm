@@ -303,8 +303,9 @@ public class Parser
                     TypeExpression type = parseTypeExpression();
                     expect(Id.L_PAREN);
                     Expression delegate = parseExpression();
-                    expect(Id.R_PAREN);
-                    compositions.add(new Composition.Delegates(exprCondition, keyword, type, delegate));
+                    Token tokEnd = expect(Id.R_PAREN);
+                    compositions.add(new Composition.Delegates(exprCondition, keyword, type,
+                            delegate, tokEnd.getEndPosition()));
                     }
                 while (match(Id.COMMA) != null);
                 fAny = true;
@@ -347,9 +348,11 @@ public class Parser
                         {
                                               keyword         = current();
                         List<Token>           qualifiedModule = parseQualifiedName();
-                        NamedTypeExpression   module          = new NamedTypeExpression(null, qualifiedModule, null);
+                        NamedTypeExpression   module          = new NamedTypeExpression(null,
+                                qualifiedModule, null);
                         List<VersionOverride> versionSpecs    = parseVersionRequirement(false);
-                        compositions.add(new Composition.Import(exprCondition, keyword, module, versionSpecs));
+                        compositions.add(new Composition.Import(exprCondition, keyword, module,
+                                versionSpecs, getLastMatch().getEndPosition()));
                         fAny = true;
                         }
                         break;
@@ -3081,8 +3084,7 @@ s     *
                     break;
 
                 case ELLIPSIS:
-                    expect(Id.ELLIPSIS);
-                    type = new SequenceTypeExpression(type);
+                    type = new SequenceTypeExpression(type, expect(Id.ELLIPSIS));
                     break;
 
                 default:
@@ -3730,7 +3732,8 @@ s     *
             }
 
         List<VersionOverride> overrides = new ArrayList<>();
-        overrides.add(new VersionOverride(ver));
+        Token                 tokVer    = getLastMatch();
+        overrides.add(new VersionOverride(ver, tokVer.getStartPosition(), tokVer.getEndPosition()));
 
         // this is a little more complicated parsing because the keywords are context sensitive
         Token verb;
@@ -3741,7 +3744,8 @@ s     *
             boolean first = true;
             while (first || match(Id.COMMA) != null)
                 {
-                overrides.add(new VersionOverride(verb, parseVersion(true)));
+                overrides.add(new VersionOverride(verb, parseVersion(true), verb.getStartPosition(),
+                        getLastMatch().getEndPosition()));
                 first = false;
                 }
             }
