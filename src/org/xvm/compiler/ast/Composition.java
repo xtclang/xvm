@@ -38,6 +38,21 @@ public abstract class Composition
         return type;
         }
 
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return condition == null ? keyword.getStartPosition() : condition.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return condition == null ? type.getEndPosition() : condition.getEndPosition();
+        }
+
     @Override
     protected Field[] getChildFields()
         {
@@ -92,6 +107,14 @@ public abstract class Composition
             {
             super(condition, keyword, type);
             this.args = args;
+            }
+
+        @Override
+        public long getEndPosition()
+            {
+            return condition == null && args != null && !args.isEmpty()
+                    ? args.get(args.size()-1).getEndPosition()
+                    : super.getEndPosition();
             }
 
         @Override

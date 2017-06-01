@@ -20,9 +20,14 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.xvm.compiler.Lexer.CR;
+import static org.xvm.compiler.Lexer.LF;
+import static org.xvm.compiler.Lexer.isLineTerminator;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
+import static org.xvm.compiler.Lexer.isWhitespace;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.parseDelimitedString;
 
 
 /**
@@ -401,7 +406,14 @@ public class TypeCompositionStatement
             }
         }
 
-    protected String extractDocumentation(Token token)
+    /**
+     * Parse a documentation comment, extracting the "body" of the documentation inside it.
+     *
+     * @param token  a documentation token
+     *
+     * @return the "body" of the documentation, as LF-delimited lines, without the leading "* "
+     */
+    public static String extractDocumentation(Token token)
         {
         if (token == null)
             {
@@ -414,8 +426,86 @@ public class TypeCompositionStatement
             return null;
             }
 
-        // TODO - need to actually parse the documentation
-        return sDoc.substring(1);
+        StringBuilder sb = new StringBuilder();
+        int nState = 0;
+        NextChar: for (char ch : sDoc.substring(1).toCharArray())
+            {
+            switch (nState)
+                {
+                case 0:         // leading whitespace expected
+                    if (!isLineTerminator(ch))
+                        {
+                        if (isWhitespace(ch))
+                            {
+                            continue NextChar;
+                            }
+
+                        if (ch == '*')
+                            {
+                            nState = 1;
+                            continue NextChar;
+                            }
+
+                        // weird - it's actual text to append; we didn't find the leading '*'
+                        break;
+                        }
+                    // fall through
+
+                case 1:         // ate the asterisk; expecting one space
+                    if (!isLineTerminator(ch))
+                        {
+                        if (isWhitespace(ch))
+                            {
+                            nState = 2;
+                            continue NextChar;
+                            }
+
+                        // weird - it's actual text to append; there was no ' ' after the '*'
+                        break;
+                        }
+                    // fall through
+
+                case 2:         // in the text
+                    if (isLineTerminator(ch))
+                        {
+                        if (sb.length() > 0)
+                            {
+                            sb.append(LF);
+                            }
+                        nState = ch == CR ? 3 : 0;
+                        continue NextChar;
+                        }
+                    break;
+
+                case 3:         // ate a CR, emitted an LF
+                    if (ch == LF || isWhitespace(ch))
+                        {
+                        nState = 0;
+                        continue NextChar;
+                        }
+
+                    if (ch == '*')
+                        {
+                        nState = 1;
+                        continue NextChar;
+                        }
+
+                    // weird - it's actual text to append; we didn't find the leading '*'
+                    break;
+                }
+
+            nState = 2;
+            sb.append(ch);
+            }
+
+        // trim any trailing whitespace & line terminators
+        int cch = sb.length();
+        while (isWhitespace(sb.charAt(cch-1)))
+            {
+            sb.setLength(cch-1);
+            }
+
+        return sb.toString();
         }
 
 

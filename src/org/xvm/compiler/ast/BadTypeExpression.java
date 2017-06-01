@@ -23,9 +23,22 @@ public class BadTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
     public boolean canComplete()
         {
         return false;
+        }
+
+    @Override
+    public long getStartPosition()
+        {
+        return nonType.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return nonType.getEndPosition();
         }
 
     @Override
