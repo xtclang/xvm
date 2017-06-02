@@ -18,22 +18,37 @@ public class ArrayTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ArrayTypeExpression(TypeExpression type, int dims)
+    public ArrayTypeExpression(TypeExpression type, int dims, long lEndPos)
         {
         this.type    = type;
         this.dims    = dims;
         this.indexes = null;
+        this.lEndPos = lEndPos;
         }
 
-    public ArrayTypeExpression(TypeExpression type, List<Expression> indexes)
+    public ArrayTypeExpression(TypeExpression type, List<Expression> indexes, long lEndPos)
         {
         this.type    = type;
         this.dims    = indexes.size();
         this.indexes = null;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return type.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -86,6 +101,7 @@ public class ArrayTypeExpression
     protected TypeExpression   type;
     protected int              dims;
     protected List<Expression> indexes;
+    protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ArrayTypeExpression.class, "type", "indexes");
     }

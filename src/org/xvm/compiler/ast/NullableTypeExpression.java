@@ -13,13 +13,27 @@ public class NullableTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public NullableTypeExpression(TypeExpression type)
+    public NullableTypeExpression(TypeExpression type, long lEndPos)
         {
-        this.type = type;
+        this.type    = type;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return type.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -51,6 +65,8 @@ public class NullableTypeExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression type;
+    protected long           lEndPos;
+
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NullableTypeExpression.class, "type");
     }

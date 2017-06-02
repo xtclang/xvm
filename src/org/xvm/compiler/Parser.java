@@ -346,13 +346,13 @@ public class Parser
                     case IMPORT_WANT:
                     case IMPORT_OPT:
                         {
-                                              keyword         = current();
-                        List<Token>           qualifiedModule = parseQualifiedName();
-                        NamedTypeExpression   module          = new NamedTypeExpression(null,
-                                qualifiedModule, null);
-                        List<VersionOverride> versionSpecs    = parseVersionRequirement(false);
+                                              keyword  = current();
+                        List<Token>           names    = parseQualifiedName();
+                        NamedTypeExpression   module   = new NamedTypeExpression(null, names, null,
+                                names.get(names.size()-1).getEndPosition());
+                        List<VersionOverride> versions = parseVersionRequirement(false);
                         compositions.add(new Composition.Import(exprCondition, keyword, module,
-                                versionSpecs, getLastMatch().getEndPosition()));
+                                versions, getLastMatch().getEndPosition()));
                         fAny = true;
                         }
                         break;
@@ -969,11 +969,12 @@ public class Parser
             }
         expect(Id.SEMICOLON);
 
-        // apply any annotations to the variable type
+        // apply any annotations to the variable type; "@A @B @C T" is "@A of (@B of (@C of T))"
         if (annotations != null)
             {
-            for (Annotation annotation : annotations)
+            for (int i = annotations.size() - 1; i >= 0; --i)
                 {
+                Annotation annotation = annotations.get(i);
                 type = new AnnotatedTypeExpression(annotation, type);
                 }
             }
@@ -2363,8 +2364,9 @@ s     *
 
                         case IDENTIFIER:
                             {
-                            Token                name   = expect(Id.IDENTIFIER);
-                            List<TypeExpression> params = null;
+                            Token                name    = expect(Id.IDENTIFIER);
+                            long                 lEndPos = name.getEndPosition();
+                            List<TypeExpression> params  = null;
                             if (peek().getId() == Id.COMP_LT)
                                 {
                                 try (SafeLookAhead attempt = new SafeLookAhead())
@@ -2373,6 +2375,7 @@ s     *
                                     if (attempt.isClean())
                                         {
                                         attempt.keepResults();
+                                        lEndPos = getLastMatch().getEndPosition();
                                         }
                                     else
                                         {
@@ -2381,7 +2384,7 @@ s     *
                                     }
                                 catch (CompilerException e) {}
                                 }
-                            expr = new DotNameExpression(expr, name, params);
+                            expr = new DotNameExpression(expr, name, params, lEndPos);
                             break;
                             }
 
@@ -2407,7 +2410,8 @@ s     *
                     if (match(Id.R_SQUARE) != null)
                         {
                         // "SomeClass[]"
-                        expr = new ArrayTypeExpression(expr.toTypeExpression(), 0);
+                        expr = new ArrayTypeExpression(expr.toTypeExpression(), 0,
+                                getLastMatch().getEndPosition());
                         }
                     else if (match(Id.COND) != null)
                         {
@@ -2419,7 +2423,8 @@ s     *
                             expect(Id.COND);
                             ++cExplicitDims;
                             }
-                        expr = new ArrayTypeExpression(expr.toTypeExpression(), cExplicitDims);
+                        expr = new ArrayTypeExpression(expr.toTypeExpression(), cExplicitDims,
+                                getLastMatch().getEndPosition());
                         }
                     else
                         {
@@ -2497,7 +2502,7 @@ s     *
 
                 List<Token> qname = parseQualifiedName();
                 qname.add(keyword);
-                return new NameExpression(qname, null);
+                return new NameExpression(qname, null, keyword.getEndPosition());
                 }
 
             default:
@@ -2509,24 +2514,26 @@ s     *
                 // test for single-param implicit lambda
                 if (peek().getId() == Id.LAMBDA)
                     {
-                    return new ImplicitLambdaExpression(
-                            Collections.singletonList(new NameExpression(names, null)),
+                    return new ImplicitLambdaExpression(Collections.singletonList(new NameExpression(
+                            names, null, names.get(names.size()-1).getEndPosition())),
                             expect(Id.LAMBDA), parseLambdaBody());
                     }
 
                 // parse qualified name
                 Token dot;
+                long  lEndPos = getLastMatch().getEndPosition();
                 while ((dot = match(Id.DOT)) != null)
                     {
                     Token name = match(Id.IDENTIFIER);
                     if (name == null)
                         {
                         putBack(dot);
-                        return new NameExpression(names, null);
+                        return new NameExpression(names, null, names.get(names.size()-1).getEndPosition());
                         }
                     else
                         {
                         names.add(name);
+                        lEndPos = name.getEndPosition();
                         }
                     }
 
@@ -2540,6 +2547,7 @@ s     *
                         if (attempt.isClean())
                             {
                             attempt.keepResults();
+                            lEndPos = getLastMatch().getEndPosition();
                             }
                         else
                             {
@@ -2558,7 +2566,7 @@ s     *
                             (peek().getId() == Id.L_CURLY ||
                             (peek().getId() == Id.L_PAREN && names.size() == 1 && names.get(0).getValue().equals("Tuple"))))
                         {
-                        return parseCustomLiteral(new NamedTypeExpression(null, names, params));
+                        return parseCustomLiteral(new NamedTypeExpression(null, names, params, lEndPos));
                         }
                     else
                         {
@@ -2566,7 +2574,7 @@ s     *
                         }
                     }
 
-                return new NameExpression(names, params);
+                return new NameExpression(names, params, lEndPos);
                 }
 
             case L_PAREN:
@@ -3066,16 +3074,16 @@ s     *
                             log(Severity.ERROR, ALL_OR_NO_DIMS, null, dim.getStartPosition(), dim.getEndPosition());
                             }
                         }
+                    long lEndPos = getLastMatch().getEndPosition();
                     type = dimExprs.isEmpty()
-                            ? new ArrayTypeExpression(type, cExplicitDims)
-                            : new ArrayTypeExpression(type, dimExprs);
+                            ? new ArrayTypeExpression(type, cExplicitDims, lEndPos)
+                            : new ArrayTypeExpression(type, dimExprs, lEndPos);
                     break;
 
                 case COND:
                     if (!peek().hasLeadingWhitespace())
                         {
-                        expect(Id.COND);
-                        type = new NullableTypeExpression(type);
+                        type = new NullableTypeExpression(type, expect(Id.COND).getEndPosition());
                         }
                     else
                         {
@@ -3145,7 +3153,7 @@ s     *
             putBack(name);
             }
 
-        return new FunctionTypeExpression(function, listReturn, listParam);
+        return new FunctionTypeExpression(function, listReturn, listParam, getLastMatch().getEndPosition());
         }
 
     /**
@@ -3165,7 +3173,7 @@ s     *
         Token immutable = match(Id.IMMUTABLE);
         List<Token> names = parseQualifiedName();
         List<TypeExpression> params = parseTypeParameterTypeList(false);
-        return new NamedTypeExpression(immutable, names, params);
+        return new NamedTypeExpression(immutable, names, params, getLastMatch().getEndPosition());
         }
 
     /**

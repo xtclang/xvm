@@ -18,15 +18,28 @@ public class NamedTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public NamedTypeExpression(Token immutable, List<Token> names, List<TypeExpression> params)
+    public NamedTypeExpression(Token immutable, List<Token> names, List<TypeExpression> params, long lEndPos)
         {
         this.immutable  = immutable;
         this.names      = names;
         this.paramTypes = params;
+        this.lEndPos    = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return immutable == null ? names.get(0).getStartPosition() : immutable.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -95,6 +108,7 @@ public class NamedTypeExpression
     protected Token                immutable;
     protected List<Token>          names;
     protected List<TypeExpression> paramTypes;
+    protected long                 lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "paramTypes");
     }
