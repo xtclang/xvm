@@ -3335,8 +3335,9 @@ s     *
             return null;
             }
 
-        NamedTypeExpression type = parseNamedTypeExpression();
-        List<Expression>    args = null;
+        long                lStartPos = getLastMatch().getStartPosition();
+        NamedTypeExpression type      = parseNamedTypeExpression();
+        List<Expression>    args      = null;
 
         // a trailing argument list is only assumed to be part of the annotation if there is
         // no whitespace separating the annotation from the arguments
@@ -3347,7 +3348,7 @@ s     *
             }
 
         long lEndPos = args == null ? type.getEndPosition() : getLastMatch().getEndPosition();
-        return new Annotation(type, args, lEndPos);
+        return new Annotation(type, args, lStartPos, lEndPos);
         }
 
     /**

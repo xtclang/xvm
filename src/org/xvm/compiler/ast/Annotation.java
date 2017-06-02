@@ -16,11 +16,12 @@ public class Annotation
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public Annotation(NamedTypeExpression type, List<Expression> args, long lEndPos)
+    public Annotation(NamedTypeExpression type, List<Expression> args, long lStartPos, long lEndPos)
         {
-        this.type    = type;
-        this.args    = args;
-        this.lEndPos = lEndPos;
+        this.type      = type;
+        this.args      = args;
+        this.lStartPos = lStartPos;
+        this.lEndPos   = lEndPos;
         }
 
 
@@ -91,6 +92,7 @@ public class Annotation
 
     protected NamedTypeExpression type;
     protected List<Expression>    args;
+    protected long                lStartPos;
     protected long                lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(Annotation.class, "type", "args");

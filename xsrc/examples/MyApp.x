@@ -9,25 +9,23 @@ module MyApp.xqiz.it
             prefer "1.2.1", "1.1"
             avoid "2.0";
 
+    package Hibernate import:optional hibernate.redhat.com;
+
     package util
         {
         /**
          * So much happiness.
          */
         enum Happiness
-                if (true)
+                if (Hibernate.present)
                     {
-                    if (Crazy.present)
-                        {
-                        implements Serializable
-                        }
+                    implements HibSerializable
+                    }
+                if (Coherence.present)
+                    {
                     implements ExternalizableLite
-
                     }
-                else
-                    {
-                    implements Externalizable
-                    }
+                implements Externalizable
             { SAD, MEDIOCRE, HAPPY, ECSTATIC }
 
         /**
