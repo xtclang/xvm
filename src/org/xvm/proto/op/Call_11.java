@@ -33,7 +33,7 @@ public class Call_11 extends OpCallable
             {
             if (f_nFunctionValue == A_SUPER)
                 {
-                return callSuperN(frame, new int[]{f_nArgValue}, f_nRetValue);
+                return callSuperN1(frame, new int[]{f_nArgValue}, f_nRetValue);
                 }
 
             if (f_nFunctionValue < 0)

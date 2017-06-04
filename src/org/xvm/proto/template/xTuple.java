@@ -69,7 +69,7 @@ public class xTuple
     @Override
     public ObjectHandle createHandle(TypeComposition clazz)
         {
-        return new TupleHandle(clazz, null);
+        return new TupleHandle(clazz, new ObjectHandle[clazz.f_atGenericActual.length]);
         }
 
     @Override
@@ -97,10 +97,12 @@ public class xTuple
             throws ExceptionHandle.WrapperException
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
+        ObjectHandle[] ahValue = hTuple.m_ahValue;
+        int cElements = ahValue == null ? 0 : ahValue.length;
 
-        if (lIndex < 0 || lIndex >= hTuple.m_ahValue.length)
+        if (lIndex < 0 || lIndex >= cElements)
             {
-            throw IndexSupport.outOfRange(lIndex, hTuple.m_ahValue.length).getException();
+            throw IndexSupport.outOfRange(lIndex, cElements).getException();
             }
 
         return hTuple.m_ahValue[(int) lIndex];
@@ -110,15 +112,17 @@ public class xTuple
     public ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
+        ObjectHandle[] ahValue = hTuple.m_ahValue;
+        int cElements = ahValue == null ? 0 : ahValue.length;
 
-        if (lIndex < 0 || lIndex >= hTuple.m_ahValue.length)
+        if (lIndex < 0 || lIndex >= cElements)
             {
-            return IndexSupport.outOfRange(lIndex, hTuple.m_ahValue.length);
+            return IndexSupport.outOfRange(lIndex, cElements);
             }
 
         if (!hTuple.isMutable())
             {
-
+            return xException.makeHandle("Immutable object");
             }
 
         hTuple.m_ahValue[(int) lIndex] = hValue;
@@ -130,11 +134,14 @@ public class xTuple
                 throws ExceptionHandle.WrapperException
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
+        ObjectHandle[] ahValue = hTuple.m_ahValue;
+        int cElements = ahValue == null ? 0 : ahValue.length;
 
-        if (lIndex < 0 || lIndex >= hTuple.m_aType.length)
+        if (lIndex < 0 || lIndex >= cElements)
             {
-            throw IndexSupport.outOfRange(lIndex, hTuple.m_aType.length).getException();
+            throw IndexSupport.outOfRange(lIndex, cElements).getException();
             }
+
         return hTuple.m_aType[(int) lIndex];
         }
 

@@ -170,6 +170,47 @@ public class xArray
         return frame.assignValue(iReturn, hArray);
         }
 
+    @Override
+    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        GenericArrayHandle h1 = (GenericArrayHandle) hValue1;
+        GenericArrayHandle h2 = (GenericArrayHandle) hValue2;
+
+        ObjectHandle[] ah1 = h1.m_ahValue;
+        ObjectHandle[] ah2 = h2.m_ahValue;
+
+        if (ah1.length != ah2.length)
+            {
+            return false;
+            }
+
+        Type type1 = getElementType(h1, 0);
+        Type type2 = getElementType(h2, 0);
+
+        if (!type1.equals(type2))
+            {
+            return false;
+            }
+
+        String sTemplate = type1.f_sName;
+        if (sTemplate != null)
+            {
+            TypeCompositionTemplate template = f_types.getTemplate(sTemplate);
+
+            for (int i = 0, c = ah1.length; i < c; i++)
+                {
+                if (!template.callEquals(ah1[i], ah2[i]))
+                    {
+                    return false;
+                    }
+                }
+            return true;
+            }
+
+        // TODO: in general case we cannot know the "compile time" class
+        return false;
+        }
+
     // ----- IndexSupport methods -----
 
     @Override

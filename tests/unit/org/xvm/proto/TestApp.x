@@ -241,11 +241,16 @@ module TestApp
         Tuple<String, Int> t2 = new Tuple("", 0); // fixed-size (rigid)
         t2[0] = "t";
         t2[1] = 2;
+        print(t2);
 
         int of = "the test".indexOf(t2); // same as "the test".indexOf("t", 2);
-        print(of);
+        assert(of == 4);
 
-        print(testConditional(1));
+        if (String s : testConditional(1))
+            {
+            print(s);
+            }
+
         print(testConditional(-1));
 
         static conditional String testConditional(Int i)

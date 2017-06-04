@@ -44,6 +44,9 @@ public class xMethod
                 {
                 return new MethodHandle(f_clazzCanonical, method);
                 }
+
+            // TODO: will there be a FunctionConstant?
+            return xFunction.INSTANCE.createConstHandle(constMethod, heap);
             }
         return null;
         }

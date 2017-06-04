@@ -4,24 +4,26 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
-import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
+import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
 /**
- * CALL_N0 rvalue-function, #params:(rvalue)
+ * CALL_1N rvalue-function, rvalue-param, #returns:(lvalue)
  *
  * @author gg 2017.03.08
  */
-public class Call_N0 extends OpCallable
+public class Call_1N extends OpCallable
     {
     private final int f_nFunctionValue;
-    private final int[] f_anArgValue;
+    private final int f_nArgValue;
+    private final int[] f_anRetValue;
 
-    public Call_N0(int nFunction, int[] anArg)
+    public Call_1N(int nFunction, int nArg, int[] anRet)
         {
         f_nFunctionValue = nFunction;
-        f_anArgValue = anArg;
+        f_nArgValue = nArg;
+        f_anRetValue = anRet;
         }
 
     @Override
@@ -31,30 +33,34 @@ public class Call_N0 extends OpCallable
             {
             if (f_nFunctionValue == A_SUPER)
                 {
-                return callSuperN1(frame, f_anArgValue, Frame.R_UNUSED);
+                return callSuperNN(frame, new int[]{f_nArgValue}, f_anRetValue);
                 }
 
             if (f_nFunctionValue < 0)
                 {
-                FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
+                InvocationTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
 
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.m_cVars, 0);
-                if (ahVar == null)
+                ObjectHandle hArg = frame.getArgument(f_nArgValue);
+                if (hArg == null)
                     {
                     return R_REPEAT;
                     }
 
-                return frame.call1(function, null, ahVar, Frame.R_UNUSED);
+                ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
+                ahVar[0] = hArg;
+
+                return frame.callN(function, null, ahVar, f_anRetValue);
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount(), 0);
-            if (hFunction == null || ahVar == null)
+            ObjectHandle[] ahVars = frame.getArguments(new int[]{f_nArgValue}, hFunction.getVarCount(), 0);
+
+            if (hFunction == null || ahVars == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, ahVar, Frame.R_UNUSED);
+            return hFunction.callN(frame, ahVars, f_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

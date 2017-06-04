@@ -166,11 +166,6 @@ public class ObjectHandle
         {
         protected long m_lValue = UNASSIGNED;
 
-        public JavaLong(TypeComposition clazz)
-            {
-            super(clazz);
-            }
-
         public JavaLong(TypeComposition clazz, long lValue)
             {
             super(clazz);
@@ -180,12 +175,6 @@ public class ObjectHandle
         public long getValue()
             {
             return m_lValue;
-            }
-
-        public void assign(long lValue)
-            {
-            assert m_lValue == UNASSIGNED;
-            m_lValue = lValue;
             }
 
         @Override

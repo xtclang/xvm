@@ -54,7 +54,7 @@ public class xService
         //    @ro @atomic Duration cpuTime;
         //    @ro @atomic Boolean contended;
         //    @ro @atomic Int backlogDepth;
-        //    Void yield();
+        // +  Void yield();
         // +  Void invokeLater(function Void doLater());
         //    @ro @atomic Int bytesReserved;
         //    @ro @atomic Int bytesAllocated;
@@ -68,13 +68,8 @@ public class xService
 
         ensurePropertyTemplate("serviceName", "x:String").makeAtomicRef();
 
+        ensureMethodTemplate("yield", VOID, VOID).markNative();
         ensureMethodTemplate("invokeLater", new String[] {"x:Function"}, VOID).markNative();
-        }
-
-    @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
-        {
-        return new ServiceHandle(clazz);
         }
 
     @Override
@@ -104,6 +99,7 @@ public class xService
                 return hService.m_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE);
                 }
             }
+
         return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }
 
@@ -111,6 +107,16 @@ public class xService
     public int invokeNative(Frame frame, ObjectHandle hTarget,
                             MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
         {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        switch (method.f_sName)
+            {
+            case "yield":
+                {
+                return frame.f_context == hService.m_context ? Op.R_YIELD : Op.R_NEXT;
+                }
+            }
+
         return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
         }
 

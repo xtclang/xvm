@@ -3,8 +3,11 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.proto.*;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
 
 
 /**
@@ -61,8 +64,11 @@ public class xBit
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
+    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        return new JavaLong(clazz);
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return h1.getValue() == h2.getValue();
         }
     }

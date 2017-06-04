@@ -139,22 +139,24 @@ public class ServiceContext
 
         Op[] abOp = frame.f_aOp;
 
-        for (int nOps = 0; true; nOps++)
+        int nOps = 0;
+        while (true)
             {
+            while (iPC >= 0) // main loop
+                {
+                if (++nOps > 10)
+                    {
+                    // same as yield
+                    frame.m_iPC = iPC;
+                    m_frameCurrent = null;
+                    return frame;
+                    }
+
+                iPC = abOp[iPC].process(frame, iPCLast = iPC);
+                }
+
             switch (iPC)
                 {
-                default:
-                    if (nOps > 10)
-                        {
-                        // swap context
-                        frame.m_iPC = iPC;
-                        m_frameCurrent = null;
-                        return frame;
-                        }
-
-                    iPC = abOp[iPC].process(frame, iPCLast = iPC);
-                    break;
-
                 case Op.R_NEXT:
                     iPC = iPCLast + 1;
                     break;
@@ -256,6 +258,11 @@ public class ServiceContext
                 case Op.R_BLOCK:
                     frame.m_iPC = iPCLast + 1;
                     frame.m_fBlocked = true;
+                    m_frameCurrent = null;
+                    return frame;
+
+                case Op.R_YIELD:
+                    frame.m_iPC = iPCLast + 1;
                     m_frameCurrent = null;
                     return frame;
                 }
