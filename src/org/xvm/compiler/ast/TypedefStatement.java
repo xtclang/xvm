@@ -16,15 +16,29 @@ public class TypedefStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TypedefStatement(Expression cond, Token alias, TypeExpression type)
+    public TypedefStatement(Expression cond, Token keyword, TypeExpression type, Token alias)
         {
-        this.cond  = cond;
-        this.alias = alias;
-        this.type  = type;
+        this.cond      = cond;
+        this.lStartPos = keyword.getStartPosition();
+        this.type      = type;
+        this.alias     = alias;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return alias.getEndPosition();
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -73,6 +87,7 @@ public class TypedefStatement
     protected Expression     cond;
     protected Token          alias;
     protected TypeExpression type;
+    protected long           lStartPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypedefStatement.class, "cond", "type");
     }

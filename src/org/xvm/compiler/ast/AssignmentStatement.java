@@ -41,6 +41,18 @@ public class AssignmentStatement
         }
 
     @Override
+    public long getStartPosition()
+        {
+        return lvalue.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return rvalue.getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

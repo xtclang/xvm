@@ -18,15 +18,30 @@ public class FunctionTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public FunctionTypeExpression(Token function, List<TypeExpression> returnValues, List<TypeExpression> params)
+    public FunctionTypeExpression(Token function, List<TypeExpression> returnValues,
+            List<TypeExpression> params, long lEndPos)
         {
         this.function     = function;
         this.returnValues = returnValues;
         this.paramTypes   = params;
+        this.lEndPos      = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return function.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return  lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -102,6 +117,7 @@ public class FunctionTypeExpression
     protected Token                function;
     protected List<TypeExpression> returnValues;
     protected List<TypeExpression> paramTypes;
+    protected long                 lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(FunctionTypeExpression.class, "returnValues", "paramTypes");
     }

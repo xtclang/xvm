@@ -23,6 +23,19 @@ public class AnnotatedTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+
+    @Override
+    public long getStartPosition()
+        {
+        return annotation.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return type.getEndPosition();
+        }
+
     @Override
     protected Field[] getChildFields()
         {
@@ -53,7 +66,7 @@ public class AnnotatedTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Annotation annotation;
+    protected Annotation     annotation;
     protected TypeExpression type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotatedTypeExpression.class,

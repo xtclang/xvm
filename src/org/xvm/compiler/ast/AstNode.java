@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -85,6 +86,20 @@ public abstract class AstNode
                 ? null
                 : parent.getSource();
         }
+
+    /**
+     * Determine the starting position in the source at which this AstNode occurs.
+     *
+     * @return the Source position of the AstNode
+     */
+    public abstract long getStartPosition();
+
+    /**
+     * Determine the ending position (exclusive) in the source for this AstNode.
+     *
+     * @return the Source position of the end of the AstNode
+     */
+    public abstract long getEndPosition();
 
     /**
      * Obtain the Component for this AstNode, if any.
@@ -161,6 +176,25 @@ public abstract class AstNode
             {
             node.registerRemainingStructures(errs);
             }
+        }
+
+    /**
+     * Helper to log an error related to this AstNode.
+     *
+     * @param severity    the severity level of the error; one of
+     *                    {@link Severity#INFO}, {@link Severity#WARNING},
+     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
+     * @param sCode       the error code that identifies the error message
+     * @param aoParam     the parameters for the error message; may be null
+     *
+     * @return true to attempt to abort the process that reported the error, or
+     *         false to attempt continue the process
+     */
+    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam)
+        {
+        Source source = getSource();
+        return errs.log(severity, sCode, aoParam, source,
+                source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition());
         }
 
 

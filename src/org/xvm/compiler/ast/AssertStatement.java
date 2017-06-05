@@ -26,6 +26,18 @@ public class AssertStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return stmt == null ? keyword.getEndPosition() : stmt.getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

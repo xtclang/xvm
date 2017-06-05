@@ -80,7 +80,8 @@ public class Parser
             try
                 {
                 List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
-                m_root = new StatementBlock(stmts, m_source);
+                m_root = new StatementBlock(stmts, m_source, stmts.get(0).getStartPosition(),
+                        stmts.get(stmts.size()-1).getEndPosition());
                 }
             catch (UnsupportedOperationException e)
                 {
@@ -140,7 +141,8 @@ public class Parser
      */
     TypeCompositionStatement parseTypeCompositionStatement()
         {
-        Token doc = takeDoc();
+        Token doc       = takeDoc();
+        long  lStartPos = peek().getStartPosition();
 
         // modifiers (including annotations)
         List<Token> modifiers = null;
@@ -153,14 +155,14 @@ public class Parser
             annotations = twoLists[1];
             }
 
-        return parseTypeDeclarationStatementAfterModifiers(null, doc, modifiers, annotations);
+        return parseTypeDeclarationStatementAfterModifiers(lStartPos, null, doc, modifiers, annotations);
         }
 
     /**
      * (This is just a continuation of the above method.)
      */
-    TypeCompositionStatement parseTypeDeclarationStatementAfterModifiers(Expression exprCondition,
-            Token doc, List<Token> modifiers, List<Annotation> annotations)
+    TypeCompositionStatement parseTypeDeclarationStatementAfterModifiers(long lStartPos,
+            Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations)
         {
         // category & name
         Token category;
@@ -198,17 +200,21 @@ public class Parser
 
         // TypeCompositionBody
         StatementBlock body = null;
+        long           lEndPos;
         if (peek().getId() == Id.L_CURLY)
             {
-            body = parseTypeCompositionBody(category);
+            body    = parseTypeCompositionBody(category);
+            lEndPos = body.getEndPosition();
             }
         else
             {
+            lEndPos = getLastMatch().getEndPosition();
             expect(Id.SEMICOLON);
             }
 
-        return new TypeCompositionStatement(m_source, exprCondition, modifiers, annotations, category, name,
-                qualified, typeParams, constructorParams, compositions, body, doc);
+        return new TypeCompositionStatement(m_source, lStartPos, lEndPos, exprCondition, modifiers,
+                annotations, category, name, qualified, typeParams, constructorParams, compositions,
+                body, doc);
         }
 
     /**
@@ -303,8 +309,9 @@ public class Parser
                     TypeExpression type = parseTypeExpression();
                     expect(Id.L_PAREN);
                     Expression delegate = parseExpression();
-                    expect(Id.R_PAREN);
-                    compositions.add(new Composition.Delegates(exprCondition, keyword, type, delegate));
+                    Token tokEnd = expect(Id.R_PAREN);
+                    compositions.add(new Composition.Delegates(exprCondition, keyword, type,
+                            delegate, tokEnd.getEndPosition()));
                     }
                 while (match(Id.COMMA) != null);
                 fAny = true;
@@ -345,11 +352,13 @@ public class Parser
                     case IMPORT_WANT:
                     case IMPORT_OPT:
                         {
-                                              keyword         = current();
-                        List<Token>           qualifiedModule = parseQualifiedName();
-                        NamedTypeExpression   module          = new NamedTypeExpression(null, qualifiedModule, null);
-                        List<VersionOverride> versionSpecs    = parseVersionRequirement(false);
-                        compositions.add(new Composition.Import(exprCondition, keyword, module, versionSpecs));
+                                              keyword  = current();
+                        List<Token>           names    = parseQualifiedName();
+                        NamedTypeExpression   module   = new NamedTypeExpression(null, names, null,
+                                names.get(names.size()-1).getEndPosition());
+                        List<VersionOverride> versions = parseVersionRequirement(false);
+                        compositions.add(new Composition.Import(exprCondition, keyword, module,
+                                versions, getLastMatch().getEndPosition()));
                         fAny = true;
                         }
                         break;
@@ -381,12 +390,14 @@ public class Parser
     StatementBlock parseTypeCompositionBody(Token category)
         {
         List<Statement> stmts = new ArrayList<>();
-        expect(Id.L_CURLY);
+        Token tokLCurly = expect(Id.L_CURLY);
         if (category.getId() == Id.ENUM)
             {
             do
                 {
                 Token doc = takeDoc();
+
+                long lStartPos = peek().getStartPosition();
 
                 // annotations
                 List<Annotation> annotations = null;
@@ -416,10 +427,15 @@ public class Parser
                 StatementBlock body = null;
                 if (match(Id.L_CURLY) != null)
                     {
-                    body = new StatementBlock(parseTypeCompositionComponents(null, new ArrayList<>(), false));
+                    Token tokLCurly2 = getLastMatch();
+                    body = new StatementBlock(parseTypeCompositionComponents(null, new ArrayList<>(), false),
+                            tokLCurly2.getStartPosition(), getLastMatch().getEndPosition());
                     }
 
-                stmts.add(new EnumDeclaration(annotations, name, typeParams, args, body, doc));
+                long lEndPos = getLastMatch().getEndPosition();
+
+                stmts.add(new EnumDeclaration(annotations, name, typeParams, args, body, doc,
+                        lStartPos, lEndPos));
                 }
             while (match(Id.COMMA) != null);
 
@@ -429,7 +445,8 @@ public class Parser
                 }
             }
 
-        return new StatementBlock(parseTypeCompositionComponents(null, stmts, false));
+        return new StatementBlock(parseTypeCompositionComponents(null, stmts, false),
+                tokLCurly.getStartPosition(), getLastMatch().getEndPosition());
         }
 
     /**
@@ -604,7 +621,8 @@ public class Parser
         // an enclosing "if" statement instead
         assert !(fInMethod && exprCondition != null);
 
-        Token doc = takeDoc();
+        Token doc       = takeDoc();
+        long  lStartPos = peek().getStartPosition();
 
         // constant starts with "static" (a modifier)
         // method starts with annotations/modifiers
@@ -641,7 +659,8 @@ public class Parser
             case TRAIT:
             case MIXIN:
                 // it's definitely a type composition
-                return parseTypeDeclarationStatementAfterModifiers(exprCondition, doc, modifiers, annotations);
+                return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
+                        modifiers, annotations);
 
             case L_PAREN:
                 {
@@ -688,7 +707,7 @@ public class Parser
 
                             // create a statement that represents a variable declaration
                             stmts.add(new VariableDeclarationStatement(expr.toTypeExpression(),
-                                    expect(Id.IDENTIFIER), null, null, false));
+                                    expect(Id.IDENTIFIER), null, null));
                             }
                         else
                             {
@@ -736,7 +755,7 @@ public class Parser
                         expect(Id.ASN);
                         Expression value = parseExpression();
                         expect(Id.SEMICOLON);
-                        return new MultipleDeclarationStatement(stmts, value);
+                        return new MultipleDeclarationStatement(stmts, value, start.getStartPosition());
                         }
 
                     // at this point, all we encountered was a list of expressions inside of
@@ -811,8 +830,8 @@ public class Parser
 
                     if (returns != null)
                         {
-                        return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations,
-                                null, returns, null, expect(Id.IDENTIFIER));
+                        return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                                modifiers, annotations, null, returns, null, expect(Id.IDENTIFIER));
                         }
                     }
 
@@ -828,7 +847,7 @@ public class Parser
                     return parseVariableDeclarationAfterName(annotations, type, name);
                     }
 
-                return parsePropertyDeclarationFinish(exprCondition, doc, modifiers, annotations, type, name);
+                return parsePropertyDeclarationFinish(lStartPos, exprCondition, doc, modifiers, annotations, type, name);
                 }
 
             case COMP_LT:
@@ -837,7 +856,8 @@ public class Parser
                 List<Token>          typeVars = parseTypeVariableList(true);
                 List<TypeExpression> returns  = parseReturnList();
                 Token                name     = expect(Id.IDENTIFIER);
-                return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations, typeVars, returns, null, name);
+                return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                        modifiers, annotations, typeVars, returns, null, name);
                 }
 
             case CONSTRUCT:
@@ -852,7 +872,8 @@ public class Parser
 
                 Token keyword = expect(Id.CONSTRUCT);
                 Token name    = expect(Id.IDENTIFIER);
-                return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations, null, null, keyword, name);
+                return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                        modifiers, annotations, null, null, keyword, name);
                 }
 
             default:
@@ -881,8 +902,8 @@ public class Parser
                     {
                     // '<' indicates redundant return type list
                     // '(' indicates parameters
-                    return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations,
-                            null, Collections.singletonList(type), null, name);
+                    return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                            modifiers, annotations, null, Collections.singletonList(type), null, name);
                     }
                 else if (!fInMethod && peek().getId() == Id.ASN && modifiers != null
                         && modifiers.size() == 1 && modifiers.get(0).getId() == Id.STATIC)
@@ -901,7 +922,7 @@ public class Parser
                         }
 
                     // it's a property
-                    return parsePropertyDeclarationFinish(exprCondition, doc, modifiers, annotations, type, name);
+                    return parsePropertyDeclarationFinish(lStartPos, exprCondition, doc, modifiers, annotations, type, name);
                     }
                 }
             }
@@ -966,11 +987,12 @@ public class Parser
             }
         expect(Id.SEMICOLON);
 
-        // apply any annotations to the variable type
+        // apply any annotations to the variable type; "@A @B @C T" is "@A of (@B of (@C of T))"
         if (annotations != null)
             {
-            for (Annotation annotation : annotations)
+            for (int i = annotations.size() - 1; i >= 0; --i)
                 {
+                Annotation annotation = annotations.get(i);
                 type = new AnnotatedTypeExpression(annotation, type);
                 }
             }
@@ -989,23 +1011,32 @@ public class Parser
      *
      * @return a MethodDeclarationStatement
      */
-    MethodDeclarationStatement parseMethodDeclarationAfterName(Expression exprCondition, Token doc,
-            List<Token> modifiers, List<Annotation> annotations, List<Token> typeVars,
-            List<TypeExpression> returns, Token keyword, Token name)
+    MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos,
+            Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations,
+            List<Token> typeVars, List<TypeExpression> returns, Token keyword, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
         List<Parameter>      params           = parseParameterList(true);
+        long                 lEndPos          = getLastMatch().getEndPosition();
         StatementBlock       body             = match(Id.SEMICOLON) == null ? parseStatementBlock() : null;
         StatementBlock       stmtFinally      = null;
 
-        // check for "constructor finally" block
-        if (body != null && keyword != null && match(Id.FINALLY) != null)
+        if (body != null)
             {
-            stmtFinally = parseStatementBlock();
+            // check for "constructor finally" block
+            if (keyword != null && match(Id.FINALLY) != null)
+                {
+                stmtFinally = parseStatementBlock();
+                lEndPos = stmtFinally.getEndPosition();
+                }
+            else
+                {
+                lEndPos = body.getEndPosition();
+                }
             }
 
-        return new MethodDeclarationStatement(exprCondition, modifiers, annotations, typeVars, returns, name,
-                redundantReturns, params, body, stmtFinally, doc);
+        return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers,
+                annotations, typeVars, returns, name, redundantReturns, params, body, stmtFinally, doc);
         }
 
     /**
@@ -1020,37 +1051,48 @@ public class Parser
      *
      * @return a StatementBlock
      */
-    PropertyDeclarationStatement parsePropertyDeclarationFinish(Expression exprCondition, Token doc,
-            List<Token> modifiers, List<Annotation> annotations, TypeExpression type, Token name)
+    PropertyDeclarationStatement parsePropertyDeclarationFinish(long lStartPos,
+            Expression exprCondition, Token doc, List<Token> modifiers,
+            List<Annotation> annotations, TypeExpression type, Token name)
         {
-        Expression     value = null;
-        StatementBlock body  = null;
+        Expression     value   = null;
+        StatementBlock body    = null;
+        long           lEndPos;
         if (match(Id.ASN) != null)
             {
             // "=" Expression ";"
-            value = parseExpression();
+            value   = parseExpression();
+            lEndPos = value.getEndPosition();
             expect(Id.SEMICOLON);
             }
         else if (match(Id.DOT) != null)
             {
             // "." Name Parameters MethodBody
-            Token           methodName = expect(Id.IDENTIFIER);
-            List<Parameter> params     = parseParameterList(true);
-            MethodDeclarationStatement method = new MethodDeclarationStatement(null, null, null, null, null,
-                    methodName, null, params, parseStatementBlock(), null, null);
-            body = new StatementBlock(Collections.singletonList(method));
+            Token                      methodName = expect(Id.IDENTIFIER);
+            List<Parameter>            params     = parseParameterList(true);
+            StatementBlock             block      = parseStatementBlock();
+            MethodDeclarationStatement method     = new MethodDeclarationStatement(
+                    methodName.getStartPosition(), block.getEndPosition(),
+                    null, null, null, null, null, methodName, null, params, block, null, null);
+            body    = new StatementBlock(Collections.singletonList(method),
+                    method.getStartPosition(), method.getEndPosition());
+            lEndPos = body.getEndPosition();
             }
         else if (peek().getId() == Id.L_CURLY)
             {
             // pretend we're parsing a class (use the property name token as the basis)
-            body = parseTypeCompositionBody(new Token(name.getStartPosition(), name.getEndPosition(), Id.CLASS));
+            body    = parseTypeCompositionBody(new Token(name.getStartPosition(),
+                                               name.getEndPosition(), Id.CLASS));
+            lEndPos = body.getEndPosition();
             }
         else
             {
+            lEndPos = getLastMatch().getEndPosition();
             expect(Id.SEMICOLON);
             }
 
-        return new PropertyDeclarationStatement(exprCondition, modifiers, annotations, type, name, value, body, doc);
+        return new PropertyDeclarationStatement(lStartPos, lEndPos, exprCondition,
+                modifiers, annotations, type, name, value, body, doc);
         }
 
     /**
@@ -1063,23 +1105,14 @@ public class Parser
      */
     StatementBlock parseStatementBlock()
         {
-        expect(Id.L_CURLY);
-        return parseBlockStatementRemainder(new ArrayList<>());
-        }
-
-    /**
-     * Parse the remainder of a block statement.
-     *
-     * @return a list of Statements
-     */
-    StatementBlock parseBlockStatementRemainder(List<Statement> stmts)
-        {
+        Token tokStart = expect(Id.L_CURLY);
+        List<Statement> stmts = new ArrayList<>();
         while (match(Id.R_CURLY) == null)
             {
             stmts.add(parseStatement());
             }
 
-        return new StatementBlock(stmts);
+        return new StatementBlock(stmts, tokStart.getStartPosition(), getLastMatch().getEndPosition());
         }
 
     /**
@@ -1181,9 +1214,9 @@ public class Parser
         switch (peek().getId())
             {
             case SEMICOLON:
-                next();
-                log(Severity.ERROR, NO_EMPTY_STMT, null, peek().getStartPosition(), peek().getEndPosition());
-                return new StatementBlock(null);
+                Token tokSemi = match(Id.SEMICOLON);
+                log(Severity.ERROR, NO_EMPTY_STMT, null, tokSemi.getStartPosition(), tokSemi.getEndPosition());
+                return new StatementBlock(null, tokSemi.getStartPosition(), tokSemi.getEndPosition());
 
             case L_CURLY:
                 return parseStatementBlock();
@@ -1318,9 +1351,9 @@ public class Parser
         expect(Id.WHILE);
         expect(Id.L_PAREN);
         Statement cond = parseConditionalDeclaration(false);
-        expect(Id.R_PAREN);
+        long lEndPos = expect(Id.R_PAREN).getEndPosition();
         expect(Id.SEMICOLON);
-        return new WhileStatement(keyword, cond, block);
+        return new WhileStatement(keyword, cond, block, lEndPos);
         }
 
     /**
@@ -1500,8 +1533,7 @@ public class Parser
         {
         List<Token> qualifiedName = new ArrayList<>();
         Token       simpleName    = null;
-
-        expect(Id.IMPORT);
+        Token       keyword       = expect(Id.IMPORT);
 
         // parse qualified name
         boolean first = true;
@@ -1521,7 +1553,7 @@ public class Parser
 
         expect(Id.SEMICOLON);
 
-        return new ImportStatement(exprCond, simpleName, qualifiedName);
+        return new ImportStatement(exprCond, keyword, simpleName, qualifiedName);
         }
 
     /**
@@ -1598,20 +1630,18 @@ public class Parser
             }
         expect(Id.R_PAREN);
 
-        expect(Id.L_CURLY);
+        Token tokLCurly = expect(Id.L_CURLY);
         List<Statement> stmts = new ArrayList<>();
         while (true)
             {
             switch (peek().getId())
                 {
                 case CASE:
-                    stmts.add(new CaseStatement(current(), parseTernaryExpression()));
-                    expect(Id.COLON);
+                    stmts.add(new CaseStatement(current(), parseTernaryExpression(), expect(Id.COLON)));
                     break;
 
                 case DEFAULT:
-                    stmts.add(new CaseStatement(current(), null));
-                    expect(Id.COLON);
+                    stmts.add(new CaseStatement(current(), null, expect(Id.COLON)));
                     break;
 
                 default:
@@ -1624,8 +1654,9 @@ public class Parser
                     break;
 
                 case R_CURLY:
-                    expect(Id.R_CURLY);
-                    return new SwitchStatement(keyword, cond, new StatementBlock(stmts));
+                    Token tokRCurly = expect(Id.R_CURLY);
+                    return new SwitchStatement(keyword, cond, new StatementBlock(stmts,
+                            tokLCurly.getStartPosition(), tokRCurly.getEndPosition()));
                 }
             }
         }
@@ -1669,11 +1700,12 @@ public class Parser
         List<CatchStatement> catches = new ArrayList<>();
         while (match(Id.CATCH) != null)
             {
+            long lStartPos = getLastMatch().getStartPosition();
             expect(Id.L_PAREN);
             VariableDeclarationStatement var = new VariableDeclarationStatement(
-                    parseTypeExpression(), expect(Id.IDENTIFIER), null, null, false);
+                    parseTypeExpression(), expect(Id.IDENTIFIER), null, null);
             expect(Id.R_PAREN);
-            catches.add(new CatchStatement(var, parseStatementBlock()));
+            catches.add(new CatchStatement(var, parseStatementBlock(), lStartPos));
             }
 
         StatementBlock catchall = null;
@@ -1697,7 +1729,7 @@ public class Parser
      */
     TypedefStatement parseTypeDefStatement(Expression exprCond)
         {
-        expect(Id.TYPEDEF);
+        Token keyword = expect(Id.TYPEDEF);
 
         TypeExpression type = parseTypeExpression();
 
@@ -1705,7 +1737,7 @@ public class Parser
 
         expect(Id.SEMICOLON);
 
-        return new TypedefStatement(exprCond, simpleName, type);
+        return new TypedefStatement(exprCond, keyword, type, simpleName);
         }
 
     /**
@@ -1815,7 +1847,7 @@ public class Parser
 
         TypeExpression type = expr.toTypeExpression();
         Token name = expect(Id.IDENTIFIER);
-        return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression(), false);
+        return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression());
         }
 
     /**
@@ -1872,7 +1904,7 @@ public class Parser
             op = expect(Id.COLON);
             }
 
-        return new VariableDeclarationStatement(type, name, op, parseExpression(), false);
+        return new VariableDeclarationStatement(type, name, op, parseExpression());
         }
 
     /**
@@ -2343,8 +2375,13 @@ s     *
                         {
                         case NEW:
                             {
-                            Token keyword = expect(Id.NEW);
-                            expr = new NewExpression(expr, keyword, parseTypeExpression(), parseArgumentList(false));
+                            Token            keyword = expect(Id.NEW);
+                            TypeExpression   type    = parseTypeExpression();
+                            List<Expression> params  = parseArgumentList(false);
+                            long             lEndPos = params == null
+                                    ? type.getEndPosition()
+                                    : getLastMatch().getEndPosition();
+                            expr = new NewExpression(expr, keyword, type, params, lEndPos);
                             break;
                             }
 
@@ -2360,8 +2397,9 @@ s     *
 
                         case IDENTIFIER:
                             {
-                            Token                name   = expect(Id.IDENTIFIER);
-                            List<TypeExpression> params = null;
+                            Token                name    = expect(Id.IDENTIFIER);
+                            long                 lEndPos = name.getEndPosition();
+                            List<TypeExpression> params  = null;
                             if (peek().getId() == Id.COMP_LT)
                                 {
                                 try (SafeLookAhead attempt = new SafeLookAhead())
@@ -2370,6 +2408,7 @@ s     *
                                     if (attempt.isClean())
                                         {
                                         attempt.keepResults();
+                                        lEndPos = getLastMatch().getEndPosition();
                                         }
                                     else
                                         {
@@ -2378,7 +2417,7 @@ s     *
                                     }
                                 catch (CompilerException e) {}
                                 }
-                            expr = new DotNameExpression(expr, name, params);
+                            expr = new DotNameExpression(expr, name, params, lEndPos);
                             break;
                             }
 
@@ -2393,7 +2432,8 @@ s     *
 
                 case L_PAREN:
                     // ArgumentList
-                    expr = new InvocationExpression(expr, parseArgumentList(true));
+                    expr = new InvocationExpression(expr, parseArgumentList(true),
+                            getLastMatch().getEndPosition());
                     break;
 
                 case L_SQUARE:
@@ -2404,7 +2444,8 @@ s     *
                     if (match(Id.R_SQUARE) != null)
                         {
                         // "SomeClass[]"
-                        expr = new ArrayTypeExpression(expr.toTypeExpression(), 0);
+                        expr = new ArrayTypeExpression(expr.toTypeExpression(), 0,
+                                getLastMatch().getEndPosition());
                         }
                     else if (match(Id.COND) != null)
                         {
@@ -2416,14 +2457,15 @@ s     *
                             expect(Id.COND);
                             ++cExplicitDims;
                             }
-                        expr = new ArrayTypeExpression(expr.toTypeExpression(), cExplicitDims);
+                        expr = new ArrayTypeExpression(expr.toTypeExpression(), cExplicitDims,
+                                getLastMatch().getEndPosition());
                         }
                     else
                         {
                         // "someArray[3]"
                         List<Expression> indexes = parseExpressionList();
                         expect(Id.R_SQUARE);
-                        expr = new ArrayAccessExpression(expr, indexes);
+                        expr = new ArrayAccessExpression(expr, indexes, getLastMatch().getEndPosition());
                         }
                     break;
                     }
@@ -2481,7 +2523,7 @@ s     *
                     {
                     body = parseTypeCompositionBody(keyword);
                     }
-                return new NewExpression(keyword, type, args, body);
+                return new NewExpression(keyword, type, args, body, getLastMatch().getEndPosition());
                 }
 
             case CONSTRUCT:
@@ -2494,7 +2536,7 @@ s     *
 
                 List<Token> qname = parseQualifiedName();
                 qname.add(keyword);
-                return new NameExpression(qname, null);
+                return new NameExpression(qname, null, keyword.getEndPosition());
                 }
 
             default:
@@ -2506,24 +2548,26 @@ s     *
                 // test for single-param implicit lambda
                 if (peek().getId() == Id.LAMBDA)
                     {
-                    return new ImplicitLambdaExpression(
-                            Collections.singletonList(new NameExpression(names, null)),
-                            expect(Id.LAMBDA), parseLambdaBody());
+                    return new ImplicitLambdaExpression(Collections.singletonList(new NameExpression(
+                            names, null, names.get(names.size()-1).getEndPosition())),
+                            expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition());
                     }
 
                 // parse qualified name
                 Token dot;
+                long  lEndPos = getLastMatch().getEndPosition();
                 while ((dot = match(Id.DOT)) != null)
                     {
                     Token name = match(Id.IDENTIFIER);
                     if (name == null)
                         {
                         putBack(dot);
-                        return new NameExpression(names, null);
+                        return new NameExpression(names, null, names.get(names.size()-1).getEndPosition());
                         }
                     else
                         {
                         names.add(name);
+                        lEndPos = name.getEndPosition();
                         }
                     }
 
@@ -2537,6 +2581,7 @@ s     *
                         if (attempt.isClean())
                             {
                             attempt.keepResults();
+                            lEndPos = getLastMatch().getEndPosition();
                             }
                         else
                             {
@@ -2555,7 +2600,7 @@ s     *
                             (peek().getId() == Id.L_CURLY ||
                             (peek().getId() == Id.L_PAREN && names.size() == 1 && names.get(0).getValue().equals("Tuple"))))
                         {
-                        return parseCustomLiteral(new NamedTypeExpression(null, names, params));
+                        return parseCustomLiteral(new NamedTypeExpression(null, names, params, lEndPos));
                         }
                     else
                         {
@@ -2563,19 +2608,19 @@ s     *
                         }
                     }
 
-                return new NameExpression(names, params);
+                return new NameExpression(names, params, lEndPos);
                 }
 
             case L_PAREN:
                 {
                 /// this could be a tuple literal, a parenthesized expression, or a lambda
                 // expression's parameter list
-                expect(Id.L_PAREN);
+                Token tokLParen = expect(Id.L_PAREN);
                 if (match(Id.R_PAREN) != null)
                     {
                     // Void lambda
                     return new ExplicitLambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
-                            parseLambdaBody());
+                            parseLambdaBody(), tokLParen.getStartPosition());
                     }
 
                 Expression expr = parseExpression();
@@ -2595,11 +2640,12 @@ s     *
 
                         if (peek().getId() == Id.LAMBDA)
                             {
-                            return new ImplicitLambdaExpression(exprs, expect(Id.LAMBDA), parseLambdaBody());
+                            return new ImplicitLambdaExpression(exprs, expect(Id.LAMBDA),
+                                    parseLambdaBody(), tokLParen.getStartPosition());
                             }
 
                         // it's a Tuple literal
-                        return new TupleExpression(null, exprs);
+                        return new TupleExpression(null, exprs, tokLParen.getStartPosition(), getLastMatch().getEndPosition());
 
                     case R_PAREN:
                         // this is either a parenthesized expression or a single parameter for a
@@ -2607,8 +2653,8 @@ s     *
                         expect(Id.R_PAREN);
                         if (peek().getId() == Id.LAMBDA)
                             {
-                            return new ImplicitLambdaExpression(Collections.EMPTY_LIST,
-                                    expect(Id.LAMBDA), parseLambdaBody());
+                            return new ImplicitLambdaExpression(Collections.singletonList(expr),
+                                    expect(Id.LAMBDA), parseLambdaBody(), tokLParen.getStartPosition());
                             }
                         else
                             {
@@ -2617,7 +2663,7 @@ s     *
                             }
 
                     case IDENTIFIER:
-                        // it has to be a lambda, because we just parse an expression (which must
+                        // it has to be a lambda, because we just parsed an expression (which must
                         // have been a parameter type) and now we have the parameter name
                         {
                         List<Parameter> params = new ArrayList<>();
@@ -2630,7 +2676,8 @@ s     *
                             }
                         expect(Id.R_PAREN);
 
-                        return new ExplicitLambdaExpression(params, expect(Id.LAMBDA), parseLambdaBody());
+                        return new ExplicitLambdaExpression(params, expect(Id.LAMBDA),
+                                parseLambdaBody(), tokLParen.getStartPosition());
                         }
 
                     default:
@@ -2675,7 +2722,7 @@ s     *
 
         Token fakeReturn = new Token(firstToken.getStartPosition(), firstToken.getStartPosition(), Id.RETURN);
         ReturnStatement stmt = new ReturnStatement(fakeReturn, parseElvisExpression());
-        return new StatementBlock(Collections.singletonList(stmt));
+        return new StatementBlock(Collections.singletonList(stmt), stmt.getStartPosition(), stmt.getEndPosition());
         }
 
     /**
@@ -2823,12 +2870,16 @@ s     *
                                        + hexitValue(sb.charAt(ofch++)));
                     }
 
-                return new BinaryExpression(ab, lPosStart, lPosEnd);
+                return new BinaryExpression(ab, lPosStart, lPosEnd, type.getStartPosition(),
+                        getLastMatch().getEndPosition());
                 }
 
             case "List":
                 {
                 expect(Id.L_CURLY);
+                long lStartPos = type == null
+                        ? getLastMatch().getStartPosition()
+                        : type.getStartPosition();
                 List<Expression> exprs = null;
                 while (match(Id.R_CURLY) == null)
                     {
@@ -2842,7 +2893,7 @@ s     *
                         }
                     exprs.add(parseExpression());
                     }
-                return new ListExpression(type, exprs);
+                return new ListExpression(type, exprs, lStartPos, getLastMatch().getEndPosition());
                 }
 
             case "Map":
@@ -2865,7 +2916,7 @@ s     *
                     expect(Id.ASN);
                     values.add(parseExpression());
                     }
-                return new MapExpression(type, keys, values);
+                return new MapExpression(type, keys, values, getLastMatch().getEndPosition());
                 }
 
             case "Tuple":
@@ -2890,7 +2941,8 @@ s     *
                         }
                     exprs.add(parseExpression());
                     }
-                return new TupleExpression(type, exprs);
+                return new TupleExpression(type, exprs, type.getStartPosition(),
+                        getLastMatch().getEndPosition());
                 }
 
             default:
@@ -3063,16 +3115,16 @@ s     *
                             log(Severity.ERROR, ALL_OR_NO_DIMS, null, dim.getStartPosition(), dim.getEndPosition());
                             }
                         }
+                    long lEndPos = getLastMatch().getEndPosition();
                     type = dimExprs.isEmpty()
-                            ? new ArrayTypeExpression(type, cExplicitDims)
-                            : new ArrayTypeExpression(type, dimExprs);
+                            ? new ArrayTypeExpression(type, cExplicitDims, lEndPos)
+                            : new ArrayTypeExpression(type, dimExprs, lEndPos);
                     break;
 
                 case COND:
                     if (!peek().hasLeadingWhitespace())
                         {
-                        expect(Id.COND);
-                        type = new NullableTypeExpression(type);
+                        type = new NullableTypeExpression(type, expect(Id.COND).getEndPosition());
                         }
                     else
                         {
@@ -3081,8 +3133,7 @@ s     *
                     break;
 
                 case ELLIPSIS:
-                    expect(Id.ELLIPSIS);
-                    type = new SequenceTypeExpression(type);
+                    type = new SequenceTypeExpression(type, expect(Id.ELLIPSIS));
                     break;
 
                 default:
@@ -3143,7 +3194,7 @@ s     *
             putBack(name);
             }
 
-        return new FunctionTypeExpression(function, listReturn, listParam);
+        return new FunctionTypeExpression(function, listReturn, listParam, getLastMatch().getEndPosition());
         }
 
     /**
@@ -3163,7 +3214,7 @@ s     *
         Token immutable = match(Id.IMMUTABLE);
         List<Token> names = parseQualifiedName();
         List<TypeExpression> params = parseTypeParameterTypeList(false);
-        return new NamedTypeExpression(immutable, names, params);
+        return new NamedTypeExpression(immutable, names, params, getLastMatch().getEndPosition());
         }
 
     /**
@@ -3333,8 +3384,9 @@ s     *
             return null;
             }
 
-        NamedTypeExpression type = parseNamedTypeExpression();
-        List<Expression>    args = null;
+        long                lStartPos = getLastMatch().getStartPosition();
+        NamedTypeExpression type      = parseNamedTypeExpression();
+        List<Expression>    args      = null;
 
         // a trailing argument list is only assumed to be part of the annotation if there is
         // no whitespace separating the annotation from the arguments
@@ -3344,7 +3396,8 @@ s     *
             args = parseArgumentList(true);
             }
 
-        return new Annotation(type, args);
+        long lEndPos = args == null ? type.getEndPosition() : getLastMatch().getEndPosition();
+        return new Annotation(type, args, lStartPos, lEndPos);
         }
 
     /**
@@ -3729,7 +3782,8 @@ s     *
             }
 
         List<VersionOverride> overrides = new ArrayList<>();
-        overrides.add(new VersionOverride(ver));
+        Token                 tokVer    = getLastMatch();
+        overrides.add(new VersionOverride(ver, tokVer.getStartPosition(), tokVer.getEndPosition()));
 
         // this is a little more complicated parsing because the keywords are context sensitive
         Token verb;
@@ -3740,7 +3794,8 @@ s     *
             boolean first = true;
             while (first || match(Id.COMMA) != null)
                 {
-                overrides.add(new VersionOverride(verb, parseVersion(true)));
+                overrides.add(new VersionOverride(verb, parseVersion(true), verb.getStartPosition(),
+                        getLastMatch().getEndPosition()));
                 first = false;
                 }
             }
@@ -4035,20 +4090,35 @@ s     *
         {
         if (peek().getId() == id)
             {
-            return current();
+            return m_tokenLastMatch = current();
             }
 
-        final Token token = m_token;
+        Token token = m_token;
         if (token.getId() == Id.IDENTIFIER && id.ContextSensitive && token.getValue().equals(id.TEXT))
             {
             // advance to the next token
             next();
 
             // return the previously "current" token
-            return token.convertToKeyword();
+            return m_tokenLastMatch = token.convertToKeyword();
             }
 
-        return token.peel(id, m_source);
+        token = token.peel(id, m_source);
+        if (token != null)
+            {
+            m_tokenLastMatch = token;
+            }
+        return token;
+        }
+
+    /**
+     * Return the most recently matched token.
+     *
+     * @return the token most recently returned from the match method
+     */
+    protected Token getLastMatch()
+        {
+        return m_tokenLastMatch;
         }
 
     /**
@@ -4285,6 +4355,11 @@ s     *
      * The "put back" token.
      */
     private Token m_tokenPutBack;
+
+    /**
+     * The most recently matched token.
+     */
+    private Token m_tokenLastMatch;
 
     /**
      * The current token.

@@ -20,13 +20,31 @@ public class WhileStatement
 
     public WhileStatement(Token keyword, Statement cond, StatementBlock block)
         {
+        this(keyword, cond, block, block.getEndPosition());
+        }
+
+    public WhileStatement(Token keyword, Statement cond, StatementBlock block, long lEndPos)
+        {
         this.keyword = keyword;
         this.cond    = cond;
         this.block   = block;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -80,6 +98,7 @@ public class WhileStatement
     protected Token          keyword;
     protected Statement      cond;
     protected StatementBlock block;
+    protected long           lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "cond", "block");
     }

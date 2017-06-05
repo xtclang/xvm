@@ -28,6 +28,12 @@ public class ConstantDeclaration
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

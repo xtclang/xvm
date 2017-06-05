@@ -16,14 +16,27 @@ public class CatchStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CatchStatement(VariableDeclarationStatement target, StatementBlock block)
+    public CatchStatement(VariableDeclarationStatement target, StatementBlock block, long lStartPos)
         {
-        this.target = target;
-        this.block  = block;
+        this.target    = target;
+        this.block     = block;
+        this.lStartPos = lStartPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return block.getEndPosition();
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -45,6 +58,7 @@ public class CatchStatement
 
     protected VariableDeclarationStatement target;
     protected StatementBlock               block;
+    protected long                         lStartPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CatchStatement.class, "target", "block");
     }

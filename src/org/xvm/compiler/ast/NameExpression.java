@@ -22,17 +22,30 @@ public class NameExpression
 
     public NameExpression(Token name)
         {
-        names = Collections.singletonList(name);
+        this(Collections.singletonList(name), null, name.getEndPosition());
         }
 
-    public NameExpression(List<Token> names, List<TypeExpression> params)
+    public NameExpression(List<Token> names, List<TypeExpression> params, long lEndPos)
         {
-        this.names  = names;
-        this.params = params;
+        this.names   = names;
+        this.params  = params;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return names.get(0).getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     public boolean isSpecial()
         {
@@ -49,7 +62,7 @@ public class NameExpression
     @Override
     public TypeExpression toTypeExpression()
         {
-        return new NamedTypeExpression(null, names, params);
+        return new NamedTypeExpression(null, names, params, lEndPos);
         }
 
     @Override
@@ -113,6 +126,7 @@ public class NameExpression
 
     protected List<Token>          names;
     protected List<TypeExpression> params;
+    protected long                 lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "params");
     }

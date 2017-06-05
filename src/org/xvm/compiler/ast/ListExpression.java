@@ -17,14 +17,29 @@ public class ListExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ListExpression(TypeExpression type, List<Expression> exprs)
+    public ListExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos)
         {
-        this.type  = type;
-        this.exprs = exprs;
+        this.type      = type;
+        this.exprs     = exprs;
+        this.lStartPos = lStartPos;
+        this.lEndPos   = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -72,6 +87,8 @@ public class ListExpression
 
     protected TypeExpression   type;
     protected List<Expression> exprs;
+    protected long             lStartPos;
+    protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ListExpression.class, "type", "exprs");
     }

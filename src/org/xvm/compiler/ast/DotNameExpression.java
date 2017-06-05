@@ -20,15 +20,29 @@ public class DotNameExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public DotNameExpression(Expression expr, Token name, List<TypeExpression> params)
+    public DotNameExpression(Expression expr, Token name, List<TypeExpression> params, long lEndPos)
         {
-        this.expr   = expr;
-        this.name   = name;
-        this.params = params;
+        this.expr    = expr;
+        this.name    = name;
+        this.params  = params;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return expr.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -82,6 +96,7 @@ public class DotNameExpression
     protected Expression           expr;
     protected Token                name;
     protected List<TypeExpression> params;
+    protected long                 lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(DotNameExpression.class, "expr", "params");
     }

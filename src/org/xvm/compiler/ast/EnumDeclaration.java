@@ -22,7 +22,7 @@ public class EnumDeclaration
     // ----- constructors --------------------------------------------------------------------------
 
     public EnumDeclaration(List<Annotation> annotations, Token name, List<TypeExpression> typeParams,
-                           List<Expression> args, StatementBlock body, Token doc)
+            List<Expression> args, StatementBlock body, Token doc, long lStartPos, long lEndPos)
         {
         this.annotations = annotations;
         this.name        = name;
@@ -30,10 +30,24 @@ public class EnumDeclaration
         this.args        = args;
         this.body        = body;
         this.doc         = doc;
+        this.lStartPos   = lStartPos;
+        this.lEndPos     = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -135,12 +149,14 @@ public class EnumDeclaration
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected List<Annotation> annotations;
-    protected Token name;
-    protected List<TypeExpression> typeParams;
-    protected List<Expression> args;
-    protected StatementBlock body;
-    protected Token doc;
+    protected List<Annotation>      annotations;
+    protected Token                 name;
+    protected List<TypeExpression>  typeParams;
+    protected List<Expression>      args;
+    protected StatementBlock        body;
+    protected Token                 doc;
+    protected long                  lStartPos;
+    protected long                  lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(EnumDeclaration.class,
             "annotations", "typeParams", "args", "body");

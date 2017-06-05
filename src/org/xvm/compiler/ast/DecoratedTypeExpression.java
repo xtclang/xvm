@@ -26,6 +26,19 @@ public class DecoratedTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+
+    @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return type.getEndPosition();
+        }
+
     @Override
     protected Field[] getChildFields()
         {

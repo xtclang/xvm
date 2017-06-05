@@ -26,6 +26,18 @@ public class PrefixExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public long getStartPosition()
+        {
+        return operator.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return expr.getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

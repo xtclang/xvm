@@ -17,14 +17,27 @@ public class CaseStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CaseStatement(Token keyword, Expression expr)
+    public CaseStatement(Token keyword, Expression expr, Token tokColon)
         {
         this.keyword = keyword;
         this.expr    = expr;
+        this.lEndPos = tokColon.getEndPosition();
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -64,6 +77,7 @@ public class CaseStatement
 
     protected Token      keyword;
     protected Expression expr;
+    protected long       lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "expr");
     }

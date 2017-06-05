@@ -25,6 +25,18 @@ public class TernaryExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public long getStartPosition()
+        {
+        return cond.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return exprElse.getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

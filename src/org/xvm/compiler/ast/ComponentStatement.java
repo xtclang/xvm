@@ -17,6 +17,15 @@ import java.util.List;
 public abstract class ComponentStatement
         extends Statement
     {
+    // ----- constructors --------------------------------------------------------------------------
+
+    protected ComponentStatement(long lStartPos, long lEndPos)
+        {
+        this.lStartPos = lStartPos;
+        this.lEndPos   = lEndPos;
+        }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     public Component getComponent()
@@ -27,6 +36,18 @@ public abstract class ComponentStatement
     protected void setStructure(Component component)
         {
         this.component = component;
+        }
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
         }
 
 
@@ -67,7 +88,10 @@ public abstract class ComponentStatement
         return null;
         }
 
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected Component component;
+    protected long      lStartPos;
+    protected long      lEndPos;
     }

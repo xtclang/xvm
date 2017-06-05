@@ -18,14 +18,27 @@ public class InvocationExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public InvocationExpression(Expression expr, List<Expression> args)
+    public InvocationExpression(Expression expr, List<Expression> args, long lEndPos)
         {
-        this.expr = expr;
-        this.args = args;
+        this.expr    = expr;
+        this.args    = args;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return expr.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -72,6 +85,7 @@ public class InvocationExpression
 
     protected Expression       expr;
     protected List<Expression> args;
+    protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
     }

@@ -27,6 +27,19 @@ public class BiTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+
+    @Override
+    public long getStartPosition()
+        {
+        return type1.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return type2.getEndPosition();
+        }
+
     @Override
     protected Field[] getChildFields()
         {

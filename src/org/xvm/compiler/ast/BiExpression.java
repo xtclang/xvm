@@ -41,6 +41,18 @@ public class BiExpression
         }
 
     @Override
+    public long getStartPosition()
+        {
+        return expr1.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return expr2.getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

@@ -28,6 +28,19 @@ public class ExpressionStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+
+    @Override
+    public long getStartPosition()
+        {
+        return expr.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return expr.getEndPosition();
+        }
+
     @Override
     protected Field[] getChildFields()
         {
