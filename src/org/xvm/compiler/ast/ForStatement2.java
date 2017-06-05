@@ -30,6 +30,19 @@ public class ForStatement2
 
     // ----- accessors -----------------------------------------------------------------------------
 
+
+    @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return block.getEndPosition();
+        }
+
     @Override
     protected Field[] getChildFields()
         {

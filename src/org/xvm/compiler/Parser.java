@@ -80,7 +80,8 @@ public class Parser
             try
                 {
                 List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
-                m_root = new StatementBlock(stmts, m_source);
+                m_root = new StatementBlock(stmts, m_source, stmts.get(0).getStartPosition(),
+                        stmts.get(stmts.size()-1).getEndPosition());
                 }
             catch (UnsupportedOperationException e)
                 {
@@ -384,7 +385,7 @@ public class Parser
     StatementBlock parseTypeCompositionBody(Token category)
         {
         List<Statement> stmts = new ArrayList<>();
-        expect(Id.L_CURLY);
+        Token tokLCurly = expect(Id.L_CURLY);
         if (category.getId() == Id.ENUM)
             {
             do
@@ -419,7 +420,9 @@ public class Parser
                 StatementBlock body = null;
                 if (match(Id.L_CURLY) != null)
                     {
-                    body = new StatementBlock(parseTypeCompositionComponents(null, new ArrayList<>(), false));
+                    Token tokLCurly2 = getLastMatch();
+                    body = new StatementBlock(parseTypeCompositionComponents(null, new ArrayList<>(), false),
+                            tokLCurly2.getStartPosition(), getLastMatch().getEndPosition());
                     }
 
                 stmts.add(new EnumDeclaration(annotations, name, typeParams, args, body, doc));
@@ -432,7 +435,8 @@ public class Parser
                 }
             }
 
-        return new StatementBlock(parseTypeCompositionComponents(null, stmts, false));
+        return new StatementBlock(parseTypeCompositionComponents(null, stmts, false),
+                tokLCurly.getStartPosition(), getLastMatch().getEndPosition());
         }
 
     /**
@@ -1067,23 +1071,14 @@ public class Parser
      */
     StatementBlock parseStatementBlock()
         {
-        expect(Id.L_CURLY);
-        return parseBlockStatementRemainder(new ArrayList<>());
-        }
-
-    /**
-     * Parse the remainder of a block statement.
-     *
-     * @return a list of Statements
-     */
-    StatementBlock parseBlockStatementRemainder(List<Statement> stmts)
-        {
+        Token tokStart = expect(Id.L_CURLY);
+        List<Statement> stmts = new ArrayList<>();
         while (match(Id.R_CURLY) == null)
             {
             stmts.add(parseStatement());
             }
 
-        return new StatementBlock(stmts);
+        return new StatementBlock(stmts, tokStart.getStartPosition(), getLastMatch().getEndPosition());
         }
 
     /**
@@ -1185,9 +1180,9 @@ public class Parser
         switch (peek().getId())
             {
             case SEMICOLON:
-                next();
-                log(Severity.ERROR, NO_EMPTY_STMT, null, peek().getStartPosition(), peek().getEndPosition());
-                return new StatementBlock(null);
+                Token tokSemi = match(Id.SEMICOLON);
+                log(Severity.ERROR, NO_EMPTY_STMT, null, tokSemi.getStartPosition(), tokSemi.getEndPosition());
+                return new StatementBlock(null, tokSemi.getStartPosition(), tokSemi.getEndPosition());
 
             case L_CURLY:
                 return parseStatementBlock();
@@ -1602,7 +1597,7 @@ public class Parser
             }
         expect(Id.R_PAREN);
 
-        expect(Id.L_CURLY);
+        Token tokLCurly = expect(Id.L_CURLY);
         List<Statement> stmts = new ArrayList<>();
         while (true)
             {
@@ -1628,8 +1623,9 @@ public class Parser
                     break;
 
                 case R_CURLY:
-                    expect(Id.R_CURLY);
-                    return new SwitchStatement(keyword, cond, new StatementBlock(stmts));
+                    Token tokRCurly = expect(Id.R_CURLY);
+                    return new SwitchStatement(keyword, cond, new StatementBlock(stmts,
+                            tokLCurly.getStartPosition(), tokRCurly.getEndPosition()));
                 }
             }
         }
@@ -1701,7 +1697,7 @@ public class Parser
      */
     TypedefStatement parseTypeDefStatement(Expression exprCond)
         {
-        expect(Id.TYPEDEF);
+        Token keyword = expect(Id.TYPEDEF);
 
         TypeExpression type = parseTypeExpression();
 
@@ -1709,7 +1705,7 @@ public class Parser
 
         expect(Id.SEMICOLON);
 
-        return new TypedefStatement(exprCond, simpleName, type);
+        return new TypedefStatement(exprCond, keyword, type, simpleName);
         }
 
     /**

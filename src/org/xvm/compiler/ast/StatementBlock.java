@@ -20,13 +20,20 @@ public class StatementBlock
 
     public StatementBlock(List<Statement> stmts)
         {
-        this(stmts, null);
+        this(stmts, null, stmts.get(0).getStartPosition(), stmts.get(stmts.size()-1).getEndPosition());
         }
 
-    public StatementBlock(List<Statement> stmts, Source source)
+    public StatementBlock(List<Statement> stmts, long lStartPos, long lEndPos)
         {
-        this.stmts  = stmts;
-        this.source = source;
+        this(stmts, null, lStartPos, lEndPos);
+        }
+
+    public StatementBlock(List<Statement> stmts, Source source, long lStartPos, long lEndPos)
+        {
+        this.stmts     = stmts;
+        this.source    = source;
+        this.lStartPos = lStartPos;
+        this.lEndPos   = lEndPos;
         }
 
 
@@ -48,6 +55,18 @@ public class StatementBlock
         return source == null
                 ? super.getSource()
                 : source;
+        }
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
         }
 
     @Override
@@ -122,6 +141,8 @@ public class StatementBlock
 
     protected Source          source;
     protected List<Statement> stmts;
+    protected long            lStartPos;
+    protected long            lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
     }
