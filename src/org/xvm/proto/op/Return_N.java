@@ -4,28 +4,31 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * RETURN_1 rvalue
+ * RETURN_N #vals:(rvalue)
  *
  * @author gg 2017.03.08
  */
-public class Return_1 extends Op
+public class Return_N extends Op
     {
-    private final int f_nArgValue;
+    private final int[] f_anArgValue;
 
-    public Return_1(int nValue)
+    public Return_N(int[] anValue)
         {
-        f_nArgValue = nValue;
+        f_anArgValue = anValue;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
         int[] aiRet = frame.f_aiReturn;
-        if (aiRet.length > 0) // it's possible that the caller doesn't care about the return value
-            {
-            int iArg = f_nArgValue;
+        int cReturns = aiRet.length;
 
-            frame.f_framePrev.forceValue(aiRet[0],
+        // it's possible that the caller doesn't care about all the return values
+        for (int i = 0; i < cReturns; i++)
+            {
+            int iArg = f_anArgValue[i];
+
+            frame.f_framePrev.forceValue(aiRet[i],
                 iArg >= 0 ? frame.f_ahVar[iArg] :
                 iArg < -Op.MAX_CONST_ID ?
                     frame.getPredefinedArgument(iArg) :

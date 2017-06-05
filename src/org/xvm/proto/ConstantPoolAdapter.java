@@ -1,11 +1,14 @@
 package org.xvm.proto;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
+import com.sun.tools.internal.jxc.ap.Const;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.*;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
+import org.xvm.proto.template.*;
 import org.xvm.util.Handy;
 
 import java.util.HashMap;
@@ -232,6 +235,13 @@ public class ConstantPoolAdapter
         if (oValue instanceof Character)
             {
             return m_constantPool.ensureCharConstant(((Character) oValue).charValue());
+            }
+
+        if (oValue instanceof Boolean)
+            {
+            return getClassTypeConstant(
+                    ((Boolean) oValue).booleanValue() ?
+                            "x:Boolean$True" : "x:Boolean$False");
             }
 
         if (oValue instanceof Object[])

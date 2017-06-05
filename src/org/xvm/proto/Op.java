@@ -50,6 +50,9 @@ public abstract class Op
     // executing the next op-code
     public static final int R_BLOCK = -6;
 
+    // yield before executing the next op-code
+    public static final int R_YIELD = -7;
+
     // an stub for an op-code
     public static final Op[] STUB = new Op[] {Return_0.INSTANCE};
 

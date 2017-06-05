@@ -109,7 +109,7 @@ public abstract class OpCallable extends Op
 
     // call super() methods with multiple arguments and no more than one return
     // (cannot be properties)
-    protected int callSuperN(Frame frame, int[] anArgValue, int iReturn)
+    protected int callSuperN1(Frame frame, int[] anArgValue, int iReturn)
         {
         MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
 
@@ -122,6 +122,28 @@ public abstract class OpCallable extends Op
                 }
 
             return frame.call1(methodSuper, frame.getThis(), ahVar, iReturn);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            frame.m_hException = e.getExceptionHandle();
+            return R_EXCEPTION;
+            }
+        }
+
+    // call super() methods with multiple arguments and multiple returns
+    protected int callSuperNN(Frame frame, int[] anArgValue, int[] aiReturn)
+        {
+        MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
+
+        try
+            {
+            ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.m_cVars, 1);
+            if (ahVar == null)
+                {
+                return R_REPEAT;
+                }
+
+            return frame.callN(methodSuper, frame.getThis(), ahVar, aiReturn);
             }
         catch (ExceptionHandle.WrapperException e)
             {

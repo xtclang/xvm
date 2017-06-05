@@ -3,8 +3,12 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ClassTypeConstant;
 
-import org.xvm.proto.*;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -77,27 +81,20 @@ public class xBoolean
         return null;
         }
 
-    @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
-        {
-        return new BooleanHandle(clazz);
-        }
-
-
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
 
-    private static class BooleanHandle
+    public static class BooleanHandle
                 extends JavaLong
         {
-        BooleanHandle(TypeComposition clz)
-            {
-            super(clz);
-            }
-
         BooleanHandle(TypeComposition clz, boolean f)
             {
             super(clz, f ? 1 : 0);
+            }
+
+        public boolean get()
+            {
+            return m_lValue != 0;
             }
 
         @Override

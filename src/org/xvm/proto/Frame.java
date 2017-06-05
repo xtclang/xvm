@@ -8,6 +8,7 @@ import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 import org.xvm.proto.template.IndexSupport;
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
@@ -379,6 +380,13 @@ public class Frame
         return Op.R_NEXT;
         }
 
+    // return the class of the specified argument
+    public TypeComposition getArgumentClass(int iArg)
+        {
+        return iArg >= 0 ? getVarInfo(iArg).f_clazz :
+            f_context.f_heapGlobal.getConstTemplate(-iArg).f_clazzCanonical;
+        }
+
     // return the ObjectHandle, or null if the value is "pending future", or
     // throw if the async assignment has failed
     public ObjectHandle getArgument(int iArg)
@@ -388,6 +396,11 @@ public class Frame
             {
             VarInfo info = f_aInfo[iArg];
             ObjectHandle hValue = f_ahVar[iArg];
+
+            if (hValue == null)
+                {
+                throw xException.makeHandle("Unassigned value").getException();
+                }
 
             if (info != null)
                 {
@@ -473,6 +486,11 @@ public class Frame
     public void introduceVar(int nVar, TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)
         {
         f_aInfo[nVar] = new VarInfo(clz, sName, nStyle);
+
+        if (hValue == null)
+            {
+            hValue = clz.f_template.createHandle(clz);
+            }
 
         if (hValue != null)
             {

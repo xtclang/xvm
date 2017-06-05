@@ -397,7 +397,7 @@ public abstract class TypeCompositionTemplate
 
                 String sSimpleName = ConstantPoolAdapter.getClassName(constParamClass);
                 TypeCompositionTemplate templateParam = f_types.ensureTemplate(sSimpleName);
-                aClz[iParam] = templateParam.resolve(constParamClass);
+                aClz[iParam++] = templateParam.resolve(constParamClass);
                 }
             else
                 {
@@ -496,6 +496,10 @@ public abstract class TypeCompositionTemplate
     // create an un-initialized handle (Int i;)
     public ObjectHandle createHandle(TypeComposition clazz)
         {
+        if (f_shape == Shape.Const || f_shape == Shape.Enum)
+            {
+            return null;
+            }
         return new ObjectHandle(clazz);
         }
 
@@ -566,9 +570,9 @@ public abstract class TypeCompositionTemplate
         return Op.R_CALL;
         }
 
-    // ----- OpCode support: register operations ------
+    // ----- OpCode support ------
 
-    // invokeNative with one argument and zero or one return value
+    // invokeNative with exactly one argument and zero or one return value
     // place the result into the specified frame register
     // return one of the Op.R_ values
     public int invokeNative(Frame frame, ObjectHandle hTarget,
@@ -577,7 +581,7 @@ public abstract class TypeCompositionTemplate
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
         }
 
-    // invokeNative with N arguments and zero or one return values
+    // invokeNative with zero or more than one arguments and zero or one return values
     // return one of the Op.R_ values
     public int invokeNative(Frame frame, ObjectHandle hTarget,
                             MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
@@ -591,7 +595,6 @@ public abstract class TypeCompositionTemplate
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         throw new IllegalStateException("Invalid op for " + f_sName);
-
         }
 
     // Neg operation
@@ -815,6 +818,36 @@ public abstract class TypeCompositionTemplate
         return null;
         }
 
+    // compare two object handles for equality
+    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        if (f_shape == Shape.Enum)
+            {
+            return hValue1 == hValue2;
+            }
+
+        if (hValue1.f_clazz != hValue2.f_clazz)
+            {
+            return false;
+            }
+
+        Map<String, ObjectHandle> map1 = ((GenericHandle) hValue1).m_mapFields;
+        Map<String, ObjectHandle> map2 = ((GenericHandle) hValue2).m_mapFields;
+
+        for (String sField : map1.keySet())
+            {
+            ObjectHandle h1 = map1.get(sField);
+            ObjectHandle h2 = map2.get(sField);
+
+            TypeCompositionTemplate template = getPropertyTemplate(sField).getClazzTemplate();
+            if (!template.callEquals(h1, h2))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
     // ----- Op-code support: array operations -----
 
     // get a handle to an array for the specified class
@@ -1036,6 +1069,12 @@ public abstract class TypeCompositionTemplate
                 }
             }
 
+        // get the property type in the context of the specified parent class
+        public Type getType(TypeComposition clzParent)
+            {
+            return f_typeName.resolveFormalTypes(clzParent);
+            }
+
         @Override
         public String toString()
             {
@@ -1086,7 +1125,7 @@ public abstract class TypeCompositionTemplate
         // TODO: pointer to what XVM Structure?
         Constant.Access m_access = Constants.Access.PUBLIC;
         boolean m_fNative;
-        public int m_cArgs; // number of args
+        public int m_cArgs; // number of args (excluding "this")
         public int m_cReturns; // number of return values
         public int m_cVars; // max number of local vars (including "this")
         public int m_cScopes = 1; // max number of scopes

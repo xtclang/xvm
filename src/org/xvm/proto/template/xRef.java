@@ -223,7 +223,7 @@ public class xRef
         public String toString()
             {
             return super.toString() +
-                    (m_iVar >= 0 ? " -> " + m_frame.f_ahVar[m_iVar] : m_hDelegate);
+                    (m_iVar >= 0 ? "-> " + m_frame.f_ahVar[m_iVar] : m_hDelegate);
             }
         }
 

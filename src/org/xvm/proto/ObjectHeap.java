@@ -65,47 +65,48 @@ public class ObjectHeap
 
     public ObjectHandle ensureConstHandle(Constant constValue)
         {
+        return getConstTemplate(constValue).createConstHandle(constValue, this);
+        }
+
+    public TypeCompositionTemplate getConstTemplate(int nValueConstId)
+        {
+        Constant constValue = f_constantPool.getConstantValue(nValueConstId);
+        return getConstTemplate(constValue);
+        }
+
+    public TypeCompositionTemplate getConstTemplate(Constant constValue)
+        {
         if (constValue instanceof CharStringConstant)
             {
-            return xString.INSTANCE.createConstHandle(constValue, this);
+            return xString.INSTANCE;
             }
 
         if (constValue instanceof IntConstant)
             {
-            return xInt64.INSTANCE.createConstHandle(constValue, this);
+            return xInt64.INSTANCE;
             }
 
         if (constValue instanceof ClassTypeConstant)
             {
-            return xClass.INSTANCE.createConstHandle(constValue, this);
+            return xClass.INSTANCE;
             }
 
         if (constValue instanceof ModuleConstant)
             {
-            return xModule.INSTANCE.createConstHandle(constValue, this);
+            return xModule.INSTANCE;
             }
 
         if (constValue instanceof TupleConstant)
             {
-            return xTuple.INSTANCE.createConstHandle(constValue, this);
+            return xTuple.INSTANCE;
             }
 
         if (constValue instanceof MethodConstant)
             {
-            ObjectHandle hValue = xMethod.INSTANCE.createConstHandle(constValue, this);
-            if (hValue == null)
-                {
-                // TODO: replace with function when implemented
-                return xFunction.INSTANCE.createConstHandle(constValue, this);
-                }
+            return xMethod.INSTANCE;
             }
 
         throw new UnsupportedOperationException("Unknown constant " + constValue);
-        }
-
-    public String getPropertyName(int nValueConstId)
-        {
-        return ((CharStringConstant) f_constantPool.getConstantValue(nValueConstId)).getValue();
         }
 
     public ObjectHandle getConstHandle(int nValueConstId)

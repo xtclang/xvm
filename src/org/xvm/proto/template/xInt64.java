@@ -3,7 +3,6 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.proto.*;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 
 /**
@@ -13,6 +12,7 @@ import org.xvm.proto.ObjectHandle.JavaLong;
  */
 public class xInt64
         extends TypeCompositionTemplate
+        implements ComparisonSupport
     {
     public static xInt64 INSTANCE;
 
@@ -32,16 +32,19 @@ public class xInt64
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
-        {
-        return new JavaLong(clazz);
-        }
-
-    @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
             (((IntConstant) constant).getValue().getLong())) : null;
+        }
+
+    @Override
+    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return h1.getValue() == h2.getValue();
         }
 
     @Override
@@ -122,5 +125,16 @@ public class xInt64
                     }
             }
         return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
+        }
+
+    // ----- ComparisonSupport -----
+
+    @Override
+    public int compare(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return (int) (h1.getValue() - h2.getValue());
         }
     }

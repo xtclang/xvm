@@ -1,9 +1,15 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.Op;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
+
+import java.util.Arrays;
 
 /**
  * TODO:
@@ -25,6 +31,15 @@ public class xIntArray
     @Override
     public void initDeclared()
         {
+        }
+
+    @Override
+    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        IntArrayHandle h1 = (IntArrayHandle) hValue1;
+        IntArrayHandle h2 = (IntArrayHandle) hValue2;
+
+        return Arrays.equals(h1.m_alValue, h2.m_alValue);
         }
 
     @Override

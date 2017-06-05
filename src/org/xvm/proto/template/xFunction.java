@@ -46,12 +46,6 @@ public class xFunction
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
-        {
-        return new DelegatingHandle(clazz, null);
-        }
-
-    @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         if (constant instanceof MethodConstant)

@@ -3,8 +3,13 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.CharStringConstant;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -13,6 +18,7 @@ import org.xvm.proto.ObjectHandle.JavaLong;
  */
 public class xString
         extends TypeCompositionTemplate
+        implements ComparisonSupport
     {
     public static xString INSTANCE;
 
@@ -47,6 +53,15 @@ public class xString
         {
         return constant instanceof CharStringConstant ? new StringHandle(f_clazzCanonical,
                 ((CharStringConstant) constant).getValue()) : null;
+        }
+
+    @Override
+    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        StringHandle h1 = (StringHandle) hValue1;
+        StringHandle h2 = (StringHandle) hValue2;
+
+        return h1.getValue().equals(h2.getValue());
         }
 
     @Override
@@ -113,10 +128,15 @@ public class xString
         return frame.assignValue(iReturn, makeHandle(hThis.m_sValue + hThat.m_sValue));
         }
 
+    // ----- ComparisonSupport -----
+
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
+    public int compare(ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        return new StringHandle(clazz);
+        StringHandle h1 = (StringHandle) hValue1;
+        StringHandle h2 = (StringHandle) hValue2;
+
+        return h1.getValue().compareTo(h2.getValue());
         }
 
     public static class StringHandle
@@ -124,10 +144,6 @@ public class xString
         {
         private String m_sValue = UNASSIGNED;
 
-        protected StringHandle(TypeComposition clazz)
-            {
-            super(clazz);
-            }
         protected StringHandle(TypeComposition clazz, String sValue)
             {
             super(clazz);

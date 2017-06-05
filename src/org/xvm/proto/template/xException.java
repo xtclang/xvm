@@ -45,12 +45,6 @@ public class xException
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
-        {
-        return new ExceptionHandle(f_clazzCanonical, false, null);
-        }
-
-    @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         return makeHandle(null, null);

@@ -33,8 +33,8 @@ public class ISet extends Op
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            ObjectHandle hArg = frame.getArgument(f_nValue);
             long lIndex = frame.getIndex(f_nIndexValue);
+            ObjectHandle hArg = frame.getArgument(f_nValue);
 
             if (hTarget == null || hArg == null || lIndex == -1)
                 {
