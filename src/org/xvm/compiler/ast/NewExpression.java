@@ -27,12 +27,13 @@ public class NewExpression
      * @param expr
      * @param args
      */
-    public NewExpression(Token operator, Expression expr, List<Expression> args, StatementBlock body)
+    public NewExpression(Token operator, Expression expr, List<Expression> args, StatementBlock body, long lEndPos)
         {
         super(operator, expr);
-        this.cont = null;
-        this.args = args;
-        this.body = body;
+        this.cont    = null;
+        this.args    = args;
+        this.body    = body;
+        this.lEndPos = lEndPos;
         }
 
     /**
@@ -43,16 +44,29 @@ public class NewExpression
      * @param expr
      * @param args
      */
-    public NewExpression(Expression cont, Token operator, Expression expr, List<Expression> args)
+    public NewExpression(Expression cont, Token operator, Expression expr, List<Expression> args, long lEndPos)
         {
         super(operator, expr);
-        this.cont = cont;
-        this.args = args;
-        this.body = null;
+        this.cont    = cont;
+        this.args    = args;
+        this.body    = null;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return cont == null ? operator.getStartPosition() : cont.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -128,6 +142,7 @@ public class NewExpression
     protected Expression       cont;
     protected List<Expression> args;
     protected StatementBlock   body;
+    protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "cont", "args", "body");
     }

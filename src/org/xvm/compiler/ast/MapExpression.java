@@ -17,15 +17,28 @@ public class MapExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public MapExpression(TypeExpression type, List<Expression> keys, List<Expression> values)
+    public MapExpression(TypeExpression type, List<Expression> keys, List<Expression> values, long lEndPos)
         {
-        this.type   = type;
-        this.keys   = keys;
-        this.values = values;
+        this.type    = type;
+        this.keys    = keys;
+        this.values  = values;
+        this.lEndPos = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return type.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -73,6 +86,7 @@ public class MapExpression
     protected TypeExpression   type;
     protected List<Expression> keys;
     protected List<Expression> values;
+    protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MapExpression.class, "type", "keys", "values");
     }

@@ -21,15 +21,28 @@ public class ImplicitLambdaExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ImplicitLambdaExpression(List<Expression> params, Token operator, StatementBlock body)
+    public ImplicitLambdaExpression(List<Expression> params, Token operator, StatementBlock body, long lStartPos)
         {
-        this.params   = params;
-        this.operator = operator;
-        this.body     = body;
+        this.params    = params;
+        this.operator  = operator;
+        this.body      = body;
+        this.lStartPos = lStartPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return body.getEndPosition();
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -100,6 +113,7 @@ public class ImplicitLambdaExpression
     protected List<Expression> params;
     protected Token            operator;
     protected StatementBlock   body;
+    protected long             lStartPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImplicitLambdaExpression.class, "params", "body");
     }

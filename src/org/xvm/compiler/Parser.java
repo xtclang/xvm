@@ -2347,8 +2347,13 @@ s     *
                         {
                         case NEW:
                             {
-                            Token keyword = expect(Id.NEW);
-                            expr = new NewExpression(expr, keyword, parseTypeExpression(), parseArgumentList(false));
+                            Token            keyword = expect(Id.NEW);
+                            TypeExpression   type    = parseTypeExpression();
+                            List<Expression> params  = parseArgumentList(false);
+                            long             lEndPos = params == null
+                                    ? type.getEndPosition()
+                                    : getLastMatch().getEndPosition();
+                            expr = new NewExpression(expr, keyword, type, params, lEndPos);
                             break;
                             }
 
@@ -2399,7 +2404,8 @@ s     *
 
                 case L_PAREN:
                     // ArgumentList
-                    expr = new InvocationExpression(expr, parseArgumentList(true));
+                    expr = new InvocationExpression(expr, parseArgumentList(true),
+                            getLastMatch().getEndPosition());
                     break;
 
                 case L_SQUARE:
@@ -2431,7 +2437,7 @@ s     *
                         // "someArray[3]"
                         List<Expression> indexes = parseExpressionList();
                         expect(Id.R_SQUARE);
-                        expr = new ArrayAccessExpression(expr, indexes);
+                        expr = new ArrayAccessExpression(expr, indexes, getLastMatch().getEndPosition());
                         }
                     break;
                     }
@@ -2489,7 +2495,7 @@ s     *
                     {
                     body = parseTypeCompositionBody(keyword);
                     }
-                return new NewExpression(keyword, type, args, body);
+                return new NewExpression(keyword, type, args, body, getLastMatch().getEndPosition());
                 }
 
             case CONSTRUCT:
@@ -2516,7 +2522,7 @@ s     *
                     {
                     return new ImplicitLambdaExpression(Collections.singletonList(new NameExpression(
                             names, null, names.get(names.size()-1).getEndPosition())),
-                            expect(Id.LAMBDA), parseLambdaBody());
+                            expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition());
                     }
 
                 // parse qualified name
@@ -2581,12 +2587,12 @@ s     *
                 {
                 /// this could be a tuple literal, a parenthesized expression, or a lambda
                 // expression's parameter list
-                expect(Id.L_PAREN);
+                Token tokLParen = expect(Id.L_PAREN);
                 if (match(Id.R_PAREN) != null)
                     {
                     // Void lambda
                     return new ExplicitLambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
-                            parseLambdaBody());
+                            parseLambdaBody(), tokLParen.getStartPosition());
                     }
 
                 Expression expr = parseExpression();
@@ -2606,11 +2612,12 @@ s     *
 
                         if (peek().getId() == Id.LAMBDA)
                             {
-                            return new ImplicitLambdaExpression(exprs, expect(Id.LAMBDA), parseLambdaBody());
+                            return new ImplicitLambdaExpression(exprs, expect(Id.LAMBDA),
+                                    parseLambdaBody(), tokLParen.getStartPosition());
                             }
 
                         // it's a Tuple literal
-                        return new TupleExpression(null, exprs);
+                        return new TupleExpression(null, exprs, tokLParen.getStartPosition(), getLastMatch().getEndPosition());
 
                     case R_PAREN:
                         // this is either a parenthesized expression or a single parameter for a
@@ -2618,8 +2625,8 @@ s     *
                         expect(Id.R_PAREN);
                         if (peek().getId() == Id.LAMBDA)
                             {
-                            return new ImplicitLambdaExpression(Collections.EMPTY_LIST,
-                                    expect(Id.LAMBDA), parseLambdaBody());
+                            return new ImplicitLambdaExpression(Collections.singletonList(expr),
+                                    expect(Id.LAMBDA), parseLambdaBody(), tokLParen.getStartPosition());
                             }
                         else
                             {
@@ -2628,7 +2635,7 @@ s     *
                             }
 
                     case IDENTIFIER:
-                        // it has to be a lambda, because we just parse an expression (which must
+                        // it has to be a lambda, because we just parsed an expression (which must
                         // have been a parameter type) and now we have the parameter name
                         {
                         List<Parameter> params = new ArrayList<>();
@@ -2641,7 +2648,8 @@ s     *
                             }
                         expect(Id.R_PAREN);
 
-                        return new ExplicitLambdaExpression(params, expect(Id.LAMBDA), parseLambdaBody());
+                        return new ExplicitLambdaExpression(params, expect(Id.LAMBDA),
+                                parseLambdaBody(), tokLParen.getStartPosition());
                         }
 
                     default:
@@ -2834,12 +2842,16 @@ s     *
                                        + hexitValue(sb.charAt(ofch++)));
                     }
 
-                return new BinaryExpression(ab, lPosStart, lPosEnd);
+                return new BinaryExpression(ab, lPosStart, lPosEnd, type.getStartPosition(),
+                        getLastMatch().getEndPosition());
                 }
 
             case "List":
                 {
                 expect(Id.L_CURLY);
+                long lStartPos = type == null
+                        ? getLastMatch().getStartPosition()
+                        : type.getStartPosition();
                 List<Expression> exprs = null;
                 while (match(Id.R_CURLY) == null)
                     {
@@ -2853,7 +2865,7 @@ s     *
                         }
                     exprs.add(parseExpression());
                     }
-                return new ListExpression(type, exprs);
+                return new ListExpression(type, exprs, lStartPos, getLastMatch().getEndPosition());
                 }
 
             case "Map":
@@ -2876,7 +2888,7 @@ s     *
                     expect(Id.ASN);
                     values.add(parseExpression());
                     }
-                return new MapExpression(type, keys, values);
+                return new MapExpression(type, keys, values, getLastMatch().getEndPosition());
                 }
 
             case "Tuple":
@@ -2901,7 +2913,8 @@ s     *
                         }
                     exprs.add(parseExpression());
                     }
-                return new TupleExpression(type, exprs);
+                return new TupleExpression(type, exprs, type.getStartPosition(),
+                        getLastMatch().getEndPosition());
                 }
 
             default:

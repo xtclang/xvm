@@ -19,15 +19,29 @@ public class BinaryExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public BinaryExpression(byte[] bytes, long startPos, long endPos)
+    public BinaryExpression(byte[] bytes, long ofStart, long ofEnd, long lStartPos, long lEndPos)
         {
-        this.bytes    = bytes;
-        this.startPos = startPos;
-        this.endPos   = endPos;
+        this.bytes     = bytes;
+        this.startPos  = ofStart;
+        this.endPos    = ofEnd;
+        this.lStartPos = lStartPos;
+        this.lEndPos   = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -67,4 +81,6 @@ public class BinaryExpression
     protected byte[] bytes;
     protected long   startPos;
     protected long   endPos;
+    protected long   lStartPos;
+    protected long   lEndPos;
     }

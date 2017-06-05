@@ -20,15 +20,28 @@ public class ExplicitLambdaExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ExplicitLambdaExpression(List<Parameter> params, Token operator, StatementBlock body)
+    public ExplicitLambdaExpression(List<Parameter> params, Token operator, StatementBlock body, long lStartPos)
         {
-        this.params   = params;
-        this.operator = operator;
-        this.body     = body;
+        this.params    = params;
+        this.operator  = operator;
+        this.body      = body;
+        this.lStartPos = lStartPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return body.getEndPosition();
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -99,6 +112,7 @@ public class ExplicitLambdaExpression
     protected List<Parameter> params;
     protected Token           operator;
     protected StatementBlock  body;
+    protected long            lStartPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ExplicitLambdaExpression.class, "params", "body");
     }

@@ -31,10 +31,22 @@ public class PostfixExpression
         if (operator.getId() == Token.Id.COND)
             {
             // convert "expr?" to "type?"
-            return new NullableTypeExpression(expr.toTypeExpression());
+            return new NullableTypeExpression(expr.toTypeExpression(), getEndPosition());
             }
 
         return super.toTypeExpression();
+        }
+
+    @Override
+    public long getStartPosition()
+        {
+        return expr.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return operator.getEndPosition();
         }
 
     @Override

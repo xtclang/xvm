@@ -24,6 +24,18 @@ public class LiteralExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public long getStartPosition()
+        {
+        return literal.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return literal.getEndPosition();
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

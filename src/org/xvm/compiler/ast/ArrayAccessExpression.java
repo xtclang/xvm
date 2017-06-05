@@ -16,10 +16,11 @@ public class ArrayAccessExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ArrayAccessExpression(Expression expr, List<Expression> indexes)
+    public ArrayAccessExpression(Expression expr, List<Expression> indexes, long lEndPos)
         {
         this.expr    = expr;
         this.indexes = indexes;
+        this.lEndPos = lEndPos;
         }
 
 
@@ -28,7 +29,19 @@ public class ArrayAccessExpression
     @Override
     public TypeExpression toTypeExpression()
         {
-        return new ArrayTypeExpression(expr.toTypeExpression(), indexes);
+        return new ArrayTypeExpression(expr.toTypeExpression(), indexes, lEndPos);
+        }
+
+    @Override
+    public long getStartPosition()
+        {
+        return expr.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
         }
 
     @Override
@@ -78,6 +91,7 @@ public class ArrayAccessExpression
 
     protected Expression       expr;
     protected List<Expression> indexes;
+    protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ArrayAccessExpression.class, "expr", "indexes");
     }

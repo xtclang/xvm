@@ -26,6 +26,18 @@ public class NamedExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public long getStartPosition()
+        {
+        return name.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return expr.getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

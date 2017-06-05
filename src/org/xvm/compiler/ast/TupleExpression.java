@@ -16,14 +16,28 @@ public class TupleExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TupleExpression(TypeExpression type, List<Expression> exprs)
+    public TupleExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos)
         {
-        this.type  = type;
-        this.exprs = exprs;
+        this.type      = type;
+        this.exprs     = exprs;
+        this.lStartPos = lStartPos;
+        this.lEndPos   = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -74,6 +88,8 @@ public class TupleExpression
 
     protected TypeExpression   type;
     protected List<Expression> exprs;
+    protected long             lStartPos;
+    protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TupleExpression.class, "type", "exprs");
     }
