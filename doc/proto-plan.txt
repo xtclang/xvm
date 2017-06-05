@@ -23,9 +23,9 @@
 
 + DaemonPool scheduling - "native" stack implementation
 
-- Service and Fiber id passing
-
 - Tuple, ConditionalTuple
+
+- Service and Fiber id passing
 
 - Property and Method
 

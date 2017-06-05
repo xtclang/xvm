@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 public class Frame
     {
     public final ServiceContext f_context;
-    // public final long[]         f_alXid;       // fiber Xid; the
+    // public final long[]         f_alXid;       // fiber Xid; TODO
     public final InvocationTemplate f_function;
     public final Op[]           f_aOp;          // the op-codes
     public final ObjectHandle   f_hTarget;      // target
@@ -117,7 +117,7 @@ public class Frame
                 for (int iCatch = 0, c = guard.f_anClassConstId.length; iCatch < c; iCatch++)
                     {
                     TypeComposition clzCatch = f_context.f_types.
-                            ensureConstComposition(guard.f_anClassConstId[iCatch]);
+                            ensureComposition(guard.f_anClassConstId[iCatch]);
                     if (clzException.extends_(clzCatch))
                         {
                         int nScope = guard.f_nScope;
@@ -486,11 +486,6 @@ public class Frame
     public void introduceVar(int nVar, TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)
         {
         f_aInfo[nVar] = new VarInfo(clz, sName, nStyle);
-
-        if (hValue == null)
-            {
-            hValue = clz.f_template.createHandle(clz);
-            }
 
         if (hValue != null)
             {

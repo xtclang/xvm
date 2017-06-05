@@ -23,7 +23,7 @@ public class Return_N extends Op
         int[] aiRet = frame.f_aiReturn;
         int cReturns = aiRet.length;
 
-        // it's possible that the caller doesn't care about all the return values
+        // it's possible that the caller doesn't care about some of the return values
         for (int i = 0; i < cReturns; i++)
             {
             int iArg = f_anArgValue[i];

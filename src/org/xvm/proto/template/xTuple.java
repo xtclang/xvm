@@ -55,7 +55,10 @@ public class xTuple
         //    Tuple<ElementTypes> ensurePersistent();
         //    Tuple<ElementTypes> ensureConst();
 
+        ensureConstructTemplate(new String[]{"x:collections.Sequence"}).markNative();
+
         ensurePropertyTemplate("size", "x:Int").makeReadOnly();
+
         ensureMethodTemplate("get", INT, new String[]{"x:Type"}); // not quite right
         ensureMethodTemplate("set", new String[]{"x:Int", "x:Type"}, VOID); // not quite right
         ensureMethodTemplate("elementAt", INT, new String[]{"x:Ref<x:Type>"}); // not quite right
@@ -64,12 +67,6 @@ public class xTuple
         ensureMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, new String[]{"x:Tuple"}); // non "virtual"
         ensureMethodTemplate("remove", INT, new String[]{"x:Tuple"}); // non "virtual"
         ensureMethodTemplate("remove", new String[]{"x:Range<x:Int>"}, new String[]{"x:Tuple"}); // non "virtual"
-        }
-
-    @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
-        {
-        return new TupleHandle(clazz, new ObjectHandle[clazz.f_atGenericActual.length]);
         }
 
     @Override

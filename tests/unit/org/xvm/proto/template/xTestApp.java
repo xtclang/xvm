@@ -334,7 +334,7 @@ public class xTestApp extends xModule
             new Return_N(new int[] {
                     -adapter.ensureValueConstantId(true),
                     -adapter.ensureValueConstantId("positive")}),
-            new Return_1(-adapter.ensureValueConstantId(true))
+            new Return_1(-adapter.ensureValueConstantId(false))
             };
         ftTestCond.m_cVars = 2;
 
@@ -355,6 +355,10 @@ public class xTestApp extends xModule
 
             new NVar(adapter.getClassTypeConstId("x:Tuple<x:String,x:Int64>"),
                      adapter.ensureValueConstantId("t2")), // #3 (t2)
+            new New_N(adapter.getMethodConstId("x:Tuple", "construct"),
+                       new int[] {-adapter.ensureValueConstantId(""),
+                                  -adapter.ensureValueConstantId(0)}, 3),
+            new X_Print(3),
 
             new IVar(adapter.getClassTypeConstId("x:String"),
                     -adapter.ensureValueConstantId("t")), // #4
@@ -375,20 +379,24 @@ public class xTestApp extends xModule
             new IsEq(6, -adapter.ensureValueConstantId(4), 8),
             new AssertV(8, adapter.ensureValueConstantId("of == 4"), new int[] {6}),
 
+            new Enter(),
             new Var(adapter.getClassTypeConstId("x:Boolean")), // #9
             new Var(adapter.getClassTypeConstId("x:String")), // #10
             new Call_1N(-adapter.getMethodConstId("x:TestApp", "testConditional"),
                     -adapter.ensureValueConstantId(1), new int[] {9, 10}),
             new JumpFalse(9, 2),
             new X_Print(10),
+            new Exit(),
 
-            new Var(adapter.getClassTypeConstId("x:Tuple")), // #11
+            new Var(adapter.getClassTypeConstId("x:Tuple")), // #9
             new Call_1T(-adapter.getMethodConstId("x:TestApp", "testConditional"),
-                    -adapter.ensureValueConstantId(1), 11),
+                        -adapter.ensureValueConstantId(-1), 9),
+            new X_Print(9),
 
             new Return_0()
             };
-        ftTestTuple.m_cVars = 12;
+        ftTestTuple.m_cVars = 11;
+        ftTestTuple.m_cScopes = 2;
 
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);

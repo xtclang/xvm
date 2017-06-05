@@ -29,11 +29,16 @@ public class Construct_1 extends OpCallable
             {
             ConstructTemplate constructor = (ConstructTemplate) getFunctionTemplate(frame, f_nConstructId);
 
-            ObjectHandle[] ahVar = frame.getArguments(new int[]{0, f_nArgValue}, constructor.getVarCount(), 0);
-            if (ahVar == null)
+            ObjectHandle hStruct = frame.getArgument(0);
+            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            if (hArg == null)
                 {
                 return R_REPEAT;
                 }
+
+            ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
+            ahVar[0] = hStruct;
+            ahVar[1] = hArg;
 
             frame.chainFinalizer(constructor.makeFinalizer(ahVar));
 

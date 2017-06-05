@@ -10,10 +10,6 @@ import org.xvm.proto.op.Return_0;
  */
 public abstract class Op
     {
-    // offsets for the execution indexes
-    public static final int I_SCOPE = 0;
-    public static final int I_GUARD = 1;
-
     // the maximum value for the constants in the const pool
     public static final int MAX_CONST_ID = 2_000_000_000;
 

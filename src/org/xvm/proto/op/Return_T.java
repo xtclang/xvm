@@ -8,7 +8,7 @@ import org.xvm.proto.Op;
 import org.xvm.proto.template.xTuple.TupleHandle;
 
 /**
- * RETURN_T rvalue-tuple  ; return (a tuple of return values)
+ * RETURN_T rvalue-tuple ; return (a tuple of return values)
  *
  * @author gg 2017.03.08
  */
@@ -27,7 +27,7 @@ public class Return_T extends Op
         int[] aiRet = frame.f_aiReturn;
         int cReturns = aiRet.length;
 
-        // it's possible that the caller doesn't care about the return value
+        // it's possible that the caller doesn't care about some of the return values
         if (cReturns > 0)
             {
             try

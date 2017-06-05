@@ -65,7 +65,7 @@ public class xAtomicRef
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz)
         {
         return new AtomicHandle(clazz, null);
         }

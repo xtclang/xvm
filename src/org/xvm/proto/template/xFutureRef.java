@@ -1,7 +1,10 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -68,13 +71,13 @@ public class xFutureRef
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz)
         {
         return new FutureHandle(clazz, null, false);
         }
 
     public static class FutureHandle
-            extends xRef.RefHandle
+            extends RefHandle
         {
         public final boolean f_fSynthetic;
         public CompletableFuture<ObjectHandle> m_future;

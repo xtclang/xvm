@@ -493,14 +493,10 @@ public abstract class TypeCompositionTemplate
 
     // ---- OpCode support: construction and initialization -----
 
-    // create an un-initialized handle (Int i;)
-    public ObjectHandle createHandle(TypeComposition clazz)
+    // create a RefHandle for the specified class
+    public RefHandle createRefHandle(TypeComposition clazz)
         {
-        if (f_shape == Shape.Const || f_shape == Shape.Enum)
-            {
-            return null;
-            }
-        return new ObjectHandle(clazz);
+        throw new IllegalStateException("Invalid op for " + f_sName);
         }
 
     // assign (Int i = 5;)
@@ -1010,7 +1006,7 @@ public abstract class TypeCompositionTemplate
             TypeComposition clzReferent = typeReferent == null ?
                 m_templateRef.resolve(new Type[] {typeReferent}) :
                 m_templateRef.f_clazzCanonical;
-            return (RefHandle) m_templateRef.createHandle(clzReferent);
+            return m_templateRef.createRefHandle(clzReferent);
             }
 
         public void setGetAccess(Constant.Access access)
