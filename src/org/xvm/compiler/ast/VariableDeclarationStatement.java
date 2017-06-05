@@ -24,7 +24,12 @@ public class VariableDeclarationStatement
         this(type, name, null, value, true);
         }
 
-    public VariableDeclarationStatement(TypeExpression type, Token name, Token op, Expression value, Boolean standalone)
+    public VariableDeclarationStatement(TypeExpression type, Token name, Token op, Expression value)
+        {
+        this(type, name, op, value, false);
+        }
+
+    private VariableDeclarationStatement(TypeExpression type, Token name, Token op, Expression value, Boolean standalone)
         {
         this.name  = name;
         this.type  = type;
@@ -39,6 +44,18 @@ public class VariableDeclarationStatement
     public boolean isConditional()
         {
         return cond;
+        }
+
+    @Override
+    public long getStartPosition()
+        {
+        return type.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return value == null ? name.getEndPosition() : value.getEndPosition();
         }
 
     @Override

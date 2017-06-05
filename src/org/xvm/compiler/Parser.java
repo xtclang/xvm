@@ -695,7 +695,7 @@ public class Parser
 
                             // create a statement that represents a variable declaration
                             stmts.add(new VariableDeclarationStatement(expr.toTypeExpression(),
-                                    expect(Id.IDENTIFIER), null, null, false));
+                                    expect(Id.IDENTIFIER), null, null));
                             }
                         else
                             {
@@ -1671,7 +1671,7 @@ public class Parser
             {
             expect(Id.L_PAREN);
             VariableDeclarationStatement var = new VariableDeclarationStatement(
-                    parseTypeExpression(), expect(Id.IDENTIFIER), null, null, false);
+                    parseTypeExpression(), expect(Id.IDENTIFIER), null, null);
             expect(Id.R_PAREN);
             catches.add(new CatchStatement(var, parseStatementBlock()));
             }
@@ -1815,7 +1815,7 @@ public class Parser
 
         TypeExpression type = expr.toTypeExpression();
         Token name = expect(Id.IDENTIFIER);
-        return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression(), false);
+        return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression());
         }
 
     /**
@@ -1872,7 +1872,7 @@ public class Parser
             op = expect(Id.COLON);
             }
 
-        return new VariableDeclarationStatement(type, name, op, parseExpression(), false);
+        return new VariableDeclarationStatement(type, name, op, parseExpression());
         }
 
     /**
