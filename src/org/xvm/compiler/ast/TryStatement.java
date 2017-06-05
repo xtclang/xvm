@@ -34,6 +34,22 @@ public class TryStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return catchall == null
+                ? catches.isEmpty()
+                        ? block.getEndPosition()
+                        : catches.get(catches.size()-1).getEndPosition()
+                : catchall.getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

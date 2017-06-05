@@ -25,6 +25,19 @@ public class LabeledStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+
+    @Override
+    public long getStartPosition()
+        {
+        return label.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return stmt.getEndPosition();
+        }
+
     @Override
     protected Field[] getChildFields()
         {

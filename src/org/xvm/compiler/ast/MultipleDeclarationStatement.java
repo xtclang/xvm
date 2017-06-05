@@ -17,14 +17,28 @@ public class MultipleDeclarationStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public MultipleDeclarationStatement(List<Statement> lvalues, Expression rvalue)
+    public MultipleDeclarationStatement(List<Statement> lvalues, Expression rvalue, long lStartPos)
         {
-        this.lvalues = lvalues;
-        this.rvalue  = rvalue;
+        this.lvalues   = lvalues;
+        this.rvalue    = rvalue;
+        this.lStartPos = lStartPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public long getStartPosition()
+        {
+        return lStartPos;
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return rvalue.getEndPosition();
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -75,6 +89,7 @@ public class MultipleDeclarationStatement
 
     protected List<Statement> lvalues;
     protected Expression      rvalue;
+    protected long            lStartPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MultipleDeclarationStatement.class, "lvalues", "rvalue");
     }

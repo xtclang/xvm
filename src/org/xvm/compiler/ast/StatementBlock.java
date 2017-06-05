@@ -20,7 +20,9 @@ public class StatementBlock
 
     public StatementBlock(List<Statement> stmts)
         {
-        this(stmts, null, stmts.get(0).getStartPosition(), stmts.get(stmts.size()-1).getEndPosition());
+        this(stmts, null,
+                stmts.isEmpty() ? 0L : stmts.get(0).getStartPosition(),
+                stmts.isEmpty() ? 0L : stmts.get(stmts.size()-1).getEndPosition());
         }
 
     public StatementBlock(List<Statement> stmts, long lStartPos, long lEndPos)

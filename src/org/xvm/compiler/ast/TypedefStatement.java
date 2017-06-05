@@ -19,7 +19,7 @@ public class TypedefStatement
     public TypedefStatement(Expression cond, Token keyword, TypeExpression type, Token alias)
         {
         this.cond      = cond;
-        this.lStartPos = cond == null ? keyword.getStartPosition() : cond.getStartPosition();
+        this.lStartPos = keyword.getStartPosition();
         this.type      = type;
         this.alias     = alias;
         }

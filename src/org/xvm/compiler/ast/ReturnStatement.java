@@ -39,6 +39,18 @@ public class ReturnStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return exprs == null ? keyword.getEndPosition() : exprs.get(exprs.size()-1).getEndPosition();
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

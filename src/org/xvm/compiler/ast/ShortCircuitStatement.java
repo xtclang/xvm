@@ -23,6 +23,18 @@ public class ShortCircuitStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return name == null ? keyword.getEndPosition() : name.getEndPosition();
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

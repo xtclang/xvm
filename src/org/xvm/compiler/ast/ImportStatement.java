@@ -18,15 +18,28 @@ public class ImportStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ImportStatement(Expression cond, Token alias, List<Token> qualifiedName)
+    public ImportStatement(Expression cond, Token keyword, Token alias, List<Token> qualifiedName)
         {
         this.cond          = cond;
+        this.keyword       = keyword;
         this.alias         = alias;
         this.qualifiedName = qualifiedName;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return keyword.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return alias.getEndPosition();
+        }
 
     @Override
     protected Field[] getChildFields()
@@ -87,6 +100,7 @@ public class ImportStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression  cond;
+    protected Token       keyword;
     protected Token       alias;
     protected List<Token> qualifiedName;
 

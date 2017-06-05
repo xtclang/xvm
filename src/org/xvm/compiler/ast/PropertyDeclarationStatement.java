@@ -32,7 +32,9 @@ public class PropertyDeclarationStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public PropertyDeclarationStatement(Expression       condition,
+    public PropertyDeclarationStatement(long             lStartPos,
+                                        long             lEndPos,
+                                        Expression       condition,
                                         List<Token>      modifiers,
                                         List<Annotation> annotations,
                                         TypeExpression   type,
@@ -41,6 +43,8 @@ public class PropertyDeclarationStatement
                                         StatementBlock   body,
                                         Token            doc)
         {
+        super(lStartPos, lEndPos);
+
         this.condition   = condition;
         this.modifiers   = modifiers;
         this.annotations = annotations;

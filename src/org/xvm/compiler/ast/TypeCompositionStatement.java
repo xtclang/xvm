@@ -5,8 +5,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
-
 import org.xvm.asm.ModuleStructure;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorListener;
@@ -27,7 +27,6 @@ import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 import static org.xvm.compiler.Lexer.isWhitespace;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
-import static org.xvm.util.Handy.parseDelimitedString;
 
 
 /**
@@ -41,6 +40,8 @@ public class TypeCompositionStatement
     // ----- constructors --------------------------------------------------------------------------
 
     public TypeCompositionStatement(Source            source,
+                                    long              lStartPos,
+                                    long              lEndPos,
                                     Expression        condition,
                                     List<Token>       modifiers,
                                     List<Annotation>  annotations,
@@ -53,6 +54,8 @@ public class TypeCompositionStatement
                                     StatementBlock    body,
                                     Token             doc)
         {
+        super(lStartPos, lEndPos);
+
         this.source            = source;
         this.condition         = condition;
         this.modifiers         = modifiers;
@@ -154,8 +157,7 @@ public class TypeCompositionStatement
         String sName = getName();
         if (!isValidQualifiedModule(sName))
             {
-            errs.log(Severity.ERROR, Compiler.MODULE_BAD_NAME, new Object[] {sName}, source,
-                    qualified.get(0).getStartPosition(), qualified.get(qualified.size()-1).getEndPosition());
+            log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sName);
             throw new CompilerException("unable to create module with illegal name: " + sName);
             }
 
@@ -188,8 +190,7 @@ public class TypeCompositionStatement
                     case PROTECTED:
                     case PRIVATE:
                     case STATIC:
-                        errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, new Object[] {token.getId().TEXT},
-                                source, token.getStartPosition(), token.getEndPosition());
+                        log(errs, Severity.ERROR, Compiler.ILLEGAL_MODIFIER, token.getId().TEXT);
                         break;
 
                     default:
@@ -500,9 +501,9 @@ public class TypeCompositionStatement
 
         // trim any trailing whitespace & line terminators
         int cch = sb.length();
-        while (isWhitespace(sb.charAt(cch-1)))
+        while (isWhitespace(sb.charAt(--cch)))
             {
-            sb.setLength(cch-1);
+            sb.setLength(cch);
             }
 
         return sb.toString();

@@ -32,7 +32,9 @@ public class MethodDeclarationStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public MethodDeclarationStatement(Expression           condition,
+    public MethodDeclarationStatement(long                 lStartPos,
+                                      long                 lEndPos,
+                                      Expression           condition,
                                       List<Token>          modifiers,
                                       List<Annotation>     annotations,
                                       List<Token>          typeVars,
@@ -44,6 +46,8 @@ public class MethodDeclarationStatement
                                       StatementBlock       continuation,
                                       Token                doc)
         {
+        super(lStartPos, lEndPos);
+
         this.condition    = condition;
         this.modifiers    = modifiers;
         this.annotations  = annotations;

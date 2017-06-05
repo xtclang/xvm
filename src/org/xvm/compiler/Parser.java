@@ -141,7 +141,8 @@ public class Parser
      */
     TypeCompositionStatement parseTypeCompositionStatement()
         {
-        Token doc = takeDoc();
+        Token doc       = takeDoc();
+        long  lStartPos = peek().getStartPosition();
 
         // modifiers (including annotations)
         List<Token> modifiers = null;
@@ -154,14 +155,14 @@ public class Parser
             annotations = twoLists[1];
             }
 
-        return parseTypeDeclarationStatementAfterModifiers(null, doc, modifiers, annotations);
+        return parseTypeDeclarationStatementAfterModifiers(lStartPos, null, doc, modifiers, annotations);
         }
 
     /**
      * (This is just a continuation of the above method.)
      */
-    TypeCompositionStatement parseTypeDeclarationStatementAfterModifiers(Expression exprCondition,
-            Token doc, List<Token> modifiers, List<Annotation> annotations)
+    TypeCompositionStatement parseTypeDeclarationStatementAfterModifiers(long lStartPos,
+            Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations)
         {
         // category & name
         Token category;
@@ -199,17 +200,21 @@ public class Parser
 
         // TypeCompositionBody
         StatementBlock body = null;
+        long           lEndPos;
         if (peek().getId() == Id.L_CURLY)
             {
-            body = parseTypeCompositionBody(category);
+            body    = parseTypeCompositionBody(category);
+            lEndPos = body.getEndPosition();
             }
         else
             {
+            lEndPos = getLastMatch().getEndPosition();
             expect(Id.SEMICOLON);
             }
 
-        return new TypeCompositionStatement(m_source, exprCondition, modifiers, annotations, category, name,
-                qualified, typeParams, constructorParams, compositions, body, doc);
+        return new TypeCompositionStatement(m_source, lStartPos, lEndPos, exprCondition, modifiers,
+                annotations, category, name, qualified, typeParams, constructorParams, compositions,
+                body, doc);
         }
 
     /**
@@ -392,6 +397,8 @@ public class Parser
                 {
                 Token doc = takeDoc();
 
+                long lStartPos = peek().getStartPosition();
+
                 // annotations
                 List<Annotation> annotations = null;
                 while (true)
@@ -425,7 +432,10 @@ public class Parser
                             tokLCurly2.getStartPosition(), getLastMatch().getEndPosition());
                     }
 
-                stmts.add(new EnumDeclaration(annotations, name, typeParams, args, body, doc));
+                long lEndPos = getLastMatch().getEndPosition();
+
+                stmts.add(new EnumDeclaration(annotations, name, typeParams, args, body, doc,
+                        lStartPos, lEndPos));
                 }
             while (match(Id.COMMA) != null);
 
@@ -611,7 +621,8 @@ public class Parser
         // an enclosing "if" statement instead
         assert !(fInMethod && exprCondition != null);
 
-        Token doc = takeDoc();
+        Token doc       = takeDoc();
+        long  lStartPos = peek().getStartPosition();
 
         // constant starts with "static" (a modifier)
         // method starts with annotations/modifiers
@@ -648,7 +659,8 @@ public class Parser
             case TRAIT:
             case MIXIN:
                 // it's definitely a type composition
-                return parseTypeDeclarationStatementAfterModifiers(exprCondition, doc, modifiers, annotations);
+                return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
+                        modifiers, annotations);
 
             case L_PAREN:
                 {
@@ -743,7 +755,7 @@ public class Parser
                         expect(Id.ASN);
                         Expression value = parseExpression();
                         expect(Id.SEMICOLON);
-                        return new MultipleDeclarationStatement(stmts, value);
+                        return new MultipleDeclarationStatement(stmts, value, start.getStartPosition());
                         }
 
                     // at this point, all we encountered was a list of expressions inside of
@@ -818,8 +830,8 @@ public class Parser
 
                     if (returns != null)
                         {
-                        return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations,
-                                null, returns, null, expect(Id.IDENTIFIER));
+                        return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                                modifiers, annotations, null, returns, null, expect(Id.IDENTIFIER));
                         }
                     }
 
@@ -835,7 +847,7 @@ public class Parser
                     return parseVariableDeclarationAfterName(annotations, type, name);
                     }
 
-                return parsePropertyDeclarationFinish(exprCondition, doc, modifiers, annotations, type, name);
+                return parsePropertyDeclarationFinish(lStartPos, exprCondition, doc, modifiers, annotations, type, name);
                 }
 
             case COMP_LT:
@@ -844,7 +856,8 @@ public class Parser
                 List<Token>          typeVars = parseTypeVariableList(true);
                 List<TypeExpression> returns  = parseReturnList();
                 Token                name     = expect(Id.IDENTIFIER);
-                return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations, typeVars, returns, null, name);
+                return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                        modifiers, annotations, typeVars, returns, null, name);
                 }
 
             case CONSTRUCT:
@@ -859,7 +872,8 @@ public class Parser
 
                 Token keyword = expect(Id.CONSTRUCT);
                 Token name    = expect(Id.IDENTIFIER);
-                return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations, null, null, keyword, name);
+                return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                        modifiers, annotations, null, null, keyword, name);
                 }
 
             default:
@@ -888,8 +902,8 @@ public class Parser
                     {
                     // '<' indicates redundant return type list
                     // '(' indicates parameters
-                    return parseMethodDeclarationAfterName(exprCondition, doc, modifiers, annotations,
-                            null, Collections.singletonList(type), null, name);
+                    return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                            modifiers, annotations, null, Collections.singletonList(type), null, name);
                     }
                 else if (!fInMethod && peek().getId() == Id.ASN && modifiers != null
                         && modifiers.size() == 1 && modifiers.get(0).getId() == Id.STATIC)
@@ -908,7 +922,7 @@ public class Parser
                         }
 
                     // it's a property
-                    return parsePropertyDeclarationFinish(exprCondition, doc, modifiers, annotations, type, name);
+                    return parsePropertyDeclarationFinish(lStartPos, exprCondition, doc, modifiers, annotations, type, name);
                     }
                 }
             }
@@ -997,23 +1011,32 @@ public class Parser
      *
      * @return a MethodDeclarationStatement
      */
-    MethodDeclarationStatement parseMethodDeclarationAfterName(Expression exprCondition, Token doc,
-            List<Token> modifiers, List<Annotation> annotations, List<Token> typeVars,
-            List<TypeExpression> returns, Token keyword, Token name)
+    MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos,
+            Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations,
+            List<Token> typeVars, List<TypeExpression> returns, Token keyword, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
         List<Parameter>      params           = parseParameterList(true);
+        long                 lEndPos          = getLastMatch().getEndPosition();
         StatementBlock       body             = match(Id.SEMICOLON) == null ? parseStatementBlock() : null;
         StatementBlock       stmtFinally      = null;
 
-        // check for "constructor finally" block
-        if (body != null && keyword != null && match(Id.FINALLY) != null)
+        if (body != null)
             {
-            stmtFinally = parseStatementBlock();
+            // check for "constructor finally" block
+            if (keyword != null && match(Id.FINALLY) != null)
+                {
+                stmtFinally = parseStatementBlock();
+                lEndPos = stmtFinally.getEndPosition();
+                }
+            else
+                {
+                lEndPos = body.getEndPosition();
+                }
             }
 
-        return new MethodDeclarationStatement(exprCondition, modifiers, annotations, typeVars, returns, name,
-                redundantReturns, params, body, stmtFinally, doc);
+        return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers,
+                annotations, typeVars, returns, name, redundantReturns, params, body, stmtFinally, doc);
         }
 
     /**
@@ -1028,37 +1051,48 @@ public class Parser
      *
      * @return a StatementBlock
      */
-    PropertyDeclarationStatement parsePropertyDeclarationFinish(Expression exprCondition, Token doc,
-            List<Token> modifiers, List<Annotation> annotations, TypeExpression type, Token name)
+    PropertyDeclarationStatement parsePropertyDeclarationFinish(long lStartPos,
+            Expression exprCondition, Token doc, List<Token> modifiers,
+            List<Annotation> annotations, TypeExpression type, Token name)
         {
-        Expression     value = null;
-        StatementBlock body  = null;
+        Expression     value   = null;
+        StatementBlock body    = null;
+        long           lEndPos;
         if (match(Id.ASN) != null)
             {
             // "=" Expression ";"
-            value = parseExpression();
+            value   = parseExpression();
+            lEndPos = value.getEndPosition();
             expect(Id.SEMICOLON);
             }
         else if (match(Id.DOT) != null)
             {
             // "." Name Parameters MethodBody
-            Token           methodName = expect(Id.IDENTIFIER);
-            List<Parameter> params     = parseParameterList(true);
-            MethodDeclarationStatement method = new MethodDeclarationStatement(null, null, null, null, null,
-                    methodName, null, params, parseStatementBlock(), null, null);
-            body = new StatementBlock(Collections.singletonList(method));
+            Token                      methodName = expect(Id.IDENTIFIER);
+            List<Parameter>            params     = parseParameterList(true);
+            StatementBlock             block      = parseStatementBlock();
+            MethodDeclarationStatement method     = new MethodDeclarationStatement(
+                    methodName.getStartPosition(), block.getEndPosition(),
+                    null, null, null, null, null, methodName, null, params, block, null, null);
+            body    = new StatementBlock(Collections.singletonList(method),
+                    method.getStartPosition(), method.getEndPosition());
+            lEndPos = body.getEndPosition();
             }
         else if (peek().getId() == Id.L_CURLY)
             {
             // pretend we're parsing a class (use the property name token as the basis)
-            body = parseTypeCompositionBody(new Token(name.getStartPosition(), name.getEndPosition(), Id.CLASS));
+            body    = parseTypeCompositionBody(new Token(name.getStartPosition(),
+                                               name.getEndPosition(), Id.CLASS));
+            lEndPos = body.getEndPosition();
             }
         else
             {
+            lEndPos = getLastMatch().getEndPosition();
             expect(Id.SEMICOLON);
             }
 
-        return new PropertyDeclarationStatement(exprCondition, modifiers, annotations, type, name, value, body, doc);
+        return new PropertyDeclarationStatement(lStartPos, lEndPos, exprCondition,
+                modifiers, annotations, type, name, value, body, doc);
         }
 
     /**
@@ -1317,9 +1351,9 @@ public class Parser
         expect(Id.WHILE);
         expect(Id.L_PAREN);
         Statement cond = parseConditionalDeclaration(false);
-        expect(Id.R_PAREN);
+        long lEndPos = expect(Id.R_PAREN).getEndPosition();
         expect(Id.SEMICOLON);
-        return new WhileStatement(keyword, cond, block);
+        return new WhileStatement(keyword, cond, block, lEndPos);
         }
 
     /**
@@ -1499,8 +1533,7 @@ public class Parser
         {
         List<Token> qualifiedName = new ArrayList<>();
         Token       simpleName    = null;
-
-        expect(Id.IMPORT);
+        Token       keyword       = expect(Id.IMPORT);
 
         // parse qualified name
         boolean first = true;
@@ -1520,7 +1553,7 @@ public class Parser
 
         expect(Id.SEMICOLON);
 
-        return new ImportStatement(exprCond, simpleName, qualifiedName);
+        return new ImportStatement(exprCond, keyword, simpleName, qualifiedName);
         }
 
     /**
@@ -1604,13 +1637,11 @@ public class Parser
             switch (peek().getId())
                 {
                 case CASE:
-                    stmts.add(new CaseStatement(current(), parseTernaryExpression()));
-                    expect(Id.COLON);
+                    stmts.add(new CaseStatement(current(), parseTernaryExpression(), expect(Id.COLON)));
                     break;
 
                 case DEFAULT:
-                    stmts.add(new CaseStatement(current(), null));
-                    expect(Id.COLON);
+                    stmts.add(new CaseStatement(current(), null, expect(Id.COLON)));
                     break;
 
                 default:
@@ -1669,11 +1700,12 @@ public class Parser
         List<CatchStatement> catches = new ArrayList<>();
         while (match(Id.CATCH) != null)
             {
+            long lStartPos = getLastMatch().getStartPosition();
             expect(Id.L_PAREN);
             VariableDeclarationStatement var = new VariableDeclarationStatement(
                     parseTypeExpression(), expect(Id.IDENTIFIER), null, null);
             expect(Id.R_PAREN);
-            catches.add(new CatchStatement(var, parseStatementBlock()));
+            catches.add(new CatchStatement(var, parseStatementBlock(), lStartPos));
             }
 
         StatementBlock catchall = null;
@@ -2690,7 +2722,7 @@ s     *
 
         Token fakeReturn = new Token(firstToken.getStartPosition(), firstToken.getStartPosition(), Id.RETURN);
         ReturnStatement stmt = new ReturnStatement(fakeReturn, parseElvisExpression());
-        return new StatementBlock(Collections.singletonList(stmt));
+        return new StatementBlock(Collections.singletonList(stmt), stmt.getStartPosition(), stmt.getEndPosition());
         }
 
     /**

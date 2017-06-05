@@ -1238,6 +1238,22 @@ public abstract class Component
         }
 
 
+    // ----- Documentable methods ------------------------------------------------------------------
+
+    @Override
+    public String getDocumentation()
+        {
+        return m_sDoc;
+        }
+
+    @Override
+    public void setDocumentation(String sDoc)
+        {
+        m_sDoc = sDoc;
+        markModified();
+        }
+
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -1703,6 +1719,11 @@ public abstract class Component
      * This holds all of the method children. See the explanation of {@link #m_childByName}.
      */
     private Map<MethodConstant, MethodStructure> m_methodByConstant;
+
+    /**
+     * The documentation.
+     */
+    private String m_sDoc;
 
     /**
      * For XVM structures that can be modified, this flag tracks whether or not
