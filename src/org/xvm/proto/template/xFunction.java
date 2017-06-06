@@ -76,6 +76,11 @@ public class xFunction
             m_invoke = function;
             }
 
+        public InvocationTemplate getTemplate()
+            {
+            return m_invoke;
+            }
+
         public int getReturnCount()
             {
             return m_invoke.m_cReturns;

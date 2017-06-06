@@ -55,17 +55,12 @@ public class ObjectHeap
             {
             Constant constValue = f_constantPool.getConstantValue(nValueConstId); // must exist
 
-            handle = ensureConstHandle(constValue);
+            handle = getConstTemplate(constValue).createConstHandle(constValue, this);
 
             registerConstHandle(nValueConstId, handle);
             }
 
         return handle;
-        }
-
-    public ObjectHandle ensureConstHandle(Constant constValue)
-        {
-        return getConstTemplate(constValue).createConstHandle(constValue, this);
         }
 
     public TypeCompositionTemplate getConstTemplate(int nValueConstId)

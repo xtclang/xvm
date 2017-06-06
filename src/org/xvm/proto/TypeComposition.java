@@ -3,7 +3,6 @@ package org.xvm.proto;
 import org.xvm.asm.Constants;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Shape;
-import org.xvm.proto.template.xRef.RefHandle;
 
 import java.util.function.Supplier;
 

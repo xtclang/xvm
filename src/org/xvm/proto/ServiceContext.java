@@ -3,6 +3,7 @@ package org.xvm.proto;
 import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
+
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
@@ -144,10 +145,11 @@ public class ServiceContext
             {
             while (iPC >= 0) // main loop
                 {
+                frame.m_iPC = iPC;
+
                 if (++nOps > 10)
                     {
                     // same as yield
-                    frame.m_iPC = iPC;
                     m_frameCurrent = null;
                     return frame;
                     }
@@ -273,14 +275,13 @@ public class ServiceContext
     public Frame createFrame1(Frame framePrev, InvocationTemplate template,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return new Frame(this, framePrev, template, hTarget, ahVar,
-                iReturn == Frame.R_UNUSED ? Utils.ARGS_NONE : new int[] {iReturn});
+        return new Frame(this, framePrev, template, hTarget, ahVar, iReturn, null);
         }
 
     public Frame createFrameN(Frame framePrev, InvocationTemplate template,
                              ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return new Frame(this, framePrev, template, hTarget, ahVar, aiReturn);
+        return new Frame(this, framePrev, template, hTarget, ahVar, Frame.R_MULTI, aiReturn);
         }
 
     // this method is used by the ServiceContext

@@ -621,7 +621,7 @@ public abstract class TypeCompositionTemplate
         }
 
     // increment the property value and place the result into the specified frame register
-    // return one of the Op.R_ values
+    // return either R_NEXT or R_EXCEPTION
     public int invokePreInc(Frame frame, ObjectHandle hTarget,
                             PropertyTemplate property, int iReturn)
         {
@@ -634,7 +634,7 @@ public abstract class TypeCompositionTemplate
             return property.getRefTemplate().invokePreInc(frame, hProp, null, iReturn);
             }
 
-        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.R_FRAME);
+        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.R_LOCAL);
         if (nResult == Op.R_EXCEPTION)
             {
             return nResult;
@@ -647,6 +647,7 @@ public abstract class TypeCompositionTemplate
         }
 
     // place the property value into the specified frame register and increment it
+    // return either R_NEXT or R_EXCEPTION
     public int invokePostInc(Frame frame, ObjectHandle hTarget,
                              PropertyTemplate property, int iReturn)
         {
@@ -659,7 +660,7 @@ public abstract class TypeCompositionTemplate
             return property.getRefTemplate().invokePostInc(frame, hProp, null, iReturn);
             }
 
-        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.R_FRAME);
+        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.R_LOCAL);
         if (nResult == Op.R_EXCEPTION)
             {
             return nResult;
@@ -847,6 +848,7 @@ public abstract class TypeCompositionTemplate
     // ----- Op-code support: array operations -----
 
     // get a handle to an array for the specified class
+    // returns R_NEXT or R_EXCEPTION
     public int createArrayStruct(Frame frame, TypeComposition clzArray,
                                  long cCapacity, int iReturn)
         {
@@ -1402,6 +1404,8 @@ public abstract class TypeCompositionTemplate
         protected ConstructTemplate(String[] asArgType)
             {
             super("construct", asArgType, VOID);
+
+            m_cVars++; // compensate for "this"
             }
 
         public void setFinally(FunctionTemplate ftFinally)

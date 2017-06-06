@@ -16,6 +16,7 @@ import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.template.xTuple;
 
 import java.util.function.Supplier;
 
@@ -33,7 +34,10 @@ public class Frame
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVar;        // arguments/local var registers
     public final VarInfo[]      f_aInfo;        // optional info for var registers
-    public final int[]          f_aiReturn;     // the indexes for return values
+    public final int            f_iReturn;      // an index for a single return value
+                                                // a negative value below -65000 indicates an
+                                                // automatic tuple conversion into a (-i-1) register
+    public final int[]          f_aiReturn;     // indexes for multiple return values
     public final Frame          f_framePrev;    // the caller's frame
     public final int[]          f_anNextVar;    // at index i, the "next available" var register for scope i
 
@@ -43,14 +47,15 @@ public class Frame
     public Guard[]              m_aGuard;       // at index i, the guard for the guard index i
     public ExceptionHandle      m_hException;   // an exception
     public FullyBoundHandle     m_hfnFinally;   // a "finally" method for the constructors
-    public ObjectHandle         m_hFrameLocal;  // a "frame local" holding area; assigned by
     public Frame                m_frameNext;    // the next frame to call
     public Supplier<Frame>      m_continuation; // a frame supplier to call after this frame returns
     public boolean              m_fBlocked;     // indicates that the frame execution must be blocked
                                                 // until the "waiting" futures are completed
+    private ObjectHandle        m_hFrameLocal;  // a "frame local" holding area
 
-    public final static int R_UNUSED = -1; // an register index for an "unused return value"
-    public final static int R_FRAME  = -2; // an register index for the "frame local value"
+    public final static int R_LOCAL  = -65000;   // an indicator for the "frame local single value"
+    public final static int R_UNUSED = -65001;   // an indicator for an "unused return value"
+    public final static int R_MULTI  = -65002;   // an indicator for "multiple return values"
 
     public static final int VAR_STANDARD = 0;
     public static final int VAR_DYNAMIC_REF = 1;
@@ -58,7 +63,7 @@ public class Frame
     public static final int VAR_WAITING = 3;
 
     protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
-                    ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+                    ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
         f_context = context;
         f_framePrev = framePrev;
@@ -82,6 +87,7 @@ public class Frame
             f_anNextVar[0] = 1 + function.m_cArgs;
             }
 
+        f_iReturn = iReturn;
         f_aiReturn = aiReturn;
         }
 
@@ -151,6 +157,9 @@ public class Frame
         {
         switch (nArgId)
             {
+            case Op.A_LOCAL:
+                return m_hFrameLocal;
+
             case Op.A_SUPER:
                 if (f_hTarget == null)
                     {
@@ -265,77 +274,123 @@ public class Frame
     public void forceValue(int nVar, ObjectHandle hValue)
         {
         int nResult = assignValue(nVar, hValue);
-        if (nResult == Op.R_EXCEPTION)
+        switch (nResult)
             {
-            // TODO: call an error handler?
-            System.out.println("Out-of-context exception: " + m_hException);
+            case Op.R_NEXT:
+                return;
+
+            case Op.R_EXCEPTION:
+                // TODO: call an error handler?
+                System.out.println("Out-of-context exception: " + m_hException);
+                return;
+
+            default:
+                throw new IllegalStateException(); // assert
             }
         }
 
     // return R_NEXT, R_EXCEPTION or R_BLOCK
     public int assignValue(int nVar, ObjectHandle hValue)
         {
+        if (nVar >= 0)
+            {
+            VarInfo info = f_aInfo[nVar];
+
+            switch (info.m_nStyle)
+                {
+                case VAR_DYNAMIC_REF:
+                    ExceptionHandle hException = ((RefHandle) f_ahVar[nVar]).set(hValue);
+                    if (hException != null)
+                        {
+                        m_hException = hException;
+                        return Op.R_EXCEPTION;
+                        }
+                    return Op.R_NEXT;
+
+                case VAR_DEFERRABLE:
+                    // take as is
+                    break;
+
+                case VAR_STANDARD:
+                    if (hValue instanceof FutureHandle)
+                        {
+                        FutureHandle hFuture = (FutureHandle) hValue;
+                        if (hFuture.f_fSynthetic)
+                            {
+                            if (hFuture.m_future.isDone())
+                                {
+                                try
+                                    {
+                                    hValue = hFuture.get();
+                                    }
+                                catch (ExceptionHandle.WrapperException e)
+                                    {
+                                    m_hException = e.getExceptionHandle();
+                                    return Op.R_EXCEPTION;
+                                    }
+                                }
+                            else
+                                {
+                                // mark the register as "waiting for a result",
+                                // blocking the next op-code from being executed
+                                f_ahVar[nVar] = hFuture;
+                                info.m_nStyle = VAR_WAITING;
+                                return Op.R_BLOCK;
+                                }
+                            }
+                        }
+                    break;
+                }
+
+            f_ahVar[nVar] = hValue;
+            return Op.R_NEXT;
+            }
+
         switch (nVar)
             {
-            case R_FRAME:
-                m_hFrameLocal = hValue;
-                // fall through
-
             case R_UNUSED:
                 return Op.R_NEXT;
 
+            case R_MULTI:
+                throw new IllegalStateException();
+
             default:
-                VarInfo info = f_aInfo[nVar];
-
-                switch (info.m_nStyle)
-                    {
-                    case VAR_DYNAMIC_REF:
-                        ExceptionHandle hException = ((RefHandle) f_ahVar[nVar]).set(hValue);
-                        if (hException != null)
-                            {
-                            m_hException = hException;
-                            return Op.R_EXCEPTION;
-                            }
-                        return Op.R_NEXT;
-
-                    case VAR_DEFERRABLE:
-                        // take as is
-                        break;
-
-                    case VAR_STANDARD:
-                        if (hValue instanceof FutureHandle)
-                            {
-                            FutureHandle hFuture = (FutureHandle) hValue;
-                            if (hFuture.f_fSynthetic)
-                                {
-                                if (hFuture.m_future.isDone())
-                                    {
-                                    try
-                                        {
-                                        hValue = hFuture.get();
-                                        }
-                                    catch (ExceptionHandle.WrapperException e)
-                                        {
-                                        m_hException = e.getExceptionHandle();
-                                        return Op.R_EXCEPTION;
-                                        }
-                                    }
-                                else
-                                    {
-                                    // mark the register as "waiting for a result",
-                                    // blocking the next op-code from being executed
-                                    f_ahVar[nVar] = hFuture;
-                                    info.m_nStyle = VAR_WAITING;
-                                    return Op.R_BLOCK;
-                                    }
-                                }
-                            }
-                        break;
-                    }
-
-                f_ahVar[nVar] = hValue;
+                // any other negative value indicates an automatic tuple conversion
+                m_hFrameLocal = hValue;
                 return Op.R_NEXT;
             }
+        }
+
+    public void returnValue(int iReturn, int iArg)
+        {
+        assert iReturn >= 0 || iReturn == R_LOCAL;
+
+        f_framePrev.forceValue(iReturn, getReturnValue(iArg));
+        }
+
+    public void returnTuple(int iReturn, int[] aiArg)
+        {
+        assert iReturn >= 0;
+
+        int c = aiArg.length;
+        ObjectHandle[] ahValue = new ObjectHandle[c];
+        Type[] aType = new Type[c];
+        for (int i = 0; i < c; i++)
+            {
+            aType[i] = f_function.getReturnType(i, null);
+            ahValue[i] = getReturnValue(aiArg[i]);
+            }
+
+        f_framePrev.forceValue(iReturn, xTuple.makeHandle(aType, ahValue));
+        }
+
+    private ObjectHandle getReturnValue(int iArg)
+        {
+        return iArg >= 0 ?
+                    f_ahVar[iArg] :
+               iArg <= -Op.MAX_CONST_ID ?
+                    getPredefinedArgument(iArg) :
+                    f_context.f_heapGlobal.ensureConstHandle(-iArg);
         }
 
     public int checkWaitingRegisters()
@@ -542,14 +597,27 @@ public class Frame
         {
         StringBuilder sb = new StringBuilder();
         Frame frame = this;
-        do
+        int iPC = m_iPC;
+
+        while (true)
             {
             sb.append("\n  - ")
               .append(frame);
 
+            if (iPC >= 0)
+                {
+                sb.append(" (iPC=").append(iPC)
+                  .append(", op=").append(frame.f_aOp[iPC].getClass().getSimpleName())
+                  .append(')');
+                }
+
             frame = frame.f_framePrev;
+            if (frame == null)
+                {
+                break;
+                }
+            iPC = frame.m_iPC - 1;
             }
-        while (frame != null);
 
         sb.append('\n');
 
@@ -559,8 +627,11 @@ public class Frame
     @Override
     public String toString()
         {
-        return "Frame: " + (f_hTarget == null ? "" : f_hTarget) + " " +
-                           (f_function == null ? "<none>" : f_function.f_sName);
+        InvocationTemplate fn = f_function;
+        int iPC = m_iPC;
+
+        return "Frame: " + (fn == null ? "<none>" :
+                fn.getClazzTemplate().f_sName + '.' + f_function.f_sName);
         }
 
     // try-catch support

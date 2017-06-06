@@ -3,13 +3,8 @@ package org.xvm.proto.template;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.TupleConstant;
 
-import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.ObjectHeap;
-import org.xvm.proto.Type;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
 
 import java.util.Arrays;
 import java.util.List;
@@ -55,7 +50,9 @@ public class xTuple
         //    Tuple<ElementTypes> ensurePersistent();
         //    Tuple<ElementTypes> ensureConst();
 
-        ensureConstructTemplate(new String[]{"x:collections.Sequence"}).markNative();
+        ConstructTemplate construct =
+                ensureConstructTemplate(new String[]{"x:collections.Sequence"});
+        construct.markNative();
 
         ensurePropertyTemplate("size", "x:Int").makeReadOnly();
 
@@ -77,17 +74,49 @@ public class xTuple
         List<Constant> list = constTuple.constants();
         int c = list.size();
         ObjectHandle[] ahValue = new ObjectHandle[c];
+        Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
-            ahValue[i] = heap.ensureConstHandle(list.get(i));
+            Constant constValue = list.get(i);
+
+            ahValue[i] = heap.ensureConstHandle(constValue.getPosition());
+            aType[i] = heap.getConstTemplate(constValue).f_clazzCanonical.ensurePublicType();
             }
 
-        TupleHandle hTuple = new TupleHandle(INSTANCE.f_clazzCanonical, ahValue);
+        TupleHandle hTuple = makeHandle(aType, ahValue);
         hTuple.makeImmutable();
         return hTuple;
         }
 
-    // ----- IndexSupport methods -----
+    @Override
+    public int construct(Frame frame, ConstructTemplate constructor,
+                         TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
+        {
+        ObjectHandle hSequence = ahVar[1];
+        IndexSupport support = (IndexSupport) hSequence.f_clazz.f_template;
+
+        int cValues = (int) support.size(hSequence);
+        ObjectHandle[] ahValue = new ObjectHandle[cValues];
+
+        try
+            {
+            for (int i = 0; i < cValues; i++)
+                {
+                ahValue[i] = support.extractArrayValue(hSequence, i);
+                }
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            frame.m_hException = e.getExceptionHandle();
+            return Op.R_EXCEPTION;
+            }
+
+        TupleHandle hTuple = new TupleHandle(clazz, ahValue);
+
+        return frame.assignValue(iReturn, hTuple);
+        }
+
+// ----- IndexSupport methods -----
 
     @Override
     public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
@@ -142,7 +171,20 @@ public class xTuple
         return hTuple.m_aType[(int) lIndex];
         }
 
-    // ----- ObjectHandle helpers -----
+    @Override
+    public long size(ObjectHandle hTarget)
+        {
+        TupleHandle hTuple = (TupleHandle) hTarget;
+
+        return hTuple.m_ahValue.length;
+        }
+
+// ----- ObjectHandle helpers -----
+
+    public static TupleHandle makeHandle(Type[] aType, ObjectHandle[] ahValue)
+        {
+        return new TupleHandle(INSTANCE.resolve(aType), ahValue);
+        }
 
     public static class TupleHandle
             extends ObjectHandle

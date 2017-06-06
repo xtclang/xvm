@@ -107,7 +107,7 @@ public class xArray
         // argument [0] is reserved for this:struct
         long cCapacity = ((JavaLong) ahVar[1]).getValue();
 
-        int nR = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.R_FRAME);
+        int nR = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.R_LOCAL);
         if (nR == Op.R_EXCEPTION)
             {
             return Op.R_EXCEPTION;
@@ -131,8 +131,8 @@ public class xArray
                 ObjectHandle[] ahArg = new ObjectHandle[1];
                 ahArg[0] = xInt64.makeHandle(ai[0]);
 
-                // TODO: what if supplier produces a "future" result
-                hSupplier.call1(frame, ahArg, Frame.R_FRAME);
+                // TODO: what if the supplier produces a "future" result
+                hSupplier.call1(frame, ahArg, Frame.R_LOCAL);
                 Frame frame0 = frame.m_frameNext;
 
                 frame0.m_continuation = new Supplier<Frame>()
@@ -152,7 +152,7 @@ public class xArray
                             {
                             ahArg[0] = xInt64.makeHandle(i);
                             // TODO: ditto
-                            hSupplier.call1(frame, ahArg, Frame.R_FRAME);
+                            hSupplier.call1(frame, ahArg, Frame.R_LOCAL);
                             Frame frameNext = frame.m_frameNext;
                             frameNext.m_continuation = this;
                             return frameNext;
@@ -265,6 +265,14 @@ public class xArray
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
         return hArray.f_clazz.f_atGenericActual[0];
+        }
+
+    @Override
+    public long size(ObjectHandle hTarget)
+        {
+        ArrayHandle hArray = (ArrayHandle) hTarget;
+
+        return hArray.m_cSize;
         }
 
     // ----- ObjectHandle helpers -----
