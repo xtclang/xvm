@@ -12,17 +12,20 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.xvm.compiler.BuildRepository;
-import org.xvm.compiler.Compiler;
-
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorList;
+import org.xvm.compiler.ErrorList.ErrorInfo;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
+
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;
@@ -135,6 +138,52 @@ public class FileStructureTest
         Compiler                 compiler = new Compiler(new BuildRepository(), module, errlist);
         Assert.assertTrue(errlist.getSeriousErrorCount() == 0);
         return compiler.generateInitialFileStructure();
+        }
+
+    public static FileStructure compile(String sSrc, Severity sev, String sCode)
+        {
+        Source        source  = new Source(sSrc);
+        ErrorList     errlist = new ErrorList(10);
+        FileStructure struct  = null;
+
+        try
+            {
+            Parser parser = new Parser(source, errlist);
+            List<Statement> stmts = parser.parseSource().getStatements();
+            TypeCompositionStatement module =
+                    (TypeCompositionStatement) stmts.get(stmts.size() - 1);
+            Compiler compiler = new Compiler(new BuildRepository(), module, errlist);
+
+            struct = compiler.generateInitialFileStructure();
+            }
+        catch (CompilerException e)
+            {
+            if (sev == null || (sev != Severity.ERROR && sev != Severity.FATAL))
+                {
+                throw e;
+                }
+            }
+
+        if (sev != null)
+            {
+            Assert.assertEquals(sev, errlist.getSeverity());
+            }
+
+        if (sCode != null)
+            {
+            boolean fFound = false;
+            for (ErrorInfo err : errlist.getErrors())
+                {
+                if (err.getCode().equals(sCode))
+                    {
+                    fFound = true;
+                    break;
+                    }
+                }
+            Assert.assertTrue(fFound);
+            }
+
+        return struct;
         }
 
     public static void testFileStructure(FileStructure structfile)

@@ -106,9 +106,7 @@ public class MethodDeclarationStatement
             else
                 {
                 // TODO need a "method unexpected" error code
-                errs.log(Severity.ERROR, org.xvm.compiler.Compiler.PROP_UNEXPECTED, new Object[] {sName, container},
-                        getSource(), name.getStartPosition(), name.getEndPosition());
-
+                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.PROP_UNEXPECTED, sName, container);
                 throw new UnsupportedOperationException("not a method container: " + container);
                 }
             }

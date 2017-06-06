@@ -130,8 +130,7 @@ public class PropertyDeclarationStatement
                 }
             else
                 {
-                errs.log(Severity.ERROR, Compiler.PROP_UNEXPECTED, new Object[] {sName, container},
-                        getSource(), name.getStartPosition(), name.getEndPosition());
+                log(errs, Severity.ERROR, Compiler.PROP_UNEXPECTED, sName, container);
                 }
             }
 

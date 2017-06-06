@@ -178,8 +178,7 @@ public class TypeCompositionStatement
                     case PUBLIC:
                         if (fFoundPublic)
                             {
-                            errs.log(Severity.ERROR, Compiler.DUPLICATE_MODIFIER, new Object[] {token.getId().TEXT},
-                                    source, token.getStartPosition(), token.getEndPosition());
+                            log(errs, Severity.ERROR, Compiler.DUPLICATE_MODIFIER, token.getId().TEXT);
                             }
                         else
                             {
@@ -199,10 +198,14 @@ public class TypeCompositionStatement
                 }
             }
 
+        // TODO annotations
+
         // type parameters are not permitted
         disallowTypeParams(errs);
 
-        // constructor parameters are not permitted unless they have default values
+        // constructor parameters are not permitted unless they all have default values (since the
+        // module is a singleton, and is automatically created, i.e. it has to have all of its
+        // construction parameters available)
         requireConstructorParamValues(errs);
 
         // validate composition
@@ -216,12 +219,13 @@ public class TypeCompositionStatement
                     if (fAlreadyExtends)
                         {
                         Token token = composition.getKeyword();
-                        errs.log(Severity.ERROR, Compiler.MULTIPLE_EXTENDS, new Object[] {composition},
-                                source, token.getStartPosition(), token.getEndPosition());
+                        log(errs, Severity.ERROR, Compiler.MULTIPLE_EXTENDS, composition);
                         }
                     else
                         {
-                        fAlreadyExtends = true;
+                        // make sure that there is only one "extends" clause, but defer the analysis
+                        // of conditional "extends" clauses (since we can't evaluate conditions yet)
+                        fAlreadyExtends = composition.condition == null;
                         }
                     break;
 
@@ -240,8 +244,7 @@ public class TypeCompositionStatement
                     // "import" composition not allowed for modules (only used by packages)
                     // "into" not allowed (only used by traits & mixins)
                     Token token = composition.getKeyword();
-                    errs.log(Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, new Object[] {composition},
-                            source, token.getStartPosition(), token.getEndPosition());
+                    log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, composition);
                     break;
                 }
             }
@@ -273,8 +276,7 @@ public class TypeCompositionStatement
             switch (category.getId())
                 {
                 case MODULE:
-                    errs.log(Severity.ERROR, Compiler.MODULE_UNEXPECTED, null,
-                            getSource(), category.getStartPosition(), category.getEndPosition());
+                    log(errs, Severity.ERROR, Compiler.MODULE_UNEXPECTED);
                     break;
 
                 case PACKAGE:
@@ -287,9 +289,7 @@ public class TypeCompositionStatement
                         }
                     else
                         {
-                        errs.log(Severity.ERROR, Compiler.PACKAGE_UNEXPECTED,
-                                new String[] {container.toString()},
-                                getSource(), category.getStartPosition(), category.getEndPosition());
+                        log(errs, Severity.ERROR, Compiler.PACKAGE_UNEXPECTED, container.toString());
                         }
                     break;
 
@@ -341,9 +341,7 @@ public class TypeCompositionStatement
                         }
                     else
                         {
-                        errs.log(Severity.ERROR, Compiler.CLASS_UNEXPECTED,
-                                new String[] {container.toString()},
-                                getSource(), category.getStartPosition(), category.getEndPosition());
+                        log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, container.toString());
                         }
                     break;
 
@@ -367,8 +365,7 @@ public class TypeCompositionStatement
 
             Token tokFirst = category == null ? name : category;
             Token tokLast  = name == null ? category : name;
-            errs.log(Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED, null,
-                    getSource(), tokFirst.getStartPosition(), tokLast.getEndPosition());
+            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
             }
         }
 
@@ -383,8 +380,7 @@ public class TypeCompositionStatement
 
             Token tokFirst = category == null ? name : category;
             Token tokLast  = name == null ? category : name;
-            errs.log(Severity.ERROR, Compiler.CONSTRUCTOR_PARAMS_UNEXPECTED, null,
-                    getSource(), tokFirst.getStartPosition(), tokLast.getEndPosition());
+            log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAMS_UNEXPECTED);
             }
         }
 
@@ -400,8 +396,7 @@ public class TypeCompositionStatement
                     // note: currently no way to determine the location of the parameter
                     Token tokFirst = category == null ? name : category;
                     Token tokLast  = name == null ? category : name;
-                    errs.log(Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_REQUIRED, null,
-                            getSource(), tokFirst.getStartPosition(), tokLast.getEndPosition());
+                    log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_REQUIRED);
                     }
                 }
             }
