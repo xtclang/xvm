@@ -334,7 +334,7 @@ public class xTestApp extends xModule
             new Return_N(new int[] {
                     -adapter.ensureValueConstantId(true),
                     -adapter.ensureValueConstantId("positive")}),
-            new Return_1(-adapter.ensureValueConstantId(true))
+            new Return_1(-adapter.ensureValueConstantId(false))
             };
         ftTestCond.m_cVars = 2;
 
@@ -355,40 +355,48 @@ public class xTestApp extends xModule
 
             new NVar(adapter.getClassTypeConstId("x:Tuple<x:String,x:Int64>"),
                      adapter.ensureValueConstantId("t2")), // #3 (t2)
+            new IVar(adapter.getClassTypeConstId("x:collections.Sequence"),
+                    -adapter.ensureValueConstantId(new Object[] {"", 0})), // #4
+            new New_1(adapter.getMethodConstId("x:Tuple", "construct"), 4, 3),
+            new X_Print(3),
 
             new IVar(adapter.getClassTypeConstId("x:String"),
-                    -adapter.ensureValueConstantId("t")), // #4
-            new ISet(3, -adapter.ensureValueConstantId(0), 4),
+                    -adapter.ensureValueConstantId("t")), // #5
+            new ISet(3, -adapter.ensureValueConstantId(0), 5),
 
             new IVar(adapter.getClassTypeConstId("x:Int64"),
-                    -adapter.ensureValueConstantId(2)), // #5
-            new ISet(3, -adapter.ensureValueConstantId(1), 5),
+                    -adapter.ensureValueConstantId(2)), // #6
+            new ISet(3, -adapter.ensureValueConstantId(1), 6),
             new X_Print(3),
 
             new NVar(adapter.getClassTypeConstId("x:Int64"),
-                     adapter.ensureValueConstantId("of")), // #6 (of)
+                     adapter.ensureValueConstantId("of")), // #7 (of)
             new IVar(adapter.getClassTypeConstId("x:String"),
-                    -adapter.ensureValueConstantId("the test")), // #7
-            new Invoke_T1(7, adapter.getMethodConstId("x:String", "indexOf"), 3, 6),
-
-            new Var(adapter.getClassTypeConstId("x:Boolean")), // #8
-            new IsEq(6, -adapter.ensureValueConstantId(4), 8),
-            new AssertV(8, adapter.ensureValueConstantId("of == 4"), new int[] {6}),
+                    -adapter.ensureValueConstantId("the test")), // #8
+            new Invoke_T1(8, adapter.getMethodConstId("x:String", "indexOf"), 3, 7),
 
             new Var(adapter.getClassTypeConstId("x:Boolean")), // #9
-            new Var(adapter.getClassTypeConstId("x:String")), // #10
-            new Call_1N(-adapter.getMethodConstId("x:TestApp", "testConditional"),
-                    -adapter.ensureValueConstantId(1), new int[] {9, 10}),
-            new JumpFalse(9, 2),
-            new X_Print(10),
+            new IsEq(7, -adapter.ensureValueConstantId(4), 9),
+            new AssertV(9, adapter.ensureValueConstantId("of == 4"), new int[] {7}),
 
-            new Var(adapter.getClassTypeConstId("x:Tuple")), // #11
+            new Enter(),
+            new Var(adapter.getClassTypeConstId("x:Boolean")), // #10
+            new Var(adapter.getClassTypeConstId("x:String")), // #11
+            new Call_1N(-adapter.getMethodConstId("x:TestApp", "testConditional"),
+                        -adapter.ensureValueConstantId(1), new int[] {10, 11}),
+            new JumpFalse(10, 2),
+            new X_Print(11),
+            new Exit(),
+
+            new Var(adapter.getClassTypeConstId("x:Tuple")), // #10
             new Call_1T(-adapter.getMethodConstId("x:TestApp", "testConditional"),
-                    -adapter.ensureValueConstantId(1), 11),
+                        -adapter.ensureValueConstantId(-1), 10),
+            new X_Print(10),
 
             new Return_0()
             };
         ftTestTuple.m_cVars = 12;
+        ftTestTuple.m_cScopes = 2;
 
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);

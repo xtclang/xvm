@@ -10,7 +10,7 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xRef.IndexedRefHandle;
 
 /**
- * Support for UniformIndex (array or tuple) op-codes.
+ * Support for index-based (array or tuple) op-codes.
  *
  * @author gg 2017.05.15
  */
@@ -26,6 +26,9 @@ public interface IndexSupport
     // obtain the [declared] element type
     Type getElementType(ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException;
+
+    // get the element count
+    long size(ObjectHandle hTarget);
 
     // @op "elementAt" support - place a Ref to the element value into the specified register
     default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)

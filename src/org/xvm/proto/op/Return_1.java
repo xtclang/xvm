@@ -20,16 +20,30 @@ public class Return_1 extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int[] aiRet = frame.f_aiReturn;
-        if (aiRet.length > 0) // it's possible that the caller doesn't care about the return value
-            {
-            int iArg = f_nArgValue;
+        int iRet = frame.f_iReturn;
 
-            frame.f_framePrev.forceValue(aiRet[0],
-                iArg >= 0 ? frame.f_ahVar[iArg] :
-                iArg < -Op.MAX_CONST_ID ?
-                    frame.getPredefinedArgument(iArg) :
-                    frame.f_context.f_heapGlobal.ensureConstHandle(-iArg));
+        if (iRet >= 0)
+            {
+            frame.returnValue(iRet, f_nArgValue);
+            }
+        else
+            {
+            switch (iRet)
+                {
+                case Frame.R_LOCAL:
+                    frame.returnValue(iRet, f_nArgValue);
+                    break;
+
+                case Frame.R_UNUSED:
+                    break;
+
+                case Frame.R_MULTI:
+                    throw new IllegalStateException();
+
+                default:
+                    frame.returnTuple(-iRet - 1, new int[] {f_nArgValue});
+                    break;
+                }
             }
         return R_RETURN;
         }

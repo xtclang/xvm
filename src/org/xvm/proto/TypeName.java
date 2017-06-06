@@ -62,8 +62,7 @@ public interface TypeName
         return format(tnRet) + ' ' + sName + "(" + format(tnArg) + ')';
         }
 
-    static String[] NON_GENERIC = new String[0];
-    static String THIS_TYPE = "this.Type";
+    String THIS_TYPE = "this.Type";
 
     // any depth and mis of formal/actual is allowed
     static TypeName parseName(String sName)

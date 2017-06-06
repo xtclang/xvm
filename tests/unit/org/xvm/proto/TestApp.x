@@ -239,6 +239,8 @@ module TestApp
         print(t[1]);
 
         Tuple<String, Int> t2 = new Tuple("", 0); // fixed-size (rigid)
+        print(t2);
+
         t2[0] = "t";
         t2[1] = 2;
         print(t2);
@@ -251,7 +253,8 @@ module TestApp
             print(s);
             }
 
-        print(testConditional(-1));
+        Tuple<Boolean, String> t = testConditional(-1));
+        print(t);
 
         static conditional String testConditional(Int i)
              {

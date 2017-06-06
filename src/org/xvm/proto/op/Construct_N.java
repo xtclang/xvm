@@ -34,6 +34,7 @@ public class Construct_N extends OpCallable
                 {
                 return R_REPEAT;
                 }
+            ahVar[0] = frame.getArgument(0); // struct
 
             frame.chainFinalizer(constructor.makeFinalizer(ahVar));
 

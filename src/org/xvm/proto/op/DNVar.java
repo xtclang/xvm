@@ -31,12 +31,13 @@ public class DNVar extends Op
 
         ServiceContext context = frame.f_context;
 
-        RefHandle hRef = (RefHandle) context.f_heapGlobal.ensureHandle(f_nClassConstId);
+        RefHandle hRef = context.f_heapGlobal.createRefHandle(f_nClassConstId);
 
         CharStringConstant constName =
                 (CharStringConstant) context.f_constantPool.getConstantValue(f_nNameConstId);
 
-        frame.introduceVar(nNextVar, hRef.f_clazz, constName.getValue(), Frame.VAR_DYNAMIC_REF, hRef);
+        frame.introduceVar(nNextVar, hRef.f_clazz,
+                constName.getValue(), Frame.VAR_DYNAMIC_REF, hRef);
 
         frame.f_anNextVar[iScope] = nNextVar + 1;
 

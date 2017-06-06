@@ -10,14 +10,11 @@ import org.xvm.proto.op.Return_0;
  */
 public abstract class Op
     {
-    // offsets for the execution indexes
-    public static final int I_SCOPE = 0;
-    public static final int I_GUARD = 1;
-
     // the maximum value for the constants in the const pool
     public static final int MAX_CONST_ID = 2_000_000_000;
 
     // indexes for pre-defined arguments
+    public static final int A_LOCAL     = -MAX_CONST_ID;       // frame.getFrameLocal()
     public static final int A_TARGET    = -MAX_CONST_ID - 1;   // this:target
     public static final int A_PUBLIC    = -MAX_CONST_ID - 2;   // this:public
     public static final int A_PROTECTED = -MAX_CONST_ID - 3;   // this:protected

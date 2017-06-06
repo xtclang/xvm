@@ -106,7 +106,7 @@ public class xRef
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz)
         {
         return new RefHandle(clazz);
         }

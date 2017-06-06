@@ -36,15 +36,15 @@ public class Call_11 extends OpCallable
                 return callSuperN1(frame, new int[]{f_nArgValue}, f_nRetValue);
                 }
 
+            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            if (hArg == null)
+                {
+                return R_REPEAT;
+                }
+
             if (f_nFunctionValue < 0)
                 {
                 InvocationTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
-
-                ObjectHandle hArg = frame.getArgument(f_nArgValue);
-                if (hArg == null)
-                    {
-                    return R_REPEAT;
-                    }
 
                 ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
                 ahVar[0] = hArg;
@@ -53,14 +53,15 @@ public class Call_11 extends OpCallable
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
-            ObjectHandle[] ahVars = frame.getArguments(new int[]{f_nArgValue}, hFunction.getVarCount(), 0);
-
-            if (hFunction == null || ahVars == null)
+            if (hFunction == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, ahVars, f_nRetValue);
+            ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
+            ahVar[0] = hArg;
+
+            return hFunction.call1(frame, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

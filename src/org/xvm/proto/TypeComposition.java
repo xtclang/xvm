@@ -3,7 +3,6 @@ package org.xvm.proto;
 import org.xvm.asm.Constants;
 import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
 import org.xvm.proto.TypeCompositionTemplate.Shape;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import java.util.function.Supplier;
 
@@ -153,13 +152,6 @@ public class TypeComposition
             throw new IllegalArgumentException(
                     "Invalid formal name: " + sFormalName + " for " + f_template);
             }
-        }
-
-    // create an un-initialized handle for this class
-    public ObjectHandle createHandle()
-        {
-        // TODO: ByComposition may not have a single template
-        return f_template.createHandle(this);
         }
 
     // TODO: this needs to be improved

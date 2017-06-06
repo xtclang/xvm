@@ -91,7 +91,7 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public ObjectHandle createHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz)
         {
         return new AtomicIntRefHandle(clazz);
         }
