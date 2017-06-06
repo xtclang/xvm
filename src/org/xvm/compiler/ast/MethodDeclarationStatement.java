@@ -101,7 +101,7 @@ public class MethodDeclarationStatement
                 TypeConstant[]  paramTypes  = toTypeConstants(toTypeExpressions(params));
                 MethodStructure method      = container.createMethod(fFunction, access, returnTypes,
                                                                      sName, paramTypes);
-                setStructure(method);
+                setComponent(method);
                 }
             else
                 {

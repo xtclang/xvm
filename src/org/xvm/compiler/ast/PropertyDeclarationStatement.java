@@ -126,7 +126,7 @@ public class PropertyDeclarationStatement
                 TypeConstant      constType = pool.createUnresolvedTypeConstant(type.toString());
                 PropertyStructure prop      = container.createProperty(isStatic(), getDefaultAccess(),
                                                                        constType, sName);
-                setStructure(prop);
+                setComponent(prop);
                 }
             else
                 {

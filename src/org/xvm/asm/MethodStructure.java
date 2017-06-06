@@ -53,6 +53,12 @@ public class MethodStructure
         }
 
     @Override
+    protected boolean isChildLessVisible()
+        {
+        return true;
+        }
+
+    @Override
     protected Component getEldestSibling()
         {
         Component parent = getParent();

@@ -391,6 +391,12 @@ public class FileStructure
                 : file.getName();
         }
 
+    @Override
+    public boolean isGloballyVisible()
+        {
+        // file is not identifiable, and therefore is not visible
+        return false;
+        }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

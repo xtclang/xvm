@@ -172,4 +172,12 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.ILLEGAL_MODIFIER);
         }
 
+    @Test
+    public void testConditional()
+            throws IOException
+        {
+        // this should fail because a module can't be declared static
+        String src = "static module Test.mycompany.com if (\"debug\".defined) {implements Runnable} {}";
+        testFileStructure(compile(src, null, null));
+        }
     }

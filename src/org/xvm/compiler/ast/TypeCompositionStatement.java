@@ -5,7 +5,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.ModuleStructure;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
@@ -18,6 +17,7 @@ import org.xvm.util.Severity;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 import static org.xvm.compiler.Lexer.CR;
@@ -70,6 +70,30 @@ public class TypeCompositionStatement
         this.doc               = doc;
         }
 
+    /**
+     * Used by enumeration value declarations.
+     */
+    public TypeCompositionStatement(List<Annotation>     annotations,
+                                    Token                name,
+                                    List<TypeExpression> typeArgs,
+                                    List<Expression>     args,
+                                    StatementBlock       body,
+                                    Token                doc,
+                                    long                 lStartPos,
+                                    long                 lEndPos)
+        {
+        super(lStartPos, lEndPos);
+
+        this.annotations = annotations;
+        this.category    = new Token(name.getStartPosition(), name.getStartPosition(), Token.Id.ENUM_VAL);
+        this.name        = name;
+        this.typeArgs    = typeArgs;
+        this.args        = args;
+        this.body        = body;
+        this.doc         = doc;
+        this.lStartPos   = lStartPos;
+        this.lEndPos     = lEndPos;
+        }
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -102,6 +126,64 @@ public class TypeCompositionStatement
         else
             {
             return (String) name.getValue();
+            }
+        }
+
+    /**
+     * Determine the zone within which the type is declared. The rules for declaration change
+     * depending on what the zone is; for example, the meaning of the "static" keyword differs
+     * between each of the top level, inner class, and in-method zones.
+     *
+     * @return the declaration zone of the type represented by this TypeCompositionStatement
+     */
+    public Zone getDeclarationZone()
+        {
+        Component structThis = getComponent();
+        switch (structThis.getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+                // modules and components are always top level
+                return Zone.TopLevel;
+
+            case CLASS:
+            case INTERFACE:
+            case SERVICE:
+            case CONST:
+            case ENUM:
+            case TRAIT:
+            case MIXIN:
+                Component structParent = structThis.getParent();
+                switch (structParent.getFormat())
+                    {
+                    case MODULE:
+                    case PACKAGE:
+                        return Zone.TopLevel;
+
+                    case CLASS:
+                    case INTERFACE:
+                    case SERVICE:
+                    case CONST:
+                    case ENUM:
+                    case ENUMVALUE:
+                    case TRAIT:
+                    case MIXIN:
+                        return Zone.InClass;
+
+                    case METHOD:
+                        return Zone.InMethod;
+
+                    default:
+                        throw new IllegalStateException("this=" + structThis.getFormat()
+                                + ", parent=" + structParent.getFormat());
+                    }
+
+            case ENUMVALUE:
+                // enum values are ALWAYS nested inside an enumeration class
+                return Zone.InClass;
+
+            default:
+                throw new IllegalStateException("this=" + structThis.getFormat());
             }
         }
 
@@ -161,47 +243,326 @@ public class TypeCompositionStatement
             throw new CompilerException("unable to create module with illegal name: " + sName);
             }
 
-        // create the FileStructure and "this" ModuleStructure
-        FileStructure struct = new FileStructure(getName());
-        ModuleStructure module = struct.getModule();
-        setStructure(module);
+        registerStructures(null, errs);
+
+        return getComponent().getFileStructure();
+        }
+
+    @Override
+    protected void registerStructures(AstNode parent, ErrorListener errs)
+        {
+        setParent(parent);
+        createStructure(errs);
+        super.registerStructures(parent, errs);
+        }
+
+    /**
+     * TODO
+     *
+     * @param errs  the error list to log any errors etc. to
+     */
+    protected void createStructure(ErrorListener errs)
+        {
+        assert getComponent() == null;
+
+        // create the structure for this module, package, or class (etc.)
+        String    sName     = (String) name.getValue();
+        Access    access    = getDefaultAccess();
+        Component container = parent == null ? null : parent.getComponent();
+        Component component = null;
+        switch (category.getId())
+            {
+            case MODULE:
+                if (container == null)
+                    {
+                    // create the FileStructure and "this" ModuleStructure
+                    FileStructure struct = new FileStructure(getName());
+                    component = struct.getModule();
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.MODULE_UNEXPECTED);
+                    }
+                break;
+
+            case PACKAGE:
+                if (container.isPackageContainer())
+                    {
+                    // the check for duplicates is deferred, since it is possible (thanks to
+                    // the complexity of conditionals) to have multiple components occupying
+                    // the same location within the namespace at this point in the compilation
+                    component = container.createPackage(access, sName);
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.PACKAGE_UNEXPECTED, container.toString());
+                    }
+                break;
+
+            case CLASS:
+            case INTERFACE:
+            case SERVICE:
+            case CONST:
+            case ENUM:
+            case ENUM_VAL:
+            case TRAIT:
+            case MIXIN:
+                if (container.isClassContainer())
+                    {
+                    Format format;
+                    switch (category.getId())
+                        {
+                        case CLASS:
+                            format = Format.CLASS;
+                            break;
+
+                        case INTERFACE:
+                            format = Format.INTERFACE;
+                            break;
+
+                        case SERVICE:
+                            format = Format.SERVICE;
+                            break;
+
+                        case CONST:
+                            format = Format.CONST;
+                            break;
+
+                        case ENUM:
+                            format = Format.ENUM;
+                            break;
+
+                        case ENUM_VAL:
+                            format = Format.ENUMVALUE;
+                            break;
+
+                        case TRAIT:
+                            format = Format.TRAIT;
+                            break;
+
+                        case MIXIN:
+                            format = Format.MIXIN;
+                            break;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+
+                    component = container.createClass(getDefaultAccess(), format, sName);
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, container.toString());
+                    }
+                break;
+
+            default:
+                throw new UnsupportedOperationException("unable to guess structure for: "
+                        + category.getId().TEXT);
+            }
+
+        if (component == null)
+            {
+            return;
+            }
+        else
+            {
+            setComponent(component);
+            }
+
+        // the "global" namespace is composed of the union of the top-level namespace and the "inner"
+        // namespace of each component in the global namespace.
+        //
+        // modifiers for "top-level" namespace structures:
+        // - "top-level" means nested within a file, module, or package structure
+        // - static means "singleton"
+        // - public means visible outside of the module
+        // - protected means t.b.d.
+        // - private means no visibility outside of the module
+        //
+        //              public      protected   private     static
+        //              ----------  ----------  ----------  ----------
+        // module       (implicit)                          (implicit)
+        // package      x           x           x           (implicit)
+        // class        x           x           x
+        // interface    x           x           x
+        // service      x           x           x           x
+        // const        x           x           x           x
+        // enum         x           x           x           (implicit)
+        // trait        x           x           x
+        // mixin        x           x           x
+        //
+        // modifiers for "inner" namespace structures:
+        // - "inner" means nested within a class
+        // - static means "no ref to parent, no virtual new"; it only applies to something that can be new'd
+        //   or init'd from a constant, so it does not apply to interface, trait, or mixin
+        //
+        //              public      protected   private     static
+        //              ----------  ----------  ----------  ----------
+        // class        x           x           x           x
+        // interface    x           x           x
+        // service      x           x           x           x - required if parent is not const or service
+        // const        x           x           x           x - required if parent is not const
+        // enum         x           x           x           (implicit)
+        // - enum val                                       (implicit)
+        // trait        x           x           x
+        // mixin        x           x           x
+        //
+        // modifiers for "local" namespace structures:
+        // - "local" means declared within a method; items declared within a method are not visible outside
+        //   of (above on the hierarchy) the method
+        // - static means "no ref to the method frame", i.e. no ability to capture, not even the "this"
+        //   from the method
+        //
+        //              public      protected   private     static
+        //              ----------  ----------  ----------  ----------
+        // class                                            x
+        // interface
+        // service                                          x
+        // const                                            x
+        // enum                                             (implicit)
+        // trait
+        // mixin
+        int nAllowed = 0;
+        switch (component.getFormat())
+            {
+            case SERVICE:
+            case CONST:
+            case CLASS:
+                // class is not allowed to be declared static if it is top-level, otherwise all of
+                // these can always be declared static
+                if (!(component.getFormat() == Format.CLASS && getDeclarationZone() == Zone.TopLevel))
+                    {
+                    nAllowed |= Component.STATIC_BIT;
+                    }
+                // fall through
+            case PACKAGE:
+            case INTERFACE:
+            case ENUM:
+            case TRAIT:
+            case MIXIN:
+                {
+                // these are all allowed to be declared public/private/protected, except when they
+                // appear inside a method body
+                if (getDeclarationZone() != Zone.InMethod)
+                    {
+                    nAllowed |= Component.ACCESS_MASK;
+                    }
+                }
+            }
 
         // validate modifiers
+        boolean fExplicitlyStatic = false;
         if (modifiers != null && !modifiers.isEmpty())
             {
-            boolean fFoundPublic = false;
-            for (int i = 0, c = modifiers.size(); i < c; ++i)
+            int     nSpecified           = 0;
+            boolean fExplicitlyPublic    = false;
+            boolean fExplicitlyProtected = false;
+            boolean fExplicitlyPrivate   = false;
+
+            NextModifier: for (int i = 0, c = modifiers.size(); i < c; ++i)
                 {
                 Token token = modifiers.get(i);
+                int     nBits;
+                boolean fAlready;
                 switch (token.getId())
                     {
                     case PUBLIC:
-                        if (fFoundPublic)
-                            {
-                            log(errs, Severity.ERROR, Compiler.DUPLICATE_MODIFIER, token.getId().TEXT);
-                            }
-                        else
-                            {
-                            fFoundPublic = true;
-                            }
+                        fAlready          = fExplicitlyPublic;
+                        fExplicitlyPublic = true;
+                        nBits             = Component.ACCESS_MASK;
                         break;
 
                     case PROTECTED:
+                        fAlready             = fExplicitlyProtected;
+                        fExplicitlyProtected = true;
+                        nBits                = Component.ACCESS_MASK;
+                        break;
+
                     case PRIVATE:
+                        fAlready           = fExplicitlyPrivate;
+                        fExplicitlyPrivate = true;
+                        nBits              = Component.ACCESS_MASK;
+                        break;
+
                     case STATIC:
-                        log(errs, Severity.ERROR, Compiler.ILLEGAL_MODIFIER, token.getId().TEXT);
+                        fAlready          = fExplicitlyStatic;
+                        fExplicitlyStatic = true;
+                        nBits             = Component.STATIC_BIT;
                         break;
 
                     default:
                         throw new IllegalStateException("token=" + token);
+                    }
+
+                if (fAlready)
+                    {
+                    log(errs, Severity.ERROR, Compiler.DUPLICATE_MODIFIER, token.getId().TEXT);
+                    }
+                else if ((nAllowed & nBits) == 0)
+                    {
+                    log(errs, Severity.ERROR, Compiler.ILLEGAL_MODIFIER, token.getId().TEXT);
+                    }
+                else if ((nSpecified & nBits) != 0)
+                    {
+                    log(errs, Severity.ERROR, Compiler.CONFLICTING_MODIFIER, token.getId().TEXT);
+                    }
+
+                nSpecified |= nBits;
+                }
+            }
+
+        // inner const/service classes must be declared static if the parent is not const/service
+        if (!fExplicitlyStatic && getDeclarationZone() == Zone.InClass)
+            {
+            if (component.getFormat() == Format.CONST)
+                {
+                // parent MUST be a const (because parent will be automatically captured, and a
+                // const can't capture a non-const)
+                if (container.getFormat() != Format.CONST)
+                    {
+                    log(errs, Severity.ERROR, Compiler.INNER_CONST_NOT_STATIC);
+                    }
+                }
+            else if (component.getFormat() == Format.SERVICE)
+                {
+                // parent MUST be a const or a service (because parent is automatically captured,
+                // and a service can't capture an object that isn't either a const or a service)
+                if (container.getFormat() != Format.CONST && container.getFormat() != Format.SERVICE)
+                    {
+                    log(errs, Severity.ERROR, Compiler.INNER_SERVIC_NOT_STATIC);
                     }
                 }
             }
 
         // TODO annotations
 
-        // type parameters are not permitted
-        disallowTypeParams(errs);
+        // TODO
+//        protected Expression        condition;
+//        protected List<Annotation>  annotations;
+//        protected List<Parameter>   typeParams;
+//        protected List<Parameter>   constructorParams;
+//        protected List<Composition> composition;
+//        protected StatementBlock    body;
+//        protected Token             doc;
+//        protected StatementBlock    enclosed;
+
+
+        switch (component.getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+
+            case SERVICE:
+            case CONST:
+            case CLASS:
+            case INTERFACE:
+            case ENUM:
+            case TRAIT:
+            case MIXIN:
+                // type parameters are not permitted
+                disallowTypeParams(errs);
+            }
 
         // constructor parameters are not permitted unless they all have default values (since the
         // module is a singleton, and is automatically created, i.e. it has to have all of its
@@ -251,107 +612,11 @@ public class TypeCompositionStatement
 
         if (doc != null)
             {
-            module.setDocumentation(extractDocumentation(doc));
+            component.setDocumentation(extractDocumentation(doc));
             }
-
-        super.registerStructures(null, errs);
 
         // TODO validate any constructor parameters and their default values, and transfer the info to the constructor
 
-        return struct;
-        }
-
-    @Override
-    protected void registerStructures(AstNode parent, ErrorListener errs)
-        {
-        Component componentParent = parent.getComponent();
-        if (componentParent != null)
-            {
-            // create the structure for this package or class (etc.)
-            assert getComponent() == null;
-
-            String    sName     = (String) name.getValue();
-            Access    access    = getDefaultAccess();
-            Component container = parent.getComponent();
-            switch (category.getId())
-                {
-                case MODULE:
-                    log(errs, Severity.ERROR, Compiler.MODULE_UNEXPECTED);
-                    break;
-
-                case PACKAGE:
-                    if (container.isPackageContainer())
-                        {
-                        // the check for duplicates is deferred, since it is possible (thanks to
-                        // the complexity of conditionals) to have multiple components occupying
-                        // the same location within the namespace at this point in the compilation
-                        setStructure(container.createPackage(access, sName));
-                        }
-                    else
-                        {
-                        log(errs, Severity.ERROR, Compiler.PACKAGE_UNEXPECTED, container.toString());
-                        }
-                    break;
-
-                case CLASS:
-                case INTERFACE:
-                case SERVICE:
-                case CONST:
-                case ENUM:
-                case TRAIT:
-                case MIXIN:
-                    if (container.isClassContainer())
-                        {
-                        Format format;
-                        switch (category.getId())
-                            {
-                            case CLASS:
-                                format = Format.CLASS;
-                                break;
-
-                            case INTERFACE:
-                                format = Format.INTERFACE;
-                                break;
-
-                            case SERVICE:
-                                format = Format.SERVICE;
-                                break;
-
-                            case CONST:
-                                format = Format.CONST;
-                                break;
-
-                            case ENUM:
-                                format = Format.ENUM;
-                                break;
-
-                            case TRAIT:
-                                format = Format.TRAIT;
-                                break;
-
-                            case MIXIN:
-                                format = Format.MIXIN;
-                                break;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
-
-                        setStructure(container.createClass(getDefaultAccess(), format, sName));
-                        }
-                    else
-                        {
-                        log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, container.toString());
-                        }
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("unable to guess structure for: "
-                            + category.getId().TEXT);
-                }
-            }
-
-        super.registerStructures(parent, errs);
         }
 
     private void disallowTypeParams(ErrorListener errs)
@@ -511,84 +776,138 @@ public class TypeCompositionStatement
         {
         StringBuilder sb = new StringBuilder();
 
-        if (modifiers != null)
+        if (category.getId() == Token.Id.ENUM_VAL)
             {
-            for (Token token : modifiers)
+            if (annotations != null)
                 {
-                sb.append(token.getId().TEXT)
-                  .append(' ');
+                for (Annotation annotation : annotations)
+                    {
+                    sb.append(annotation)
+                      .append(' ');
+                    }
                 }
-            }
 
-        if (annotations != null)
-            {
-            for (Annotation annotation : annotations)
-                {
-                sb.append(annotation)
-                  .append(' ');
-                }
-            }
-
-        sb.append(category.getId().TEXT)
-          .append(' ');
-
-        if (qualified == null)
-            {
             sb.append(name.getValue());
+
+            if (typeParams != null)
+                {
+                sb.append('<');
+                boolean first = true;
+                for (TypeExpression typeParam : typeArgs)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(typeParam);
+                    }
+                sb.append('>');
+                }
+
+            if (args != null)
+                {
+                sb.append('(');
+                boolean first = true;
+                for (Expression arg : args)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(arg);
+                    }
+                sb.append(')');
+                }
             }
         else
             {
-            boolean first = true;
-            for (Token token : qualified)
+            if (modifiers != null)
                 {
-                if (first)
+                for (Token token : modifiers)
                     {
-                    first = false;
+                    sb.append(token.getId().TEXT)
+                      .append(' ');
                     }
-                else
-                    {
-                    sb.append('.');
-                    }
-                sb.append(token.getValue());
                 }
-            }
 
-        if (typeParams != null)
-            {
-            sb.append('<');
-            boolean first = true;
-            for (Parameter param : typeParams)
+            if (annotations != null)
                 {
-                if (first)
+                for (Annotation annotation : annotations)
                     {
-                    first = false;
+                    sb.append(annotation)
+                      .append(' ');
                     }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(param.toTypeParamString());
                 }
-            sb.append('>');
-            }
 
-        if (constructorParams != null)
-            {
-            sb.append('(');
-            boolean first = true;
-            for (Parameter param : constructorParams)
+            sb.append(category.getId().TEXT)
+              .append(' ');
+
+            if (qualified == null)
                 {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(param);
+                sb.append(name.getValue());
                 }
-            sb.append(')');
+            else
+                {
+                boolean first = true;
+                for (Token token : qualified)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append('.');
+                        }
+                    sb.append(token.getValue());
+                    }
+                }
+
+            if (typeParams != null)
+                {
+                sb.append('<');
+                boolean first = true;
+                for (Parameter param : typeParams)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(param.toTypeParamString());
+                    }
+                sb.append('>');
+                }
+
+            if (constructorParams != null)
+                {
+                sb.append('(');
+                boolean first = true;
+                for (Parameter param : constructorParams)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(param);
+                    }
+                sb.append(')');
+                }
             }
 
         return sb.toString();
@@ -611,28 +930,39 @@ public class TypeCompositionStatement
 
         sb.append(toSignatureString());
 
-        for (Composition composition : this.composition)
+        if (category.getId() == Token.Id.ENUM_VAL)
             {
-            sb.append("\n        ")
-              .append(composition);
-            }
-
-        if (body == null)
-            {
-            sb.append(';');
+            if (body != null)
+                {
+                sb.append('\n')
+                  .append(indentLines(body.toString(), "    "));
+                }
             }
         else
             {
-            String sBody = body.toString();
-            if (sBody.indexOf('\n') >= 0)
+            for (Composition composition : this.composition)
                 {
-                sb.append('\n')
-                  .append(indentLines(sBody, "    "));
+                sb.append("\n        ")
+                  .append(composition);
+                }
+
+            if (body == null)
+                {
+                sb.append(';');
                 }
             else
                 {
-                sb.append(' ')
-                  .append(sBody);
+                String sBody = body.toString();
+                if (sBody.indexOf('\n') >= 0)
+                    {
+                    sb.append('\n')
+                      .append(indentLines(sBody, "    "));
+                    }
+                else
+                    {
+                    sb.append(' ')
+                      .append(sBody);
+                    }
                 }
             }
 
@@ -646,22 +976,58 @@ public class TypeCompositionStatement
         }
 
 
+    // ----- inner class: Zone ---------------------------------------------------------------------
+
+    /**
+     * The Zone enumeration defines the zone within which a particular type is declared.
+     *
+     * <ul>
+     * <li><b>{@code TopLevel}</b> - the module itself, or declared within a module or package;</li>
+     * <li><b>{@code InClass}</b> - declared within a class, e.g. an inner class;</li>
+     * <li><b>{@code InMethod}</b> - declared within the body of a method.</li>
+     * </ul>
+     */
+    public enum Zone
+        {
+        TopLevel, InClass, InMethod;
+
+        /**
+         * Look up a DeclZone enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the DeclZone enum for the specified ordinal
+         */
+        public static Zone valueOf(int i)
+            {
+            return ZONES[i];
+            }
+
+        /**
+         * All of the DeclZone enums.
+         */
+        private static final Zone[] ZONES = Zone.values();
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Source            source;
-    protected Expression        condition;
-    protected List<Token>       modifiers;
-    protected List<Annotation>  annotations;
-    protected Token             category;
-    protected Token             name;
-    protected List<Token>       qualified;
-    protected List<Parameter>   typeParams;
-    protected List<Parameter>   constructorParams;
-    protected List<Composition> composition;
-    protected StatementBlock    body;
-    protected Token             doc;
-    protected StatementBlock    enclosed;
+    protected Source               source;
+    protected Expression           condition;
+    protected List<Token>          modifiers;
+    protected List<Annotation>     annotations;
+    protected Token                category;
+    protected Token                name;
+    protected List<Token>          qualified;
+    protected List<Parameter>      typeParams;
+    protected List<Parameter>      constructorParams;
+    protected List<TypeExpression> typeArgs;
+    protected List<Expression>     args;
+    protected List<Composition>    composition;
+    protected StatementBlock       body;
+    protected Token                doc;
+    protected StatementBlock       enclosed;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
-            "annotations", "typeParams", "constructorParams", "composition", "body");
+            "annotations", "typeParams", "constructorParams", "typeArgs", "args", "composition", "body");
     }

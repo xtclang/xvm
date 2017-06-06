@@ -434,8 +434,8 @@ public class Parser
 
                 long lEndPos = getLastMatch().getEndPosition();
 
-                stmts.add(new EnumDeclaration(annotations, name, typeParams, args, body, doc,
-                        lStartPos, lEndPos));
+                stmts.add(new TypeCompositionStatement(annotations, name, typeParams, args, body,
+                        doc, lStartPos, lEndPos));
                 }
             while (match(Id.COMMA) != null);
 
