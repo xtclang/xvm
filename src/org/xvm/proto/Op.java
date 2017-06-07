@@ -37,18 +37,25 @@ public abstract class Op
     // process the exception placed in frame.m_hException
     public static final int R_EXCEPTION = -3;
 
+    // process the exception raised during return
+    public static final int R_RETURN_EXCEPTION = -4;
+
     // call the frame placed in frame.m_frameNext
-    public static final int R_CALL = -4;
+    public static final int R_CALL = -5;
 
     // some registers are not ready for a read; yield and repeat the same op-code
-    public static final int R_REPEAT = -5;
+    public static final int R_REPEAT = -6;
 
-    // some assignments were deferred; yield and check the "waiting" registers before
-    // executing the next op-code
-    public static final int R_BLOCK = -6;
+    // some assignments were deferred; yield and check the "waiting" registers
+    // before executing the next op-code
+    public static final int R_BLOCK = -7;
+
+    // some assignments were deferred; yield and check the "waiting" registers
+    // before returning
+    public static final int R_BLOCK_RETURN = -8;
 
     // yield before executing the next op-code
-    public static final int R_YIELD = -7;
+    public static final int R_YIELD = -9;
 
     // an stub for an op-code
     public static final Op[] STUB = new Op[] {Return_0.INSTANCE};

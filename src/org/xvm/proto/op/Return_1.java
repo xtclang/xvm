@@ -22,29 +22,21 @@ public class Return_1 extends Op
         {
         int iRet = frame.f_iReturn;
 
-        if (iRet >= 0)
+        if (iRet >= 0 || iRet == Frame.RET_LOCAL)
             {
-            frame.returnValue(iRet, f_nArgValue);
+            return frame.returnValue(iRet, f_nArgValue);
             }
-        else
+
+        switch (iRet)
             {
-            switch (iRet)
-                {
-                case Frame.R_LOCAL:
-                    frame.returnValue(iRet, f_nArgValue);
-                    break;
+            case Frame.RET_UNUSED:
+                return R_RETURN;
 
-                case Frame.R_UNUSED:
-                    break;
+            case Frame.RET_MULTI:
+                throw new IllegalStateException();
 
-                case Frame.R_MULTI:
-                    throw new IllegalStateException();
-
-                default:
-                    frame.returnTuple(-iRet - 1, new int[] {f_nArgValue});
-                    break;
-                }
+            default:
+                return frame.returnTuple(-iRet - 1, new int[] {f_nArgValue});
             }
-        return R_RETURN;
         }
     }

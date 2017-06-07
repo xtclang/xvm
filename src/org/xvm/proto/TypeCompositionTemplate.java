@@ -545,7 +545,7 @@ public abstract class TypeCompositionTemplate
             return null;
             };
 
-        Frame frameRC = frame.f_context.createFrame1(frame, constructor, null, ahVar, Frame.R_UNUSED);
+        Frame frameRC = frame.f_context.createFrame1(frame, constructor, null, ahVar, Frame.RET_UNUSED);
 
         Frame frameDC = clazz.callDefaultConstructors(frame, ahVar, () -> frameRC);
 
@@ -634,7 +634,7 @@ public abstract class TypeCompositionTemplate
             return property.getRefTemplate().invokePreInc(frame, hProp, null, iReturn);
             }
 
-        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.R_LOCAL);
+        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.RET_LOCAL);
         if (nResult == Op.R_EXCEPTION)
             {
             return nResult;
@@ -660,7 +660,7 @@ public abstract class TypeCompositionTemplate
             return property.getRefTemplate().invokePostInc(frame, hProp, null, iReturn);
             }
 
-        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.R_LOCAL);
+        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.RET_LOCAL);
         if (nResult == Op.R_EXCEPTION)
             {
             return nResult;
@@ -776,13 +776,13 @@ public abstract class TypeCompositionTemplate
                 {
                 if (method.isNative())
                     {
-                    return invokeNative(frame, hTarget, method, hValue, Frame.R_UNUSED);
+                    return invokeNative(frame, hTarget, method, hValue, Frame.RET_UNUSED);
                     }
 
                 ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
                 ahVar[1] = hValue;
 
-                return frame.call1(method, hTarget, ahVar, Frame.R_UNUSED);
+                return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);
                 }
             }
 

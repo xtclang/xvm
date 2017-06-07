@@ -47,7 +47,7 @@ public class Call_10 extends OpCallable
                 ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
                 ahVar[0] = hArg;
 
-                return frame.call1(function, null, ahVar, Frame.R_UNUSED);
+                return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
@@ -59,7 +59,7 @@ public class Call_10 extends OpCallable
             ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
             ahVar[0] = hArg;
 
-            return hFunction.call1(frame, ahVar, Frame.R_UNUSED);
+            return hFunction.call1(frame, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

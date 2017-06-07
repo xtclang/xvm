@@ -172,6 +172,10 @@ public class ServiceContext
                     iPC = 0;
                     break;
 
+                case Op.R_BLOCK_RETURN:
+                    frame.f_framePrev.m_fBlocked = true;
+                    // fall through
+
                 case Op.R_RETURN:
                     Supplier<Frame> continuation = frame.m_continuation;
                     if (continuation != null)
@@ -202,9 +206,19 @@ public class ServiceContext
                         // all done
                         return null;
                         }
+
+                    if (frame.m_fBlocked)
+                        {
+                        m_frameCurrent = null;
+                        return frame;
+                        }
                     abOp = frame.f_aOp;
                     iPC = frame.m_iPC;
                     break;
+
+                case Op.R_RETURN_EXCEPTION:
+                    frame = frame.f_framePrev;
+                    // fall-through
 
                 case Op.R_EXCEPTION:
                     ExceptionHandle hException = frame.m_hException;
@@ -281,7 +295,7 @@ public class ServiceContext
     public Frame createFrameN(Frame framePrev, InvocationTemplate template,
                              ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return new Frame(this, framePrev, template, hTarget, ahVar, Frame.R_MULTI, aiReturn);
+        return new Frame(this, framePrev, template, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
         }
 
     // this method is used by the ServiceContext
@@ -293,7 +307,7 @@ public class ServiceContext
         // the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
-        Frame frame = createFrame1(null, null, null, ahVar, Frame.R_UNUSED);
+        Frame frame = createFrame1(null, null, null, ahVar, Frame.RET_UNUSED);
 
         for (int iVar = 0; iVar < cReturns; iVar++)
             {
@@ -586,7 +600,7 @@ public class ServiceContext
                 ExceptionHandle hException = frame0.m_hException;
                 if (hException == null)
                     {
-                    // TODO: optimized for a case when all futures are complete
+                    // TODO: optimize for a case when all futures are complete
                     CompletableFuture<Void>[] acf = new CompletableFuture[f_cReturns];
                     for (int i = 0; i < f_cReturns; i++)
                         {

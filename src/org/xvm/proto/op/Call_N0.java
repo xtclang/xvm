@@ -31,7 +31,7 @@ public class Call_N0 extends OpCallable
             {
             if (f_nFunctionValue == A_SUPER)
                 {
-                return callSuperN1(frame, f_anArgValue, Frame.R_UNUSED);
+                return callSuperN1(frame, f_anArgValue, Frame.RET_UNUSED);
                 }
 
             if (f_nFunctionValue < 0)
@@ -44,7 +44,7 @@ public class Call_N0 extends OpCallable
                     return R_REPEAT;
                     }
 
-                return frame.call1(function, null, ahVar, Frame.R_UNUSED);
+                return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
@@ -54,7 +54,7 @@ public class Call_N0 extends OpCallable
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, ahVar, Frame.R_UNUSED);
+            return hFunction.call1(frame, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {
