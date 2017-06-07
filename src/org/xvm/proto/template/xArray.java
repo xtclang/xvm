@@ -107,7 +107,7 @@ public class xArray
         // argument [0] is reserved for this:struct
         long cCapacity = ((JavaLong) ahVar[1]).getValue();
 
-        int nR = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.R_LOCAL);
+        int nR = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.RET_LOCAL);
         if (nR == Op.R_EXCEPTION)
             {
             return Op.R_EXCEPTION;
@@ -132,7 +132,7 @@ public class xArray
                 ahArg[0] = xInt64.makeHandle(ai[0]);
 
                 // TODO: what if the supplier produces a "future" result
-                hSupplier.call1(frame, ahArg, Frame.R_LOCAL);
+                hSupplier.call1(frame, ahArg, Frame.RET_LOCAL);
                 Frame frame0 = frame.m_frameNext;
 
                 frame0.m_continuation = new Supplier<Frame>()
@@ -152,7 +152,7 @@ public class xArray
                             {
                             ahArg[0] = xInt64.makeHandle(i);
                             // TODO: ditto
-                            hSupplier.call1(frame, ahArg, Frame.R_LOCAL);
+                            hSupplier.call1(frame, ahArg, Frame.RET_LOCAL);
                             Frame frameNext = frame.m_frameNext;
                             frameNext.m_continuation = this;
                             return frameNext;
@@ -207,7 +207,7 @@ public class xArray
             return true;
             }
 
-        // TODO: in general case we cannot know the "compile time" class
+        // TODO: in a general case can we know the "compile time" class?
         return false;
         }
 

@@ -34,7 +34,7 @@ public class Call_00 extends OpCallable
 
             ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
 
-            return frame.call1(methodSuper, frame.getThis(), ahVar, Frame.R_UNUSED);
+            return frame.call1(methodSuper, frame.getThis(), ahVar, Frame.RET_UNUSED);
             }
 
         if (f_nFunctionValue < 0)
@@ -43,7 +43,7 @@ public class Call_00 extends OpCallable
 
             ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
 
-            return frame.call1(function, null, ahVar, Frame.R_UNUSED);
+            return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
             }
 
         try
@@ -54,7 +54,7 @@ public class Call_00 extends OpCallable
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, Utils.OBJECTS_NONE, Frame.R_UNUSED);
+            return hFunction.call1(frame, Utils.OBJECTS_NONE, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

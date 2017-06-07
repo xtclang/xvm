@@ -154,7 +154,6 @@ public class TypeComposition
             }
         }
 
-    // TODO: this needs to be improved
     // create a sequence of frames to be called in the inverse order (the base super first)
     public Frame callDefaultConstructors(Frame frame, ObjectHandle[] ahVar, Supplier<Frame> continuation)
         {
@@ -170,7 +169,7 @@ public class TypeComposition
         else
             {
             frameDefault = frame.f_context.createFrame1(frame, ftDefault,
-                                ahVar[0], ahVar, Frame.R_UNUSED);
+                                ahVar[0], ahVar, Frame.RET_UNUSED);
             frameDefault.m_continuation = continuation;
             continuation = null;
             }

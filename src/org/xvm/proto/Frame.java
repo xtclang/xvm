@@ -53,9 +53,9 @@ public class Frame
                                                 // until the "waiting" futures are completed
     private ObjectHandle        m_hFrameLocal;  // a "frame local" holding area
 
-    public final static int R_LOCAL  = -65000;   // an indicator for the "frame local single value"
-    public final static int R_UNUSED = -65001;   // an indicator for an "unused return value"
-    public final static int R_MULTI  = -65002;   // an indicator for "multiple return values"
+    public final static int RET_LOCAL = -65000;   // an indicator for the "frame local single value"
+    public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
+    public final static int RET_MULTI = -65002;   // an indicator for "multiple return values"
 
     public static final int VAR_STANDARD = 0;
     public static final int VAR_DYNAMIC_REF = 1;
@@ -348,10 +348,10 @@ public class Frame
 
         switch (nVar)
             {
-            case R_UNUSED:
+            case RET_UNUSED:
                 return Op.R_NEXT;
 
-            case R_MULTI:
+            case RET_MULTI:
                 throw new IllegalStateException();
 
             default:
@@ -361,14 +361,25 @@ public class Frame
             }
         }
 
-    public void returnValue(int iReturn, int iArg)
+    public int returnValue(int iReturn, int iArg)
         {
-        assert iReturn >= 0 || iReturn == R_LOCAL;
+        assert iReturn >= 0 || iReturn == RET_LOCAL;
 
-        f_framePrev.forceValue(iReturn, getReturnValue(iArg));
+        int iResult = f_framePrev.assignValue(iReturn, getReturnValue(iArg));
+        switch (iResult)
+            {
+            case Op.R_EXCEPTION:
+                return Op.R_RETURN_EXCEPTION;
+
+            case Op.R_BLOCK:
+                return Op.R_BLOCK_RETURN;
+
+            default:
+                return Op.R_RETURN;
+            }
         }
 
-    public void returnTuple(int iReturn, int[] aiArg)
+    public int returnTuple(int iReturn, int[] aiArg)
         {
         assert iReturn >= 0;
 
@@ -381,7 +392,18 @@ public class Frame
             ahValue[i] = getReturnValue(aiArg[i]);
             }
 
-        f_framePrev.forceValue(iReturn, xTuple.makeHandle(aType, ahValue));
+        int iResult = f_framePrev.assignValue(iReturn, xTuple.makeHandle(aType, ahValue));
+        switch (iResult)
+            {
+            case Op.R_EXCEPTION:
+                return Op.R_RETURN_EXCEPTION;
+
+            case Op.R_BLOCK:
+                return Op.R_BLOCK_RETURN;
+
+            default:
+                return Op.R_RETURN;
+            }
         }
 
     private ObjectHandle getReturnValue(int iArg)

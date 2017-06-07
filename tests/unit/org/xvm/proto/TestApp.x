@@ -158,6 +158,32 @@ module TestApp
         svc.throwing();
         }
 
+    static Void testService2()
+        {
+        TestService svc = new TestService();
+
+        Int testBlockingReturn()
+            {
+            return svc.increment();
+            }
+
+        int c = testBlockingReturn();
+        print(c);
+
+        @future Int fc = svc.increment();
+        print(fc);
+        try
+            {
+            // setting the "future" value should blow
+            fc = getIntValue();
+            }
+        catch (Exception e)
+            {
+            print(e);
+            }
+        }
+
+
     service TestService(Int counter = 48)
         {
         Int counter

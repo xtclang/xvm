@@ -25,6 +25,8 @@
 
 + Tuple, ConditionalTuple
 
+- Tuple construction - new SVAR op-code
+
 - Service and Fiber id passing
 
 - Property and Method

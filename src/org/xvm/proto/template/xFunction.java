@@ -297,7 +297,7 @@ public class xFunction
 
             Frame frameSave = frame.m_frameNext;
 
-            call1(frame, Utils.OBJECTS_NONE, Frame.R_UNUSED);
+            call1(frame, Utils.OBJECTS_NONE, Frame.RET_UNUSED);
 
             // TODO: what if this function is async and frameThis is null
             Frame frameThis = frame.m_frameNext;
@@ -348,7 +348,7 @@ public class xFunction
                 }
 
             // TODO: validate that all the arguments are immutable or ImmutableAble
-            int cReturns = iReturn == Frame.R_UNUSED ? 0 : 1;
+            int cReturns = iReturn == Frame.RET_UNUSED ? 0 : 1;
 
             CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendInvoke1Request(
                     hService.m_context, this, ahVar, cReturns);

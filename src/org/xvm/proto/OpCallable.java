@@ -104,7 +104,7 @@ public abstract class OpCallable extends Op
         ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
         ahVar[1] = hArg;
 
-        return frame.call1(methodSuper, hThis, ahVar, Frame.R_UNUSED);
+        return frame.call1(methodSuper, hThis, ahVar, Frame.RET_UNUSED);
         }
 
     // call super() methods with multiple arguments and no more than one return

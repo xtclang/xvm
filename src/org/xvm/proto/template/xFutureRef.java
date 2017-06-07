@@ -170,8 +170,12 @@ public class xFutureRef
                 {
                 return String.valueOf(m_future.get());
                 }
-            catch (Exception e)
+            catch (Throwable e)
                 {
+                if (e instanceof ExecutionException)
+                    {
+                    e = e.getCause();
+                    }
                 return e.toString();
                 }
             }

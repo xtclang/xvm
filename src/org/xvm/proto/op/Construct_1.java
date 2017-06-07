@@ -42,7 +42,7 @@ public class Construct_1 extends OpCallable
 
             frame.chainFinalizer(constructor.makeFinalizer(ahVar));
 
-            return frame.call1(constructor, null, ahVar, Frame.R_UNUSED);
+            return frame.call1(constructor, null, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {
