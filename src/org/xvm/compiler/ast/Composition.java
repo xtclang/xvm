@@ -170,6 +170,17 @@ public abstract class Composition
             this.args = args;
             }
 
+        /**
+         * Convertss an annotation to an "incorporate" clause.
+         *
+         * @param annotation  the Annotation to create an Incorporates for
+         */
+        public Incorporates(Annotation annotation)
+            {
+            this(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
+                    Token.Id.INCORPORATES), annotation.type, annotation.args);
+            }
+
         @Override
         public long getEndPosition()
             {

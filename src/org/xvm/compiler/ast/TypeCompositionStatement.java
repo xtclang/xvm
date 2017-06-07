@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
@@ -17,7 +18,6 @@ import org.xvm.util.Severity;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 
 import static org.xvm.compiler.Lexer.CR;
@@ -50,7 +50,7 @@ public class TypeCompositionStatement
                                     List<Token>       qualified,
                                     List<Parameter>   typeParams,
                                     List<Parameter>   constructorParams,
-                                    List<Composition> composition,
+                                    List<Composition> compositions,
                                     StatementBlock    body,
                                     Token             doc)
         {
@@ -65,7 +65,7 @@ public class TypeCompositionStatement
         this.qualified         = qualified;
         this.typeParams        = typeParams;               
         this.constructorParams = constructorParams;        
-        this.composition       = composition;              
+        this.compositions      = compositions;
         this.body              = body;
         this.doc               = doc;
         }
@@ -257,7 +257,7 @@ public class TypeCompositionStatement
         }
 
     /**
-     * TODO
+     * Create and populate the structure corresponding to this TypeCompositionStatement.
      *
      * @param errs  the error list to log any errors etc. to
      */
@@ -437,8 +437,8 @@ public class TypeCompositionStatement
                     }
                 // fall through
             case PACKAGE:
-            case INTERFACE:
             case ENUM:
+            case INTERFACE:
             case TRAIT:
             case MIXIN:
                 {
@@ -510,6 +510,15 @@ public class TypeCompositionStatement
 
                 nSpecified |= nBits;
                 }
+
+            // verification that if one access modifier is explicit, that the component correctly
+            // used that access modifier
+            if (fExplicitlyPublic ^ fExplicitlyProtected ^ fExplicitlyPrivate)
+                {
+                assert (component.getAccess() == Access.PUBLIC   ) == fExplicitlyPublic;
+                assert (component.getAccess() == Access.PROTECTED) == fExplicitlyProtected;
+                assert (component.getAccess() == Access.PRIVATE  ) == fExplicitlyPrivate;
+                }
             }
 
         // inner const/service classes must be declared static if the parent is not const/service
@@ -522,6 +531,7 @@ public class TypeCompositionStatement
                 if (container.getFormat() != Format.CONST)
                     {
                     log(errs, Severity.ERROR, Compiler.INNER_CONST_NOT_STATIC);
+                    fExplicitlyStatic = true;
                     }
                 }
             else if (component.getFormat() == Format.SERVICE)
@@ -531,47 +541,75 @@ public class TypeCompositionStatement
                 if (container.getFormat() != Format.CONST && container.getFormat() != Format.SERVICE)
                     {
                     log(errs, Severity.ERROR, Compiler.INNER_SERVIC_NOT_STATIC);
+                    fExplicitlyStatic = true;
                     }
                 }
             }
 
-        // TODO annotations
+        // configure the static bit on the component
+        if (fExplicitlyStatic || component.getFormat().isImplicitlyStatic())
+            {
+            component.setStatic(true);
+            }
 
-        // TODO
-//        protected Expression        condition;
-//        protected List<Annotation>  annotations;
-//        protected List<Parameter>   typeParams;
-//        protected List<Parameter>   constructorParams;
-//        protected List<Composition> composition;
-//        protected StatementBlock    body;
-//        protected Token             doc;
-//        protected StatementBlock    enclosed;
-
-
+        // validate that type parameters are allowed (the actual validation of the type parameters
+        // themselves happens in a later phase)
         switch (component.getFormat())
             {
             case MODULE:
             case PACKAGE:
+                // type parameters are not permitted
+                disallowTypeParams(errs);
+                // constructor params are only allowed if they have defaulted values
+                requireConstructorParamValues(errs);
+                break;
+
+            case ENUMVALUE:
+                // type parameters are not permitted
+                disallowTypeParams(errs);
+                // number of type arguments must match the number of the enum's type parameters
+                assert container instanceof ClassStructure && container.getFormat() == Format.ENUMVALUE;
+// TODO make sure # matches               if ((args == null ? 0 : args.size()) != typeParams)
+// List<Expression>     args;
+                    break;
 
             case SERVICE:
             case CONST:
             case CLASS:
-            case INTERFACE:
+                // these compositions are new-able, and thus can usually declare type parameters;
+                // the exception is when the composition is not new-able, which is the case for
+                // singleton compositions
+                if (fExplicitlyStatic && getDeclarationZone() == Zone.TopLevel)
+                    {
+                    disallowTypeParams(errs);
+                    requireConstructorParamValues(errs);
+                    }
+                break;
+
             case ENUM:
+                // while an enum is not new-able (it is abstract), it can have type params which are
+                // then defined by each enum value; the same goes for constructor params
+                break;
+
+            case INTERFACE:
             case TRAIT:
             case MIXIN:
-                // type parameters are not permitted
-                disallowTypeParams(errs);
+                break;
+
+            default:
+                throw new IllegalStateException();
             }
 
+        // validate constructor parameters
+        // TODO
         // constructor parameters are not permitted unless they all have default values (since the
         // module is a singleton, and is automatically created, i.e. it has to have all of its
         // construction parameters available)
-        requireConstructorParamValues(errs);
+
 
         // validate composition
         boolean fAlreadyExtends = false;
-        for (Composition composition : this.composition)
+        for (Composition composition : compositions)
             {
             switch (composition.getKeyword().getId())
                 {
@@ -610,6 +648,19 @@ public class TypeCompositionStatement
                 }
             }
 
+        // validate and register annotations (as if they had been written as "incorporates" clauses)
+        if (annotations != null && !annotations.isEmpty())
+            {
+            if (compositions == null)
+                {
+                compositions = new ArrayList<>();
+                }
+            for (int i = annotations.size()-1; i >= 0; --i)
+                {
+                compositions.add(new Composition.Incorporates(annotations.get(i)));
+                }
+            }
+
         if (doc != null)
             {
             component.setDocumentation(extractDocumentation(doc));
@@ -629,7 +680,7 @@ public class TypeCompositionStatement
             // Parameter paramLast  = typeParams.get(typeParams.size() - 1);
 
             Token tokFirst = category == null ? name : category;
-            Token tokLast  = name == null ? category : name;
+            Token tokLast = name == null ? category : name;
             log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
             }
         }
@@ -940,7 +991,7 @@ public class TypeCompositionStatement
             }
         else
             {
-            for (Composition composition : this.composition)
+            for (Composition composition : this.compositions)
                 {
                 sb.append("\n        ")
                   .append(composition);
@@ -1023,11 +1074,12 @@ public class TypeCompositionStatement
     protected List<Parameter>      constructorParams;
     protected List<TypeExpression> typeArgs;
     protected List<Expression>     args;
-    protected List<Composition>    composition;
+    protected List<Composition>    compositions;
     protected StatementBlock       body;
     protected Token                doc;
     protected StatementBlock       enclosed;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
-            "annotations", "typeParams", "constructorParams", "typeArgs", "args", "composition", "body");
+            "annotations", "typeParams", "constructorParams", "typeArgs", "args", "compositions",
+            "body");
     }

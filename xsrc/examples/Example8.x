@@ -90,3 +90,20 @@ module MyApp
 
     protected static Int OFFSET = 3;
     }
+
+// annotations
+
+public @AnnoType(parm) @AnnoType2 static class Dohickey
+        extends Base
+        implements Functionality
+        // ...
+    {
+    // ...
+    }
+
+// translates to ...
+class Dohickey
+    extends Base
+    implements Functionality
+    incorporates AnnoType2
+    incorporates AnnoType(parm)
