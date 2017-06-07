@@ -303,6 +303,13 @@ public class ModuleStructure
         }
 
     @Override
+    public boolean isGloballyVisible()
+        {
+        // modules are always public, and always "top level" visible
+        return true;
+        }
+
+    @Override
     public boolean isPackageContainer()
         {
         return true;

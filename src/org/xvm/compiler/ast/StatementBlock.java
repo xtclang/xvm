@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.compiler.Source;
+import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
 
@@ -95,15 +96,17 @@ public class StatementBlock
         sb.append('{');
 
         int firstNonEnum = 0;
-        if (stmts.get(0) instanceof EnumDeclaration)
+        if (stmts.get(0) instanceof TypeCompositionStatement
+                && ((TypeCompositionStatement) stmts.get(0)).category.getId() == Token.Id.ENUM_VAL)
             {
             boolean multiline = false;
             for (int i = 0, c = stmts.size(); i < c; ++i)
                 {
                 Statement stmt = stmts.get(i);
-                if (stmt instanceof EnumDeclaration)
+                if (stmt instanceof TypeCompositionStatement
+                        && ((TypeCompositionStatement) stmt).category.getId() == Token.Id.ENUM_VAL)
                     {
-                    EnumDeclaration enumStmt = (EnumDeclaration) stmt;
+                    TypeCompositionStatement enumStmt = (TypeCompositionStatement) stmt;
                     multiline |= enumStmt.doc != null || enumStmt.body != null;
                     ++firstNonEnum;
                     }

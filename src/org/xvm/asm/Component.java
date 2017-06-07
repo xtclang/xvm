@@ -336,6 +336,24 @@ public abstract class Component
         }
 
     /**
+     * @return true if the identity of this component is visible from anywhere
+     */
+    public boolean isGloballyVisible()
+        {
+        Component parent = getParent();
+        return parent.isGloballyVisible() && !parent.isChildLessVisible();
+        }
+
+    /**
+     * @return true if the identity of a child component is less visible than the identity of this
+     *         component; this tends to be true when this component is a method
+     */
+    protected boolean isChildLessVisible()
+        {
+        return false;
+        }
+
+    /**
      * @return assuming that this is one of any number of siblings, obtain a reference to the first
      *         sibling (which may be this); never null
      */
@@ -1422,13 +1440,19 @@ public abstract class Component
 
     // ----- inner class: Format -------------------------------------------------------------------
 
+    /**
+     * The Format enumeration defines the multiple different binary formats used to store component
+     * information.
+     * <p/>
+     * Those beginning with "RSVD_" are reserved, and must not be used.
+     */
     public enum Format
         {
-        NONE,
         INTERFACE,
         CLASS,
         CONST,
         ENUM,
+        ENUMVALUE,
         MIXIN,
         TRAIT,
         SERVICE,

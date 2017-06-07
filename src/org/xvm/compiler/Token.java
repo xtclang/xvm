@@ -438,7 +438,8 @@ public class Token
         LIT_STRING  (null             ),
         LIT_INT     (null             ),
         LIT_DEC     (null             ),
-        LIT_BIN     (null             );
+        LIT_BIN     (null             ),
+        ENUM_VAL    ("enum-value"     );            // not a real token
 
         /**
          * Constructor.

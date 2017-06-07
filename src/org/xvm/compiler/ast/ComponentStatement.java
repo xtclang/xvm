@@ -33,7 +33,7 @@ public abstract class ComponentStatement
         return component;
         }
 
-    protected void setStructure(Component component)
+    protected void setComponent(Component component)
         {
         this.component = component;
         }

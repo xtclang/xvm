@@ -241,6 +241,36 @@ public class CompositeComponent
         }
 
     @Override
+    public boolean isGloballyVisible()
+        {
+        boolean fVisible = true;
+        for (Component sibling : m_siblings)
+            {
+            if (!sibling.isGloballyVisible())
+                {
+                fVisible = false;
+                break;
+                }
+            }
+        return fVisible;
+        }
+
+    @Override
+    protected boolean isChildLessVisible()
+        {
+        boolean fAsVisible = true;
+        for (Component sibling : m_siblings)
+            {
+            if (!sibling.isChildLessVisible())
+                {
+                fAsVisible = false;
+                break;
+                }
+            }
+        return !fAsVisible;
+        }
+
+    @Override
     protected Component getEldestSibling()
         {
         return m_siblings.get(0).getEldestSibling();

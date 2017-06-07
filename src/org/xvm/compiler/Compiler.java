@@ -138,25 +138,37 @@ public class Compiler
      */
     public static final String ILLEGAL_MODIFIER                     = "COMPILER-09";
     /**
+     * Illegal modifier.
+     */
+    public static final String CONFLICTING_MODIFIER                 = "COMPILER-10";
+    /**
      * More than one "extends" clause.
      */
-    public static final String MULTIPLE_EXTENDS                     = "COMPILER-10";
+    public static final String MULTIPLE_EXTENDS                     = "COMPILER-11";
     /**
      * Illegal / unexpected type parameters.
      */
-    public static final String TYPE_PARAMS_UNEXPECTED               = "COMPILER-11";
+    public static final String TYPE_PARAMS_UNEXPECTED               = "COMPILER-12";
     /**
      * Illegal / unexpected constructor parameters.
      */
-    public static final String CONSTRUCTOR_PARAMS_UNEXPECTED        = "COMPILER-12";
+    public static final String CONSTRUCTOR_PARAMS_UNEXPECTED        = "COMPILER-13";
     /**
      * Illegal / unexpected constructor parameters.
      */
-    public static final String CONSTRUCTOR_PARAM_DEFAULT_REQUIRED   = "COMPILER-13";
+    public static final String CONSTRUCTOR_PARAM_DEFAULT_REQUIRED   = "COMPILER-14";
     /**
      * Unexpected keyword.
      */
-    public static final String KEYWORD_UNEXPECTED                   = "COMPILER-14";
+    public static final String KEYWORD_UNEXPECTED                   = "COMPILER-15";
+    /**
+     * Inner const class must be declared static if its outer class is not a const.
+     */
+    public static final String INNER_CONST_NOT_STATIC               = "COMPILER-16";
+    /**
+     * Inner service class must be declared static if its outer class is not a const or service.
+     */
+    public static final String INNER_SERVIC_NOT_STATIC              = "COMPILER-17";
 
 
     // ----- data members --------------------------------------------------------------------------
