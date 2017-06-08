@@ -118,7 +118,7 @@ public class CompositeComponent
         }
 
     @Override
-    protected void setAccess(Access access)
+    public void setAccess(Access access)
         {
         for (Component sibling : m_siblings)
             {
@@ -149,7 +149,7 @@ public class CompositeComponent
         }
 
     @Override
-    protected void setAbstract(boolean fAbstract)
+    public void setAbstract(boolean fAbstract)
         {
         for (Component sibling : m_siblings)
             {
@@ -180,7 +180,7 @@ public class CompositeComponent
         }
 
     @Override
-    protected void setStatic(boolean fStatic)
+    public void setStatic(boolean fStatic)
         {
         for (Component sibling : m_siblings)
             {
@@ -211,7 +211,7 @@ public class CompositeComponent
         }
 
     @Override
-    protected void setSynthetic(boolean fSynthetic)
+    public void setSynthetic(boolean fSynthetic)
         {
         for (Component sibling : m_siblings)
             {

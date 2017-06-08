@@ -169,6 +169,14 @@ public class Compiler
      * Inner service class must be declared static if its outer class is not a const or service.
      */
     public static final String INNER_SERVIC_NOT_STATIC              = "COMPILER-17";
+    /**
+     * Wrong number of type parameter values.
+     */
+    public static final String TYPE_PARAMS_MISMATCH                 = "COMPILER-18";
+    /**
+     * Type parameter name is a duplicate.
+     */
+    public static final String DUPLICATE_TYPE_PARAM                 = "COMPILER-19";
 
 
     // ----- data members --------------------------------------------------------------------------

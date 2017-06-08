@@ -384,7 +384,23 @@ public class ClassStructure
         /**
          * Represents that the class being composed is one of the enumeration of a specified type.
          */
-        Enumerates,;
+        Enumerates,
+        /**
+         * Represents that the package being composed represents an optional module.
+         */
+        ImportOptional,
+        /**
+         * Represents that the package being composed represents an optional-but-desired module.
+         */
+        ImportDesired,
+        /**
+         * Represents that the package being composed represents a required module.
+         */
+        ImportRequired,
+        /**
+         * Represents that the package being composed represents an embedded module.
+         */
+        ImportEmbedded,;
 
         /**
          * Look up a Composition enum by its ordinal.
@@ -403,6 +419,7 @@ public class ClassStructure
          */
         private static final Composition[] COMPOSITIONS = Composition.values();
         }
+
 
     /**
      * Represents one contribution to the definition of a class. A class (with the term used in the
@@ -430,7 +447,8 @@ public class ClassStructure
          * @param delegate     for a Delegates composition, this is the property that provides the
          *                     delegate reference
          */
-        protected Contribution(Composition composition, ClassConstant constant, PropertyConstant delegate)
+        protected Contribution(Composition composition, ClassConstant constant,
+                PropertyConstant delegate)
             {
             assert composition != null && constant != null;
             assert (composition == Composition.Delegates) == (delegate != null);
@@ -482,8 +500,8 @@ public class ClassStructure
 
             Contribution that = (Contribution) obj;
             return this.m_composition == that.m_composition
-                && this.m_constClass.equals(that.m_constClass)
-                && Handy.equals(this.m_constProp, that.m_constProp);
+                    && this.m_constClass.equals(that.m_constClass)
+                    && Handy.equals(this.m_constProp, that.m_constProp);
             }
 
         @Override

@@ -1,9 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.HashSet;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 
@@ -13,6 +15,7 @@ import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
+import org.xvm.proto.Container;
 import org.xvm.util.Severity;
 
 import java.lang.reflect.Field;
@@ -269,6 +272,7 @@ public class TypeCompositionStatement
         String         sName     = (String) name.getValue();
         Access         access    = getDefaultAccess();
         Component      container = parent == null ? null : parent.getComponent();
+        ConstantPool   pool      = container.getConstantPool();
         ClassStructure component = null;
         switch (category.getId())
             {
@@ -552,8 +556,8 @@ public class TypeCompositionStatement
             component.setStatic(true);
             }
 
-        // validate that type parameters are allowed (the actual validation of the type parameters
-        // themselves happens in a later phase)
+        // validate that type parameters are allowed, and register them (the actual validation of
+        // the type parameters themselves happens in a later phase)
         switch (component.getFormat())
             {
             case MODULE:
@@ -569,9 +573,12 @@ public class TypeCompositionStatement
                 disallowTypeParams(errs);
                 // number of type arguments must match the number of the enum's type parameters
                 assert container instanceof ClassStructure && container.getFormat() == Format.ENUM;
-// TODO make sure # matches               if ((args == null ? 0 : args.size()) != typeParams)
-// List<Expression>     args;
-                    break;
+                ClassStructure enumeration = (ClassStructure) container;
+                if (enumeration.getTypeParams().size() != (args == null ? 0 : args.size()))
+                    {
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_MISMATCH);
+                    }
+                break;
 
             case SERVICE:
             case CONST:
@@ -583,37 +590,92 @@ public class TypeCompositionStatement
                     {
                     disallowTypeParams(errs);
                     requireConstructorParamValues(errs);
+                    break;
                     }
-                break;
-
+                // fall through
             case ENUM:
-                // while an enum is not new-able (it is abstract), it can have type params which are
-                // then defined by each enum value; the same goes for constructor params
-                break;
-
+                // while an enum is not new-able (it is abstract), it can have type params which
+                // must each be explicitly defined by each enum value; the same goes for constructor
+                // params
             case INTERFACE:
             case TRAIT:
             case MIXIN:
+                // register the type parameters
+                if (typeParams != null && !typeParams.isEmpty())
+                    {
+                    HashSet<String> names = new HashSet<>();
+                    for (Parameter param : typeParams)
+                        {
+                        String sParam = param.getName();
+                        if (names.contains(sParam))
+                            {
+                            log(errs, Severity.ERROR, Compiler.DUPLICATE_TYPE_PARAM, sName);
+                            }
+                        else
+                            {
+                            component.addTypeParam(sParam,
+                                    pool.createUnresolvedTypeConstant(param.getType().toString()));
+                            }
+                        }
+                    }
                 break;
 
             default:
                 throw new IllegalStateException();
             }
 
-        // validate constructor parameters
-        // TODO
-        // constructor parameters are not permitted unless they all have default values (since the
-        // module is a singleton, and is automatically created, i.e. it has to have all of its
-        // construction parameters available)
+        // validate and register annotations (as if they had been written as "incorporates" clauses)
+        // note that the annotations are added to the end of the list, and in reverse order of how
+        // they were encountered (as if they were the outer-most shells of a russian nesting doll)
+        if (annotations != null && !annotations.isEmpty())
+            {
+            if (compositions == null)
+                {
+                compositions = new ArrayList<>();
+                }
+            for (int i = annotations.size()-1; i >= 0; --i)
+                {
+                compositions.add(new Composition.Incorporates(annotations.get(i)));
+                }
+            }
+
+        // validate and register each composition
+        //
+        //              extends     implements  delegates   incorporates  import*     into
+        //              ----------  ----------  ----------  ------------  ----------  ----------
+        // module       0/1 [1]     n           n           n
+        // package      0/1 [1]     n           n           n             0/1 [2]
+        // class        0/1 [3]     n           n           n
+        // service      0/1 [4]     n           n           n
+        // const        0/1 [1]     n           n           n
+        // enum         0/1 [1]     n           n           n
+        // enum-value       [5]     n           n           n
+        // trait        0/1 [6]     n           n           n [9]                     0/1 [10]
+        // mixin        0/1 [7]     n           n           n                         0/1 [10]
+        // interface    n   [8]     n [8]       n           n [9]
+        //
+        // [1] module/package/const/enum may explicitly extend a class or a const; otherwise extends
+        //     Object
+        // [2] package may import a module
+        // [3] class may explicitly extend a class; otherwise extends Object
+        // [4] service may explicitly extend a class or service; otherwise extends Object
+        // [5] enum values always implicitly extend the enum to which they belong
+        // [6] trait may explicitly extend a trait
+        // [7] mixin may explicitly extend a trait or mixin
+        // [8] in the source code, an interface "extends" any number of interfaces, but it is
+        //     compiled as implements
+        // [9] traits and interfaces can only incorporate traits
+        // [10] traits and mixins may specify a type that they can be mixed into; otherwise any type
 
 
-        // validate composition
+
         boolean fAlreadyExtends = false;
         for (Composition composition : compositions)
             {
             switch (composition.getKeyword().getId())
                 {
                 case EXTENDS:
+// TODO what can extend? interface extends actually means implements
                     // only one extends is allowed
                     if (fAlreadyExtends)
                         {
@@ -632,6 +694,7 @@ public class TypeCompositionStatement
                 case IMPLEMENTS:
                 case INCORPORATES:
                     // these are all OK; other checks will be done after the types are resolved
+// TODO
                     break;
 
                 case IMPORT:
@@ -648,19 +711,6 @@ public class TypeCompositionStatement
                 }
             }
 
-        // validate and register annotations (as if they had been written as "incorporates" clauses)
-        if (annotations != null && !annotations.isEmpty())
-            {
-            if (compositions == null)
-                {
-                compositions = new ArrayList<>();
-                }
-            for (int i = annotations.size()-1; i >= 0; --i)
-                {
-                compositions.add(new Composition.Incorporates(annotations.get(i)));
-                }
-            }
-
         if (doc != null)
             {
             component.setDocumentation(extractDocumentation(doc));
@@ -668,6 +718,11 @@ public class TypeCompositionStatement
 
         // TODO validate any constructor parameters and their default values, and transfer the info to the constructor
 
+        // validation of constructor parameters happens in a
+        // TODO
+        // constructor parameters are not permitted unless they all have default values (since the
+        // module is a singleton, and is automatically created, i.e. it has to have all of its
+        // construction parameters available)
         }
 
     private void disallowTypeParams(ErrorListener errs)
