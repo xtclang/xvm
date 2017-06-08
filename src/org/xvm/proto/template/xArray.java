@@ -277,12 +277,17 @@ public class xArray
 
     // ----- ObjectHandle helpers -----
 
-    public static GenericArrayHandle makeInstance(long cCapacity)
+    public static GenericArrayHandle makeHandle(long cCapacity)
         {
         return new GenericArrayHandle(INSTANCE.f_clazzCanonical, cCapacity);
         }
 
-    public static GenericArrayHandle makeInstance(TypeComposition clzArray, long cCapacity)
+    public static GenericArrayHandle makeHandle(Type typeEl, ObjectHandle[] ahValue)
+        {
+        return new GenericArrayHandle(INSTANCE.resolve(new Type[] {typeEl}), ahValue);
+        }
+
+    public static GenericArrayHandle makeHandle(TypeComposition clzArray, long cCapacity)
         {
         return new GenericArrayHandle(clzArray, cCapacity);
         }
@@ -292,6 +297,13 @@ public class xArray
             extends ArrayHandle
         {
         public ObjectHandle[] m_ahValue;
+
+        protected GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue)
+            {
+            super(clzArray);
+
+            m_ahValue = ahValue;
+            }
 
         protected GenericArrayHandle(TypeComposition clzArray, long cCapacity)
             {

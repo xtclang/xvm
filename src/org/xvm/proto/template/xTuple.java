@@ -179,7 +179,7 @@ public class xTuple
         return hTuple.m_ahValue.length;
         }
 
-// ----- ObjectHandle helpers -----
+    // ----- ObjectHandle helpers -----
 
     public static TupleHandle makeHandle(Type[] aType, ObjectHandle[] ahValue)
         {

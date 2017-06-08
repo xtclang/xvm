@@ -1,29 +1,28 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.constants.CharStringConstant;
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
+import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
+import org.xvm.proto.template.xArray;
+
 /**
- * INVAR CONST_CLASS, CONST_STRING, rvalue-src ; (next register is an initialized named variable)
+ * SVAR TYPE_CONST, #values:(rvalue-src) ; next register is an initialized anonymous Sequence variable
  *
  * @author gg 2017.03.08
  */
-public class INVar extends Op
+public class SVar extends Op
     {
     final private int f_nClassConstId;
-    final private int f_nNameConstId;
-    final private int f_nArgValue;
+    final private int[] f_anArgValue;
 
-    public INVar(int nClassConstId, int nNamedConstId, int nValue)
+    public SVar(int nClassConstId, int[] anValue)
         {
         f_nClassConstId = nClassConstId;
-        f_nNameConstId = nNamedConstId;
-        f_nArgValue = nValue;
+        f_anArgValue = anValue;
         }
 
     @Override
@@ -35,18 +34,28 @@ public class INVar extends Op
         ServiceContext context = frame.f_context;
 
         TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
-        CharStringConstant constName = (CharStringConstant)
-                context.f_constantPool.getConstantValue(f_nNameConstId);
+        int[] anArg = f_anArgValue;
+        int cArgs = anArg.length;
 
         try
             {
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
-            if (hArg == null)
+            ObjectHandle[] ahArg = new ObjectHandle[cArgs];
+
+            for (int i = 0; i < cArgs; i++)
                 {
-                return R_REPEAT;
+                ObjectHandle hArg = frame.getArgument(anArg[i]);
+                if (hArg == null)
+                    {
+                    return R_REPEAT;
+                    }
+
+                ahArg[i] = hArg;
                 }
 
-            frame.introduceVar(nNextVar, clazz, constName.getValue(), Frame.VAR_STANDARD, hArg);
+            ArrayHandle hArray = xArray.makeHandle(clazz.ensurePublicType(), ahArg);
+            hArray.makeImmutable();
+
+            frame.introduceVar(nNextVar, null, null, Frame.VAR_STANDARD, hArray);
 
             frame.f_anNextVar[iScope] = nNextVar + 1;
             return iPC + 1;
@@ -57,4 +66,5 @@ public class INVar extends Op
             return R_EXCEPTION;
             }
         }
+
     }

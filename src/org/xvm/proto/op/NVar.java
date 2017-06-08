@@ -31,7 +31,7 @@ public class NVar extends Op
 
         ServiceContext context = frame.f_context;
 
-        TypeComposition clazz = context.f_types.ensureComposition(f_nClassConstId);
+        TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
         CharStringConstant constName = (CharStringConstant)
                 context.f_constantPool.getConstantValue(f_nNameConstId);
 

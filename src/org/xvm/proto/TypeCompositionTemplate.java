@@ -858,7 +858,7 @@ public abstract class TypeCompositionTemplate
             return Op.R_EXCEPTION;
             }
 
-        return frame.assignValue(iReturn, xArray.makeInstance(clzArray, cCapacity));
+        return frame.assignValue(iReturn, xArray.makeHandle(clzArray, cCapacity));
         }
 
     // ----- debugging support -----

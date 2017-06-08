@@ -264,7 +264,8 @@ module TestApp
         print(t[0]);
         print(t[1]);
 
-        Tuple<String, Int> t2 = new Tuple("", 0); // fixed-size (rigid)
+        Int i = 0;
+        Tuple<String, Int> t2 = new Tuple("", i); // fixed-size (rigid)
         print(t2);
 
         t2[0] = "t";
