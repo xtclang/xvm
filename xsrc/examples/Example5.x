@@ -385,3 +385,12 @@ svc.prop = 5;
 
 // to get a future for it
 @future Tuple<> result = (&svc.prop).set<Tuple>(5);
+
+
+static <T> Boolean bar(T t1, T t2)
+    {
+    Boolean f = ...;
+
+    T t = f ? t1 : t2; // NVAR Object, "t"
+    }
+}

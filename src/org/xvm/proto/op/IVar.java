@@ -29,7 +29,7 @@ public class IVar extends Op
         int nNextVar = frame.f_anNextVar[iScope];
 
         ServiceContext context = frame.f_context;
-        TypeComposition clazz = context.f_types.ensureComposition(f_nClassConstId);
+        TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
 
         try
             {

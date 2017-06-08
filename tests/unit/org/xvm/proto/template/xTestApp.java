@@ -208,7 +208,7 @@ public class xTestApp extends xModule
             new Invoke_01(0, adapter.getMethodConstId("x:TestService", "increment"), 8),
             new X_Print(8),
 
-//            new Invoke_00(0, adapter.getMethodConstId("x:TestService", "throwing")),
+            new Invoke_00(0, adapter.getMethodConstId("x:TestService", "throwing")),
             new Return_0(),
             };
         ftTestService.m_cVars = 9;
@@ -250,7 +250,6 @@ public class xTestApp extends xModule
             new Invoke_01(0, adapter.getMethodConstId("x:TestService", "increment"), 3),
             new X_Print(3),
 
-new Nop(),
             new GuardStart(adapter.getClassTypeConstId("x:Exception"),
                     adapter.ensureValueConstantId("e"), +3),
             new Call_01(-adapter.getMethodConstId("x:TestApp", "getIntValue"), 3),
@@ -395,57 +394,57 @@ new Nop(),
             new INVar(adapter.getClassTypeConstId("x:Tuple"), adapter.ensureValueConstantId("t"),
                       -adapter.ensureValueConstantId(new Object[] {"zero", Integer.valueOf(0)})), // #0 (t)
 
+            new Enter(),
             new Var(adapter.getClassTypeConstId("x:String")), // #1
             new IGet(0, -adapter.ensureValueConstantId(0), 1),
             new X_Print(1),
-
-            new Var(adapter.getClassTypeConstId("x:Int64")), // #2
-            new IGet(0, -adapter.ensureValueConstantId(1), 2),
-            new X_Print(2),
-
-            new NVar(adapter.getClassTypeConstId("x:Tuple<x:String,x:Int64>"),
-                     adapter.ensureValueConstantId("t2")), // #3 (t2)
-            new IVar(adapter.getClassTypeConstId("x:collections.Sequence"),
-                    -adapter.ensureValueConstantId(new Object[] {"", 0})), // #4
-            new New_1(adapter.getMethodConstId("x:Tuple", "construct"), 4, 3),
-            new X_Print(3),
-
-            new IVar(adapter.getClassTypeConstId("x:String"),
-                    -adapter.ensureValueConstantId("t")), // #5
-            new ISet(3, -adapter.ensureValueConstantId(0), 5),
-
-            new IVar(adapter.getClassTypeConstId("x:Int64"),
-                    -adapter.ensureValueConstantId(2)), // #6
-            new ISet(3, -adapter.ensureValueConstantId(1), 6),
-            new X_Print(3),
-
-            new NVar(adapter.getClassTypeConstId("x:Int64"),
-                     adapter.ensureValueConstantId("of")), // #7 (of)
-            new IVar(adapter.getClassTypeConstId("x:String"),
-                    -adapter.ensureValueConstantId("the test")), // #8
-            new Invoke_T1(8, adapter.getMethodConstId("x:String", "indexOf"), 3, 7),
-
-            new Var(adapter.getClassTypeConstId("x:Boolean")), // #9
-            new IsEq(7, -adapter.ensureValueConstantId(4), 9),
-            new AssertV(9, adapter.ensureValueConstantId("of == 4"), new int[] {7}),
-
-            new Enter(),
-            new Var(adapter.getClassTypeConstId("x:Boolean")), // #10
-            new Var(adapter.getClassTypeConstId("x:String")), // #11
-            new Call_1N(-adapter.getMethodConstId("x:TestApp", "testConditional"),
-                        -adapter.ensureValueConstantId(1), new int[] {10, 11}),
-            new JumpFalse(10, 2),
-            new X_Print(11),
             new Exit(),
 
-            new Var(adapter.getClassTypeConstId("x:Tuple")), // #10
+            new Enter(),
+            new Var(adapter.getClassTypeConstId("x:Int64")), // #1
+            new IGet(0, -adapter.ensureValueConstantId(1), 1),
+            new X_Print(1),
+            new Exit(),
+
+            new INVar(adapter.getClassTypeConstId("x:Int64"),
+                      adapter.ensureValueConstantId("i"), -adapter.ensureValueConstantId(0)), // #1 (i)
+            new NVar(adapter.getClassTypeConstId("x:Tuple<x:String,x:Int64>"),
+                     adapter.ensureValueConstantId("t2")), // #2 (t2)
+            new TVar(new int[] {adapter.getClassTypeConstId("x:String"), adapter.getClassTypeConstId("x:Int64")},
+                    new int[] {-adapter.ensureValueConstantId(""), 1}), // #3
+            new New_1(adapter.getMethodConstId("x:Tuple", "construct"), 3, 2),
+            new X_Print(2),
+
+            new ISet(2, -adapter.ensureValueConstantId(0), -adapter.ensureValueConstantId("t")),
+            new ISet(2, -adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(2)),
+            new X_Print(2),
+
+            new NVar(adapter.getClassTypeConstId("x:Int64"),
+                     adapter.ensureValueConstantId("of")), // #4 (of)
+            new Invoke_T1(-adapter.ensureValueConstantId("the test"),
+                          adapter.getMethodConstId("x:String", "indexOf"), 2, 4),
+
+            new Var(adapter.getClassTypeConstId("x:Boolean")), // #5
+            new IsEq(4, -adapter.ensureValueConstantId(4), 5),
+            new AssertV(5, adapter.ensureValueConstantId("of == 4"), new int[] {4}),
+
+            new Enter(),
+            new Var(adapter.getClassTypeConstId("x:Boolean")), // #6
+            new Var(adapter.getClassTypeConstId("x:String")), // #7
+            new Call_1N(-adapter.getMethodConstId("x:TestApp", "testConditional"),
+                        -adapter.ensureValueConstantId(1), new int[] {6, 7}),
+            new JumpFalse(6, 2),
+            new X_Print(7),
+            new Exit(),
+
+            new Var(adapter.getClassTypeConstId("x:Tuple")), // #6
             new Call_1T(-adapter.getMethodConstId("x:TestApp", "testConditional"),
-                        -adapter.ensureValueConstantId(-1), 10),
-            new X_Print(10),
+                        -adapter.ensureValueConstantId(-1), 6),
+            new X_Print(6),
 
             new Return_0()
             };
-        ftTestTuple.m_cVars = 12;
+        ftTestTuple.m_cVars = 8;
         ftTestTuple.m_cScopes = 2;
 
         // --- run()

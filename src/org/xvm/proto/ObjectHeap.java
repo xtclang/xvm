@@ -39,9 +39,9 @@ public class ObjectHeap
         }
 
     // nClassConstId - ClassTypeConstant in the ConstantPool
-    public RefHandle createRefHandle(int nClassConstId)
+    public RefHandle createRefHandle(Frame frame, int nClassConstId)
         {
-        TypeComposition typeComposition = f_types.ensureComposition(nClassConstId);
+        TypeComposition typeComposition = f_types.ensureComposition(frame, nClassConstId);
 
         return typeComposition.f_template.createRefHandle(typeComposition);
         }

@@ -123,7 +123,7 @@ public class Frame
                 for (int iCatch = 0, c = guard.f_anClassConstId.length; iCatch < c; iCatch++)
                     {
                     TypeComposition clzCatch = f_context.f_types.
-                            ensureComposition(guard.f_anClassConstId[iCatch]);
+                            ensureComposition(this, guard.f_anClassConstId[iCatch]);
                     if (clzException.extends_(clzCatch))
                         {
                         int nScope = guard.f_nScope;
@@ -560,8 +560,16 @@ public class Frame
         return lIndex;
         }
 
-    public void introduceVar(int nVar, TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)
+    // if the class is not specified, it will be inferred from the handle,
+    // which in that case must be specified
+    public void introduceVar(int nVar, TypeComposition clz,
+                             String sName, int nStyle, ObjectHandle hValue)
         {
+        if (clz == null)
+            {
+            clz = hValue.f_clazz;
+            }
+
         f_aInfo[nVar] = new VarInfo(clz, sName, nStyle);
 
         if (hValue != null)

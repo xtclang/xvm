@@ -159,12 +159,14 @@ public class TypeSet
 
 
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
-    public TypeComposition ensureComposition(int nClassConstId)
+    public TypeComposition ensureComposition(Frame frame, int nClassConstId)
         {
         TypeComposition typeComposition = m_mapConstCompositions.get(nClassConstId);
         if (typeComposition == null)
             {
-            ClassTypeConstant classConstant = f_adapter.getClassTypeConstant(nClassConstId);   // must exist
+            // TODO: if the constant is not a CTC, but TypeParameterTypeConstant, it needs
+            // to be resolved using  frame.getThis().f_clazz
+            ClassTypeConstant classConstant = f_adapter.getClassTypeConstant(nClassConstId); // must exist
 
             // TODO: combination types (String|Runnable)
             String sTemplate = ConstantPoolAdapter.getClassName(classConstant.getClassConstant());

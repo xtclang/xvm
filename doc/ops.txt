@@ -38,6 +38,8 @@
 +INVAR      TYPE_CONST, CONST_STRING, rvalue-src    ; next register is an initialized named variable
 +DVAR       CONST_REF_CLASS                         ; next register is an anonymous "dynamic reference" variable
 +DNVAR      CONST_REF_CLASS, CONST_STRING           ; next register is a named "dynamic reference" variable
+ SVAR       TYPE_CONST, #values:(rvalue-src)        ; next register is an initialized anonymous Sequence variable
++TVAR       #values:(TYPE_CONST, rvalue-src)        ; next register is an initialized anonymous Tuple variable
 +REF        lvalue                                  ; next register represents the Variable ref for the specified variable
  CREF       rvalue                                  ; next register represents the @ro Variable ref for the specified variable
  CAST       rvalue, TYPE_CONST                      ; next register holds the type-casted value
