@@ -231,7 +231,7 @@ public abstract class Component
      *
      * @param access  the accessibility of the component
      */
-    protected void setAccess(Access access)
+    public void setAccess(Access access)
         {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~ACCESS_MASK) | (access.ordinal() << ACCESS_SHIFT);
@@ -255,7 +255,7 @@ public abstract class Component
      * 
      * @param fAbstract  true to specify the component is abstract; false otherwise
      */
-    protected void setAbstract(boolean fAbstract)
+    public void setAbstract(boolean fAbstract)
         {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~ABSTRACT_BIT) | (fAbstract ? ABSTRACT_BIT : 0);
@@ -279,7 +279,7 @@ public abstract class Component
      *
      * @param fStatic  true to specify the component is static; false otherwise
      */
-    protected void setStatic(boolean fStatic)
+    public void setStatic(boolean fStatic)
         {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~STATIC_BIT) | (fStatic ? STATIC_BIT : 0);
@@ -303,7 +303,7 @@ public abstract class Component
      *
      * @param fSynthetic  true to specify the component is synthetic; false otherwise
      */
-    protected void setSynthetic(boolean fSynthetic)
+    public void setSynthetic(boolean fSynthetic)
         {
         int nFlagsOld = m_nFlags;
         int nFlagsNew = (nFlagsOld & ~SYNTHETIC_BIT) | (fSynthetic ? SYNTHETIC_BIT : 0);
@@ -1512,6 +1512,7 @@ public abstract class Component
                 case CLASS:
                 case CONST:
                 case ENUM:
+                case ENUMVALUE:
                 case MIXIN:
                 case TRAIT:
                 case SERVICE:
@@ -1528,6 +1529,32 @@ public abstract class Component
 
                 default:
                     throw new IllegalStateException("uninstantiable format: " + this);
+                }
+            }
+
+        public boolean isImplicitlyStatic()
+            {
+            switch (this)
+                {
+                case MODULE:
+                case PACKAGE:
+                case ENUM:
+                case ENUMVALUE:
+                    return true;
+
+                case INTERFACE:
+                case CLASS:
+                case CONST:
+                case MIXIN:
+                case TRAIT:
+                case SERVICE:
+                case PROPERTY:
+                case MULTIMETHOD:
+                case METHOD:
+                    return false;
+
+                default:
+                    throw new IllegalStateException("unsupported format: " + this);
                 }
             }
 

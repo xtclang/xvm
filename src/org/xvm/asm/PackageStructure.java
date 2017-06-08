@@ -21,7 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @author cp 2016.04.14
  */
 public class PackageStructure
-        extends Component
+        extends ClassStructure
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -73,18 +73,6 @@ public class PackageStructure
 
     @Override
     public boolean isPackageContainer()
-        {
-        return true;
-        }
-
-    @Override
-    public boolean isClassContainer()
-        {
-        return true;
-        }
-
-    @Override
-    public boolean isMethodContainer()
         {
         return true;
         }

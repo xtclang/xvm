@@ -14,6 +14,7 @@ import java.util.Map;
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -26,7 +27,8 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * An XVM Structure that represents an entire Class.
+ * An XVM Structure that represents an entire Class. This is also the base class for module and
+ * package structures.
  *
  * @author cp 2016.04.14
  */
@@ -38,28 +40,19 @@ public class ClassStructure
     /**
      * Construct a ClassStructure with the specified identity.
      *
-     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param xsParent   the XvmStructure that contains this structure
      * @param nFlags     the Component bit flags
-     * @param constId    the constant that specifies the identity of the Module
-     * @param condition  the optional condition for this ModuleStructure
+     * @param constId    the constant that specifies the identity of the Module, Package, or Class
+     * @param condition  the optional condition for this ClassStructure
      */
-    protected ClassStructure(XvmStructure xsParent, int nFlags, ClassConstant constId, ConditionalConstant condition)
+    protected ClassStructure(XvmStructure xsParent, int nFlags, IdentityConstant constId,
+                             ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
-    /**
-     * Obtain the ClassConstant that holds the identity of this Class.
-     *
-     * @return the ClassConstant representing the identity of this ClassStructure
-     */
-    public ClassConstant getClassConstant()
-        {
-        return (ClassConstant) getIdentityConstant();
-        }
 
     /**
      * Obtain the type parameters for the class as an ordered read-only map, keyed by name and with
