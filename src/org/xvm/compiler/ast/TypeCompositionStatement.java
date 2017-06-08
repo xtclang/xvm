@@ -266,10 +266,10 @@ public class TypeCompositionStatement
         assert getComponent() == null;
 
         // create the structure for this module, package, or class (etc.)
-        String    sName     = (String) name.getValue();
-        Access    access    = getDefaultAccess();
-        Component container = parent == null ? null : parent.getComponent();
-        Component component = null;
+        String         sName     = (String) name.getValue();
+        Access         access    = getDefaultAccess();
+        Component      container = parent == null ? null : parent.getComponent();
+        ClassStructure component = null;
         switch (category.getId())
             {
             case MODULE:
@@ -568,7 +568,7 @@ public class TypeCompositionStatement
                 // type parameters are not permitted
                 disallowTypeParams(errs);
                 // number of type arguments must match the number of the enum's type parameters
-                assert container instanceof ClassStructure && container.getFormat() == Format.ENUMVALUE;
+                assert container instanceof ClassStructure && container.getFormat() == Format.ENUM;
 // TODO make sure # matches               if ((args == null ? 0 : args.size()) != typeParams)
 // List<Expression>     args;
                     break;

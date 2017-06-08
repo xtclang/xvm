@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.BuildRepository;
@@ -84,7 +85,7 @@ public class FileStructureTest
                 "collections");
         ClassStructure structclz = structpkg.createClass(Constants.Access.PUBLIC,
                 Component.Format.INTERFACE, "List");
-        structclz.addTypeParam("ElementType", structobj.getClassConstant().asTypeConstant());
+        structclz.addTypeParam("ElementType", ((ClassConstant) structobj.getIdentityConstant()).asTypeConstant());
         testFileStructure(structfile);
         }
 
@@ -98,12 +99,12 @@ public class FileStructureTest
         PackageStructure pkgColl = module.createPackage(Constants.Access.PUBLIC, "collections");
         ClassStructure   clzHash = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Hashable");
         ClassStructure   clzMap  = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Map");
-        clzMap.addTypeParam("KeyType", clzObj.getClassConstant().asTypeConstant());
-        clzMap.addTypeParam("ValueType", clzObj.getClassConstant().asTypeConstant());
+        clzMap.addTypeParam("KeyType", ((ClassConstant) clzObj.getIdentityConstant()).asTypeConstant());
+        clzMap.addTypeParam("ValueType", ((ClassConstant) clzObj.getIdentityConstant()).asTypeConstant());
         ClassStructure clzHashMap = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "HashMap");
-        clzHashMap.addTypeParam("KeyType", clzHash.getClassConstant().asTypeConstant());
-        clzHashMap.addTypeParam("ValueType", clzObj.getClassConstant().asTypeConstant());
-        clzHashMap.addContribution(ClassStructure.Composition.Implements, clzMap.getClassConstant());
+        clzHashMap.addTypeParam("KeyType", ((ClassConstant) clzHash.getIdentityConstant()).asTypeConstant());
+        clzHashMap.addTypeParam("ValueType", ((ClassConstant) clzObj.getIdentityConstant()).asTypeConstant());
+        clzHashMap.addContribution(ClassStructure.Composition.Implements, ((ClassConstant) clzMap.getIdentityConstant()));
 
         testFileStructure(file);
         }
