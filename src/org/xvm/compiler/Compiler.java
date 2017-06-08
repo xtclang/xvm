@@ -104,79 +104,88 @@ public class Compiler
     /**
      * Unknown fatal error.
      */
-    public static final String FATAL_ERROR                          = "COMPILER-01";
+    public static final String FATAL_ERROR                        = "COMPILER-01";
     /**
      * Cannot nest a module.
      */
-    public static final String MODULE_UNEXPECTED                    = "COMPILER-02";
+    public static final String MODULE_UNEXPECTED                  = "COMPILER-02";
     /**
      * Cannot nest a package.
      */
-    public static final String PACKAGE_UNEXPECTED                   = "COMPILER-03";
+    public static final String PACKAGE_UNEXPECTED                 = "COMPILER-03";
     /**
      * Cannot nest a class etc.
      */
-    public static final String CLASS_UNEXPECTED                     = "COMPILER-04";
+    public static final String CLASS_UNEXPECTED                   = "COMPILER-04";
     /**
      * Another property by the same name exists.
      */
-    public static final String PROP_DUPLICATE                       = "COMPILER-05";
+    public static final String PROP_DUPLICATE                     = "COMPILER-05";
     /**
      * Cannot nest a property.
      */
-    public static final String PROP_UNEXPECTED                      = "COMPILER-06"; // TODO update .properties file
+    public static final String PROP_UNEXPECTED                    = "COMPILER-06";
+            // TODO update .properties file
     /**
      * Illegal module name.
      */
-    public static final String MODULE_BAD_NAME                      = "COMPILER-07";
+    public static final String MODULE_BAD_NAME                    = "COMPILER-07";
     /**
      * Duplicate modifier.
      */
-    public static final String DUPLICATE_MODIFIER                   = "COMPILER-08";
+    public static final String DUPLICATE_MODIFIER                 = "COMPILER-08";
     /**
      * Illegal modifier.
      */
-    public static final String ILLEGAL_MODIFIER                     = "COMPILER-09";
+    public static final String ILLEGAL_MODIFIER                   = "COMPILER-09";
     /**
      * Illegal modifier.
      */
-    public static final String CONFLICTING_MODIFIER                 = "COMPILER-10";
+    public static final String CONFLICTING_MODIFIER               = "COMPILER-10";
     /**
      * More than one "extends" clause.
      */
-    public static final String MULTIPLE_EXTENDS                     = "COMPILER-11";
+    public static final String MULTIPLE_EXTEND_CLAUSES            = "COMPILER-11";
     /**
      * Illegal / unexpected type parameters.
      */
-    public static final String TYPE_PARAMS_UNEXPECTED               = "COMPILER-12";
+    public static final String TYPE_PARAMS_UNEXPECTED             = "COMPILER-12";
     /**
      * Illegal / unexpected constructor parameters.
      */
-    public static final String CONSTRUCTOR_PARAMS_UNEXPECTED        = "COMPILER-13";
+    public static final String CONSTRUCTOR_PARAMS_UNEXPECTED      = "COMPILER-13";
     /**
      * Illegal / unexpected constructor parameters.
      */
-    public static final String CONSTRUCTOR_PARAM_DEFAULT_REQUIRED   = "COMPILER-14";
+    public static final String CONSTRUCTOR_PARAM_DEFAULT_REQUIRED = "COMPILER-14";
     /**
      * Unexpected keyword.
      */
-    public static final String KEYWORD_UNEXPECTED                   = "COMPILER-15";
+    public static final String KEYWORD_UNEXPECTED                 = "COMPILER-15";
     /**
      * Inner const class must be declared static if its outer class is not a const.
      */
-    public static final String INNER_CONST_NOT_STATIC               = "COMPILER-16";
+    public static final String INNER_CONST_NOT_STATIC             = "COMPILER-16";
     /**
      * Inner service class must be declared static if its outer class is not a const or service.
      */
-    public static final String INNER_SERVIC_NOT_STATIC              = "COMPILER-17";
+    public static final String INNER_SERVIC_NOT_STATIC            = "COMPILER-17";
     /**
      * Wrong number of type parameter values.
      */
-    public static final String TYPE_PARAMS_MISMATCH                 = "COMPILER-18";
+    public static final String TYPE_PARAMS_MISMATCH               = "COMPILER-18";
     /**
      * Type parameter name is a duplicate.
      */
-    public static final String DUPLICATE_TYPE_PARAM                 = "COMPILER-19";
+    public static final String DUPLICATE_TYPE_PARAM               = "COMPILER-19";
+    /**
+     * More than one "import" clause.
+     */
+    public static final String MULTIPLE_IMPORT_CLAUSES            = "COMPILER-20";
+    /**
+     * More than one "into" clause.
+     */
+    public static final String MULTIPLE_INTO_CLAUSES              = "COMPILER-21";
 
 
     // ----- data members --------------------------------------------------------------------------

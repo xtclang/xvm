@@ -15,7 +15,6 @@ import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
-import org.xvm.proto.Container;
 import org.xvm.util.Severity;
 
 import java.lang.reflect.Field;
@@ -639,7 +638,7 @@ public class TypeCompositionStatement
                 }
             }
 
-        // validate and register each composition
+        // validate compositions (at least what can be validated at this point)
         //
         //              extends     implements  delegates   incorporates  import*     into
         //              ----------  ----------  ----------  ------------  ----------  ----------
@@ -662,39 +661,48 @@ public class TypeCompositionStatement
         // [5] enum values always implicitly extend the enum to which they belong
         // [6] trait may explicitly extend a trait
         // [7] mixin may explicitly extend a trait or mixin
-        // [8] in the source code, an interface "extends" any number of interfaces, but it is
-        //     compiled as implements
+        // [8] in the source code, an interface "extends" any number of interfaces, but the compiler
+        //     produces those relationships using the "implements" composition
         // [9] traits and interfaces can only incorporate traits
         // [10] traits and mixins may specify a type that they can be mixed into; otherwise any type
-
-
-
+        //
+        // at this point, the class names are not yet resolvable, so defer most of these checks
+        // until the next phase. what must be done at this point:
+        // 1. register imported modules, so that we can create the necessary module fingerprint
+        //    structures to track dependencies;
+        // 2. verify that only legitimate compositions are present for the type of this component;
+        // 3. verify that nore more than one "extends", "import*", or "into" clause is used (subject
+        //    to the exception defined by rule #8 above)
+        // 4. verify that a package with an import does not have a body
         boolean fAlreadyExtends = false;
+        boolean fAlreadyImports = false;
+        boolean fAlreadyIntos   = false;
         for (Composition composition : compositions)
             {
-            switch (composition.getKeyword().getId())
+            Format   format  = component.getFormat();
+            Token.Id keyword = composition.getKeyword().getId();
+            switch (keyword)
                 {
                 case EXTENDS:
-// TODO what can extend? interface extends actually means implements
-                    // only one extends is allowed
-                    if (fAlreadyExtends)
+                    // interface is allowed to have any number of "extends"
+                    if (format != Format.INTERFACE)
                         {
-                        Token token = composition.getKeyword();
-                        log(errs, Severity.ERROR, Compiler.MULTIPLE_EXTENDS, composition);
-                        }
-                    else
-                        {
-                        // make sure that there is only one "extends" clause, but defer the analysis
-                        // of conditional "extends" clauses (since we can't evaluate conditions yet)
-                        fAlreadyExtends = composition.condition == null;
-                        }
-                    break;
+                        // only other format that can't have "extends" is an enum value, but that
+                        // should be impossible to even parse, hence the assertion
+                        assert format != Format.ENUMVALUE;
 
-                case DELEGATES:
-                case IMPLEMENTS:
-                case INCORPORATES:
-                    // these are all OK; other checks will be done after the types are resolved
-// TODO
+                        // only one extends is allowed
+                        if (fAlreadyExtends)
+                            {
+                            log(errs, Severity.ERROR, Compiler.MULTIPLE_EXTEND_CLAUSES, category.getId().TEXT);
+                            }
+                        else
+                            {
+                            // make sure that there is only one "extends" clause, but defer the
+                            // analysis of conditional clauses (we can't evaluate conditions yet)
+                            fAlreadyExtends = composition.condition == null;
+                            }
+                        }
                     break;
 
                 case IMPORT:
@@ -702,12 +710,60 @@ public class TypeCompositionStatement
                 case IMPORT_REQ:
                 case IMPORT_WANT:
                 case IMPORT_OPT:
-                case INTO:
-                    // "import" composition not allowed for modules (only used by packages)
-                    // "into" not allowed (only used by traits & mixins)
-                    Token token = composition.getKeyword();
-                    log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, composition);
+                    if (format == Format.PACKAGE)
+                        {
+                        // only one import is allowed
+                        if (fAlreadyImports)
+                            {
+                            log(errs, Severity.ERROR, Compiler.MULTIPLE_IMPORT_CLAUSES, keyword.TEXT);
+                            }
+                        else
+                            {
+                            // make sure that there is only one "import" clause, but defer the
+                            // analysis of conditional clauses (we can't evaluate conditions yet)
+                            fAlreadyImports = composition.condition == null;
+                            }
+                        }
+                    else
+                        {
+                        // "import" not allowed (only used by packages)
+                        log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        }
                     break;
+
+                case INTO:
+                    if (format == Format.TRAIT || format == Format.MIXIN)
+                        {
+                        // only one "into" clause is allowed
+                        if (fAlreadyIntos)
+                            {
+                            log(errs, Severity.ERROR, Compiler.MULTIPLE_INTO_CLAUSES);
+                            }
+                        else
+                            {
+                            // make sure that there is only one "into" clause, but defer the
+                            // analysis of conditional clauses (we can't evaluate conditions yet)
+                            fAlreadyIntos = composition.condition == null;
+                            }
+                        }
+                    else
+                        {
+                        // "into" not allowed (only used by traits & mixins)
+                        log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        }
+                    break;
+
+                case IMPLEMENTS:
+                    // TODO interface can't implement
+                    break;
+
+                case DELEGATES:
+                case INCORPORATES:
+                    // these are all OK; other checks will be done after the types are resolvable
+                    break;
+
+                default:
+                    throw new IllegalStateException("illegal composition: " + composition);
                 }
             }
 

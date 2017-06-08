@@ -42,7 +42,7 @@ public class ModuleStructureTest
         {
         // this should fail because a module can't have type params
         String src = "module Test extends Something extends SomethingElse {}";
-        compile(src, Severity.ERROR, Compiler.MULTIPLE_EXTENDS);
+        compile(src, Severity.ERROR, Compiler.MULTIPLE_EXTEND_CLAUSES);
         }
 
     @Test

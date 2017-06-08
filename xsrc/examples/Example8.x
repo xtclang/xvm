@@ -107,3 +107,40 @@ class Dohickey
     implements Functionality
     incorporates AnnoType2
     incorporates AnnoType(parm)
+
+
+class MyMap
+    {
+    static service MyEntry
+        {
+        // hidden
+        MyEntry(MyMap parent)
+            {
+            this.parent = parent;
+            }
+
+        Void foo()
+            {
+            v = MyMap.this.bar();
+
+
+            Int j = 4;
+
+            class Thingie
+                {
+                print(v);
+                print(j);
+                }
+            }
+
+        Int k;
+        Int v;
+        }
+
+    Int bar()
+        {
+        return ++i
+        };
+
+    Int i;
+    }
