@@ -59,8 +59,7 @@ public class Frame
 
     public static final int VAR_STANDARD = 0;
     public static final int VAR_DYNAMIC_REF = 1;
-    public static final int VAR_DEFERRABLE = 2;
-    public static final int VAR_WAITING = 3;
+    public static final int VAR_WAITING = 2;
 
     protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
@@ -307,10 +306,6 @@ public class Frame
                         }
                     return Op.R_NEXT;
 
-                case VAR_DEFERRABLE:
-                    // take as is
-                    break;
-
                 case VAR_STANDARD:
                     if (hValue instanceof FutureHandle)
                         {
@@ -479,27 +474,8 @@ public class Frame
                 throw xException.makeHandle("Unassigned value").getException();
                 }
 
-            if (info != null)
-                {
-                switch (info.m_nStyle)
-                    {
-                    case VAR_DYNAMIC_REF:
-                        return ((RefHandle) hValue).get();
-
-                    case VAR_DEFERRABLE:
-                        if (hValue instanceof FutureHandle)
-                            {
-                            FutureHandle hFuture = (FutureHandle) hValue;
-                            if (hFuture.f_fSynthetic)
-                                {
-                                // this can return null, indicating a "pending future"
-                                return hFuture.get();
-                                }
-                            }
-                        break;
-                    }
-                }
-            return hValue;
+            return info != null && info.m_nStyle == VAR_DYNAMIC_REF ?
+                ((RefHandle) hValue).get() : hValue;
             }
 
         return iArg < -Op.MAX_CONST_ID ? getPredefinedArgument(iArg) :
@@ -673,7 +649,8 @@ public class Frame
         public final int[] f_anNameConstId;
         public final int[] f_anCatchRelAddress;
 
-        public Guard(int nStartAddr, int nScope, int[] anClassConstId, int[] anNameConstId, int[] anCatchAddress)
+        public Guard(int nStartAddr, int nScope, int[] anClassConstId,
+                     int[] anNameConstId, int[] anCatchAddress)
             {
             f_nStartAddress = nStartAddr;
             f_nScope = nScope;
@@ -688,7 +665,7 @@ public class Frame
         {
         public final TypeComposition f_clazz;
         public final String f_sVarName;
-        public int m_nStyle; // one of the Op.VAR_* values
+        public int m_nStyle; // one of the VAR_* values
         public RefHandle m_ref; // an "active" reference to this register
 
         public VarInfo(TypeComposition clazz, String sName, int nStyle)

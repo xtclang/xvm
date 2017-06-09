@@ -32,10 +32,9 @@
 - Property and Method
 
 - Multi:
-    -- new
-    -- call
-    -- invoke
-    -- return
+    +- new
+    +- call
+    +- invoke
 
 - native Service methods
 

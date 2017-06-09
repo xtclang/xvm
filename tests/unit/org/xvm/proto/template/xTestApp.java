@@ -430,7 +430,8 @@ public class xTestApp extends xModule
 
             new Enter(),
             new Var(adapter.getClassTypeConstId("x:Boolean")), // #6
-            new Var(adapter.getClassTypeConstId("x:String")), // #7
+            new NVar(adapter.getClassTypeConstId("x:String"),
+                     adapter.ensureValueConstantId("s")), // #7
             new Call_1N(-adapter.getMethodConstId("x:TestApp", "testConditional"),
                         -adapter.ensureValueConstantId(1), new int[] {6, 7}),
             new JumpFalse(6, 2),

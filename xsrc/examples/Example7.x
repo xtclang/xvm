@@ -78,6 +78,12 @@ Int foo4()
     return foo5();
     }
 
+Int bar()
+    {
+    @future Int i = foo4();
+    return i;
+    }
+
 Int foo5()
     {
     return myService.foo();

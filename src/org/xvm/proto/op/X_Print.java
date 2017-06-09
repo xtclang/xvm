@@ -43,13 +43,6 @@ public class X_Print extends Op
                         sb.append("<dynamic> ");
                         break;
 
-                    case Frame.VAR_DEFERRABLE:
-                        if (frame.f_ahVar[nValue] instanceof RefHandle)
-                            {
-                            sb.append("<deferred> ");
-                            }
-                        break;
-
                     case Frame.VAR_WAITING:
                         // must not happen
                         throw new IllegalStateException();

@@ -60,6 +60,6 @@ public abstract class Op
     // an stub for an op-code
     public static final Op[] STUB = new Op[] {Return_0.INSTANCE};
 
-    // returns a positive iPC or a negative RETURN_*
+    // returns a positive iPC or a negative R_*
     public abstract int process(Frame frame, int iPC);
     }
