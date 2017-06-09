@@ -48,7 +48,6 @@ public class VersionOverride
 
     // ----- accessors -----------------------------------------------------------------------------
 
-
     @Override
     public long getStartPosition()
         {

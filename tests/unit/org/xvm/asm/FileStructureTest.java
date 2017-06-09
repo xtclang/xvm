@@ -60,8 +60,8 @@ public class FileStructureTest
         {
         FileStructure structfile = new FileStructure("test");
         structfile.getModule()
-                .createPackage(Constants.Access.PUBLIC, "x")
-                .setImportedModule(structfile.getConstantPool().ensureModuleConstant("ecstasy.xtclang.org"));
+                .createPackage(Constants.Access.PUBLIC, "x");
+        // TODO .setImportedModule(structfile.getConstantPool().ensureModuleConstant("ecstasy.xtclang.org"));
         testFileStructure(structfile);
         }
 

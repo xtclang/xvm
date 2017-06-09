@@ -9,6 +9,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 
+import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.PackageStructure;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorListener;
@@ -65,8 +68,8 @@ public class TypeCompositionStatement
         this.category          = category;
         this.name              = name;
         this.qualified         = qualified;
-        this.typeParams        = typeParams;               
-        this.constructorParams = constructorParams;        
+        this.typeParams        = typeParams;
+        this.constructorParams = constructorParams;
         this.compositions      = compositions;
         this.body              = body;
         this.doc               = doc;
@@ -674,9 +677,11 @@ public class TypeCompositionStatement
         // 3. verify that nore more than one "extends", "import*", or "into" clause is used (subject
         //    to the exception defined by rule #8 above)
         // 4. verify that a package with an import does not have a body
-        boolean fAlreadyExtends = false;
-        boolean fAlreadyImports = false;
-        boolean fAlreadyIntos   = false;
+        boolean         fAlreadyExtends = false;
+        boolean         fAlreadyImports = false;
+        boolean         fAlreadyIntos   = false;
+        int             cImports        = 0;
+        ModuleStructure moduleImport    = null;
         for (Composition composition : compositions)
             {
             Format   format  = component.getFormat();
@@ -710,6 +715,7 @@ public class TypeCompositionStatement
                 case IMPORT_REQ:
                 case IMPORT_WANT:
                 case IMPORT_OPT:
+                    ++cImports;
                     if (format == Format.PACKAGE)
                         {
                         // only one import is allowed
@@ -722,6 +728,34 @@ public class TypeCompositionStatement
                             // make sure that there is only one "import" clause, but defer the
                             // analysis of conditional clauses (we can't evaluate conditions yet)
                             fAlreadyImports = composition.condition == null;
+
+                            NamedTypeExpression type = (NamedTypeExpression)
+                                    ((Composition.Import) composition).type;
+                            String sModule = type.getName();
+                            if (type.isValidModuleName())
+                                {
+                                if (moduleImport == null)
+                                    {
+                                    // create the fingerprint
+                                    ((PackageStructure) component).setImportedModule(
+                                            component.getFileStructure().ensureModule(sModule));
+                                    }
+                                else
+                                    {
+                                    // verify that the existing fingerprint has the same qualified name
+                                    // as this import
+                                    String sPrev = moduleImport.getName();
+                                    if (!sModule.equals(sPrev))
+                                        {
+                                        log(errs, Severity.ERROR,
+                                                Compiler.CONFLICTING_IMPORT_CLAUSES, sPrev, sModule);
+                                        }
+                                    }
+                                }
+                            else
+                                {
+                                log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sModule);
+                                }
                             }
                         }
                     else
@@ -754,7 +788,11 @@ public class TypeCompositionStatement
                     break;
 
                 case IMPLEMENTS:
-                    // TODO interface can't implement
+                    if (format == Format.INTERFACE)
+                        {
+                        // interface can't implement
+                        log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        }
                     break;
 
                 case DELEGATES:
@@ -767,18 +805,68 @@ public class TypeCompositionStatement
                 }
             }
 
+        // verify that a package that imports does nothing else
+        if (cImports > 0)
+            {
+            if (cImports != compositions.size() || body != null
+                    || (modifiers != null && !modifiers.isEmpty())
+                    || (typeParams != null && !typeParams.isEmpty())
+                    || (constructorParams != null && !constructorParams.isEmpty()))
+                {
+                // oops, the package doesn't just import a module
+                log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
+                }
+            }
+
         if (doc != null)
             {
             component.setDocumentation(extractDocumentation(doc));
             }
+        }
 
-        // TODO validate any constructor parameters and their default values, and transfer the info to the constructor
+    @Override
+    protected void resolveGlobalVisibility(ModuleRepository repos, ErrorListener errs)
+        {
+        if (getComponent().getFormat() == Format.PACKAGE)
+            {
+            for (Composition composition : compositions)
+                {
+                Token.Id keyword = composition.getKeyword().getId();
+                switch (keyword)
+                    {
+                    case IMPORT:
+                    case IMPORT_EMBED:
+                    case IMPORT_REQ:
+                    case IMPORT_WANT:
+                    case IMPORT_OPT:
+                        // here's the question: do we try to pick a particular version to load right
+                        // now? or do we load some sort of "composite" version? or do we just verify
+                        // that the name exists and that's good enough for now?
+                        NamedTypeExpression type = (NamedTypeExpression)
+                                ((Composition.Import) composition).type;
+                        String sModule = type.getName();
+                        if (repos.getModuleNames().contains(sModule))
+                            {
+                            // TODO
+                            }
+                        else
+                            {
+                            // this is obviously an error -- we can't compile without the module
+                            // being available
+                            log(errs, Severity.ERROR, Compiler.MODULE_MISSING, sModule);
+                            }
+                        break;
+                    }
+                }
+            }
 
         // validation of constructor parameters happens in a
-        // TODO
+        // TODO validate any constructor parameters and their default values, and transfer the info to the constructor
         // constructor parameters are not permitted unless they all have default values (since the
         // module is a singleton, and is automatically created, i.e. it has to have all of its
         // construction parameters available)
+
+        super.resolveGlobalVisibility(repos, errs);
         }
 
     private void disallowTypeParams(ErrorListener errs)

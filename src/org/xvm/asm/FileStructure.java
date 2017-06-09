@@ -261,7 +261,7 @@ public class FileStructure
      *
      * @return the specified module
      */
-    ModuleStructure ensureModule(String sName)
+    public ModuleStructure ensureModule(String sName)
         {
         ModuleStructure module = getModule(sName);
         if (module == null)

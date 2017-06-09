@@ -929,7 +929,10 @@ AnnotatedTypeExpression
     Annotation TypeExpression
 
 NamedTypeExpression
-    QualifiedName TypeParameterTypeList-opt
+    QualifiedName TypeAccessModifier-opt TypeParameterTypeList-opt
+
+TypeAccessModifier
+    NoWhitespace ":" NoWhitespace AccessModifier
 
 FunctionTypeExpression
     "function" ReturnList FunctionTypeFinish
