@@ -81,7 +81,6 @@ public class xFutureRef
         {
         public final boolean f_fSynthetic;
         public CompletableFuture<ObjectHandle> m_future;
-        protected Frame m_frameNext;
 
         protected FutureHandle(TypeComposition clazz,
                                CompletableFuture<ObjectHandle> future, boolean fSynthetic)
@@ -130,8 +129,8 @@ public class xFutureRef
             {
             if (handle instanceof FutureHandle)
                 {
-                // this is only possible if this "handle" is a "dynamic ref" and the "handle" is
-                // is a synthetic one (see Frame.assignValue)
+                // this is only possible if this "handle" is a "dynamic ref" and the passed in
+                // "handle" is is a synthetic one (see Frame.assignValue)
                 if (m_future != null)
                     {
                     return xException.makeHandle("Future has already been assigned");
@@ -140,7 +139,7 @@ public class xFutureRef
                 FutureHandle that = (FutureHandle) handle;
                 assert that.f_fSynthetic;
 
-                m_future = that.m_future.whenComplete((r, x) -> this.m_frameNext = that.m_frameNext);
+                m_future = that.m_future;
                 return null;
                 }
 
@@ -150,7 +149,6 @@ public class xFutureRef
                 }
 
             m_future.complete(handle);
-
             return null;
             }
 
