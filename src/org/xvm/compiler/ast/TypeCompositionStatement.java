@@ -742,7 +742,8 @@ public class TypeCompositionStatement
                                     }
                                 else
                                     {
-                                    // verify that the existing fingerprint has the same qualified name
+                                    // this can only occur if conditionals are being used; verify
+                                    // that the existing fingerprint has the same qualified name
                                     // as this import
                                     String sPrev = moduleImport.getName();
                                     if (!sModule.equals(sPrev))
