@@ -25,11 +25,32 @@ public class Version
         this.literal = literal;
         this.strs    = parseDelimitedString(literal, '.');
 
+        boolean fGA  = true;
         for (int i = 0, c = strs.length; i < c; ++i)
             {
             // each of the parts has to be an integer, except for the last which can start with
             // a non-GA designator
-            if (!isValidVersionPart(strs[i], i == c-1))
+            String part = strs[i];
+            if (isValidVersionPart(part, i == c-1))
+                {
+                // check if it's a non-GA part
+                if (!isDigit(part.charAt(0)))
+                    {
+                    if (!fGA)
+                        {
+                        throw new IllegalStateException("illegal version: " + literal
+                                + " (only one non-GA specifier allowed)");
+                        }
+                    fGA = false;
+
+                    if (i > 0 && Integer.valueOf(strs[i-1]) == 0)
+                        {
+                        throw new IllegalStateException("illegal version: " + literal
+                                + " (a non-GA specifier cannot follow a dot-zero version)");
+                        }
+                    }
+                }
+            else
                 {
                 throw new IllegalStateException("illegal version: " + literal);
                 }
@@ -40,14 +61,34 @@ public class Version
         {
         StringBuilder sb  = new StringBuilder();
         boolean       err = parts.length == 0;
+        boolean       fGA = true;
         for (int i = 0, c = parts.length; i < c; ++i)
             {
             // each of the parts has to be an integer, except for the last which can start with
             // a non-GA designator
             String part = parts[i];
-            if (!isValidVersionPart(part, i == c-1))
+            if (isValidVersionPart(part, i == c-1))
                 {
-                err = true;
+                // check if it's a non-GA part
+                if (!isDigit(part.charAt(0)))
+                    {
+                    if (!fGA)
+                        {
+                        throw new IllegalStateException("illegal version: " + literal
+                                + " (only one non-GA specifier allowed)");
+                        }
+                    fGA = false;
+
+                    if (i > 0 && Integer.valueOf(parts[i-1]) == 0)
+                        {
+                        throw new IllegalStateException("illegal version: " + literal
+                                + " (a non-GA specifier cannot follow a dot-zero version)");
+                        }
+                    }
+                }
+            else
+                {
+                throw new IllegalStateException("illegal version: " + literal);
                 }
 
             if (i > 0)
@@ -59,18 +100,14 @@ public class Version
 
         this.literal = sb.toString();
         this.strs    = parts;
-
-        if (err)
-            {
-            throw new IllegalStateException("illegal version: " + literal);
-            }
         }
 
     public Version(int[] parts)
         {
         assert parts != null;
 
-        // each version indicator must be >= 0, except the second-to-the-last which may be -1 to -5
+        // each version indicator must be >= 0, except the second-to-the-last or last, which may be
+        // between -1 and -5
         StringBuilder sb  = new StringBuilder();
         boolean       err = parts.length == 0;
         for (int i = 0, c = parts.length; i < c; ++i)
@@ -102,6 +139,11 @@ public class Version
                     default:
                         err = true;
                         break;
+                    }
+                if (i > 0 && parts[i-1] == 0)
+                    {
+                    // previous part must > 0
+                    err = true;
                     }
                 }
             else
@@ -386,7 +428,7 @@ public class Version
         sb.append('\"');
 
         int[] ints = ensureIntArray();
-        if (ints.length > strs.length)
+        if (ints.length > strs.length || ints[ints.length-1] < 0)
             {
             sb.append(" /* ");
             first = true;

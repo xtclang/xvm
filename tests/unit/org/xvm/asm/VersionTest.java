@@ -168,6 +168,63 @@ public class VersionTest
         Assert.assertFalse(tree.iterator().hasNext());
         }
 
+    @Test
+    public void testClosestVersion()
+        {
+        VersionTree<String> tree = new VersionTree<>();
+        tree.put(new Version("1"          ), "1"          );
+        tree.put(new Version("2"          ), "2"          );
+        tree.put(new Version("2.0"        ), "2.0"        );
+        tree.put(new Version("2.1"        ), "2.1"        );
+        tree.put(new Version("2.1.0"      ), "2.1.0"      );
+        tree.put(new Version("2.1.0.0"    ), "2.1.0.0"    );
+        tree.put(new Version("2.1.0.1"    ), "2.1.0.1"    );
+        tree.put(new Version("2.1.0.1.0"  ), "2.1.0.1.0"  );
+        tree.put(new Version("2.1.0.1.0.0"), "2.1.0.1.beta");
+        tree.put(new Version("2.1.0.1.0.0"), "2.1.0.1.0.0");
+        tree.put(new Version("2.2"        ), "2.2"        );
+        tree.put(new Version("4"          ), "4"          );
+
+        Assert.assertEquals(null                      , tree.findClosestVersion(new Version("beta")));
+        Assert.assertEquals(null                      , tree.findClosestVersion(new Version("beta2")));
+        Assert.assertEquals(new Version("1"          ), tree.findClosestVersion(new Version("1")));
+        Assert.assertEquals(new Version("2.0"        ), tree.findClosestVersion(new Version("2")));
+        Assert.assertEquals(new Version("2"          ), tree.findClosestVersion(new Version("3")));
+        Assert.assertEquals(new Version("4"          ), tree.findClosestVersion(new Version("4")));
+        Assert.assertEquals(new Version("4"          ), tree.findClosestVersion(new Version("5")));
+        Assert.assertEquals(new Version("1"          ), tree.findClosestVersion(new Version("1.5")));
+        Assert.assertEquals(new Version("1"          ), tree.findClosestVersion(new Version("2.beta")));
+        Assert.assertEquals(new Version("2.0"        ), tree.findClosestVersion(new Version("2.1.beta")));
+        Assert.assertEquals(new Version("2.1.0.0"    ), tree.findClosestVersion(new Version("2.1")));
+        Assert.assertEquals(new Version("2.1.0.0"    ), tree.findClosestVersion(new Version("2.1.0")));
+        Assert.assertEquals(new Version("2.1.0"      ), tree.findClosestVersion(new Version("2.1.1")));
+        Assert.assertEquals(new Version("2.1.0.1.0.0"), tree.findClosestVersion(new Version("2.1.0.1")));
+        Assert.assertEquals(new Version("2.1.0.1.0"  ), tree.findClosestVersion(new Version("2.1.0.1.1")));
+        Assert.assertEquals(new Version("2.1.0.1"    ), tree.findClosestVersion(new Version("2.1.0.2")));
+        Assert.assertEquals(new Version("2.2"        ), tree.findClosestVersion(new Version("2.5.1.3")));
+        }
+
+    @Test
+    public void testHighestVersion()
+        {
+        VersionTree<String> tree = genTree();
+        Assert.assertEquals(new Version("3.0"), tree.findHighestVersion());
+        Assert.assertEquals(new Version("2.1"), tree.findHighestVersion(new Version("2.1.0")));
+        Assert.assertEquals(new Version("2.2.0.1"), tree.findHighestVersion(new Version("2.1")));
+        }
+
+    @Test
+    public void testPreRels()
+        {
+        out(new Version("beta").toDebugString());
+        out(new Version("beta3").toDebugString());
+        out(new Version("2.beta").toDebugString());
+        out(new Version("2.beta3").toDebugString());
+        out(new Version("beta2").toDebugString());
+        out(new Version("2.1.beta3").toDebugString());
+        }
+
+
     static VersionTree<String> genTree()
         {
         VersionTree<String> tree = new VersionTree<>();

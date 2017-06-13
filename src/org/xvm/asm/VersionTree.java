@@ -13,10 +13,14 @@ import java.util.NoSuchElementException;
 public class VersionTree<V>
         implements Iterable<Version>
     {
+    // ----- constructors --------------------------------------------------------------------------
     public VersionTree()
         {
         clear();
         }
+
+
+    // ----- VersionTree API -----------------------------------------------------------------------
 
     /**
      * @return true iff the tree is empty
@@ -123,6 +127,80 @@ public class VersionTree<V>
         }
 
     /**
+     * Find the closest version (that is present in the tree) to the specified version, and return
+     * it. The "closest version" must be substitutable for the specified version, which means it
+     * needs to be the exact same version as specified, or it needs to unambiguously precede it.
+     * <p/>
+     * Consider the following tree:
+     * <code><pre>
+     * VersionTree
+     * |- 1:                v1
+     * |- 2:                v2
+     * |  |- 0:             v2.0
+     * |  |- 1:             v2.1
+     * |  |  |- 0:          v2.1.0
+     * |  |     |- 0:       v2.1.0.0
+     * |  |     |- 1:       v2.1.0.1
+     * |  |        |- 0:    v2.1.0.1.0
+     * |  |           |- 0: v2.1.0.1.0.0
+     * |  |- 2:             v2.2
+     * |- 4:                v4
+     * </pre></code>
+     * Examples:
+     * <ul>
+     * <li>findClosestVersion(1) -> v1</li>
+     * <li>findClosestVersion(2) -> v2.0</li>
+     * <li>findClosestVersion(3) -> v2</li>
+     * <li>findClosestVersion(4) -> v4</li>
+     * <li>findClosestVersion(5) -> v4</li>
+     * <li>findClosestVersion(1.5) -> v1</li>
+     * <li>findClosestVersion(2.1beta) -> v2.0</li>
+     * <li>findClosestVersion(2.1) -> v2.1.0.0</li>
+     * <li>findClosestVersion(2.1.0) -> v2.1.0.0</li>
+     * <li>findClosestVersion(2.1.1) -> v2.1.0</li>
+     * <li>findClosestVersion(2.1.0.1) -> v2.1.0.1.0.0</li>
+     * <li>findClosestVersion(2.1.0.1.1) -> v2.1.0.1.0</li>
+     * <li>findClosestVersion(2.1.0.2) -> v2.1.0.1</li>
+     * <li>findClosestVersion(2.5.1.3) -> v2.2</li>
+     * </ul>
+     *
+     * @param ver  the version to search for
+     *
+     * @return the closest version that is present in the tree
+     */
+    public Version findClosestVersion(Version ver)
+        {
+        int[] parts = ver.ensureIntArray();
+        Node node = root.findClosestNode(parts, 0);
+        return node == null ? null : node.getVersion();
+        }
+
+    /**
+     * Find the latest (preferably GA) version in the tree.
+     *
+     * @return the latest version, or null
+     */
+    public Version findHighestVersion()
+        {
+        Node node = root.findHighestNode(EMPTY_PARTS, 0);
+        return node == null ? null : node.getVersion();
+        }
+
+    /**
+     * Find the latest (preferably GA) version in the tree that is later than the specified version.
+     *
+     * @param ver  the version requirement
+     *
+     * @return the latest version, or null
+     */
+    public Version findHighestVersion(Version ver)
+        {
+        int[] parts = ver.ensureIntArray();
+        Node node = root.findHighestNode(parts, 0);
+        return node == null ? null : node.getVersion();
+        }
+
+    /**
      * Store the specified value for the specified version.
      *
      * @param ver    the version
@@ -198,6 +276,9 @@ public class VersionTree<V>
         return sb.toString();
         }
 
+
+    // ----- internal ------------------------------------------------------------------------------
+
     /**
      * Find the node corresponding to the specified version. Only used internally.
      *
@@ -236,6 +317,8 @@ public class VersionTree<V>
         return node;
         }
 
+
+    // ----- inner class: Node ---------------------------------------------------------------------
 
     private static class Node<V>
         {
@@ -358,6 +441,143 @@ public class VersionTree<V>
                 this.kids = addNode(kids, node);
                 }
             return node;
+            }
+
+        /**
+         * Find a node (from this point down in the tree) that represents the "closest derivative"
+         * of the specified version.
+         *
+         * @param parts  the parts of the version being searched for
+         * @param iPart  the index of the part that potentially corresponds to a child of this node
+         *
+         * @return the node that most closely derives from the specified version, or null if none
+         */
+        Node findClosestNode(int[] parts, int iPart)
+            {
+            // what is the part that this node is looking for?
+            int nPart  = iPart >= parts.length ? 0 : parts[iPart];
+
+            // keep track of the best match that we've found; note that if the next part indicates a
+            // pre-release, that means that this part can't match, because it's a pre-release of
+            // this version (e.g. version 1.2.beta comes before version 1.2)
+            Node nodeBestMatch = isPresent() && nPart >= 0 ? this : null;
+
+            // go through the kids, looking for something that works, until we've passed the kids
+            // that match
+            Node[] kids = this.kids;
+            if (kids != null)
+                {
+                for (int i = 0, c = kids.length; i < c; ++i)
+                    {
+                    Node kid = kids[i];
+                    if (kid == null)
+                        {
+                        // no more kids
+                        break;
+                        }
+
+                    if (kid.part == nPart)
+                        {
+                        // this is very good! we found a match
+                        Node node = kid.findClosestNode(parts, iPart + 1);
+                        if (node != null)
+                            {
+                            return node;
+                            }
+
+                        // we're not going to find a better match than an exact match
+                        break;
+                        }
+
+                    if (kid.part < nPart)
+                        {
+                        if (kid.isPresent())
+                            {
+                            // it's not the exact version that we're looking for, but it is a
+                            // "direct ancestor" version
+                            nodeBestMatch = kid;
+                            }
+                        }
+                    else
+                        {
+                        // we've past the version range that could match
+                        break;
+                        }
+                    }
+                }
+
+            return nodeBestMatch;
+            }
+
+        /**
+         * Find a node (from this point down in the tree) that represents the "latest version" by
+         * a non-strictly-ordered measure:
+         * <ul>
+         * <li>Versions parts are evaluated left to right;</li>
+         * <li>A higher version part number is assumed to be later;</li>
+         * <li>A GA version is preferred over a non-GA version, even if the non-GA version is
+         *     a provably later version.</li>
+         * </ul>
+         *
+         * @param parts  the parts of the version being searched for
+         * @param iPart  the index of the part that potentially corresponds to a child of this node
+         *
+         * @return the node that represents the highest version, using the rules defined by this
+         *         method, or null if no node is present from this point down in the tree
+         */
+        Node findHighestNode(int[] parts, int iPart)
+            {
+            // the search is split into three modes:
+            // 1. exact: for every version part except the last (or the last two in the case of a
+            //    version ending with something like ".beta2")
+            // 2. for the last version part, any substitutable version will work, so either an
+            //    increment of the last part (e.g. 2.2 instead of 2.1), or a sub-version thereof
+            //    (e.g. 2.1.1 instead of 2.1), with the highest being searched for left-to-right
+            // 3. for any children beyond that, looking for the latest (since they are all
+            //    substitutable at that point)
+
+            // what is the part that this node is looking for?
+            int nPart  = iPart >= parts.length ? 0 : parts[iPart];          // TODO not 0 ?!?!
+
+            // go through the kids from newest to oldest, looking for a GA release (and keeping
+            // track of the newest non-GA release, just in case)
+            Node nodeBestMatch = null;
+            Node[] kids = this.kids;
+            if (kids != null)
+                {
+                for (int i = kids.length - 1; i >= 0; --i)
+                    {
+                    Node kid = kids[i];
+                    if (kid != null)
+                        {
+                        // make sure that the child meets the version requirement
+                        if (kid.part < nPart)
+                            {
+                            // we've looked too far; this child's version is too early to meet the
+                            // requirement, and all of the rest of the children will be even earlier
+                            break;
+                            }
+
+                        Node node = kid.findHighestNode(parts, i+1);
+                        if (node != null)
+                            {
+                            if (node.getVersion().isGARelease())
+                                {
+                                return node;
+                                }
+
+                            if (nodeBestMatch == null)
+                                {
+                                nodeBestMatch = node;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            return this.isPresent() && (nodeBestMatch == null || this.getVersion().isGARelease())
+                    ? this
+                    : nodeBestMatch;
             }
 
         /**
@@ -601,13 +821,46 @@ public class VersionTree<V>
             nodes[iLast] = null;
             }
 
+        /**
+         * The parent of this node; all nodes have a parent, except for the root node.
+         */
         Node    parent;
+        /**
+         * The cached version (the key) of this node. The root node does not have a version.
+         */
         Version version;
+        /**
+         * The version part that this node represents. The root node does not have a version part.
+         */
         int     part;
+        /**
+         * The value that this node holds, if the version for this node is associated with a value.
+         * The root node does not have a value. Nodes without values are used for hierarchical
+         * organization of the tree, but are not considered to be "present" in the tree.
+         */
         V       value;
+        /**
+         * The child nodes of this node. May be null, which indicates no children. May contain
+         * nulls, but the non-null child references always start at index zero and occur in order
+         * of the version part represented by each child.
+         */
         Node[]  kids;
         }
 
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * An empty, immutable array of version parts.
+     */
+    private static final int[] EMPTY_PARTS = new int[0];
+
+    /**
+     * The root node of the tree.
+     */
     Node<V> root;
+    /**
+     * The number of values in the tree.
+     */
     int     count;
     }
