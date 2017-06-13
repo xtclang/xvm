@@ -8,6 +8,7 @@ module TestApp
         testService();
         testRef("hi");
         testArray();
+        testTuple();
         }
 
     static Int getIntValue()
@@ -153,6 +154,8 @@ module TestApp
         print(++svc.counter2);
         print(svc.counter++);
         print(svc.increment()));
+
+        this::service.yield();
 
         // unhandled exception
         svc.throwing();

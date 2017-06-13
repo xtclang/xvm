@@ -350,8 +350,8 @@ public class xFunction
             // TODO: validate that all the arguments are immutable or ImmutableAble
             int cReturns = iReturn == Frame.RET_UNUSED ? 0 : 1;
 
-            CompletableFuture<ObjectHandle> cfResult = frame.f_context.sendInvoke1Request(
-                    hService.m_context, this, ahVar, cReturns);
+            CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
+                    frame, this, ahVar, cReturns);
 
             return cReturns == 0 ? Op.R_NEXT :
                 frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
@@ -372,8 +372,8 @@ public class xFunction
 
             int cReturns = aiReturn.length;
 
-            CompletableFuture<ObjectHandle[]> cfResult = frame.f_context.sendInvokeNRequest(
-                    hService.m_context, this, ahVar, cReturns);
+            CompletableFuture<ObjectHandle[]> cfResult = hService.m_context.sendInvokeNRequest(
+                    frame, this, ahVar, cReturns);
 
             boolean fBlock = false;
             if (cReturns > 0)

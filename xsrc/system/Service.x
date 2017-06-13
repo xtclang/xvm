@@ -99,9 +99,9 @@ interface Service()
     /**
      * Optional re-entrancy settings for a service:
      *
+     * * Open: general re-entrancy is permitted, and requests are processed in a FIFO fashion.
      * * Prioritized (default): general re-entrancy is permitted, but priority is given to the
      *   conceptual thread(s) of execution that have already entered the service.
-     * * Open: general re-entrancy is permitted, and requests are processed in a FIFO fashion.
      * * Exclusive: re-entrancy is only permitted for requests originating from the conceptual
      *   thread of execution that has already entered the service (service A invoked service B
      *   invokes service A).
@@ -110,7 +110,7 @@ interface Service()
      *   deadlock situations, which will result in a DeadlockException. Note that runtime events can
      *   still be processed (e.g. by calling {@link yield}) even when reentrancy is Forbidden.
      */
-    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
+    enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}
 
     /**
      * The re-entrancy setting for this service.

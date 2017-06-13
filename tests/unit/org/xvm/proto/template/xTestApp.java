@@ -127,7 +127,7 @@ public class xTestApp extends xModule
         ftLambda$1.setAccess(Constants.Access.PRIVATE);
         ftLambda$1.m_aop = new Op[]
             { // #0 = c; #1 = r, #2 = x
-            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.lambda$1 #")),
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.lambda$1 (rfc2.whenComplete) #")),
             new X_Print(0),
             new X_Print(1),
             new X_Print(2),
@@ -207,6 +207,8 @@ public class xTestApp extends xModule
             new X_Print(8),
             new Invoke_01(0, adapter.getMethodConstId("x:TestService", "increment"), 8),
             new X_Print(8),
+
+            new Invoke_00(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "yield")),
 
             new Invoke_00(0, adapter.getMethodConstId("x:TestService", "throwing")),
             new Return_0(),

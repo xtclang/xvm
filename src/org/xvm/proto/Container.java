@@ -8,6 +8,7 @@ import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
+import org.xvm.proto.template.xService;
 
 import java.util.Map;
 
@@ -92,6 +93,7 @@ public class Container
             }
 
         m_contextMain = createServiceContext("main");
+        m_contextMain.setService(xService.makeHandle(m_contextMain)); // main service handle
 
         try
             {

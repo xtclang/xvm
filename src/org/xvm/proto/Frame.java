@@ -6,8 +6,8 @@ import org.xvm.asm.constants.IntConstant;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
+import org.xvm.proto.ServiceContext.Fiber;
 
-import org.xvm.proto.op.Return_0;
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
@@ -17,6 +17,7 @@ import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+
 import org.xvm.proto.template.xTuple;
 
 import java.util.function.Supplier;
@@ -28,8 +29,8 @@ import java.util.function.Supplier;
  */
 public class Frame
     {
+    public final Fiber f_fiber;
     public final ServiceContext f_context;
-    public long[]         f_alXid;       // fiber Xid; TODO
     public final InvocationTemplate f_function;
     public final Op[]           f_aOp;          // the op-codes
     public final ObjectHandle   f_hTarget;      // target
@@ -52,16 +53,6 @@ public class Frame
     public Supplier<Frame>      m_continuation; // a frame supplier to call after this frame returns
     private ObjectHandle        m_hFrameLocal;  // a "frame local" holding area
 
-    enum Status
-        {
-        Initial, // the frame has not been scheduled for execution yet
-        Running, // normal execution
-        Waiting, // execution is blocked until the "waiting" futures are completed
-        Yielded, // the execution was explicitly yielded by the frame
-        Paused   // the execution was paused by the scheduler
-        }
-    public Status m_status;
-
     public final static int RET_LOCAL = -65000;   // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI = -65002;   // an indicator for "multiple return values"
@@ -71,10 +62,12 @@ public class Frame
     public static final int VAR_WAITING = 2;
 
     // construct a frame
-    protected Frame(ServiceContext context, Frame framePrev, InvocationTemplate function,
+    protected Frame(Frame framePrev, InvocationTemplate function,
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
-        f_context = context;
+        f_context = framePrev.f_context;
+        f_fiber = framePrev.f_fiber;
+
         f_framePrev = framePrev;
         f_function = function;
         f_aOp = function == null ? Op.STUB : function.m_aop;
@@ -98,29 +91,26 @@ public class Frame
 
         f_iReturn = iReturn;
         f_aiReturn = aiReturn;
-
-        m_status = framePrev == null ? Status.Initial : framePrev.m_status;
         }
 
-    // construct a native frame
-    protected Frame(ServiceContext context, Frame framePrev, Op[] aopNative,
+    // construct a initial (native) frame
+    protected Frame(Fiber fiber, Op[] aopNative,
                     ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
-        f_context = context;
-        f_framePrev = framePrev;
+        f_context = fiber.f_context;
+        f_fiber = fiber;
+        f_framePrev = null;
         f_function = null;
         f_aOp = aopNative;
 
         f_hTarget = null;
-        f_ahVar = ahVar; // [0] - target:private for methods
+        f_ahVar = ahVar;
         f_aInfo = new VarInfo[ahVar.length];
 
         f_anNextVar = null;
 
         f_iReturn = iReturn;
         f_aiReturn = aiReturn;
-
-        m_status = framePrev == null ? Status.Initial : framePrev.m_status;
         }
 
     // a convenience method; ahVar - prepared variables
@@ -474,8 +464,6 @@ public class Frame
                     }
                 }
             }
-
-        m_status = Status.Running;
 
         if (hException != null)
             {

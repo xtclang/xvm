@@ -1,13 +1,12 @@
 package org.xvm.proto;
 
-import jdk.nashorn.internal.runtime.regexp.joni.constants.OPCode;
 import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-
 import org.xvm.proto.op.Return_0;
+
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFutureRef;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
@@ -18,13 +17,13 @@ import org.xvm.proto.template.xService.PropertyOperation01;
 import org.xvm.proto.template.xService.PropertyOperation11;
 import org.xvm.proto.template.xService.ServiceHandle;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import java.util.function.Supplier;
 
@@ -45,19 +44,40 @@ public class ServiceContext
 
     private final int f_nId; // the service id
     private final String f_sName; // the service name
-    ServiceHandle m_hService;
+
+    protected ServiceHandle m_hService;
+
+    /**
+     * The current Timeout that will be used by the service when it invokes other services.
+     */
+    public long m_cTimeoutMillis;
+
+    // Metrics: the total time (in nanos) this service has been running
+    protected long m_cRuntimeNanos;
 
     private  Frame m_frameCurrent;
     private List<Frame> f_listSuspended = new LinkedList<>(); // suspended fibers
 
-    // fiber id producer
-    AtomicInteger f_idProducer = new AtomicInteger();
-
     enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
     volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
 
-    enum Status {Idle, Busy, ShuttingDown, Terminated}
-    volatile Status m_status = Status.Idle;
+    enum ServiceStatus
+        {
+        Idle,
+        Busy,
+        ShuttingDown,
+        Terminated,
+        }
+    volatile ServiceStatus m_status = ServiceStatus.Idle;
+
+    enum FiberStatus
+        {
+        Initial, // the frame has not been scheduled for execution yet
+        Running, // normal execution
+        Paused,  // the execution was paused by the scheduler
+        Yielded, // the execution was explicitly yielded by the user code
+        Waiting, // execution is blocked until the "waiting" futures are completed
+        }
 
     final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
 
@@ -111,14 +131,14 @@ public class ServiceContext
             response.run();
             }
 
-        // pickup all the messages, but keep them suspended
+        // pickup all the messages, but keep them in the "initial" state
         Message message = f_queueMsg.poll();
         while (message != null)
             {
             s_tloContext.set(this);
             Frame frame = message.createFrame(this);
 
-            assert frame.m_status == Frame.Status.Initial;
+            assert frame.f_fiber.getStatus() == FiberStatus.Initial;
 
             suspendFiber(frame);
             message = f_queueMsg.poll();
@@ -138,18 +158,131 @@ public class ServiceContext
 
         switch (m_reentrancy)
             {
+            default:
             case Forbidden:
                 throw new IllegalStateException(); // assert
 
             case Exclusive:
-            default:
-                return f_listSuspended.remove(0);
+                {
+                // don't allow a new fiber unless it belongs to already existing thread of execution
+                Frame frameNext = null;
+                for (Iterator<Frame> iter = f_listSuspended.iterator(); iter.hasNext();)
+                    {
+                    Frame frame = iter.next();
+                    Fiber fiber = frame.f_fiber;
+
+                    switch (fiber.getStatus())
+                        {
+                        case Initial:
+                            if (frameNext == null
+                                // && fiber.originatesFromEntered()
+                                    )
+                                 {
+                                 frameNext = frame;
+                                 }
+                            break;
+
+                        case Yielded:
+                            if (frameNext == null)
+                                {
+                                frameNext = frame;
+                                }
+                            break;
+
+                        case Waiting:
+                            if (fiber.m_fResponded)
+                                {
+                                iter.remove();
+                                return frame;
+                                }
+                            break;
+
+                        case Running:
+                        case Paused:
+                            throw new IllegalStateException(); // assert
+                        }
+                    }
+
+                if (frameNext != null)
+                    {
+                    f_listSuspended.remove(frameNext);
+                    return frameNext;
+                    }
+                return null;
+                }
+
+            case Prioritized:
+                {
+                // don't start a new fiber unless there is nothing ready and the give priority
+                // to already existing thread of execution
+                Frame frameNext = null;
+                for (Iterator<Frame> iter = f_listSuspended.iterator(); iter.hasNext();)
+                    {
+                    Frame frame = iter.next();
+                    Fiber fiber = frame.f_fiber;
+
+                    switch (fiber.getStatus())
+                        {
+                        case Initial:
+                        case Yielded:
+                            break;
+
+                        case Waiting:
+                            if (fiber.m_fResponded)
+                                {
+                                iter.remove();
+                                return frame;
+                                }
+                            break;
+
+                        case Running:
+                        case Paused:
+                            throw new IllegalStateException(); // assert
+                        }
+                    }
+
+                if (frameNext != null)
+                    {
+                    f_listSuspended.remove(frameNext);
+                    return frameNext;
+                    }
+                // fall through;
+                }
+
+            case Open:
+                // resume a pending (for any reason) or start a new fiber in a round-robin fashion
+                for (Iterator<Frame> iter = f_listSuspended.iterator(); iter.hasNext();)
+                    {
+                    Frame frame = iter.next();
+                    Fiber fiber = frame.f_fiber;
+
+                    switch (fiber.getStatus())
+                        {
+                        case Initial:
+                        case Yielded:
+                            iter.remove();
+                            return frame;
+
+                        case Waiting:
+                            if (fiber.m_fResponded)
+                                {
+                                iter.remove();
+                                return frame;
+                                }
+                            break;
+
+                        case Running:
+                        case Paused:
+                            throw new IllegalStateException(); // assert
+                        }
+                    }
+                return null;
             }
         }
 
     public void suspendFiber(Frame frame)
         {
-        switch (frame.m_status)
+        switch (frame.f_fiber.getStatus())
             {
             case Initial:
                 f_listSuspended.add(frame);
@@ -181,10 +314,11 @@ public class ServiceContext
     // return null iff there the context popped up all frames
     public Frame execute(Frame frame)
         {
+        Fiber fiber = frame.f_fiber;
         int iPC = frame.m_iPC;
         int iPCLast = iPC;
 
-        if (frame.m_status == Frame.Status.Waiting)
+        if (fiber.getStatus() == FiberStatus.Waiting)
             {
             switch (frame.checkWaitingRegisters())
                 {
@@ -202,7 +336,8 @@ public class ServiceContext
                 }
             }
 
-        frame.m_status = Frame.Status.Running;
+        fiber.setStatus(FiberStatus.Running);
+        fiber.m_fResponded = false;
         m_frameCurrent = frame;
         s_tloContext.set(this);
 
@@ -217,7 +352,7 @@ public class ServiceContext
 
                 if (++nOps > 10)
                     {
-                    frame.m_status = Frame.Status.Paused;
+                    fiber.setStatus(FiberStatus.Paused);
                     return frame;
                     }
 
@@ -240,7 +375,7 @@ public class ServiceContext
                     break;
 
                 case Op.R_BLOCK_RETURN:
-                    frame.f_framePrev.m_status = Frame.Status.Waiting;
+                    fiber.setStatus(FiberStatus.Waiting);
                     // fall through
 
                 case Op.R_RETURN:
@@ -274,7 +409,7 @@ public class ServiceContext
                         return null;
                         }
 
-                    if (frame.m_status == Frame.Status.Waiting)
+                    if (fiber.getStatus() == FiberStatus.Waiting)
                         {
                         return frame;
                         }
@@ -333,17 +468,17 @@ public class ServiceContext
 
                 case Op.R_REPEAT:
                     frame.m_iPC = iPCLast;
-                    frame.m_status = Frame.Status.Waiting;
+                    fiber.setStatus(FiberStatus.Waiting);
                     return frame;
 
                 case Op.R_BLOCK:
                     frame.m_iPC = iPCLast + 1;
-                    frame.m_status = Frame.Status.Waiting;
+                    fiber.setStatus(FiberStatus.Waiting);
                     return frame;
 
                 case Op.R_YIELD:
                     frame.m_iPC = iPCLast + 1;
-                    frame.m_status = Frame.Status.Yielded;
+                    fiber.setStatus(FiberStatus.Yielded);
                     return frame;
                 }
             }
@@ -353,17 +488,17 @@ public class ServiceContext
     public Frame createFrame1(Frame framePrev, InvocationTemplate template,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return new Frame(this, framePrev, template, hTarget, ahVar, iReturn, null);
+        return new Frame(framePrev, template, hTarget, ahVar, iReturn, null);
         }
 
     public Frame createFrameN(Frame framePrev, InvocationTemplate template,
                              ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return new Frame(this, framePrev, template, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
+        return new Frame(framePrev, template, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
         }
 
     // create a "proto"-frame
-    protected Frame createServiceEntryFrame(int cReturns, Op[] aopNative)
+    protected Frame createServiceEntryFrame(Fiber fiberCaller, int cReturns, Op[] aopNative)
         {
         // TODO: collect the caller's frame proxy
 
@@ -371,7 +506,8 @@ public class ServiceContext
         // the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
-        Frame frame = new Frame(this, null, aopNative, ahVar, Frame.RET_UNUSED, null);
+        Fiber fiber = new Fiber(this, fiberCaller);
+        Frame frame = new Frame(fiber, aopNative, ahVar, Frame.RET_UNUSED, null);
 
         for (int iVar = 0; iVar < cReturns; iVar++)
             {
@@ -391,67 +527,70 @@ public class ServiceContext
         return !f_queueMsg.isEmpty() || !f_listSuspended.isEmpty() || m_frameCurrent != null;
         }
 
-    // send and asynchronous "construct service" message
-    public CompletableFuture<ServiceHandle> sendConstructRequest(ServiceContext context,
+    // send and asynchronous "construct service" message to this context
+    public CompletableFuture<ServiceHandle> sendConstructRequest(Frame frameCaller,
                 ConstructTemplate constructor, TypeComposition clazz, ObjectHandle[] ahArg)
         {
         CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
 
-        context.addRequest(new ConstructRequest(this, constructor, clazz, future, ahArg));
+        addRequest(new ConstructRequest(frameCaller.f_fiber, constructor, clazz, future, ahArg));
 
         return future.whenComplete((r, x) ->
             {
             if (x != null)
                 {
                 // the construction failed; we need to kill the service
-                f_container.removeServiceContext(context);
+                f_container.removeServiceContext(this);
                 }
             });
         }
 
     // send and asynchronous "invoke" message with zero or one return value
-    public CompletableFuture<ObjectHandle> sendInvoke1Request(
-            ServiceContext context, FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
+    public CompletableFuture<ObjectHandle> sendInvoke1Request(Frame frameCaller,
+                FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle> future = cReturns == 0 ? null : new CompletableFuture<>();
 
-        context.addRequest(new Invoke1Request(this, hFunction, ahArg, cReturns, future));
+        addRequest(new Invoke1Request(frameCaller == null ? null : frameCaller.f_fiber,
+                hFunction, ahArg, cReturns, future));
 
         return future;
         }
 
     // send and asynchronous "invoke" message with multiple return values
-    public CompletableFuture<ObjectHandle[]> sendInvokeNRequest(ServiceContext context,
+    public CompletableFuture<ObjectHandle[]> sendInvokeNRequest(Frame frameCaller,
                 FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle[]> future = new CompletableFuture<>();
 
-        context.addRequest(new InvokeNRequest(this, hFunction, ahArg, cReturns, future));
+        addRequest(new InvokeNRequest(frameCaller == null ? null : frameCaller.f_fiber,
+                hFunction, ahArg, cReturns, future));
 
         return future;
         }
 
     // send and asynchronous property operation message
-    public CompletableFuture<ObjectHandle> sendProperty01Request(ServiceContext context,
+    public CompletableFuture<ObjectHandle> sendProperty01Request(Frame frameCaller,
             PropertyTemplate property, PropertyOperation01 op)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        context.addRequest(new PropertyOpRequest(this, property, null, 1, future, op));
+        addRequest(new PropertyOpRequest(frameCaller == null ? null : frameCaller.f_fiber,
+                property, null, 1, future, op));
 
         return future;
         }
 
     // send and asynchronous property operation message
-    public void sendProperty10Request(ServiceContext context,
+    public void sendProperty10Request(Fiber fiberCaller,
             PropertyTemplate property, ObjectHandle hValue, PropertyOperation10 op)
         {
-        context.addRequest(new PropertyOpRequest(this, property, hValue, 0, null, op));
+        addRequest(new PropertyOpRequest(fiberCaller, property, hValue, 0, null, op));
         }
 
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
         {
-        sendInvoke1Request(this, hFunction, ahArg, 0);
+        sendInvoke1Request(null, hFunction, ahArg, 0);
         return Op.R_NEXT;
         }
 
@@ -465,9 +604,11 @@ public class ServiceContext
     // ----- helpers ------
 
     // send zero or one results back to the caller
-    protected static void sendResponse1(ServiceContext contextCaller,
+    protected static void sendResponse1(Fiber fiberCaller,
                                         Frame frame, CompletableFuture future)
         {
+        ServiceContext contextCaller = fiberCaller.f_context;
+
         if (frame.m_hException == null)
             {
             CompletableFuture<ObjectHandle> cf =
@@ -478,7 +619,7 @@ public class ServiceContext
                 // common path
                 try
                     {
-                    contextCaller.respond(new Response(cf.get(), null, future));
+                    contextCaller.respond(new Response(fiberCaller, cf.get(), null, future));
                     }
                 catch (Exception e) {}
                 }
@@ -488,20 +629,20 @@ public class ServiceContext
                     {
                     if (x == null)
                         {
-                        contextCaller.respond(new Response(hR, null, future));
+                        contextCaller.respond(new Response(fiberCaller, hR, null, future));
                         }
                     else
                         {
                         ExceptionHandle hX = ((ExceptionHandle.WrapperException) x).
                                 getExceptionHandle();
-                        contextCaller.respond(new Response(null, hX, future));
+                        contextCaller.respond(new Response(fiberCaller, null, hX, future));
                         }
                     });
                 }
             }
         else
             {
-            contextCaller.respond(new Response(null, frame.m_hException, future));
+            contextCaller.respond(new Response(fiberCaller, null, frame.m_hException, future));
             }
         }
 
@@ -509,6 +650,72 @@ public class ServiceContext
     public String toString()
         {
         return "Service(" + f_sName + ')';
+        }
+
+    // --- inner classes
+
+    public static class Fiber
+        {
+        final ServiceContext f_context;
+        final Fiber f_fiberPrev; // a caller's fiber (null for original)
+
+        // the fiber status can only be mutated by the fiber itself
+        private FiberStatus m_status;
+
+        // this flag serves a hint that the execution could be resumed;
+        // it's set by the responding fiber and cleared reset when the execution resumes
+        // the use of this flag is tolerant to the possibility that the "waiting" state times out
+        // and the execution resumes before the flag is set; however, we will never lose a
+        // "a response has arrived" notification and get stuck waiting
+        public volatile boolean m_fResponded;
+
+        // Metrics: the timestamp (in nanos) when the fiber execution has started
+        private long m_nanoStarted;
+
+        /**
+         * The timeout (timestamp) that this fiber is subject to (optional).
+         */
+        public long m_ldtTimeout;
+
+        public Fiber(ServiceContext context, Fiber fiberPrev)
+            {
+            f_context = context;
+            f_fiberPrev = fiberPrev;
+            m_status = FiberStatus.Initial;
+            }
+
+        public FiberStatus getStatus()
+            {
+            return m_status;
+            }
+
+        // called only by this fiber
+        public void setStatus(FiberStatus status)
+            {
+            switch (m_status = status)
+                {
+                default:
+                case Initial:
+                    throw new IllegalArgumentException();
+
+                case Running:
+                    m_nanoStarted = System.nanoTime();
+                    break;
+
+                case Paused:
+                case Waiting:
+                case Yielded:
+                    long cNanos = System.nanoTime() - m_nanoStarted;
+                    m_nanoStarted = 0;
+                    f_context.m_cRuntimeNanos += cNanos;
+                    break;
+                }
+            }
+
+        public boolean isTimeout()
+            {
+            return m_ldtTimeout > 0 && System.currentTimeMillis() > m_ldtTimeout;
+            }
         }
 
     public interface Message
@@ -522,16 +729,16 @@ public class ServiceContext
     public static class ConstructRequest
             implements Message
         {
-        private final ServiceContext f_contextCaller;
+        private final Fiber f_fiberCaller;
         private final ConstructTemplate f_constructor;
         private final TypeComposition f_clazz;
         private final ObjectHandle[] f_ahArg;
         private final CompletableFuture<ServiceHandle> f_future;
 
-        public ConstructRequest(ServiceContext contextCaller, ConstructTemplate constructor,
+        public ConstructRequest(Fiber fiberCaller, ConstructTemplate constructor,
                                 TypeComposition clazz, CompletableFuture<ServiceHandle> future, ObjectHandle[] ahArg)
             {
-            f_contextCaller = contextCaller;
+            f_fiberCaller = fiberCaller;
             f_constructor = constructor;
             f_clazz = clazz;
             f_ahArg = ahArg;
@@ -551,12 +758,12 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(1,
+            Frame frame0 = context.createServiceEntryFrame(f_fiberCaller, 1,
                     new Op[]{opConstruct, Return_0.INSTANCE});
 
             frame0.m_continuation = () ->
                 {
-                sendResponse1(f_contextCaller, frame0, f_future);
+                sendResponse1(f_fiberCaller, frame0, f_future);
                 return null;
                 };
 
@@ -570,17 +777,17 @@ public class ServiceContext
     public static class Invoke1Request
             implements Message
         {
-        private final ServiceContext f_contextCaller;
+        private final Fiber f_fiberCaller;
         private final FunctionHandle f_hFunction;
         private final ObjectHandle[] f_ahArg;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
 
-        public Invoke1Request(ServiceContext contextCaller, FunctionHandle hFunction,
+        public Invoke1Request(Fiber fiberCaller, FunctionHandle hFunction,
                               ObjectHandle[] ahArg, int cReturns,
                               CompletableFuture<ObjectHandle> future)
             {
-            f_contextCaller = contextCaller;
+            f_fiberCaller = fiberCaller;
             f_hFunction = hFunction;
             f_ahArg = ahArg;
             f_cReturns = cReturns;
@@ -599,7 +806,7 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(f_hFunction.getReturnCount(),
+            Frame frame0 = context.createServiceEntryFrame(f_fiberCaller, f_hFunction.getReturnCount(),
                     new Op[] {opCall, Return_0.INSTANCE});
 
 
@@ -614,7 +821,7 @@ public class ServiceContext
                     }
                 else
                     {
-                    sendResponse1(f_contextCaller, frame0, f_future);
+                    sendResponse1(f_fiberCaller, frame0, f_future);
                     }
                 return null;
                 };
@@ -629,17 +836,17 @@ public class ServiceContext
     public static class InvokeNRequest
             implements Message
         {
-        private final ServiceContext f_contextCaller;
+        private final Fiber f_fiberCaller;
         private final FunctionHandle f_hFunction;
         private final ObjectHandle[] f_ahArg;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle[]> f_future;
 
-        public InvokeNRequest(ServiceContext contextCaller, FunctionHandle hFunction,
+        public InvokeNRequest(Fiber fiberCaller, FunctionHandle hFunction,
                              ObjectHandle[] ahArg, int cReturns,
                              CompletableFuture<ObjectHandle[]> future)
             {
-            f_contextCaller = contextCaller;
+            f_fiberCaller = fiberCaller;
             f_hFunction = hFunction;
             f_ahArg = ahArg;
             f_cReturns = cReturns;
@@ -664,9 +871,10 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(f_hFunction.getReturnCount(),
+            Frame frame0 = context.createServiceEntryFrame(f_fiberCaller, f_hFunction.getReturnCount(),
                 new Op[] {opCall, Return_0.INSTANCE});
 
+            ServiceContext contextCaller = f_fiberCaller.f_context;
             frame0.m_continuation = () ->
                 {
                 ExceptionHandle hException = frame0.m_hException;
@@ -686,19 +894,19 @@ public class ServiceContext
                         {
                         if (x == null)
                             {
-                            f_contextCaller.respond(new Response(frame0.f_ahVar, null, f_future));
+                            contextCaller.respond(new Response(f_fiberCaller, frame0.f_ahVar, null, f_future));
                             }
                         else
                             {
                             ExceptionHandle hX = ((ExceptionHandle.WrapperException) x).
                                     getExceptionHandle();
-                            f_contextCaller.respond(new Response(null, hX, f_future));
+                            contextCaller.respond(new Response(f_fiberCaller, null, hX, f_future));
                             }
                         });
                     }
                 else
                     {
-                    f_contextCaller.respond(new Response(null, hException, f_future));
+                    contextCaller.respond(new Response(f_fiberCaller, null, hException, f_future));
                     }
                 return null;
                 };
@@ -714,18 +922,18 @@ public class ServiceContext
     public static class PropertyOpRequest
             implements Message
         {
-        private final ServiceContext f_contextCaller;
+        private final Fiber f_fiberCaller;
         private final PropertyTemplate f_property;
         private final ObjectHandle f_hValue;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
         private final PropertyOperation f_op;
 
-        public PropertyOpRequest(ServiceContext contextCaller, PropertyTemplate property,
+        public PropertyOpRequest(Fiber fiberCaller, PropertyTemplate property,
                                  ObjectHandle hValue, int cReturns,
                                  CompletableFuture<ObjectHandle> future, PropertyOperation op)
             {
-            f_contextCaller = contextCaller;
+            f_fiberCaller = fiberCaller;
             f_property = property;
             f_hValue = hValue;
             f_cReturns = cReturns;
@@ -750,7 +958,7 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(cReturns,
+            Frame frame0 = context.createServiceEntryFrame(f_fiberCaller, cReturns,
                     new Op[]{opCall, Return_0.INSTANCE});
 
             frame0.m_continuation = () ->
@@ -764,7 +972,7 @@ public class ServiceContext
                     }
                 else
                     {
-                    sendResponse1(f_contextCaller, frame0, f_future);
+                    sendResponse1(f_fiberCaller, frame0, f_future);
                     }
                 return null;
                 };
@@ -779,12 +987,15 @@ public class ServiceContext
     public static class Response<T>
             implements Runnable
         {
-        private final ExceptionHandle f_hException;
+        private final Fiber f_fiberCaller;
         private final T f_return;
+        private final ExceptionHandle f_hException;
         private final CompletableFuture<T> f_future;
 
-        public Response(T returnValue, ExceptionHandle hException, CompletableFuture<T> future)
+        public Response(Fiber fiberCaller, T returnValue, ExceptionHandle hException,
+                        CompletableFuture<T> future)
             {
+            f_fiberCaller = fiberCaller;
             f_hException = hException;
             f_return = returnValue;
             f_future = future;
@@ -793,6 +1004,8 @@ public class ServiceContext
         @Override
         public void run()
             {
+            f_fiberCaller.m_fResponded = true;
+
             if (f_hException == null)
                 {
                 f_future.complete(f_return);
