@@ -4,12 +4,14 @@ import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
+import org.xvm.proto.Fiber.FiberStatus;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.op.Return_0;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFutureRef;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xService.PropertyOperation;
 import org.xvm.proto.template.xService.PropertyOperation10;
@@ -17,9 +19,6 @@ import org.xvm.proto.template.xService.PropertyOperation01;
 import org.xvm.proto.template.xService.PropertyOperation11;
 import org.xvm.proto.template.xService.ServiceHandle;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 
 import java.util.concurrent.CompletableFuture;
@@ -55,8 +54,8 @@ public class ServiceContext
     // Metrics: the total time (in nanos) this service has been running
     protected long m_cRuntimeNanos;
 
-    private  Frame m_frameCurrent;
-    private List<Frame> f_listSuspended = new LinkedList<>(); // suspended fibers
+    private Frame m_frameCurrent;
+    private FiberQueue f_queueSuspended = new FiberQueue(); // suspended fibers
 
     enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
     volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
@@ -69,15 +68,6 @@ public class ServiceContext
         Terminated,
         }
     volatile ServiceStatus m_status = ServiceStatus.Idle;
-
-    enum FiberStatus
-        {
-        Initial, // the frame has not been scheduled for execution yet
-        Running, // normal execution
-        Paused,  // the execution was paused by the scheduler
-        Yielded, // the execution was explicitly yielded by the user code
-        Waiting, // execution is blocked until the "waiting" futures are completed
-        }
 
     final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
 
@@ -138,8 +128,6 @@ public class ServiceContext
             s_tloContext.set(this);
             Frame frame = message.createFrame(this);
 
-            assert frame.f_fiber.getStatus() == FiberStatus.Initial;
-
             suspendFiber(frame);
             message = f_queueMsg.poll();
             }
@@ -150,7 +138,7 @@ public class ServiceContext
             return m_frameCurrent;
             }
 
-        if (f_listSuspended.isEmpty())
+        if (f_queueSuspended.isEmpty())
             {
             // nothing to do
             return null;
@@ -163,120 +151,20 @@ public class ServiceContext
                 throw new IllegalStateException(); // assert
 
             case Exclusive:
-                {
                 // don't allow a new fiber unless it belongs to already existing thread of execution
-                Frame frameNext = null;
-                for (Iterator<Frame> iter = f_listSuspended.iterator(); iter.hasNext();)
-                    {
-                    Frame frame = iter.next();
-                    Fiber fiber = frame.f_fiber;
-
-                    switch (fiber.getStatus())
-                        {
-                        case Initial:
-                            if (frameNext == null
-                                // && fiber.originatesFromEntered()
-                                    )
-                                 {
-                                 frameNext = frame;
-                                 }
-                            break;
-
-                        case Yielded:
-                            if (frameNext == null)
-                                {
-                                frameNext = frame;
-                                }
-                            break;
-
-                        case Waiting:
-                            if (fiber.m_fResponded)
-                                {
-                                iter.remove();
-                                return frame;
-                                }
-                            break;
-
-                        case Running:
-                        case Paused:
-                            throw new IllegalStateException(); // assert
-                        }
-                    }
-
-                if (frameNext != null)
-                    {
-                    f_listSuspended.remove(frameNext);
-                    return frameNext;
-                    }
-                return null;
-                }
+                return f_queueSuspended.getAssociatedOrYielded();
 
             case Prioritized:
-                {
-                // don't start a new fiber unless there is nothing ready and the give priority
-                // to already existing thread of execution
-                Frame frameNext = null;
-                for (Iterator<Frame> iter = f_listSuspended.iterator(); iter.hasNext();)
-                    {
-                    Frame frame = iter.next();
-                    Fiber fiber = frame.f_fiber;
-
-                    switch (fiber.getStatus())
-                        {
-                        case Initial:
-                        case Yielded:
-                            break;
-
-                        case Waiting:
-                            if (fiber.m_fResponded)
-                                {
-                                iter.remove();
-                                return frame;
-                                }
-                            break;
-
-                        case Running:
-                        case Paused:
-                            throw new IllegalStateException(); // assert
-                        }
-                    }
-
+                // give priority to already existing thread of execution
+                Frame frameNext = f_queueSuspended.getAssociatedOrYielded();
                 if (frameNext != null)
                     {
-                    f_listSuspended.remove(frameNext);
                     return frameNext;
                     }
-                // fall through;
-                }
+                // fall through
 
             case Open:
-                // resume a pending (for any reason) or start a new fiber in a round-robin fashion
-                for (Iterator<Frame> iter = f_listSuspended.iterator(); iter.hasNext();)
-                    {
-                    Frame frame = iter.next();
-                    Fiber fiber = frame.f_fiber;
-
-                    switch (fiber.getStatus())
-                        {
-                        case Initial:
-                        case Yielded:
-                            iter.remove();
-                            return frame;
-
-                        case Waiting:
-                            if (fiber.m_fResponded)
-                                {
-                                iter.remove();
-                                return frame;
-                                }
-                            break;
-
-                        case Running:
-                        case Paused:
-                            throw new IllegalStateException(); // assert
-                        }
-                    }
-                return null;
+                return f_queueSuspended.getAnyReady();
             }
         }
 
@@ -284,12 +172,13 @@ public class ServiceContext
         {
         switch (frame.f_fiber.getStatus())
             {
-            case Initial:
-                f_listSuspended.add(frame);
-                break;
-
             case Running:
                 throw new IllegalStateException(); // assert
+
+            case InitialNew:
+            case InitialAssociated:
+                f_queueSuspended.add(frame);
+                break;
 
             case Waiting:
             case Yielded:
@@ -300,7 +189,7 @@ public class ServiceContext
                 else
                     {
                     m_frameCurrent = null;
-                    f_listSuspended.add(frame);
+                    f_queueSuspended.add(frame);
                     }
                 break;
 
@@ -318,7 +207,12 @@ public class ServiceContext
         int iPC = frame.m_iPC;
         int iPCLast = iPC;
 
-        if (fiber.getStatus() == FiberStatus.Waiting)
+        if (fiber.isTimedOut())
+            {
+            frame.m_hException = xException.makeHandle("The service has timed-out");
+            iPC = Op.R_EXCEPTION;
+            }
+        else if (fiber.getStatus() == FiberStatus.Waiting)
             {
             switch (frame.checkWaitingRegisters())
                 {
@@ -524,7 +418,7 @@ public class ServiceContext
 
     public boolean isContended()
         {
-        return !f_queueMsg.isEmpty() || !f_listSuspended.isEmpty() || m_frameCurrent != null;
+        return !f_queueMsg.isEmpty() || !f_queueSuspended.isEmpty() || m_frameCurrent != null;
         }
 
     // send and asynchronous "construct service" message to this context
@@ -653,70 +547,6 @@ public class ServiceContext
         }
 
     // --- inner classes
-
-    public static class Fiber
-        {
-        final ServiceContext f_context;
-        final Fiber f_fiberPrev; // a caller's fiber (null for original)
-
-        // the fiber status can only be mutated by the fiber itself
-        private FiberStatus m_status;
-
-        // this flag serves a hint that the execution could be resumed;
-        // it's set by the responding fiber and cleared reset when the execution resumes
-        // the use of this flag is tolerant to the possibility that the "waiting" state times out
-        // and the execution resumes before the flag is set; however, we will never lose a
-        // "a response has arrived" notification and get stuck waiting
-        public volatile boolean m_fResponded;
-
-        // Metrics: the timestamp (in nanos) when the fiber execution has started
-        private long m_nanoStarted;
-
-        /**
-         * The timeout (timestamp) that this fiber is subject to (optional).
-         */
-        public long m_ldtTimeout;
-
-        public Fiber(ServiceContext context, Fiber fiberPrev)
-            {
-            f_context = context;
-            f_fiberPrev = fiberPrev;
-            m_status = FiberStatus.Initial;
-            }
-
-        public FiberStatus getStatus()
-            {
-            return m_status;
-            }
-
-        // called only by this fiber
-        public void setStatus(FiberStatus status)
-            {
-            switch (m_status = status)
-                {
-                default:
-                case Initial:
-                    throw new IllegalArgumentException();
-
-                case Running:
-                    m_nanoStarted = System.nanoTime();
-                    break;
-
-                case Paused:
-                case Waiting:
-                case Yielded:
-                    long cNanos = System.nanoTime() - m_nanoStarted;
-                    m_nanoStarted = 0;
-                    f_context.m_cRuntimeNanos += cNanos;
-                    break;
-                }
-            }
-
-        public boolean isTimeout()
-            {
-            return m_ldtTimeout > 0 && System.currentTimeMillis() > m_ldtTimeout;
-            }
-        }
 
     public interface Message
         {

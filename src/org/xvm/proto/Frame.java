@@ -6,7 +6,6 @@ import org.xvm.asm.constants.IntConstant;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
-import org.xvm.proto.ServiceContext.Fiber;
 
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
