@@ -1,6 +1,8 @@
 package org.xvm.compiler;
 
 
+import java.util.HashSet;
+import java.util.Set;
 import org.xvm.asm.Version;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.*;
@@ -94,7 +96,7 @@ public class Parser
             Token next = peek();
             if (next != null && next.getStartPosition() < next.getEndPosition())
                 {
-                log(Severity.ERROR, EXPECTED_EOF, new Object[] {next}, next.getStartPosition(), next.getEndPosition());
+                log(Severity.ERROR, EXPECTED_EOF, next.getStartPosition(), next.getEndPosition(), next);
                 }
             }
 
@@ -355,7 +357,7 @@ public class Parser
                                               keyword  = current();
                         List<Token>           names    = parseQualifiedName();
                         NamedTypeExpression   module   = new NamedTypeExpression(null, names, null,
-                                names.get(names.size()-1).getEndPosition());
+                                null, names.get(names.size()-1).getEndPosition());
                         List<VersionOverride> versions = parseVersionRequirement(false);
                         compositions.add(new Composition.Import(exprCondition, keyword, module,
                                 versions, getLastMatch().getEndPosition()));
@@ -543,12 +545,14 @@ public class Parser
                             if (((TypeCompositionStatement) stmt).getCategory().getId() == Id.MODULE
                                     && !stmts.isEmpty())
                                 {
-                                log(Severity.ERROR, MODULE_NOT_ROOT, null, start.getStartPosition(), start.getEndPosition());
+                                log(Severity.ERROR, MODULE_NOT_ROOT, start.getStartPosition(),
+                                        start.getEndPosition(), null);
                                 }
                             }
                         else
                             {
-                            log(Severity.ERROR, NO_TYPE_FOUND, null, start.getStartPosition(), start.getEndPosition());
+                            log(Severity.ERROR, NO_TYPE_FOUND, start.getStartPosition(),
+                                    start.getEndPosition());
                             }
                         }
 
@@ -648,7 +652,7 @@ public class Parser
             case PACKAGE:
                 if (fInMethod)
                     {
-                    log(Severity.ERROR, NO_TOP_LEVEL, null, peek().getStartPosition(), peek().getEndPosition());
+                    log(Severity.ERROR, NO_TOP_LEVEL, peek().getStartPosition(), peek().getEndPosition());
                     }
                 // fall through
             case CLASS:
@@ -748,7 +752,7 @@ public class Parser
                         {
                         if (stmts.size() <= 1)
                             {
-                            log(Severity.ERROR, NOT_MULTI_ASN, null, start.getStartPosition(), peek().getEndPosition());
+                            log(Severity.ERROR, NOT_MULTI_ASN, start.getStartPosition(), peek().getEndPosition());
                             throw new CompilerException("multi assignment has only " + stmts.size() + " l-values");
                             }
 
@@ -1215,7 +1219,7 @@ public class Parser
             {
             case SEMICOLON:
                 Token tokSemi = match(Id.SEMICOLON);
-                log(Severity.ERROR, NO_EMPTY_STMT, null, tokSemi.getStartPosition(), tokSemi.getEndPosition());
+                log(Severity.ERROR, NO_EMPTY_STMT, tokSemi.getStartPosition(), tokSemi.getEndPosition());
                 return new StatementBlock(null, tokSemi.getStartPosition(), tokSemi.getEndPosition());
 
             case L_CURLY:
@@ -1417,7 +1421,7 @@ public class Parser
                 // all need to be of the same type: all conditional, or none conditional
                 if (cConds != 0 && cConds != init.size())
                     {
-                    log(Severity.ERROR, ALL_OR_NO_CONDS, null, lPos, peek().getStartPosition());
+                    log(Severity.ERROR, ALL_OR_NO_CONDS, lPos, peek().getStartPosition());
                     }
                 }
             while (match(Id.COMMA) != null);
@@ -1625,7 +1629,7 @@ public class Parser
         Statement cond = parseConditionalDeclaration(true);
         if (cond instanceof VariableDeclarationStatement && ((VariableDeclarationStatement) cond).isConditional())
             {
-            log(Severity.ERROR, NO_CONDITIONAL, null, keyword.getStartPosition(), peek().getEndPosition());
+            log(Severity.ERROR, NO_CONDITIONAL, keyword.getStartPosition(), peek().getEndPosition());
             throw new CompilerException("conditional is not allowed");
             }
         expect(Id.R_PAREN);
@@ -1647,7 +1651,7 @@ public class Parser
                 default:
                     if (stmts.isEmpty())
                         {
-                        log(Severity.ERROR, MISSING_CASE, null, peek().getStartPosition(), peek().getEndPosition());
+                        log(Severity.ERROR, MISSING_CASE, peek().getStartPosition(), peek().getEndPosition());
                         throw new CompilerException("switch must start with a case");
                         }
                     stmts.add(parseStatement());
@@ -1875,7 +1879,7 @@ public class Parser
             case ASN:
                 if (!fAllowAsn)
                     {
-                    log(Severity.ERROR, NO_ASSIGNMENT, null, peek().getStartPosition(), peek().getEndPosition());
+                    log(Severity.ERROR, NO_ASSIGNMENT, peek().getStartPosition(), peek().getEndPosition());
                     throw new CompilerException("assignment disallowed");
                     }
                 // fall through
@@ -2571,6 +2575,32 @@ s     *
                         }
                     }
 
+                // test for an access-specified TypeExpression, i.e. ending with :public,
+                // :protected, or :private
+                Token access = null;
+                Token colon  = match(Id.COLON);
+                if (colon != null)
+                    {
+                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
+                        {
+                        switch (peek().getId())
+                            {
+                            case PUBLIC:
+                            case PROTECTED:
+                            case PRIVATE:
+                                // at this point, this MUST be a type expression
+                                access  = current();
+                                lEndPos = access.getEndPosition();
+                                break;
+                            }
+                        }
+
+                    if (access == null)
+                        {
+                        putBack(colon);
+                        }
+                    }
+
                 // test to see if there is a type parameter list (implying the expression is a type)
                 List<TypeExpression> params = null;
                 if (peek().getId() == Id.COMP_LT)
@@ -2593,22 +2623,30 @@ s     *
 
                 // test to see if this is a tuple literal of the form "Tuple:(", or some other
                 // type literal of the form "type:{"
-                Token colon = match(Id.COLON);
+                colon = match(Id.COLON);
                 if (colon != null)
                     {
-                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace() &&
-                            (peek().getId() == Id.L_CURLY ||
-                            (peek().getId() == Id.L_PAREN && names.size() == 1 && names.get(0).getValue().equals("Tuple"))))
+                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
                         {
-                        return parseCustomLiteral(new NamedTypeExpression(null, names, params, lEndPos));
+                        switch (peek().getId())
+                            {
+                            case L_PAREN:
+                                if (!(names.size() == 1 && names.get(0).getValue().equals("Tuple")))
+                                    {
+                                    break;
+                                    }
+                                // fall through
+                            case L_CURLY:
+                                return parseCustomLiteral(new NamedTypeExpression(null, names, access, params, lEndPos));
+                            }
                         }
-                    else
-                        {
-                        putBack(colon);
-                        }
+
+                    putBack(colon);
                     }
 
-                return new NameExpression(names, params, lEndPos);
+                return access == null
+                        ? new NameExpression(names, params, lEndPos)
+                        : new NamedTypeExpression(null, names, access, params, lEndPos);
                 }
 
             case L_PAREN:
@@ -2846,8 +2884,8 @@ s     *
                             }
                         else if (!Lexer.isWhitespace(ch))
                             {
-                            log(Severity.ERROR, BAD_HEX_LITERAL, new Object[] {Handy.quotedChar(ch)},
-                                    literal.getStartPosition(), literal.getEndPosition());
+                            log(Severity.ERROR, BAD_HEX_LITERAL, literal.getStartPosition(),
+                                    literal.getEndPosition(), Handy.quotedChar(ch));
                             }
                         }
                     }
@@ -2951,8 +2989,7 @@ s     *
                 Expression expr  = parseExpression();
                 Token      close = expect(Id.R_CURLY);
                 // custom type parsing is not supported in the prototype compiler
-                log(Severity.ERROR, BAD_CUSTOM, new Object[] {type, expr},
-                        open.getStartPosition(), close.getEndPosition());
+                log(Severity.ERROR, BAD_CUSTOM, open.getStartPosition(), close.getEndPosition(), type, expr);
                 return expr;
                 }
             }
@@ -3112,7 +3149,7 @@ s     *
 
                         if (!dimExprs.isEmpty() && dimExprs.size() != cExplicitDims)
                             {
-                            log(Severity.ERROR, ALL_OR_NO_DIMS, null, dim.getStartPosition(), dim.getEndPosition());
+                            log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
                             }
                         }
                     long lEndPos = getLastMatch().getEndPosition();
@@ -3204,7 +3241,10 @@ s     *
      *
      * <p/><code><pre>
      * NamedTypeExpression
-     *     QualifiedName TypeParameterTypeList-opt
+     *     QualifiedName TypeAccessModifier-opt TypeParameterTypeList-opt
+     *
+     * TypeAccessModifier
+     *     NoWhitespace ":" NoWhitespace AccessModifier
      * </pre></code>
      *
      * @return a NamedTypeExpression
@@ -3213,8 +3253,29 @@ s     *
         {
         Token immutable = match(Id.IMMUTABLE);
         List<Token> names = parseQualifiedName();
+
+        Token tokAccess = null;
+        Token tokNext   = peek();
+        if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace() && !tokNext.hasTrailingWhitespace())
+            {
+            Token tokColon = current();
+            switch ((tokNext = peek()).getId())
+                {
+                case PUBLIC:
+                case PROTECTED:
+                case PRIVATE:
+                    // use expect() to make sure that getLastMatch() is set correctly
+                    tokAccess = expect(tokNext.getId());
+                    break;
+
+                default:
+                    putBack(tokColon);
+                    break;
+                }
+            }
+
         List<TypeExpression> params = parseTypeParameterTypeList(false);
-        return new NamedTypeExpression(immutable, names, params, getLastMatch().getEndPosition());
+        return new NamedTypeExpression(immutable, names, tokAccess, params, getLastMatch().getEndPosition());
         }
 
     /**
@@ -3307,14 +3368,14 @@ s     *
                     else if (!err && modifiers.contains(modifier))
                         {
                         err = true;
-                        log(Severity.ERROR, REPEAT_MODIFIER, new Object[] {modifier},
-                                modifier.getStartPosition(), modifier.getEndPosition());
+                        log(Severity.ERROR, REPEAT_MODIFIER, modifier.getStartPosition(),
+                                modifier.getEndPosition(), modifier);
                         }
                     else if (!err && isAccess && access != null)
                         {
                         err = true;
-                        log(Severity.ERROR, MODIFIER_CONFLICT, new Object[] {access, modifier},
-                                modifier.getStartPosition(), modifier.getEndPosition());
+                        log(Severity.ERROR, MODIFIER_CONFLICT, modifier.getStartPosition(),
+                                modifier.getEndPosition(), access, modifier);
                         }
                     modifiers.add(modifier);
                     if (couldBeProperty && peek().getId() == Id.DIV)
@@ -3331,15 +3392,15 @@ s     *
                             else if (modifier.getId() == Id.PRIVATE)
                                 {
                                 // cannot be private/protected
-                                log(Severity.ERROR, MODIFIER_CONFLICT, new Object[] {modifier, second},
-                                        modifier.getStartPosition(), modifier.getEndPosition());
+                                log(Severity.ERROR, MODIFIER_CONFLICT, modifier.getStartPosition(),
+                                        modifier.getEndPosition(), modifier, second);
                                 }
                             }
                         else if (modifier.getId() != Id.PUBLIC)
                             {
                             // cannot be protected/public or private/public
-                            log(Severity.ERROR, MODIFIER_CONFLICT, new Object[] {modifier, second},
-                                    modifier.getStartPosition(), modifier.getEndPosition());
+                            log(Severity.ERROR, MODIFIER_CONFLICT, modifier.getStartPosition(),
+                                    modifier.getEndPosition(), modifier, second);
                             }
                         modifiers.add(second);
                         }
@@ -3785,7 +3846,11 @@ s     *
         Token                 tokVer    = getLastMatch();
         overrides.add(new VersionOverride(ver, tokVer.getStartPosition(), tokVer.getEndPosition()));
 
+        Set<Version> setGood = new HashSet<>();
+        Set<Version> setBad  = new HashSet<>();
+
         // this is a little more complicated parsing because the keywords are context sensitive
+        // (so we need to use match() to grab them)
         Token verb;
         while ((verb = match(Id.ALLOW )) != null ||
                (verb = match(Id.AVOID )) != null ||
@@ -3794,8 +3859,17 @@ s     *
             boolean first = true;
             while (first || match(Id.COMMA) != null)
                 {
-                overrides.add(new VersionOverride(verb, parseVersion(true), verb.getStartPosition(),
+                ver = parseVersion(true);
+                overrides.add(new VersionOverride(verb, ver, verb.getStartPosition(),
                         getLastMatch().getEndPosition()));
+
+                if ((verb.getId() == Id.AVOID ? setGood : setBad).contains(ver))
+                    {
+                    log(Severity.ERROR, Compiler.CONFLICTING_VERSIONS, verb.getStartPosition(),
+                            getLastMatch().getEndPosition(), ver.toString());
+                    }
+                (verb.getId() == Id.AVOID ? setBad : setGood).add(ver);
+
                 first = false;
                 }
             }
@@ -3843,7 +3917,7 @@ s     *
                 // a non-GA designator
                 if (!Version.isValidVersionPart(parts[i], i == c-1))
                     {
-                    log(Severity.ERROR, BAD_VERSION, null, token.getStartPosition(), token.getEndPosition());
+                    log(Severity.ERROR, BAD_VERSION, token.getStartPosition(), token.getEndPosition());
                     return new Version("0");
                     }
                 }
@@ -4023,7 +4097,7 @@ s     *
             return m_token;
             }
 
-        log(Severity.ERROR, UNEXPECTED_EOF, null, m_source.getPosition(), m_source.getPosition());
+        log(Severity.ERROR, UNEXPECTED_EOF, m_source.getPosition(), m_source.getPosition());
         throw new CompilerException("unexpected EOF");
         }
 
@@ -4138,8 +4212,8 @@ s     *
             return token;
             }
 
-        log(Severity.ERROR, EXPECTED_TOKEN, new Token.Id[] {id, m_token.getId()},
-                m_token.getStartPosition(), m_token.getEndPosition());
+        log(Severity.ERROR, EXPECTED_TOKEN, m_token.getStartPosition(), m_token.getEndPosition(),
+                id, m_token.getId());
 
         // TODO remove this so there can be more than one error reported
         throw new CompilerException("expected token: " + id + " (found: " + token + ")");
@@ -4170,11 +4244,11 @@ s     *
      *
      * @param severity
      * @param sCode
-     * @param aoParam
      * @param lPosStart
      * @param lPosEnd
+     * @param aoParam
      */
-    protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd)
+    protected void log(Severity severity, String sCode, long lPosStart, long lPosEnd, Object... aoParam)
         {
         if (m_lookAhead != null)
             {

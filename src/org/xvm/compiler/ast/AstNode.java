@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 
+import org.xvm.asm.ModuleRepository;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 
@@ -159,6 +160,35 @@ public abstract class AstNode
         for (AstNode node : children())
             {
             node.registerStructures(this, errs);
+            }
+        }
+
+    /**
+     * Second logical compiler pass. This pass introduces the ModuleRepository, which allows the
+     * module that is being compiled to see other modules, including other modules that are being
+     * compiled in parallel with this module. The rule of thumb is that no questions should be
+     * asked of other modules that could not have been answered by this module before this call; in
+     * other words, the order of the module compilation is not only unpredictable, but the potential
+     * exists for dependencies in either direction (first to last and/or vice versa).
+     * <p/>
+     * <ul>
+     * <li>Packages that import modules need to validate that those modules are available to
+     * compile against, and that the corresponding "fingerprint" module structure is present in the
+     * FileStructure;</li>
+     *
+     * <li>Globally visible types must resolve and validate all of their conditionals, i.e. the
+     * link-time conditionals defining which types are present and which of their Compositions are
+     * in effect.</li>
+     * </ul>
+     *
+     * @param repos  the module repository
+     * @param errs   the error list to log any errors to
+     */
+    protected void resolveGlobalVisibility(ModuleRepository repos, ErrorListener errs)
+        {
+        for (AstNode node : children())
+            {
+            node.resolveGlobalVisibility(repos, errs);
             }
         }
 

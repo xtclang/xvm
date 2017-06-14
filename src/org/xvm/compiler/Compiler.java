@@ -125,7 +125,6 @@ public class Compiler
      * Cannot nest a property.
      */
     public static final String PROP_UNEXPECTED                    = "COMPILER-06";
-            // TODO update .properties file
     /**
      * Illegal module name.
      */
@@ -139,7 +138,7 @@ public class Compiler
      */
     public static final String ILLEGAL_MODIFIER                   = "COMPILER-09";
     /**
-     * Illegal modifier.
+     * Conflicting modifier.
      */
     public static final String CONFLICTING_MODIFIER               = "COMPILER-10";
     /**
@@ -186,6 +185,22 @@ public class Compiler
      * More than one "into" clause.
      */
     public static final String MULTIPLE_INTO_CLAUSES              = "COMPILER-21";
+    /**
+     * Package cannot have both body and "import" clause.
+     */
+    public static final String IMPURE_MODULE_IMPORT               = "COMPILER-22";
+    /**
+     * More than one "import" clause, and the names don't match.
+     */
+    public static final String CONFLICTING_IMPORT_CLAUSES         = "COMPILER-23";
+    /**
+     * Cannot find a module.
+     */
+    public static final String MODULE_MISSING                     = "COMPILER-24";
+    /**
+     * Conflicting version clauses.
+     */
+    public static final String CONFLICTING_VERSIONS               = "COMPILER-25";
 
 
     // ----- data members --------------------------------------------------------------------------

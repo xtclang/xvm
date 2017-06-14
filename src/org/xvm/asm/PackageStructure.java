@@ -51,20 +51,20 @@ public class PackageStructure
         return (PackageConstant) getIdentityConstant();
         }
 
-    public ModuleConstant getImportedModule()
+    public ModuleStructure getImportedModule()
         {
-        return m_constModule;
+        return m_module;
         }
 
     /**
      *
-     * @param constModule
+     * @param module
      */
-    public void setImportedModule(ModuleConstant constModule)
+    public void setImportedModule(ModuleStructure module)
         {
-        // TODO
+        assert m_module == null;
 
-        m_constModule = constModule;
+        m_module = module;
         markModified();
         }
 
@@ -86,7 +86,7 @@ public class PackageStructure
         {
         super.disassemble(in);
 
-        m_constModule = (ModuleConstant) getConstantPool().getConstant(readIndex(in));
+        // TODO m_module = (ModuleConstant) getConstantPool().getConstant(readIndex(in));
         }
 
     @Override
@@ -94,7 +94,7 @@ public class PackageStructure
         {
         super.registerConstants(pool);
 
-        m_constModule = (ModuleConstant) pool.register(m_constModule);
+        // TODO review m_module = (ModuleConstant) pool.register(m_module);
         }
 
     @Override
@@ -103,7 +103,7 @@ public class PackageStructure
         {
         super.assemble(out);
 
-        writePackedLong(out, m_constModule == null ? -1 : m_constModule.getPosition());
+        writePackedLong(out, m_module == null ? -1 : m_module.getModuleConstant().getPosition());
         }
 
     @Override
@@ -112,7 +112,7 @@ public class PackageStructure
         StringBuilder sb = new StringBuilder();
         sb.append(super.getDescription())
           .append(", import-module=")
-          .append(m_constModule == null ? "n/a" : m_constModule);
+          .append(m_module == null ? "n/a" : m_module);
         return sb.toString();
         }
 
@@ -134,7 +134,7 @@ public class PackageStructure
 
         // compare imported modules
         PackageStructure that = (PackageStructure) obj;
-        return Handy.equals(this.m_constModule, that.m_constModule);
+        return Handy.equals(this.m_module, that.m_module);
         }
 
 
@@ -144,5 +144,5 @@ public class PackageStructure
      * If this package is a placeholder in the namespace for an imported module, this is the module
      * that the package imports.
      */
-    private ModuleConstant m_constModule;
+    private ModuleStructure m_module;
     }
