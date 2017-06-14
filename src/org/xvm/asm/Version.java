@@ -207,18 +207,27 @@ public class Version
         }
 
     /**
-     * @return one of "dev", "ci", "alpha", "beta", "rc", or "ga"
+     * @return a value between -5 and 0, representing "dev", "ci", "alpha", "beta", "rc", or "ga"
      */
-    public String getReleaseCategory()
+    public int getReleaseCategory()
         {
         for (int part : ensureIntArray())
             {
             if (part < 0)
                 {
-                return PREFIX[part + PREFIX.length];
+                return part;
                 }
             }
-        return "ga";
+        return 0;
+        }
+
+    /**
+     * @return one of "dev", "ci", "alpha", "beta", "rc", or "ga"
+     */
+    public String getReleaseCategoryString()
+        {
+        int n = getReleaseCategory();
+        return n < 0 ? PREFIX[n + PREFIX.length] : "ga";
         }
 
     /**
@@ -268,13 +277,16 @@ public class Version
         // check all of the shared version parts (except for the last shared version part) to make
         // sure that they are identical; for example, when comparing "1.2.3" and "1.2.4", this would
         // compare both the "1" and the "2" parts, but when comparing "1.2.3" and "1.2", this would
-        // only check the "1" part
+        // only check the "1" part.
         int[] thisInts = this.ensureIntArray();
         int[] thatInts = that.ensureIntArray();
         int   cThis    = thisInts.length;
+        int   cThisGA  = thisInts[cThis - 1] < 0 ? cThis - 1 : cThis >= 2 && thisInts[cThis - 2] < 0 ? cThis - 2 : cThis;
         int   cThat    = thatInts.length;
+        int   cThatGA  = thatInts[cThat - 1] < 0 ? cThat - 1 : cThat >= 2 && thatInts[cThat - 2] < 0 ? cThat - 2 : cThat;
         int   iLast    = Math.min(cThis, cThat) - 1;
-        for (int i = 0, c = iLast; i < c; ++i)
+        int   iLastGA  = Math.min(cThisGA, cThatGA) - 1;
+        for (int i = 0; i < iLastGA; ++i)
             {
             if (thisInts[i] != thatInts[i])
                 {
@@ -282,28 +294,91 @@ public class Version
                 }
             }
 
-        if (cThis >= cThat)
-            {
-            // the number of version parts in this are at least as many as the number of version
-            // parts in that, so this is substitutable for that iff the last shared part of this
-            // is equal to or greater than the corresponding part of that
-            return thisInts[iLast] >= thatInts[iLast];
-            }
-
-        // the number of version parts in this is fewer than the number of version parts in that,
-        // so the only way that this is substitutable for that is if the last shared part is
-        // identical AND all subsequent version parts of that are "0"; for example, "1.2" is
-        // substitutable for "1.2.0.0.0"
-        if (thisInts[iLast] != thatInts[iLast])
+        // if this was a smaller version than that, then this cannot substitute for that
+        int nVerDif = iLastGA >= 0 ? thisInts[iLastGA] - thatInts[iLastGA] : 0;
+        if (nVerDif < 0)
             {
             return false;
             }
 
-        for (int i = cThis; i < cThat; ++i)
+        // if this was a larger version than that, then this can sub for that if we're comparing
+        // the last digit of that
+        if (nVerDif > 0)
             {
-            if (thatInts[i] != 0)
+            return cThisGA >= cThatGA;
+            }
+
+        // all of the shared GA digits are identical; check the non-shared digits
+        if (cThisGA > cThatGA)
+            {
+            // any remaining version part number in this version higher than zero indicates this
+            // could sub for that
+            for (int i = cThatGA; i < cThisGA; ++i)
                 {
-                return false;
+                if (thisInts[i] > 0)
+                    {
+                    return true;
+                    }
+                }
+            // this could still be substitutable for that, because the GA versions are the same
+            }
+        else if (cThisGA < cThatGA)
+            {
+            // any remaining version part number in that version higher than zero indicates this
+            // can NOT sub for that; the number of version parts in this is fewer than the number of
+            // version parts in that, so the only way that this is substitutable for that is if all
+            // subsequent version parts of that are "0"; for example, "1.2" can sub for "1.2.0.0.0"
+            for (int i = cThisGA; i < cThatGA; ++i)
+                {
+                if (thatInts[i] > 0)
+                    {
+                    return false;
+                    }
+                }
+            // this could still be substitutable for that, because the GA versions are the same
+            }
+
+        // the two GA versions are identical; the only thing left to check is the non-GA information
+        boolean fThisGA = cThis == cThisGA;
+        boolean fThatGA = cThat == cThatGA;
+        if (!fThisGA || !fThatGA)
+            {
+            // at least one is a non-GA
+            // if this is GA and that is a non-GA, then this will sub for that
+            // if this is non-GA and that is GA, then this can not sub for that
+            if (fThisGA ^ fThatGA)
+                {
+                return fThisGA;
+                }
+
+            // they're both pre-release versions; need to compare the pre-release version parts
+            int cThisNonGA   = cThis - cThisGA;
+            int cThatNonGA   = cThat - cThatGA;
+            int cSharedNonGA = Math.min(cThisNonGA, cThatNonGA);
+            assert cSharedNonGA == 1 || cSharedNonGA == 2;
+            for (int of = 0; of < cSharedNonGA; ++of)
+                {
+                nVerDif = thisInts[cThisGA + of] - thatInts[cThatGA + of];
+                if (nVerDif < 0)
+                    {
+                    // this is an older pre-release
+                    return false;
+                    }
+                else if (nVerDif > 0)
+                    {
+                    // this ia newer pre-release
+                    return true;
+                    }
+                }
+
+            // all the shared digits of the pre-release matched; check for non-shared digits of
+            // one of the pre-release versions
+            if (cThisNonGA != cThatNonGA)
+                {
+                // one of the pre-release versions has a sub-version
+                // if this has a sub-version, then this is newer (and thus substitutable)
+                // if that has a sub-version, then that is newer (and this is NOT substitutable)
+                return cThisNonGA > cThatNonGA;
                 }
             }
 

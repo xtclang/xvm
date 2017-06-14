@@ -182,7 +182,7 @@ public class VersionTree<V>
      */
     public Version findHighestVersion()
         {
-        Node node = root.findHighestNode(EMPTY_PARTS, 0);
+        Node node = root.findHighestNode();
         return node == null ? null : node.getVersion();
         }
 
@@ -536,9 +536,116 @@ public class VersionTree<V>
             // 3. for any children beyond that, looking for the latest (since they are all
             //    substitutable at that point)
 
-            // what is the part that this node is looking for?
-            int nPart  = iPart >= parts.length ? 0 : parts[iPart];          // TODO not 0 ?!?!
+            Node[]  kids   = this.kids;
+            int     cParts = parts.length;
+            int     cMatch = cParts - 1;
+            boolean fGA    = !(cParts >= 1 && parts[cParts - 1] < 0
+                            || cParts >= 2 && parts[cParts - 2] < 0);
+            if (!fGA)
+                {
+                cMatch -= parts[cParts - 1] < 0 ? 1 : 2;
+                }
 
+            if (iPart < cMatch)
+                {
+                // this part needs to be an exact match
+                int  nPart = parts[iPart];
+                Node kid   = getChild(nPart);
+                if (kid != null)
+                    {
+                    return kid.findHighestNode(parts, iPart + 1);
+                    }
+
+                // it's possible that the request is for a .0.0.0 version of this node
+                if (nPart == 0 && isPresent())
+                    {
+                    while (++iPart < cParts)
+                        {
+                        if (parts[iPart] != 0)
+                            {
+                            return null;
+                            }
+                        }
+                    return this;
+                    }
+
+                return null;
+                }
+
+            if (iPart < cParts)
+                {
+                // find the highest substitutable version; this is the difficult part of the
+                // algorithm, because if they ask for 1.2.beta (fGA==false, cParts==3) and there is
+                // a 1.2.beta1 and a 1.3, it needs to take the 1.3; in a sense, it's like the
+                // request was actually for 1.2, with the additional information being "but we'll
+                // accept a beta or later of 1.2 itself"
+
+                // go through the kids from newest to oldest, looking for a GA release (and keeping
+                // track of the newest non-GA release, just in case)
+                int  nPart     = parts[iPart];
+                Node nodeNonGA = null;
+                if (kids != null)
+                    {
+                    for (int i = kids.length - 1; i >= 0; --i)
+                        {
+                        Node kid = kids[i];
+                        if (kid != null)
+                            {
+                            // make sure that the child meets the version requirement
+                            if (kid.part < nPart)
+                                {
+                                // we've looked too far; this child's version is too early to meet the
+                                // requirement, and all of the rest of the children will be even earlier
+                                break;
+                                }
+
+                            Node node = kid.part == nPart
+                                    ? kid.findHighestNode(parts, i+1)
+                                    : kid.findHighestNode();
+                            if (node != null)
+                                {
+                                if (node.getVersion().isGARelease())
+                                    {
+                                    return node;
+                                    }
+
+                                if (nodeNonGA == null || nodeNonGA.getVersion().getReleaseCategory()
+                                        < node.getVersion().getReleaseCategory())
+                                    {
+                                    nodeNonGA = node;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                // return this node, if it is present and substitutable for the requested version,
+                // if there is no child that matches, or this node is a GA release
+                return this.isPresent() && (nodeNonGA == null || this.getVersion().isGARelease())
+                    && this.getVersion().isSubstitutableFor(new Version(parts))
+                        ? this
+                        : nodeNonGA;
+                }
+
+            // otherwise, find the highest version available
+            return findHighestNode();
+            }
+
+        /**
+         * Find a node (from this point down in the tree) that represents the "latest version" by
+         * a non-strictly-ordered measure:
+         * <ul>
+         * <li>Versions parts are evaluated left to right;</li>
+         * <li>A higher version part number is assumed to be later;</li>
+         * <li>A GA version is preferred over a non-GA version, even if the non-GA version is
+         *     a provably later version.</li>
+         * </ul>
+         *
+         * @return the node that represents the highest version, using the rules defined by this
+         *         method, or null if no node is present from this point down in the tree
+         */
+        Node findHighestNode()
+            {
             // go through the kids from newest to oldest, looking for a GA release (and keeping
             // track of the newest non-GA release, just in case)
             Node nodeBestMatch = null;
@@ -550,15 +657,7 @@ public class VersionTree<V>
                     Node kid = kids[i];
                     if (kid != null)
                         {
-                        // make sure that the child meets the version requirement
-                        if (kid.part < nPart)
-                            {
-                            // we've looked too far; this child's version is too early to meet the
-                            // requirement, and all of the rest of the children will be even earlier
-                            break;
-                            }
-
-                        Node node = kid.findHighestNode(parts, i+1);
+                        Node node = kid.findHighestNode();
                         if (node != null)
                             {
                             if (node.getVersion().isGARelease())
@@ -660,7 +759,7 @@ public class VersionTree<V>
                 {
                 sb.append('\n')
                   .append(sIndentFirst)
-                  .append(part);
+                        .append(part);
 
                 if (isPresent())
                     {

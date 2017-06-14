@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 
 import java.util.Iterator;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -13,6 +14,55 @@ import org.junit.Test;
  */
 public class VersionTest
     {
+    @Test
+    public void testSubstitutables()
+        {
+        Assert.assertTrue (new Version("0"        ).isSubstitutableFor(new Version("beta"     )));
+        Assert.assertTrue (new Version("1"        ).isSubstitutableFor(new Version("beta"     )));
+        Assert.assertTrue (new Version("0"        ).isSubstitutableFor(new Version("0"        )));
+        Assert.assertTrue (new Version("1"        ).isSubstitutableFor(new Version("0"        )));
+        Assert.assertTrue (new Version("1"        ).isSubstitutableFor(new Version("1"        )));
+        Assert.assertTrue (new Version("1.2.3.4.5").isSubstitutableFor(new Version("1"        )));
+        Assert.assertTrue (new Version("2.1.rc"   ).isSubstitutableFor(new Version("2.1.beta3")));
+        Assert.assertTrue (new Version("2.1.rc2"  ).isSubstitutableFor(new Version("2.1.beta3")));
+        Assert.assertTrue (new Version("2.1"      ).isSubstitutableFor(new Version("2.1.beta" )));
+        Assert.assertTrue (new Version("2.1"      ).isSubstitutableFor(new Version("2.1.beta3")));
+        Assert.assertTrue (new Version("2.2"      ).isSubstitutableFor(new Version("2.1.beta3")));
+        Assert.assertTrue (new Version("2.1.beta3").isSubstitutableFor(new Version("2.1.beta" )));
+        Assert.assertTrue (new Version("2.1.beta3").isSubstitutableFor(new Version("2.1.beta3")));
+        Assert.assertTrue (new Version("1.2"      ).isSubstitutableFor(new Version("1.beta"   )));
+        Assert.assertTrue (new Version("1.2.alpha").isSubstitutableFor(new Version("1.beta"   )));
+        Assert.assertTrue (new Version("1.2.beta" ).isSubstitutableFor(new Version("1.beta"   )));
+        Assert.assertTrue (new Version("1.2.beta1").isSubstitutableFor(new Version("1.beta"   )));
+        Assert.assertTrue (new Version("1.2"      ).isSubstitutableFor(new Version("1.beta1"  )));
+        Assert.assertTrue (new Version("1.2.alpha").isSubstitutableFor(new Version("1.beta1"  )));
+        Assert.assertTrue (new Version("1.2.beta1").isSubstitutableFor(new Version("1.beta1"  )));
+        Assert.assertTrue (new Version("1.2.beta2").isSubstitutableFor(new Version("1.2.beta1")));
+        Assert.assertTrue (new Version("1.2.beta" ).isSubstitutableFor(new Version("1.2.alpha")));
+        Assert.assertTrue (new Version("beta"     ).isSubstitutableFor(new Version("alpha"    )));
+
+        Assert.assertFalse(new Version("beta").isSubstitutableFor(new Version("0")));
+        Assert.assertFalse(new Version("beta").isSubstitutableFor(new Version("1")));
+        Assert.assertFalse(new Version("0").isSubstitutableFor(new Version("1")));
+        Assert.assertFalse(new Version("1").isSubstitutableFor(new Version("1.2.3.4.5")));
+        Assert.assertFalse(new Version("2.1.beta3").isSubstitutableFor(new Version("2.1.rc")));
+        Assert.assertFalse(new Version("2.1.beta3").isSubstitutableFor(new Version("2.1.rc2")));
+        Assert.assertFalse(new Version("2.1.beta").isSubstitutableFor(new Version("2.1")));
+        Assert.assertFalse(new Version("2.1.beta3").isSubstitutableFor(new Version("2.1")));
+        Assert.assertFalse(new Version("2.1.beta3").isSubstitutableFor(new Version("2.2")));
+        Assert.assertFalse(new Version("2.1.beta").isSubstitutableFor(new Version("2.1.beta3")));
+        Assert.assertFalse(new Version("1.beta").isSubstitutableFor(new Version("1.2")));
+        Assert.assertFalse(new Version("1.beta").isSubstitutableFor(new Version("1.2.alpha")));
+        Assert.assertFalse(new Version("1.beta").isSubstitutableFor(new Version("1.2.beta")));
+        Assert.assertFalse(new Version("1.beta").isSubstitutableFor(new Version("1.2.beta1")));
+        Assert.assertFalse(new Version("1.beta1").isSubstitutableFor(new Version("1.2")));
+        Assert.assertFalse(new Version("1.beta1").isSubstitutableFor(new Version("1.2.alpha")));
+        Assert.assertFalse(new Version("1.beta1").isSubstitutableFor(new Version("1.2.beta1")));
+        Assert.assertFalse(new Version("1.2.beta1").isSubstitutableFor(new Version("1.2.beta2")));
+        Assert.assertFalse(new Version("1.2.alpha").isSubstitutableFor(new Version("1.2.beta")));
+        Assert.assertFalse(new Version("alpha").isSubstitutableFor(new Version("beta")));
+        }
+
     @Test
     public void testEmptyTree()
         {
@@ -209,19 +259,9 @@ public class VersionTest
         {
         VersionTree<String> tree = genTree();
         Assert.assertEquals(new Version("3.0"), tree.findHighestVersion());
+        Assert.assertEquals(new Version("3.0"), tree.findHighestVersion(new Version("3.0.0.0")));
         Assert.assertEquals(new Version("2.1"), tree.findHighestVersion(new Version("2.1.0")));
         Assert.assertEquals(new Version("2.2.0.1"), tree.findHighestVersion(new Version("2.1")));
-        }
-
-    @Test
-    public void testPreRels()
-        {
-        out(new Version("beta").toDebugString());
-        out(new Version("beta3").toDebugString());
-        out(new Version("2.beta").toDebugString());
-        out(new Version("2.beta3").toDebugString());
-        out(new Version("beta2").toDebugString());
-        out(new Version("2.1.beta3").toDebugString());
         }
 
 
