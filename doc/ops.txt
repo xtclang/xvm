@@ -207,7 +207,7 @@
 +RETURN_T   rvalue-tuple                                                    ; return (multiple return from a tuple)
 
 // Boolean checks
- IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
++IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
  IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
 +IS_NULL    rvalue, lvalue-return                   ; T == null -> Boolean
 +IS_NNULL   rvalue, lvalue-return                   ; T != null -> Boolean

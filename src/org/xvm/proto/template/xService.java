@@ -3,6 +3,7 @@ package org.xvm.proto.template;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
+import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
@@ -61,7 +62,7 @@ public class xService
         //    Void gc();
         //    Void shutdown();
         //    Void kill();
-        //    Void registerTimeout(Timeout? timeout);
+        // +  Void registerTimeout(Timeout? timeout);
         //    Void registerCriticalSection(CriticalSection? criticalSection);
         //    Void registerShuttingDownNotification(function Void notify());
         //    Void registerUnhandledExceptionNotification(function Void notify(Exception));
@@ -70,6 +71,7 @@ public class xService
 
         ensureMethodTemplate("yield", VOID, VOID).markNative();
         ensureMethodTemplate("invokeLater", new String[] {"x:Function"}, VOID).markNative();
+        ensureMethodTemplate("registerTimeout", INT, VOID).markNative();
         }
 
     @Override
@@ -97,6 +99,16 @@ public class xService
             case "invokeLater":
                 {
                 return hService.m_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE);
+                }
+
+            case "registerTimeout":
+                {
+                JavaLong hDelay = (JavaLong) hArg;
+                long lDelay = hDelay.getValue();
+
+                frame.f_fiber.m_ldtTimeout = lDelay <= 0 ? 0 : System.currentTimeMillis() + lDelay;
+
+                return Op.R_NEXT;
                 }
             }
 

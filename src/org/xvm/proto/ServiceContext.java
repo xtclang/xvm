@@ -9,9 +9,9 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.op.Return_0;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
-import org.xvm.proto.template.xFutureRef;
 import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xException;
+import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xService.PropertyOperation;
 import org.xvm.proto.template.xService.PropertyOperation10;
@@ -42,7 +42,7 @@ public class ServiceContext
     private final Queue<Response> f_queueResponse;
 
     private final int f_nId; // the service id
-    private final String f_sName; // the service name
+    public final String f_sName; // the service name
 
     protected ServiceHandle m_hService;
 
@@ -132,7 +132,10 @@ public class ServiceContext
             message = f_queueMsg.poll();
             }
 
-        if (m_frameCurrent != null)
+        // allow initial timeouts to be processed always, since they won't run any used code
+        // TODO: return ?f_queueSuspended.getInitialTimeout();
+
+        if (m_frameCurrent != null && m_frameCurrent.f_fiber.isReady())
             {
             // resume the paused frame (could be forbidden reentrancy)
             return m_frameCurrent;
@@ -207,6 +210,9 @@ public class ServiceContext
         int iPC = frame.m_iPC;
         int iPCLast = iPC;
 
+        m_frameCurrent = frame;
+        s_tloContext.set(this);
+
         if (fiber.isTimedOut())
             {
             frame.m_hException = xException.makeHandle("The service has timed-out");
@@ -232,8 +238,6 @@ public class ServiceContext
 
         fiber.setStatus(FiberStatus.Running);
         fiber.m_fResponded = false;
-        m_frameCurrent = frame;
-        s_tloContext.set(this);
 
         Op[] abOp = frame.f_aOp;
 
@@ -300,6 +304,7 @@ public class ServiceContext
                     if (frame == null)
                         {
                         // all done
+                        fiber.setStatus(FiberStatus.Terminated);
                         return null;
                         }
 
@@ -354,6 +359,7 @@ public class ServiceContext
                                     }
                                 }
 
+                            fiber.setStatus(FiberStatus.Terminated);
                             return m_frameCurrent = null;
                             }
                         frame = framePrev;
@@ -394,8 +400,6 @@ public class ServiceContext
     // create a "proto"-frame
     protected Frame createServiceEntryFrame(Fiber fiberCaller, int cReturns, Op[] aopNative)
         {
-        // TODO: collect the caller's frame proxy
-
         // create a pseudo frame that has variables to collect
         // the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
@@ -405,11 +409,7 @@ public class ServiceContext
 
         for (int iVar = 0; iVar < cReturns; iVar++)
             {
-            // create a "dynamic ref" for all return values
-            // (see DVar op-code)
-            FutureHandle hRef = xFutureRef.makeHandle(new CompletableFuture<>());
-
-            frame.introduceVar(iVar, hRef.f_clazz, null, Frame.VAR_DYNAMIC_REF, hRef);
+            frame.introduceVar(iVar, xObject.CLASS, null, Frame.VAR_STANDARD, null);
             }
         return frame;
         }
@@ -490,7 +490,7 @@ public class ServiceContext
 
     public Frame callUnhandledExceptionHandler(Frame frame)
         {
-        // TODO:
+        // TODO: call the handler
         Utils.log("Unhandled exception: " + frame.m_hException);
         return null;
         }
@@ -501,43 +501,8 @@ public class ServiceContext
     protected static void sendResponse1(Fiber fiberCaller,
                                         Frame frame, CompletableFuture future)
         {
-        ServiceContext contextCaller = fiberCaller.f_context;
-
-        if (frame.m_hException == null)
-            {
-            CompletableFuture<ObjectHandle> cf =
-                    ((FutureHandle) frame.f_ahVar[0]).m_future;
-
-            if (cf.isDone() && !cf.isCompletedExceptionally())
-                {
-                // common path
-                try
-                    {
-                    contextCaller.respond(new Response(fiberCaller, cf.get(), null, future));
-                    }
-                catch (Exception e) {}
-                }
-            else // has not finished yet, or completed exceptionally
-                {
-                cf.whenComplete((hR, x) ->
-                    {
-                    if (x == null)
-                        {
-                        contextCaller.respond(new Response(fiberCaller, hR, null, future));
-                        }
-                    else
-                        {
-                        ExceptionHandle hX = ((ExceptionHandle.WrapperException) x).
-                                getExceptionHandle();
-                        contextCaller.respond(new Response(fiberCaller, null, hX, future));
-                        }
-                    });
-                }
-            }
-        else
-            {
-            contextCaller.respond(new Response(fiberCaller, null, frame.m_hException, future));
-            }
+        fiberCaller.f_context.respond(
+                new Response(fiberCaller, frame.f_ahVar[0], frame.m_hException, future));
         }
 
     @Override

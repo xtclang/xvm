@@ -52,10 +52,9 @@ public class DaemonPool
 
         while (!isStarted())
             {
-            // TODO: timeout
             try
                 {
-                wait(100);
+                wait(1000);
                 }
             catch (InterruptedException e)
                 {
@@ -122,7 +121,7 @@ public class DaemonPool
                             }
                         catch (Throwable e)
                             {
-                            // TODO:
+                            // TODO: RTError
                             Utils.log("\nUnhandled exception: " + e);
                             e.printStackTrace(System.out);
                             System.exit(-1);

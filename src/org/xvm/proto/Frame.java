@@ -319,6 +319,42 @@ public class Frame
 
             switch (info.m_nStyle)
                 {
+                case VAR_STANDARD:
+                    if (hValue instanceof FutureHandle)
+                        {
+                        if (info.f_clazz == hValue.f_clazz)
+                            {
+                            // TODO: allow hValue to be a subclass?
+                            // this can only be a trivial assignment, for example:
+                            // @future Int i1;
+                            // @future Int i2 = i1;
+                            break;
+                            }
+
+                        FutureHandle hFuture = (FutureHandle) hValue;
+                        if (hFuture.isDone())
+                            {
+                            try
+                                {
+                                hValue = hFuture.get();
+                                }
+                            catch (ExceptionHandle.WrapperException e)
+                                {
+                                m_hException = e.getExceptionHandle();
+                                return Op.R_EXCEPTION;
+                                }
+                            }
+                        else
+                            {
+                            // mark the register as "waiting for a result",
+                            // blocking the next op-code from being executed
+                            f_ahVar[nVar] = hFuture;
+                            info.m_nStyle = VAR_WAITING;
+                            return Op.R_BLOCK;
+                            }
+                        }
+                    break;
+
                 case VAR_DYNAMIC_REF:
                     ExceptionHandle hException = ((RefHandle) f_ahVar[nVar]).set(hValue);
                     if (hException != null)
@@ -328,35 +364,8 @@ public class Frame
                         }
                     return Op.R_NEXT;
 
-                case VAR_STANDARD:
-                    if (hValue instanceof FutureHandle)
-                        {
-                        FutureHandle hFuture = (FutureHandle) hValue;
-                        if (hFuture.f_fSynthetic)
-                            {
-                            if (hFuture.m_future.isDone())
-                                {
-                                try
-                                    {
-                                    hValue = hFuture.get();
-                                    }
-                                catch (ExceptionHandle.WrapperException e)
-                                    {
-                                    m_hException = e.getExceptionHandle();
-                                    return Op.R_EXCEPTION;
-                                    }
-                                }
-                            else
-                                {
-                                // mark the register as "waiting for a result",
-                                // blocking the next op-code from being executed
-                                f_ahVar[nVar] = hFuture;
-                                info.m_nStyle = VAR_WAITING;
-                                return Op.R_BLOCK;
-                                }
-                            }
-                        }
-                    break;
+                default:
+                    throw new IllegalStateException();
                 }
 
             f_ahVar[nVar] = hValue;
@@ -444,7 +453,7 @@ public class Frame
             if (info != null && info.m_nStyle == VAR_WAITING)
                 {
                 FutureHandle hFuture = (FutureHandle) f_ahVar[i];
-                if (hFuture.m_future.isDone())
+                if (hFuture.isDone())
                     {
                     try
                         {
@@ -632,7 +641,14 @@ public class Frame
         {
         StringBuilder sb = new StringBuilder();
         Frame frame = this;
+        Fiber fiber = frame.f_fiber;
         int iPC = m_iPC;
+
+        if (f_fiber.getStatus() != Fiber.FiberStatus.Running)
+            {
+            // the exception was caused by the previous op-code
+            iPC--;
+            }
 
         while (true)
             {
@@ -649,7 +665,19 @@ public class Frame
             frame = frame.f_framePrev;
             if (frame == null)
                 {
-                break;
+                fiber = fiber.f_fiberPrev;
+                if (fiber == null)
+                    {
+                    break;
+                    }
+                frame = fiber.m_frame;
+                if (frame == null)
+                    {
+                    break;
+                    }
+                // TODO: not quite right; the caller fiber could have moved asynchronously
+                // we'd need to have a snapshot during the call itself
+                sb.append("\n    =========");
                 }
             iPC = frame.m_iPC - 1;
             }
@@ -663,9 +691,8 @@ public class Frame
     public String toString()
         {
         InvocationTemplate fn = f_function;
-        int iPC = m_iPC;
 
-        return "Frame: " + (fn == null ? "<none>" :
+        return "Frame: " + (fn == null ? '<' + f_context.f_sName + '>' :
                 fn.getClazzTemplate().f_sName + '.' + f_function.f_sName);
         }
 

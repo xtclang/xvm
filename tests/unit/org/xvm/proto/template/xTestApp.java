@@ -91,7 +91,7 @@ public class xTestApp extends xModule
 
             new GuardStart(adapter.getClassTypeConstId("x:Exception"),
                            adapter.ensureValueConstantId("e"), +3),
-            new Invoke_10(0, adapter.getMethodConstId("x:TestClass", "throwing"),
+            new Invoke_10(0, adapter.getMethodConstId("x:TestClass", "exceptional"),
                              -adapter.ensureValueConstantId("handled")),
             new GuardEnd(+4),
             new HandlerStart(), // #3 (e)
@@ -185,7 +185,8 @@ public class xTestApp extends xModule
 
             new GuardStart(adapter.getClassTypeConstId("x:Exception"),
                     adapter.ensureValueConstantId("e"), +3),
-            new Invoke_01(0, adapter.getMethodConstId("x:TestService", "throwing"), 1),
+            new Invoke_11(0, adapter.getMethodConstId("x:TestService", "exceptional"),
+                             -adapter.ensureValueConstantId(0), 1),
             new GuardEnd(+4),
             new HandlerStart(), // #8 (e)
             new X_Print(8),
@@ -210,7 +211,8 @@ public class xTestApp extends xModule
 
             new Invoke_00(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "yield")),
 
-            new Invoke_00(0, adapter.getMethodConstId("x:TestService", "throwing")),
+            new Invoke_10(0, adapter.getMethodConstId("x:TestService", "exceptional"),
+                            -adapter.ensureValueConstantId(0)),
             new Return_0(),
             };
         ftTestService.m_cVars = 9;
@@ -259,6 +261,19 @@ public class xTestApp extends xModule
             new HandlerStart(), // #4 (e)
             new X_Print(4),
             new HandlerEnd(1),
+
+            new Invoke_10(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "registerTimeout"),
+                    -adapter.ensureValueConstantId(500)),
+            new GuardStart(adapter.getClassTypeConstId("x:Exception"),
+                    adapter.ensureValueConstantId("e"), +3),
+            new Invoke_11(0, adapter.getMethodConstId("x:TestService", "exceptional"),
+                    -adapter.ensureValueConstantId(1000), 2),
+            new GuardEnd(+4),
+            new HandlerStart(), // #4 (e)
+            new X_Print(4),
+            new HandlerEnd(1),
+            new Invoke_10(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "registerTimeout"),
+                    -adapter.ensureValueConstantId(0)),
 
             new Return_0(),
             };

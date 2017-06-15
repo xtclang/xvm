@@ -10,8 +10,12 @@ public class Fiber
     final ServiceContext f_context;
 
     final Fiber f_fiberPrev; // a caller's fiber (null for original)
+
     // the fiber status can only be mutated by the fiber itself
     private FiberStatus m_status;
+
+    // if the fiber is not running, the frame it was suspended at
+    public Frame m_frame;
 
     // this flag serves a hint that the execution could be resumed;
     // it's set by the responding fiber and cleared reset when the execution resumes
@@ -37,6 +41,7 @@ public class Fiber
         Paused,  // the execution was paused by the scheduler
         Yielded, // the execution was explicitly yielded by the user code
         Waiting, // execution is blocked until the "waiting" futures are completed
+        Terminated,
         }
 
     public Fiber(ServiceContext context, Fiber fiberPrev)
@@ -60,9 +65,8 @@ public class Fiber
                 }
             else
                 {
-                // create a new timeout constraint
-                // TODO: the value below should be passed along the inter-service invocation request
-                long cTimeoutMillis = fiberPrev.f_context.m_cTimeoutMillis;
+                // TODO: what is the API to the context's (rather than fiber's) timeout?
+                long cTimeoutMillis = context.m_cTimeoutMillis;
                 if (cTimeoutMillis > 0)
                     {
                     m_ldtTimeout = System.currentTimeMillis() + cTimeoutMillis;
@@ -101,23 +105,26 @@ public class Fiber
 
             case Running:
                 m_nanoStarted = System.nanoTime();
+                m_frame = null;
                 break;
 
-            case Paused:
             case Waiting:
+            case Paused:
             case Yielded:
+            case Terminated:
                 long cNanos = System.nanoTime() - m_nanoStarted;
                 m_nanoStarted = 0;
                 f_context.m_cRuntimeNanos += cNanos;
+                m_frame = f_context.getCurrentFrame();
                 break;
             }
         }
 
-    // only applies to the fiber in waiting status
+    // the only thing that is not ready for execution is a
+    // waiting, not responded and not timed-out fiber
     public boolean isReady()
         {
-        assert m_status == FiberStatus.Waiting;
-        return m_fResponded || isTimedOut();
+        return m_status != FiberStatus.Waiting || m_fResponded || isTimedOut();
         }
 
     public boolean isTimedOut()

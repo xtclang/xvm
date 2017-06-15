@@ -81,15 +81,32 @@ public class xTestService extends xService
             };
         mtIncrement.m_cVars = 3;
 
-        MethodTemplate mtThrowing = ensureMethodTemplate("throwing", VOID, INT);
-        mtThrowing.m_aop = new Op[]
-            {
-            new Var(this.adapter.getClassTypeConstId("x:Exception")), // #1
+        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", INT, INT);
+        mtExceptional.m_aop = new Op[]
+            { // #1 - cDelay
+            new Enter(),
+            new Var(adapter.getClassTypeConstId("x:Boolean")), // 2
+            new IsZero(1, 2),
+            new JumpFalse(2, 4), // Exit
+
+            new Var(this.adapter.getClassTypeConstId("x:Exception")), // #3
             new New_N(this.adapter.getMethodConstId("x:Exception", "construct"),
                     new int[]{-adapter.ensureValueConstantId("test"),
-                            -adapter.getClassTypeConstId("x:Nullable$Null")}, 1),
-            new Throw(1),
+                            -adapter.getClassTypeConstId("x:Nullable$Null")}, 3),
+            new Throw(3),
+            new Exit(),     // should be optimized out (after throw)
+
+            new Enter(),
+
+            new DNVar(adapter.getClassTypeConstId("x:FutureRef<x:Int64>"),
+                    adapter.ensureValueConstantId("iRet")), // 2
+            // new Var("x:Clock"), // 3
+            // new LGet("runtimeClock", 3),
+            // new Invoke_20("x:Clock", "scheduleAlarm", "lambda$3")
+            new Return_1(2),
+            new Exit(),     // should be optimized out (after return)
             };
-        mtThrowing.m_cVars = 2;
+        mtExceptional.m_cVars = 4;
+        mtExceptional.m_cScopes = 2;
         }
     }
