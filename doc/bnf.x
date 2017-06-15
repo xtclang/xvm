@@ -153,7 +153,7 @@ VersionRequirement
     
 VersionOverrides
     VersionOverride
-    VersionOverrides VersionOverride
+    VersionOverrides "," VersionOverride
     
 VersionOverride
     VersionOverrideVerb Versions

@@ -2,8 +2,8 @@ package org.xvm.compiler;
 
 
 import org.xvm.asm.FileStructure;
-
 import org.xvm.asm.ModuleRepository;
+
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 

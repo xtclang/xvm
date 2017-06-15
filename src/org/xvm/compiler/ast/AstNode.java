@@ -1,15 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.Component;
-import org.xvm.asm.Constants.Access;
-
-import org.xvm.asm.ModuleRepository;
-import org.xvm.compiler.ErrorListener;
-import org.xvm.compiler.Source;
-
-import org.xvm.util.ListMap;
-
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -23,6 +14,15 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
+import org.xvm.asm.Component;
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ModuleRepository;
+
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Source;
+
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;

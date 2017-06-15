@@ -1,18 +1,19 @@
 package org.xvm.compiler;
 
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+
 import org.xvm.asm.Version;
+
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.*;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isHexit;
@@ -3799,7 +3800,7 @@ s     *
      *
      * VersionOverrides
      *     VersionOverride
-     *     VersionOverrides VersionOverride
+     *     VersionOverrides "," VersionOverride
      *
      * VersionOverride
      *     VersionOverrideVerb Versions

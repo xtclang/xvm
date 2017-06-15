@@ -51,20 +51,44 @@ public class PackageStructure
         return (PackageConstant) getIdentityConstant();
         }
 
-    public ModuleStructure getImportedModule()
+    /**
+     * Determine if this package exists to import a module.
+     *
+     * @return true iff this package is a module import
+     */
+    public boolean isModuleImport()
         {
-        return m_module;
+        return m_constModule != null;
         }
 
     /**
+     * Obtain the module that this package imports.
+     *
+     * @return the associated module, or null if this package is not a module import
+     */
+    public ModuleStructure getImportedModule()
+        {
+        return isModuleImport()
+                ? (ModuleStructure) getFileStructure().getChild(m_constModule)
+                : null;
+        }
+
+    /**
+     * Specify the module that this package imports.
+     * <p/>
+     * This method must only be called once.
      *
      * @param module
      */
     public void setImportedModule(ModuleStructure module)
         {
-        assert m_module == null;
+        assert module != null;
+        assert module.getFileStructure() == getFileStructure();
+        assert !module.isMainModule();
+        assert m_constModule == null;
+        assert getChildByNameMap().isEmpty();
 
-        m_module = module;
+        m_constModule = module.getModuleConstant();
         markModified();
         }
 
@@ -74,7 +98,19 @@ public class PackageStructure
     @Override
     public boolean isPackageContainer()
         {
-        return true;
+        return !isModuleImport();
+        }
+
+    @Override
+    public boolean isClassContainer()
+        {
+        return !isModuleImport();
+        }
+
+    @Override
+    public boolean isMethodContainer()
+        {
+        return !isModuleImport();
         }
 
 
@@ -86,7 +122,7 @@ public class PackageStructure
         {
         super.disassemble(in);
 
-        // TODO m_module = (ModuleConstant) getConstantPool().getConstant(readIndex(in));
+        m_constModule = (ModuleConstant) getConstantPool().getConstant(readIndex(in));
         }
 
     @Override
@@ -94,7 +130,7 @@ public class PackageStructure
         {
         super.registerConstants(pool);
 
-        // TODO review m_module = (ModuleConstant) pool.register(m_module);
+        m_constModule = (ModuleConstant) pool.register(m_constModule);
         }
 
     @Override
@@ -103,7 +139,7 @@ public class PackageStructure
         {
         super.assemble(out);
 
-        writePackedLong(out, m_module == null ? -1 : m_module.getModuleConstant().getPosition());
+        writePackedLong(out, Constant.indexOf(m_constModule));
         }
 
     @Override
@@ -112,7 +148,7 @@ public class PackageStructure
         StringBuilder sb = new StringBuilder();
         sb.append(super.getDescription())
           .append(", import-module=")
-          .append(m_module == null ? "n/a" : m_module);
+          .append(m_constModule == null ? "n/a" : m_constModule);
         return sb.toString();
         }
 
@@ -134,7 +170,7 @@ public class PackageStructure
 
         // compare imported modules
         PackageStructure that = (PackageStructure) obj;
-        return Handy.equals(this.m_module, that.m_module);
+        return Handy.equals(this.m_constModule, that.m_constModule);
         }
 
 
@@ -144,5 +180,5 @@ public class PackageStructure
      * If this package is a placeholder in the namespace for an imported module, this is the module
      * that the package imports.
      */
-    private ModuleStructure m_module;
+    private ModuleConstant m_constModule;
     }

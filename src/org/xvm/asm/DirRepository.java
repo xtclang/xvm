@@ -234,7 +234,7 @@ public class DirRepository
             else
                 {
                 this.name     = module.getModuleConstant().getName();
-                this.versions = module.getVersions();
+                this.versions = module.getFileStructure().getVersions();
                 this.err      = false;
                 }
             }

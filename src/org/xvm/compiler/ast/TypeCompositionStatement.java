@@ -1,17 +1,22 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
-
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorListener;
@@ -19,11 +24,6 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
-
-import java.lang.reflect.Field;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.xvm.compiler.Lexer.CR;
 import static org.xvm.compiler.Lexer.LF;
@@ -737,6 +737,7 @@ public class TypeCompositionStatement
                                 if (moduleImport == null)
                                     {
                                     // create the fingerprint
+                                    // TODO - if the module already was created (by another module-import), merge the versions
                                     ((PackageStructure) component).setImportedModule(
                                             component.getFileStructure().ensureModule(sModule));
                                     }

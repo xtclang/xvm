@@ -72,7 +72,7 @@ public interface ModuleRepository
     default public Set<Version> getAvailableVersions(String sModule)
         {
         ModuleStructure module = loadModule(sModule);
-        return module == null ? null : module.getVersions();
+        return module == null ? null : module.getFileStructure().getVersions();
         }
 
     /**
@@ -103,14 +103,14 @@ public interface ModuleRepository
             }
 
         Version useVersion = null;
-        if (module.containsVersion(version))
+        if (module.getFileStructure().containsVersion(version))
             {
             useVersion = version;
             }
         else
             {
             // check each version in the module to see if it would work; keep the most appropriate one
-            for (Version possibleVer : module.getVersions())
+            for (Version possibleVer : module.getFileStructure().getVersions())
                 {
                 if (possibleVer.isSubstitutableFor(version))
                     {
@@ -138,9 +138,9 @@ public interface ModuleRepository
                 }
             }
 
-        if (module.getVersions().size() > 1)
+        if (module.getFileStructure().getVersions().size() > 1)
             {
-            module.purgeAllExceptVersion(useVersion);
+            module.getFileStructure().purgeAllExceptVersion(useVersion);
             }
 
         return module;
