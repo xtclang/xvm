@@ -27,7 +27,7 @@
 
 + Tuple construction - new TVAR, SVAR op-codes
 
-- Service reentrancy, timeouts and Fibers
++ Service reentrancy, timeouts and Fibers
 
 - try-finally
 

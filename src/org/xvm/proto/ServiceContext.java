@@ -115,33 +115,36 @@ public class ServiceContext
         {
         // responses have the highest priority and no user code runs there;
         // process all we've got so far
-        for (Response response = f_queueResponse.poll(); response != null;
-                      response = f_queueResponse.poll())
+        Queue<Response> qResponse = f_queueResponse;
+        Response response;
+        while ((response = qResponse.poll()) != null)
             {
             response.run();
             }
 
         // pickup all the messages, but keep them in the "initial" state
-        Message message = f_queueMsg.poll();
-        while (message != null)
+        Queue<Message> qMsg = f_queueMsg;
+        Message message;
+        while ((message = qMsg.poll()) != null)
             {
             s_tloContext.set(this);
             Frame frame = message.createFrame(this);
 
             suspendFiber(frame);
-            message = f_queueMsg.poll();
             }
 
         // allow initial timeouts to be processed always, since they won't run any used code
         // TODO: return ?f_queueSuspended.getInitialTimeout();
 
-        if (m_frameCurrent != null && m_frameCurrent.f_fiber.isReady())
+        Frame frameCurrent = m_frameCurrent;
+        if (frameCurrent != null)
             {
             // resume the paused frame (could be forbidden reentrancy)
-            return m_frameCurrent;
+            return frameCurrent.f_fiber.isReady() ? frameCurrent : null;
             }
 
-        if (f_queueSuspended.isEmpty())
+        FiberQueue qSuspended = f_queueSuspended;
+        if (qSuspended.isEmpty())
             {
             // nothing to do
             return null;
@@ -155,11 +158,11 @@ public class ServiceContext
 
             case Exclusive:
                 // don't allow a new fiber unless it belongs to already existing thread of execution
-                return f_queueSuspended.getAssociatedOrYielded();
+                return qSuspended.getAssociatedOrYielded();
 
             case Prioritized:
                 // give priority to already existing thread of execution
-                Frame frameNext = f_queueSuspended.getAssociatedOrYielded();
+                Frame frameNext = qSuspended.getAssociatedOrYielded();
                 if (frameNext != null)
                     {
                     return frameNext;
@@ -167,7 +170,7 @@ public class ServiceContext
                 // fall through
 
             case Open:
-                return f_queueSuspended.getAnyReady();
+                return qSuspended.getAnyReady();
             }
         }
 

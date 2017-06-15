@@ -145,7 +145,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, property, this::invokePreInc);
 
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
 
     @Override
@@ -161,7 +161,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, property, this::invokePostInc);
 
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
 
     @Override
@@ -177,7 +177,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, property, this::getPropertyValue);
 
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
 
     @Override
@@ -233,7 +233,7 @@ public class xService
 
         CompletableFuture cfService = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
 
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
+        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfService));
         }
 
     // ----- Service API -----

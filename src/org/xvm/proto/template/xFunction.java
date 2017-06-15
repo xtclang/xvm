@@ -354,7 +354,7 @@ public class xFunction
                     frame, this, ahVar, cReturns);
 
             return cReturns == 0 ? Op.R_NEXT :
-                frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+                frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
             }
 
         @Override
@@ -385,7 +385,7 @@ public class xFunction
                     CompletableFuture<ObjectHandle> cfReturn =
                             cfResult.thenApply(ahResult -> ahResult[iRet]);
 
-                    int nR = frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
+                    int nR = frame.assignValue(aiReturn[i], xFutureRef.makeHandle(cfReturn));
                     if (nR == Op.R_EXCEPTION)
                         {
                         return Op.R_EXCEPTION;
