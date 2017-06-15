@@ -183,6 +183,36 @@ public abstract class ConditionalConstant
         }
 
     /**
+     * Add the specified version to this conditional.
+     *
+     * @param ver  the version to add
+     *
+     * @return a new conditional
+     */
+    public ConditionalConstant addVersion(Version ver)
+        {
+        if (versions().contains(ver))
+            {
+            return this;
+            }
+
+        ConstantPool pool = getConstantPool();
+        return new AllCondition(pool, this, pool.ensureVersionedCondition(ver));
+        }
+
+    /**
+     * Remove the specified version from this conditional.
+     *
+     * @param ver  the version to remove
+     *
+     * @return a new conditional
+     */
+    public ConditionalConstant removeVersion(Version ver)
+        {
+        return this;
+        }
+
+    /**
      * Obtain a ConditionalConstant that represents the union of {@code this} and {@code that}
      * condition.
      * 

@@ -315,6 +315,19 @@ public class ConstantPool
         }
 
     /**
+     * Given a version , obtain a VersionedCondition that represents a test for that version
+     * of this module.
+     *
+     * @param ver  the version of this module to test for
+     *
+     * @return a VersionedCondition
+     */
+    public VersionedCondition ensureVersionedCondition(Version ver)
+        {
+        return ensureVersionedCondition(ensureVersionConstant(ver));
+        }
+
+    /**
      * Given a version constant, obtain a VersionedCondition that represents a test for that version
      * of this module.
      *

@@ -79,10 +79,10 @@ public class FileRepository
         }
 
     @Override
-    public Set<Version> getAvailableVersions(String sModule)
+    public VersionTree<Boolean> getAvailableVersions(String sModule)
         {
         checkCache();
-        return !err && name.equals(sModule) ? Collections.unmodifiableSet(versions) : null;
+        return !err && name.equals(sModule) ? versions : null;
         }
 
     @Override
@@ -123,7 +123,7 @@ public class FileRepository
             }
 
         this.name      = module.getModuleConstant().getName();
-        this.versions  = module.getFileStructure().getVersions();
+        this.versions  = module.getFileStructure().getVersionTree();
         this.timestamp = file.lastModified();
         this.size      = file.length();
         this.module    = module;
@@ -187,7 +187,7 @@ public class FileRepository
         else
             {
             this.name     = module.getModuleConstant().getName();
-            this.versions = module.getFileStructure().getVersions();
+            this.versions = module.getFileStructure().getVersionTree();
             }
 
         this.module   = null;
@@ -262,14 +262,14 @@ public class FileRepository
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final File          file;
-    private final boolean       fRO;
+    private final File           file;
+    private final boolean        fRO;
 
-    private String              name;
-    private SortedSet<Version>  versions;
-    private long                timestamp;
-    private long                size;
-    private ModuleStructure     module;
-    private long                lastScan;
-    private boolean             err;
+    private String               name;
+    private VersionTree<Boolean> versions;
+    private long                 timestamp;
+    private long                 size;
+    private ModuleStructure      module;
+    private long                 lastScan;
+    private boolean              err;
     }

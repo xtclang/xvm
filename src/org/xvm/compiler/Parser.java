@@ -547,7 +547,7 @@ public class Parser
                                     && !stmts.isEmpty())
                                 {
                                 log(Severity.ERROR, MODULE_NOT_ROOT, start.getStartPosition(),
-                                        start.getEndPosition(), null);
+                                        start.getEndPosition());
                                 }
                             }
                         else

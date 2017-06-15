@@ -11,12 +11,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -371,6 +373,15 @@ public abstract class Component
         }
 
     /**
+     * @return assuming that this is one of any number of siblings, obtain a reference to the next
+     *         sibling, which may be null to indicate no more siblings
+     */
+    protected Component getNextSibling()
+        {
+        return m_sibling;
+        }
+
+    /**
      * Iterate all of the siblings of this component, including this component.
      *
      * @return an Iterator of sibling components, including this component
@@ -513,6 +524,51 @@ public abstract class Component
                 {
                 throw new IllegalStateException("IOException occurred in " + getIdentityConstant()
                         + " during deferred read of child components", e);
+                }
+            }
+        }
+
+    /**
+     * Visitor pattern for children of this component, optionally including all siblings, and
+     * optionally recursively through the remainder of the component hierarchy.
+     *
+     * @param visitor     the consumer to use as the visitor, passing each child component
+     * @param fSiblings   true to visit all siblings; false to visit only the eldest sibling
+     * @param fRecursive  true to recursively visit the children of the children, and so on
+     */
+    protected void visitChildren(Consumer<Component> visitor, boolean fSiblings, boolean fRecursive)
+        {
+        for (Component component : getChildByNameMap().values())
+            {
+            Component componentEldest = component;
+
+            do
+                {
+                visitor.accept(component);
+                component = component.getNextSibling();
+                }
+            while (fSiblings && component != null);
+
+            if (fRecursive)
+                {
+                componentEldest.visitChildren(visitor, fSiblings, fRecursive);
+                }
+            }
+
+        for (Component component : getMethodByConstantMap().values())
+            {
+            Component componentEldest = component;
+
+            do
+                {
+                visitor.accept(component);
+                component = component.getNextSibling();
+                }
+            while (fSiblings && component != null);
+
+            if (fRecursive)
+                {
+                componentEldest.visitChildren(visitor, fSiblings, fRecursive);
                 }
             }
         }
@@ -760,6 +816,38 @@ public abstract class Component
         addChild(struct);
 
         return struct;
+        }
+
+    /**
+     * Add the specified version as a condition on this component.
+     *
+     * @param ver  the version
+     */
+    protected void addVersion(Version ver)
+        {
+        ConditionalConstant cond = getCondition();
+        if (cond == null)
+            {
+            setCondition(getConstantPool().ensureVersionedCondition(ver));
+            }
+        else
+            {
+            setCondition(cond.addVersion(ver));
+            }
+        }
+
+    /**
+     * Remove the specified version as a condition from this component.
+     *
+     * @param ver  the version
+     */
+    protected void removeVersion(Version ver)
+        {
+        ConditionalConstant cond = getCondition();
+        if (cond != null)
+            {
+            setCondition(cond.removeVersion(ver));
+            }
         }
 
     /**
@@ -1399,6 +1487,7 @@ public abstract class Component
     protected void setCondition(ConditionalConstant condition)
         {
         m_cond = condition;
+        markModified();
         }
 
     /**

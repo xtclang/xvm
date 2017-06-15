@@ -50,6 +50,11 @@ public class AnyCondition
         super(pool, mergeOrs(aconstCond));
         }
 
+    private AnyCondition(ConditionalConstant[] acond)
+        {
+        super(acond[0].getConstantPool(), acond);
+        }
+
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
@@ -93,11 +98,76 @@ public class AnyCondition
                     {
                     setVers = new TreeSet<>();
                     }
-                setVers.add(((VersionedCondition) cond).getVersionConstant().getVersion());
+                setVers.add(((VersionedCondition) cond).getVersion());
                 }
             }
 
         return setVers == null ? Collections.EMPTY_SET : setVers;
+        }
+
+    @Override
+    public ConditionalConstant addVersion(Version ver)
+        {
+        if (versions().contains(ver))
+            {
+            return this;
+            }
+
+        if (isOnlyVersions())
+            {
+            ConditionalConstant[] acondOld = m_aconstCond;
+            int                   cConds   = acondOld.length;
+            ConditionalConstant[] acondNew = new ConditionalConstant[cConds+1];
+            System.arraycopy(acondOld, 0, acondNew, 0, cConds);
+            acondNew[cConds] = getConstantPool().ensureVersionedCondition(ver);
+            return new AnyCondition(acondNew);
+            }
+
+        return super.addVersion(ver);
+        }
+
+    @Override
+    public ConditionalConstant removeVersion(Version ver)
+        {
+        if (!versions().contains(ver))
+            {
+            return this;
+            }
+
+        if (!isOnlyVersions())
+            {
+            throw new IllegalStateException("version not allowed inside an arbitrary OR");
+            }
+
+        ConditionalConstant[] acondOld = m_aconstCond;
+        int                   cConds   = acondOld.length;
+        switch (cConds)
+            {
+            case 0:
+            case 1:
+                throw new IllegalStateException("unexpectedly small AnyCondition: " + cConds);
+
+            case 2:
+                return ver.equals(((VersionedCondition) acondOld[0]).getVersion())
+                        ? acondOld[1]
+                        : acondOld[0];
+
+            default:
+                {
+                ConditionalConstant[] acondNew = new ConditionalConstant[cConds - 1];
+                int                   cNew     = 0;
+                for (int iOld = 0; iOld < cConds; ++iOld)
+                    {
+                    VersionedCondition cond = (VersionedCondition) acondOld[iOld];
+                    if (!ver.equals(cond.getVersion()))
+                        {
+                        acondNew[cNew++] = cond;
+                        }
+                    }
+                assert cNew == acondNew.length;
+                return new AnyCondition(acondNew);
+                }
+            }
         }
 
     /**

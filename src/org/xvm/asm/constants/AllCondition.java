@@ -50,6 +50,10 @@ public class AllCondition
         super(pool, mergeAnds(aconstCond));
         }
 
+    private AllCondition(ConditionalConstant[] acond)
+        {
+        super(acond[0].getConstantPool(), acond);
+        }
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
@@ -102,6 +106,88 @@ public class AllCondition
             }
 
         return setVers == null ? Collections.EMPTY_SET : setVers;
+        }
+
+    @Override
+    public ConditionalConstant addVersion(Version ver)
+        {
+        if (versions().contains(ver))
+            {
+            return this;
+            }
+
+        // by convention, the version is placed at the end of the list
+        ConditionalConstant[] acondOld = m_aconstCond;
+        int                   cConds   = acondOld.length;
+        ConditionalConstant   condLast = acondOld[cConds-1];
+        if (condLast instanceof AnyCondition)
+            {
+            AnyCondition condAny = (AnyCondition) condLast;
+            if (condAny.isOnlyVersions())
+                {
+                ConditionalConstant[] acondNew = acondOld.clone();
+                acondNew[cConds-1] = condAny.addVersion(ver);
+                return new AllCondition(acondNew);
+                }
+            }
+        else if (condLast instanceof VersionedCondition)
+            {
+            ConstantPool          pool     = getConstantPool();
+            ConditionalConstant[] acondNew = acondOld.clone();
+            acondNew[cConds-1] = new AnyCondition(pool, condLast, pool.ensureVersionedCondition(ver));
+            return new AllCondition(acondNew);
+            }
+
+        // this is the first version being added
+        assert versions().isEmpty();
+        ConditionalConstant[] acondNew = new ConditionalConstant[cConds+1];
+        System.arraycopy(acondOld, 0, acondNew, 0, cConds);
+        acondNew[cConds] = getConstantPool().ensureVersionedCondition(ver);
+        return new AllCondition(acondNew);
+        }
+
+    @Override
+    public ConditionalConstant removeVersion(Version ver)
+        {
+        if (!versions().contains(ver))
+            {
+            return this;
+            }
+
+        // by convention, the version is placed at the end of the list
+        ConditionalConstant[] acondOld = m_aconstCond;
+        int                   cConds   = acondOld.length;
+        ConditionalConstant   condLast = acondOld[cConds-1];
+        if (condLast instanceof AnyCondition)
+            {
+            assert condLast.versions().contains(ver);
+            ConditionalConstant[] acondNew = acondOld.clone();
+            acondNew[cConds-1] = condLast.removeVersion(ver);
+            return new AllCondition(acondNew);
+            }
+        else if (condLast instanceof VersionedCondition)
+            {
+            assert ver.equals(((VersionedCondition) condLast).getVersion());
+            switch (cConds)
+                {
+                case 0:
+                case 1:
+                    throw new IllegalStateException("unexpectedly small AllCondition: " + cConds);
+
+                case 2:
+                    return acondOld[0];
+
+                default:
+                    ConstantPool          pool     = getConstantPool();
+                    ConditionalConstant[] acondNew = new ConditionalConstant[cConds-1];
+                    System.arraycopy(acondOld, 0, acondNew, 0, cConds-1);
+                    return new AllCondition(acondNew);
+                }
+            }
+        else
+            {
+            throw new IllegalStateException("version not found at end of conditions");
+            }
         }
 
     @Override
@@ -230,7 +316,7 @@ public class AllCondition
                     // three cases: this version is impossible, in which case it should be ALWAYS_F;
                     // this version is the only version, in which case it should be AND; or this
                     // version is one of several versions, in which case it should be CONTRIB
-                    Version   ver       = cond.getVersionConstant().getVersion();
+                    Version   ver       = cond.getVersion();
                     Influence influence = Influence.ALWAYS_F;
                     if (setVers.contains(ver))
                         {

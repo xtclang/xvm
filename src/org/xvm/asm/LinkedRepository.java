@@ -77,12 +77,15 @@ public class LinkedRepository
         }
 
     @Override
-    public Set<Version> getAvailableVersions(String sModule)
+    public VersionTree<Boolean> getAvailableVersions(String sModule)
         {
-        TreeSet<Version> vers = new TreeSet<>();
+        VersionTree<Boolean> vers = new VersionTree<>();
         for (ModuleRepository repo : repos)
             {
-            vers.addAll(repo.getAvailableVersions(sModule));
+            for (Version ver : repo.getAvailableVersions(sModule))
+                {
+                vers.put(ver, true);
+                }
             }
         return vers;
         }

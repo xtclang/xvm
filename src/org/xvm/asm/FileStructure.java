@@ -13,14 +13,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.util.LinkedIterator;
 
@@ -253,7 +251,13 @@ public class FileStructure
      */
     public ModuleStructure getModule(String sName)
         {
-        return (ModuleStructure) getChild(sName);
+        Component child = getChild(sName);
+        if (child instanceof ModuleStructure)
+            {
+            return (ModuleStructure) child;
+            }
+
+        throw new IllegalStateException("module must be resolved");
         }
 
     /**
@@ -275,181 +279,39 @@ public class FileStructure
         return module;
         }
 
-// TODO
     /**
-     * If this ModuleStructure contains an unlabeled version of a module, then
-     * label the module in this module structure with the provided version
-     * number; if this ModuleStructure contains a single version label, then
-     * replace that version label with the specified version number.
-     *
-     * @param ver  the version number for the module in this module structure
-     *
-     * @throws IllegalStateException if this module structure has more than one
-     *         version label
+     * @return a read-only tree of versions in this FileStructure
      */
-    public void labelModuleVersion(Version ver)
+    public VersionTree<Boolean> getVersionTree()
         {
-        SortedSet<VersionConstant> setVer = m_setVer;
-        if (setVer.size() <= 1)
-            {
-            setVer.clear();
-            setVer.add(asConst(ver));
-            markModified();
-            }
-        else
-            {
-// TODO
-//            throw new IllegalStateException("the module (" + getModuleConstant()
-//                    + ") contains more than one version label");
-            }
+        return m_vtree;
         }
 
     /**
-     * Given a second ModuleStructure containing one or more version labels
-     * of the same module as is found in this module structure, merge those
-     * module versions into this module. Note that any version labels in
-     * the second module structure that exist in this module structure will
-     * not be merged, as they already exist in this module structure.
+     * Determine if the FileStructure contains version information.
      *
-     * @param that  a module structure containing one or more version labels
-     *              of the same module that is stored in this module structure
-     *
-     * @throws IllegalStateException if this module structure does not contain
-     *         version label(s)
-     * @throws IllegalArgumentException if either that module structure does
-     *         not contain a module with the same identity, or it does not
-     *         contain version label(s)
-     */
-    public void mergeVersions(ModuleStructure that)
-        {
-// TODO
-//        if (!this.isVersioned())
-//            {
-//            throw new IllegalStateException("first module " + this.getModuleConstant()
-//                    + " does not contain a version label");
-//            }
-//
-//        if (that == null)
-//            {
-//            throw new IllegalArgumentException("second module is required");
-//            }
-//
-//        if (!this.getModuleConstant().equals(that.getModuleConstant()))
-//            {
-//            throw new IllegalArgumentException("second module (" + that.getModuleConstant()
-//                    + ") does not match the first module (" + this.getModuleConstant() + ")");
-//            }
-//
-//        if (!that.isVersioned())
-//            {
-//            throw new IllegalArgumentException("second module " + that.getModuleConstant()
-//                    + " does not contain a version label");
-//            }
-//
-//        SortedSet<VersionConstant> setThisVer = this.m_setVer;
-//        SortedSet<VersionConstant> setThatVer = that.m_setVer;
-//        for (VersionConstant ver : setThatVer)
-//            {
-//            if (!setThisVer.contains(ver))
-//                {
-//                // TODO - actual merge processing
-//                setThisVer.add(ver);
-//                markModified();
-//                }
-//            }
-        }
-
-    /**
-     * Remove a version label of the module from this module structure. If
-     * there are multiple versions within this module structure, then only
-     * the specified version label is removed. If there is only one version
-     * within this module structure, then the structure is left unchanged,
-     * but the version label is removed.
-     *
-     * @param ver  the version label to remove from this module structure
-     *
-     * @throws IllegalArgumentException if the specified version label does
-     *         not exist within this module structure
-     */
-    public void purgeVersion(Version ver)
-        {
-        if (ver == null)
-            {
-            throw new IllegalArgumentException("version required");
-            }
-
-        SortedSet<VersionConstant> setVer = m_setVer;
-        VersionConstant verConst = asConst(ver);
-        if (!setVer.contains(verConst))
-            {
-            throw new IllegalArgumentException("version (" + ver  + ") does not exist in this module");
-            }
-
-        if (setVer.size() == 1)
-            {
-            // TODO - actual remove processing
-            }
-
-        setVer.remove(verConst);
-        markModified();
-        }
-
-    public void purgeAllExceptVersion(Version ver)
-        {
-        if (ver == null)
-            {
-            throw new IllegalArgumentException("version required");
-            }
-
-        SortedSet<VersionConstant> setVer = m_setVer;
-        VersionConstant verConst = asConst(ver);
-        if (!setVer.contains(verConst))
-            {
-            throw new IllegalArgumentException("version (" + ver  + ") does not exist in this module");
-            }
-
-        if (setVer.size() > 1)
-            {
-            // TODO - actual remove processing
-            }
-
-        setVer.clear();
-        setVer.add(verConst);
-        markModified();
-        }
-
-    /**
-     * Determine if the module structure contains version information.
-     *
-     * @return true if this module structure contains one or more versions of
-     *         the module
+     * @return true if this contains version label(s) for the contained module(s)
      */
     boolean isVersioned()
         {
-        return !m_setVer.isEmpty();
+        return !getVersionTree().isEmpty();
         }
 
     /**
-     * Determine if the specified version of the module is contained within
-     * this module structure.
+     * Determine if the specified primary module version is contained within this FileStructure.
      *
      * @param ver  a version number
      *
-     * @return true if this module structure contains the specified version
+     * @return true if the specified version label is present
      */
-    public boolean containsVersion(VersionConstant ver)
-        {
-        return m_setVer.contains(ver);
-        }
-
     public boolean containsVersion(Version ver)
         {
-        return containsVersion(asConst(ver));
+        return getVersionTree().get(ver);
         }
 
     /**
-     * Determine if the specified version of the module is supported by a
-     * version label that is within this module structure.
+     * Determine if the specified version of the primary module is supported, either by that exact
+     * version, or by a subsequent version.
      *
      * @param ver     a version number
      * @param fExact  true if the version has to match exactly
@@ -458,19 +320,16 @@ public class FileStructure
      */
     public boolean supportsVersion(Version ver, boolean fExact)
         {
-        if (m_setVer.contains(asConst(ver)))
+        if (containsVersion(ver))
             {
             return true;
             }
 
         if (!fExact)
             {
-            for (VersionConstant verSupported : m_setVer)
+            if (getVersionTree().findHighestVersion(ver) != null)
                 {
-                if (asVer(verSupported).isSubstitutableFor(ver))
-                    {
-                    return true;
-                    }
+                return true;
                 }
             }
 
@@ -478,50 +337,184 @@ public class FileStructure
         }
 
     /**
-     * Obtain a set of all of the versions of the module contained within this
-     * module structure.
+     * If the module in this file structure contains an unlabeled version of a module, then label
+     * the module with the provided version number; if the module contains a single version label,
+     * then replace that version label with the specified version number.
      *
-     * @return a SortedSet of the versions contained within this module
-     *         structure; if the set is empty, that indicates that the module
-     *         structure does not contain version information (the module
-     *         information in the module structure is not version labeled)
+     * @param ver  the version number for the module in this module structure
+     *
+     * @throws IllegalStateException if this module structure has more than one version label
      */
-    public SortedSet<Version> getVersions()
+    public void labelModuleVersion(Version ver)
         {
-        SortedSet<Version> vers = new TreeSet<>();
-        for (VersionConstant ver : m_setVer)
+        if (ver == null)
             {
-            vers.add(asVer(ver));
+            throw new IllegalArgumentException("version required");
             }
-        return vers;
-        }
 
-    VersionConstant asConst(Version ver)
-        {
-        return ver == null ? null : getConstantPool().ensureVersionConstant(ver);
-        }
+        // only normalized versions are used as version labels
+        final Version VER = ver = ver.normalize();
 
-    Version asVer(VersionConstant ver)
-        {
-        return ver == null ? null : ver.getVersion();
+        VersionTree<Boolean> vtree = m_vtree;
+        switch (vtree.size())
+            {
+            case 1:
+                // module is already labeled; it is either this version, or another version (which
+                // will be replaced with this version)
+                if (vtree.get(ver))
+                    {
+                    // already has the right version number
+                    return;
+                    }
+
+                // it has a different version; get rid of that version first
+                purgeVersion(vtree.findHighestVersion());
+                // fall through
+            case 0:
+                // the modules should not be labeled with a version; add one
+                visitChildren(component -> component.addVersion(VER), true, false);
+                break;
+
+            default:
+                throw new IllegalStateException("the module (" + getModuleName()
+                        + ") already contains more than one version label");
+            }
+
+        vtree.put(ver, true);
+        markModified();
         }
 
     /**
-     * Set of versions held by this module.
-     * <ul>
-     * <li>If the set is empty, that indicates that the module structure does
-     * not contain version information (the module information in the module
-     * structure is not version labeled.)</li>
-     * <li>If the set contains one version, that indicates that the module
-     * structure contains a single version label, i.e. there is a single
-     * version of the module inside of the module structure.</li>
-     * <li>If the set contains more than one version, that indicates that the
-     * module structure contains multiple different versions of the module,
-     * and must be resolved in order to link the module.</li>
-     * </ul>
+     * Given a second FileStructure with the same primary module identity as this FileStructure,
+     * and with both FileStructure objects containing one or more version labels, merge the versions
+     * from the second FileStructure into this module. Note that any version labels in the second
+     * FileStructure that exist in this FileStructure will not be merged, as they already exist in
+     * this FileStructure.
+     *
+     * @param that  a FileStructure containing one or more version labels of the same primary module
+     *              that is stored in this FileStructure
+     *
+     * @throws IllegalStateException     if this module structure does not contain version label(s)
+     * @throws IllegalArgumentException  if that FileStructure does not contain the same primary
+     *         module as this, or it does not contain version label(s)
      */
-    private TreeSet<VersionConstant> m_setVer = new TreeSet<>();
-// end TODO
+    public void mergeVersions(FileStructure that)
+        {
+        if (!this.isVersioned())
+            {
+            throw new IllegalStateException("this FileStructure ("+ getName()
+                    + ") does not contain a version label");
+            }
+
+        if (that == null)
+            {
+            throw new IllegalArgumentException("second FileStructure is required");
+            }
+
+        if (!this.getModuleName().equals(that.getModuleName()))
+            {
+            throw new IllegalArgumentException("second FileStructure (" + that.getName()
+                    + ") does not contain the same primary module as this FileStructure ("
+                    + this.getName() + ")");
+            }
+
+        if (!that.isVersioned())
+            {
+            throw new IllegalArgumentException("second FileStructure (" + that.getName()
+                    + ") does not contain a version label");
+            }
+
+        // first, determine what versions need to be moved over
+        VersionTree<Boolean> vtreeThis = this.m_vtree;
+        VersionTree<Boolean> vtreeThat = that.m_vtree;
+        VersionTree<Boolean> vtreeAdd  = new VersionTree<>();
+        for (Version ver : vtreeThat)
+            {
+            if (!vtreeThis.get(ver))
+                {
+                vtreeAdd.put(ver, true);
+                }
+            }
+
+        // TODO - actual merge processing
+
+        // update the list of versions in this FileStructure
+        for (Version ver : vtreeAdd)
+            {
+            vtreeThis.put(ver, true);
+            }
+        markModified();
+        }
+
+    /**
+     * Remove a version label from this FileStructure. If there are multiple versions within this
+     * FileStructure, then only the specified version label is removed. If there is only one version
+     * within this FileStructure, then the structure is left unchanged, but the version label is
+     * removed.
+     *
+     * @param ver  the version label to remove from this module structure
+     */
+    public void purgeVersion(Version ver)
+        {
+        if (ver == null)
+            {
+            throw new IllegalArgumentException("version required");
+            }
+
+        final Version ver1 = ver = ver.normalize();
+
+        VersionTree<Boolean> vtree = m_vtree;
+        if (!vtree.get(ver))
+            {
+            return;
+            }
+
+        if (vtree.size() == 1)
+            {
+            // this just strips any remaining version label off the entire component tree
+            visitChildren(component -> component.removeVersion(ver1), true, true);
+            }
+        else
+            {
+            // this has to find just the components that have the specified version label, and
+            // remove it from just those components, and then remove those components if they no
+            // longer have any version label
+            // TODO
+            }
+
+        vtree.remove(ver);
+        markModified();
+        }
+
+    public void purgeVersionsExcept(Version ver)
+        {
+        if (ver == null)
+            {
+            throw new IllegalArgumentException("version required");
+            }
+
+        VersionTree<Boolean> vtree = m_vtree;
+        ver = ver.normalize();
+        if (!vtree.get(ver))
+            {
+            throw new IllegalArgumentException("version " + ver  + " does not exist in this file");
+            }
+
+        if (vtree.size() == 1)
+            {
+            // already done
+            return;
+            }
+
+        // this has to go to every component, and remove every version except the specified version,
+        // and then remove those components if they no longer have any version label
+        // TODO
+
+        vtree.clear();
+        vtree.put(ver, true);
+        markModified();
+        }
+
 
     // ----- FileStructure methods -----------------------------------------------------------------
 
@@ -553,12 +546,13 @@ public class FileStructure
         }
 
     /**
-     * Determine the major version of the XVM specification and related
-     * tool-chain that this particular FileStructure corresponds to.
+     * Determine the major version of the XVM specification and related tool-chain that this
+     * particular FileStructure corresponds to.
+     * <p/>
+     * This is unrelated to version labels and the versioning of modules.
      *
-     * @return the major version of the binary form that this FileStructure was
-     *         constructed from, or the current major version if this
-     *         FileStructure was constructed from scratch
+     * @return the major version of the binary form that this FileStructure was constructed from, or
+     *         the current major version if this FileStructure was constructed from scratch
      */
     public int getFileMajorVersion()
         {
@@ -566,12 +560,13 @@ public class FileStructure
         }
 
     /**
-     * Determine the minor version of the XVM specification and related
-     * tool-chain that this particular FileStructure corresponds to.
+     * Determine the minor version of the XVM specification and related tool-chain that this
+     * particular FileStructure corresponds to.
+     * <p/>
+     * This is unrelated to version labels and the versioning of modules.
      *
-     * @return the minor version of the binary form that this FileStructure was
-     *         constructed from, or the current minor version if this
-     *         FileStructure was constructed from scratch
+     * @return the minor version of the binary form that this FileStructure was constructed from, or
+     *         the current minor version if this FileStructure was constructed from scratch
      */
     public int getFileMinorVersion()
         {
@@ -581,6 +576,8 @@ public class FileStructure
     /**
      * Determine the current major version of the XVM specification and related tool-chain that this
      * implementation supports.
+     * <p/>
+     * This is unrelated to version labels and the versioning of modules.
      *
      * @return the current major version of the XVM specification and related tool-chain that this
      *         implementation supports
@@ -593,6 +590,8 @@ public class FileStructure
     /**
      * Determine the current minor version of the XVM specification and related tool-chain that this
      * implementation supports.
+     * <p/>
+     * This is unrelated to version labels and the versioning of modules.
      *
      * @return the current minor version of the XVM specification and related tool-chain that this
      *         implementation supports
@@ -605,6 +604,8 @@ public class FileStructure
     /**
      * Determine if the specified version of an XVM file structure is supported by this version of
      * the XVM assembler.
+     * <p/>
+     * This is unrelated to version labels and the versioning of modules.
      *
      * @param nVerMajor  major version number
      * @param nVerMinor  minor version number
@@ -612,7 +613,7 @@ public class FileStructure
      * @return true if this version of the XVM assembler can correctly read in and deal with a file
      *         structure of the specified version
      */
-    public static boolean isVersionSupported(int nVerMajor, int nVerMinor)
+    public static boolean isFileVersionSupported(int nVerMajor, int nVerMinor)
         {
         if (nVerMajor == VERSION_MAJOR_CUR && nVerMinor == VERSION_MINOR_CUR)
             {
@@ -702,7 +703,7 @@ public class FileStructure
         // specific-major-versions are likely to be supported
         nMajorVer = in.readUnsignedShort();
         nMinorVer = in.readUnsignedShort();
-        if (!isVersionSupported(nMajorVer, nMinorVer))
+        if (!isFileVersionSupported(nMajorVer, nMinorVer))
             {
             throw new IOException("unsupported version: " + nMajorVer + "." + nMinorVer);
             }
@@ -847,6 +848,21 @@ public class FileStructure
      * modules) of the main module.
      */
     private String moduleName;
+
+    /**
+     * Tree of versions held by this FileStructure.
+     * <ul>
+     * <li>If the tree is empty, that indicates that the module structure does not contain version
+     * information (the module information in the module structure is not version labeled.)</li>
+     * <li>If the tree contains one version, that indicates that the module structure contains a
+     * single version label, i.e. there is a single version of the module inside of the module
+     * structure.</li>
+     * <li>If the tree contains more than one version, that indicates that the module structure
+     * contains multiple different versions of the module, and must be resolved in order to link the
+     * module.</li>
+     * </ul>
+     */
+    private VersionTree<Boolean> m_vtree = new VersionTree<>();
 
     /**
      * The ConstantPool for the FileStructure.

@@ -434,6 +434,39 @@ public class Version
         return true;
         }
 
+    /**
+     * If the version ends with ".0", return a version that does not end with ".0" but represents
+     * the same version.
+     *
+     * @return a normalized version
+     */
+    public Version normalize()
+        {
+        int[] parts  = ensureIntArray();
+        int   cParts = parts.length;
+        int   cZeros = 0;
+        for (int i = cParts - 1; i > 0; --i)
+            {
+            if (parts[i] == 0)
+                {
+                ++cZeros;
+                }
+            else
+                {
+                break;
+                }
+            }
+
+        if (cZeros == 0)
+            {
+            return this;
+            }
+
+        int[] partsNew = new int[cParts - cZeros];
+        System.arraycopy(parts, 0, partsNew, 0, cParts - cZeros);
+        return new Version(partsNew);
+        }
+
 
     // ----- Comparable methods --------------------------------------------------------------------
 

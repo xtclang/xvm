@@ -14,6 +14,7 @@ public class VersionTree<V>
         implements Iterable<Version>
     {
     // ----- constructors --------------------------------------------------------------------------
+
     public VersionTree()
         {
         clear();
@@ -958,6 +959,7 @@ public class VersionTree<V>
      * The root node of the tree.
      */
     Node<V> root;
+
     /**
      * The number of values in the tree.
      */

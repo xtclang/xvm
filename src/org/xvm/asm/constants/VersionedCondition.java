@@ -70,6 +70,16 @@ public class VersionedCondition
      *
      * @return the version that is required
      */
+    public Version getVersion()
+        {
+        return m_constVer.getVersion();
+        }
+
+    /**
+     * Obtain the version of the current module that the condition is predicated on.
+     *
+     * @return the constant for the version that is required
+     */
     public VersionConstant getVersionConstant()
         {
         return m_constVer;
@@ -94,6 +104,26 @@ public class VersionedCondition
     public Set<Version> versions()
         {
         return Collections.singleton(m_constVer.getVersion());
+        }
+
+    @Override
+    public ConditionalConstant addVersion(Version ver)
+        {
+        if (ver.equals(getVersion()))
+            {
+            return this;
+            }
+
+        ConstantPool pool = getConstantPool();
+        return new AnyCondition(pool, this, pool.ensureVersionedCondition(ver));
+        }
+
+    @Override
+    public ConditionalConstant removeVersion(Version ver)
+        {
+        return ver.equals(getVersion())
+                ? null
+                : this;
         }
 
     @Override

@@ -234,7 +234,7 @@ public class DirRepository
             else
                 {
                 this.name     = module.getModuleConstant().getName();
-                this.versions = module.getFileStructure().getVersions();
+                this.versions = module.getFileStructure().getVersionTree();
                 this.err      = false;
                 }
             }
@@ -274,12 +274,12 @@ public class DirRepository
             return module;
             }
 
-        public final String             name;
-        public final File               file;
-        public final SortedSet<Version> versions;
-        public final long               timestamp;
-        public final long               size;
-        public final boolean            err;
+        public final String               name;
+        public final File                 file;
+        public final VersionTree<Boolean> versions;
+        public final long                 timestamp;
+        public final long                 size;
+        public final boolean              err;
 
         /**
          * Cached instance of the module struct. If the caller changes it, we will detect it and

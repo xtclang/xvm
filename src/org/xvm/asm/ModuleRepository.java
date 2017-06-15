@@ -69,10 +69,10 @@ public interface ModuleRepository
      *         note that the set may contain a null value, indicating a
      *         versionless module; or null if the module does not exist
      */
-    default public Set<Version> getAvailableVersions(String sModule)
+    default public VersionTree<Boolean> getAvailableVersions(String sModule)
         {
         ModuleStructure module = loadModule(sModule);
-        return module == null ? null : module.getFileStructure().getVersions();
+        return module == null ? null : module.getFileStructure().getVersionTree();
         }
 
     /**
@@ -110,7 +110,7 @@ public interface ModuleRepository
         else
             {
             // check each version in the module to see if it would work; keep the most appropriate one
-            for (Version possibleVer : module.getFileStructure().getVersions())
+            for (Version possibleVer : module.getFileStructure().getVersionTree())
                 {
                 if (possibleVer.isSubstitutableFor(version))
                     {
@@ -138,9 +138,9 @@ public interface ModuleRepository
                 }
             }
 
-        if (module.getFileStructure().getVersions().size() > 1)
+        if (module.getFileStructure().getVersionTree().size() > 1)
             {
-            module.getFileStructure().purgeAllExceptVersion(useVersion);
+            module.getFileStructure().purgeVersionsExcept(useVersion);
             }
 
         return module;

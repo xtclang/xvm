@@ -123,7 +123,7 @@ public class SimulatedLinkerContext
                 else if (condEach instanceof VersionedCondition)
                     {
                     assert version == null;
-                    version = ((VersionedCondition) condEach).getVersionConstant().getVersion();
+                    version = ((VersionedCondition) condEach).getVersion();
                     }
                 }
             }
