@@ -88,13 +88,13 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * series of composition steps.
      *
      */
-    const Composition(Action action, Class ingredient);
+    static const Composition(Action action, Class ingredient);
 
     /**
      * SourceCodeInfo provides information about the name of the file that contains source code,
      * and the 0-based line number within that file that the relevant source code begins.
      */
-    const SourceCodeInfo(String sourceFile, Int lineNumber);
+    static const SourceCodeInfo(String sourceFile, Int lineNumber);
 
     // ----- primary state -------------------------------------------------------------------------
 

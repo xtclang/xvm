@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -17,6 +18,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorListener;
@@ -101,6 +103,14 @@ public class TypeCompositionStatement
         }
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public Source getSource()
+        {
+        return source == null
+                ? super.getSource()
+                : source;
+        }
 
     @Override
     public Access getDefaultAccess()
@@ -274,7 +284,7 @@ public class TypeCompositionStatement
         String         sName     = (String) name.getValue();
         Access         access    = getDefaultAccess();
         Component      container = parent == null ? null : parent.getComponent();
-        ConstantPool   pool      = container.getConstantPool();
+        ConstantPool   pool      = container == null ? null : container.getConstantPool();
         ClassStructure component = null;
         switch (category.getId())
             {
@@ -284,6 +294,7 @@ public class TypeCompositionStatement
                     // create the FileStructure and "this" ModuleStructure
                     FileStructure struct = new FileStructure(getName());
                     component = struct.getModule();
+                    pool      = struct.getConstantPool();
                     }
                 else
                     {
@@ -503,15 +514,15 @@ public class TypeCompositionStatement
 
                 if (fAlready)
                     {
-                    log(errs, Severity.ERROR, Compiler.DUPLICATE_MODIFIER, token.getId().TEXT);
+                    token.log(errs, getSource(), Severity.ERROR, Compiler.DUPLICATE_MODIFIER);
                     }
                 else if ((nAllowed & nBits) == 0)
                     {
-                    log(errs, Severity.ERROR, Compiler.ILLEGAL_MODIFIER, token.getId().TEXT);
+                    token.log(errs, getSource(), Severity.ERROR, Compiler.ILLEGAL_MODIFIER);
                     }
                 else if ((nSpecified & nBits) != 0)
                     {
-                    log(errs, Severity.ERROR, Compiler.CONFLICTING_MODIFIER, token.getId().TEXT);
+                    token.log(errs, getSource(), Severity.ERROR, Compiler.CONFLICTING_MODIFIER);
                     }
 
                 nSpecified |= nBits;
@@ -576,7 +587,7 @@ public class TypeCompositionStatement
                 // number of type arguments must match the number of the enum's type parameters
                 assert container instanceof ClassStructure && container.getFormat() == Format.ENUM;
                 ClassStructure enumeration = (ClassStructure) container;
-                if (enumeration.getTypeParams().size() != (args == null ? 0 : args.size()))
+                if (enumeration.getTypeParams().size() != (typeArgs == null ? 0 : typeArgs.size()))
                     {
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_MISMATCH);
                     }
@@ -615,8 +626,11 @@ public class TypeCompositionStatement
                             }
                         else
                             {
-                            component.addTypeParam(sParam,
-                                    pool.createUnresolvedTypeConstant(param.getType().toString()));
+                            TypeExpression exprType  = param.getType();
+                            TypeConstant   constType = exprType == null
+                                    ? pool.ensureEcstasyClassConstant("Object").asTypeConstant()
+                                    : pool.createUnresolvedTypeConstant(exprType.toString());
+                            component.addTypeParam(sParam, constType);
                             }
                         }
                     }
@@ -682,7 +696,7 @@ public class TypeCompositionStatement
         boolean         fAlreadyIntos   = false;
         int             cImports        = 0;
         ModuleStructure moduleImport    = null;
-        for (Composition composition : compositions)
+        for (Composition composition : compositions == null ? Collections.<Composition>emptyList() : compositions)
             {
             Format   format  = component.getFormat();
             Token.Id keyword = composition.getKeyword().getId();
@@ -699,7 +713,8 @@ public class TypeCompositionStatement
                         // only one extends is allowed
                         if (fAlreadyExtends)
                             {
-                            log(errs, Severity.ERROR, Compiler.MULTIPLE_EXTEND_CLAUSES, category.getId().TEXT);
+                            composition.log(errs, Severity.ERROR, Compiler.MULTIPLE_EXTEND_CLAUSES,
+                                    category.getId().TEXT);
                             }
                         else
                             {
@@ -721,7 +736,8 @@ public class TypeCompositionStatement
                         // only one import is allowed
                         if (fAlreadyImports)
                             {
-                            log(errs, Severity.ERROR, Compiler.MULTIPLE_IMPORT_CLAUSES, keyword.TEXT);
+                            composition.log(errs, Severity.ERROR, Compiler.MULTIPLE_IMPORT_CLAUSES,
+                                    keyword.TEXT);
                             }
                         else
                             {
@@ -749,21 +765,21 @@ public class TypeCompositionStatement
                                     String sPrev = moduleImport.getName();
                                     if (!sModule.equals(sPrev))
                                         {
-                                        log(errs, Severity.ERROR,
+                                        composition.log(errs, Severity.ERROR,
                                                 Compiler.CONFLICTING_IMPORT_CLAUSES, sPrev, sModule);
                                         }
                                     }
                                 }
                             else
                                 {
-                                log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sModule);
+                                composition.log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sModule);
                                 }
                             }
                         }
                     else
                         {
                         // "import" not allowed (only used by packages)
-                        log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
                     break;
 
@@ -773,7 +789,7 @@ public class TypeCompositionStatement
                         // only one "into" clause is allowed
                         if (fAlreadyIntos)
                             {
-                            log(errs, Severity.ERROR, Compiler.MULTIPLE_INTO_CLAUSES);
+                            composition.log(errs, Severity.ERROR, Compiler.MULTIPLE_INTO_CLAUSES);
                             }
                         else
                             {
@@ -785,7 +801,7 @@ public class TypeCompositionStatement
                     else
                         {
                         // "into" not allowed (only used by traits & mixins)
-                        log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
                     break;
 
@@ -793,7 +809,7 @@ public class TypeCompositionStatement
                     if (format == Format.INTERFACE)
                         {
                         // interface can't implement
-                        log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
                     break;
 

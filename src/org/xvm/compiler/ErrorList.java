@@ -253,7 +253,7 @@ public class ErrorList
             {
             StringBuilder sb = new StringBuilder();
 
-            String sFile = m_source.getFileName();
+            String sFile = m_source == null ? null : m_source.getFileName();
             if (sFile != null)
                 {
                 sb.append(sFile)

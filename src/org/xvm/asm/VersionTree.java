@@ -321,8 +321,19 @@ public class VersionTree<V>
 
     // ----- inner class: Node ---------------------------------------------------------------------
 
+    /**
+     * Represents a node within the version tree. All nodes are used for building the hierarchical
+     * organization of tree, but only a node that has a value is considered to be "present" in the
+     * tree.
+     */
     private static class Node<V>
         {
+        /**
+         * Construct a node.
+         *
+         * @param parent
+         * @param part
+         */
         Node(Node parent, int part)
             {
             this.parent = parent;
@@ -788,6 +799,8 @@ public class VersionTree<V>
                 }
             }
 
+        // ----- helpers -----------------------------------------------------------------------
+
         /**
          * Find the specified node instance in the array of nodes passed in. Only used internally.
          *
@@ -921,24 +934,30 @@ public class VersionTree<V>
             nodes[iLast] = null;
             }
 
+        // ----- fields ------------------------------------------------------------------------
+
         /**
          * The parent of this node; all nodes have a parent, except for the root node.
          */
         Node    parent;
+
         /**
          * The cached version (the key) of this node. The root node does not have a version.
          */
         Version version;
+
         /**
          * The version part that this node represents. The root node does not have a version part.
          */
         int     part;
+
         /**
          * The value that this node holds, if the version for this node is associated with a value.
          * The root node does not have a value. Nodes without values are used for hierarchical
          * organization of the tree, but are not considered to be "present" in the tree.
          */
         V       value;
+
         /**
          * The child nodes of this node. May be null, which indicates no children. May contain
          * nulls, but the non-null child references always start at index zero and occur in order
@@ -949,11 +968,6 @@ public class VersionTree<V>
 
 
     // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * An empty, immutable array of version parts.
-     */
-    private static final int[] EMPTY_PARTS = new int[0];
 
     /**
      * The root node of the tree.

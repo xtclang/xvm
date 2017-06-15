@@ -30,8 +30,8 @@
  *   {@link ConstAble} interface.
  */
 interface Collection<ElementType>
-        implements Iterable<ElementType>
-        implements VariablyMutable
+        extends Iterable<ElementType>
+        extends VariablyMutable
     {
     // ----- read operations -----------------------------------------------------------------------
 

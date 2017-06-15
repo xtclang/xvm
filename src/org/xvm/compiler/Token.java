@@ -4,6 +4,8 @@ package org.xvm.compiler;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.xvm.util.Severity;
+
 import static org.xvm.util.Handy.appendChar;
 import static org.xvm.util.Handy.appendString;
 
@@ -15,7 +17,7 @@ import static org.xvm.util.Handy.appendString;
  */
 public class Token
     {
-    // ----- constructors ------------------------------------------------------
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct an XTC token.
@@ -58,7 +60,7 @@ public class Token
         }
 
 
-    // ----- accessors ---------------------------------------------------------
+    // ----- accessors -----------------------------------------------------------------------------
 
     /**
      * Determine the starting position in the source at which this token occurs.
@@ -101,8 +103,7 @@ public class Token
         }
 
     /**
-     * Determine the identity of the token. A token identity specifies the type
-     * of the token (e.g. operator, identifier) and
+     * Determine the identity of the token.
      *
      * @return the identity of the token
      */
@@ -227,10 +228,32 @@ public class Token
         return source.toString(m_lStartPos, m_lEndPos);
         }
 
-    // ----- Object methods ----------------------------------------------------
+    /**
+     * Helper to log an error related to this Token.
+     *
+     * @param severity   the severity level of the error; one of {@link Severity#INFO},
+     *                   {@link Severity#WARNING}, {@link Severity#ERROR}, or {@link Severity#FATAL}
+     * @param sCode      the error code that identifies the error message
+     * @param aoParam    the parameters for the error message; may be null
+     *
+     * @return true to attempt to abort the process that reported the error, or false to attempt
+     *         continue the process
+     */
+    public boolean log(ErrorListener errs, Source source, Severity severity, String sCode, Object... aoParam)
+        {
+        if (aoParam == null || aoParam.length == 0)
+            {
+            aoParam = new Object[] {source == null ? toString() : getString(source)};
+            }
 
-    @Override
-    public String toString()
+        return errs.log(severity, sCode, aoParam, source,
+                source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition());
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    public String toDebugString()
         {
         StringBuilder sb = new StringBuilder();
         sb.append('[')
@@ -242,7 +265,15 @@ public class Token
           .append(",")
           .append(Source.calculateOffset(m_lEndPos))
           .append("] ");
-        
+
+        return sb.append(toString()).toString();
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
         switch (m_id)
             {
             case LIT_CHAR:
@@ -301,7 +332,7 @@ public class Token
         }
 
 
-    // ----- Token identities --------------------------------------------------
+    // ----- Token identities ----------------------------------------------------------------------
 
     /**
      * Token Identity. 
@@ -567,14 +598,13 @@ public class Token
             }
 
         /**
-         * A textual representation of the token, if it has a constant
-         * textual representation; otherwise null.
+         * A textual representation of the token, if it has a constant textual representation;
+         * otherwise null.
          */
         final public String TEXT;
 
         /**
-         * True if the token is context-sensitive, i.e. if it is not always a
-         * reserved word.
+         * True if the token is context-sensitive, i.e. if it is not always a reserved word.
          */
         final boolean ContextSensitive;
 
@@ -585,7 +615,7 @@ public class Token
         }
 
 
-    // ----- data members ------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
     /**
      * Starting position (inclusive) in the source of this token.

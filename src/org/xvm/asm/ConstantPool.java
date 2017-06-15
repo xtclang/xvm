@@ -487,6 +487,30 @@ public class ConstantPool
         }
 
     /**
+     * Helper to get a ClassConstant for a class in the Ecstasy core module.
+     *
+     * @param sClass  the qualified class name, dot-delimited
+     *
+     * @return the specified ClassConstant referring to a class from the Ecstasy core module
+     */
+    public ClassConstant ensureEcstasyClassConstant(String sClass)
+        {
+        Constant constParent = ensureModuleConstant(ECSTASY_MODULE);
+        int      ofStart     = 0;
+        int      ofEnd       = sClass.indexOf('.');
+        while (ofEnd >= 0)
+            {
+            String sName = sClass.substring(ofStart, ofEnd);
+            constParent = constParent instanceof ClassConstant || sName.charAt(0) <= 'Z'
+                    ? ensureClassConstant(constParent, sName)
+                    : ensurePackageConstant(constParent, sName);
+            ofStart = ofEnd + 1;
+            ofEnd   = sClass.indexOf('.', ofStart);
+            }
+        return ensureClassConstant(constParent, sClass.substring(ofStart));
+        }
+
+    /**
      * Given the specified property name and the context (module, package, class, method) within
      * which it exists, obtain a PropertyConstant that represents it.
      *

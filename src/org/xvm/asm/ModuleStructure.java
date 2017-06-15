@@ -4,16 +4,14 @@ package org.xvm.asm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.VersionConstant;
+
 import org.xvm.util.Handy;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -151,17 +149,32 @@ public class ModuleStructure
         {
         super.disassemble(in);
 
-        // TODO
-//        final int cVers = readMagnitude(in);
-//        if (cVers > 0)
-//            {
-//            final SortedSet<VersionConstant> setVer = m_setVer;
-//            final ConstantPool               pool   = getConstantPool();
-//            for (int i = 0; i < cVers; ++i)
-//                {
-//                setVer.add((VersionConstant) pool.getConstant(readMagnitude(in)));
-//                }
-//            }
+        if (in.readBoolean())
+            {
+            ConstantPool pool = getConstantPool();
+
+            VersionTree<Boolean> vtreeAllow = new VersionTree<>();
+            for (int i = 0, c = readMagnitude(in); i < c; ++i)
+                {
+                VersionConstant constVer = (VersionConstant) pool.getConstant(readMagnitude(in));
+                vtreeAllow.put(constVer.getVersion(), in.readBoolean());
+                }
+
+            List<Version> listPrefer = new ArrayList<>();
+            for (int i = 0, c = readMagnitude(in); i < c; ++i)
+                {
+                VersionConstant constVer = (VersionConstant) pool.getConstant(readMagnitude(in));
+                Version         ver      = constVer.getVersion();
+                if (!listPrefer.contains(ver))
+                    {
+                    listPrefer.add(ver);
+                    }
+                }
+
+            fFingerprint         = true;
+            vtreeImportAllowVers = vtreeAllow;
+            listImportPreferVers = listPrefer;
+            }
         }
 
     @Override
@@ -169,19 +182,18 @@ public class ModuleStructure
         {
         super.registerConstants(pool);
 
-        // TODO
-//        final TreeSet<VersionConstant> setOld = m_setVer;
-//        if (!setOld.isEmpty())
-//            {
-//            final TreeSet<VersionConstant> setNew = new TreeSet<>();
-//
-//            for (VersionConstant ver : setOld)
-//                {
-//                setNew.add((VersionConstant) pool.register(ver));
-//                }
-//
-//            m_setVer = setNew;
-//            }
+        if (fFingerprint)
+            {
+            for (Version ver : vtreeImportAllowVers)
+                {
+                pool.register(pool.ensureVersionConstant(ver));
+                }
+
+            for (Version ver : listImportPreferVers)
+                {
+                pool.register(pool.ensureVersionConstant(ver));
+                }
+            }
         }
 
     @Override
@@ -190,46 +202,74 @@ public class ModuleStructure
         {
         super.assemble(out);
 
-        // TODO
-//        final TreeSet<VersionConstant> setVer = m_setVer;
-//        writePackedLong(out, setVer.size());
-//        for (VersionConstant ver : setVer)
-//            {
-//            writePackedLong(out, ver.getPosition());
-//            }
+        out.writeBoolean(fFingerprint);
+        if (fFingerprint)
+            {
+            final ConstantPool pool = getConstantPool();
+
+            final VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
+            writePackedLong(out, vtreeAllow.size());
+            for (Version ver : vtreeAllow)
+                {
+                writePackedLong(out, pool.ensureVersionConstant(ver).getPosition());
+                out.writeBoolean(vtreeAllow.get(ver));
+                }
+
+            final List<Version> listPrefer = listImportPreferVers;
+            writePackedLong(out, listPrefer.size());
+            for (Version ver : listPrefer)
+                {
+                writePackedLong(out, pool.ensureVersionConstant(ver).getPosition());
+                }
+            }
         }
 
     @Override
     public String getDescription()
         {
-        // TODO
-//        final TreeSet<VersionConstant> setVer = m_setVer;
-
         StringBuilder sb = new StringBuilder();
-        sb.append(super.getDescription())
-          .append(", version=");
+        sb.append(super.getDescription());
 
-//        switch (setVer.size())
-//            {
-//            case 0:
-//                sb.append("none");
-//                break;
-//            case 1:
-//                sb.append(setVer.iterator().next().getValueString());
-//                break;
-//            default:
-//                sb.append("multiple");
-//                break;
-//            }
+        if (fFingerprint)
+            {
+            sb.append(", fingerprint=true");
+
+            final VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
+            final List<Version>        listPrefer = listImportPreferVers;
+            if (!vtreeAllow.isEmpty() || !listPrefer.isEmpty())
+                {
+                sb.append(", version={");
+                boolean fFirst = true;
+
+                for (Version ver : vtreeAllow)
+                    {
+                    if (fFirst)
+                        {
+                        sb.append(", ");
+                        fFirst = false;
+                        }
+
+                    sb.append(vtreeAllow.get(ver) ? "allow " : "avoid ")
+                      .append(ver);
+                    }
+
+                for (Version ver : listPrefer)
+                    {
+                    if (fFirst)
+                        {
+                        sb.append(", ");
+                        fFirst = false;
+                        }
+
+                    sb.append("prefer ")
+                      .append(ver);
+                    }
+
+                sb.append('}');
+                }
+            }
 
         return sb.toString();
-        }
-
-    @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
-        super.dump(out, sIndent);
-//        dumpStructureCollection(out, sIndent, "Versions", m_setVer);
         }
 
 
