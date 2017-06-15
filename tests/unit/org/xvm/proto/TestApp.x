@@ -38,7 +38,7 @@ module TestApp
 
         try
             {
-            t.throwing("handled");
+            t.exceptional("handled");
             }
         catch (Exception e)
             {
@@ -71,7 +71,7 @@ module TestApp
             return of + s.length();
             }
 
-        Int throwing(String? s)
+        Int exceptional(String? s)
             {
             throw new Exception(s);
             }
@@ -134,7 +134,7 @@ module TestApp
         // handled exception
         try
             {
-            c = svc.throwing();
+            c = svc.exceptional(0);
             }
         catch (Exception e)
             {
@@ -158,7 +158,7 @@ module TestApp
         this::service.yield();
 
         // unhandled exception
-        svc.throwing();
+        svc.exceptional(0);
         }
 
     static Void testService2()
@@ -184,8 +184,17 @@ module TestApp
             {
             print(e);
             }
-        }
 
+        try (new Timeout(500))
+            {
+            // this should timeout
+            c = svc.exceptional(1000);
+            }
+        catch (Exception e)
+            {
+            print(e);
+            }
+        }
 
     service TestService(Int counter = 48)
         {
@@ -204,6 +213,8 @@ module TestApp
 
         @atomic Int counter2 = 5;
 
+        private @inject Clock runtimeClock;
+
         // pre-increment
         Int increment()
             {
@@ -211,9 +222,18 @@ module TestApp
             }
 
         // exceptional
-        Int throwing()
+        Int exceptional(Int cDelay)
             {
-            throw new Exception("test");
+            if (cDelay == 0)
+                {
+                throw new Exception("test");
+                }
+            else
+                {
+                @future Int iRet;
+                runtimeClock.scheduleAlarm(() -> iRet = 0, cDelay); // &iRet.set(0)
+                return iRet;
+                }
             }
         }
 

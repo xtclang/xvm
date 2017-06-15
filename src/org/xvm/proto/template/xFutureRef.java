@@ -91,6 +91,11 @@ public class xFutureRef
             m_future = future;
             }
 
+        public boolean isDone()
+            {
+            return m_future != null && m_future.isDone();
+            }
+
         @Override
         protected ObjectHandle getInternal()
                 throws ExceptionHandle.WrapperException
@@ -130,22 +135,26 @@ public class xFutureRef
             if (handle instanceof FutureHandle)
                 {
                 // this is only possible if this "handle" is a "dynamic ref" and the passed in
-                // "handle" is is a synthetic one (see Frame.assignValue)
+                // "handle" is a synthetic or dynamic one (see Frame.assignValue)
                 if (m_future != null)
                     {
-                    return xException.makeHandle("Future has already been assigned");
+                    return xException.makeHandle("FutureRef has already been assigned");
                     }
 
                 FutureHandle that = (FutureHandle) handle;
-                assert that.f_fSynthetic;
+                this.m_future = that.m_future;
+                return null;
+                }
 
-                m_future = that.m_future;
+            if (m_future == null)
+                {
+                m_future = CompletableFuture.completedFuture(handle);
                 return null;
                 }
 
             if (m_future.isDone())
                 {
-                return xException.makeHandle("Future has already been set");
+                return xException.makeHandle("FutureRef has already been set");
                 }
 
             m_future.complete(handle);

@@ -27,7 +27,9 @@
 
 + Tuple construction - new TVAR, SVAR op-codes
 
-- Service and Fiber id passing
+- Service reentrancy, timeouts and Fibers
+
+- try-finally
 
 - Property and Method
 

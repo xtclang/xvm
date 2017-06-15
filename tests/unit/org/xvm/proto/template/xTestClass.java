@@ -70,14 +70,14 @@ public class xTestClass extends TypeCompositionTemplate
             };
         mtMethod1.m_cVars = 5;
 
-        MethodTemplate mtThrowing = ensureMethodTemplate("throwing", STRING, VOID);
-        mtThrowing.m_aop = new Op[]
+        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", STRING, VOID);
+        mtExceptional.m_aop = new Op[]
             { // #0 (this), #1 (s)
             new Var(adapter.getClassTypeConstId("x:Exception")), // #2
             new New_N(adapter.getMethodConstId("x:Exception", "construct"),
                         new int[]{1, -adapter.getClassTypeConstId("x:Nullable$Null")}, 2),
             new Throw(2),
             };
-        mtThrowing.m_cVars = 3;
+        mtExceptional.m_cVars = 3;
         }
     }

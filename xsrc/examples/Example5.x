@@ -387,6 +387,18 @@ svc.prop = 5;
 @future Tuple<> result = (&svc.prop).set<Tuple>(5);
 
 
+// assignment of dynamic ref into a standard
+@future Int fi;
+
+foo(&fi);
+
+@future Int fi2 = fi; // doesn't block
+FutureRef<Int> rf = fi; // compile error
+FutureRef<Int> rf = &fi; // doesn't block
+
+Int i = fi; // blocks
+
+
 static <T> Boolean bar(T t1, T t2)
     {
     Boolean f = ...;
