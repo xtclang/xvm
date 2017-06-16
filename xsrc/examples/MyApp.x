@@ -28,6 +28,16 @@ module MyApp.xqiz.it
                 implements Externalizable
             { SAD, MEDIOCRE, HAPPY, ECSTATIC }
 
+
+        if (Hibernate.present)
+            {
+            class Bob implements Runnable {}
+            }
+        else
+            {
+            Void Bob(String s) {print(s);}
+            }
+
         /**
          * So much light.
          */
