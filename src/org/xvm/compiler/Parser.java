@@ -215,6 +215,7 @@ public class Parser
             expect(Id.SEMICOLON);
             }
 
+        // TODO constructor needs to add itself as a parent to anything that is parent-aware
         return new TypeCompositionStatement(m_source, lStartPos, lEndPos, exprCondition, modifiers,
                 annotations, category, name, qualified, typeParams, constructorParams, compositions,
                 body, doc);
