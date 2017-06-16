@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
+import org.xvm.asm.Version;
+import org.xvm.asm.VersionTree;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -302,6 +305,45 @@ public abstract class Composition
             super(condition, keyword, type);
             this.vers    = vers;
             this.lEndPos = lEndPos;
+            }
+
+        /**
+         * @return a version tree specifying versions allowed/preferred (true) and avoided (false)
+         */
+        public VersionTree<Boolean> getAllowVersionTree()
+            {
+            VersionTree<Boolean> vtree = new VersionTree<>();
+            for (VersionOverride override : vers)
+                {
+                Version ver        = override.getVersion();
+                Boolean BPrevAllow = vtree.get(ver);
+                boolean fAllow     = override.isAllowed();
+                if (BPrevAllow != null && fAllow != BPrevAllow.booleanValue())
+                    {
+                    throw new IllegalStateException("version " + ver + " is both allowed and disallowed");
+                    }
+                else
+                    {
+                    vtree.put(ver, fAllow);
+                    }
+                }
+            return vtree;
+            }
+
+        /**
+         * @return the list of preferred versions
+         */
+        public List<Version> getPreferVersionList()
+            {
+            List<Version> list = new ArrayList<>();
+            for (VersionOverride override : vers)
+                {
+                if (override.isPreferred())
+                    {
+                    list.add(override.getVersion());
+                    }
+                }
+            return list;
             }
 
         @Override

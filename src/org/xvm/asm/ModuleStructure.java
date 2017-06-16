@@ -95,7 +95,7 @@ public class ModuleStructure
     /**
      * Determine which versions this fingerprint module allows and disallows.
      *
-     * @return
+     * @return a VersionTree that indicates which versions are allowed (true) and avoided (false)
      */
     public VersionTree<Boolean> getFingerprintVersions()
         {
@@ -103,6 +103,11 @@ public class ModuleStructure
         return vtreeImportAllowVers;
         }
 
+    /**
+     * Determine which versions are desired.
+     *
+     * @return a list of versions desired
+     */
     public List<Version> getFingerprintVersionPrefs()
         {
         assert isFingerprint();

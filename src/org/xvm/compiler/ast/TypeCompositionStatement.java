@@ -18,6 +18,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
 
+import org.xvm.asm.Version;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
@@ -753,9 +754,8 @@ public class TypeCompositionStatement
                                 if (moduleImport == null)
                                     {
                                     // create the fingerprint
-                                    // TODO - if the module already was created (by another module-import), merge the versions
-                                    ((PackageStructure) component).setImportedModule(
-                                            component.getFileStructure().ensureModule(sModule));
+                                    moduleImport = component.getFileStructure().ensureModule(sModule);
+                                    ((PackageStructure) component).setImportedModule(moduleImport);
                                     }
                                 else
                                     {
@@ -769,6 +769,13 @@ public class TypeCompositionStatement
                                                 Compiler.CONFLICTING_IMPORT_CLAUSES, sPrev, sModule);
                                         }
                                     }
+
+                                // the imported module must always be imported with the same exact
+                                // version override (or no version specified); we have a
+                                // TODO - if the module already was created (by another module-import), merge the versions
+                                // TODO aggregate condition
+                                // TODO moduleImport.mergeFingerprintVersions(composition.condition, null, null);
+                                // VersionTree<Boolean> vtreeAllow, List<Version > listPrefer)
                                 }
                             else
                                 {

@@ -48,6 +48,30 @@ public class VersionOverride
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the version number
+     */
+    public Version getVersion()
+        {
+        return version;
+        }
+
+    /**
+     * @return true iff the version is allowed or preferred, or false if the version is avoided
+     */
+    public boolean isAllowed()
+        {
+        return verb.getId() != Token.Id.AVOID;
+        }
+
+    /**
+     * @return true iff the version is a preferred version
+     */
+    public boolean isPreferred()
+        {
+        return verb.getId() == Token.Id.PREFER;
+        }
+
     @Override
     public long getStartPosition()
         {
