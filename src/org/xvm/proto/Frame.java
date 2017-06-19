@@ -52,6 +52,8 @@ public class Frame
     public Supplier<Frame>      m_continuation; // a frame supplier to call after this frame returns
     private ObjectHandle        m_hFrameLocal;  // a "frame local" holding area
 
+    // positive return values indicate a caller's frame register
+    // negative value above RET_LOCAL indicate an automatic tuple conversion
     public final static int RET_LOCAL = -65000;   // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI = -65002;   // an indicator for "multiple return values"
@@ -290,24 +292,6 @@ public class Frame
     public ObjectHandle getFrameLocal()
         {
         return m_hFrameLocal;
-        }
-
-    public void forceValue(int nVar, ObjectHandle hValue)
-        {
-        int nResult = assignValue(nVar, hValue);
-        switch (nResult)
-            {
-            case Op.R_NEXT:
-                return;
-
-            case Op.R_EXCEPTION:
-                // TODO: call an error handler?
-                System.out.println("Out-of-context exception: " + m_hException);
-                return;
-
-            default:
-                throw new IllegalStateException(); // assert
-            }
         }
 
     // return R_NEXT, R_EXCEPTION or R_BLOCK
@@ -665,19 +649,34 @@ public class Frame
             frame = frame.f_framePrev;
             if (frame == null)
                 {
-                fiber = fiber.f_fiberPrev;
-                if (fiber == null)
+                Fiber fiberCaller = fiber.f_fiberCaller;
+                if (fiberCaller == null)
                     {
                     break;
                     }
-                frame = fiber.m_frame;
+
+                frame = fiberCaller.m_frame;
                 if (frame == null)
                     {
                     break;
                     }
+
                 // TODO: not quite right; the caller fiber could have moved asynchronously
                 // we'd need to have a snapshot during the call itself
                 sb.append("\n    =========");
+
+                if (frame.m_iPC != fiber.m_iPCCaller + 1)
+                    {
+                    iPC = fiber.m_iPCCaller;
+                    InvocationTemplate fnCaller = fiber.m_fnCaller;
+                    sb.append("\n  ")
+                      .append(fnCaller.toString())
+                      .append(" (iPC=").append(iPC)
+                      .append(", op=").append(fnCaller.m_aop[iPC].getClass().getSimpleName())
+                      .append(')');
+                    break;
+                    }
+                fiber = fiberCaller;
                 }
             iPC = frame.m_iPC - 1;
             }

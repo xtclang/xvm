@@ -34,6 +34,7 @@ public class DaemonPool
         {
         m_sName = sName;
         }
+
     /**
     * Start the DaemonPool.
     */

@@ -9,7 +9,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.op.Return_0;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
-import org.xvm.proto.template.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xService;
@@ -401,13 +400,16 @@ public class ServiceContext
         }
 
     // create a "proto"-frame
-    protected Frame createServiceEntryFrame(Fiber fiberCaller, int cReturns, Op[] aopNative)
+    protected Frame createServiceEntryFrame(Message msg, int cReturns, Op[] aopNative)
         {
         // create a pseudo frame that has variables to collect
         // the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
-        Fiber fiber = new Fiber(this, fiberCaller);
+        Fiber fiber = new Fiber(this, msg.f_fiberCaller);
+        fiber.m_iPCCaller = msg.f_iPC;
+        fiber.m_fnCaller = msg.f_fnCaller;
+
         Frame frame = new Frame(fiber, aopNative, ahVar, Frame.RET_UNUSED, null);
 
         for (int iVar = 0; iVar < cReturns; iVar++)
@@ -430,7 +432,7 @@ public class ServiceContext
         {
         CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
 
-        addRequest(new ConstructRequest(frameCaller.f_fiber, constructor, clazz, future, ahArg));
+        addRequest(new ConstructRequest(frameCaller, constructor, clazz, future, ahArg));
 
         return future.whenComplete((r, x) ->
             {
@@ -448,8 +450,7 @@ public class ServiceContext
         {
         CompletableFuture<ObjectHandle> future = cReturns == 0 ? null : new CompletableFuture<>();
 
-        addRequest(new Invoke1Request(frameCaller == null ? null : frameCaller.f_fiber,
-                hFunction, ahArg, cReturns, future));
+        addRequest(new Invoke1Request(frameCaller, hFunction, ahArg, cReturns, future));
 
         return future;
         }
@@ -460,8 +461,7 @@ public class ServiceContext
         {
         CompletableFuture<ObjectHandle[]> future = new CompletableFuture<>();
 
-        addRequest(new InvokeNRequest(frameCaller == null ? null : frameCaller.f_fiber,
-                hFunction, ahArg, cReturns, future));
+        addRequest(new InvokeNRequest(frameCaller, hFunction, ahArg, cReturns, future));
 
         return future;
         }
@@ -472,17 +472,16 @@ public class ServiceContext
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new PropertyOpRequest(frameCaller == null ? null : frameCaller.f_fiber,
-                property, null, 1, future, op));
+        addRequest(new PropertyOpRequest(frameCaller, property, null, 1, future, op));
 
         return future;
         }
 
     // send and asynchronous property operation message
-    public void sendProperty10Request(Fiber fiberCaller,
+    public void sendProperty10Request(Frame frameCaller,
             PropertyTemplate property, ObjectHandle hValue, PropertyOperation10 op)
         {
-        addRequest(new PropertyOpRequest(fiberCaller, property, hValue, 0, null, op));
+        addRequest(new PropertyOpRequest(frameCaller, property, hValue, 0, null, op));
         }
 
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
@@ -493,19 +492,25 @@ public class ServiceContext
 
     public Frame callUnhandledExceptionHandler(Frame frame)
         {
-        // TODO: call the handler
+        // TODO: call the handler (via invokeLater)
         Utils.log("Unhandled exception: " + frame.m_hException);
         return null;
         }
 
     // ----- helpers ------
 
-    // send zero or one results back to the caller
-    protected static void sendResponse1(Fiber fiberCaller,
-                                        Frame frame, CompletableFuture future)
+    // send one results back to the caller
+    protected static void sendResponse1(Fiber fiberCaller, Frame frame, CompletableFuture future)
         {
         fiberCaller.f_context.respond(
                 new Response(fiberCaller, frame.f_ahVar[0], frame.m_hException, future));
+        }
+
+    // send all results back to the caller
+    protected static void sendResponseN(Fiber fiberCaller, Frame frame, CompletableFuture future)
+        {
+        fiberCaller.f_context.respond(
+                new Response(fiberCaller, frame.f_ahVar, frame.m_hException, future));
         }
 
     @Override
@@ -516,27 +521,48 @@ public class ServiceContext
 
     // --- inner classes
 
-    public interface Message
+    public abstract static class Message
         {
-        Frame createFrame(ServiceContext context);
+        public final Fiber f_fiberCaller;
+        public final InvocationTemplate f_fnCaller;
+        public final int f_iPC; // the source of the call
+
+        protected Message(Frame frameCaller)
+            {
+            if (frameCaller == null)
+                {
+                f_fiberCaller = null;
+                f_fnCaller = null;
+                f_iPC = -1;
+                }
+            else
+                {
+                f_fiberCaller = frameCaller.f_fiber;
+                f_fnCaller = frameCaller.f_function;
+                f_iPC = frameCaller.m_iPC;
+                }
+            }
+
+        abstract Frame createFrame(ServiceContext context);
         }
 
     /**
      * Represents an invoke request from one service onto another with zero or one return value.
      */
     public static class ConstructRequest
-            implements Message
+            extends Message
         {
-        private final Fiber f_fiberCaller;
+
         private final ConstructTemplate f_constructor;
         private final TypeComposition f_clazz;
         private final ObjectHandle[] f_ahArg;
         private final CompletableFuture<ServiceHandle> f_future;
 
-        public ConstructRequest(Fiber fiberCaller, ConstructTemplate constructor,
+        public ConstructRequest(Frame frameCaller, ConstructTemplate constructor,
                                 TypeComposition clazz, CompletableFuture<ServiceHandle> future, ObjectHandle[] ahArg)
             {
-            f_fiberCaller = fiberCaller;
+            super(frameCaller);
+
             f_constructor = constructor;
             f_clazz = clazz;
             f_ahArg = ahArg;
@@ -556,7 +582,7 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(f_fiberCaller, 1,
+            Frame frame0 = context.createServiceEntryFrame(this, 1,
                     new Op[]{opConstruct, Return_0.INSTANCE});
 
             frame0.m_continuation = () ->
@@ -573,25 +599,24 @@ public class ServiceContext
      * Represents an invoke request from one service onto another with zero or one return value.
      */
     public static class Invoke1Request
-            implements Message
+            extends Message
         {
-        private final Fiber f_fiberCaller;
         private final FunctionHandle f_hFunction;
         private final ObjectHandle[] f_ahArg;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
 
-        public Invoke1Request(Fiber fiberCaller, FunctionHandle hFunction,
+        public Invoke1Request(Frame frameCaller, FunctionHandle hFunction,
                               ObjectHandle[] ahArg, int cReturns,
                               CompletableFuture<ObjectHandle> future)
             {
-            f_fiberCaller = fiberCaller;
+            super(frameCaller);
+
             f_hFunction = hFunction;
             f_ahArg = ahArg;
             f_cReturns = cReturns;
             f_future = future;
             }
-
 
         @Override
         public Frame createFrame(ServiceContext context)
@@ -600,13 +625,12 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.call1(frame, f_ahArg, f_cReturns - 1);
+                    return f_hFunction.call1(frame, f_ahArg, f_cReturns == 1 ? 0 : Frame.RET_UNUSED);
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(f_fiberCaller, f_hFunction.getReturnCount(),
+            Frame frame0 = context.createServiceEntryFrame(this, f_hFunction.getReturnCount(),
                     new Op[] {opCall, Return_0.INSTANCE});
-
 
             frame0.m_continuation = () ->
                 {
@@ -632,19 +656,19 @@ public class ServiceContext
      * Represents an invoke request from one service onto another with multiple return values.
      */
     public static class InvokeNRequest
-            implements Message
+            extends Message
         {
-        private final Fiber f_fiberCaller;
         private final FunctionHandle f_hFunction;
         private final ObjectHandle[] f_ahArg;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle[]> f_future;
 
-        public InvokeNRequest(Fiber fiberCaller, FunctionHandle hFunction,
+        public InvokeNRequest(Frame frameCaller, FunctionHandle hFunction,
                              ObjectHandle[] ahArg, int cReturns,
                              CompletableFuture<ObjectHandle[]> future)
             {
-            f_fiberCaller = fiberCaller;
+            super(frameCaller);
+
             f_hFunction = hFunction;
             f_ahArg = ahArg;
             f_cReturns = cReturns;
@@ -669,43 +693,12 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(f_fiberCaller, f_hFunction.getReturnCount(),
+            Frame frame0 = context.createServiceEntryFrame(this, f_hFunction.getReturnCount(),
                 new Op[] {opCall, Return_0.INSTANCE});
 
-            ServiceContext contextCaller = f_fiberCaller.f_context;
             frame0.m_continuation = () ->
                 {
-                ExceptionHandle hException = frame0.m_hException;
-                if (hException == null)
-                    {
-                    // TODO: optimize for a case when all futures are complete
-                    CompletableFuture<Void>[] acf = new CompletableFuture[f_cReturns];
-                    for (int i = 0; i < f_cReturns; i++)
-                        {
-                        int iRet = i;
-
-                        acf[i] = ((FutureHandle) frame0.f_ahVar[i]).m_future.thenAccept(
-                                h -> frame0.f_ahVar[iRet] = h);
-                        }
-
-                    CompletableFuture.allOf(acf).whenComplete((none, x) ->
-                        {
-                        if (x == null)
-                            {
-                            contextCaller.respond(new Response(f_fiberCaller, frame0.f_ahVar, null, f_future));
-                            }
-                        else
-                            {
-                            ExceptionHandle hX = ((ExceptionHandle.WrapperException) x).
-                                    getExceptionHandle();
-                            contextCaller.respond(new Response(f_fiberCaller, null, hX, f_future));
-                            }
-                        });
-                    }
-                else
-                    {
-                    contextCaller.respond(new Response(f_fiberCaller, null, hException, f_future));
-                    }
+                sendResponseN(f_fiberCaller, frame0, f_future);
                 return null;
                 };
 
@@ -718,20 +711,20 @@ public class ServiceContext
      * that takes zero or one parameter and returns zero or one value.
      */
     public static class PropertyOpRequest
-            implements Message
+            extends Message
         {
-        private final Fiber f_fiberCaller;
         private final PropertyTemplate f_property;
         private final ObjectHandle f_hValue;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
         private final PropertyOperation f_op;
 
-        public PropertyOpRequest(Fiber fiberCaller, PropertyTemplate property,
+        public PropertyOpRequest(Frame frameCaller, PropertyTemplate property,
                                  ObjectHandle hValue, int cReturns,
                                  CompletableFuture<ObjectHandle> future, PropertyOperation op)
             {
-            f_fiberCaller = fiberCaller;
+            super(frameCaller);
+
             f_property = property;
             f_hValue = hValue;
             f_cReturns = cReturns;
@@ -756,7 +749,7 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(f_fiberCaller, cReturns,
+            Frame frame0 = context.createServiceEntryFrame(this, cReturns,
                     new Op[]{opCall, Return_0.INSTANCE});
 
             frame0.m_continuation = () ->

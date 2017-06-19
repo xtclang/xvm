@@ -29,6 +29,8 @@
 
 + Service reentrancy, timeouts and Fibers
 
+- injection
+
 - try-finally
 
 - Property and Method

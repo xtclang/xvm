@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
 /**
  * TODO:
  *
@@ -9,7 +10,14 @@ public class Fiber
     {
     final ServiceContext f_context;
 
-    final Fiber f_fiberPrev; // a caller's fiber (null for original)
+    // the caller's fiber (null for original)
+    final Fiber f_fiberCaller;
+
+    // the PC of the caller's service invocation Op
+    public int m_iPCCaller;
+
+    // the function of the caller's service invocation Op
+    public InvocationTemplate m_fnCaller;
 
     // the fiber status can only be mutated by the fiber itself
     private FiberStatus m_status;
@@ -44,24 +52,24 @@ public class Fiber
         Terminated,
         }
 
-    public Fiber(ServiceContext context, Fiber fiberPrev)
+    public Fiber(ServiceContext context, Fiber fiberCaller)
         {
         f_context = context;
-        f_fiberPrev = fiberPrev;
+        f_fiberCaller = fiberCaller;
         m_status = FiberStatus.InitialNew;
 
-        if (fiberPrev == null)
+        if (fiberCaller == null)
             {
             // an independent fiber is only limited by the timeout of the parent service
             // and in general has no timeout
             }
         else
             {
-            long ldtTimeoutFiber = fiberPrev.m_ldtTimeout;
+            long ldtTimeoutFiber = fiberCaller.m_ldtTimeout;
             if (ldtTimeoutFiber > 0)
                 {
                 // inherit the caller's timeout
-                m_ldtTimeout = ldtTimeoutFiber;
+                m_ldtTimeout = ldtTimeoutFiber - 10;
                 }
             else
                 {
@@ -74,16 +82,16 @@ public class Fiber
                 }
 
             // check if the fiber chain points back to the same service
-            // (clearly fiberPrev cannot belong to this service)
-            Fiber fiber = fiberPrev.f_fiberPrev;
-            while (fiber != null)
+            // (clearly fiberCaller cannot belong to this service)
+            fiberCaller = fiberCaller.f_fiberCaller;
+            while (fiberCaller != null)
                 {
-                if (fiber.f_context == context)
+                if (fiberCaller.f_context == context)
                     {
                     m_status = FiberStatus.InitialAssociated;
                     break;
                     }
-                fiber = fiber.f_fiberPrev;
+                fiberCaller = fiberCaller.f_fiberCaller;
                 }
             }
         }

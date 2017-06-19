@@ -203,8 +203,7 @@ public class xService
             return super.setPropertyValue(frame, hTarget, property, hValue);
             }
 
-        hService.m_context.sendProperty10Request(
-                frame.f_fiber, property, hValue, this::setPropertyValue);
+        hService.m_context.sendProperty10Request(frame, property, hValue, this::setPropertyValue);
 
         return Op.R_NEXT;
         }
