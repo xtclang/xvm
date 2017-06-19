@@ -201,6 +201,10 @@ public class Compiler
      * Conflicting version clauses.
      */
     public static final String CONFLICTING_VERSIONS               = "COMPILER-25";
+    /**
+     * Conflicting import composition when importing one's own module.
+     */
+    public static final String ILLEGAL_SELF_IMPORT                = "COMPILER-26";
 
 
     // ----- data members --------------------------------------------------------------------------

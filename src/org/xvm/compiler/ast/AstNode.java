@@ -48,9 +48,44 @@ public abstract class AstNode
         return parent;
         }
 
+    /**
+     * Specify a parent for the AstNode.
+     *
+     * @param parent  the parent node
+     */
     protected void setParent(AstNode parent)
         {
         this.parent = parent;
+        }
+
+    /**
+     * Helper: Given an optional Iterable of child AstNode objects, set the parent of each of the
+     * children to be this node.
+     *
+     * @param children  an Iterable of AstNode, or null
+     */
+    protected void introduceParentage(Iterable<? extends AstNode> children)
+        {
+        if (children != null)
+            {
+            for (AstNode child : children)
+                {
+                child.setParent(this);
+                }
+            }
+        }
+
+    /**
+     * Helper: Given an optional AstNode object, set its parent to this node.
+     *
+     * @param child  an AstNode, or null
+     */
+    protected void introduceParentage(AstNode child)
+        {
+        if (child != null)
+            {
+            child.setParent(this);
+            }
         }
 
     /**
@@ -68,6 +103,7 @@ public abstract class AstNode
         return NO_FIELDS;
         }
 
+    @Override
     public Iterator<AstNode> iterator()
         {
         Field[] fields = getChildFields();

@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -56,7 +57,7 @@ public class ModuleStructure
         // this module is being created to act as a fingerprint
         if (xsParent.getFileStructure().getModuleName() != null)
             {
-            fFingerprint         = true;
+            moduletype           = ModuleType.Optional;
             vtreeImportAllowVers = new VersionTree<>();
             listImportPreferVers = new ArrayList<>();
             }
@@ -77,11 +78,20 @@ public class ModuleStructure
         }
 
     /**
+     * @return the {@link ModuleType} of this module structure
+     */
+    public ModuleType getModuleType()
+        {
+        return moduletype;
+        }
+
+    /**
      * @return true iff this is the main module
      */
     public boolean isMainModule()
         {
-        return getName().equals(getFileStructure().getModuleName());
+        assert (moduletype == ModuleType.Primary) == getName().equals(getFileStructure().getModuleName());
+        return moduletype == ModuleType.Primary;
         }
 
     /**
@@ -89,13 +99,27 @@ public class ModuleStructure
      */
     public boolean isFingerprint()
         {
-        return fFingerprint;
+        switch (moduletype)
+            {
+            case Optional:
+            case Desired:
+            case Required:
+                return true;
+
+            case Primary:
+            case Embedded:
+                return false;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
      * Determine which versions this fingerprint module allows and disallows.
      *
-     * @return a VersionTree that indicates which versions are allowed (true) and avoided (false)
+     * @return a read-only VersionTree that indicates which versions are allowed (true) and avoided
+     *         (false)
      */
     public VersionTree<Boolean> getFingerprintVersions()
         {
@@ -104,14 +128,77 @@ public class ModuleStructure
         }
 
     /**
+     * Update the list of preferred versions.
+     *
+     * @param vtreeAllow  the version tree of versions to allow (true) and avoid (false)
+     */
+    public void setFingerprintVersions(VersionTree<Boolean> vtreeAllow)
+        {
+        assert isFingerprint();
+        vtreeImportAllowVers.clear();
+        vtreeImportAllowVers.putAll(vtreeAllow);
+        markModified();
+        }
+
+    /**
      * Determine which versions are desired.
      *
-     * @return a list of versions desired
+     * @return a read-only list of versions desired
      */
     public List<Version> getFingerprintVersionPrefs()
         {
         assert isFingerprint();
-        return listImportPreferVers;
+
+        List<Version> list = listImportPreferVers;
+        assert (list = Collections.unmodifiableList(list)) != null;
+        return list;
+        }
+
+    /**
+     * Update the list of preferred versions.
+     *
+     * @param listPrefer  the list of preferred versions to use
+     */
+    public void setFingerprintVersionPrefs(List<Version> listPrefer)
+        {
+        assert isFingerprint();
+        listImportPreferVers.clear();
+        listImportPreferVers.addAll(listPrefer);
+        markModified();
+        }
+
+    /**
+     * Indicate that the fingerprint is optional.
+     */
+    public void fingerprintOptional()
+        {
+        assert isFingerprint();
+        }
+
+    /**
+     * Indicate that the fingerprint is desired.
+     */
+    public void fingerprintDesired()
+        {
+        assert isFingerprint();
+        if (moduletype == ModuleType.Optional)
+            {
+            moduletype = ModuleType.Desired;
+            markModified();
+            }
+        }
+
+    /**
+     * Indicate that the fingerprint is required.
+     */
+    public void fingerprintRequired()
+        {
+        assert isFingerprint();
+        if (moduletype == ModuleType.Optional || moduletype == ModuleType.Desired)
+            {
+            moduletype = ModuleType.Required;
+            markModified();
+            }
         }
 
     /**
@@ -120,7 +207,8 @@ public class ModuleStructure
      */
     public boolean isEmbeddedModule()
         {
-        return !isMainModule() && !isFingerprint();
+        assert (moduletype == ModuleType.Embedded) == (!isMainModule() && !isFingerprint());
+        return moduletype == ModuleType.Embedded;
         }
 
 
@@ -154,7 +242,9 @@ public class ModuleStructure
         {
         super.disassemble(in);
 
-        if (in.readBoolean())
+        moduletype = ModuleType.valueOf(in.readUnsignedByte());
+
+        if (isFingerprint())
             {
             ConstantPool pool = getConstantPool();
 
@@ -176,7 +266,6 @@ public class ModuleStructure
                     }
                 }
 
-            fFingerprint         = true;
             vtreeImportAllowVers = vtreeAllow;
             listImportPreferVers = listPrefer;
             }
@@ -187,7 +276,7 @@ public class ModuleStructure
         {
         super.registerConstants(pool);
 
-        if (fFingerprint)
+        if (isFingerprint())
             {
             for (Version ver : vtreeImportAllowVers)
                 {
@@ -207,8 +296,9 @@ public class ModuleStructure
         {
         super.assemble(out);
 
-        out.writeBoolean(fFingerprint);
-        if (fFingerprint)
+        out.writeByte(moduletype.ordinal());
+
+        if (isFingerprint())
             {
             final ConstantPool pool = getConstantPool();
 
@@ -235,7 +325,10 @@ public class ModuleStructure
         StringBuilder sb = new StringBuilder();
         sb.append(super.getDescription());
 
-        if (fFingerprint)
+        sb.append(", moduletype=")
+                .append(moduletype);
+
+        if (isFingerprint())
             {
             sb.append(", fingerprint=true");
 
@@ -295,7 +388,7 @@ public class ModuleStructure
 
         // compare versions
         ModuleStructure that = (ModuleStructure) obj;
-        return this.fFingerprint == that.fFingerprint
+        return this.moduletype == that.moduletype
                 && Handy.equals(this.vtreeImportAllowVers, that.vtreeImportAllowVers)
                 && Handy.equals(this.listImportPreferVers, that.listImportPreferVers);
         }
@@ -303,17 +396,62 @@ public class ModuleStructure
 
     // ----- fields --------------------------------------------------------------------------------
 
+
+    /**
+     * A module serves one of three primary purposes:
+     * <ul>
+     * <li>The primary module is the module for which the FileStructure exists;</li>
+     * <li>A fingerprint module represents an imported module;</li>
+     * <li>An embedded module is an entire module that is embedded within the FileStructure in order
+     *     to fully satisfy the dependencies of an import.</li>
+     * </ul>
+     * <p/>
+     * A fingerprint module has three levels that indicate how desired or required it is:
+     * <ul>
+     * <li>Optional indicates that the dependency is supported, but leaves the decision regarding
+     *     whether or not to import the module to the linker;</li>
+     * <li>Desired also indicates that the dependency is supported, but even though the dependency
+     *     is not required, the linker should make a best effort to obtain and link in the
+     *     module;</li>
+     * <li>Required indicates that the primary module can not be loaded unless the fingerprint
+     *     module is obtained and linked in by the linker.</li>
+     * </ul>
+     */
+    enum ModuleType
+        {
+        Primary, Optional, Desired, Required, Embedded;
+
+        /**
+         * Look up a Format enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Format enum for the specified ordinal
+         */
+        public static ModuleType valueOf(int i)
+            {
+            return MODULE_TYPES[i];
+            }
+
+        /**
+         * All of the Format enums.
+         */
+        private static final ModuleType[] MODULE_TYPES = ModuleType.values();
+        };
+
     /**
      * True iff this is a fingerprint module, which is a secondary (not main) module in a file
      * structure that represents the set of external dependencies on a particular imported module
      * from the main module and any embedded modules.
      */
-    private boolean              fFingerprint;
+    private ModuleType           moduletype = ModuleType.Primary;
+
     /**
      * If this is a fingerprint, then this will be a non-null version tree (but potentially empty)
      * specifying which versions are allowed (via a TRUE value) and avoided (via a FALSE value).
      */
     private VersionTree<Boolean> vtreeImportAllowVers;
+
     /**
      * If this is a fingerprint, then this will be a non-null (but potentially empty) list of
      * versions that are specified as preferred, in their order of preference.

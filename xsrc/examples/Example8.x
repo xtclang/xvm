@@ -144,3 +144,73 @@ class MyMap
 
     Int i;
     }
+
+// ----- imports
+
+// simple
+module MyApp
+    {
+    package Q import q.sourceforge.net;
+    }
+
+// multiple
+module MyApp
+    {
+    package A
+        {
+        package Q1 import q.sourceforge.net;
+        }
+
+    package B
+        {
+        package Q2 import q.sourceforge.net;
+        }
+    }
+
+// conditional
+module MyApp
+    {
+    package Spring import:optional springframework.spring.io;
+
+    package A
+        {
+        if (Spring.present)
+            {
+            package Q1 import q.sourceforge.net;
+            }
+        }
+
+    package B
+        {
+        // since this is NOT conditional, it should override the other import
+        // w.r.t. the import (but not w.r.t. the "Q1" name), i.e. Q1 will still
+        // be conditional, but the fingerprint is NOT conditional
+        package Q2 import q.sourceforge.net;
+        }
+    }
+
+// conditional #2
+module MyApp
+    {
+    package Spring import:optional springframework.spring.io;
+    package Hibernate import:optional hibernate.jboss.org;
+
+    package A
+        {
+        if (Spring.present)
+            {
+            package Q1 import q.sourceforge.net;
+            }
+        }
+
+    package B
+        {
+        // the resulting module fingerprint for "q" should be conditional on:
+        // "Spring.present || Hibernate.present"
+        if (Hibernate.present)
+            {
+            package Q2 import q.sourceforge.net;
+            }
+        }
+    }
+
