@@ -236,7 +236,7 @@ public class Parser
                 {
                 Token tokIf = expect(Id.IF);
                 expect(Id.L_PAREN);
-                Expression exprIf = parseExpression();
+                Expression exprIf = parseExpression();          // TODO validate conditional expression
                 expect(Id.R_PAREN);
 
                 // then ...
@@ -254,7 +254,7 @@ public class Parser
                 expect(Id.R_CURLY);
 
                 // else ...
-                Token tokElse = match(Id.ELSE);
+                Token tokElse = match(Id.ELSE);                 // TODO what about "else if"
                 if (tokElse != null)
                     {
                     expect(Id.L_CURLY);
@@ -492,7 +492,7 @@ public class Parser
                     {
                     Token tokIf = expect(Id.IF);
                     expect(Id.L_PAREN);
-                    Expression exprIf = parseExpression();
+                    Expression exprIf = parseExpression(); // TODO validate conditional expression
                     expect(Id.R_PAREN);
 
                     // then ...
@@ -510,7 +510,7 @@ public class Parser
                     // the '}' is eaten by the recursive call to parseTypeCompositionComponents
 
                     // else ...
-                    Token tokElse = match(Id.ELSE);
+                    Token tokElse = match(Id.ELSE);         // TODO what about "else if"
                     if (tokElse != null)
                         {
                         expect(Id.L_CURLY);

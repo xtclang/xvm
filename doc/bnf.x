@@ -1,7 +1,4 @@
 
-# question: is "<A, B>" a "tuple type of A and B"? i.e. is "(a, b)" of type "<A, B>"?
-
-
 #
 # misc
 #
@@ -129,9 +126,22 @@ Compositions
     ConditionalComposition
     Compositions ConditionalComposition
 
+# while parsing is of a generic Expression, there are only a few expression forms that are permitted:
+# 1. StringLiteral "." "defined"
+# 2. QualifiedName "." "present"
+# 3. QualifiedName "." "versionMatches" "(" VersionLiteral ")"
+# 4. Any of 1-3 and 5 negated using "!"
+# 5. Any two of 1-5 combined using "&", "&&", "|", or "||"
 ConditionalComposition
-    "if" "(" Expression ")" "{" Composition "}"
+    IfComposition
     Composition
+
+IfComposition
+    "if" "(" Expression ")" "{" Compositions "}" ElseComposition-opt
+
+ElseComposition
+    "else" IfComposition
+    "else" "{" Compositions "}"
 
 Composition
     "extends" TypeExpression ArgumentList-opt
@@ -146,7 +156,7 @@ ImportClause
     "import:embedded"
     "import:required"
     "import:desired"
-    "import:optional"       // TODO "supported"?
+    "import:optional"
 
 VersionRequirement
     Version VersionOverrides-opt
@@ -209,8 +219,20 @@ Enum
     Annotations-opt Name TypeParameterTypeList-opt ArgumentList-opt TypeCompositionBody-opt
 
 TypeCompositionComponents
+    ConditionalTypeCompositionComponent
+    TypeCompositionComponents ConditionalTypeCompositionComponent
+
+ConditionalTypeCompositionComponent
+    IfTypeCompositionComponent
     TypeCompositionComponent
-    TypeCompositionComponents TypeCompositionComponent
+
+# see special notes on ConditionalComposition related to the Expression
+IfTypeCompositionComponent
+    "if" "(" Expression ")" "{" TypeCompositionComponents "}" ElseTypeCompositionComponent-opt
+
+ElseTypeCompositionComponent
+    "else" IfTypeCompositionComponent
+    "else" "{" TypeCompositionComponents "}"
 
 TypeCompositionComponent
     TypdefStatement

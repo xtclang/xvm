@@ -234,6 +234,67 @@ public abstract class XvmStructure
         }
 
     /**
+     * Obtain the condition for the entire path from the root XVM Structure down to this XVM
+     * Structure.
+     *
+     * @return
+     */
+    public ConditionalConstant getAggregateCondition()
+        {
+        ConditionalConstant[] conds = aggregateConditions(0);
+        if (conds == null)
+            {
+            return null;
+            }
+
+        return conds.length == 1
+                ? conds[0]
+                : getConstantPool().ensureAllCondition(conds);
+        }
+
+    /**
+     * Aggregate all of the conditions for a specified XVM Structure by walking the tree up to its
+     * root.
+     *
+     * @param cConditions  the number of conditions present further down in the tree
+     *
+     * @return an array of conditions, or nullif the XVM Structure is not conditional
+     */
+    protected ConditionalConstant[] aggregateConditions(int cConditions)
+        {
+        ConditionalConstant[] conds  = null;
+        XvmStructure          parent = m_xsParent;
+        ConditionalConstant   cond   = getCondition();
+        if (cond != null)
+            {
+            ++cConditions;
+            }
+
+        if (parent == null)
+            {
+            // we're at the top of the tree; create the storage to hold the aggregated conditions
+            // (if any)
+            if (cConditions > 0)
+                {
+                conds = new ConditionalConstant[cConditions];
+                }
+            }
+        else
+            {
+            // go up the tree
+            conds = parent.aggregateConditions(cConditions);
+            }
+
+        // add our condition to the end
+        if (cond != null)
+            {
+            conds[conds.length-cConditions] = cond;
+            }
+
+        return conds;
+        }
+
+    /**
      * Specify a condition for this XVM Structure. Note that this condition is <i>in addition to</i>
      * any condition that applies to the parent of this XVM Structure.
      *

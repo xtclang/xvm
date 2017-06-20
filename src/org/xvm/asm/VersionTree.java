@@ -1,8 +1,11 @@
 package org.xvm.asm;
 
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+
+import org.xvm.util.Handy;
 
 
 /**
@@ -115,6 +118,37 @@ public class VersionTree<V>
         }
 
     /**
+     * Test for the presence of the specified version in this tree.
+     *
+     * @param ver  the version to test for
+     *
+     * @return true iff the version exists in this tree
+     */
+    public boolean contains(Version ver)
+        {
+        return findNode(ver) != null;
+        }
+
+    /**
+     * Test for the presence of all of the version from the specified tree in this tree.
+     *
+     * @param that  the VersionTree of versions to test for; the values in the tree are ignored
+     *
+     * @return true iff all of the versions from that tree exist in this tree
+     */
+    public boolean containsAll(VersionTree<?> that)
+        {
+        for (Version ver : that)
+            {
+            if (!contains(ver))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    /**
      * Obtain the value stored associated with the specified version.
      *
      * @param ver  the version
@@ -223,6 +257,19 @@ public class VersionTree<V>
         }
 
     /**
+     * Copy all of the data from that tree into this tree.
+     *
+     * @param that  another version tree with the same associated value type
+     */
+    public void putAll(VersionTree<V> that)
+        {
+        for (Version ver : that)
+            {
+            put(ver, that.get(ver));
+            }
+        }
+
+    /**
      * Remove the specified version and its associated value from this tree.
      *
      * @param ver  the version to remove
@@ -238,6 +285,49 @@ public class VersionTree<V>
                 }
 
             node.remove();
+            }
+        }
+
+    /**
+     * Remove all of the version in the specified tree from this tree.
+     *
+     * @param that  the VersionTree of versions to remove; the values in the tree are ignored
+     */
+    public void removeAll(VersionTree<?> that)
+        {
+        for (Version ver : that)
+            {
+            remove(ver);
+            }
+        }
+
+    /**
+     * Retain only the versions in this tree that exist in the specified tree.
+     *
+     * @param that  the VersionTree of versions to retain; the values in the tree are ignored
+     */
+    public void retainAll(VersionTree<?> that)
+        {
+        // first, collect a list of versions to remove, so that removal (in the middle of our
+        // iteration) does not cause instability in the iterator
+        ArrayList<Version> listRemove = null;
+        for (Version ver : this)
+            {
+            if (that.get(ver) == null)
+                {
+                if (listRemove == null)
+                    {
+                    listRemove = new ArrayList<>();
+                    }
+                listRemove.add(ver);
+                }
+            }
+        if (listRemove != null)
+            {
+            for (Version ver : listRemove)
+                {
+                remove(ver);
+                }
             }
         }
 
@@ -266,6 +356,38 @@ public class VersionTree<V>
             node.copyTo(that);
             }
         return that;
+        }
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public boolean equals(Object o)
+        {
+        if (o == this)
+            {
+            return true;
+            }
+
+        if (o instanceof VersionTree)
+            {
+            VersionTree<?> that = (VersionTree<?>) o;
+            if (this.size() == that.size())
+                {
+                for (Iterator<Version> iterThis = this.iterator(), iterThat = that.iterator();
+                        iterThis.hasNext(); )
+                    {
+                    Version verThis = iterThis.next();
+                    Version verThat = iterThat.next();
+                    if (!verThis.equals(verThat) || !Handy.equals(this.get(verThis), that.get(verThat)))
+                        {
+                        return false;
+                        }
+                    }
+                return true;
+                }
+            }
+
+        return false;
         }
 
     @Override
