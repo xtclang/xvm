@@ -1,6 +1,12 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
+
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -34,6 +40,74 @@ public class NameExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public boolean validateCondition(ErrorListener errs)
+        {
+        return isDotNameWithNoParams("present") || super.validateCondition(errs);
+        }
+
+    @Override
+    public ConditionalConstant toConditionalConstant()
+        {
+        if (validateCondition(null))
+            {
+            ConstantPool pool = getComponent().getConstantPool();
+            return pool.ensurePresentCondition(new UnresolvedNameConstant(pool, getUpToDotName()));
+            }
+
+        return super.toConditionalConstant();
+        }
+
+    /**
+     * Determine if the expression is a multi-part, dot-delimited name that has no type params.
+     *
+     * @param sName  the last name of the expression must match this name
+     *
+     * @return true iff the expression is a multi-part, dot-delimited name that has no type params,
+     *         with the last part of the name matching the specified name
+     */
+    protected boolean isDotNameWithNoParams(String sName)
+        {
+        List<Token> names  = this.names;
+        int         cNames = names.size();
+        return cNames > 1 && names.get(cNames-1).equals(sName) && (params == null || params.isEmpty());
+        }
+
+    /**
+     * Get all of the names in the expression except the last one.
+     *
+     * @return an array of names
+     */
+    protected String[] getUpToDotName()
+        {
+        List<Token> listNames = this.names;
+        int         cNames    = listNames.size() - 1;
+        String[]    aNames    = new String[cNames];
+        for (int i = 0; i < cNames; ++i)
+            {
+            aNames[i] = (String) listNames.get(i).getValue();
+            }
+        return aNames;
+        }
+
+    /**
+     * @return the number of dot-delimited names in the expression
+     */
+    public int getNameCount()
+        {
+        return names.size();
+        }
+
+    /**
+     * @param i  the index of the name to obtain from the dot-delimited names in the expression
+     *
+     * @return the i-th name in the expression
+     */
+    String getName(int i)
+        {
+        return (String) names.get(i).getValue();
+        }
 
     @Override
     public long getStartPosition()

@@ -140,6 +140,12 @@ public class NotCondition
         return mapInv;
         }
 
+    @Override
+    public ConditionalConstant negate()
+        {
+        return m_constCond;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

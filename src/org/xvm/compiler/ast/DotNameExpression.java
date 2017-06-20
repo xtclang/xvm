@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.constants.ConditionalConstant;
+
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -31,6 +34,23 @@ public class DotNameExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public boolean validateCondition(ErrorListener errs)
+        {
+        return expr instanceof LiteralExpression
+                && ((LiteralExpression) expr).literal.getId() == Token.Id.LIT_STRING
+                && ((String) name.getValue()).equals("present")
+                || super.validateCondition(errs);
+        }
+
+    @Override
+    public ConditionalConstant toConditionalConstant()
+        {
+        return validateCondition(null)
+                ? getComponent().getConstantPool().ensureNamedCondition(
+                        (String) ((LiteralExpression) expr).literal.getValue())
+                : super.toConditionalConstant();
+        }
 
     @Override
     public long getStartPosition()

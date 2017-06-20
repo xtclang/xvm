@@ -179,7 +179,7 @@ Versions
 
 # note: the StringLiteral must contain a VersionString
 Version
-    StringLiteral
+    "v:" NoWhitespace StringLiteral
 
 VersionString
     VersionFinish
@@ -795,6 +795,7 @@ Entry
     Expression "=" Expression
 
 VersionLiteral
+    "v" ":{" Version "}"        // TODO
     "Version" ":{" Version "}"
 
 CustomLiteral

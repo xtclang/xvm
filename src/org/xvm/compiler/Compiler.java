@@ -190,9 +190,9 @@ public class Compiler
      */
     public static final String IMPURE_MODULE_IMPORT               = "COMPILER-22";
     /**
-     * More than one "import" clause, and the names don't match.
+     * A conditional is not allowed on this structure.
      */
-    public static final String CONFLICTING_IMPORT_CLAUSES         = "COMPILER-23";
+    public static final String CONDITIONAL_NOT_ALLOWED            = "COMPILER-23";
     /**
      * Cannot find a module.
      */
@@ -205,6 +205,10 @@ public class Compiler
      * Conflicting import composition when importing one's own module.
      */
     public static final String ILLEGAL_SELF_IMPORT                = "COMPILER-26";
+    /**
+     * Illegal link-time conditional.
+     */
+    public static final String ILLEGAL_CONDITIONAL                = "COMPILER-27";
 
 
     // ----- data members --------------------------------------------------------------------------
