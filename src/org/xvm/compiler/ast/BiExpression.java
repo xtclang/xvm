@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -37,6 +39,40 @@ public class BiExpression
 
             default:
                 return super.toTypeExpression();
+            }
+        }
+
+    @Override
+    public boolean validateCondition(ErrorListener errs)
+        {
+        switch (operator.getId())
+            {
+            case BIT_AND:
+            case COND_AND:
+            case BIT_OR:
+            case COND_OR:
+                return expr1.validateCondition(errs) && expr2.validateCondition(errs);
+
+            default:
+                return super.validateCondition(errs);
+            }
+        }
+
+    @Override
+    public ConditionalConstant toConditionalConstant()
+        {
+        switch (operator.getId())
+            {
+            case BIT_AND:
+            case COND_AND:
+                return expr1.toConditionalConstant().addAnd(expr2.toConditionalConstant());
+
+            case BIT_OR:
+            case COND_OR:
+                return expr1.toConditionalConstant().addOr(expr2.toConditionalConstant());
+
+            default:
+                return super.toConditionalConstant();
             }
         }
 

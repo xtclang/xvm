@@ -215,7 +215,6 @@ public class Parser
             expect(Id.SEMICOLON);
             }
 
-        // TODO constructor needs to add itself as a parent to anything that is parent-aware
         return new TypeCompositionStatement(m_source, lStartPos, lEndPos, exprCondition, modifiers,
                 annotations, category, name, qualified, typeParams, constructorParams, compositions,
                 body, doc);
@@ -236,7 +235,7 @@ public class Parser
                 {
                 Token tokIf = expect(Id.IF);
                 expect(Id.L_PAREN);
-                Expression exprIf = parseExpression();          // TODO validate conditional expression
+                Expression exprIf = parseCondition();
                 expect(Id.R_PAREN);
 
                 // then ...
@@ -254,12 +253,16 @@ public class Parser
                 expect(Id.R_CURLY);
 
                 // else ...
-                Token tokElse = match(Id.ELSE);                 // TODO what about "else if"
+                Token tokElse = match(Id.ELSE);
                 if (tokElse != null)
                     {
-                    expect(Id.L_CURLY);
-                    Token tokNot = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
+                    Token      tokNot   = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
                     Expression exprElse = new PrefixExpression(tokNot, exprIf);
+                    boolean    fElseIf  = peek().getId() == Id.IF;
+                    if (!fElseIf)
+                        {
+                        expect(Id.L_CURLY);
+                        }
                     if (exprCondition == null)
                         {
                         parseConditionalComposition(exprElse, compositions);
@@ -268,7 +271,10 @@ public class Parser
                         {
                         parseConditionalComposition(new BiExpression(exprCondition, tokAnd, exprElse), compositions);
                         }
-                    expect(Id.R_CURLY);
+                    if (!fElseIf)
+                        {
+                        expect(Id.R_CURLY);
+                        }
                     }
 
                 fAny = true;
@@ -492,7 +498,7 @@ public class Parser
                     {
                     Token tokIf = expect(Id.IF);
                     expect(Id.L_PAREN);
-                    Expression exprIf = parseExpression(); // TODO validate conditional expression
+                    Expression exprIf = parseCondition();
                     expect(Id.R_PAREN);
 
                     // then ...
@@ -510,12 +516,16 @@ public class Parser
                     // the '}' is eaten by the recursive call to parseTypeCompositionComponents
 
                     // else ...
-                    Token tokElse = match(Id.ELSE);         // TODO what about "else if"
+                    Token tokElse = match(Id.ELSE);
                     if (tokElse != null)
                         {
-                        expect(Id.L_CURLY);
-                        Token tokNot = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
+                        Token      tokNot   = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
                         Expression exprElse = new PrefixExpression(tokNot, exprIf);
+                        boolean    fElseIf  = peek().getId() == Id.IF;
+                        if (!fElseIf)
+                            {
+                            expect(Id.L_CURLY);
+                            }
                         if (exprCondition == null)
                             {
                             parseTypeCompositionComponents(exprElse, stmts, fFileLevel);
@@ -525,6 +535,12 @@ public class Parser
                             parseTypeCompositionComponents(new BiExpression(exprCondition, tokAnd, exprElse), stmts, fFileLevel);
                             }
                         // the '}' is eaten by the recursive call to parseTypeCompositionComponents
+
+                        // TODO what about "else if" (the else won't have a '}')
+//                        if (!fElseIf)
+//                            {
+//                            expect(Id.R_CURLY);
+//                            }
                         }
 
                     // there is no "if statement" per se; instead, the expression was simply pushed
@@ -1914,9 +1930,32 @@ public class Parser
         }
 
     /**
-     * Parse any expression.
+     * Parse a condition expression.
      *
      * <p/><code><pre>
+     * while parsing is of a generic Expression, there are only a few expression
+     * forms that are permitted:
+     * 1. StringLiteral "." "defined"
+     * 2. QualifiedName "." "present"
+     * 3. QualifiedName "." "versionMatches" "(" VersionLiteral ")"
+     * 4. Any of 1-3 and 5 negated using "!"
+     * 5. Any two of 1-5 combined using "&", "&&", "|", or "||"
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseCondition()
+        {
+        Expression expr = parseExpression();
+        expr.validateCondition(m_errorListener);
+        return expr;
+        }
+
+    /**
+     * Parse a list of expressions.
+     *
+     * <p/><code><pre>
+     *     TODO
      * </pre></code>
      *
      * @return an expression
@@ -2985,6 +3024,14 @@ s     *
                         getLastMatch().getEndPosition());
                 }
 
+            case "Version":
+            case "v":
+                {
+                Token   tokLit = peek();
+                Version ver    = parseVersion(true);
+                return new VersionExpression(tokLit, ver, type.getStartPosition());
+                }
+
             default:
                 {
                 Token      open  = expect(Id.L_CURLY);
@@ -3793,7 +3840,7 @@ s     *
         }
 
     /**
-     * Parse a sequence of version
+     * Parse a sequence of version override clauses.
      *
      * <p/><code><pre>
      * VersionRequirement
@@ -3815,9 +3862,13 @@ s     *
      *     Version
      *     Versions, Version
      *
+     * # note: the StringLiteral must contain a VersionString
      * Version
+     *     "v:" NoWhitespace StringLiteral
+     *
+     * VersionString
      *     VersionFinish
-     *     Version . VersionFinish
+     *     VersionString . VersionFinish
      *
      * VersionFinish:
      *     NonGAPrefix-opt DigitsNoUnderscores
@@ -3838,18 +3889,21 @@ s     *
     List<VersionOverride> parseVersionRequirement(boolean required)
         {
         // start with the initial version requirement (no preceding verb)
-        Version ver = parseVersion(required);
-        if (ver == null)
+        VersionExpression exprVer = parseVersionLiteral(required);
+        if (exprVer == null)
             {
             return null;
             }
 
         List<VersionOverride> overrides = new ArrayList<>();
         Token                 tokVer    = getLastMatch();
-        overrides.add(new VersionOverride(ver, tokVer.getStartPosition(), tokVer.getEndPosition()));
+        overrides.add(new VersionOverride(exprVer));
 
         Set<Version> setGood = new HashSet<>();
         Set<Version> setBad  = new HashSet<>();
+
+        // the initial version requirement is obviously "good"
+        setGood.add(exprVer.getVersion());
 
         // this is a little more complicated parsing because the keywords are context sensitive
         // (so we need to use match() to grab them)
@@ -3861,10 +3915,10 @@ s     *
             boolean first = true;
             while (first || match(Id.COMMA) != null)
                 {
-                ver = parseVersion(true);
-                overrides.add(new VersionOverride(verb, ver, verb.getStartPosition(),
-                        getLastMatch().getEndPosition()));
+                exprVer = parseVersionLiteral(true);
+                overrides.add(new VersionOverride(verb, exprVer));
 
+                Version ver = exprVer.getVersion();
                 if ((verb.getId() == Id.AVOID ? setGood : setBad).contains(ver))
                     {
                     log(Severity.ERROR, Compiler.CONFLICTING_VERSIONS, verb.getStartPosition(),
@@ -3877,6 +3931,55 @@ s     *
             }
 
         return overrides;
+        }
+
+    /**
+     * Parse a version literal.
+     *
+     * <p/><code><pre>
+     * # note: the StringLiteral must contain a VersionString
+     * Version
+     *     "v" ":" StringLiteral
+     *
+     * VersionString
+     *     VersionFinish
+     *     VersionString . VersionFinish
+     *
+     * VersionFinish:
+     *     NonGAPrefix-opt DigitsNoUnderscores
+     *     NonGAPrefix DigitsNoUnderscores-opt
+     *
+     * NonGAPrefix:
+     *     "dev"
+     *     "ci"
+     *     "alpha"
+     *     "beta"
+     *     "rc"
+     * </pre></code>
+     *
+     * @param required  true if a version requirement must be present next in the stream of tokens
+     *
+     * @return a VersionExpression
+     */
+    VersionExpression parseVersionLiteral(boolean required)
+        {
+        Token tokPrefix = match(Id.IDENTIFIER, required);
+        if (tokPrefix == null)
+            {
+            return null;
+            }
+
+        String sName = (String) tokPrefix.getValue();
+        if ((sName.equals("v") || sName.equals("Version")) && !tokPrefix.hasTrailingWhitespace()
+                && !expect(Id.COLON).hasTrailingWhitespace())
+            {
+            return new VersionExpression(peek(), parseVersion(true), tokPrefix.getStartPosition());
+            }
+        else
+            {
+            log(Severity.ERROR, BAD_VERSION, tokPrefix.getStartPosition(), peek().getEndPosition());
+            throw new CompilerException("version literal");
+            }
         }
 
     /**

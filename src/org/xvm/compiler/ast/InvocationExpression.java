@@ -1,6 +1,12 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Version;
+import org.xvm.asm.constants.ConditionalConstant;
+
+import org.xvm.compiler.ErrorListener;
+
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -27,6 +33,41 @@ public class InvocationExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public boolean validateCondition(ErrorListener errs)
+        {
+        return expr instanceof NameExpression && ((NameExpression) expr).isDotNameWithNoParams("versionMatches")
+                && args.size() == 1 && args.get(0) instanceof VersionExpression
+                || super.validateCondition(errs);
+        }
+
+    @Override
+    public ConditionalConstant toConditionalConstant()
+        {
+        if (validateCondition(null))
+            {
+            // build the qualified module name
+            NameExpression exprNames = (NameExpression) expr;
+            StringBuilder  sb        = new StringBuilder();
+            for (int i = 0, c = exprNames.getNameCount() - 1; i < c; ++i)
+                {
+                if (i > 0)
+                    {
+                    sb.append('.');
+                    }
+                sb.append(exprNames.getName(i));
+                }
+
+            String       sModule = sb.toString();
+            Version      version = ((VersionExpression) args.get(0)).getVersion();
+            ConstantPool pool    = getComponent().getConstantPool();
+            return pool.ensureImportVersionCondition(
+                    pool.ensureModuleConstant(sModule), pool.ensureVersionConstant(version));
+            }
+
+        return super.toConditionalConstant();
+        }
 
     @Override
     public long getStartPosition()

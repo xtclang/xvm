@@ -259,8 +259,11 @@ public abstract class AstNode
     public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam)
         {
         Source source = getSource();
-        return errs.log(severity, sCode, aoParam, source,
-                source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition());
+        return errs == null
+                ? errs.log(severity, sCode, aoParam, source,
+                        source == null ? 0L : getStartPosition(),
+                        source == null ? 0L : getEndPosition())
+                : severity.ordinal() >= Severity.ERROR.ordinal();
         }
 
 

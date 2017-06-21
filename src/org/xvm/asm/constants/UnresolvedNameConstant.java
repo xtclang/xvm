@@ -10,46 +10,90 @@ import java.io.IOException;
 
 
 /**
- * Represent a constant that will eventually be replaced with a real name. Because the constant is
- * actually a CharStringConstant, it "completes" itself (by eventually becoming a "real" resolved
- * CharStringConstant.)
+ * Represent a constant that will eventually be replaced with a real identity constant.
  */
 public class UnresolvedNameConstant
-        extends CharStringConstant
+        extends IdentityConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a place-holder constant that will eventually be replaced with a real constant
      *
-     * @param pool         the ConstantPool that will contain this Constant
+     * @param pool  the ConstantPool that will contain this Constant
      */
-    public UnresolvedNameConstant(ConstantPool pool)
+    public UnresolvedNameConstant(ConstantPool pool, String[] names)
         {
-        super(pool, UNRESOLVED);
+        super(pool);
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
 
-    public boolean isNameResolved()
+    @Override
+    public IdentityConstant getParentConstant()
         {
-        return getValue() != UNRESOLVED;
+        if (isNameResolved())
+            {
+            return constant.getParentConstant();
+            }
+
+        throw new IllegalStateException("unresolved: " + getName());
         }
 
     @Override
-    public void resolve(String value)
+    public String getName()
         {
-        super.resolve(value);
+        if (isNameResolved())
+            {
+            return constant.getName();
+            }
+
+        String[]      names  = this.names;
+        StringBuilder sb     = new StringBuilder();
+        for (int i = 0, c = names.length; i < c; ++i)
+            {
+            if (i > 0)
+                {
+                sb.append('.');
+                }
+            sb.append(names[i]);
+            }
+        return sb.toString();
+        }
+
+    public boolean isNameResolved()
+        {
+        return constant != null;
+        }
+
+    public void resolve(IdentityConstant constant)
+        {
+        assert this.constant == null || this.constant == constant;
+        this.constant = constant;
         }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    public Format getFormat()
+        {
+        return isNameResolved() ? constant.getFormat() : Format.Unresolved;
+        }
+
+    @Override
     public Object getLocator()
         {
-        return isNameResolved() ? super.getLocator() : null;
+        return isNameResolved() ? constant.getLocator() : null;
+        }
+
+    @Override
+    public String getValueString()
+        {
+        return isNameResolved()
+                ? constant.getValueString()
+                : getName();
         }
 
     @Override
@@ -57,12 +101,12 @@ public class UnresolvedNameConstant
         {
         if (isNameResolved())
             {
-            return super.compareDetails(that);
+            return constant.compareDetails(that);
             }
         else
             {
-            // need to return a value that allows for stable sorts, but unless this==that, the details
-            // can never be equal
+            // need to return a value that allows for stable sorts, but unless this==that, the
+            // details can never be equal
             return this == that ? 0 : -1;
             }
         }
@@ -82,7 +126,11 @@ public class UnresolvedNameConstant
         {
         if (isNameResolved())
             {
-            super.registerConstants(pool);
+            constant.registerConstants(pool);
+            }
+        else
+            {
+            throw new IllegalStateException("unresolved: " + getName());
             }
         }
 
@@ -92,28 +140,30 @@ public class UnresolvedNameConstant
         {
         if (isNameResolved())
             {
-            super.assemble(out);
+            constant.assemble(out);
             }
         else
             {
-            throw new IllegalStateException();
+            throw new IllegalStateException("unresolved: " + getName());
             }
         }
 
+    @Override
+    public String getDescription()
+        {
+        return isNameResolved()
+                ? constant.getDescription()
+                : "name=" + getName();
+        }
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
         public boolean equals(Object obj)
         {
-        if (isNameResolved())
-            {
-            return super.equals(obj);
-            }
-        else
-            {
-            return this == obj;
-            }
+        return isNameResolved()
+                ? constant.equals(obj)
+                : this == obj;
         }
 
     @Override
@@ -121,15 +171,24 @@ public class UnresolvedNameConstant
         {
         if (isNameResolved())
             {
-            return super.hashCode();
+            return constant.hashCode();
             }
         else
             {
-            return -271828182;
+            String[] names  = this.names;
+            int      cNames = names.length;
+            int      nHash  = cNames ^ names[0].hashCode();
+            if (cNames > 1)
+                {
+                nHash ^= names[cNames-1].hashCode();
+                }
+            return nHash;
             }
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
+    private String[]         names;
+    private IdentityConstant constant;
     }

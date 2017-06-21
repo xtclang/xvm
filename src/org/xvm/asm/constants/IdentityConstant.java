@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.List;
 
 import org.xvm.asm.Component;
@@ -83,4 +85,24 @@ public abstract class IdentityConstant
         {
         return getParentConstant().getComponent().getChild(this);
         }
+
+    // ----- constant methods ----------------------------------------------------------------------
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        super.registerConstants(pool);
+        }
+
+    @Override
+    protected abstract void assemble(DataOutput out) throws IOException;
+
+    @Override
+    protected Object getLocator()
+        {
+        return super.getLocator();
+        }
+
+    @Override
+    protected abstract int compareDetails(Constant that);
     }

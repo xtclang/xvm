@@ -24,25 +24,23 @@ public class VersionOverride
     /**
      * Construct a default version requirement.
      *
-     * @param version  the version required
+     * @param exprVer  denotes the version required
      */
-    public VersionOverride(Version version, long lStartPos, long lEndPos)
+    public VersionOverride(VersionExpression exprVer)
         {
-        this(null, version, lStartPos, lEndPos);
+        this(null, exprVer);
         }
 
     /**
      * Construct a version override.
      *
      * @param verb     the overriding verb ("allow", "avoid", or "prefer")
-     * @param version  the version associated with the verb
+     * @param exprVer  denotes the version associated with the verb
      */
-    public VersionOverride(Token verb, Version version, long lStartPos, long lEndPos)
+    public VersionOverride(Token verb, VersionExpression exprVer)
         {
-        this.verb      = verb;
-        this.version   = version;
-        this.lStartPos = lStartPos;
-        this.lEndPos   = lEndPos;
+        this.verb    = verb;
+        this.exprVer = exprVer;
         }
 
 
@@ -53,7 +51,7 @@ public class VersionOverride
      */
     public Version getVersion()
         {
-        return version;
+        return exprVer.getVersion();
         }
 
     /**
@@ -75,13 +73,15 @@ public class VersionOverride
     @Override
     public long getStartPosition()
         {
-        return lStartPos;
+        return verb == null
+                ? exprVer.getStartPosition()
+                : verb.getStartPosition();
         }
 
     @Override
     public long getEndPosition()
         {
-        return lEndPos;
+        return exprVer.getEndPosition();
         }
 
     @Override
@@ -96,7 +96,7 @@ public class VersionOverride
     @Override
     public String toString()
         {
-        return verb == null ? version.toString() : (verb.getId().TEXT + ' ' + version);
+        return verb == null ? exprVer.toString() : (verb.getId().TEXT + ' ' + exprVer.toString());
         }
 
     @Override
@@ -122,12 +122,9 @@ public class VersionOverride
     protected Token verb;
 
     /**
-     * The version id.
+     * The version literal expression.
      */
-    protected Version version;
-
-    protected long lStartPos;
-    protected long lEndPos;
+    protected VersionExpression exprVer;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "version");
     }

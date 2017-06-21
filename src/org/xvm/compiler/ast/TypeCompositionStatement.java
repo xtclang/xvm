@@ -750,137 +750,128 @@ public class TypeCompositionStatement
                 case IMPORT_REQ:
                 case IMPORT_WANT:
                 case IMPORT_OPT:
+                    {
                     ++cImports;
-                    if (format == Format.PACKAGE)
+                    // "import" not allowed (only used by packages)
+                    if (format != Format.PACKAGE)
+                        {
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        break;
+                        }
+
+                    if (fAlreadyImports)
                         {
                         // only one import is allowed
-                        if (fAlreadyImports)
+                        composition.log(errs, Severity.ERROR, Compiler.MULTIPLE_IMPORT_CLAUSES);
+                        break;
+                        }
+
+                    if (composition.condition != null)
+                        {
+                        composition.log(errs, Severity.ERROR, Compiler.CONDITIONAL_NOT_ALLOWED);
+                        }
+
+                    // make sure that there is only one "import" clause
+                    fAlreadyImports = true;
+
+                    // create the fingerprint for the imported module
+                    Composition.Import  compImport = (Composition.Import) composition;
+                    NamedTypeExpression type       = (NamedTypeExpression) compImport.type;
+                    String              sModule    = type.getName();
+                    if (!type.isValidModuleName())
+                        {
+                        composition.log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sModule);
+                        break;
+                        }
+
+                    boolean fNewFingerprint = false;
+                    if (moduleImport == null)
+                        {
+                        // create the fingerprint
+                        moduleImport = (ModuleStructure) component.getFileStructure().getChild(sModule);
+                        if (moduleImport == null)
                             {
-                            composition.log(errs, Severity.ERROR, Compiler.MULTIPLE_IMPORT_CLAUSES,
-                                    keyword.TEXT);
+                            moduleImport    = component.getFileStructure().ensureModule(sModule);
+                            fNewFingerprint = true;
                             }
-                        else
+                        ((PackageStructure) component).setImportedModule(moduleImport);
+                        }
+
+                    List<Version>        listPrefer = compImport.getPreferVersionList();
+                    VersionTree<Boolean> vtreeAllow = compImport.getAllowVersionTree();
+                    if (moduleImport.isMainModule())
+                        {
+                        // it is possible to import "this" module, which would be useful
+                        // for example if names within this module were inadvertently
+                        // hidden; however, an import of "this" module must not use
+                        // version specifiers or any modifiers e.g. "optional" or
+                        // "desired"
+                        if (keyword != Token.Id.IMPORT
+                                || !listPrefer.isEmpty() || !vtreeAllow.isEmpty())
                             {
-                            // make sure that there is only one "import" clause, but defer the
-                            // analysis of conditional clauses (we can't evaluate conditions yet)
-                            fAlreadyImports = composition.condition == null;
-
-                            // create the fingerprint for the imported module
-                            Composition.Import  compImport = (Composition.Import) composition;
-                            NamedTypeExpression type       = (NamedTypeExpression) compImport.type;
-                            String              sModule    = type.getName();
-                            if (type.isValidModuleName())
-                                {
-                                boolean fNewFingerprint = false;
-                                if (moduleImport == null)
-                                    {
-                                    // create the fingerprint
-                                    moduleImport = (ModuleStructure) component.getFileStructure().getChild(sModule);
-                                    if (moduleImport == null)
-                                        {
-                                        fNewFingerprint = true;
-                                        moduleImport    = component.getFileStructure().ensureModule(sModule);
-                                        }
-                                    ((PackageStructure) component).setImportedModule(moduleImport);
-                                    }
-                                else
-                                    {
-                                    // this can only occur if conditionals are being used; verify
-                                    // that the existing fingerprint has the same qualified name
-                                    // as this import
-                                    String sPrev = moduleImport.getName();
-                                    if (!sModule.equals(sPrev))
-                                        {
-                                        composition.log(errs, Severity.ERROR,
-                                                Compiler.CONFLICTING_IMPORT_CLAUSES, sPrev, sModule);
-                                        }
-                                    }
-
-                                List<Version>        listPrefer = compImport.getPreferVersionList();
-                                VersionTree<Boolean> vtreeAllow = compImport.getAllowVersionTree();
-                                if (moduleImport.isMainModule())
-                                    {
-                                    // it is possible to import "this" module, which would be useful
-                                    // for example if names within this module were inadvertently
-                                    // hidden; however, an import of "this" module must not use
-                                    // version specifiers or any modifiers e.g. "optional" or
-                                    // "desired"
-                                    if (keyword != Token.Id.IMPORT
-                                            || !listPrefer.isEmpty() || !vtreeAllow.isEmpty())
-                                        {
-                                        composition.log(errs, Severity.ERROR, Compiler.ILLEGAL_SELF_IMPORT);
-                                        }
-                                    }
-                                else
-                                    {
-                                    switch (keyword)
-                                        {
-                                        case IMPORT_OPT:
-                                            moduleImport.fingerprintOptional();
-                                            break;
-                                            
-                                        case IMPORT_WANT:
-                                            moduleImport.fingerprintDesired();
-                                            break;
-
-                                        case IMPORT:
-                                        case IMPORT_REQ:
-                                            moduleImport.fingerprintRequired();
-                                            break;
-
-                                        case IMPORT_EMBED:
-                                            // the embedding is performed much later; for now, just
-                                            // mark it as required
-                                            moduleImport.fingerprintRequired();
-                                            break;
-                                        
-                                        default:
-                                            throw new IllegalStateException();
-                                        }
-
-                                    // the imported module must always be imported with the same
-                                    // exact version override (or none)
-                                    if (!listPrefer.isEmpty())
-                                        {
-                                        List<Version> listOld = moduleImport.getFingerprintVersionPrefs();
-                                        if (listOld == null || listOld.isEmpty())
-                                            {
-                                            moduleImport.setFingerprintVersionPrefs(listPrefer);
-                                            }
-                                        else if (!listOld.equals(listPrefer))
-                                            {
-                                            composition.log(errs, Severity.ERROR, Compiler.CONFLICTING_VERSIONS);
-                                            }
-                                        }
-                                    if (!vtreeAllow.isEmpty())
-                                        {
-                                        VersionTree<Boolean> vtreeOld = moduleImport.getFingerprintVersions();
-                                        if (vtreeOld == null || vtreeOld.isEmpty())
-                                            {
-                                            moduleImport.setFingerprintVersions(vtreeAllow);
-                                            }
-                                        else if (!vtreeOld.equals(vtreeAllow))
-                                            {
-                                            composition.log(errs, Severity.ERROR, Compiler.CONFLICTING_VERSIONS);
-                                            }
-                                        }
-                                    }
-
-                                // if the import is subject to a condition, then the module should
-                                // be marked with that condition
-                                // TODO aggregate and validate (minus names) condition composition.condition
-                                }
-                            else
-                                {
-                                composition.log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sModule);
-                                }
+                            composition.log(errs, Severity.ERROR, Compiler.ILLEGAL_SELF_IMPORT);
                             }
                         }
                     else
                         {
-                        // "import" not allowed (only used by packages)
-                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        switch (keyword)
+                            {
+                            case IMPORT_OPT:
+                                moduleImport.fingerprintOptional();
+                                break;
+
+                            case IMPORT_WANT:
+                                moduleImport.fingerprintDesired();
+                                break;
+
+                            case IMPORT:
+                            case IMPORT_REQ:
+                                moduleImport.fingerprintRequired();
+                                break;
+
+                            case IMPORT_EMBED:
+                                // the embedding is performed much later; for now, just
+                                // mark it as required
+                                moduleImport.fingerprintRequired();
+                                break;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+
+                        // the imported module must always be imported with the same
+                        // exact version override (or none)
+                        if (!listPrefer.isEmpty())
+                            {
+                            List<Version> listOld = moduleImport.getFingerprintVersionPrefs();
+                            if (listOld == null || listOld.isEmpty())
+                                {
+                                moduleImport.setFingerprintVersionPrefs(listPrefer);
+                                }
+                            else if (!listOld.equals(listPrefer))
+                                {
+                                composition.log(errs, Severity.ERROR, Compiler.CONFLICTING_VERSIONS);
+                                }
+                            }
+                        if (!vtreeAllow.isEmpty())
+                            {
+                            VersionTree<Boolean> vtreeOld = moduleImport.getFingerprintVersions();
+                            if (vtreeOld == null || vtreeOld.isEmpty())
+                                {
+                                moduleImport.setFingerprintVersions(vtreeAllow);
+                                }
+                            else if (!vtreeOld.equals(vtreeAllow))
+                                {
+                                composition.log(errs, Severity.ERROR, Compiler.CONFLICTING_VERSIONS);
+                                }
+                            }
                         }
+
+                    // if the package statement is subject to a condition (note that the import
+                    // composition cannot be conditional itself), then the module must be marked
+                    // with that condition, but we can't safely do that after we can resolve the
+                    // names that are likely to be found in the condition
+                    }
                     break;
 
                 case INTO:

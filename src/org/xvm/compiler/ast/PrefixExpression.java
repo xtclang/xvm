@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -24,6 +26,22 @@ public class PrefixExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public boolean validateCondition(ErrorListener errs)
+        {
+        return operator.getId() == Token.Id.NOT
+                ? expr.validateCondition(errs)
+                : super.validateCondition(errs);
+        }
+
+    @Override
+    public ConditionalConstant toConditionalConstant()
+        {
+        return operator.getId() == Token.Id.NOT
+                ? expr.toConditionalConstant().negate()
+                : super.toConditionalConstant();
+        }
 
     @Override
     public long getStartPosition()

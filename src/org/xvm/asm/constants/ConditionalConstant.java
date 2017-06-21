@@ -82,16 +82,14 @@ public abstract class ConditionalConstant
      * Evaluate this condition for inclusion in a container whose context is provided.
      *
      * @param ctx the context of the container being created
-     *
      * @return true whether this condition is met in the container
      */
     public abstract boolean evaluate(LinkerContext ctx);
 
     /**
      * Used to brute-force evaluate every possible condition without using a LinkerContext.
-     * 
-     * @param n  the test number
-     *           
+     *
+     * @param n the test number
      * @return the result for this condition
      */
     public boolean testEvaluate(long n)
@@ -99,7 +97,7 @@ public abstract class ConditionalConstant
         assert isTerminal();
         return iTest < 0
                 ? (n & (1L << (-1 - iTest))) == 0
-                : (n & (1L << iTest)) != 0; 
+                : (n & (1L << iTest)) != 0;
         }
 
     /**
@@ -122,8 +120,8 @@ public abstract class ConditionalConstant
     /**
      * Determine the set of terminal conditions that make up this ConditionalConstant.
      *
-     * @return a set of terminals that are referenced by this ConditionalConstant
      * @param terminals
+     * @return a set of terminals that are referenced by this ConditionalConstant
      */
     protected void collectTerminals(Set<ConditionalConstant> terminals)
         {
@@ -135,8 +133,7 @@ public abstract class ConditionalConstant
      * Determine if the specified terminal ConditionalConstant is present in this
      * ConditionalConstant.
      *
-     * @param that  a ConditionalConstant
-     *
+     * @param that a ConditionalConstant
      * @return true iff the specified ConditionalConstant is found inside this ConditionalConstant
      */
     public boolean containsTerminal(ConditionalConstant that)
@@ -156,7 +153,6 @@ public abstract class ConditionalConstant
      * Determine the relation between two terminal ConditionalConstant objects.
      *
      * @param that
-     *
      * @return
      */
     public Relation calcRelation(ConditionalConstant that)
@@ -167,7 +163,7 @@ public abstract class ConditionalConstant
 
     /**
      * Determine the versions specified for the ConditionalConstant, if any.
-     * <p/>
+     * <p>
      * A conditional can include a version in one of three ways:
      * <ul>
      * <li>A VersionedCondition;</li>
@@ -185,8 +181,7 @@ public abstract class ConditionalConstant
     /**
      * Add the specified version to this conditional.
      *
-     * @param ver  the version to add
-     *
+     * @param ver the version to add
      * @return a new conditional
      */
     public ConditionalConstant addVersion(Version ver)
@@ -203,8 +198,7 @@ public abstract class ConditionalConstant
     /**
      * Remove the specified version from this conditional.
      *
-     * @param ver  the version to remove
-     *
+     * @param ver the version to remove
      * @return a new conditional
      */
     public ConditionalConstant removeVersion(Version ver)
@@ -215,9 +209,8 @@ public abstract class ConditionalConstant
     /**
      * Obtain a ConditionalConstant that represents the union of {@code this} and {@code that}
      * condition.
-     * 
-     * @param that  another condition
-     * 
+     *
+     * @param that another condition
      * @return a condition representing the "and" of the {@code this} and {@code that} conditions
      */
     public ConditionalConstant addAnd(ConditionalConstant that)
@@ -226,7 +219,7 @@ public abstract class ConditionalConstant
             {
             return this;
             }
-        
+
         if (this instanceof AllCondition || that instanceof AllCondition)
             {
             // collect a unique set of conditions
@@ -242,7 +235,7 @@ public abstract class ConditionalConstant
                 {
                 conds.put(this, this);
                 }
-            
+
             if (that instanceof AllCondition)
                 {
                 for (ConditionalConstant cond : ((AllCondition) that).m_aconstCond)
@@ -254,15 +247,15 @@ public abstract class ConditionalConstant
                 {
                 conds.putIfAbsent(that, that);
                 }
-            
+
             if (conds.size() == 1)
                 {
                 return conds.keySet().iterator().next();
                 }
-            
+
             return new AllCondition(getConstantPool(), conds.keySet().toArray(new ConditionalConstant[conds.size()]));
             }
-        
+
         return new AllCondition(getConstantPool(), this, that);
         }
 
@@ -270,8 +263,7 @@ public abstract class ConditionalConstant
      * Obtain a ConditionalConstant that represents the option of {@code this} or {@code that}
      * condition.
      *
-     * @param that  another condition
-     *
+     * @param that another condition
      * @return a condition representing the "or" of the {@code this} and {@code that} conditions
      */
     public ConditionalConstant addOr(ConditionalConstant that)
@@ -318,6 +310,14 @@ public abstract class ConditionalConstant
             }
 
         return new AnyCondition(getConstantPool(), this, that);
+        }
+
+    /**
+     * @return a negation of this ConditionalConstant
+     */
+    public ConditionalConstant negate()
+        {
+        return getConstantPool().ensureNotCondition(this);
         }
 
     /**
