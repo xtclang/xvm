@@ -13,11 +13,11 @@ public class Fiber
     // the caller's fiber (null for original)
     final Fiber f_fiberCaller;
 
-    // the PC of the caller's service invocation Op
-    public int m_iPCCaller;
+    // the caller's frame id
+    final int f_iCallerId;
 
     // the function of the caller's service invocation Op
-    public InvocationTemplate m_fnCaller;
+    final InvocationTemplate f_fnCaller;
 
     // the fiber status can only be mutated by the fiber itself
     private FiberStatus m_status;
@@ -52,10 +52,15 @@ public class Fiber
         Terminated,
         }
 
-    public Fiber(ServiceContext context, Fiber fiberCaller)
+    public Fiber(ServiceContext context, ServiceContext.Message msgCall)
         {
         f_context = context;
-        f_fiberCaller = fiberCaller;
+
+        Fiber fiberCaller = f_fiberCaller = msgCall.f_fiberCaller;
+
+        f_iCallerId = msgCall.f_iCallerId;
+        f_fnCaller = msgCall.f_fnCaller;
+
         m_status = FiberStatus.InitialNew;
 
         if (fiberCaller == null)
@@ -68,8 +73,9 @@ public class Fiber
             long ldtTimeoutFiber = fiberCaller.m_ldtTimeout;
             if (ldtTimeoutFiber > 0)
                 {
-                // inherit the caller's timeout
-                m_ldtTimeout = ldtTimeoutFiber - 10;
+                // inherit the caller's timeout,
+                // but stagger it a bit to have the callee to time-out first
+                m_ldtTimeout = ldtTimeoutFiber - 20;
                 }
             else
                 {
@@ -138,5 +144,11 @@ public class Fiber
     public boolean isTimedOut()
         {
         return m_ldtTimeout > 0 && System.currentTimeMillis() > m_ldtTimeout;
+        }
+
+    @Override
+    public String toString()
+        {
+        return "Fiber of " + f_context + ": " + m_status.name();
         }
     }

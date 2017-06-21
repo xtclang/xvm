@@ -185,6 +185,17 @@ module TestApp
             print(e);
             }
 
+        try (new Timeout(2000))
+            {
+            // this should complete normally
+            c = svc.exceptional(1000);
+            print(c);
+            }
+        catch (Exception e)
+            {
+            assert false;
+            }
+
         try (new Timeout(500))
             {
             // this should timeout
@@ -231,7 +242,7 @@ module TestApp
             else
                 {
                 @future Int iRet;
-                runtimeClock.scheduleAlarm(() -> iRet = 0, cDelay); // &iRet.set(0)
+                runtimeClock.scheduleAlarm(() -> iRet = cDelay, cDelay); // &iRet.set(0)
                 return iRet;
                 }
             }

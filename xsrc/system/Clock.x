@@ -10,7 +10,7 @@ typedef function Void () Cancellable;
  * container-specific clocks
  * service-specific clocks
  */
-service Clock
+interface Clock
     {
     @ro DateTime epoch;
     @ro TimeZone timezone;

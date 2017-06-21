@@ -2,10 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 /**
  * TypeName represents fully qualified generic names for the type system.
@@ -289,6 +286,24 @@ public interface TypeName
                     }
                 }
             return this;
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return m_sName.hashCode();
+            }
+
+        @Override
+        public boolean equals(Object o)
+            {
+            if (o instanceof SimpleTypeName)
+                {
+                SimpleTypeName that = (SimpleTypeName) o;
+                return Objects.equals(this.m_sName, that.m_sName);
+                }
+
+            return false;
             }
 
         @Override

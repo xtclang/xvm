@@ -79,9 +79,7 @@ public class xService
         {
         ServiceContext context = frame.f_context;
 
-        ServiceHandle hService = new ServiceHandle(clazz, clazz.ensureStructType(), context);
-
-        context.setService(hService);
+        ServiceHandle hService = makeHandle(context, clazz, clazz.ensureStructType());
 
         setFieldValue(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
 
@@ -246,11 +244,11 @@ public class xService
 
     // ----- ObjectHandle -----
 
-    public static ServiceHandle makeHandle(ServiceContext context)
+    public static ServiceHandle makeHandle(ServiceContext context, TypeComposition clz, Type type)
         {
-        TypeComposition clz = INSTANCE.f_clazzCanonical;
-
-        return new ServiceHandle(clz, clz.ensurePublicType(), context);
+        ServiceHandle hService = new ServiceHandle(clz, type, context);
+        context.setService(hService);
+        return hService;
         }
 
     public static class ServiceHandle
@@ -295,5 +293,12 @@ public class xService
         {
         int invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
                    ObjectHandle hValue, int iReturn);
+        }
+
+    // native function adapters
+    @FunctionalInterface
+    public interface NativeOperation
+        {
+        int invoke(Frame frame, ObjectHandle[] ahArg, int iReturn);
         }
     }

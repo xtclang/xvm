@@ -45,6 +45,8 @@ public class ServiceContext
 
     protected ServiceHandle m_hService;
 
+    public int m_iFrameCounter; // used to create the Frame id
+
     /**
      * The current Timeout that will be used by the service when it invokes other services.
      */
@@ -406,11 +408,8 @@ public class ServiceContext
         // the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
-        Fiber fiber = new Fiber(this, msg.f_fiberCaller);
-        fiber.m_iPCCaller = msg.f_iPC;
-        fiber.m_fnCaller = msg.f_fnCaller;
-
-        Frame frame = new Frame(fiber, aopNative, ahVar, Frame.RET_UNUSED, null);
+        Fiber fiber = new Fiber(this, msg);
+        Frame frame = new Frame(fiber, msg.f_iCallerPC, aopNative, ahVar, Frame.RET_UNUSED, null);
 
         for (int iVar = 0; iVar < cReturns; iVar++)
             {
@@ -502,8 +501,12 @@ public class ServiceContext
     // send one results back to the caller
     protected static void sendResponse1(Fiber fiberCaller, Frame frame, CompletableFuture future)
         {
+        ObjectHandle hReturn = frame.f_ahVar[0];
+
+        // TODO: validate that all the arguments are immutable or ImmutableAble;
+        //       replace functions with proxies
         fiberCaller.f_context.respond(
-                new Response(fiberCaller, frame.f_ahVar[0], frame.m_hException, future));
+                new Response(fiberCaller, hReturn, frame.m_hException, future));
         }
 
     // send all results back to the caller
@@ -516,7 +519,7 @@ public class ServiceContext
     @Override
     public String toString()
         {
-        return "Service(" + f_sName + ')';
+        return "Service \"" + f_sName + "\" (id=" + f_nId + ')';
         }
 
     // --- inner classes
@@ -525,7 +528,8 @@ public class ServiceContext
         {
         public final Fiber f_fiberCaller;
         public final InvocationTemplate f_fnCaller;
-        public final int f_iPC; // the source of the call
+        public final int f_iCallerId; // the FrameId of the caller
+        public final int f_iCallerPC; // the PC of the caller
 
         protected Message(Frame frameCaller)
             {
@@ -533,13 +537,15 @@ public class ServiceContext
                 {
                 f_fiberCaller = null;
                 f_fnCaller = null;
-                f_iPC = -1;
+                f_iCallerId = 0;
+                f_iCallerPC = -1;
                 }
             else
                 {
                 f_fiberCaller = frameCaller.f_fiber;
                 f_fnCaller = frameCaller.f_function;
-                f_iPC = frameCaller.m_iPC;
+                f_iCallerId = frameCaller.f_iId;
+                f_iCallerPC = frameCaller.m_iPC;
                 }
             }
 
@@ -552,14 +558,13 @@ public class ServiceContext
     public static class ConstructRequest
             extends Message
         {
-
         private final ConstructTemplate f_constructor;
         private final TypeComposition f_clazz;
         private final ObjectHandle[] f_ahArg;
         private final CompletableFuture<ServiceHandle> f_future;
 
-        public ConstructRequest(Frame frameCaller, ConstructTemplate constructor,
-                                TypeComposition clazz, CompletableFuture<ServiceHandle> future, ObjectHandle[] ahArg)
+        public ConstructRequest(Frame frameCaller, ConstructTemplate constructor, TypeComposition clazz,
+                                CompletableFuture<ServiceHandle> future, ObjectHandle[] ahArg)
             {
             super(frameCaller);
 
@@ -629,7 +634,7 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(this, f_hFunction.getReturnCount(),
+            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
             frame0.m_continuation = () ->
@@ -693,7 +698,7 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(this, f_hFunction.getReturnCount(),
+            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                 new Op[] {opCall, Return_0.INSTANCE});
 
             frame0.m_continuation = () ->

@@ -98,6 +98,11 @@ public class xFutureRef
                 throws ExceptionHandle.WrapperException
             {
             CompletableFuture<ObjectHandle> cf = m_future;
+            if (cf == null)
+                {
+                throw xException.makeHandle("Unassigned reference").getException();
+                }
+
             if (cf.isDone())
                 {
                 try
