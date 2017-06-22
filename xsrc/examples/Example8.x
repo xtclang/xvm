@@ -213,4 +213,90 @@ module MyApp
             }
         }
     }
+// fingerprint
+if (Spring.present | Hibernate.present)
+    {
+    module q.sourceforge.net {...}
+    }
 
+// remapping conditions
+class D
+    if (C1) { extends B1 }
+    else if (C2) { extends B2 }
+    else { extends B3 }
+// translates to
+if (C1)
+    {
+    class D
+        extends B1
+    }
+if (!C1 & C2)
+    {
+    class D
+        extends B2
+    }
+if (!C1 & !C2)
+    {
+    class D
+        extends B3
+    }
+
+// remapping multiple conditions
+class D
+    if (C1) { extends B1 }
+    else if (C2) { extends B2 }
+    else { extends B3 }
+    if (C1) { implements I1 }
+    else if (C2) { implements I2 }
+    else { implements I3 }
+// translates to
+if (C1)
+    {
+    class D
+        extends B1
+        implements I1
+    }
+if (!C1 & C2)
+    {
+    class D
+        extends B2
+        implements I2
+    }
+if (!C1 & !C2)
+    {
+    class D
+        extends B3
+        implements I3
+    }
+
+// remapping multiple conditions but with different conditions
+class D
+    if (C1) { extends B1 }
+    else { extends B2 }
+    if (C2) { implements I1 }
+    else { implements I2 }
+// translates to
+if (C1 & C2)
+    {
+    class D
+        extends B1
+        implements I1
+    }
+if (C1 & !C2)
+    {
+    class D
+        extends B1
+        implements I2
+    }
+if (!C1 & C2)
+    {
+    class D
+        extends B2
+        implements I1
+    }
+if (!C1 & !C2)
+    {
+    class D
+        extends B2
+        implements I2
+    }

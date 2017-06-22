@@ -11,6 +11,7 @@ import java.util.List;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.ComponentBifurcator;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
@@ -20,14 +21,21 @@ import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnresolvedClassConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
+import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.CR;
@@ -301,15 +309,20 @@ public class TypeCompositionStatement
         assert getComponent() == null;
 
         // create the structure for this module, package, or class (etc.)
-        String         sName     = (String) name.getValue();
-        Access         access    = getDefaultAccess();
-        Component      container = parent == null ? null : parent.getComponent();
-        ConstantPool   pool      = container == null ? null : container.getConstantPool();
+        String              sName     = (String) name.getValue();
+        Access              access    = getDefaultAccess();
+        Component           container = parent == null ? null : parent.getComponent();
+        ConstantPool        pool      = container == null ? null : container.getConstantPool();
+        ConditionalConstant constCond = condition == null ? null : condition.toConditionalConstant();
         ClassStructure component = null;
         switch (category.getId())
             {
             case MODULE:
-                if (container == null)
+                if (constCond != null)
+                    {
+                    condition.log(errs, Severity.ERROR, Compiler.CONDITIONAL_NOT_ALLOWED);
+                    }
+                else if (container == null)
                     {
                     // create the FileStructure and "this" ModuleStructure
                     FileStructure struct = new FileStructure(getName());
@@ -325,10 +338,7 @@ public class TypeCompositionStatement
             case PACKAGE:
                 if (container.isPackageContainer())
                     {
-                    // the check for duplicates is deferred, since it is possible (thanks to
-                    // the complexity of conditionals) to have multiple components occupying
-                    // the same location within the namespace at this point in the compilation
-                    component = container.createPackage(access, sName);
+                    component = container.createPackage(access, sName, constCond);
                     }
                 else
                     {
@@ -385,7 +395,7 @@ public class TypeCompositionStatement
                             throw new IllegalStateException();
                         }
 
-                    component = container.createClass(getDefaultAccess(), format, sName);
+                    component = container.createClass(getDefaultAccess(), format, sName, constCond);
                     }
                 else
                     {
@@ -397,14 +407,17 @@ public class TypeCompositionStatement
                 throw new UnsupportedOperationException("unable to guess structure for: "
                         + category.getId().TEXT);
             }
-
+        setComponent(component);
         if (component == null)
             {
+            // must have been an error
             return;
             }
-        else
+
+        // documentation
+        if (doc != null)
             {
-            setComponent(component);
+            component.setDocumentation(extractDocumentation(doc));
             }
 
         // the "global" namespace is composed of the union of the top-level namespace and the "inner"
@@ -711,20 +724,50 @@ public class TypeCompositionStatement
         // 3. verify that nore more than one "extends", "import*", or "into" clause is used (subject
         //    to the exception defined by rule #8 above)
         // 4. verify that a package with an import does not have a body
-        boolean         fAlreadyExtends = false;
-        boolean         fAlreadyImports = false;
-        boolean         fAlreadyIntos   = false;
-        int             cImports        = 0;
-        ModuleStructure moduleImport    = null;
+        boolean              fAlreadyExtends = false;
+        boolean              fAlreadyImports = false;
+        boolean              fAlreadyIntos   = false;
+        int                  cImports        = 0;
+        ModuleStructure      moduleImport    = null;
+        Format               format          = component.getFormat();
+        ComponentBifurcator  bifurcator      = new ComponentBifurcator(component);
+        ConditionalConstant  condPrev        = null;
+        List<Component>      componentList   = new ArrayList<>();
+        componentList.add(component);
+        // note: from this point down (and through the remainder of compilation), the component may
+        // be conditionally bifurcated. (it's even possible that already there are multiple
+        // components with the same identity, due to conditionality, but what is meant here is that
+        // the one component that we just created and configured above may be split into multiple
+        // "siblings" of itself based on any conditionals that are encountered in the processing of
+        // the "Composition" objects)
         for (Composition composition : compositions == null ? Collections.<Composition>emptyList() : compositions)
             {
-            Format   format  = component.getFormat();
+            // most compositions are allowed to be conditional; conditional compositions will
+            // bifurcate the component
+            Expression          exprCond = composition.getCondition();
+            ConditionalConstant condCur  = exprCond == null ? null : exprCond.toConditionalConstant();
+            if (!Handy.equals(condCur, condPrev))
+                {
+                componentList.clear();
+                bifurcator.collectMatchingComponents(condCur, componentList);
+                condPrev = condCur;
+                }
+
             Token.Id keyword = composition.getKeyword().getId();
             switch (keyword)
                 {
                 case EXTENDS:
                     // interface is allowed to have any number of "extends"
-                    if (format != Format.INTERFACE)
+                    if (format == Format.INTERFACE)
+                        {
+                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            {
+                            // when an interface "extends" an interface, it is actually implementing
+                            struct.addContribution(ClassStructure.Composition.Implements,
+                                    new UnresolvedClassConstant(pool, composition.getType().toString()));
+                            }
+                        }
+                    else
                         {
                         // only other format that can't have "extends" is an enum value, but that
                         // should be impossible to even parse, hence the assertion
@@ -741,6 +784,13 @@ public class TypeCompositionStatement
                             // make sure that there is only one "extends" clause, but defer the
                             // analysis of conditional clauses (we can't evaluate conditions yet)
                             fAlreadyExtends = composition.condition == null;
+
+                            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                                {
+                                // register the class that the component extends
+                                struct.addContribution(ClassStructure.Composition.Extends,
+                                        new UnresolvedClassConstant(pool, composition.getType().toString()));
+                                }
                             }
                         }
                     break;
@@ -759,20 +809,22 @@ public class TypeCompositionStatement
                         break;
                         }
 
+                    // make sure that there is only one "import" clause
                     if (fAlreadyImports)
                         {
-                        // only one import is allowed
                         composition.log(errs, Severity.ERROR, Compiler.MULTIPLE_IMPORT_CLAUSES);
                         break;
                         }
+                    fAlreadyImports = true;
 
+                    // conditions are not allowed on the import composition, mainly because it is
+                    // too complicated to handle the case when "this module is optional if
+                    // some other module is being imported, but required if it isn't ..."; this
+                    // could be improved in a later Ecstasy version, once we get the basics down
                     if (composition.condition != null)
                         {
                         composition.log(errs, Severity.ERROR, Compiler.CONDITIONAL_NOT_ALLOWED);
                         }
-
-                    // make sure that there is only one "import" clause
-                    fAlreadyImports = true;
 
                     // create the fingerprint for the imported module
                     Composition.Import  compImport = (Composition.Import) composition;
@@ -794,6 +846,8 @@ public class TypeCompositionStatement
                             moduleImport    = component.getFileStructure().ensureModule(sModule);
                             fNewFingerprint = true;
                             }
+                        // note that the component is not bifurcated because import compositions
+                        // are not allowed to be conditional
                         ((PackageStructure) component).setImportedModule(moduleImport);
                         }
 
@@ -830,8 +884,8 @@ public class TypeCompositionStatement
                                 break;
 
                             case IMPORT_EMBED:
-                                // the embedding is performed much later; for now, just
-                                // mark it as required
+                                // the embedding is performed much later, long after the fingerprint
+                                // is fully formed; for now, just mark the module import as required
                                 moduleImport.fingerprintRequired();
                                 break;
 
@@ -869,8 +923,28 @@ public class TypeCompositionStatement
 
                     // if the package statement is subject to a condition (note that the import
                     // composition cannot be conditional itself), then the module must be marked
-                    // with that condition, but we can't safely do that after we can resolve the
-                    // names that are likely to be found in the condition
+                    // with that condition
+                    ConditionalConstant condSum = component.getAggregateCondition();
+                    if (condSum == null || fNewFingerprint)
+                        {
+                        // if the path through the AST down to this import is unconditional, then
+                        // the fingerprint exists unconditionally; if the fingerprint is new, then
+                        // whatever condition must be met to reach this package statement will also
+                        // govern the existence of the imported module
+                        moduleImport.setCondition(condSum);
+                        }
+                    else
+                        {
+                        // if the module import is already unconditional, then it has to remain
+                        // unconditional; otherwise, the condition is the intersection of the
+                        // existing condition and on the module import and whatever condition must
+                        // be met to reach this package statement in the AST
+                        ConditionalConstant condPre = moduleImport.getCondition();
+                        if (condPre != null)
+                            {
+                            moduleImport.setCondition(condPre.addOr(condSum));
+                            }
+                        }
                     }
                     break;
 
@@ -887,6 +961,13 @@ public class TypeCompositionStatement
                             // make sure that there is only one "into" clause, but defer the
                             // analysis of conditional clauses (we can't evaluate conditions yet)
                             fAlreadyIntos = composition.condition == null;
+
+                            // register the "into" clause
+                            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                                {
+                                struct.addContribution(ClassStructure.Composition.Into,
+                                        new UnresolvedClassConstant(pool, composition.getType().toString()));
+                                }
                             }
                         }
                     else
@@ -902,11 +983,39 @@ public class TypeCompositionStatement
                         // interface can't implement
                         composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
+                    else
+                        {
+                        // register the "implements"
+                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            {
+                            struct.addContribution(ClassStructure.Composition.Implements,
+                                    new UnresolvedClassConstant(pool, composition.getType().toString()));
+                            }
+                        }
                     break;
 
                 case DELEGATES:
+                    // these are all OK; other checks will be done after the types are resolvable
+                    ClassConstant    constClass = new UnresolvedClassConstant(pool, composition.getType().toString());
+                    PropertyConstant constProp  = pool.ensurePropertyConstant(
+                            component.getIdentityConstant(),
+                            ((Composition.Delegates) composition).getPropertyName());
+                    for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                        {
+                        // register the class whose interface the component delegates, and the
+                        // property whose value indicates the object to delegate to
+                        struct.addContribution(constClass, constProp);
+                        }
+                    break;
+
                 case INCORPORATES:
                     // these are all OK; other checks will be done after the types are resolvable
+                    for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                        {
+                        // register the mixin/trait that the component incorporates
+                        struct.addContribution(ClassStructure.Composition.Incorporates,
+                                new UnresolvedClassConstant(pool, composition.getType().toString()));
+                        }
                     break;
 
                 default:
@@ -925,11 +1034,6 @@ public class TypeCompositionStatement
                 // oops, the package doesn't just import a module
                 log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
                 }
-            }
-
-        if (doc != null)
-            {
-            component.setDocumentation(extractDocumentation(doc));
             }
         }
 

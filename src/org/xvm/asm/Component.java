@@ -90,7 +90,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public abstract class Component
         extends XvmStructure
-        implements Documentable
+        implements Documentable, Cloneable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -657,8 +657,9 @@ public abstract class Component
      *
      * @param access  the accessibility of the package to create
      * @param sName   the simple (unqualified) package name to create
+     * @param cond    the conditional constant for the class, or null
      */
-    public PackageStructure createPackage(Access access, String sName)
+    public PackageStructure createPackage(Access access, String sName, ConditionalConstant cond)
         {
         assert sName != null;
         assert access != null;
@@ -668,19 +669,13 @@ public abstract class Component
             throw new IllegalStateException("this (" + this + ") cannot contain a package");
             }
 
-        // the check for duplicates is deferred, since it is possible (thanks to the complexity of
-        // conditionals) to have multiple components occupying the same location within the
-        // namespace at this point in the compilation
-        // Component component = getChild(sName);
-        // if (component != null)
-        //     {
-        //     throw new IllegalStateException("cannot add a package \"" + sName
-        //             + "\" because a child with that name already exists: " + component);
-        //     }
+        // the check for duplicates is deferred, since it is possible (e.g. with conditionals) to
+        // have multiple components occupying the same location within the namespace at this point
+        // in the compilation
 
         int              nFlags  = Format.PACKAGE.ordinal() | access.FLAGS;
         PackageConstant  constId = getConstantPool().ensurePackageConstant(getIdentityConstant(), sName);
-        PackageStructure struct  = new PackageStructure(this, nFlags, constId, null);
+        PackageStructure struct  = new PackageStructure(this, nFlags, constId, cond);
         addChild(struct);
 
         return struct;
@@ -700,8 +695,9 @@ public abstract class Component
      * @param access  the accessibility of the class to create
      * @param format  the category format of the class
      * @param sName   the simple (unqualified) class name to create
+     * @param cond    the conditional constant for the class, or null
      */
-    public ClassStructure createClass(Access access, Format format, String sName)
+    public ClassStructure createClass(Access access, Format format, String sName, ConditionalConstant cond)
         {
         assert sName != null;
         assert access != null;
@@ -711,19 +707,13 @@ public abstract class Component
             throw new IllegalStateException("this (" + this + ") cannot contain a class");
             }
 
-        // the check for duplicates is deferred, since it is possible (thanks to the complexity of
-        // conditionals) to have multiple components occupying the same location within the
-        // namespace at this point in the compilation
-        // Component component = getChild(sName);
-        // if (component != null)
-        //     {
-        //     throw new IllegalStateException("cannot add a class \"" + sName
-        //             + "\" because a child with that name already exists: " + component);
-        //     }
+        // the check for duplicates is deferred, since it is possible (e.g. with conditionals) to
+        // have multiple components occupying the same location within the namespace at this point
+        // in the compilation
 
         int            nFlags  = format.ordinal() | access.FLAGS;
         ClassConstant  constId = getConstantPool().ensureClassConstant(getIdentityConstant(), sName);
-        ClassStructure struct  = new ClassStructure(this, nFlags, constId, null);
+        ClassStructure struct  = new ClassStructure(this, nFlags, constId, cond);
         addChild(struct);
 
         return struct;
@@ -1483,10 +1473,24 @@ public abstract class Component
         }
 
     @Override
-    protected void setCondition(ConditionalConstant condition)
+    public void setCondition(ConditionalConstant condition)
         {
         m_cond = condition;
         markModified();
+        }
+
+    /**
+     * Split this component into multiple components based on the specified condition. The result
+     * is a CompositeComponent.
+     *
+     * @param condition  the condition which is used to split this component
+     *
+     * @return a CompositeComponent that contains both the specified condition and its negation
+     */
+    public CompositeComponent bifurcateConditional(ConditionalConstant condition)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
         }
 
     /**
@@ -1506,6 +1510,22 @@ public abstract class Component
 
 
     // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    protected Component clone()
+        {
+        try
+            {
+            Component that = (Component) super.clone();
+            // TODO this needs to clone data structures on this component as well
+            // TODO this needs to be overriden by all sub-classes of Component
+            return that;
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new IllegalStateException();
+            }
+        }
 
     @Override
     public boolean equals(Object obj)

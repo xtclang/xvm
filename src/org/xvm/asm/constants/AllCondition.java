@@ -55,6 +55,7 @@ public class AllCondition
         super(acond[0].getConstantPool(), acond);
         }
 
+
     // ----- ConditionalConstant methods -----------------------------------------------------------
 
     @Override
@@ -336,6 +337,12 @@ public class AllCondition
     protected String getOperatorString()
         {
         return "&&";
+        }
+
+    @Override
+    protected AllCondition instantiate(ConditionalConstant[] aconstCond)
+        {
+        return new AllCondition(getConstantPool(), aconstCond);
         }
 
 

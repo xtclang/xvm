@@ -85,8 +85,8 @@ public class ConditionalTest
         VersionedCondition  condV2 = pool.ensureVersionedCondition(v2);
         AnyCondition        condVB = pool.ensureAnyCondition(condV1, condV2);
         ModuleStructure     module = file.getModule();
-        ClassStructure      clz    = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Util");
-        PackageStructure    pkg    = module.createPackage(Constants.Access.PUBLIC, "Util");
+        ClassStructure      clz    = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Util", null);
+        PackageStructure    pkg    = module.createPackage(Constants.Access.PUBLIC, "Util", null);
         MethodStructure     method = clz.createMethod(false, Constants.Access.PUBLIC,
                                                       new TypeConstant[]{}, "foo", new TypeConstant[]{});
 

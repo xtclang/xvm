@@ -223,6 +223,12 @@ public class AnyCondition
         return "||";
         }
 
+    @Override
+    protected AnyCondition instantiate(ConditionalConstant[] aconstCond)
+        {
+        return new AnyCondition(getConstantPool(), aconstCond);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

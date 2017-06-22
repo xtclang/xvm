@@ -10,22 +10,23 @@ import org.xvm.asm.ConstantPool;
 
 
 /**
- * Represent a constant that will eventually be replaced with a real identity constant.
+ * Represent a constant that will eventually be replaced with a real class constant.
  */
-public class UnresolvedNameConstant
-        extends IdentityConstant
+public class UnresolvedClassConstant
+        extends ClassConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a place-holder constant that will eventually be replaced with a real constant
+     * Construct a place-holder constant that will eventually be replaced with a real ClassConstant.
      *
      * @param pool  the ConstantPool that will contain this Constant
+     * @param name  the name of the unresolved class
      */
-    public UnresolvedNameConstant(ConstantPool pool, String[] names)
+    public UnresolvedClassConstant(ConstantPool pool, String name)
         {
         super(pool);
-        this.names = names;
+        this.name = name;
         }
 
 
@@ -34,7 +35,7 @@ public class UnresolvedNameConstant
     @Override
     public IdentityConstant getParentConstant()
         {
-        if (isNameResolved())
+        if (isClassResolved())
             {
             return constant.getParentConstant();
             }
@@ -45,30 +46,17 @@ public class UnresolvedNameConstant
     @Override
     public String getName()
         {
-        if (isNameResolved())
-            {
-            return constant.getName();
-            }
-
-        String[]      names  = this.names;
-        StringBuilder sb     = new StringBuilder();
-        for (int i = 0, c = names.length; i < c; ++i)
-            {
-            if (i > 0)
-                {
-                sb.append('.');
-                }
-            sb.append(names[i]);
-            }
-        return sb.toString();
+        return isClassResolved()
+                ? constant.getName()
+                : name;
         }
 
-    public boolean isNameResolved()
+    public boolean isClassResolved()
         {
         return constant != null;
         }
 
-    public void resolve(IdentityConstant constant)
+    public void resolve(ClassConstant constant)
         {
         assert this.constant == null || this.constant == constant;
         this.constant = constant;
@@ -80,19 +68,19 @@ public class UnresolvedNameConstant
     @Override
     public Format getFormat()
         {
-        return isNameResolved() ? constant.getFormat() : Format.Unresolved;
+        return isClassResolved() ? constant.getFormat() : Format.Unresolved;
         }
 
     @Override
     public Object getLocator()
         {
-        return isNameResolved() ? constant.getLocator() : null;
+        return isClassResolved() ? constant.getLocator() : null;
         }
 
     @Override
     public String getValueString()
         {
-        return isNameResolved()
+        return isClassResolved()
                 ? constant.getValueString()
                 : getName();
         }
@@ -100,35 +88,21 @@ public class UnresolvedNameConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (isNameResolved())
+        if (isClassResolved())
             {
-            if (that instanceof UnresolvedNameConstant && ((UnresolvedNameConstant) that).isNameResolved())
+            if (that instanceof UnresolvedClassConstant && ((UnresolvedClassConstant) that).isClassResolved())
                 {
-                that = ((UnresolvedNameConstant) that).constant;
+                that = ((UnresolvedClassConstant) that).constant;
                 }
             return constant.compareDetails(that);
             }
-        else if (that instanceof UnresolvedNameConstant)
+        else if (that instanceof UnresolvedClassConstant)
             {
-            String[] asThis = this.names;
-            String[] asThat = ((UnresolvedNameConstant) that).names;
-            int      cThis  = asThis.length;
-            int      cThat  = asThat.length;
-            for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i)
-                {
-                int n = asThis[i].compareTo(asThat[i]);
-                if (n != 0)
-                    {
-                    return n;
-                    }
-                }
-            return cThis - cThat;
+            return this.name.compareTo(((UnresolvedClassConstant) that).name);
             }
         else
             {
-            // need to return a value that allows for stable sorts, but unless this==that, the
-            // details can never be equal
-            return this == that ? 0 : -1;
+            return -1;
             }
         }
 
@@ -145,7 +119,7 @@ public class UnresolvedNameConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        if (isNameResolved())
+        if (isClassResolved())
             {
             constant.registerConstants(pool);
             }
@@ -159,7 +133,7 @@ public class UnresolvedNameConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
-        if (isNameResolved())
+        if (isClassResolved())
             {
             constant.assemble(out);
             }
@@ -172,7 +146,7 @@ public class UnresolvedNameConstant
     @Override
     public String getDescription()
         {
-        return isNameResolved()
+        return isClassResolved()
                 ? constant.getDescription()
                 : "name=" + getName();
         }
@@ -182,7 +156,12 @@ public class UnresolvedNameConstant
     @Override
     public boolean equals(Object obj)
         {
-        return isNameResolved()
+        if (obj instanceof UnresolvedClassConstant && ((UnresolvedClassConstant) obj).isClassResolved())
+            {
+            obj = ((UnresolvedClassConstant) obj).constant;
+            }
+
+        return isClassResolved()
                 ? constant.equals(obj)
                 : super.equals(obj);
         }
@@ -190,26 +169,14 @@ public class UnresolvedNameConstant
     @Override
     public int hashCode()
         {
-        if (isNameResolved())
-            {
-            return constant.hashCode();
-            }
-        else
-            {
-            String[] names  = this.names;
-            int      cNames = names.length;
-            int      nHash  = cNames ^ names[0].hashCode();
-            if (cNames > 1)
-                {
-                nHash ^= names[cNames-1].hashCode();
-                }
-            return nHash;
-            }
+        return isClassResolved()
+                ? constant.hashCode()
+                : name.hashCode();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private String[]         names;
+    private String           name;
     private IdentityConstant constant;
     }

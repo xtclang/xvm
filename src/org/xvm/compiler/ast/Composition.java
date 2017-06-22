@@ -31,11 +31,25 @@ public abstract class Composition
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the condition that applies to the composition, or null
+     */
+    public Expression getCondition()
+        {
+        return condition;
+        }
+
+    /**
+     * @return the keyword token used to define the composition
+     */
     public Token getKeyword()
         {
         return keyword;
         }
 
+    /**
+     * @return the TypeExpression of the Composition
+     */
     public TypeExpression getType()
         {
         return type;
@@ -251,11 +265,19 @@ public abstract class Composition
     public static class Delegates
             extends Composition
         {
-        public Delegates(Expression condition, Token keyword, TypeExpression type, Expression delegate, long lEndPos)
+        public Delegates(Expression condition, Token keyword, TypeExpression type, Token delegate, long lEndPos)
             {
             super(condition, keyword, type);
             this.delegate = delegate;
             this.lEndPos  = lEndPos;
+            }
+
+        /**
+         * @return the name of the property that holds the reference to delegate to
+         */
+        public String getPropertyName()
+            {
+            return (String) delegate.getValue();
             }
 
         @Override
@@ -265,21 +287,13 @@ public abstract class Composition
             }
 
         @Override
-        protected Field[] getChildFields()
-            {
-            return CHILD_FIELDS;
-            }
-
-        @Override
         public String toString()
             {
             return toStartString() + '(' + delegate + ')' + toEndString();
             }
 
-        protected Expression delegate;
-        protected long       lEndPos;
-
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Delegates.class, "condition", "type", "delegate");
+        protected Token delegate;
+        protected long  lEndPos;
         }
 
 

@@ -468,7 +468,7 @@ mixin FutureRef<RefType>
     static class DependentFuture<RefType, InputType>
             implements Ref<RefType>
             incorporates FutureRef<RefType>
-            delegates Ref<RefType>(&result)
+            delegates Ref<RefType>(resultRef)
         {
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
@@ -489,7 +489,11 @@ mixin FutureRef<RefType>
                 }
             }
 
-        private RefType? result = null; // TODO this is a type mismatch with the "delegates" clause due to the type being (Nullable|RefType) instead of RefType
+        private @Unassigned RefType result;
+        private Ref<RefType> resultRef.get()
+            {
+            return &result;
+            }
         }
 
     /**

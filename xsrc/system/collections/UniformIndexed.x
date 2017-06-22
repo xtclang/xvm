@@ -29,7 +29,7 @@ interface UniformIndexed<IndexType, ElementType>
          * the return value from the {@link UniformIndexed.get} method.
          */
         class SimpleRef
-                delegates Ref<ElementType>(&get())
+                delegates Ref<ElementType>(ref)
             {
             Boolean assigned.get()
                 {
@@ -44,6 +44,12 @@ interface UniformIndexed<IndexType, ElementType>
             Void set(RefType value)
                 {
                 UniformIndexed.this.set(index, value);
+                }
+
+            private Ref<ElementType> ref.get()
+                {
+                ElementType value = get();
+                return &value;
                 }
             }
         }
