@@ -3,17 +3,22 @@ package org.xvm.proto;
 import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
+import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
+import org.xvm.proto.template.xClock;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
+import org.xvm.proto.template.xRuntimeClock;
 import org.xvm.proto.template.xService;
 
+import java.util.HashMap;
 import java.util.Map;
-
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /**
  * TODO: for now Container == SecureContainer
@@ -29,12 +34,17 @@ public class Container
 
     final protected ModuleConstant f_constModule;
 
-    // context id producer
+    // service id producer
     final AtomicInteger f_idProducer = new AtomicInteger();
-    // service context -> id
+
+    // service context map (concurrent set)
     final Map<ServiceContext, ServiceContext> f_mapServices = new ConcurrentHashMap<>();
 
-    private ServiceContext m_contextMain; // the service context for the container itself
+    // the service context for the container itself
+    private ServiceContext m_contextMain;
+
+    // the values are: ObjectHandle | Supplier<ObjectHandle>
+    final Map<InjectionKey, Object> f_mapResources = new HashMap<>();
 
     public Container(Runtime runtime, String sName)
         {
@@ -69,6 +79,20 @@ public class Container
         // container.m_typeSet.dumpTemplates();
         }
 
+    protected void initResources()
+        {
+        f_types.ensureTemplate("x:RuntimeClock");
+
+        Supplier<ObjectHandle> supplierClock = () ->
+            {
+            ServiceContext ctxClock = createServiceContext("RuntimeClock");
+            return xService.makeHandle(ctxClock,
+                    xRuntimeClock.INSTANCE.f_clazzCanonical,
+                    xClock.INSTANCE.f_clazzCanonical.ensurePublicType());
+            };
+        f_mapResources.put(new InjectionKey("runtimeClock", TypeName.parseName("x:Clock")), supplierClock);
+        }
+
     public ServiceContext createServiceContext(String sName)
         {
         ServiceContext context = new ServiceContext(this, sName, f_idProducer.getAndIncrement());
@@ -85,6 +109,31 @@ public class Container
         f_mapServices.remove(context);
         }
 
+    // return the injectable handle or null, if not resolvable
+    // clzParent - the class of the object for which the property needs to be injected
+    //             (may need to be used to resolve a composite type)
+    // TODO: need an "override" name or better yet "injectionAttributes"
+    public ObjectHandle getInjectable(TypeComposition clzParent, PropertyTemplate property)
+        {
+        InjectionKey key = new InjectionKey(property.f_sName, property.f_typeName);
+        Object oResource = f_mapResources.get(key);
+
+        if (oResource instanceof ObjectHandle)
+            {
+            return (ObjectHandle) oResource;
+            }
+
+        if (oResource == null)
+            {
+            return null;
+            }
+
+        // TODO: concurrently
+        ObjectHandle hResource = ((Supplier<ObjectHandle>) oResource).get();
+        f_mapResources.put(key, hResource);
+        return hResource;
+        }
+
     public void start()
         {
         if (m_contextMain != null)
@@ -93,7 +142,11 @@ public class Container
             }
 
         m_contextMain = createServiceContext("main");
-        m_contextMain.setService(xService.makeHandle(m_contextMain)); // main service handle
+        xService.makeHandle(m_contextMain,
+                xService.INSTANCE.f_clazzCanonical,
+                xService.INSTANCE.f_clazzCanonical.ensurePublicType());
+
+        initResources();
 
         try
             {
@@ -134,5 +187,48 @@ public class Container
     public String toString()
         {
         return "Container: " + f_constModule.getName();
+        }
+
+    public static class InjectionKey
+        {
+        public final String f_sName;
+        public final TypeName f_typeName;
+
+        public InjectionKey(String sName, TypeName typeName)
+            {
+            f_sName = sName;
+            f_typeName = typeName;
+            }
+
+        @Override
+        public boolean equals(Object o)
+            {
+            if (this == o)
+                {
+                return true;
+                }
+
+            if (!(o instanceof InjectionKey))
+                {
+                return false;
+                }
+
+            InjectionKey that = (InjectionKey) o;
+
+            return Objects.equals(this.f_sName, that.f_sName) &&
+                   Objects.equals(this.f_typeName, that.f_typeName);
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return f_sName.hashCode() + f_typeName.hashCode();
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Key: " + f_sName + ", " + f_typeName;
+            }
         }
     }

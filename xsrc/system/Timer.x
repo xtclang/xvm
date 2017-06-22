@@ -1,7 +1,7 @@
 typedef function Void () Alarm;
 typedef function Void () Cancellable;
 
-service Timer
+interface Timer
     {
     /**
      * Determine the resolution of this timer.

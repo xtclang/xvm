@@ -73,21 +73,18 @@ public class xFutureRef
     @Override
     public RefHandle createRefHandle(TypeComposition clazz)
         {
-        return new FutureHandle(clazz, null, false);
+        return new FutureHandle(clazz, null);
         }
 
     public static class FutureHandle
             extends RefHandle
         {
-        public final boolean f_fSynthetic;
         public CompletableFuture<ObjectHandle> m_future;
 
-        protected FutureHandle(TypeComposition clazz,
-                               CompletableFuture<ObjectHandle> future, boolean fSynthetic)
+        protected FutureHandle(TypeComposition clazz, CompletableFuture<ObjectHandle> future)
             {
             super(clazz);
 
-            f_fSynthetic = fSynthetic;
             m_future = future;
             }
 
@@ -101,6 +98,11 @@ public class xFutureRef
                 throws ExceptionHandle.WrapperException
             {
             CompletableFuture<ObjectHandle> cf = m_future;
+            if (cf == null)
+                {
+                throw xException.makeHandle("Unassigned reference").getException();
+                }
+
             if (cf.isDone())
                 {
                 try
@@ -190,11 +192,6 @@ public class xFutureRef
 
     public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future)
         {
-        return new FutureHandle(INSTANCE.f_clazzCanonical, future, false);
-        }
-
-    public static FutureHandle makeSyntheticHandle(CompletableFuture<ObjectHandle> future)
-        {
-        return new FutureHandle(INSTANCE.f_clazzCanonical, future, true);
+        return new FutureHandle(INSTANCE.f_clazzCanonical, future);
         }
     }

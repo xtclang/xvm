@@ -34,6 +34,7 @@ public class DaemonPool
         {
         m_sName = sName;
         }
+
     /**
     * Start the DaemonPool.
     */
@@ -96,7 +97,7 @@ public class DaemonPool
                 if (fNothingToDo)
                     {
                     m_fWaiting = true;
-                    notifier.await(1000);
+                    notifier.await(10); // min of all registered timeouts
                     m_fWaiting = false;
                     }
                 else

@@ -36,10 +36,12 @@ public class GuardStart extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
+        int[] anNextVar = frame.f_anNextVar;
+
         // ++ Enter
         int iScope = ++frame.m_iScope;
 
-        frame.f_anNextVar[iScope] = frame.f_anNextVar[iScope-1];
+        anNextVar[iScope] = anNextVar[iScope-1];
         // --
 
         int iGuard = ++frame.m_iGuard;
@@ -47,7 +49,7 @@ public class GuardStart extends Op
         Guard[] aGuard = frame.m_aGuard;
         if (aGuard == null)
             {
-            aGuard = frame.m_aGuard = new Frame.Guard[frame.f_function.m_cScopes];
+            aGuard = frame.m_aGuard = new Frame.Guard[anNextVar.length]; // # of scopes
             }
 
         Guard guard = m_guard;

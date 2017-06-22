@@ -720,12 +720,27 @@ public abstract class TypeCompositionTemplate
             }
 
         ObjectHandle hValue = hThis.m_mapFields.get(sName);
-        ExceptionHandle hException;
 
         if (hValue == null)
             {
-            frame.m_hException = xException.makeHandle((hThis.m_mapFields.containsKey(sName) ?
-                    "Un-initialized property " : "Invalid property ") + property.f_sName);
+            String sErr;
+            if (property.isInjectable())
+                {
+                hValue = frame.f_context.f_container.getInjectable(hThis.f_clazz, property);
+                if (hValue != null)
+                    {
+                    hThis.m_mapFields.put(sName, hValue);
+                    return frame.assignValue(iReturn, hValue);
+                    }
+                sErr = "Unknown injectable property ";
+                }
+            else
+                {
+                sErr = hThis.m_mapFields.containsKey(sName) ?
+                        "Un-initialized property " : "Invalid property ";
+                }
+
+            frame.m_hException = xException.makeHandle(sErr + property.f_sName);
             return Op.R_EXCEPTION;
             }
 
@@ -939,6 +954,9 @@ public abstract class TypeCompositionTemplate
         // indicates that the property is safe to access from out-of-service-context
         protected boolean m_fAtomic = false;
 
+        // indicates that the property value needs to be injected
+        protected boolean m_fInjectable = false;
+
         public Constant.Access m_accessGet = Constants.Access.PUBLIC;
         public Constant.Access m_accessSet = Constants.Access.PUBLIC;
 
@@ -967,6 +985,16 @@ public abstract class TypeCompositionTemplate
         public boolean isReadOnly()
             {
             return m_accessSet == null;
+            }
+
+        public void markInjectable()
+            {
+            m_fInjectable = true;
+            }
+
+        public boolean isInjectable()
+            {
+            return m_fInjectable;
             }
 
         public void makeAtomicRef()

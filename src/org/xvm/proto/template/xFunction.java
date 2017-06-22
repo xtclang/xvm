@@ -222,6 +222,24 @@ public class xFunction
             }
         }
 
+    public static class NativeMethodHandle
+            extends FunctionHandle
+        {
+        final protected xService.NativeOperation f_op;
+
+        public NativeMethodHandle(xService.NativeOperation op)
+            {
+            super(INSTANCE.f_clazzCanonical, null);
+
+            f_op = op;
+            }
+
+        @Override
+        public int call1(Frame frame, ObjectHandle[] ahArg, int iReturn)
+            {
+            return f_op.invoke(frame, ahArg, iReturn);
+            }
+        }
 
     // one parameter bound function
     public static class SingleBoundHandle
@@ -347,14 +365,15 @@ public class xFunction
                 return super.call1Impl(frame, ahVar, iReturn);
                 }
 
-            // TODO: validate that all the arguments are immutable or ImmutableAble
+            // TODO: validate that all the arguments are immutable or ImmutableAble;
+            //       replace functions with proxies
             int cReturns = iReturn == Frame.RET_UNUSED ? 0 : 1;
 
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
                     frame, this, ahVar, cReturns);
 
             return cReturns == 0 ? Op.R_NEXT :
-                frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+                frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
             }
 
         @Override
@@ -385,7 +404,7 @@ public class xFunction
                     CompletableFuture<ObjectHandle> cfReturn =
                             cfResult.thenApply(ahResult -> ahResult[iRet]);
 
-                    int nR = frame.assignValue(aiReturn[i], xFutureRef.makeSyntheticHandle(cfReturn));
+                    int nR = frame.assignValue(aiReturn[i], xFutureRef.makeHandle(cfReturn));
                     if (nR == Op.R_EXCEPTION)
                         {
                         return Op.R_EXCEPTION;

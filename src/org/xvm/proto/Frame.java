@@ -19,6 +19,7 @@ import org.xvm.proto.ObjectHandle.JavaLong;
 
 import org.xvm.proto.template.xTuple;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 /**
@@ -29,7 +30,7 @@ import java.util.function.Supplier;
 public class Frame
     {
     public final Fiber f_fiber;
-    public final ServiceContext f_context;
+    public final ServiceContext f_context;      // same as f_fiber.f_context
     public final InvocationTemplate f_function;
     public final Op[]           f_aOp;          // the op-codes
     public final ObjectHandle   f_hTarget;      // target
@@ -40,6 +41,8 @@ public class Frame
                                                 // automatic tuple conversion into a (-i-1) register
     public final int[]          f_aiReturn;     // indexes for multiple return values
     public final Frame          f_framePrev;    // the caller's frame
+    public final int            f_iPCPrev;      // the caller's PC (used only for async reporting)
+    public final int            f_iId;          // the frame's id (used only for async reporting)
     public final int[]          f_anNextVar;    // at index i, the "next available" var register for scope i
 
     public int                  m_iScope;       // current scope index (starts with 0)
@@ -52,6 +55,8 @@ public class Frame
     public Supplier<Frame>      m_continuation; // a frame supplier to call after this frame returns
     private ObjectHandle        m_hFrameLocal;  // a "frame local" holding area
 
+    // positive return values indicate a caller's frame register
+    // negative value above RET_LOCAL indicate an automatic tuple conversion
     public final static int RET_LOCAL = -65000;   // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI = -65002;   // an indicator for "multiple return values"
@@ -65,9 +70,12 @@ public class Frame
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
         f_context = framePrev.f_context;
+        f_iId = f_context.m_iFrameCounter++;
         f_fiber = framePrev.f_fiber;
 
         f_framePrev = framePrev;
+        f_iPCPrev = framePrev.m_iPC;
+
         f_function = function;
         f_aOp = function == null ? Op.STUB : function.m_aop;
 
@@ -93,12 +101,14 @@ public class Frame
         }
 
     // construct a initial (native) frame
-    protected Frame(Fiber fiber, Op[] aopNative,
+    protected Frame(Fiber fiber, int iCallerPC, Op[] aopNative,
                     ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
         f_context = fiber.f_context;
+        f_iId = f_context.m_iFrameCounter++;
         f_fiber = fiber;
         f_framePrev = null;
+        f_iPCPrev = iCallerPC;
         f_function = null;
         f_aOp = aopNative;
 
@@ -292,24 +302,6 @@ public class Frame
         return m_hFrameLocal;
         }
 
-    public void forceValue(int nVar, ObjectHandle hValue)
-        {
-        int nResult = assignValue(nVar, hValue);
-        switch (nResult)
-            {
-            case Op.R_NEXT:
-                return;
-
-            case Op.R_EXCEPTION:
-                // TODO: call an error handler?
-                System.out.println("Out-of-context exception: " + m_hException);
-                return;
-
-            default:
-                throw new IllegalStateException(); // assert
-            }
-        }
-
     // return R_NEXT, R_EXCEPTION or R_BLOCK
     public int assignValue(int nVar, ObjectHandle hValue)
         {
@@ -348,6 +340,16 @@ public class Frame
                             {
                             // mark the register as "waiting for a result",
                             // blocking the next op-code from being executed
+                            // and add a notification
+                            CompletableFuture<ObjectHandle> cf = hFuture.m_future;
+                            if (cf == null)
+                                {
+                                // since this ref can only be changed by this service,
+                                // we can safely add a completable future now
+                                cf = hFuture.m_future = new CompletableFuture();
+                                }
+                            cf.whenComplete((r, x) -> f_fiber.m_fResponded = true);
+
                             f_ahVar[nVar] = hFuture;
                             info.m_nStyle = VAR_WAITING;
                             return Op.R_BLOCK;
@@ -662,24 +664,34 @@ public class Frame
                   .append(')');
                 }
 
+            iPC = frame.f_iPCPrev;
             frame = frame.f_framePrev;
             if (frame == null)
                 {
-                fiber = fiber.f_fiberPrev;
-                if (fiber == null)
+                Fiber fiberCaller = fiber.f_fiberCaller;
+                if (fiberCaller == null)
                     {
                     break;
                     }
-                frame = fiber.m_frame;
-                if (frame == null)
-                    {
-                    break;
-                    }
-                // TODO: not quite right; the caller fiber could have moved asynchronously
-                // we'd need to have a snapshot during the call itself
+
+                frame = fiberCaller.m_frame;
+
                 sb.append("\n    =========");
+
+                if (frame == null || frame.f_iId != fiber.f_iCallerId)
+                    {
+                    // the caller's fiber has moved away from the calling frame;
+                    // simply show the calling function
+                    InvocationTemplate fnCaller = fiber.f_fnCaller;
+                    sb.append("\n  ")
+                      .append(fnCaller.toString())
+                      .append(" (iPC=").append(iPC)
+                      .append(", op=").append(fnCaller.m_aop[iPC].getClass().getSimpleName())
+                      .append(')');
+                    break;
+                    }
+                fiber = fiberCaller;
                 }
-            iPC = frame.m_iPC - 1;
             }
 
         sb.append('\n');

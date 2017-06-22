@@ -79,9 +79,7 @@ public class xService
         {
         ServiceContext context = frame.f_context;
 
-        ServiceHandle hService = new ServiceHandle(clazz, clazz.ensureStructType(), context);
-
-        context.setService(hService);
+        ServiceHandle hService = makeHandle(context, clazz, clazz.ensureStructType());
 
         setFieldValue(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
 
@@ -145,7 +143,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, property, this::invokePreInc);
 
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
 
     @Override
@@ -161,7 +159,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, property, this::invokePostInc);
 
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
 
     @Override
@@ -177,7 +175,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, property, this::getPropertyValue);
 
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
 
     @Override
@@ -203,8 +201,7 @@ public class xService
             return super.setPropertyValue(frame, hTarget, property, hValue);
             }
 
-        hService.m_context.sendProperty10Request(
-                frame.f_fiber, property, hValue, this::setPropertyValue);
+        hService.m_context.sendProperty10Request(frame, property, hValue, this::setPropertyValue);
 
         return Op.R_NEXT;
         }
@@ -233,7 +230,7 @@ public class xService
 
         CompletableFuture cfService = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
 
-        return frame.assignValue(iReturn, xFutureRef.makeSyntheticHandle(cfService));
+        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfService));
         }
 
     // ----- Service API -----
@@ -247,11 +244,11 @@ public class xService
 
     // ----- ObjectHandle -----
 
-    public static ServiceHandle makeHandle(ServiceContext context)
+    public static ServiceHandle makeHandle(ServiceContext context, TypeComposition clz, Type type)
         {
-        TypeComposition clz = INSTANCE.f_clazzCanonical;
-
-        return new ServiceHandle(clz, clz.ensurePublicType(), context);
+        ServiceHandle hService = new ServiceHandle(clz, type, context);
+        context.setService(hService);
+        return hService;
         }
 
     public static class ServiceHandle
@@ -296,5 +293,12 @@ public class xService
         {
         int invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
                    ObjectHandle hValue, int iReturn);
+        }
+
+    // native function adapters
+    @FunctionalInterface
+    public interface NativeOperation
+        {
+        int invoke(Frame frame, ObjectHandle[] ahArg, int iReturn);
         }
     }
