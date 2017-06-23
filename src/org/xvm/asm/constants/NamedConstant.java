@@ -64,6 +64,16 @@ public abstract class NamedConstant
         m_constName   = pool.ensureCharStringConstant(sName);
         }
 
+    /**
+     * Internal constructor, used for temporary (unresolved) constants.
+     *
+     * @param pool  the ConstantPool
+     */
+    protected NamedConstant(ConstantPool pool)
+        {
+        super(pool);
+        }
+
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 

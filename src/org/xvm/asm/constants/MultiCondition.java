@@ -45,7 +45,7 @@ public abstract class MultiCondition
         super(pool);
 
         final int c = readMagnitude(in);
-        if (c < 1 || c > 1000)
+        if (c < 2 || c > 63)
             {
             throw new IllegalStateException("# conditions=" + c);
             }
@@ -174,13 +174,73 @@ public abstract class MultiCondition
      */
     protected abstract String getOperatorString();
 
+    /**
+     * Remove the specified condition from the multi-condition.
+     *
+     * @param cond  the condition to remove
+     *
+     * @return the modified multi-condition if the specified conditional was found; otherwise this
+     */
+    public ConditionalConstant remove(ConditionalConstant cond)
+        {
+        ConditionalConstant[] acond = m_aconstCond;
+        for (int i = 0, c = acond.length; i < c; ++i)
+            {
+            if (acond[i].equals(cond))
+                {
+                return remove(i);
+                }
+            }
+        return this;
+        }
+
+    /**
+     * Remove the specified condition from the multi-condition.
+     *
+     * @param i  the index of the condition to remove
+     *
+     * @return the resulting condition
+     */
+    public ConditionalConstant remove(int i)
+        {
+        ConditionalConstant[] acondOld = m_aconstCond;
+        int                   cConds   = acondOld.length;
+        assert i >= 0 && i < cConds;
+
+        if (cConds < 2)
+            {
+            throw new IllegalStateException("length=" + cConds);
+            }
+
+        if (cConds == 2)
+            {
+            return acondOld[-(i-1)];
+            }
+
+        ConditionalConstant[] acondNew = new ConditionalConstant[cConds-1];
+        System.arraycopy(acondOld, 0, acondNew, 0, i);
+        System.arraycopy(acondOld, i+1, acondNew, i, cConds - i - 1);
+        return instantiate(acondNew);
+        }
+
+    /**
+     * Factory.
+     *
+     * @param aconstCond  an array of conditions
+     *
+     * @return a multi-condition of the same type composed of the specified conditions
+     */
+    protected abstract MultiCondition instantiate(ConditionalConstant[] aconstCond);
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     protected int compareDetails(Constant that)
         {
-        return Handy.compareArrays(m_aconstCond, ((org.xvm.asm.constants.MultiCondition) that).m_aconstCond);
+        return this.equals(that)
+                ? 0
+                : Handy.compareArrays(m_aconstCond, ((org.xvm.asm.constants.MultiCondition) that).m_aconstCond);
         }
 
 
@@ -191,14 +251,14 @@ public abstract class MultiCondition
 
         StringBuilder sb = new StringBuilder();
         sb.append('(')
-                .append(m_aconstCond[0].getValueString());
+          .append(m_aconstCond[0].getValueString());
 
         for (int i = 1, c = aconstCond.length; i < c; ++i)
             {
             sb.append(' ')
-                    .append(getOperatorString())
-                    .append(' ')
-                    .append(aconstCond[i].getValueString());
+              .append(getOperatorString())
+              .append(' ')
+              .append(aconstCond[i].getValueString());
             }
 
         return sb.append(')').toString();
@@ -263,9 +323,76 @@ public abstract class MultiCondition
         int nHash = m_nHash;
         if (nHash == 0)
             {
-            m_nHash = nHash = getOperatorString().hashCode() ^ Handy.hashCode(m_aconstCond);
+            nHash = getOperatorString().hashCode();
+            for (ConditionalConstant cond : m_aconstCond)
+                {
+                nHash ^= cond.hashCode();
+                }
+            m_nHash = nHash;
             }
         return nHash;
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        // must both be multi-conditions
+        if (!(obj instanceof MultiCondition))
+            {
+            return false;
+            }
+
+        // must both have the same operator
+        final MultiCondition that = (MultiCondition) obj;
+        if (!this.getOperatorString().equals(that.getOperatorString()))
+            {
+            return false;
+            }
+
+        // must both contain the same conditions; order of conditionals is not important; start by
+        // verify that they both have the same number of conditionals
+        final ConditionalConstant[] aconstThis = this.m_aconstCond;
+        final ConditionalConstant[] aconstThat = that.m_aconstCond;
+        int cConds = aconstThis.length;
+        if (cConds != aconstThat.length)
+            {
+            return false;
+            }
+
+        // sequentially match as many as possible
+        int cSeqMatch = 0;
+        for (int i = 0; i < cConds; ++i)
+            {
+            if (aconstThis[i].equals(aconstThat[i]))
+                {
+                ++cSeqMatch;
+                }
+            else
+                {
+                break;
+                }
+            }
+
+        // n^2 match the remaining
+        if (cSeqMatch < cConds)
+            {
+            boolean[] matched = new boolean[cConds];
+            NextCond: for (int iThis = cSeqMatch; iThis < cConds; ++iThis)
+                {
+                ConditionalConstant constThis = aconstThis[iThis];
+                for (int iThat = cSeqMatch; iThat < cConds; ++iThat)
+                    {
+                    if (!matched[iThat] && constThis.equals(aconstThat[iThat]))
+                        {
+                        matched[iThat] = true;
+                        continue NextCond;
+                        }
+                    }
+                return false;
+                }
+            }
+
+        return true;
         }
 
 

@@ -17,6 +17,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
@@ -378,6 +379,10 @@ public class ClassStructure
          */
         Delegates,
         /**
+         * Represents that the class being composed is a mixin that applies to the specified type.
+         */
+        Into,
+        /**
          * Represents the combining-in of a trait or mix-in.
          */
         Incorporates,
@@ -434,7 +439,7 @@ public class ClassStructure
          * @param composition  specifies the type of composition
          * @param constant     specifies the class being contributed
          */
-        protected Contribution(Composition composition, ClassConstant constant)
+        protected Contribution(Composition composition, IdentityConstant constant)
             {
             this(composition, constant, null);
             }
@@ -447,7 +452,7 @@ public class ClassStructure
          * @param delegate     for a Delegates composition, this is the property that provides the
          *                     delegate reference
          */
-        protected Contribution(Composition composition, ClassConstant constant,
+        protected Contribution(Composition composition, IdentityConstant constant,
                 PropertyConstant delegate)
             {
             assert composition != null && constant != null;
@@ -468,11 +473,12 @@ public class ClassStructure
             }
 
         /**
-         * Obtain the class definition being contributed by this contribution.
+         * Obtain the constant identifying the class being contributed by this contribution.
          *
-         * @return the ClassConstant for this contribution
+         * @return the ClassConstant (or UnresolvedNameConstant, during compilation) for this
+         *         contribution
          */
-        public ClassConstant getClassConstant()
+        public IdentityConstant getClassConstant()
             {
             return m_constClass;
             }
@@ -519,7 +525,7 @@ public class ClassStructure
         /**
          * Defines the class that was used as part of the composition.
          */
-        private ClassConstant m_constClass;
+        private IdentityConstant m_constClass;
 
         /**
          * The property specifying the delegate, if this Composition represents a "delegates"

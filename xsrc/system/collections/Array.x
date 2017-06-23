@@ -109,9 +109,13 @@ class Array<ElementType>
     private Element<ElementType>? head;
 
     private class Element(ElementType value)
-            delegates Ref<ElementType>(&value)
+            delegates Ref<ElementType>(valueRef)
         {
         Element<RefType>? next;
+        private Ref<ElementType> valueRef.get()
+            {
+            return &value;
+            }
         }
 
     @Override

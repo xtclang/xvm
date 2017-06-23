@@ -59,8 +59,7 @@ public class FileStructureTest
             throws IOException
         {
         FileStructure structfile = new FileStructure("test");
-        structfile.getModule()
-                .createPackage(Constants.Access.PUBLIC, "x");
+        structfile.getModule().createPackage(Constants.Access.PUBLIC, "x", null);
         // TODO .setImportedModule(structfile.getConstantPool().ensureModuleConstant("ecstasy.xtclang.org"));
         testFileStructure(structfile);
         }
@@ -70,7 +69,7 @@ public class FileStructureTest
             throws IOException
         {
         FileStructure structfile = new FileStructure(Constants.ECSTASY_MODULE);
-        structfile.getModule().createClass(Constants.Access.PUBLIC, Component.Format.CLASS, Constants.CLASS_OBJECT);
+        structfile.getModule().createClass(Constants.Access.PUBLIC, Component.Format.CLASS, Constants.CLASS_OBJECT, null);
         testFileStructure(structfile);
         }
 
@@ -80,11 +79,11 @@ public class FileStructureTest
         {
         FileStructure structfile = new FileStructure(Constants.ECSTASY_MODULE);
         ClassStructure structobj = structfile.getModule().createClass(Constants.Access.PUBLIC,
-                Component.Format.CLASS, Constants.CLASS_OBJECT);
+                Component.Format.CLASS, Constants.CLASS_OBJECT, null);
         PackageStructure structpkg =structfile.getModule().createPackage(Constants.Access.PUBLIC,
-                "collections");
+                "collections", null);
         ClassStructure structclz = structpkg.createClass(Constants.Access.PUBLIC,
-                Component.Format.INTERFACE, "List");
+                Component.Format.INTERFACE, "List", null);
         structclz.addTypeParam("ElementType", ((ClassConstant) structobj.getIdentityConstant()).asTypeConstant());
         testFileStructure(structfile);
         }
@@ -95,13 +94,13 @@ public class FileStructureTest
         {
         FileStructure    file    = new FileStructure(Constants.ECSTASY_MODULE);
         ModuleStructure  module  = file.getModule();
-        ClassStructure   clzObj  = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, Constants.CLASS_OBJECT);
-        PackageStructure pkgColl = module.createPackage(Constants.Access.PUBLIC, "collections");
-        ClassStructure   clzHash = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Hashable");
-        ClassStructure   clzMap  = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Map");
+        ClassStructure   clzObj  = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, Constants.CLASS_OBJECT, null);
+        PackageStructure pkgColl = module.createPackage(Constants.Access.PUBLIC, "collections", null);
+        ClassStructure   clzHash = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Hashable", null);
+        ClassStructure   clzMap  = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Map", null);
         clzMap.addTypeParam("KeyType", ((ClassConstant) clzObj.getIdentityConstant()).asTypeConstant());
         clzMap.addTypeParam("ValueType", ((ClassConstant) clzObj.getIdentityConstant()).asTypeConstant());
-        ClassStructure clzHashMap = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "HashMap");
+        ClassStructure clzHashMap = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "HashMap", null);
         clzHashMap.addTypeParam("KeyType", ((ClassConstant) clzHash.getIdentityConstant()).asTypeConstant());
         clzHashMap.addTypeParam("ValueType", ((ClassConstant) clzObj.getIdentityConstant()).asTypeConstant());
         clzHashMap.addContribution(ClassStructure.Composition.Implements, ((ClassConstant) clzMap.getIdentityConstant()));
@@ -117,8 +116,8 @@ public class FileStructureTest
         Assert.assertEquals("test", structfile.getModuleName());
 
         ModuleStructure  structmodule  = structfile.getModule();
-        PackageStructure structpackage = structmodule.createPackage(Constants.Access.PUBLIC, "classes");
-        ClassStructure   structclass   = structpackage.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Test");
+        PackageStructure structpackage = structmodule.createPackage(Constants.Access.PUBLIC, "classes", null);
+        ClassStructure   structclass   = structpackage.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
         MethodStructure  structmethod  = structclass.createMethod(false, Constants.Access.PUBLIC,
                 new TypeConstant[]{},
                 "foo",
