@@ -2,10 +2,11 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.Frame.Guard;
+import org.xvm.proto.Frame.MultiGuard;
 import org.xvm.proto.Op;
 
 /**
- * GUARD #handlers:(CONST_CLASS, rel_addr)  ; ENTER
+ * GUARD #handlers:(CONST_CLASS, rel_addr) ; ENTER
  *
  * @author gg 2017.03.08
  */
@@ -15,7 +16,7 @@ public class GuardStart extends Op
     private final int[] f_anNameConstId;
     private final int[] f_anCatchRelAddress;
 
-    private Guard m_guard; // cached struct
+    private MultiGuard m_guard; // cached struct
 
     public GuardStart(int nClassConstId, int nNameConstId, int nCatchAddress)
         {
@@ -36,29 +37,15 @@ public class GuardStart extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int[] anNextVar = frame.f_anNextVar;
-
-        // ++ Enter
-        int iScope = ++frame.m_iScope;
-
-        anNextVar[iScope] = anNextVar[iScope-1];
-        // --
-
-        int iGuard = ++frame.m_iGuard;
-
-        Guard[] aGuard = frame.m_aGuard;
-        if (aGuard == null)
-            {
-            aGuard = frame.m_aGuard = new Frame.Guard[anNextVar.length]; // # of scopes
-            }
+        int iScope = frame.enterScope();
 
         Guard guard = m_guard;
         if (guard == null)
             {
-            guard = m_guard = new Guard(iPC, iScope,
+            guard = m_guard = new MultiGuard(iPC, iScope,
                     f_anClassConstId, f_anNameConstId, f_anCatchRelAddress);
             }
-        aGuard[iGuard] = guard;
+        frame.pushGuard(guard);
 
         return iPC + 1;
         }

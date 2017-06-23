@@ -269,8 +269,9 @@ public class xTestApp extends xModule
             new Invoke_11(0, adapter.getMethodConstId("x:TestService", "exceptional"),
                     -adapter.ensureValueConstantId(1000), 2),
             new X_Print(2),
-            new GuardEnd(+4),
+            new GuardEnd(+5),
             new HandlerStart(), // #4 (e)
+            new X_Print(4),
             new Assert(-adapter.ensureValueConstantId(false)),
             new HandlerEnd(1),
             new Invoke_10(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "registerTimeout"),
@@ -279,9 +280,10 @@ public class xTestApp extends xModule
             new Invoke_10(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "registerTimeout"),
                     -adapter.ensureValueConstantId(500)),
             new GuardStart(adapter.getClassTypeConstId("x:Exception"),
-                    adapter.ensureValueConstantId("e"), +3),
+                    adapter.ensureValueConstantId("e"), +4),
             new Invoke_11(0, adapter.getMethodConstId("x:TestService", "exceptional"),
-                    -adapter.ensureValueConstantId(1000), 2),
+                    -adapter.ensureValueConstantId(200000), 2),
+            new Assert(-adapter.ensureValueConstantId(false)),
             new GuardEnd(+4),
             new HandlerStart(), // #4 (e)
             new X_Print(4),

@@ -24,9 +24,6 @@ public class Ref extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.m_iScope;
-        int nNextVar = frame.f_anNextVar[iScope];
-
         Frame.VarInfo infoSrc = frame.getVarInfo(f_nSrcValue);
         TypeComposition clzReferent = infoSrc.f_clazz;
 
@@ -35,7 +32,7 @@ public class Ref extends OpInvocable
             // the "dynamic ref" register must contain a RefHandle itself
             RefHandle hRef = (RefHandle) frame.f_ahVar[f_nSrcValue];
 
-            frame.introduceVar(nNextVar, clzReferent, null, Frame.VAR_STANDARD, hRef);
+            frame.introduceVar(clzReferent, null, Frame.VAR_STANDARD, hRef);
             }
         else
             {
@@ -43,7 +40,7 @@ public class Ref extends OpInvocable
 
             RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);
 
-            frame.introduceVar(nNextVar, clzRef, null, Frame.VAR_STANDARD, hRef);
+            frame.introduceVar(clzRef, null, Frame.VAR_STANDARD, hRef);
             }
 
         return iPC + 1;

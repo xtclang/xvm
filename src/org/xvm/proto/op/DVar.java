@@ -22,14 +22,9 @@ public class DVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope   = frame.m_iScope;
-        int nNextVar = frame.f_anNextVar[iScope];
-
         RefHandle hRef = frame.f_context.f_heapGlobal.createRefHandle(frame, f_nClassConstId);
 
-        frame.introduceVar(nNextVar, hRef.f_clazz, null, Frame.VAR_DYNAMIC_REF, hRef);
-
-        frame.f_anNextVar[iScope] = nNextVar + 1;
+        frame.introduceVar(hRef.f_clazz, null, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }

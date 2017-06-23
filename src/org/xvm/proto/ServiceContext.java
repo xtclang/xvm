@@ -411,9 +411,9 @@ public class ServiceContext
         Fiber fiber = new Fiber(this, msg);
         Frame frame = new Frame(fiber, msg.f_iCallerPC, aopNative, ahVar, Frame.RET_UNUSED, null);
 
-        for (int iVar = 0; iVar < cReturns; iVar++)
+        for (int nVar = 0; nVar < cReturns; nVar++)
             {
-            frame.introduceVar(iVar, xObject.CLASS, null, Frame.VAR_STANDARD, null);
+            frame.f_aInfo[nVar] = new Frame.VarInfo(xObject.CLASS, null, Frame.VAR_STANDARD);
             }
         return frame;
         }

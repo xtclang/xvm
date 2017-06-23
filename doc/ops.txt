@@ -1,17 +1,20 @@
 // fundamentals
 +NOP                                                ; traditional no-op, which does nothing
- LINE                                               ; advance line counter
+ LINE_1                                             ; advance line counter
+ LINE_N      #lines                                 ; advance line counter
  BREAK                                              ; explicit break-point for debugger
 +ENTER                                              ; variable scope begin
 +EXIT                                               ; variable scope end
-+GUARD      #handlers:(CLASS_CONST, CONST_STRING, rel_addr) ; try { (+ “catch” class and variable name) // note: ENTER
-+END_GUARD   rel_addr                               ; } ...                            // note: EXIT (
- GUARD_ALL                                          ; try {                            // note: ENTER
- FINALLY                                            ; } finally {                      // note: EXIT, ENTER
- END_FINALLY                                        ; }                                // note: EXIT
++GUARD       #handlers:(CLASS_CONST, CONST_STRING, rel_addr)
+                                                    ; try { (+ “catch” class, var name, handler address)
+                                                    ;       // note: ENTER
++END_GUARD   rel_addr                               ; } ... // note: EXIT (
++HANDLER                                            ; begin an exception handler (implicit ENTER and an exception var)
++END_HANDLER rel-addr                               ; finish an exception handler with a jump // note: EXIT
++GUARD_ALL   rel-addr                               ; try { (+ "finally" address // note: ENTER
+ FINALLY                                            ; begin a "finally" handler (implicit ENTER and an exception var)
+ END_FINALLY                                        ; finish a "finally" handler // note: EXIT
 +THROW       rvalue                                 ; raise exception
-+HANDLER                                            ; begin an exception handler (implicit ENTER)
-+END_HANDLER rel-addr                               ; finish an exception handler with a jump
 
 // jumps
 +GOTO       abs-addr                                ; unconditional absolute jump

@@ -29,9 +29,6 @@ public class INVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope   = frame.m_iScope;
-        int nNextVar = frame.f_anNextVar[iScope];
-
         ServiceContext context = frame.f_context;
 
         TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
@@ -46,9 +43,8 @@ public class INVar extends Op
                 return R_REPEAT;
                 }
 
-            frame.introduceVar(nNextVar, clazz, constName.getValue(), Frame.VAR_STANDARD, hArg);
+            frame.introduceVar(clazz, constName.getValue(), Frame.VAR_STANDARD, hArg);
 
-            frame.f_anNextVar[iScope] = nNextVar + 1;
             return iPC + 1;
             }
         catch (ObjectHandle.ExceptionHandle.WrapperException e)

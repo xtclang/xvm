@@ -29,18 +29,20 @@
 
 + Service reentrancy, timeouts and Fibers
 
-- injection
++ injection
 
-- try-finally
++ native Service methods
 
-- Property and Method
-
-- Multi:
++ Multi:
     +- new
     +- call
     +- invoke
 
-- native Service methods
+- try-finally
+
+- op-code deserialization
+
+- Property and Method
 
 - Class, Type
 

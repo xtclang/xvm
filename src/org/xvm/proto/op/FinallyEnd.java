@@ -4,14 +4,17 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
 /**
- * EXIT (variable scope end)
+ * END_HANDLER rel-addr ; finish an exception handler with a jump
  *
  * @author gg 2017.03.08
  */
-public class Exit extends Op
+public class FinallyEnd extends Op
     {
-    public Exit()
+    private final int f_nRelAddr;
+
+    public FinallyEnd(int iRelAddr)
         {
+        f_nRelAddr = iRelAddr;
         }
 
     @Override
@@ -19,6 +22,6 @@ public class Exit extends Op
         {
         frame.exitScope();
 
-        return iPC + 1;
+        return iPC + f_nRelAddr;
         }
     }

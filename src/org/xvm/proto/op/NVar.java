@@ -26,18 +26,13 @@ public class NVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.m_iScope;
-        int nNextVar = frame.f_anNextVar[iScope];
-
         ServiceContext context = frame.f_context;
 
         TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
         CharStringConstant constName = (CharStringConstant)
                 context.f_constantPool.getConstantValue(f_nNameConstId);
 
-        frame.introduceVar(nNextVar, clazz, constName.getValue(), Frame.VAR_STANDARD, null);
-
-        frame.f_anNextVar[iScope] = nNextVar+1;
+        frame.introduceVar(clazz, constName.getValue(), Frame.VAR_STANDARD, null);
 
         return iPC + 1;
         }

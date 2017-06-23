@@ -28,9 +28,6 @@ public class SVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope   = frame.m_iScope;
-        int nNextVar = frame.f_anNextVar[iScope];
-
         ServiceContext context = frame.f_context;
 
         TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
@@ -55,9 +52,8 @@ public class SVar extends Op
             ArrayHandle hArray = xArray.makeHandle(clazz.ensurePublicType(), ahArg);
             hArray.makeImmutable();
 
-            frame.introduceVar(nNextVar, null, null, Frame.VAR_STANDARD, hArray);
+            frame.introduceVar(hArray.f_clazz, null, Frame.VAR_STANDARD, hArray);
 
-            frame.f_anNextVar[iScope] = nNextVar + 1;
             return iPC + 1;
             }
         catch (ObjectHandle.ExceptionHandle.WrapperException e)

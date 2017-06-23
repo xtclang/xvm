@@ -20,11 +20,7 @@ public class HandlerEnd extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        // ++ Exit
-        int iScope = frame.m_iScope--;
-
-        frame.clearScope(iScope);
-        // --
+        frame.exitScope();
 
         return iPC + f_nRelAddr;
         }

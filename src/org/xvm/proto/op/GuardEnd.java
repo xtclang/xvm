@@ -20,13 +20,9 @@ public class GuardEnd extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        frame.m_iGuard--;
+        frame.popGuard();
 
-        // ++ Exit
-        int iScope = frame.m_iScope--;
-
-        frame.clearScope(iScope);
-        // --
+        frame.exitScope();
 
         return iPC + f_nRelAddr;
         }
