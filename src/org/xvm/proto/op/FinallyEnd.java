@@ -1,6 +1,7 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 
 /**
@@ -10,18 +11,26 @@ import org.xvm.proto.Op;
  */
 public class FinallyEnd extends Op
     {
-    private final int f_nRelAddr;
-
-    public FinallyEnd(int iRelAddr)
+    public FinallyEnd()
         {
-        f_nRelAddr = iRelAddr;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        frame.exitScope();
+        // a possible exception sits in the first variable of this scope,
+        // which is the same as the "next" variable in the previous scope
+        int nException = frame.f_anNextVar[frame.m_iScope - 1];
 
-        return iPC + f_nRelAddr;
+        ExceptionHandle hException = (ExceptionHandle) frame.f_ahVar[nException];
+        if (hException == null)
+            {
+            frame.exitScope();
+            return iPC + 1;
+            }
+
+        // re-throw
+        frame.m_hException = hException;
+        return R_EXCEPTION;
         }
     }

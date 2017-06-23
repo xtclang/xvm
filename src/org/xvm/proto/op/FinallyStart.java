@@ -17,6 +17,8 @@ public class FinallyStart extends OpInvocable
     @Override
     public int process(Frame frame, int iPC)
         {
+        frame.exitScope();
+
         int iScope = frame.enterScope();
 
         // if coming from Frame.findGuard(), there is an exception at

@@ -12,7 +12,7 @@
 +HANDLER                                            ; begin an exception handler (implicit ENTER and an exception var)
 +END_HANDLER rel-addr                               ; finish an exception handler with a jump // note: EXIT
 +GUARD_ALL   rel-addr                               ; try { (+ "finally" address // note: ENTER
- FINALLY                                            ; begin a "finally" handler (implicit ENTER and an exception var)
+ FINALLY                                            ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)
  END_FINALLY                                        ; finish a "finally" handler // note: EXIT
 +THROW       rvalue                                 ; raise exception
 
