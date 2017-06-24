@@ -1,13 +1,17 @@
 package org.xvm.asm.constants;
 
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -285,4 +289,4 @@ public class ClassTypeConstant
      * The type parameters.
      */
     private List<TypeConstant> m_listParams;
-}
+    }

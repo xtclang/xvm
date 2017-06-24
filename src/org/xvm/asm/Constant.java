@@ -356,9 +356,14 @@ public abstract class Constant
         MultiMethod,
         Method,
         Parameter,
-        Unresolved,
         ClassType,
-        Tuple;
+        ImmutableType,
+        UnionType,
+        IntersectionType,
+        AnnotatedType,
+        Tuple,
+        Unresolved,
+        ;
 
         /**
          * Determine if structures of the type are length-encoded when assembled.
