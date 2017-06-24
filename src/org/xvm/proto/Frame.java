@@ -138,6 +138,23 @@ public class Frame
         return Op.R_CALL;
         }
 
+    // start the specified guard as a "current" one
+    public void pushGuard(Guard guard)
+        {
+        Guard[] aGuard = m_aGuard;
+        if (aGuard == null)
+            {
+            aGuard = m_aGuard = new Guard[f_anNextVar.length]; // # of scopes
+            }
+        aGuard[++m_iGuard] = guard;
+        }
+
+    // drop the top-most guard
+    public void popGuard()
+        {
+        m_aGuard[m_iGuard--] = null;
+        }
+
     // find a first matching guard; unwind the scope and initialize the next var with the exception
     // return the PC of the catch or the R_EXCEPTION value
     protected int findGuard(ExceptionHandle hException)
@@ -145,38 +162,14 @@ public class Frame
         Guard[] aGuard = m_aGuard;
         if (aGuard != null)
             {
-            TypeComposition clzException = hException.f_clazz;
-
             for (int iGuard = m_iGuard; iGuard >= 0; iGuard--)
                 {
                 Guard guard = aGuard[iGuard];
 
-                for (int iCatch = 0, c = guard.f_anClassConstId.length; iCatch < c; iCatch++)
+                int iPC = guard.handle(this, hException, iGuard);
+                if (iPC >= 0)
                     {
-                    TypeComposition clzCatch = f_context.f_types.
-                            ensureComposition(this, guard.f_anClassConstId[iCatch]);
-                    if (clzException.extends_(clzCatch))
-                        {
-                        int nScope = guard.f_nScope;
-
-                        clearAllScopes(nScope - 1);
-
-                        // implicit "enter" with an exception variable introduction
-                        m_iScope = nScope;
-                        m_iGuard = iGuard - 1;
-
-                        int nNextVar = f_anNextVar[nScope - 1];
-
-                        CharStringConstant constVarName = (CharStringConstant)
-                                f_context.f_constantPool.getConstantValue(guard.f_anNameConstId[iCatch]);
-
-                        introduceVar(nNextVar, clzException, constVarName.getValue(), VAR_STANDARD, hException);
-
-                        f_anNextVar[nScope] = nNextVar + 1;
-                        m_hException = null;
-
-                        return guard.f_nStartAddress + guard.f_anCatchRelAddress[iCatch];
-                        }
+                    return iPC;
                     }
                 }
             }
@@ -250,9 +243,23 @@ public class Frame
             }
         }
 
-    // clear the var info for the specified scope
-    public void clearScope(int iScope)
+    // create a new "current" scope
+    public int enterScope()
         {
+        int[] anNextVar = f_anNextVar;
+
+        int iScope = ++m_iScope;
+
+        anNextVar[iScope] = anNextVar[iScope-1];
+
+        return iScope;
+        }
+
+    // exit the current scope and clear all the var info
+    public void exitScope()
+        {
+        int iScope = m_iScope--;
+
         int iVarFrom = f_anNextVar[iScope - 1];
         int iVarTo   = f_anNextVar[iScope] - 1;
 
@@ -576,15 +583,10 @@ public class Frame
         return lIndex;
         }
 
-    // if the class is not specified, it will be inferred from the handle,
-    // which in that case must be specified
-    public void introduceVar(int nVar, TypeComposition clz,
-                             String sName, int nStyle, ObjectHandle hValue)
+    // Note: this method increments up the "nextVar" index
+    public void introduceVar(TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)
         {
-        if (clz == null)
-            {
-            clz = hValue.f_clazz;
-            }
+        int nVar = f_anNextVar[m_iScope]++;
 
         f_aInfo[nVar] = new VarInfo(clz, sName, nStyle);
 
@@ -618,8 +620,7 @@ public class Frame
                 throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
                 }
 
-            introduceVar(nVar, f_ahVar[nVar].f_clazz, sName, VAR_STANDARD, null);
-            info = f_aInfo[nVar];
+            info = f_aInfo[nVar] = new VarInfo(f_ahVar[nVar].f_clazz, sName, VAR_STANDARD);
             }
         return info;
         }
@@ -709,22 +710,95 @@ public class Frame
         }
 
     // try-catch support
-    public static class Guard
+    public abstract static class Guard
         {
-        public final int f_nStartAddress;
-        public final int f_nScope;
-        public final int[] f_anClassConstId;
-        public final int[] f_anNameConstId;
-        public final int[] f_anCatchRelAddress;
+        protected final int f_nStartAddress;
+        protected final int f_nScope;
 
-        public Guard(int nStartAddr, int nScope, int[] anClassConstId,
-                     int[] anNameConstId, int[] anCatchAddress)
+        protected Guard(int nStartAddress, int nScope)
             {
-            f_nStartAddress = nStartAddr;
+            f_nStartAddress = nStartAddress;
             f_nScope = nScope;
+            }
+
+        abstract public int handle(Frame frame, ExceptionHandle hException, int iGuard);
+
+        // drop down to the scope of the exception handler;
+        // implicit "enter" with an exception variable introduction
+        public void introduceException(Frame frame, int iGuard, ExceptionHandle hException, String sVarName)
+            {
+            int nScope = f_nScope;
+
+            frame.clearAllScopes(nScope - 1);
+
+            frame.m_iScope = nScope;
+            frame.m_iGuard = iGuard - 1;
+
+            frame.f_anNextVar[nScope] = frame.f_anNextVar[nScope - 1];
+
+            frame.introduceVar(hException.f_clazz, sVarName, VAR_STANDARD, hException);
+
+            frame.m_hException = null;
+            }
+        }
+
+    public static class AllGuard
+            extends Guard
+        {
+        protected final int f_nFinallyRelAddress;
+
+        public AllGuard(int nStartAddress, int nScope, int nFinallyRelAddress)
+            {
+            super(nStartAddress, nScope);
+
+            f_nFinallyRelAddress = nFinallyRelAddress;
+            }
+
+        public int handle(Frame frame, ExceptionHandle hException, int iGuard)
+            {
+            introduceException(frame, iGuard, hException, null);
+
+            return f_nStartAddress + f_nFinallyRelAddress;
+            }
+        }
+
+    public static class MultiGuard
+            extends Guard
+        {
+        protected final int[] f_anClassConstId;
+        protected final int[] f_anNameConstId;
+        protected final int[] f_anCatchRelAddress;
+
+        public MultiGuard(int nStartAddress, int nScope, int[] anClassConstId,
+                          int[] anNameConstId, int[] anCatchAddress)
+            {
+            super(nStartAddress, nScope);
+
             f_anClassConstId = anClassConstId;
             f_anNameConstId = anNameConstId;
             f_anCatchRelAddress = anCatchAddress;
+            }
+
+        public int handle(Frame frame, ExceptionHandle hException, int iGuard)
+            {
+            ServiceContext context = frame.f_context;
+            TypeComposition clzException = hException.f_clazz;
+
+            for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
+                {
+                TypeComposition clzCatch = context.f_types.
+                        ensureComposition(frame, f_anClassConstId[iCatch]);
+                if (clzException.extends_(clzCatch))
+                    {
+                    CharStringConstant constVarName = (CharStringConstant)
+                            context.f_constantPool.getConstantValue(f_anNameConstId[iCatch]);
+
+                    introduceException(frame, iGuard, hException, constVarName.getValue());
+
+                    return f_nStartAddress + f_anCatchRelAddress[iCatch];
+                    }
+                }
+            return Op.R_EXCEPTION;
             }
         }
 

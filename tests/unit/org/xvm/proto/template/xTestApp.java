@@ -264,35 +264,35 @@ public class xTestApp extends xModule
 
             new Invoke_10(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "registerTimeout"),
                     -adapter.ensureValueConstantId(2000)),
-            new GuardStart(adapter.getClassTypeConstId("x:Exception"),
-                    adapter.ensureValueConstantId("e"), +4),
+            new GuardAll(+4),
             new Invoke_11(0, adapter.getMethodConstId("x:TestService", "exceptional"),
                     -adapter.ensureValueConstantId(1000), 2),
             new X_Print(2),
-            new GuardEnd(+4),
-            new HandlerStart(), // #4 (e)
-            new Assert(-adapter.ensureValueConstantId(false)),
-            new HandlerEnd(1),
+            new FinallyStart(),
             new Invoke_10(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "registerTimeout"),
                     -adapter.ensureValueConstantId(0)),
+            new FinallyEnd(),
 
             new Invoke_10(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "registerTimeout"),
                     -adapter.ensureValueConstantId(500)),
+            new GuardAll(+9),
             new GuardStart(adapter.getClassTypeConstId("x:Exception"),
-                    adapter.ensureValueConstantId("e"), +3),
+                    adapter.ensureValueConstantId("e"), +4),
             new Invoke_11(0, adapter.getMethodConstId("x:TestService", "exceptional"),
-                    -adapter.ensureValueConstantId(1000), 2),
+                    -adapter.ensureValueConstantId(200000), 2),
+            new Assert(-adapter.ensureValueConstantId(false)),
             new GuardEnd(+4),
             new HandlerStart(), // #4 (e)
             new X_Print(4),
             new HandlerEnd(1),
+            new FinallyStart(),
             new Invoke_10(Op.A_SERVICE, adapter.getMethodConstId("x:TestService", "registerTimeout"),
                     -adapter.ensureValueConstantId(0)),
-
+            new FinallyEnd(),
             new Return_0(),
             };
         ftTestService2.m_cVars = 5;
-        ftTestService2.m_cScopes = 2;
+        ftTestService2.m_cScopes = 3;
 
         // --- testRef()
 

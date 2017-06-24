@@ -185,21 +185,18 @@ module TestApp
             print(e);
             }
 
-        try (new Timeout(2000))
+        try (new Timeout(2000)) // compiles as try-finally
             {
             // this should complete normally
             c = svc.exceptional(1000);
             print(c);
             }
-        catch (Exception e)
-            {
-            assert false;
-            }
 
-        try (new Timeout(500))
+        try (new Timeout(500)) // compiles as try-catch-finally
             {
             // this should timeout
             c = svc.exceptional(1000);
+            assert false;
             }
         catch (Exception e)
             {

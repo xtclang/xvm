@@ -97,34 +97,34 @@ public class xTestService extends xService
 
         MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", INT, INT);
         mtExceptional.m_aop = new Op[]
-            { // #1 - cDelay
-            new Enter(),
+            { // #0 - this; #1 - cDelay
             new Var(adapter.getClassTypeConstId("x:Boolean")), // #2
             new IsZero(1, 2),
-            new JumpFalse(2, 4), // -> Exit
+            new JumpFalse(2, 6), // -> Enter
 
+            new Enter(),
             new Var(this.adapter.getClassTypeConstId("x:Exception")), // #3
-                    new New_N(adapter.getMethodConstId("x:Exception", "construct"),
-                    new int[]{-adapter.ensureValueConstantId("test"),
-                            -adapter.getClassTypeConstId("x:Nullable$Null")}, 3),
+            new New_N(adapter.getMethodConstId("x:Exception", "construct"),
+                        new int[]{-adapter.ensureValueConstantId("test"),
+                                  -adapter.getClassTypeConstId("x:Nullable$Null")}, 3),
             new Throw(3),
-            new Exit(),     // should be optimized out (after throw)
+            new Exit(), // optimize out; unreachable
 
             new Enter(),
             new DNVar(adapter.getClassTypeConstId("x:FutureRef<x:Int64>"),
-                    adapter.ensureValueConstantId("iRet")), // #2 (iRet)
-            new Var(adapter.getClassTypeConstId("x:Clock")), // #3
-            new LGet(adapter.getPropertyConstId("x:TestService", "runtimeClock"), 3),
+                    adapter.ensureValueConstantId("iRet")), // #3 (iRet)
+            new Var(adapter.getClassTypeConstId("x:Clock")), // #4
+            new LGet(adapter.getPropertyConstId("x:TestService", "runtimeClock"), 4),
             new IVar(adapter.getClassTypeConstId("x:Function"),
-                    -adapter.getMethodConstId("x:TestService", "lambda$1")), // #4
-            new Ref(2), // #5
-            new FBind(4, new int[] {0, 1}, new int[] {5, 1}, 4),
-            new Invoke_N0(3, adapter.getMethodConstId("x:Clock", "scheduleAlarm"),
-                    new int[] {4, 1}),
-            new Return_1(2),
-            new Exit(),     // should be optimized out (after return)
+                    -adapter.getMethodConstId("x:TestService", "lambda$1")), // #5
+            new Ref(3), // #6
+            new FBind(5, new int[] {0, 1}, new int[] {6, 1}, 5),
+            new Invoke_N0(4, adapter.getMethodConstId("x:Clock", "scheduleAlarm"),
+                    new int[] {5, 1}),
+            new Return_1(3),
+            new Exit(), // optimized out; unreachable
             };
-        mtExceptional.m_cVars = 6;
+        mtExceptional.m_cVars = 7;
         mtExceptional.m_cScopes = 2;
         }
     }

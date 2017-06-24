@@ -29,8 +29,6 @@ public class TVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope   = frame.m_iScope;
-        int nNextVar = frame.f_anNextVar[iScope];
 
         ServiceContext context = frame.f_context;
 
@@ -60,9 +58,8 @@ public class TVar extends Op
 
             TupleHandle hTuple = xTuple.makeHandle(aType, ahArg);
 
-            frame.introduceVar(nNextVar, null, null, Frame.VAR_STANDARD, hTuple);
+            frame.introduceVar(hTuple.f_clazz, null, Frame.VAR_STANDARD, hTuple);
 
-            frame.f_anNextVar[iScope] = nNextVar + 1;
             return iPC + 1;
             }
         catch (ObjectHandle.ExceptionHandle.WrapperException e)

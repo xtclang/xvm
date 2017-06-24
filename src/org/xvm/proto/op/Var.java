@@ -21,14 +21,10 @@ public class Var extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iScope = frame.m_iScope;
-        int nNextVar = frame.f_anNextVar[iScope];
-
         TypeComposition clazz = frame.f_context.f_types.ensureComposition(frame, f_nClassConstId);
 
-        frame.introduceVar(nNextVar, clazz, null, Frame.VAR_STANDARD, null);
+        frame.introduceVar(clazz, null, Frame.VAR_STANDARD, null);
 
-        frame.f_anNextVar[iScope] = nNextVar+1;
         return iPC + 1;
         }
     }
