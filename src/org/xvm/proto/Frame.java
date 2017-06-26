@@ -231,9 +231,12 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
+
             case Op.A_FRAME:
-            case Op.A_MODULE:
                 throw new UnsupportedOperationException("TODO");
+
+            case Op.A_MODULE:
+                return f_context.f_container.getModule();
 
             case Op.A_SERVICE:
                 return ServiceContext.getCurrentContext().m_hService;

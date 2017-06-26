@@ -12,8 +12,8 @@
 +HANDLER                                            ; begin an exception handler (implicit ENTER and an exception var)
 +END_HANDLER rel-addr                               ; finish an exception handler with a jump // note: EXIT
 +GUARD_ALL   rel-addr                               ; try { (+ "finally" address // note: ENTER
- FINALLY                                            ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)
- END_FINALLY                                        ; finish a "finally" handler // note: EXIT
++FINALLY                                            ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)
++END_FINALLY                                        ; finish a "finally" handler // note: EXIT
 +THROW       rvalue                                 ; raise exception
 
 // jumps
@@ -180,9 +180,9 @@
 +NEW_1      CONST-CONSTRUCT, rvalue-param, lvalue-return
 +NEW_N      CONST-CONSTRUCT, #params:(rvalue), lvalue-return
  NEW_T      CONST-CONSTRUCT, rvalue-params-tuple, lvalue-return
- NEW_0G     CONST-CONSTRUCT, rvalue-type, lvalue-return                             ; generic "new"
- NEW_1G     CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
- NEW_NG     CONST-CONSTRUCT, rvalue-type, #params:(rvalue), lvalue-return
++NEW_0G     CONST-CONSTRUCT, rvalue-type, lvalue-return                             ; generic "new"
++NEW_1G     CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
++NEW_NG     CONST-CONSTRUCT, rvalue-type, #params:(rvalue), lvalue-return
  NEW_TG     CONST-CONSTRUCT, rvalue-type, rvalue-params-tuple, lvalue-return
  NEWC_0     CONST-CONSTRUCT, rvalue-parent, lvalue-return                           ; virtual "new" for child classes
  NEWC_1     CONST-CONSTRUCT, rvalue-parent, rvalue-param, lvalue-return
@@ -253,8 +253,8 @@ pre-defined variables/constants:
 + 3: this:private
 + 4: this:target
 + 5: this:struct
-+ 6: this:frame     Frame
+  6: this:frame     Frame
 + 7: this:service	Service + ..
-  8: this:module    Module + ..
++ 8: this:module    Module + ..
   9: this:type      Type
 + A: super          Function

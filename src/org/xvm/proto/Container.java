@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import com.sun.org.apache.xpath.internal.operations.Mod;
 import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
@@ -42,6 +43,9 @@ public class Container
 
     // the service context for the container itself
     private ServiceContext m_contextMain;
+
+    // the module
+    private ModuleHandle m_hModule;
 
     // the values are: ObjectHandle | Supplier<ObjectHandle>
     final Map<InjectionKey, Object> f_mapResources = new HashMap<>();
@@ -159,15 +163,19 @@ public class Container
                 throw new IllegalArgumentException("Missing run() method for " + f_constModule);
                 }
 
-            FunctionHandle hFunction = xFunction.makeHandle(mtRun);
-            ModuleHandle hModule = (ModuleHandle) module.createConstHandle(f_constModule, f_heapGlobal);
+            m_hModule = (ModuleHandle) module.createConstHandle(f_constModule, f_heapGlobal);
 
-            m_contextMain.callLater(hFunction, new ObjectHandle[]{hModule});
+            m_contextMain.callLater(xFunction.makeHandle(mtRun), new ObjectHandle[]{m_hModule});
             }
         catch (Exception e)
             {
             throw new RuntimeException("failed to run: " + f_constModule, e);
             }
+        }
+
+    public ModuleHandle getModule()
+        {
+        return m_hModule;
         }
 
     public boolean isIdle()
