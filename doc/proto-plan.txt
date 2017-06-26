@@ -38,7 +38,7 @@
     +- call
     +- invoke
 
-- try-finally
++ try-finally
 
 - op-code deserialization
 
