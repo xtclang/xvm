@@ -211,7 +211,7 @@ public class FileStructureTest
             structfile2.dump(new PrintWriter(System.out, true));
             }
 
-        Assert.assertEquals(structfile, structfile2);
+        Assert.assertTrue(structfile.equals(structfile2));
 
         out = new ByteArrayOutputStream();
         structfile2.writeTo(out);
