@@ -33,7 +33,7 @@ public class TupleConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    protected TupleConstant(ConstantPool pool, Format format, DataInput in)
+    public TupleConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
