@@ -744,6 +744,10 @@ public class ConstantPool
                     constant = new IntConstant(this, format, in);
                     break;
 
+                case Tuple:
+                    constant = new TupleConstant(this, format, in);
+                    break;
+
                 case Module:
                     constant = new ModuleConstant(this, format, in);
                     break;
@@ -804,6 +808,24 @@ public class ConstantPool
                     constant = new ClassTypeConstant(this, format, in);
                     break;
 
+                case ImmutableType:
+                    constant = new ImmutableTypeConstant(this, format, in);
+                    break;
+
+                case UnionType:
+                    constant = new UnionTypeConstant(this, format, in);
+                    break;
+
+                case IntersectionType:
+                    constant = new IntersectionTypeConstant(this, format, in);
+                    break;
+
+                case AnnotatedType:
+                    constant = new AnnotatedTypeConstant(this, format, in);
+                    break;
+
+                case Parameter:
+                case Unresolved:
                 default:
                     throw new IOException("Unsupported constant format: " + nFmt);
                 }
