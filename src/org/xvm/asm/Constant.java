@@ -361,6 +361,7 @@ public abstract class Constant
         UnionType,
         IntersectionType,
         AnnotatedType,
+        TypeParamType,
         Tuple,
         Unresolved,
         ;
