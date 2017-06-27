@@ -197,25 +197,6 @@ public class ClassStructure
         return sb.toString();
         }
 
-    @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
-        out.print(sIndent);
-        out.println(toString());
-
-        final List<Contribution> listContribs = m_listContribs;
-        final int cContribs = listContribs == null ? 0 : listContribs.size();
-        if (cContribs > 0)
-            {
-            out.print(sIndent);
-            out.println("Contributions");
-            for (int i = 0; i < cContribs; ++i)
-                {
-                out.println(sIndent + '[' + i + "]=" + listContribs.get(i));
-                }
-            }
-        }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -240,16 +221,6 @@ public class ClassStructure
         final int cThisParams = mapThisParams == null ? 0 : mapThisParams.size();
         final int cThatParams = mapThatParams == null ? 0 : mapThatParams.size();
         if (cThisParams != cThatParams || (cThisParams > 0 && !mapThisParams.equals(mapThatParams)))
-            {
-            return  false;
-            }
-
-        // contributions (order is considered important)
-        final List<Contribution> listThisContribs = this.m_listContribs;
-        final List<Contribution> listThatContribs = that.m_listContribs;
-        final int cThisContribs = listThisContribs == null ? 0 : listThisContribs.size();
-        final int cThatContribs = listThatContribs == null ? 0 : listThatContribs.size();
-        if (cThisContribs != cThatContribs || (cThisContribs > 0 && !listThisContribs.equals(listThatContribs)))
             {
             return  false;
             }

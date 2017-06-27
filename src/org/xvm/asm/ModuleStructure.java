@@ -221,10 +221,11 @@ public class ModuleStructure
             // load the module against which the compilation will occur
             if (!repos.getModuleNames().contains(getName()))
                 {
-
+                // TODO
                 }
+
             // TODO
-            repos.
+            // moduleActual = ... repos.
             }
 
         return moduleActual;

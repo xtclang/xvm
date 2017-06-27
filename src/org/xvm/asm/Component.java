@@ -1504,22 +1504,7 @@ public abstract class Component
             final ConstantPool       pool = getConstantPool();
             for (int i = 0; i < c; ++i)
                 {
-                final Composition      composition = Composition.valueOf(in.readUnsignedByte());
-                final ClassConstant    constClass  = (ClassConstant) pool.getConstant(readIndex(in));
-                switch (composition)
-                    {
-                    case Delegates:
-                        list.add(new Contribution(constClass, (PropertyConstant) pool.getConstant(readIndex(in))));
-                        break;
-
-                    case Annotates:
-                        list.add(new Contribution(composition, constClass));
-                        break;
-
-                    default:
-                        list.add(new Contribution(composition, constClass));
-                        break;
-                    }
+                list.add(new Contribution(in, pool));
                 }
             m_listContribs = list;
             }
@@ -1543,19 +1528,13 @@ public abstract class Component
         m_cond    = (ConditionalConstant) pool.register(m_cond);
 
         // register the contributions
-        final List<Contribution> listOld = m_listContribs;
-        if (listOld != null && listOld.size() > 0)
+        final List<Contribution> listContribs = m_listContribs;
+        if (listContribs != null  && listContribs.size() > 0)
             {
-            final List<Contribution> listNew = new ArrayList<>();
-            for (Contribution contribution : listOld)
+            for (Contribution contribution : listContribs)
                 {
-                // TODO
-                listNew.add(new Contribution(
-                        contribution.getComposition(),
-                        (ClassConstant) pool.register(contribution.getClassConstant()),
-                        (PropertyConstant) pool.register(contribution.getDelegatePropertyConstant())));
+                contribution.registerConstants(pool);
                 }
-            m_listContribs = listNew;
             }
         }
 
@@ -1582,13 +1561,9 @@ public abstract class Component
         writePackedLong(out, cContribs);
         if (cContribs > 0)
             {
-            final ConstantPool pool = getConstantPool();
             for (Contribution contribution : listContribs)
                 {
-                out.writeByte(contribution.getComposition().ordinal());
-                writePackedLong(out, contribution.getClassConstant().getPosition());
-                // TODO
-                writePackedLong(out, Constant.indexOf(contribution.getDelegatePropertyConstant()));
+                contribution.assemble(out);
                 }
             }
         }
@@ -1633,6 +1608,18 @@ public abstract class Component
         {
         out.print(sIndent);
         out.println(toString());
+
+        final List<Contribution> listContribs = m_listContribs;
+        final int cContribs = listContribs == null ? 0 : listContribs.size();
+        if (cContribs > 0)
+            {
+            out.print(sIndent);
+            out.println("Contributions");
+            for (int i = 0; i < cContribs; ++i)
+                {
+                out.println(sIndent + '[' + i + "]=" + listContribs.get(i));
+                }
+            }
         }
 
 
@@ -1660,7 +1647,22 @@ public abstract class Component
         if (obj instanceof Component)
             {
             Component that = (Component) obj;
-            return isBodyIdentical(that) && areChildrenIdentical(that);
+            if (!isBodyIdentical(that) || !areChildrenIdentical(that))
+                {
+                return false;
+                }
+
+            // contributions (order is considered important)
+            final List<Contribution> listThisContribs = this.m_listContribs;
+            final List<Contribution> listThatContribs = that.m_listContribs;
+            final int cThisContribs = listThisContribs == null ? 0 : listThisContribs.size();
+            final int cThatContribs = listThatContribs == null ? 0 : listThatContribs.size();
+            if (cThisContribs != cThatContribs || (cThisContribs > 0 && !listThisContribs.equals(listThatContribs)))
+                {
+                return  false;
+                }
+
+            return true;
             }
 
         return false;
@@ -2010,6 +2012,31 @@ public abstract class Component
     public static class Contribution
         {
         /**
+         * @see XvmStructure#disassemble(DataInput)
+         */
+        protected Contribution(DataInput in, ConstantPool pool)
+                throws IOException
+            {
+            m_composition = Composition.valueOf(in.readUnsignedByte());
+            m_constClass  = (ClassConstant) pool.getConstant(readIndex(in));
+            switch (m_composition)
+                {
+                case Delegates:
+                    m_constProp = (PropertyConstant) pool.getConstant(readIndex(in));
+                    break;
+
+                case Annotates:
+                    final int        cConsts = readMagnitude(in);
+                    final Constant[] aconst  = new Constant[cConsts];
+                    for (int i = 0; i < cConsts; ++i)
+                        {
+                        aconst[i] = pool.getConstant(readIndex(in));
+                        }
+                    m_aconstParam = aconst;
+                    break;
+                }
+            }
+        /**
          * Construct a Contribution.
          *
          * @param composition  specifies the type of composition
@@ -2086,6 +2113,50 @@ public abstract class Component
             {
             assert m_composition == Composition.Annotates;
             return m_aconstParam == null ? Collections.EMPTY_LIST : Arrays.asList(m_aconstParam);
+            }
+
+        /**
+         * @see XvmStructure#registerConstants(ConstantPool)
+         */
+        protected void registerConstants(ConstantPool pool)
+            {
+            m_constClass = (IdentityConstant) pool.register(m_constClass);
+            m_constProp  = (PropertyConstant) pool.register(m_constProp);
+
+            final Constant[] aconst = m_aconstParam;
+            if (aconst != null)
+                {
+                for (int i = 0, c = aconst.length; i < c; ++i)
+                    {
+                    aconst[i] = pool.register(aconst[i]);
+                    }
+                }
+            }
+
+        /**
+         * @see XvmStructure#registerConstants(ConstantPool)
+         */
+        protected void assemble(DataOutput out)
+                throws IOException
+            {
+            out.writeByte(m_composition.ordinal());
+            writePackedLong(out, m_constClass.getPosition());
+            switch (m_composition)
+                {
+                case Delegates:
+                    writePackedLong(out, Constant.indexOf(m_constProp));
+                    break;
+
+                case Annotates:
+                    final Constant[] aconst  = m_aconstParam;
+                    final int        cConsts = aconst == null ? 0 : aconst.length;
+                    writePackedLong(out, cConsts);
+                    for (int i = 0; i < cConsts; ++i)
+                        {
+                        writePackedLong(out, aconst[i].getPosition());
+                        }
+                    break;
+                }
             }
 
         @Override
