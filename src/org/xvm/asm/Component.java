@@ -1495,8 +1495,35 @@ public abstract class Component
             throws IOException
         {
         assert getContaining() == null || getContaining() instanceof Component;
-        // there's nothing to do here, since the disassembly of the common body parts that all
-        // Component's share is done by the readComponent() and Format.instantiate() methods
+
+        // read in the "contributions"
+        int c = readMagnitude(in);
+        if (c > 0)
+            {
+            final List<Contribution> list = new ArrayList<>();
+            final ConstantPool       pool = getConstantPool();
+            for (int i = 0; i < c; ++i)
+                {
+                final Composition      composition = Composition.valueOf(in.readUnsignedByte());
+                final ClassConstant    constClass  = (ClassConstant) pool.getConstant(readIndex(in));
+                switch (composition)
+                    {
+                    case Delegates:
+                        list.add(new Contribution(constClass, (PropertyConstant) pool.getConstant(readIndex(in))));
+                        break;
+
+                    case Annotates:
+                        list.add(new Contribution(composition, constClass));
+                        break;
+
+                    default:
+                        list.add(new Contribution(composition, constClass));
+                        break;
+                    }
+                }
+            m_listContribs = list;
+            }
+
         }
 
     /**
@@ -1514,6 +1541,22 @@ public abstract class Component
 
         m_constId = (IdentityConstant   ) pool.register(m_constId);
         m_cond    = (ConditionalConstant) pool.register(m_cond);
+
+        // register the contributions
+        final List<Contribution> listOld = m_listContribs;
+        if (listOld != null && listOld.size() > 0)
+            {
+            final List<Contribution> listNew = new ArrayList<>();
+            for (Contribution contribution : listOld)
+                {
+                // TODO
+                listNew.add(new Contribution(
+                        contribution.getComposition(),
+                        (ClassConstant) pool.register(contribution.getClassConstant()),
+                        (PropertyConstant) pool.register(contribution.getDelegatePropertyConstant())));
+                }
+            m_listContribs = listNew;
+            }
         }
 
     /**
@@ -1532,6 +1575,22 @@ public abstract class Component
 
         out.writeShort(m_nFlags);
         writePackedLong(out, m_constId.getPosition());
+
+        // write out the contributions
+        final List<Contribution> listContribs = m_listContribs;
+        final int cContribs = listContribs == null ? 0 : listContribs.size();
+        writePackedLong(out, cContribs);
+        if (cContribs > 0)
+            {
+            final ConstantPool pool = getConstantPool();
+            for (Contribution contribution : listContribs)
+                {
+                out.writeByte(contribution.getComposition().ordinal());
+                writePackedLong(out, contribution.getClassConstant().getPosition());
+                // TODO
+                writePackedLong(out, Constant.indexOf(contribution.getDelegatePropertyConstant()));
+                }
+            }
         }
 
     @Override

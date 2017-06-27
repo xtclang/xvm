@@ -134,22 +134,6 @@ public class ClassStructure
 
         // read in the type parameters
         m_mapParams = disassembleTypeParams(in);
-
-        // read in the "contributions"
-        int c = readMagnitude(in);
-        if (c > 0)
-            {
-            final List<Contribution> list = new ArrayList<>();
-            final ConstantPool       pool = getConstantPool();
-            for (int i = 0; i < c; ++i)
-                {
-                final Composition      composition = Composition.valueOf(in.readUnsignedByte());
-                final ClassConstant    constClass  = (ClassConstant) pool.getConstant(readIndex(in));
-                final PropertyConstant constProp   = (PropertyConstant) pool.getConstant(readIndex(in));
-                list.add(new Contribution(composition, constClass, constProp));
-                }
-            m_listContribs = list;
-            }
         }
 
     @Override
@@ -159,21 +143,6 @@ public class ClassStructure
 
         // register the type parameters
         m_mapParams = registerTypeParams(m_mapParams);
-
-        // register the contributions
-        final List<Contribution> listOld = m_listContribs;
-        if (listOld != null && listOld.size() > 0)
-            {
-            final List<Contribution> listNew = new ArrayList<>();
-            for (Contribution contribution : listOld)
-                {
-                listNew.add(new Contribution(
-                        contribution.getComposition(),
-                        (ClassConstant) pool.register(contribution.getClassConstant()),
-                        (PropertyConstant) pool.register(contribution.getDelegatePropertyConstant())));
-                }
-            m_listContribs = listNew;
-            }
         }
 
     @Override
@@ -184,21 +153,6 @@ public class ClassStructure
 
         // write out the type parameters
         assembleTypeParams(m_mapParams, out);
-
-        // write out the contributions
-        final List<Contribution> listContribs = m_listContribs;
-        final int cContribs = listContribs == null ? 0 : listContribs.size();
-        writePackedLong(out, cContribs);
-        if (cContribs > 0)
-            {
-            final ConstantPool pool = getConstantPool();
-            for (Contribution contribution : listContribs)
-                {
-                out.writeByte(contribution.getComposition().ordinal());
-                writePackedLong(out, contribution.getClassConstant().getPosition());
-                writePackedLong(out, Constant.indexOf(contribution.getDelegatePropertyConstant()));
-                }
-            }
         }
 
     @Override
