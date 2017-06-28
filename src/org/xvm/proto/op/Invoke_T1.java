@@ -1,11 +1,13 @@
 package org.xvm.proto.op;
 
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
@@ -45,22 +47,22 @@ public class Invoke_T1 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+            ClassTemplate template = hTarget.f_clazz.f_template;
             ObjectHandle[] ahArg = hArgTuple.m_ahValue;
 
-            MethodTemplate method = getMethodTemplate(frame, template, f_nMethodId);
+            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
 
-            if (method.isNative())
+            if (ConstantPoolAdapter.isNative(method))
                 {
                 return template.invokeNative(frame, hTarget, method, ahArg, f_nRetValue);
                 }
 
-            if (ahArg.length != method.m_cArgs)
+            if (ahArg.length != ConstantPoolAdapter.getArgCount(method))
                 {
                 frame.m_hException = xException.makeHandle("Invalid tuple argument");
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[method.m_cVars];
+            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(method)];
             System.arraycopy(ahArg, 0, ahVar, 1, ahArg.length);
 
             if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)

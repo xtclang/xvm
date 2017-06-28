@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.asm.ClassStructure;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 
@@ -10,13 +11,16 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xUInt64
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
-    public xUInt64(TypeSet types)
+    public xUInt64(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:UInt64", "x:Object", Shape.Const);
+        super(types, structure);
 
-        addImplement("x:IntNumber");
+        if (fInstance)
+            {
+            initDeclared();
+            }
         }
 
     @Override

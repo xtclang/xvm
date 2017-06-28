@@ -1,11 +1,12 @@
 package org.xvm.proto;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.TypeConstant;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -17,21 +18,138 @@ public class TypeSet
     {
     private int m_nMaxTypeId = 0;
     private Map<Integer, Type> m_mapTypes = new ConcurrentHashMap<>();
-    private Map<String, TypeCompositionTemplate> m_mapTemplates = new TreeMap<>();
-    private Map<String, String> m_mapAliases = new TreeMap<>();
 
-    public final ConstantPoolAdapter f_adapter;
+    public final Container f_container;
+
+    // cache - ClassTemplates by name
+    final private Map<String, ClassTemplate> m_mapTemplatesByName = new HashMap<>();
+
+    // cache - ClassTemplates by ClassConstant
+    final private Map<ClassConstant, ClassTemplate> m_mapTemplatesByConst = new HashMap<>();
 
     // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
     private Map<Integer, TypeComposition> m_mapConstCompositions = new TreeMap<>(Integer::compare);
 
-    // missing templates
-    private Set<String> m_setMisses = new HashSet<>();
-
-    TypeSet(ConstantPoolAdapter adapter)
+    TypeSet(Container pool)
         {
-        f_adapter = adapter;
+        f_container = pool;
         }
+
+    // ----- templates -----
+
+    public ClassTemplate getTemplate(String sName)
+        {
+        // for core classes only
+        ClassTemplate template = m_mapTemplatesByName.get(sName);
+        if (template == null)
+            {
+            ClassConstant constClass = f_container.f_pool.ensureEcstasyClassConstant(sName);
+            template = getTemplate(constClass);
+            m_mapTemplatesByName.put(sName, template);
+            }
+        return template;
+        }
+
+    public ClassTemplate getTemplate(ClassConstant constClass)
+        {
+        ClassTemplate template = m_mapTemplatesByConst.get(constClass);
+        if (template == null)
+            {
+            ClassStructure structClass = (ClassStructure) constClass.getComponent();
+            String sName = structClass.getName();
+
+            String sSuffix = sName.substring(sName.indexOf(':') + 1);
+            sSuffix = sSuffix.substring(sSuffix.lastIndexOf('.') + 1);
+
+            String sClz= "org.xvm.proto.template.x" + sSuffix;
+            try
+                {
+                Class<ClassTemplate> clz = (Class<ClassTemplate>) Class.forName(sClz);
+
+                template = clz.getConstructor(TypeSet.class).newInstance(this);
+                }
+            catch (ClassNotFoundException e)
+                {
+                System.out.println("Missing template for " + sName);
+                // throw new RuntimeException(e);
+                }
+            catch (Throwable e)
+                {
+                e.printStackTrace();
+                }
+            m_mapTemplatesByConst.put(constClass, template);
+            }
+        return template;
+        }
+
+    // ----- TypeCompositions -----
+
+    // produce a TypeComposition based on the specified ClassTypeConstant
+    public TypeComposition resolve(ClassTypeConstant constClassType)
+        {
+        ClassConstant constClass = constClassType.getClassConstant();
+        List<TypeConstant> listParams = constClassType.getTypeConstants();
+
+        int cParams = listParams.size();
+        if (cParams == 0)
+            {
+            return resolve(constClass, Utils.TYPE_NONE);
+            }
+
+        TypeComposition[] aClz = new TypeComposition[cParams];
+        int iParam = 0;
+        for (TypeConstant constParamType : listParams)
+            {
+            if (constParamType instanceof ClassTypeConstant)
+                {
+                ClassTypeConstant constParamClass = (ClassTypeConstant) constParamType;
+                aClz[iParam++] = resolve(constParamClass);
+                }
+            else
+                {
+                throw new IllegalArgumentException("Invalid param type constant: " + constParamType);
+                }
+            }
+        return resolve(constClass, aClz);
+        }
+
+    // produce a TypeComposition for the ClassConstant by resolving the generic types
+    public TypeComposition resolve(ClassConstant constClass, TypeComposition[] aclzGenericActual)
+        {
+        int    c = aclzGenericActual.length;
+        Type[] aType = new Type[c];
+        for (int i = 0; i < c; i++)
+            {
+            aType[i] = aclzGenericActual[i].ensurePublicType();
+            }
+        return resolve(constClass, aType);
+        }
+
+    // produce a TypeComposition for the ClassConstant by resolving the generic types
+    public TypeComposition resolve(ClassConstant constClass, Type[] atGenericActual)
+        {
+        return getTemplate(constClass).resolve(atGenericActual);
+        }
+
+    // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
+    public TypeComposition ensureComposition(Frame frame, int nClassConstId)
+        {
+        TypeComposition typeComposition = m_mapConstCompositions.get(nClassConstId);
+        if (typeComposition == null)
+            {
+            // TODO: what if the constant is not a CTC, but TypeParameterTypeConstant,
+            // does it need to be resolved by using frame.getThis().f_clazz?
+            ClassTypeConstant constTypeClass = (ClassTypeConstant)
+                    f_container.f_pool.getConstant(nClassConstId); // must exist
+
+            typeComposition = resolve(constTypeClass);
+
+            m_mapConstCompositions.put(nClassConstId, typeComposition);
+            }
+        return typeComposition;
+        }
+
+    // ----- Types -----
 
     public Type getType(int nTypeId)
         {
@@ -71,143 +189,12 @@ public class TypeSet
         return type;
         }
 
-    // ----- TypeCompositionTemplates -----
-
-    public TypeCompositionTemplate getTemplate(String sName)
+    public Type createType(ClassTemplate template, Type[] atGenericActual, Constant.Access access)
         {
-        return m_mapTemplates.get(sName);
-        }
-    public boolean existsTemplate(String sName)
-        {
-        return m_mapTemplates.containsKey(sName);
-        }
+        Type type = new Type(template.f_sName);
+        // TODO create the specified type
 
-    public void addTemplate(TypeCompositionTemplate template)
-        {
-        String sName = template.f_sName;
-        if (m_mapTemplates.putIfAbsent(sName, template) != null)
-            {
-            throw new IllegalArgumentException("CompositionTemplateName is already used:" + sName);
-            }
-
-        f_adapter.registerTemplate(template);
-
-        template.resolveDependencies();
-        template.initDeclared();
-        template.forEachMethod(m -> m.loadTypes(template));
-        template.forEachMethod(m -> f_adapter.registerInvocable(template, m));
-        template.forEachProperty(p -> p.f_typeName.loadDependencies(template));
-        template.forEachFunction(f -> f.loadTypes(template));
-        template.forEachFunction(f -> f_adapter.registerInvocable(template, f));
-        }
-
-    public TypeCompositionTemplate ensureTemplate(String sName)
-        {
-        TypeCompositionTemplate template = getTemplate(sName);
-        if (template == null && !m_setMisses.contains(sName))
-            {
-            String sAlias = m_mapAliases.get(sName);
-            if (sAlias != null)
-                {
-                template = getTemplate(sAlias);
-                if (template == null)
-                    {
-                    template = ensureTemplate(sAlias);
-                    }
-                m_mapTemplates.put(sName, template);
-                return template;
-                }
-
-            String sSuffix = sName.substring(sName.indexOf(':') + 1);
-            sSuffix = sSuffix.substring(sSuffix.lastIndexOf('.') + 1);
-
-            String sClz= "org.xvm.proto.template.x" + sSuffix;
-            try
-                {
-                Class<TypeCompositionTemplate> clz = (Class<TypeCompositionTemplate>) Class.forName(sClz);
-
-                template = clz.getConstructor(TypeSet.class).newInstance(this);
-
-                addTemplate(template);
-                }
-            catch (ClassNotFoundException e)
-                {
-                System.out.println("Missing template for " + sName);
-                m_setMisses.add(sName);
-                // throw new RuntimeException(e);
-                }
-            catch (Throwable e)
-                {
-                e.printStackTrace();
-                }
-            }
-        return template;
-        }
-
-    public void addAlias(String sAlias, String sRealName)
-        {
-        m_mapAliases.put(sAlias, sRealName);
-        }
-
-    public String replaceAlias(String sName)
-        {
-        String sRealName = m_mapAliases.get(sName);
-        return sRealName == null ? sName : sRealName;
-        }
-
-    // ----- TypeCompositions -----
-
-
-    // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
-    public TypeComposition ensureComposition(Frame frame, int nClassConstId)
-        {
-        TypeComposition typeComposition = m_mapConstCompositions.get(nClassConstId);
-        if (typeComposition == null)
-            {
-            // TODO: if the constant is not a CTC, but TypeParameterTypeConstant, it needs
-            // to be resolved using  frame.getThis().f_clazz
-            ClassTypeConstant classConstant = f_adapter.getClassTypeConstant(nClassConstId); // must exist
-
-            // TODO: combination types (String|Runnable)
-            String sTemplate = ConstantPoolAdapter.getClassName(classConstant.getClassConstant());
-            TypeCompositionTemplate template = ensureTemplate(sTemplate);
-
-            typeComposition = template.resolve(classConstant);
-
-            m_mapConstCompositions.put(nClassConstId, typeComposition);
-            }
-        return typeComposition;
-        }
-
-
-    // ----- debugging -----
-
-    public void dumpTemplates()
-        {
-        m_mapTemplates.values().forEach(template ->
-                {
-                System.out.print("\n\n### Composition for ");
-                System.out.println(template);
-                });
-        }
-
-    public String dumpConstCompositions()
-        {
-        StringBuilder sb = new StringBuilder();
-
-        m_mapConstCompositions.entrySet().forEach(entry ->
-                sb.append('\n').append(entry.getKey()).append(':').append(entry.getValue()));
-
-        return sb.toString();
-        }
-
-    public String dumpTypes()
-        {
-        StringBuilder sb = new StringBuilder();
-
-        m_mapTypes.entrySet().forEach(entry ->
-                sb.append('\n').append(entry.getKey()).append(':').append(entry.getValue()));
-
-        return sb.toString();
+        addType(type);
+        return type;
         }
     }

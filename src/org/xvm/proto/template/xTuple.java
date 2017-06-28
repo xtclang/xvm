@@ -1,6 +1,8 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.TupleConstant;
 
 import org.xvm.proto.*;
@@ -15,17 +17,19 @@ import java.util.List;
  * @author gg 2017.02.27
  */
 public class xTuple
-        extends TypeCompositionTemplate
+        extends ClassTemplate
         implements IndexSupport
     {
     public static xTuple INSTANCE;
 
-    public xTuple(TypeSet types)
+    public xTuple(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        // deferring the variable length generics <ElementType...>
-        super(types, "x:Tuple", "x:Object", Shape.Interface);
+        super(types, structure);
 
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -50,20 +54,10 @@ public class xTuple
         //    Tuple<ElementTypes> ensurePersistent();
         //    Tuple<ElementTypes> ensureConst();
 
-        ConstructTemplate construct =
-                ensureConstructTemplate(new String[]{"x:collections.Sequence"});
+        MethodStructure construct =
+                ensureMethodStructure(new String[]{"x:collections.Sequence"});
         construct.markNative();
 
-        ensurePropertyTemplate("size", "x:Int").makeReadOnly();
-
-        ensureMethodTemplate("get", INT, new String[]{"x:Type"}); // not quite right
-        ensureMethodTemplate("set", new String[]{"x:Int", "x:Type"}, VOID); // not quite right
-        ensureMethodTemplate("elementAt", INT, new String[]{"x:Ref<x:Type>"}); // not quite right
-        ensureMethodTemplate("add", new String[]{"x:Tuple"}, new String[]{"x:Tuple"}); // non "virtual"
-        ensureMethodTemplate("replace", new String[]{"x:Int", "x:Type"}, THIS); // not quite right
-        ensureMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, new String[]{"x:Tuple"}); // non "virtual"
-        ensureMethodTemplate("remove", INT, new String[]{"x:Tuple"}); // non "virtual"
-        ensureMethodTemplate("remove", new String[]{"x:Range<x:Int>"}, new String[]{"x:Tuple"}); // non "virtual"
         }
 
     @Override
@@ -89,7 +83,7 @@ public class xTuple
         }
 
     @Override
-    public int construct(Frame frame, ConstructTemplate constructor,
+    public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hSequence = ahVar[1];

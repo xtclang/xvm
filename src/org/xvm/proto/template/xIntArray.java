@@ -1,5 +1,6 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
@@ -21,11 +22,14 @@ public class xIntArray
     {
     public static xIntArray INSTANCE;
 
-    public xIntArray(TypeSet types)
+    public xIntArray(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:collections.IntArray", "x:collections.Array<x:Int64>", Shape.Class);
+        super(types, structure, false);
 
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override

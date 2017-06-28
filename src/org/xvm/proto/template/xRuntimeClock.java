@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.JavaLong;
 
@@ -15,43 +17,38 @@ import java.util.TimerTask;
  * @author gg 2017.02.27
  */
 public class xRuntimeClock
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xRuntimeClock INSTANCE;
     public static Timer TIMER = new Timer("RuntimeClock", true);
 
-    public xRuntimeClock(TypeSet types)
+    public xRuntimeClock(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:RuntimeClock", "x:Service", Shape.Service);
+        super(types, structure);
 
-        addImplement("x:Clock");
-
-        INSTANCE = this;
-        }
-
-    // subclassing
-    protected xRuntimeClock(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
         // TODO: change when the DateTime is implemented
-        getMethodTemplate("scheduleAlarm", new String[]{"x:Function", "x:Int64"}, new String[]{"x:Function"}).markNative();
+        getMethodStructure("scheduleAlarm", new String[]{"x:Function", "x:Int64"}, new String[]{"x:Function"}).markNative();
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle hArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle hArg, int iReturn)
         {
         return super.invokeNative(frame, hTarget, method, hArg, iReturn);
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle[] ahArg, int iReturn)
         {
-        switch (method.f_sName)
+        switch (method.getName())
             {
             case "scheduleAlarm": // alarm, delay
                 {

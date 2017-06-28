@@ -1,6 +1,9 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -11,24 +14,24 @@ import org.xvm.proto.ObjectHandle.JavaLong;
  * @author gg 2017.02.27
  */
 public class xInt64
-        extends TypeCompositionTemplate
+        extends ClassTemplate
         implements ComparisonSupport
     {
     public static xInt64 INSTANCE;
 
-    public xInt64(TypeSet types)
+    public xInt64(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Int64", "x:Object", Shape.Const);
+        super(types, structure);
 
-        addImplement("x:IntNumber");
-
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
-        f_types.addTemplate(new xIntArray(f_types));
         }
 
     @Override
@@ -89,7 +92,7 @@ public class xInt64
 
     @Override
     public int invokePreInc(Frame frame, ObjectHandle hTarget,
-                            PropertyTemplate property, int iReturn)
+                            PropertyStructure property, int iReturn)
         {
         assert property == null;
 
@@ -103,21 +106,21 @@ public class xInt64
 
     @Override
     public int invokePostInc(Frame frame, ObjectHandle hTarget,
-                             PropertyTemplate property, int iReturn)
+                             PropertyStructure property, int iReturn)
         {
         return invokePreInc(frame, hTarget, property, iReturn);
         }
 
     @Override
     public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
         switch (ahArg.length)
             {
             case 0:
-                if (method.f_sName.equals("to"))
+                if (method.getName().equals("to"))
                     {
                     // how to differentiate; check the method's return type?
                     return frame.assignValue(iReturn,

@@ -1,6 +1,13 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.asm.ClassStructure;
+
+import org.xvm.asm.PropertyStructure;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.Op;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -14,11 +21,14 @@ public class xAtomicIntNumber
     {
     public static xAtomicIntNumber INSTANCE;
 
-    public xAtomicIntNumber(TypeSet types)
+    public xAtomicIntNumber(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:AtomicIntNumber<RefType>", "x:AtomicRef", Shape.Mixin);
+        super(types, structure, false);
 
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -44,7 +54,7 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 
@@ -58,7 +68,7 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 

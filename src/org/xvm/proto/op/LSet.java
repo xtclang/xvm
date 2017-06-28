@@ -1,11 +1,12 @@
 package org.xvm.proto.op;
 
+import org.xvm.asm.PropertyStructure;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
+import org.xvm.proto.ClassTemplate;
 
 /**
  * LSET CONST_PROPERTY, rvalue ; local set (target=this)
@@ -35,9 +36,9 @@ public class LSet extends OpInvocable
                 return R_REPEAT;
                 }
 
-            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+            ClassTemplate template = hTarget.f_clazz.f_template;
 
-            PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
+            PropertyStructure property = getPropertyStructure(frame, template, f_nPropConstId);
 
             return template.setPropertyValue(frame, hTarget, property, hValue);
             }

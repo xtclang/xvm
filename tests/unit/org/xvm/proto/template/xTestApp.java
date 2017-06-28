@@ -1,6 +1,8 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
@@ -15,24 +17,22 @@ public class xTestApp extends xModule
     {
     private final ConstantPoolAdapter adapter;
 
-    public xTestApp(TypeSet types)
+    public xTestApp(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:TestApp", "x:Object", Shape.Class);
+        super(types, structure, false);
 
-        adapter = types.f_adapter;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
+        adapter = types.f_container.f_adapter;
         }
 
     @Override
     public void initDeclared()
         {
-        m_fAutoRegister = true;
-
-        f_types.ensureTemplate("x:TestClass");
-        f_types.ensureTemplate("x:TestClass2");
-        f_types.ensureTemplate("x:TestService");
-
         // --- getIntValue
-        FunctionTemplate ftGetInt = ensureFunctionTemplate("getIntValue", VOID, INT);
+        MethodStructure ftGetInt = ensureMethodStructure("getIntValue", VOID, INT);
         ftGetInt.m_aop = new Op[]
             {
             new Return_1(-adapter.ensureValueConstantId(42)),
@@ -40,7 +40,7 @@ public class xTestApp extends xModule
         ftGetInt.m_cVars = 1;
 
         // --- test1()
-        FunctionTemplate ftTest1 = ensureFunctionTemplate("test1", VOID, VOID);
+        MethodStructure ftTest1 = ensureMethodStructure("test1", VOID, VOID);
         ftTest1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
@@ -75,7 +75,7 @@ public class xTestApp extends xModule
 
         // --- test2()
 
-        FunctionTemplate ftTest2 = ensureFunctionTemplate("test2", VOID, VOID);
+        MethodStructure ftTest2 = ensureMethodStructure("test2", VOID, VOID);
         ftTest2.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test2() #")),
@@ -122,7 +122,7 @@ public class xTestApp extends xModule
 
         // --- testService()
 
-        FunctionTemplate ftLambda$1 = ensureFunctionTemplate("lambda$1",
+        MethodStructure ftLambda$1 = ensureMethodStructure("lambda$1",
                 new String[] {"x:Int64", "x:Int64", "x:Exception"}, VOID);
         ftLambda$1.setAccess(Constants.Access.PRIVATE);
         ftLambda$1.m_aop = new Op[]
@@ -135,7 +135,7 @@ public class xTestApp extends xModule
             };
         ftLambda$1.m_cVars = 3;
 
-        FunctionTemplate ftTestService = ensureFunctionTemplate("testService", VOID, VOID);
+        MethodStructure ftTestService = ensureMethodStructure("testService", VOID, VOID);
         ftTestService.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testService() #")),
@@ -220,7 +220,7 @@ public class xTestApp extends xModule
 
         // --- testService2 ---
 
-        FunctionTemplate ftTestReturn = ensureFunctionTemplate("testBlockingReturn",
+        MethodStructure ftTestReturn = ensureMethodStructure("testBlockingReturn",
                 new String[] {"x:TestService"}, INT);
         ftTestReturn.setAccess(Constants.Access.PRIVATE);
         ftTestReturn.m_aop = new Op[]
@@ -231,7 +231,7 @@ public class xTestApp extends xModule
             };
         ftTestReturn.m_cVars = 2;
 
-        FunctionTemplate ftTestService2 = ensureFunctionTemplate("testService2", VOID, VOID);
+        MethodStructure ftTestService2 = ensureMethodStructure("testService2", VOID, VOID);
         ftTestService2.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testService2() #")),
@@ -296,7 +296,7 @@ public class xTestApp extends xModule
 
         // --- testRef()
 
-        FunctionTemplate ftTestRef = ensureFunctionTemplate("testRef", STRING, VOID);
+        MethodStructure ftTestRef = ensureMethodStructure("testRef", STRING, VOID);
         ftTestRef.m_aop = new Op[]
             { // #0 = arg
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testRef() #")),
@@ -346,7 +346,7 @@ public class xTestApp extends xModule
 
         // --- testArray()
 
-        FunctionTemplate ftLambda$2 = ensureFunctionTemplate("lambda$2", INT, STRING);
+        MethodStructure ftLambda$2 = ensureMethodStructure("lambda$2", INT, STRING);
         ftLambda$2.setAccess(Constants.Access.PRIVATE);
         ftLambda$2.m_aop = new Op[]
             { // #0 = i
@@ -359,7 +359,7 @@ public class xTestApp extends xModule
             };
         ftLambda$2.m_cVars = 3;
 
-        FunctionTemplate ftTestArray = ensureFunctionTemplate("testArray", VOID, VOID);
+        MethodStructure ftTestArray = ensureMethodStructure("testArray", VOID, VOID);
         ftTestArray.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testArray() #")),
@@ -404,7 +404,7 @@ public class xTestApp extends xModule
             };
         ftTestArray.m_cVars = 5;
 
-        FunctionTemplate ftTestCond = ensureFunctionTemplate("testConditional",
+        MethodStructure ftTestCond = ensureMethodStructure("testConditional",
                 INT, new String[] {"x:Boolean", "x:String"});
         ftTestCond.m_aop = new Op[]
             { // #0 - i
@@ -418,7 +418,7 @@ public class xTestApp extends xModule
             };
         ftTestCond.m_cVars = 2;
 
-        FunctionTemplate ftTestTuple = ensureFunctionTemplate("testTuple", VOID, VOID);
+        MethodStructure ftTestTuple = ensureMethodStructure("testTuple", VOID, VOID);
         ftTestTuple.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")),

@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.*;
 
 import org.xvm.proto.op.*;
@@ -9,28 +11,28 @@ import org.xvm.proto.op.*;
  *
  * @author gg 2017.03.15
  */
-public class xTestClass extends TypeCompositionTemplate
+public class xTestClass extends ClassTemplate
     {
     private final ConstantPoolAdapter adapter;
 
-    public xTestClass(TypeSet types)
+    public xTestClass(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:TestClass", "x:Object", Shape.Class);
+        super(types, structure);
 
-        adapter = types.f_adapter;
+
+        adapter = types.f_container.f_adapter;
         }
 
     @Override
     public void initDeclared()
         {
-        m_fAutoRegister = true;
 
         ensurePropertyTemplate("prop1", "x:String");
 
         // --- constructor()
-        ConstructTemplate construct = ensureConstructTemplate(
+        MethodStructure construct = ensureMethodStructure(
                 new String[]{"x:TestClass", "x:String"});
-        FunctionTemplate ftFinally = ensureFunctionTemplate(
+        MethodStructure ftFinally = ensureMethodStructure(
                 "finally", new String[]{"x:TestClass", "x:String"}, VOID);
 
         construct.m_aop = new Op[]
@@ -51,7 +53,7 @@ public class xTestClass extends TypeCompositionTemplate
         ftFinally.m_cVars = 2;
 
         // --- method1()
-        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
+        MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             { // #0 (this)
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
@@ -70,7 +72,7 @@ public class xTestClass extends TypeCompositionTemplate
             };
         mtMethod1.m_cVars = 5;
 
-        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", STRING, VOID);
+        MethodStructure mtExceptional = ensureMethodStructure("exceptional", STRING, VOID);
         mtExceptional.m_aop = new Op[]
             { // #0 (this), #1 (s)
             new Var(adapter.getClassTypeConstId("x:Exception")), // #2

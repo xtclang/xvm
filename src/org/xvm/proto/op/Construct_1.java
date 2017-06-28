@@ -1,10 +1,12 @@
 package org.xvm.proto.op;
 
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
-import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
 
 /**
  * CONSTR_1 CONST-CONSTRUCT, rvalue
@@ -27,7 +29,7 @@ public class Construct_1 extends OpCallable
         {
         try
             {
-            ConstructTemplate constructor = (ConstructTemplate) getFunctionTemplate(frame, f_nConstructId);
+            MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
 
             ObjectHandle hStruct = frame.getArgument(0);
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
@@ -36,11 +38,11 @@ public class Construct_1 extends OpCallable
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
+            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(constructor)];
             ahVar[0] = hStruct;
             ahVar[1] = hArg;
 
-            frame.chainFinalizer(constructor.makeFinalizer(ahVar));
+            frame.chainFinalizer(ConstantPoolAdapter.makeFinalizer(constructor, ahVar));
 
             return frame.call1(constructor, null, ahVar, Frame.RET_UNUSED);
             }

@@ -1,10 +1,11 @@
 package org.xvm.proto;
 
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
+
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
-import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
 
 /**
  * Common base for INVOKE_ ops.
@@ -13,11 +14,14 @@ import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
  */
 public abstract class OpInvocable extends Op
     {
-    private int m_nMethodId;         // cached method id
-    private MethodTemplate m_method; // cached method
+    private int m_nMethodId;          // cached method id
+    private MethodStructure m_method; // cached method
 
-    protected MethodTemplate getMethodTemplate(Frame frame,
-                                               TypeCompositionTemplate template, int nMethodConstId)
+    private int m_nPropId;                // cached property id
+    private PropertyStructure m_property; // cached property
+
+    protected MethodStructure getMethodStructure(Frame frame,
+                                                 ClassTemplate template, int nMethodConstId)
         {
         assert(nMethodConstId >= 0);
 
@@ -26,27 +30,27 @@ public abstract class OpInvocable extends Op
             return m_method;
             }
 
-        MethodConstant constMethod =
-                frame.f_context.f_constantPool.getMethodConstant(nMethodConstId);
-
-        MethodTemplate method = template.getMethodTemplate(constMethod);
-        if (method == null)
-            {
-            throw new IllegalStateException("Missing method " + constMethod + " on " + template);
-            }
+        MethodConstant constMethod = (MethodConstant)
+                frame.f_context.f_pool.getConstant(nMethodConstId);
 
         m_nMethodId = nMethodConstId;
-        m_method = method;
-        return method;
+        return m_method = (MethodStructure) constMethod.getComponent();
         }
 
-    protected PropertyTemplate getPropertyTemplate(Frame frame,
-                                                   TypeCompositionTemplate template, int nPropValue)
+    protected PropertyStructure getPropertyStructure(Frame frame,
+                                                     ClassTemplate template, int nPropertyId)
         {
-        assert (nPropValue >= 0);
+        assert (nPropertyId >= 0);
 
-        PropertyConstant constProperty =
-                frame.f_context.f_constantPool.getPropertyConstant(nPropValue);
-        return template.getPropertyTemplate(constProperty.getName());
+        if (m_property != null && nPropertyId == m_nPropId)
+            {
+            return m_property;
+            }
+
+        PropertyConstant constProperty = (PropertyConstant)
+                frame.f_context.f_pool.getConstant(nPropertyId);
+
+        m_nPropId = nPropertyId;
+        return m_property = (PropertyStructure) constProperty.getComponent();
         }
     }

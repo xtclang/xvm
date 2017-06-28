@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.TypeComposition;
@@ -17,18 +19,16 @@ public class xAtomicRef
     {
     public static xAtomicRef INSTANCE;
 
-    public xAtomicRef(TypeSet types)
+    public xAtomicRef(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:AtomicRef<RefType>", "x:Ref", Shape.Mixin);
+        super(types, structure, false);
 
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
-    // subclassing
-    protected xAtomicRef(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
-        }
 
     @Override
     public void initDeclared()
@@ -37,21 +37,20 @@ public class xAtomicRef
         //    conditional RefType replaceFailed(RefType oldValue, RefType newValue)
         //
 
-        MethodTemplate mtReplace = ensureMethodTemplate("replace",
-                new String[]{"RefType", "RefType"}, new String[]{"x:Boolean"});
-        mtReplace.markNative();
+        ensureMethodStructure("replace",
+                new String[]{"RefType", "RefType"}, new String[]{"x:Boolean"}).markNative();
         }
 
     @Override
     public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
         {
         AtomicHandle hThis = (AtomicHandle) hTarget;
 
         switch (ahArg.length)
             {
             case 2:
-                switch (method.f_sName)
+                switch (method.getName())
                     {
                     case "replace":
                         boolean fSuccess = hThis.m_atomic.compareAndSet(ahArg[0], ahArg[1]);

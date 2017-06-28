@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.asm.ClassStructure;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -9,37 +10,15 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xInterval
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
-    public xInterval(TypeSet types)
+    public xInterval(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Interval<ElementType>", "x:Object", Shape.Const);
+        super(types, structure);
         }
 
     @Override
     public void initDeclared()
         {
-        // construct
-
-        //    ElementType lowerBound;
-        //    ElementType upperBound;
-        //    Boolean reversed;
-        //    Boolean contains(ElementType value)
-        //    Boolean contains(Interval<ElementType> that)
-        //    Boolean isContainedBy(Interval<ElementType> that)
-        //    Boolean overlaps(Interval<ElementType> that)
-        //    conditional Interval<ElementType> intersection(Interval<ElementType> that)
-        //    conditional Interval<ElementType> union(Interval<ElementType> that)
-
-        ensurePropertyTemplate("lowerBound", "ElementType");
-        ensurePropertyTemplate("upperBound", "ElementType");
-        ensurePropertyTemplate("reversed", "x:Boolean");
-
-        ensureMethodTemplate("contains", new String[]{"ElementType"}, BOOLEAN);
-        ensureMethodTemplate("contains", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
-        ensureMethodTemplate("isContainedBy", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
-        ensureMethodTemplate("overlaps", new String[]{"x:Interval<ElementType>"}, BOOLEAN);
-        ensureMethodTemplate("intersection", new String[]{"x:Interval<ElementType>"}, new String[]{"x:ConditionalTuple<x:Interval<ElementType>>"});
-        ensureMethodTemplate("union", new String[]{"x:Interval<ElementType>"}, new String[]{"x:ConditionalTuple<x:Interval<ElementType>>"});
         }
     }

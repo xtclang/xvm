@@ -1,12 +1,9 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.OpCallable;
-import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
-import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -30,18 +27,18 @@ public class Call_00 extends OpCallable
         if (f_nFunctionValue == A_SUPER)
             {
             // in-lined version of "callSuperN"
-            MethodTemplate methodSuper = ((MethodTemplate) frame.f_function).getSuper();
+            MethodStructure methodSuper = ConstantPoolAdapter.getSuper(frame.f_function);
 
-            ObjectHandle[] ahVar = new ObjectHandle[methodSuper.m_cVars];
+            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(methodSuper)];
 
             return frame.call1(methodSuper, frame.getThis(), ahVar, Frame.RET_UNUSED);
             }
 
         if (f_nFunctionValue < 0)
             {
-            FunctionTemplate function = getFunctionTemplate(frame, -f_nFunctionValue);
+            MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
-            ObjectHandle[] ahVar = new ObjectHandle[function.m_cVars];
+            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(function)];
 
             return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
             }

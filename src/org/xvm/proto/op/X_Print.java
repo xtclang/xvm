@@ -8,8 +8,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.Utils;
 
-import org.xvm.proto.template.xRef.RefHandle;
-
 /**
  * Debugging only.
  *
@@ -70,7 +68,7 @@ public class X_Print extends Op
             }
         else
             {
-            Constant constValue = frame.f_context.f_constantPool.getConstantValue(-nValue);
+            Constant constValue = frame.f_context.f_pool.getConstant(-nValue);
 
             if (constValue instanceof CharStringConstant)
                 {

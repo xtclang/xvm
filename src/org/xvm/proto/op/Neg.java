@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.ClassTemplate;
 
 /**
  * NEG rvalue-target, lvalue-return   ; -T -> T
@@ -33,7 +33,7 @@ public class Neg extends OpInvocable
                 return R_REPEAT;
                 }
 
-            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+            ClassTemplate template = hTarget.f_clazz.f_template;
 
             return template.invokeNeg(frame, hTarget, f_nRetValue);
             }

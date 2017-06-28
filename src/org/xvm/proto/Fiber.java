@@ -1,6 +1,7 @@
 package org.xvm.proto;
 
-import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
+import org.xvm.asm.MethodStructure;
+
 /**
  * TODO:
  *
@@ -17,7 +18,7 @@ public class Fiber
     final int f_iCallerId;
 
     // the function of the caller's service invocation Op
-    final InvocationTemplate f_fnCaller;
+    final MethodStructure f_fnCaller;
 
     // the fiber status can only be mutated by the fiber itself
     private FiberStatus m_status;

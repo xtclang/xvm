@@ -1,5 +1,7 @@
 package org.xvm.proto;
 
+import org.xvm.asm.ModuleRepository;
+
 /**
  * The test driver.
  *
@@ -11,7 +13,9 @@ public class TestDriver
         {
         Runtime runtime = new Runtime();
 
-        runtime.createContainer("TestApp");
+        ModuleRepository repository = null;
+
+        runtime.createContainer("TestApp", repository);
 
         while (runtime.isIdle())
             {

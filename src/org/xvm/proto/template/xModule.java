@@ -1,9 +1,14 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ModuleConstant;
 
-import org.xvm.proto.*;
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,21 +19,18 @@ import java.util.Map;
  * @author gg 2017.02.27
  */
 public class xModule
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xModule INSTANCE;
 
-    public xModule(TypeSet types)
+    public xModule(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Module", "x:Object", Shape.Interface);
+        super(types, structure);
 
-        INSTANCE = this;
-        }
-
-    // subclassing
-    protected xModule(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override

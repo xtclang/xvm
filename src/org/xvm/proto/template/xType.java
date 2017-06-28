@@ -1,5 +1,6 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.proto.*;
 
 /**
@@ -8,15 +9,18 @@ import org.xvm.proto.*;
  * @author gg 2017.02.27
  */
 public class xType
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xType INSTANCE;
 
-    public xType(TypeSet types)
+    public xType(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Type", "x:Object", Shape.Interface);
+        super(types, structure);
 
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override

@@ -1,8 +1,10 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Op;
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.op.*;
 
@@ -11,15 +13,15 @@ import org.xvm.proto.op.*;
  *
  * @author gg 2017.03.15
  */
-public class xTestClass2 extends TypeCompositionTemplate
+public class xTestClass2 extends ClassTemplate
     {
     private final ConstantPoolAdapter adapter;
 
-    public xTestClass2(TypeSet types)
+    public xTestClass2(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:TestClass2", "x:TestClass", Shape.Class);
+        super(types, structure;
 
-        adapter = types.f_adapter;
+        adapter = types.f_container.f_adapter;
         }
 
     @Override
@@ -29,8 +31,8 @@ public class xTestClass2 extends TypeCompositionTemplate
 
         ensurePropertyTemplate("prop2", "x:Int");
 
-        ConstructTemplate construct = ensureConstructTemplate(new String[]{"x:TestClass2", "x:Int64", "x:String"});
-        FunctionTemplate ftFinally = ensureFunctionTemplate(
+        MethodStructure construct = ensureMethodStructure(new String[]{"x:TestClass2", "x:Int64", "x:String"});
+        MethodStructure ftFinally = ensureMethodStructure(
                 "finally", new String[]{"x:TestClass2", "x:Int64", "x:String"}, VOID);
 
         construct.m_aop = new Op[]
@@ -51,7 +53,7 @@ public class xTestClass2 extends TypeCompositionTemplate
             };
         ftFinally.m_cVars = 3;
 
-        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
+        MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),

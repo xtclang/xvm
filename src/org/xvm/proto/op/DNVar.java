@@ -31,7 +31,7 @@ public class DNVar extends Op
         RefHandle hRef = context.f_heapGlobal.createRefHandle(frame, f_nClassConstId);
 
         CharStringConstant constName =
-                (CharStringConstant) context.f_constantPool.getConstantValue(f_nNameConstId);
+                (CharStringConstant) context.f_pool.getConstant(f_nNameConstId);
 
         frame.introduceVar(hRef.f_clazz, constName.getValue(), Frame.VAR_DYNAMIC_REF, hRef);
 

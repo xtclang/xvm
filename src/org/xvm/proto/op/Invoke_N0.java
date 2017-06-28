@@ -1,12 +1,13 @@
 package org.xvm.proto.op;
 
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
-
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
 
@@ -39,12 +40,12 @@ public class Invoke_N0 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
-            MethodTemplate method = getMethodTemplate(frame, template, f_nMethodId);
+            ClassTemplate template = hTarget.f_clazz.f_template;
+            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
 
-            if (method.isNative())
+            if (ConstantPoolAdapter.isNative(method))
                 {
-                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, method.m_cVars, 0);
+                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, ConstantPoolAdapter.getVarCount(method), 0);
                 if (ahArg == null)
                     {
                     return R_REPEAT;
@@ -53,7 +54,7 @@ public class Invoke_N0 extends OpInvocable
                 return template.invokeNative(frame, hTarget, method, ahArg, Frame.RET_UNUSED);
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, method.m_cVars, 1);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, ConstantPoolAdapter.getVarCount(method), 1);
             if (ahVar == null)
                 {
                 return R_REPEAT;

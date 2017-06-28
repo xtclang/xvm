@@ -1,8 +1,8 @@
 package org.xvm.proto;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.Constants;
-import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.Shape;
+import org.xvm.asm.MethodStructure;
 
 import java.util.function.Supplier;
 
@@ -13,7 +13,7 @@ import java.util.function.Supplier;
  */
 public class TypeComposition
     {
-    public final TypeCompositionTemplate f_template;
+    public final ClassTemplate f_template;
 
     // at the moment, ignore the case of ArrayList<Runnable | String>
     public final Type[] f_atGenericActual; // corresponding to the m_template's GenericTypeName
@@ -23,7 +23,7 @@ public class TypeComposition
     private Type m_typePrivate;
     private Type m_typeStruct;
 
-    public TypeComposition(TypeCompositionTemplate template, Type[] atnGenericActual)
+    public TypeComposition(ClassTemplate template, Type[] atnGenericActual)
         {
         // assert(atnGenericActual.length == template.f_asFormalType.length);
 
@@ -86,7 +86,8 @@ public class TypeComposition
         Type type = m_typePublic;
         if (type == null)
             {
-            m_typePublic = type = f_template.createType(f_atGenericActual, Constants.Access.PUBLIC);
+            m_typePublic = type = f_template.f_types.createType(
+                    f_template, f_atGenericActual, Constants.Access.PUBLIC);
             }
         return type;
         }
@@ -95,7 +96,8 @@ public class TypeComposition
         Type type = m_typeProtected;
         if (type == null)
             {
-            m_typeProtected = type = f_template.createType(f_atGenericActual, Constants.Access.PROTECTED);
+            m_typeProtected = type = f_template.f_types.createType(
+                    f_template, f_atGenericActual, Constants.Access.PROTECTED);
             }
         return type;
         }
@@ -105,7 +107,8 @@ public class TypeComposition
         Type type = m_typePrivate;
         if (type == null)
             {
-            m_typePrivate = type = f_template.createType(f_atGenericActual, Constants.Access.PRIVATE);
+            m_typePrivate = type = f_template.f_types.createType(
+                    f_template, f_atGenericActual, Constants.Access.PRIVATE);
             }
         return type;
         }
@@ -115,7 +118,8 @@ public class TypeComposition
         Type type = m_typeStruct;
         if (type == null)
             {
-            m_typeStruct = type = f_template.createType(f_atGenericActual, Constants.Access.STRUCT);
+            m_typeStruct = type = f_template.f_types.createType(
+                    f_template, f_atGenericActual, Constants.Access.STRUCT);
             }
         return type;
         }
@@ -128,7 +132,7 @@ public class TypeComposition
     // does this class extend that?
     public boolean extends_(TypeComposition that)
         {
-        assert that.f_template.f_shape != Shape.Interface;
+        assert that.f_template.f_struct.getFormat() != Component.Format.INTERFACE;
 
         if (this.f_template.extends_(that.f_template))
             {
@@ -145,7 +149,8 @@ public class TypeComposition
         {
         try
             {
-            return f_atGenericActual[f_template.f_listFormalType.indexOf(sFormalName)];
+            // TODO
+            return f_atGenericActual[f_template.f_struct.getTypeParamsAsList().indexOf(sFormalName)];
             }
         catch (ArrayIndexOutOfBoundsException e)
             {
@@ -157,9 +162,9 @@ public class TypeComposition
     // create a sequence of frames to be called in the inverse order (the base super first)
     public Frame callDefaultConstructors(Frame frame, ObjectHandle[] ahVar, Supplier<Frame> continuation)
         {
-        TypeCompositionTemplate template = f_template;
-        FunctionTemplate ftDefault = template.getDefaultConstructTemplate();
-        TypeCompositionTemplate templateSuper = template.m_templateSuper;
+        ClassTemplate template = f_template;
+        MethodStructure ftDefault = ConstantPoolAdapter.getDefaultConstructor(template.f_struct);
+        ClassTemplate templateSuper = template.getSuper();
 
         Frame frameDefault;
         if (ftDefault == null)

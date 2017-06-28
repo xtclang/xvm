@@ -1,5 +1,7 @@
 package org.xvm.proto;
 
+import org.xvm.asm.ModuleRepository;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,9 +22,9 @@ public class Runtime
         f_daemons.start();
         }
 
-    public Container createContainer(String sName)
+    public Container createContainer(String sName, ModuleRepository repository)
         {
-        Container container = new Container(this, sName);
+        Container container = new Container(this, sName, repository);
 
         container.start();
 

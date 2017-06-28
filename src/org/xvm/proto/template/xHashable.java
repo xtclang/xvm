@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.asm.ClassStructure;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -9,17 +10,15 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xHashable
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
-    public xHashable(TypeSet types)
+    public xHashable(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:collections.Hashable", "x:Object", Shape.Interface);
+        super(types, structure);
         }
 
     @Override
     public void initDeclared()
         {
-        // @ro Int hash;
-        ensurePropertyTemplate("hash", "x:Int").makeReadOnly();
         }
     }

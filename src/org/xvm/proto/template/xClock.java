@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.asm.ClassStructure;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -9,21 +10,18 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xClock
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xClock INSTANCE;
 
-    public xClock(TypeSet types)
+    public xClock(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Clock", "x:Object", Shape.Interface);
+        super(types, structure);
 
-        INSTANCE = this;
-        }
-
-    // subclassing
-    protected xClock(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -40,8 +38,5 @@ public class xClock
         //    Timer createTimer();
         //
         //    Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp);
-
-        // TODO: change when the DateTime is implemented
-        ensureMethodTemplate("scheduleAlarm", new String[]{"x:Function", "x:Int64"}, new String[]{"x:Function"});
         }
     }

@@ -2,6 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -28,14 +29,14 @@ import java.util.Map;
 public class ObjectHeap
     {
     public final TypeSet f_types;
-    public final ConstantPoolAdapter f_constantPool;
+    public final ConstantPool f_pool;
 
     Map<Integer, ObjectHandle> m_mapConstants = new HashMap<>();
 
-    public ObjectHeap(ConstantPoolAdapter adapter, TypeSet types)
+    public ObjectHeap(ConstantPool pool, TypeSet types)
         {
         f_types = types;
-        f_constantPool = adapter;
+        f_pool = pool;
         }
 
     // nClassConstId - ClassTypeConstant in the ConstantPool
@@ -53,7 +54,7 @@ public class ObjectHeap
 
         if (handle == null)
             {
-            Constant constValue = f_constantPool.getConstantValue(nValueConstId); // must exist
+            Constant constValue = f_pool.getConstant(nValueConstId); // must exist
 
             handle = getConstTemplate(constValue).createConstHandle(constValue, this);
 
@@ -63,13 +64,13 @@ public class ObjectHeap
         return handle;
         }
 
-    public TypeCompositionTemplate getConstTemplate(int nValueConstId)
+    public ClassTemplate getConstTemplate(int nValueConstId)
         {
-        Constant constValue = f_constantPool.getConstantValue(nValueConstId);
+        Constant constValue = f_pool.getConstant(nValueConstId);
         return getConstTemplate(constValue);
         }
 
-    public TypeCompositionTemplate getConstTemplate(Constant constValue)
+    public ClassTemplate getConstTemplate(Constant constValue)
         {
         if (constValue instanceof CharStringConstant)
             {

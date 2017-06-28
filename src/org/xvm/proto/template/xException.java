@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.op.Return_0;
@@ -11,28 +13,25 @@ import org.xvm.proto.op.PSet;
  * @author gg 2017.02.27
  */
 public class xException
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xException INSTANCE;
 
-    public xException(TypeSet types)
+    public xException(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Exception", "x:Object", Shape.Const);
+        super(types, structure);
 
-        addImplement("x:Const");
-
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
-        // @inject Iterable<StackFrame> stackTrace;
-        ensurePropertyTemplate("text", "x:String");
-        ensurePropertyTemplate("cause", "this.Type");
-        ensurePropertyTemplate("stackTrace", "x:String"); // TODO: replace "x:String" with "x:Iterable<this.Type.StackFrame>"
 
-        ConstructTemplate ct = ensureConstructTemplate(
+        MethodStructure ct = ensureMethodStructure(
                 new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"});
 
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause

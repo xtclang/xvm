@@ -1,11 +1,12 @@
 package org.xvm.proto.op;
 
+import org.xvm.asm.PropertyStructure;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
+import org.xvm.proto.ClassTemplate;
 
 /**
  * P_GET rvalue-target, CONST_PROPERTY, lvalue-return
@@ -37,9 +38,9 @@ public class PGet extends OpInvocable
                 return R_REPEAT;
                 }
 
-            TypeCompositionTemplate template = hTarget.f_clazz.f_template;
+            ClassTemplate template = hTarget.f_clazz.f_template;
 
-            PropertyTemplate property = getPropertyTemplate(frame, template, f_nPropConstId);
+            PropertyStructure property = getPropertyStructure(frame, template, f_nPropConstId);
 
             return template.getPropertyValue(frame, hTarget, property, f_nRetValue);
             }

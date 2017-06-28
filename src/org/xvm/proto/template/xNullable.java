@@ -1,5 +1,6 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.proto.*;
@@ -10,29 +11,21 @@ import org.xvm.proto.*;
  * @author gg 2017.02.27
  */
 public class xNullable
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
-    public xNullable(TypeSet types)
+    public xNullable(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Nullable", "x:Object", Shape.Enum);
-        }
-
-    // subclassing
-    protected xNullable(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
+        super(types, structure);
         }
 
     @Override
     public void initDeclared()
         {
-        if (!f_sName.equals("x:Nullable")) return; // avoid recursion
-
         // in-place declaration for True and False
         // in-place generation of Hashable
-        f_types.addTemplate(new xNullable(f_types, "x:Nullable$Null", "x:Nullable", Shape.Enum));
+        ClassTemplate template = f_types.getTemplate("x:Nullable$Null");
 
-        NULL = new NullHandle(f_clazzCanonical);
+        NULL = new NullHandle(template.f_clazzCanonical);
         }
 
     @Override

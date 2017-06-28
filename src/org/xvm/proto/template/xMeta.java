@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.asm.ClassStructure;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -9,28 +10,15 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xMeta
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
-    public xMeta(TypeSet types)
+    public xMeta(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Meta", "x:Object", Shape.Interface);
-
-        addImplement("x:Referent");
+        super(types, structure);
         }
 
     @Override
     public void initDeclared()
         {
-        //    @ro Class class;
-        //    @ro Module module;
-        //    @ro Struct struct;
-        //    Boolean immutable;
-        //    @ro Int byteLength;
-
-        ensurePropertyTemplate("class", "x:Class").makeReadOnly();
-        ensurePropertyTemplate("module", "x:Module").makeReadOnly();
-        ensurePropertyTemplate("struct", "x:Struct").makeReadOnly();
-        ensurePropertyTemplate("immutable", "x:Boolean"); // an override of the @ro of the super
-        ensurePropertyTemplate("byteLength", "x:Int");
         }
     }

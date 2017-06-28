@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.asm.ClassStructure;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -9,22 +10,15 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xStruct
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
-    public xStruct(TypeSet types)
+    public xStruct(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Struct", "x:Object", Shape.Interface);
+        super(types, structure);
         }
 
     @Override
     public void initDeclared()
         {
-        //    Tuple to<Tuple>();
-        //    Ref[] to<Ref[]>();
-        //    @op Ref elementFor(String name)
-
-        ensureMethodTemplate("to", new String[]{"x:Tuple"}, new String[]{"x:Tuple"});
-        ensureMethodTemplate("to", new String[]{"x:collections.Array<x:Ref>"}, new String[]{"x:collections.Array<x:Ref>"});
-        ensureMethodTemplate("elementFor", STRING, new String[]{"x:Ref"});
         }
     }

@@ -1,10 +1,13 @@
 package org.xvm.proto.op;
 
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
-import org.xvm.proto.TypeCompositionTemplate.FunctionTemplate;
+
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -38,9 +41,9 @@ public class Call_N1 extends OpCallable
 
             if (f_nFunctionValue < 0)
                 {
-                FunctionTemplate function = getFunctionTemplate(frame, f_nFunctionValue);
+                MethodStructure function = getMethodStructure(frame, f_nFunctionValue);
 
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.m_cVars, 0);
+                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, ConstantPoolAdapter.getVarCount(function), 0);
                 if (ahVar == null)
                     {
                     return R_REPEAT;

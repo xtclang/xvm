@@ -1,11 +1,9 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.IntConstant;
-
-import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
-import org.xvm.proto.TypeCompositionTemplate.MethodTemplate;
 
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
@@ -31,7 +29,7 @@ public class Frame
     {
     public final Fiber f_fiber;
     public final ServiceContext f_context;      // same as f_fiber.f_context
-    public final InvocationTemplate f_function;
+    public final MethodStructure f_function;
     public final Op[]           f_aOp;          // the op-codes
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVar;        // arguments/local var registers
@@ -66,7 +64,7 @@ public class Frame
     public static final int VAR_WAITING = 2;
 
     // construct a frame
-    protected Frame(Frame framePrev, InvocationTemplate function,
+    protected Frame(Frame framePrev, MethodStructure function,
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
         f_context = framePrev.f_context;
@@ -77,23 +75,23 @@ public class Frame
         f_iPCPrev = framePrev.m_iPC;
 
         f_function = function;
-        f_aOp = function == null ? Op.STUB : function.m_aop;
+        f_aOp = function == null ? Op.STUB : ConstantPoolAdapter.getOps(function);
 
         f_hTarget = hTarget;
         f_ahVar = ahVar; // [0] - target:private for methods
         f_aInfo = new VarInfo[ahVar.length];
 
-        int cScopes = function == null ? 1 : function.m_cScopes;
+        int cScopes = function == null ? 1 : ConstantPoolAdapter.getScopeCount(function);
         f_anNextVar = new int[cScopes];
 
         if (hTarget == null)
             {
-            f_anNextVar[0] = function == null ? 0 : function.m_cArgs;
+            f_anNextVar[0] = function == null ? 0 : ConstantPoolAdapter.getArgCount(function);
             }
         else  // #0 - this:private
             {
             f_ahVar[0]     = hTarget.f_clazz.ensureAccess(hTarget, Access.PRIVATE);
-            f_anNextVar[0] = 1 + function.m_cArgs;
+            f_anNextVar[0] = 1 + ConstantPoolAdapter.getArgCount(function);
             }
 
         f_iReturn = iReturn;
@@ -123,7 +121,7 @@ public class Frame
         }
 
     // a convenience method; ahVar - prepared variables
-    public int call1(InvocationTemplate template, ObjectHandle hTarget,
+    public int call1(MethodStructure template, ObjectHandle hTarget,
                                  ObjectHandle[] ahVar, int iReturn)
         {
         m_frameNext = f_context.createFrame1(this, template, hTarget, ahVar, iReturn);
@@ -131,7 +129,7 @@ public class Frame
         }
 
     // a convenience method
-    public int callN(InvocationTemplate template, ObjectHandle hTarget,
+    public int callN(MethodStructure template, ObjectHandle hTarget,
                                  ObjectHandle[] ahVar, int[] aiReturn)
         {
         m_frameNext = f_context.createFrameN(this, template, hTarget, ahVar, aiReturn);
@@ -189,7 +187,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return xFunction.makeHandle(((MethodTemplate) f_function).getSuper()).bind(0, f_hTarget);
+                return xFunction.makeHandle(ConstantPoolAdapter.getSuper(f_function)).bind(0, f_hTarget);
 
             case Op.A_TARGET:
                 if (f_hTarget == null)
@@ -426,7 +424,7 @@ public class Frame
         Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
-            aType[i] = f_function.getReturnType(i, null);
+            aType[i] = ConstantPoolAdapter.getReturnType(f_function, i, null);
             ahValue[i] = getReturnValue(aiArg[i]);
             }
 
@@ -575,7 +573,7 @@ public class Frame
         else
             {
             IntConstant constant = (IntConstant)
-                    f_context.f_heapGlobal.f_constantPool.getConstantValue(-iArg);
+                    f_context.f_heapGlobal.f_pool.getConstant(-iArg);
             lIndex = constant.getValue().getLong();
             }
 
@@ -609,12 +607,12 @@ public class Frame
 
             if (f_hTarget == null)
                 {
-                cArgs = f_function.m_cArgs;
+                cArgs = ConstantPoolAdapter.getArgCount(f_function);
                 sName = "<arg " + nVar + ">";
                 }
             else
                 {
-                cArgs = f_function.m_cArgs + 1;
+                cArgs = ConstantPoolAdapter.getArgCount(f_function) + 1;
                 sName = nVar == 0 ? "<this>" : "<arg " + (nVar - 1) + ">";
                 }
 
@@ -686,11 +684,12 @@ public class Frame
                     {
                     // the caller's fiber has moved away from the calling frame;
                     // simply show the calling function
-                    InvocationTemplate fnCaller = fiber.f_fnCaller;
+                    MethodStructure fnCaller = fiber.f_fnCaller;
                     sb.append("\n  ")
                       .append(fnCaller.toString())
                       .append(" (iPC=").append(iPC)
-                      .append(", op=").append(fnCaller.m_aop[iPC].getClass().getSimpleName())
+                      .append(", op=")
+                      .append(ConstantPoolAdapter.getOps(fnCaller)[iPC].getClass().getSimpleName())
                       .append(')');
                     break;
                     }
@@ -706,10 +705,9 @@ public class Frame
     @Override
     public String toString()
         {
-        InvocationTemplate fn = f_function;
+        MethodStructure fn = f_function;
 
-        return "Frame: " + (fn == null ? '<' + f_context.f_sName + '>' :
-                fn.getClazzTemplate().f_sName + '.' + f_function.f_sName);
+        return "Frame: " + (fn == null ? '<' + f_context.f_sName + '>' : fn);
         }
 
     // try-catch support
@@ -794,7 +792,7 @@ public class Frame
                 if (clzException.extends_(clzCatch))
                     {
                     CharStringConstant constVarName = (CharStringConstant)
-                            context.f_constantPool.getConstantValue(f_anNameConstId[iCatch]);
+                            context.f_pool.getConstant(f_anNameConstId[iCatch]);
 
                     introduceException(frame, iGuard, hException, constVarName.getValue());
 

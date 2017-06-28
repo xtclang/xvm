@@ -1,8 +1,15 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.*;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.Op;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -10,23 +17,18 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
  * @author gg 2017.02.27
  */
 public class xRef
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xRef INSTANCE;
 
-    public xRef(TypeSet types)
+    public xRef(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Ref<RefType>", "x:Object", Shape.Interface);
+        super(types, structure);
 
-        addImplement("x:Referent");
-
-        INSTANCE = this;
-        }
-
-    // subclassing
-    protected xRef(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -43,31 +45,22 @@ public class xRef
         //    @ro Boolean selfContained;
 
         PropertyTemplate ptAssigned = ensurePropertyTemplate("assigned", "x:Boolean");
-        ptAssigned.makeReadOnly();
         ptAssigned.addGet().markNative();
 
-        ensurePropertyTemplate("ActualType", "x:Type").makeReadOnly();
-        ensurePropertyTemplate("name", "x:String|x:Nullable").makeReadOnly();
-        ensurePropertyTemplate("byteLength", "x:Int").makeReadOnly();
-        ensurePropertyTemplate("selfContained", "x:Boolean").makeReadOnly();
-
-        ensureMethodTemplate("peek", VOID, new String[]{"x:ConditionalTuple<RefType>"});
-        ensureMethodTemplate("get", VOID, new String[]{"RefType"}).markNative();
-        ensureMethodTemplate("set", new String[]{"RefType"}, VOID).markNative();
-
-        ensureFunctionTemplate("equals", new String[]{"x:Ref", "x:Ref"}, BOOLEAN);
+        ensureMethodStructure("get", VOID, new String[]{"RefType"}).markNative();
+        ensureMethodStructure("set", new String[]{"RefType"}, VOID).markNative();
         }
 
     @Override
     public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
         switch (ahArg.length)
             {
             case 0:
-                switch (method.f_sName)
+                switch (method.getName())
                     {
                     case "get":
                         try
@@ -87,11 +80,11 @@ public class xRef
 
     @Override
     public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodTemplate method, ObjectHandle hArg, int iReturn)
+                            MethodStructure method, ObjectHandle hArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
-        switch (method.f_sName)
+        switch (method.getName())
             {
             case "set":
                 ExceptionHandle hException = hThis.set(hArg);

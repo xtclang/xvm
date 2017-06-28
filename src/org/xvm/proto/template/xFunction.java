@@ -1,11 +1,21 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.proto.*;
-
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.ConstantPoolAdapter;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.Op;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
+import org.xvm.proto.Utils;
 import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.concurrent.CompletableFuture;
@@ -17,32 +27,23 @@ import java.util.function.Supplier;
  * @author gg 2017.02.27
  */
 public class xFunction
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xFunction INSTANCE;
 
-    public xFunction(TypeSet types)
+    public xFunction(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Function", "x:Object", Shape.Interface);
+        super(types, structure);
 
-        addImplement("x:Const");
-
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
-        //    Tuple invoke(Tuple args)
-        //
-        //    Type[] ReturnType;
-        //
-        //    Type[] ParamType;
-
-        ensurePropertyTemplate("ReturnType", "x:collections.Array<x:Type>");
-        ensurePropertyTemplate("ParamType", "x:collections.Array<x:Type>");
-
-        ensureMethodTemplate("invoke", new String[]{"x:Tuple"}, new String[]{"x:Tuple"});
         }
 
     @Override
@@ -50,16 +51,11 @@ public class xFunction
         {
         if (constant instanceof MethodConstant)
             {
-            MethodConstant constFunction = (MethodConstant) constant; // TODO: replace with function when implemented
+            MethodConstant constFunction = (MethodConstant) constant;
+            MethodStructure function = (MethodStructure) constFunction.getComponent();
 
-            String sTargetClz = ConstantPoolAdapter.getClassName(constFunction);
-            TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
-            FunctionTemplate function = target.getFunctionTemplate(constFunction);
-
-            if (function != null)
-                {
-                return new FunctionHandle(f_clazzCanonical, function);
-                }
+            // TODO: assert if a method
+            return new FunctionHandle(f_clazzCanonical, function);
             }
         return null;
         }
@@ -67,28 +63,23 @@ public class xFunction
     public static class FunctionHandle
             extends ObjectHandle
         {
-        protected InvocationTemplate m_invoke;
+        protected MethodStructure m_invoke;
 
-        protected FunctionHandle(TypeComposition clazz, InvocationTemplate function)
+        protected FunctionHandle(TypeComposition clazz, MethodStructure function)
             {
             super(clazz);
 
             m_invoke = function;
             }
 
-        public InvocationTemplate getTemplate()
+        public MethodStructure getTemplate()
             {
             return m_invoke;
             }
 
-        public int getReturnCount()
-            {
-            return m_invoke.m_cReturns;
-            }
-
         public int getVarCount()
             {
-            return m_invoke.m_cVars;
+            return ConstantPoolAdapter.getVarCount(m_invoke);
             }
 
         // ----- FunctionHandle interface -----
@@ -119,7 +110,7 @@ public class xFunction
         protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
             {
             int cArgs = ahArg.length;
-            int cVars = m_invoke.m_cVars;
+            int cVars = getVarCount();
 
             assert cArgs <= cVars;
 
@@ -151,7 +142,7 @@ public class xFunction
         // invoke with zero or one return to be placed into the specified register;
         protected int call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
             {
-            ObjectHandle hTarget = m_invoke instanceof MethodTemplate ? ahVar[0] : null;
+            ObjectHandle hTarget = m_invoke instanceof MethodStructure ? ahVar[0] : null;
 
             return frame.call1(m_invoke, hTarget, ahVar, iReturn);
             }
@@ -159,7 +150,7 @@ public class xFunction
         // invoke with multiple return values;
         protected int callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            ObjectHandle hTarget = m_invoke instanceof MethodTemplate ? ahVar[0] : null;
+            ObjectHandle hTarget = m_invoke instanceof MethodStructure ? ahVar[0] : null;
 
             return frame.callN(m_invoke, hTarget, ahVar, aiReturn);
             }
@@ -262,7 +253,7 @@ public class xFunction
             {
             super.addBoundArguments(ahVar);
 
-            int cMove = m_invoke.m_cArgs - (m_iArg + 1); // number of args to move to the right
+            int cMove = getVarCount() - (m_iArg + 1); // number of args to move to the right
             if (cMove > 0)
                 {
                 System.arraycopy(ahVar, m_iArg, ahVar, m_iArg + 1, cMove);
@@ -347,7 +338,7 @@ public class xFunction
     public static class AsyncHandle
             extends FunctionHandle
         {
-        protected AsyncHandle(TypeComposition clazz, InvocationTemplate function)
+        protected AsyncHandle(TypeComposition clazz, MethodStructure function)
             {
             super(clazz, function);
             }
@@ -360,7 +351,7 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) ahVar[0];
 
             // native method on the service means "execute on the caller's thread"
-            if (m_invoke.isNative() || frame.f_context == hService.m_context)
+            if (ConstantPoolAdapter.isNative(m_invoke) || frame.f_context == hService.m_context)
                 {
                 return super.call1Impl(frame, ahVar, iReturn);
                 }
@@ -382,7 +373,7 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) ahVar[0];
 
             // native method on the service means "execute on the caller's thread"
-            if (m_invoke.isNative() || frame.f_context == hService.m_context)
+            if (ConstantPoolAdapter.isNative(m_invoke) || frame.f_context == hService.m_context)
                 {
                 return super.callNImpl(frame, ahVar, aiReturn);
                 }
@@ -419,14 +410,14 @@ public class xFunction
             }
         }
 
-    public static AsyncHandle makeAsyncHandle(InvocationTemplate function)
+    public static AsyncHandle makeAsyncHandle(MethodStructure function)
         {
-        assert function.getClazzTemplate().isService();
+        assert function.getParent().getFormat() == Component.Format.SERVICE;
 
         return new AsyncHandle(INSTANCE.f_clazzCanonical, function);
         }
 
-    public static FunctionHandle makeHandle(InvocationTemplate function)
+    public static FunctionHandle makeHandle(MethodStructure function)
         {
         return new FunctionHandle(INSTANCE.f_clazzCanonical, function);
         }

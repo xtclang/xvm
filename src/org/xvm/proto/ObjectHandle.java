@@ -1,5 +1,7 @@
 package org.xvm.proto;
 
+import org.xvm.asm.PropertyStructure;
+import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
@@ -86,23 +88,25 @@ public class ObjectHandle
 
         protected void createFields()
             {
-            f_clazz.f_template.forEachProperty(pt ->
+            f_clazz.f_template.f_struct.children().stream().forEach(child ->
                 {
-                RefHandle hRef = null;
-                if (pt.isRef())
+                if (!(child instanceof PropertyStructure))
                     {
-                    String sReferent = pt.f_typeName.getSimpleName();
-
-                    TypeCompositionTemplate templateReferent =
-                            f_clazz.f_template.f_types.getTemplate(sReferent);
-
-                    hRef = pt.createRefHandle(templateReferent == null ? null :
-                            templateReferent.f_clazzCanonical.ensurePublicType());
+                    return;
                     }
 
-                if (!pt.isReadOnly() || hRef != null)
+                PropertyStructure prop = (PropertyStructure) child;
+                RefHandle hRef = null;
+                if (ConstantPoolAdapter.isRef(prop))
                     {
-                    m_mapFields.put(pt.f_sName, hRef);
+                    xRef referent = (xRef) ConstantPoolAdapter.getRefTemplate(f_clazz.f_template.f_types, prop);
+
+                    hRef = xRef.INSTANCE.createRefHandle(referent.f_clazzCanonical);
+                    }
+
+                if (!ConstantPoolAdapter.isReadOnly(prop) || hRef != null)
+                    {
+                    m_mapFields.put(prop.getName(), hRef);
                     }
                 });
             }

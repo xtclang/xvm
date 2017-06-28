@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.asm.ClassStructure;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -9,12 +10,11 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xConditionalTuple
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
-    public xConditionalTuple(TypeSet types)
+    public xConditionalTuple(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        // deferring the variable length generics <ElementType...>
-        super(types, "x:ConditionalTuple", "x:Tuple", Shape.Interface);
+        super(types, structure);
         }
 
     @Override

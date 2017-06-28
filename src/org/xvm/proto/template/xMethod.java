@@ -1,8 +1,15 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.proto.*;
+
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -10,23 +17,23 @@ import org.xvm.proto.*;
  * @author gg 2017.02.27
  */
 public class xMethod
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xMethod INSTANCE;
 
-    public xMethod(TypeSet types)
+    public xMethod(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        // TODO:ParamType extends Tuple, ReturnType extends Tuple
-        super(types, "x:Method<TargetType,ParamType,ReturnType>", "x:Object", Shape.Const);
+        super(types, structure);
 
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
-        // todo
-        ensurePropertyTemplate("name", "x:String");
         }
 
     @Override
@@ -35,18 +42,10 @@ public class xMethod
         if (constant instanceof MethodConstant)
             {
             MethodConstant constMethod = (MethodConstant) constant;
+            MethodStructure method = (MethodStructure) constMethod.getComponent();
 
-            String sTargetClz = ConstantPoolAdapter.getClassName(constMethod);
-            TypeCompositionTemplate target = f_types.getTemplate(sTargetClz);
-
-            MethodTemplate method = target.getMethodTemplate(constMethod.getName(), "");
-            if (method != null)
-                {
-                return new MethodHandle(f_clazzCanonical, method);
-                }
-
-            // TODO: will there be a FunctionConstant?
-            return xFunction.INSTANCE.createConstHandle(constMethod, heap);
+            // TODO: assert if a function
+            return new MethodHandle(f_clazzCanonical, method);
             }
         return null;
         }
@@ -54,14 +53,14 @@ public class xMethod
     public static class MethodHandle
             extends ObjectHandle
         {
-        public MethodTemplate m_method;
+        public MethodStructure m_method;
 
         protected MethodHandle(TypeComposition clazz)
             {
             super(clazz);
             }
 
-        protected MethodHandle(TypeComposition clazz, MethodTemplate method)
+        protected MethodHandle(TypeComposition clazz, MethodStructure method)
             {
             super(clazz);
 

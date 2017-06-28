@@ -1,5 +1,7 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -21,11 +23,14 @@ public class xFutureRef
     {
     public static xFutureRef INSTANCE;
 
-    public xFutureRef(TypeSet types)
+    public xFutureRef(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:FutureRef<RefType>", "x:Ref", Shape.Mixin);
+        super(types, structure, false);
 
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -39,17 +44,16 @@ public class xFutureRef
         //    private NotifyDependent? notify = null;
 
         // FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
-        MethodTemplate mtWC = ensureMethodTemplate("whenComplete", new String[] {"x:Function"}, THIS);
-        mtWC.markNative();
+        ensureMethodStructure("whenComplete", new String[] {"x:Function"}, THIS).markNative();
         }
 
     @Override
     public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodTemplate method, ObjectHandle hArg, int iReturn)
+                            MethodStructure method, ObjectHandle hArg, int iReturn)
         {
         FutureHandle hThis = (FutureHandle) hTarget;
 
-        switch (method.f_sName)
+        switch (method.getName())
             {
             case "whenComplete":
                 FunctionHandle hNotify = (FunctionHandle) hArg;

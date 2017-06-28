@@ -33,7 +33,7 @@ public class INVar extends Op
 
         TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
         CharStringConstant constName = (CharStringConstant)
-                context.f_constantPool.getConstantValue(f_nNameConstId);
+                context.f_pool.getConstant(f_nNameConstId);
 
         try
             {

@@ -1,6 +1,7 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.asm.ClassStructure;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -9,41 +10,15 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xConst
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
-    public xConst(TypeSet types)
+    public xConst(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Const", "x:Object", Shape.Interface);
-
-        addImplement("x:collections.Hashable");
-        addImplement("x:Orderable");
+        super(types, structure);
         }
 
     @Override
     public void initDeclared()
         {
-        //    static Ordered compare(Const value1, Const value2)
-        //
-        //    static Boolean equals(Const value1, Const value2)
-        //
-        //    String to<String>()
-        //
-        //    Byte[] to<Byte[]>()
-        //        {
-        //        Field[] fields = meta.struct.to<Field[]>();
-        //        // TODO use meta.struct
-        //        }
-        //
-        //    @lazy Int hash.get()
-
-        ensureFunctionTemplate("compare", new String[]{"x:Const", "x:Const"}, new String[]{"x:Ordered"});
-        ensureFunctionTemplate("equals", new String[]{"x:Const", "x:Const"}, new String[]{"x:Boolean"});
-
-        // an override
-        ensureMethodTemplate("to", STRING, STRING);
-
-        ensureMethodTemplate("to", new String[]{"x:collections.Array<x:Byte>"}, new String[]{"x:collections.Array<x:Byte>"});
-
-        // TODO: @LazyRef Int hash.get()
         }
     }

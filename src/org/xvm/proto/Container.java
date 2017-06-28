@@ -1,14 +1,17 @@
 package org.xvm.proto;
 
-import com.sun.org.apache.xpath.internal.operations.Mod;
-import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.PropertyStructure;
 
-import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
-import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.proto.template.xClock;
 import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
 import org.xvm.proto.template.xRuntimeClock;
@@ -19,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import java.util.function.Supplier;
 
 /**
@@ -30,9 +34,11 @@ public class Container
     {
     final public Runtime f_runtime;
     final public TypeSet f_types;
-    final public ConstantPoolAdapter f_constantPoolAdapter;
+    final public ConstantPool f_pool;
+    final public ConstantPoolAdapter f_adapter;
     final public ObjectHeap f_heapGlobal;
 
+    final protected ModuleStructure f_module;
     final protected ModuleConstant f_constModule;
 
     // service id producer
@@ -50,43 +56,21 @@ public class Container
     // the values are: ObjectHandle | Supplier<ObjectHandle>
     final Map<InjectionKey, Object> f_mapResources = new HashMap<>();
 
-    public Container(Runtime runtime, String sName)
+    public Container(Runtime runtime, String sModuleName, ModuleRepository repository)
         {
         f_runtime = runtime;
-        f_constantPoolAdapter = new ConstantPoolAdapter();
-        f_types = new TypeSet(f_constantPoolAdapter);
-        f_heapGlobal = new ObjectHeap(f_constantPoolAdapter, f_types);
-        f_constModule = f_constantPoolAdapter.ensureModuleConstant(sName);
+        f_module = repository.loadModule(sModuleName);
+        f_constModule = (ModuleConstant) f_module.getIdentityConstant();
 
-        initTypes();
-        }
+        f_pool = f_module.getConstantPool();
+        f_types = new TypeSet(this);
+        f_heapGlobal = new ObjectHeap(f_pool, f_types);
 
-    protected void initTypes()
-        {
-        TypeSet types = f_types;
-
-        // depth first traversal starting with Object
-
-        // typedef Int64   Int;
-        // typedef UInt64  UInt;
-
-        types.addAlias("x:Int", "x:Int64");
-        types.addAlias("x:UInt", "x:UInt64");
-
-        types.ensureTemplate("x:Type"); // this must come first (see TCT constructor)
-        types.ensureTemplate("x:Object");
-        types.ensureTemplate("x:Exception");
-        types.ensureTemplate("x:Service");
-        types.ensureTemplate("x:FutureRef");
-        types.ensureTemplate("x:AtomicRef");
-
-        // container.m_typeSet.dumpTemplates();
+        f_adapter = new ConstantPoolAdapter(f_pool);
         }
 
     protected void initResources()
         {
-        f_types.ensureTemplate("x:RuntimeClock");
-
         Supplier<ObjectHandle> supplierClock = () ->
             {
             ServiceContext ctxClock = createServiceContext("RuntimeClock");
@@ -94,7 +78,46 @@ public class Container
                     xRuntimeClock.INSTANCE.f_clazzCanonical,
                     xClock.INSTANCE.f_clazzCanonical.ensurePublicType());
             };
-        f_mapResources.put(new InjectionKey("runtimeClock", TypeName.parseName("x:Clock")), supplierClock);
+
+        ClassTypeConstant typeClock = f_pool.ensureClassTypeConstant(
+                f_pool.ensureClassConstant(f_constModule, "Clock"), null);
+
+        f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
+        }
+
+    public void start()
+        {
+        if (m_contextMain != null)
+            {
+            throw new IllegalStateException("Already started");
+            }
+
+        m_contextMain = createServiceContext("main");
+        xService.makeHandle(m_contextMain,
+                xService.INSTANCE.f_clazzCanonical,
+                xService.INSTANCE.f_clazzCanonical.ensurePublicType());
+
+        initResources();
+
+        try
+            {
+            String sModule = f_constModule.getName();
+            xModule module = (xModule) f_types.getTemplate(sModule);
+
+            MethodStructure mtRun = ConstantPoolAdapter.getMethod(module.f_struct, "run", new String[0]);
+            if (mtRun == null)
+                {
+                throw new IllegalArgumentException("Missing run() method for " + f_constModule);
+                }
+
+            m_hModule = (ModuleHandle) module.createConstHandle(f_constModule, f_heapGlobal);
+
+            m_contextMain.callLater(xFunction.makeHandle(mtRun), new ObjectHandle[]{m_hModule});
+            }
+        catch (Exception e)
+            {
+            throw new RuntimeException("failed to run: " + f_constModule, e);
+            }
         }
 
     public ServiceContext createServiceContext(String sName)
@@ -117,9 +140,9 @@ public class Container
     // clzParent - the class of the object for which the property needs to be injected
     //             (may need to be used to resolve a composite type)
     // TODO: need an "override" name or better yet "injectionAttributes"
-    public ObjectHandle getInjectable(TypeComposition clzParent, PropertyTemplate property)
+    public ObjectHandle getInjectable(TypeComposition clzParent, PropertyStructure property)
         {
-        InjectionKey key = new InjectionKey(property.f_sName, property.f_typeName);
+        InjectionKey key = new InjectionKey(property.getName(), (ClassTypeConstant) property.getType());
         Object oResource = f_mapResources.get(key);
 
         if (oResource instanceof ObjectHandle)
@@ -136,41 +159,6 @@ public class Container
         ObjectHandle hResource = ((Supplier<ObjectHandle>) oResource).get();
         f_mapResources.put(key, hResource);
         return hResource;
-        }
-
-    public void start()
-        {
-        if (m_contextMain != null)
-            {
-            throw new IllegalStateException("Already started");
-            }
-
-        m_contextMain = createServiceContext("main");
-        xService.makeHandle(m_contextMain,
-                xService.INSTANCE.f_clazzCanonical,
-                xService.INSTANCE.f_clazzCanonical.ensurePublicType());
-
-        initResources();
-
-        try
-            {
-            String sModule = f_constModule.getName();
-            xModule module = (xModule) f_types.ensureTemplate(sModule);
-
-            InvocationTemplate mtRun = module.getMethodTemplate("run", xModule.VOID, xModule.VOID);
-            if (mtRun == null)
-                {
-                throw new IllegalArgumentException("Missing run() method for " + f_constModule);
-                }
-
-            m_hModule = (ModuleHandle) module.createConstHandle(f_constModule, f_heapGlobal);
-
-            m_contextMain.callLater(xFunction.makeHandle(mtRun), new ObjectHandle[]{m_hModule});
-            }
-        catch (Exception e)
-            {
-            throw new RuntimeException("failed to run: " + f_constModule, e);
-            }
         }
 
     public ModuleHandle getModule()
@@ -200,12 +188,12 @@ public class Container
     public static class InjectionKey
         {
         public final String f_sName;
-        public final TypeName f_typeName;
+        public final ClassTypeConstant f_type;
 
-        public InjectionKey(String sName, TypeName typeName)
+        public InjectionKey(String sName, ClassTypeConstant typeName)
             {
             f_sName = sName;
-            f_typeName = typeName;
+            f_type = typeName;
             }
 
         @Override
@@ -224,19 +212,19 @@ public class Container
             InjectionKey that = (InjectionKey) o;
 
             return Objects.equals(this.f_sName, that.f_sName) &&
-                   Objects.equals(this.f_typeName, that.f_typeName);
+                   Objects.equals(this.f_type, that.f_type);
             }
 
         @Override
         public int hashCode()
             {
-            return f_sName.hashCode() + f_typeName.hashCode();
+            return f_sName.hashCode() + f_type.hashCode();
             }
 
         @Override
         public String toString()
             {
-            return "Key: " + f_sName + ", " + f_typeName;
+            return "Key: " + f_sName + ", " + f_type;
             }
         }
     }

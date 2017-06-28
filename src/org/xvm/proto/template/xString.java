@@ -1,6 +1,8 @@
 package org.xvm.proto.template;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.CharStringConstant;
 
 import org.xvm.proto.Frame;
@@ -8,7 +10,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -17,20 +19,19 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xString
-        extends TypeCompositionTemplate
+        extends ClassTemplate
         implements ComparisonSupport
     {
     public static xString INSTANCE;
 
-    public xString(TypeSet types)
+    public xString(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:String", "x:Object", Shape.Const);
+        super(types, structure);
 
-        // TODO: this is not processing correctly at the moment since it needs to recurse
-        // a type name resolution of Sequence<x:Char> -> UniformIndex<x:Int,x:Char>
-        // addImplement("x:collections.Sequence<x:Char>");
-
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -41,11 +42,10 @@ public class xString
         PropertyTemplate pt;
 
         pt = ensurePropertyTemplate("length", "x:Int");
-        pt.makeReadOnly();
         pt.addGet().markNative();
 
-        ensureMethodTemplate("indexOf", STRING, INT).markNative();
-        ensureMethodTemplate("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
+        ensureMethodStructure("indexOf", STRING, INT).markNative();
+        ensureMethodStructure("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
         }
 
     @Override
@@ -65,7 +65,7 @@ public class xString
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodStructure method,
                             ObjectHandle[] ahArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
@@ -73,7 +73,7 @@ public class xString
         switch (ahArg.length)
             {
             case 0:
-                switch (method.f_sName)
+                switch (method.getName())
                     {
                     case "length$get": // length.get()
                         ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
@@ -82,7 +82,7 @@ public class xString
                 break;
 
             case 2:
-                switch (method.f_sName)
+                switch (method.getName())
                     {
                     case "indexOf": // indexOf(String s, Int n)
                         String s = ((StringHandle) ahArg[0]).getValue();
@@ -99,12 +99,12 @@ public class xString
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodTemplate method,
+    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodStructure method,
                             ObjectHandle hArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
-        switch (method.f_sName)
+        switch (method.getName())
             {
             case "indexOf": // indexOf(String)
                 if (hArg instanceof StringHandle)

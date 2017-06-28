@@ -1,11 +1,13 @@
 package org.xvm.proto;
 
-import org.xvm.proto.TypeCompositionTemplate.ConstructTemplate;
-import org.xvm.proto.TypeCompositionTemplate.InvocationTemplate;
-import org.xvm.proto.TypeCompositionTemplate.PropertyTemplate;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.constants.ClassConstant;
 
 import org.xvm.proto.Fiber.FiberStatus;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+
 import org.xvm.proto.op.Return_0;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
@@ -35,7 +37,7 @@ public class ServiceContext
     public final Container f_container;
     public final TypeSet f_types;
     public final ObjectHeap f_heapGlobal;
-    public final ConstantPoolAdapter f_constantPool;
+    public final ConstantPool f_pool;
 
     private final Queue<Message> f_queueMsg;
     private final Queue<Response> f_queueResponse;
@@ -80,7 +82,7 @@ public class ServiceContext
 
         f_heapGlobal = container.f_heapGlobal;
         f_types = container.f_types;
-        f_constantPool = container.f_constantPoolAdapter;
+        f_pool = container.f_pool;
         f_queueMsg = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
         }
@@ -389,13 +391,13 @@ public class ServiceContext
         }
 
     // create a new frame that returns zero or one value into the specified slot
-    public Frame createFrame1(Frame framePrev, InvocationTemplate template,
+    public Frame createFrame1(Frame framePrev, MethodStructure template,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         return new Frame(framePrev, template, hTarget, ahVar, iReturn, null);
         }
 
-    public Frame createFrameN(Frame framePrev, InvocationTemplate template,
+    public Frame createFrameN(Frame framePrev, MethodStructure template,
                              ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         return new Frame(framePrev, template, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
@@ -427,7 +429,7 @@ public class ServiceContext
 
     // send and asynchronous "construct service" message to this context
     public CompletableFuture<ServiceHandle> sendConstructRequest(Frame frameCaller,
-                ConstructTemplate constructor, TypeComposition clazz, ObjectHandle[] ahArg)
+                MethodStructure constructor, TypeComposition clazz, ObjectHandle[] ahArg)
         {
         CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
 
@@ -467,7 +469,7 @@ public class ServiceContext
 
     // send and asynchronous property operation message
     public CompletableFuture<ObjectHandle> sendProperty01Request(Frame frameCaller,
-            PropertyTemplate property, PropertyOperation01 op)
+            PropertyStructure property, PropertyOperation01 op)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
@@ -478,7 +480,7 @@ public class ServiceContext
 
     // send and asynchronous property operation message
     public void sendProperty10Request(Frame frameCaller,
-            PropertyTemplate property, ObjectHandle hValue, PropertyOperation10 op)
+            PropertyStructure property, ObjectHandle hValue, PropertyOperation10 op)
         {
         addRequest(new PropertyOpRequest(frameCaller, property, hValue, 0, null, op));
         }
@@ -527,7 +529,7 @@ public class ServiceContext
     public abstract static class Message
         {
         public final Fiber f_fiberCaller;
-        public final InvocationTemplate f_fnCaller;
+        public final MethodStructure f_fnCaller;
         public final int f_iCallerId; // the FrameId of the caller
         public final int f_iCallerPC; // the PC of the caller
 
@@ -558,12 +560,12 @@ public class ServiceContext
     public static class ConstructRequest
             extends Message
         {
-        private final ConstructTemplate f_constructor;
+        private final MethodStructure f_constructor;
         private final TypeComposition f_clazz;
         private final ObjectHandle[] f_ahArg;
         private final CompletableFuture<ServiceHandle> f_future;
 
-        public ConstructRequest(Frame frameCaller, ConstructTemplate constructor, TypeComposition clazz,
+        public ConstructRequest(Frame frameCaller, MethodStructure constructor, TypeComposition clazz,
                                 CompletableFuture<ServiceHandle> future, ObjectHandle[] ahArg)
             {
             super(frameCaller);
@@ -581,7 +583,8 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    xService service = (xService) f_constructor.getClazzTemplate();
+                    ClassConstant constClass = (ClassConstant) f_constructor.getParent().getIdentityConstant();
+                    xService service = (xService) frame.f_context.f_types.getTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
                     }
@@ -718,13 +721,13 @@ public class ServiceContext
     public static class PropertyOpRequest
             extends Message
         {
-        private final PropertyTemplate f_property;
+        private final PropertyStructure f_property;
         private final ObjectHandle f_hValue;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
         private final PropertyOperation f_op;
 
-        public PropertyOpRequest(Frame frameCaller, PropertyTemplate property,
+        public PropertyOpRequest(Frame frameCaller, PropertyStructure property,
                                  ObjectHandle hValue, int cReturns,
                                  CompletableFuture<ObjectHandle> future, PropertyOperation op)
             {

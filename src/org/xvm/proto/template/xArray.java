@@ -1,7 +1,8 @@
 package org.xvm.proto.template;
 
-import org.xvm.asm.Constants;
+import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
@@ -11,7 +12,7 @@ import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
@@ -24,25 +25,21 @@ import java.util.function.Supplier;
  * @author gg 2017.02.27
  */
 public class xArray
-        extends TypeCompositionTemplate
+        extends ClassTemplate
         implements IndexSupport
     {
     public static xArray INSTANCE;
 
-    public xArray(TypeSet types)
+    public xArray(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:collections.Array<ElementType>", "x:Object", Shape.Class);
+        super(types, structure);
 
-        addImplement("x:collections.Sequence<ElementType>");
-
-        INSTANCE = this;
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
-    // subclassing
-    protected xArray(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
-        }
 
     @Override
     public void initDeclared()
@@ -72,36 +69,23 @@ public class xArray
         //    Array.Type<ElementType> ensurePersistent();
         //    Const+Array.Type<ElementType> ensureConst();
 
-        ConstructTemplate const1 = ensureConstructTemplate(new String[] {"x:collections.Array", "x:Int64"});
-        const1.markNative();
+        ensureMethodStructure(new String[]{"x:collections.Array", "x:Int64"}).markNative();
 
-        ConstructTemplate const2 = ensureConstructTemplate(new String[] {"x:collections.Array", "x:Int64", "x:Function"});
-        const2.markNative();
+        ensureMethodStructure(new String[]{"x:collections.Array", "x:Int64", "x:Function"}).markNative();
 
-        PropertyTemplate ptCap = ensurePropertyTemplate("capacity", "x:Int");
-        ptCap.setSetAccess(Constants.Access.PRIVATE);
 
-        PropertyTemplate ptLen = ensurePropertyTemplate("size", "x:Int");
-        ptLen.setSetAccess(Constants.Access.PRIVATE);
-
-        ensureMethodTemplate("elementAt", INT, new String[]{"x:Ref<ElementType>"}).markNative();
-        ensureMethodTemplate("reify", VOID, THIS).markNative();
-
-        ensureMethodTemplate("slice", new String[]{"x:Range<x:Int>"}, THIS);
-        ensureMethodTemplate("add", THIS, THIS);
-        ensureMethodTemplate("replace", new String[]{"x:Int", "ElementType"}, THIS);
-
-        ensureFunctionTemplate("compare", new String[]{"this.Type", "this.Type"}, new String[]{"x:Ordered"});
+        ensureMethodStructure("elementAt", INT, new String[]{"x:Ref<ElementType>"}).markNative();
+        ensureMethodStructure("reify", VOID, THIS).markNative();
         }
 
     @Override
-    public int construct(Frame frame, ConstructTemplate constructor,
+    public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
         Type typeEl = clzArray.f_atGenericActual[0];
         String sTemplate = typeEl.f_sName;
 
-        TypeCompositionTemplate templateEl = sTemplate == null ?
+        ClassTemplate templateEl = sTemplate == null ?
                 xObject.INSTANCE : f_types.getTemplate(sTemplate);
 
         // argument [0] is reserved for this:struct
@@ -195,7 +179,7 @@ public class xArray
         String sTemplate = type1.f_sName;
         if (sTemplate != null)
             {
-            TypeCompositionTemplate template = f_types.getTemplate(sTemplate);
+            ClassTemplate template = f_types.getTemplate(sTemplate);
 
             for (int i = 0, c = ah1.length; i < c; i++)
                 {

@@ -1,17 +1,12 @@
 package org.xvm.proto.template;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
+import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.Op;
-import org.xvm.proto.ServiceContext;
-import org.xvm.proto.Type;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeCompositionTemplate;
-import org.xvm.proto.TypeSet;
-import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -23,55 +18,28 @@ import java.util.concurrent.CompletableFuture;
  * @author gg 2017.02.27
  */
 public class xService
-        extends TypeCompositionTemplate
+        extends ClassTemplate
     {
     public static xService INSTANCE;
 
-    public xService(TypeSet types)
+    public xService(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, "x:Service", "x:Object", Shape.Interface);
+        super(types, structure);
 
-        INSTANCE = this;
-        }
-
-    // subclassing
-    protected xService(TypeSet types, String sName, String sSuper, Shape shape)
-        {
-        super(types, sName, sSuper, shape);
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
-        // +  @atomic String serviceName;
-        //    enum StatusIndicator {Idle, Busy, ShuttingDown, Terminated};
-        //    @ro @atomic StatusIndicator statusIndicator;
-        //    @ro @atomic CriticalSection? criticalSection;
-        //    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden};
-        //    @atomic Reentrancy reentrancy;
-        //    @ro @atomic Timeout? incomingTimeout;
-        //    @ro @atomic Timeout? timeout;
-        //    @ro @atomic Duration upTime;
-        //    @ro @atomic Duration cpuTime;
-        //    @ro @atomic Boolean contended;
-        //    @ro @atomic Int backlogDepth;
-        // +  Void yield();
-        // +  Void invokeLater(function Void doLater());
-        //    @ro @atomic Int bytesReserved;
-        //    @ro @atomic Int bytesAllocated;
-        //    Void gc();
-        //    Void shutdown();
-        //    Void kill();
-        // +  Void registerTimeout(Timeout? timeout);
-        //    Void registerCriticalSection(CriticalSection? criticalSection);
-        //    Void registerShuttingDownNotification(function Void notify());
-        //    Void registerUnhandledExceptionNotification(function Void notify(Exception));
+        ensurePropertyStructure("serviceName", "x:String").makeAtomicRef();
 
-        ensurePropertyTemplate("serviceName", "x:String").makeAtomicRef();
-
-        ensureMethodTemplate("yield", VOID, VOID).markNative();
-        ensureMethodTemplate("invokeLater", new String[] {"x:Function"}, VOID).markNative();
-        ensureMethodTemplate("registerTimeout", INT, VOID).markNative();
+        ensureMethodStructure("yield", VOID, VOID).markNative();
+        ensureMethodStructure("invokeLater", new String[]{"x:Function"}, VOID).markNative();
+        ensureMethodStructure("registerTimeout", INT, VOID).markNative();
         }
 
     @Override
@@ -88,11 +56,11 @@ public class xService
 
     @Override
     public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodTemplate method, ObjectHandle hArg, int iReturn)
+                            MethodStructure method, ObjectHandle hArg, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        switch (method.f_sName)
+        switch (method.getName())
             {
             case "invokeLater":
                 {
@@ -115,11 +83,11 @@ public class xService
 
     @Override
     public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodTemplate method, ObjectHandle[] ahArg, int iReturn)
+                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        switch (method.f_sName)
+        switch (method.getName())
             {
             case "yield":
                 {
@@ -131,11 +99,11 @@ public class xService
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || property.isAtomic())
+        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
             {
             return super.invokePreInc(frame, hTarget, property, iReturn);
             }
@@ -147,11 +115,11 @@ public class xService
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || property.isAtomic())
+        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
             {
             return super.invokePostInc(frame, hTarget, property, iReturn);
             }
@@ -163,11 +131,11 @@ public class xService
         }
 
     @Override
-    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || property.isAtomic())
+        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
             {
             return super.getPropertyValue(frame, hTarget, property, iReturn);
             }
@@ -179,11 +147,11 @@ public class xService
         }
 
     @Override
-    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn)
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || property.isAtomic())
+        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
             {
             return super.getFieldValue(frame, hTarget, property, iReturn);
             }
@@ -191,12 +159,12 @@ public class xService
         }
 
     @Override
-    public int setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+    public int setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyStructure property,
                                 ObjectHandle hValue)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || property.isAtomic())
+        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
             {
             return super.setPropertyValue(frame, hTarget, property, hValue);
             }
@@ -207,14 +175,14 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle setFieldValue(ObjectHandle hTarget, PropertyTemplate property, ObjectHandle hValue)
+    public ExceptionHandle setFieldValue(ObjectHandle hTarget, PropertyStructure property, ObjectHandle hValue)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
         ServiceContext context = hService.m_context;
         ServiceContext contextCurrent = ServiceContext.getCurrentContext();
 
-        if (context == null || context == contextCurrent || property.isAtomic())
+        if (context == null || context == contextCurrent || ConstantPoolAdapter.isAtomic(property))
             {
             return super.setFieldValue(hTarget, property, hValue);
             }
@@ -223,7 +191,7 @@ public class xService
         }
 
     @Override
-    public int construct(Frame frame, ConstructTemplate constructor,
+    public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
         ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
@@ -235,7 +203,7 @@ public class xService
 
     // ----- Service API -----
 
-    public int constructSync(Frame frame, ConstructTemplate constructor,
+    public int constructSync(Frame frame, MethodStructure constructor,
                              TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
         return super.construct(frame, constructor, clazz, ahArg, iReturn);
@@ -274,7 +242,7 @@ public class xService
     public interface PropertyOperation01
             extends PropertyOperation
         {
-        int invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property, int iReturn);
+        int invoke(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn);
         }
 
     // an operation against a property that takes one parameter and returns zero values
@@ -282,7 +250,7 @@ public class xService
     public interface PropertyOperation10
             extends PropertyOperation
         {
-        int invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+        int invoke(Frame frame, ObjectHandle hTarget, PropertyStructure property,
                    ObjectHandle hValue);
         }
 
@@ -291,7 +259,7 @@ public class xService
     public interface PropertyOperation11
             extends PropertyOperation
         {
-        int invoke(Frame frame, ObjectHandle hTarget, PropertyTemplate property,
+        int invoke(Frame frame, ObjectHandle hTarget, PropertyStructure property,
                    ObjectHandle hValue, int iReturn);
         }
 
