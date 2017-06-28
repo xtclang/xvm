@@ -410,10 +410,10 @@ public abstract class Component
     /**
      * Add an interface delegation.
      *
-     * @param constClass  the type to delegate
+     * @param constClass  the class type to delegate
      * @param constProp   the property specifying the reference to delegate to
      */
-    public void addDelegation(ClassConstant constClass, PropertyConstant constProp)
+    public void addDelegation(ClassTypeConstant constClass, PropertyConstant constProp)
         {
         addContribution(new Contribution(constClass, constProp));
         }
@@ -2338,7 +2338,7 @@ public abstract class Component
             else
                 {
                 sb.append(m_composition.toString().toLowerCase())
-                        .append(' ');
+                  .append(' ');
                 }
 
             sb.append(m_constContrib.getDescription());
@@ -2370,8 +2370,8 @@ public abstract class Component
             else if (m_composition == Composition.Delegates)
                 {
                 sb.append('(')
-                        .append(m_constProp.getDescription())
-                        .append(')');
+                  .append(m_constProp.getDescription())
+                  .append(')');
                 }
 
             return sb.toString();
@@ -2412,16 +2412,16 @@ public abstract class Component
      * for the conditional constant ID followed by the body of the component. (The children that go
      * with the various conditional components occur in the stream after the <b>last</b> body.)
      */
-    public static final int CONDITIONAL_BIT = 0x80;
+    public static final int CONDITIONAL_BIT  =   0x80;
 
-    public static final int FORMAT_MASK = 0x000F, FORMAT_SHIFT = 0;
-    public static final int ACCESS_MASK = 0x0300, ACCESS_SHIFT = 8;
+    public static final int FORMAT_MASK      = 0x000F, FORMAT_SHIFT     = 0;
+    public static final int ACCESS_MASK      = 0x0300, ACCESS_SHIFT     = 8;
     public static final int ACCESS_PUBLIC    = 0x0100;
     public static final int ACCESS_PROTECTED = 0x0200;
     public static final int ACCESS_PRIVATE   = 0x0300;
-    public static final int ABSTRACT_BIT     = 0x0400, ABSTRACT_SHIFT = 10;
-    public static final int STATIC_BIT = 0x0800, STATIC_SHIFT = 11;
-    public static final int SYNTHETIC_BIT = 0x1000, SYNTHETIC_SHIFT = 12;
+    public static final int ABSTRACT_BIT     = 0x0400, ABSTRACT_SHIFT   = 10;
+    public static final int STATIC_BIT       = 0x0800, STATIC_SHIFT     = 11;
+    public static final int SYNTHETIC_BIT    = 0x1000, SYNTHETIC_SHIFT  = 12;
 
 
     // ----- fields --------------------------------------------------------------------------------

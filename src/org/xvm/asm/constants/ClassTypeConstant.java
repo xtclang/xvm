@@ -67,19 +67,14 @@ public class ClassTypeConstant
         {
         super(pool);
 
-        if (constClass == null ||
-                !( constClass.getFormat() == Format.Module
-                || constClass.getFormat() == Format.Package
-                || constClass.getFormat() == Format.Class  ))
+        if (constClass == null)
             {
             throw new IllegalArgumentException("module, package, or class required");
             }
 
         m_constClass = constClass;
-
+        m_access     = access == null ? Access.PUBLIC : access;
         m_listParams = constTypes == null ? Collections.EMPTY_LIST : Arrays.asList(constTypes);
-
-        m_access = access == null ? Access.PUBLIC : access;
         }
 
 

@@ -4,27 +4,17 @@ package org.xvm.asm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.PrintWriter;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.constants.CharStringConstant;
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnresolvedNameConstant;
 
-import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
-
-import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**

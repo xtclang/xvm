@@ -1,14 +1,15 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.ArrayList;
-import org.xvm.asm.Version;
-import org.xvm.asm.VersionTree;
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import org.xvm.asm.Version;
+import org.xvm.asm.VersionTree;
+
+import org.xvm.compiler.Token;
 
 
 /**

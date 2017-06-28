@@ -5,17 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import static org.xvm.util.Handy.checkElementsNonNull;
+import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -43,81 +37,41 @@ public class ParameterTypeConstant
         {
         super(pool);
 
-        m_iClass = readIndex(in);
-
-        int cParams = readMagnitude(in);
-        if (cParams > 0)
-            {
-            int[] aiParam = new int[cParams];
-            for (int i = 1; i <= cParams; ++i)
-                {
-                aiParam[i] = readIndex(in);
-                }
-            m_aiParam = aiParam;
-            }
-
-        m_iType = readIndex(in);
+        m_iName = readIndex(in);
         }
 
     /**
-     * Construct a constant whose value is a data type.
+     * Construct a constant whose value is a name that represents a data type parameter (which is a
+     * specific data type at runtime).
      *
-     * @param pool         the ConstantPool that will contain this Constant
-     * @param constClass   the class of the annotation
-     * @param aconstParam  the parameters of the annotation, or null
-     * @param constType    the type being annotated
+     * @param pool        the ConstantPool that will contain this Constant
+     * @param sParamName  the simple name of the type parameter
      */
-    public ParameterTypeConstant(ConstantPool pool, ClassConstant constClass, String sParamName)
+    public ParameterTypeConstant(ConstantPool pool, String sParamName)
         {
         super(pool);
 
-        if (constClass == null)
-            {
-            throw new IllegalArgumentException("annotation class required");
-            }
-
-        if (aconstParam != null)
-            {
-            checkElementsNonNull(aconstParam);
-            }
-
-        if (constType == null)
-            {
-            throw new IllegalArgumentException("annotated type required");
-            }
-
-        m_constClass = constClass;
-        m_listParams = aconstParam == null ? Collections.EMPTY_LIST : Arrays.asList(aconstParam);
-        m_constType  = constType;
+        assert isValidIdentifier(sParamName);
+        m_constName = pool.ensureCharStringConstant(sParamName);
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * @return the class of the annotation
+     * @return the name of the type parameter
      */
-    public ClassConstant getAnnotationClass()
+    public String getName()
         {
-        return m_constClass;
+        return m_constName.getValue();
         }
 
     /**
-     * @return a read-only list of constants which are the parameters for the annotation
+     * @return the name of the type parameter, as a CharStringConstant
      */
-    public List<Constant> getAnnotationParams()
+    public CharStringConstant getNameConstant()
         {
-        List<Constant> list = m_listParams;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
-        }
-
-    /**
-     * @return the annotated type
-     */
-    public TypeConstant getAnnotatedType()
-        {
-        return m_constType;
+        return m_constName;
         }
 
 
@@ -133,64 +87,13 @@ public class ParameterTypeConstant
     protected int compareDetails(Constant obj)
         {
         ParameterTypeConstant that = (ParameterTypeConstant) obj;
-        int n = this.m_constClass.compareTo(that.m_constClass);
-
-        if (n == 0)
-            {
-            n = this.m_constType.compareTo(that.m_constType);
-            }
-
-        Params: if (n == 0)
-            {
-            List<Constant> listThis = this.m_listParams;
-            List<Constant> listThat = that.m_listParams;
-            for (int i = 0, c = Math.min(listThis.size(), listThat.size()); i < c; ++i)
-                {
-                n = listThis.get(i).compareTo(listThat.get(i));
-                if (n != 0)
-                    {
-                    break Params;
-                    }
-                }
-            n = listThis.size() - listThat.size();
-            }
-
-        return n;
+        return this.m_constName.compareDetails(that.m_constName);
         }
 
     @Override
     public String getValueString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('@')
-          .append(m_constClass.getValueString());
-
-        if (!m_listParams.isEmpty())
-            {
-            sb.append('(');
-
-            boolean first = true;
-            for (Constant param : m_listParams)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(param.getValueString());
-                }
-
-            sb.append(')');
-            }
-
-        sb.append(' ')
-          .append(m_constType.getValueString());
-
-        return sb.toString();
+        return m_constName.getValue();
         }
 
 
@@ -200,45 +103,13 @@ public class ParameterTypeConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        ConstantPool pool = getConstantPool();
-
-        m_constClass = (ClassConstant) pool.getConstant(m_iClass);
-
-        if (m_aiParam == null)
-            {
-            m_listParams = Collections.EMPTY_LIST;
-            }
-        else
-            {
-            int c = m_aiParam.length;
-            List<Constant> listParams = new ArrayList<>(c);
-            for (int i = 0; i < c; ++i)
-                {
-                listParams.add(pool.getConstant(m_aiParam[i]));
-                }
-            m_listParams = listParams;
-            }
-
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
+        m_constName = (CharStringConstant) getConstantPool().getConstant(m_iName);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constClass = (ClassConstant) pool.register(m_constClass);
-
-        List<Constant> listParams = m_listParams;
-        for (int i = 0, c = listParams.size(); i < c; ++i)
-            {
-            Constant constOld = listParams.get(i);
-            Constant constNew = pool.register(constOld);
-            if (constNew != constOld)
-                {
-                listParams.set(i, constNew);
-                }
-            }
-
-        m_constType = (TypeConstant) pool.register(m_constType);
+        m_constName = (CharStringConstant) pool.register(m_constName);
         }
 
     @Override
@@ -246,13 +117,7 @@ public class ParameterTypeConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, indexOf(m_constClass));
-        writePackedLong(out, m_listParams.size());
-        for (Constant param : m_listParams)
-            {
-            writePackedLong(out, param.getPosition());
-            }
-        writePackedLong(out, indexOf(m_constType));
+        writePackedLong(out, m_constName.getPosition());
         }
 
 
@@ -261,39 +126,19 @@ public class ParameterTypeConstant
     @Override
     public int hashCode()
         {
-        return m_constClass.hashCode() ^ m_listParams.hashCode() ^ m_constType.hashCode();
+        return -m_constName.hashCode();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * During disassembly, this holds the index of the class constant of the annotation.
+     * During disassembly, this holds the index of the parameter name constant.
      */
-    private int m_iClass;
+    private int m_iName;
 
     /**
-     * During disassembly, this holds the index of the the annotation parameters.
+     * The constant that holds the name of the type parameter.
      */
-    private int[] m_aiParam;
-
-    /**
-     * During disassembly, this holds the index of the type constant of the type being annotated.
-     */
-    private int m_iType;
-
-    /**
-     * The annotating class.
-     */
-    private ClassConstant m_constClass;
-
-    /**
-     * The annotation parameters.
-     */
-    private List<Constant> m_listParams;
-
-    /**
-     * The type being annotated.
-     */
-    private TypeConstant m_constType;
+    private CharStringConstant m_constName;
     }
