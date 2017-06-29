@@ -210,7 +210,7 @@ public abstract class Component
      *
      * @return  the constant that identifies the component, or null for a File component
      */
-    public Constant getIdentityConstant()
+    public IdentityConstant getIdentityConstant()
         {
         return m_constId;
         }

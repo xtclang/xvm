@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 
 
 /**
@@ -149,7 +150,7 @@ public abstract class XvmStructure
      *
      * @return the Constant that represents the identity of this XvmStructure; otherwise null
      */
-    public Constant getIdentityConstant()
+    public IdentityConstant getIdentityConstant()
         {
         return null;
         }
