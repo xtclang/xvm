@@ -51,6 +51,7 @@ public class xAtomicIntNumber
         //    @op Void shiftLeftAssign(Int count)
         //    @op Void shiftRightAssign(Int count)
         //    @op Void shiftAllRightAssign(Int count)
+        // TODO: all native
         }
 
     @Override

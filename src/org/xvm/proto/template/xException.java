@@ -1,9 +1,15 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.MethodStructure;
-import org.xvm.proto.*;
+
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.Op;
+import org.xvm.proto.ServiceContext;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 import org.xvm.proto.op.Return_0;
 import org.xvm.proto.op.PSet;
 
@@ -30,10 +36,7 @@ public class xException
     @Override
     public void initDeclared()
         {
-
-        MethodStructure ct = ensureMethodStructure(
-                new String[]{"x:Exception", "x:String|x:Nullable", "x:Exception|x:Nullable"});
-
+        MethodTemplate ct = getMethodTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable"});
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {
             new PSet(0, f_types.f_adapter.getPropertyConstId("x:Exception", "text"), 1),
@@ -61,7 +64,7 @@ public class xException
         ExceptionHandle hException = makeHandle(null, null);
 
         INSTANCE.setFieldValue(hException,
-                INSTANCE.getPropertyTemplate("text"), xString.makeHandle(sMessage));
+                INSTANCE.getProperty("text"), xString.makeHandle(sMessage));
 
         return hException;
         }
@@ -75,9 +78,9 @@ public class xException
         ServiceContext context = ServiceContext.getCurrentContext();
         Frame frame = context.getCurrentFrame();
 
-        INSTANCE.setFieldValue(hException, INSTANCE.getPropertyTemplate("stackTrace"),
+        INSTANCE.setFieldValue(hException, INSTANCE.getProperty("stackTrace"),
                 xString.makeHandle(frame.getStackTrace()));
-        INSTANCE.setFieldValue(hException, INSTANCE.getPropertyTemplate("cause"), hCause);
+        INSTANCE.setFieldValue(hException, INSTANCE.getProperty("cause"), hCause);
 
         return hException;
         }

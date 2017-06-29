@@ -2,7 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.ConstantPoolAdapter;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -48,7 +48,7 @@ public class Call_11 extends OpCallable
                 {
                 MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
-                ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(function)];
+                ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(function)];
                 ahVar[0] = hArg;
 
                 return frame.call1(function, null, ahVar, f_nRetValue);

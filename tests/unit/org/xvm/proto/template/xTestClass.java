@@ -1,7 +1,7 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.MethodStructure;
+
 import org.xvm.proto.*;
 
 import org.xvm.proto.op.*;
@@ -13,7 +13,7 @@ import org.xvm.proto.op.*;
  */
 public class xTestClass extends ClassTemplate
     {
-    private final ConstantPoolAdapter adapter;
+    private final Adapter adapter;
 
     public xTestClass(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -26,14 +26,10 @@ public class xTestClass extends ClassTemplate
     @Override
     public void initDeclared()
         {
-
-        ensurePropertyTemplate("prop1", "x:String");
-
         // --- constructor()
-        MethodStructure construct = ensureMethodStructure(
-                new String[]{"x:TestClass", "x:String"});
-        MethodStructure ftFinally = ensureMethodStructure(
-                "finally", new String[]{"x:TestClass", "x:String"}, VOID);
+        MethodTemplate construct = getMethodTemplate("construct", new String[]{"x:TestClass", "x:String"});
+        MethodTemplate ftFinally = getMethodTemplate(
+                "finally", new String[]{"x:TestClass", "x:String"});
 
         construct.m_aop = new Op[]
             { // #0 = this:struct; #1 = s
@@ -42,7 +38,7 @@ public class xTestClass extends ClassTemplate
             new Return_0(),
             };
         construct.m_cVars = 2;
-        construct.setFinally(ftFinally);
+        construct.m_mtFinally = ftFinally;
 
         ftFinally.m_aop = new Op[]
             { // #0 = this:private; #1 = s
@@ -53,7 +49,7 @@ public class xTestClass extends ClassTemplate
         ftFinally.m_cVars = 2;
 
         // --- method1()
-        MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
+        MethodTemplate mtMethod1 = getMethodTemplate("method1", VOID);
         mtMethod1.m_aop = new Op[]
             { // #0 (this)
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
@@ -72,7 +68,7 @@ public class xTestClass extends ClassTemplate
             };
         mtMethod1.m_cVars = 5;
 
-        MethodStructure mtExceptional = ensureMethodStructure("exceptional", STRING, VOID);
+        MethodTemplate mtExceptional = getMethodTemplate("exceptional", STRING);
         mtExceptional.m_aop = new Op[]
             { // #0 (this), #1 (s)
             new Var(adapter.getClassTypeConstId("x:Exception")), // #2

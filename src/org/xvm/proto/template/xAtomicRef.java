@@ -33,12 +33,7 @@ public class xAtomicRef
     @Override
     public void initDeclared()
         {
-        //    Boolean replace(RefType oldValue, RefType newValue)
-        //    conditional RefType replaceFailed(RefType oldValue, RefType newValue)
-        //
-
-        ensureMethodStructure("replace",
-                new String[]{"RefType", "RefType"}, new String[]{"x:Boolean"}).markNative();
+        markNativeMethod("replace", new String[]{"RefType", "RefType"});
         }
 
     @Override

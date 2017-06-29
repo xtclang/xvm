@@ -163,7 +163,7 @@ public class TypeComposition
     public Frame callDefaultConstructors(Frame frame, ObjectHandle[] ahVar, Supplier<Frame> continuation)
         {
         ClassTemplate template = f_template;
-        MethodStructure ftDefault = ConstantPoolAdapter.getDefaultConstructor(template.f_struct);
+        MethodStructure ftDefault = Adapter.getDefaultConstructor(template.f_struct);
         ClassTemplate templateSuper = template.getSuper();
 
         Frame frameDefault;

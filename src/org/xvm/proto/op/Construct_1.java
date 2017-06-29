@@ -2,7 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.ConstantPoolAdapter;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -38,11 +38,11 @@ public class Construct_1 extends OpCallable
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(constructor)];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(constructor)];
             ahVar[0] = hStruct;
             ahVar[1] = hArg;
 
-            frame.chainFinalizer(ConstantPoolAdapter.makeFinalizer(constructor, ahVar));
+            frame.chainFinalizer(frame.f_adapter.makeFinalizer(constructor, ahVar));
 
             return frame.call1(constructor, null, ahVar, Frame.RET_UNUSED);
             }

@@ -1,10 +1,10 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.ConstantPoolAdapter;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -34,13 +34,13 @@ public class New_N extends OpCallable
     public int process(Frame frame, int iPC)
         {
         MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
-        ClassConstant constClass = (ClassConstant) constructor.getParent().getIdentityConstant();
+        IdentityConstant constClass = (IdentityConstant) constructor.getParent().getIdentityConstant();
         ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
         ExceptionHandle hException;
         try
             {
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, ConstantPoolAdapter.getVarCount(constructor), 1);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor), 1);
             if (ahVar == null)
                 {
                 return R_REPEAT;

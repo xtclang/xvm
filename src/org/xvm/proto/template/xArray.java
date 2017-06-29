@@ -40,42 +40,11 @@ public class xArray
             }
         }
 
-
     @Override
     public void initDeclared()
         {
-        //    construct Array(Int capacity)
-        //    construct Array(Int capacity, function ElementType(Int) supply)
-        //
-        //    public/private Int capacity = 0;
-        //    public/private Int size     = 0;
-        //
-        //    @op ElementType get(Int index)
-        //    @op Void set(Int index, ElementType value)
-        //    @op Array.Type<ElementType> slice(Range<Int> range);
-        //    @op Array.Type<ElementType> add(Array.Type<ElementType> that);
-        //    @op Array.Type<ElementType> replace(Int index, ElementType value);
-        //
-        //    Ref<ElementType> elementAt(Int index)
-        //    Array.Type<ElementType> reify();
-        //
-        //    static Ordered compare(Array value1, Array value2)
-        //
-        //    private Element<ElementType>? head;
-        //    private class Element<RefType>(ElementType value)
-        //
-        //    Array.Type<ElementType> ensureMutable()
-        //    Array.Type<ElementType> ensureFixedSize();
-        //    Array.Type<ElementType> ensurePersistent();
-        //    Const+Array.Type<ElementType> ensureConst();
-
-        ensureMethodStructure(new String[]{"x:collections.Array", "x:Int64"}).markNative();
-
-        ensureMethodStructure(new String[]{"x:collections.Array", "x:Int64", "x:Function"}).markNative();
-
-
-        ensureMethodStructure("elementAt", INT, new String[]{"x:Ref<ElementType>"}).markNative();
-        ensureMethodStructure("reify", VOID, THIS).markNative();
+        markNativeMethod("elementAt", INT);
+        markNativeMethod("reify", VOID);
         }
 
     @Override

@@ -1,8 +1,8 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.MethodStructure;
-import org.xvm.proto.ConstantPoolAdapter;
+
+import org.xvm.proto.Adapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
@@ -15,11 +15,11 @@ import org.xvm.proto.op.*;
  */
 public class xTestClass2 extends ClassTemplate
     {
-    private final ConstantPoolAdapter adapter;
+    private final Adapter adapter;
 
     public xTestClass2(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure;
+        super(types, structure);
 
         adapter = types.f_container.f_adapter;
         }
@@ -27,13 +27,9 @@ public class xTestClass2 extends ClassTemplate
     @Override
     public void initDeclared()
         {
-        m_fAutoRegister = true;
-
-        ensurePropertyTemplate("prop2", "x:Int");
-
-        MethodStructure construct = ensureMethodStructure(new String[]{"x:TestClass2", "x:Int64", "x:String"});
-        MethodStructure ftFinally = ensureMethodStructure(
-                "finally", new String[]{"x:TestClass2", "x:Int64", "x:String"}, VOID);
+        MethodTemplate construct = getMethodTemplate("construct", new String[]{"x:TestClass2", "x:Int64", "x:String"});
+        MethodTemplate ftFinally = getMethodTemplate(
+                "finally", new String[]{"x:TestClass2", "x:Int64", "x:String"});
 
         construct.m_aop = new Op[]
             { // #0 = this:struct; #1 = i; #2 = s
@@ -43,7 +39,7 @@ public class xTestClass2 extends ClassTemplate
             new Return_0(),
             };
         construct.m_cVars = 3;
-        construct.setFinally(ftFinally);
+        construct.m_mtFinally = ftFinally;
 
         ftFinally.m_aop = new Op[]
             { // #0 = this:private; #1 = i; #2 = s
@@ -53,7 +49,7 @@ public class xTestClass2 extends ClassTemplate
             };
         ftFinally.m_cVars = 3;
 
-        MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
+        MethodTemplate mtMethod1 = getMethodTemplate("method1", VOID);
         mtMethod1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),

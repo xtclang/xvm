@@ -2,10 +2,9 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -37,7 +36,7 @@ public class New_0G extends OpCallable
     public int process(Frame frame, int iPC)
         {
         MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
-        ClassConstant constClass = (ClassConstant) constructor.getParent().getIdentityConstant();
+        IdentityConstant constClass = (IdentityConstant) constructor.getParent().getIdentityConstant();
         ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
         try
@@ -57,7 +56,7 @@ public class New_0G extends OpCallable
                 clzTarget = frame.f_context.f_types.ensureComposition(frame, -f_nTypeValue);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(constructor)];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(constructor)];
 
             return template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
             }

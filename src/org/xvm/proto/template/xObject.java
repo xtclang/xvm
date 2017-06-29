@@ -1,7 +1,6 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constants;
 
 import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Frame;
@@ -42,7 +41,7 @@ public class xObject
     @Override
     public void initDeclared()
         {
-        ensureMethodStructure("to", VOID, STRING).markNative();
+        markNativeMethod("to", VOID);
         }
 
     @Override

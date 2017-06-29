@@ -3,8 +3,8 @@ package org.xvm.proto;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.constants.ClassConstant;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.proto.Fiber.FiberStatus;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
@@ -583,7 +583,7 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    ClassConstant constClass = (ClassConstant) f_constructor.getParent().getIdentityConstant();
+                    IdentityConstant constClass = (IdentityConstant) f_constructor.getParent().getIdentityConstant();
                     xService service = (xService) frame.f_context.f_types.getTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);

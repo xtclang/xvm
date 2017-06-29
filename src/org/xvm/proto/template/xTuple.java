@@ -35,29 +35,6 @@ public class xTuple
     @Override
     public void initDeclared()
         {
-// TODO deferred for now
-//        addImplement("FixedSizeAble");
-//        addImplement("PersistentAble");
-//        addImplement("ConstAble");
-
-        //    @ro Int size;
-        //    @op ElementTypes[index] get(Int index);
-        //    @op Void set(Int index, ElementTypes[index] newValue);
-        //    @op Ref<ElementTypes[index]> elementAt(Int index);
-        //    @op Tuple add(Tuple that);
-        //    Tuple<ElementTypes> replace(Int index, ElementTypes[index] value);
-        //    @op Tuple slice(Range<Int> range);
-        //    Tuple remove(Int index);
-        //    Tuple remove(Range<Int> range);
-        // TODO deferred
-        //    Tuple<ElementTypes> ensureFixedSize();
-        //    Tuple<ElementTypes> ensurePersistent();
-        //    Tuple<ElementTypes> ensureConst();
-
-        MethodStructure construct =
-                ensureMethodStructure(new String[]{"x:collections.Sequence"});
-        construct.markNative();
-
         }
 
     @Override

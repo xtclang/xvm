@@ -3,10 +3,20 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.proto.*;
+
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Adapter;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.Op;
+import org.xvm.proto.ServiceContext;
+import org.xvm.proto.Type;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
+import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -35,11 +45,9 @@ public class xService
     @Override
     public void initDeclared()
         {
-        ensurePropertyStructure("serviceName", "x:String").makeAtomicRef();
-
-        ensureMethodStructure("yield", VOID, VOID).markNative();
-        ensureMethodStructure("invokeLater", new String[]{"x:Function"}, VOID).markNative();
-        ensureMethodStructure("registerTimeout", INT, VOID).markNative();
+        markNativeMethod("yield", VOID);
+        markNativeMethod("invokeLater", new String[]{"x:Function"});
+        markNativeMethod("registerTimeout", INT);
         }
 
     @Override
@@ -49,7 +57,7 @@ public class xService
 
         ServiceHandle hService = makeHandle(context, clazz, clazz.ensureStructType());
 
-        setFieldValue(hService, getPropertyTemplate("serviceName"), xString.makeHandle(f_sName));
+        setFieldValue(hService, getProperty("serviceName"), xString.makeHandle(f_sName));
 
         return hService;
         }
@@ -103,7 +111,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
             {
             return super.invokePreInc(frame, hTarget, property, iReturn);
             }
@@ -119,7 +127,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
             {
             return super.invokePostInc(frame, hTarget, property, iReturn);
             }
@@ -135,7 +143,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
             {
             return super.getPropertyValue(frame, hTarget, property, iReturn);
             }
@@ -151,7 +159,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
             {
             return super.getFieldValue(frame, hTarget, property, iReturn);
             }
@@ -164,7 +172,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || ConstantPoolAdapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
             {
             return super.setPropertyValue(frame, hTarget, property, hValue);
             }
@@ -182,7 +190,7 @@ public class xService
         ServiceContext context = hService.m_context;
         ServiceContext contextCurrent = ServiceContext.getCurrentContext();
 
-        if (context == null || context == contextCurrent || ConstantPoolAdapter.isAtomic(property))
+        if (context == null || context == contextCurrent || Adapter.isAtomic(property))
             {
             return super.setFieldValue(hTarget, property, hValue);
             }

@@ -27,9 +27,9 @@ public class Call_00 extends OpCallable
         if (f_nFunctionValue == A_SUPER)
             {
             // in-lined version of "callSuperN"
-            MethodStructure methodSuper = ConstantPoolAdapter.getSuper(frame.f_function);
+            MethodStructure methodSuper = Adapter.getSuper(frame.f_function);
 
-            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(methodSuper)];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
 
             return frame.call1(methodSuper, frame.getThis(), ahVar, Frame.RET_UNUSED);
             }
@@ -38,7 +38,7 @@ public class Call_00 extends OpCallable
             {
             MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
-            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(function)];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(function)];
 
             return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
             }

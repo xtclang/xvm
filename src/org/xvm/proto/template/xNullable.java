@@ -21,8 +21,6 @@ public class xNullable
     @Override
     public void initDeclared()
         {
-        // in-place declaration for True and False
-        // in-place generation of Hashable
         ClassTemplate template = f_types.getTemplate("x:Nullable$Null");
 
         NULL = new NullHandle(template.f_clazzCanonical);

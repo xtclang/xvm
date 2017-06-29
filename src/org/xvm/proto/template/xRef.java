@@ -34,21 +34,8 @@ public class xRef
     @Override
     public void initDeclared()
         {
-        //    @ro Boolean assigned;
-        //    conditional RefType peek()
-        //    RefType get();
-        //    Void set(RefType value);
-        //    @ro Type ActualType;
-        //    static Boolean equals(Ref value1, Ref value2)
-        //    @ro String? name;
-        //    @ro Int byteLength;
-        //    @ro Boolean selfContained;
-
-        PropertyTemplate ptAssigned = ensurePropertyTemplate("assigned", "x:Boolean");
-        ptAssigned.addGet().markNative();
-
-        ensureMethodStructure("get", VOID, new String[]{"RefType"}).markNative();
-        ensureMethodStructure("set", new String[]{"RefType"}, VOID).markNative();
+        markNativeGetter("assigned");
+        markNativeSetter("assigned");
         }
 
     @Override

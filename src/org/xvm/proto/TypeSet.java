@@ -4,9 +4,13 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -20,19 +24,21 @@ public class TypeSet
     private Map<Integer, Type> m_mapTypes = new ConcurrentHashMap<>();
 
     public final Container f_container;
+    final public Adapter f_adapter;
 
     // cache - ClassTemplates by name
     final private Map<String, ClassTemplate> m_mapTemplatesByName = new HashMap<>();
 
     // cache - ClassTemplates by ClassConstant
-    final private Map<ClassConstant, ClassTemplate> m_mapTemplatesByConst = new HashMap<>();
+    final private Map<IdentityConstant, ClassTemplate> m_mapTemplatesByConst = new HashMap<>();
 
     // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
     private Map<Integer, TypeComposition> m_mapConstCompositions = new TreeMap<>(Integer::compare);
 
-    TypeSet(Container pool)
+    TypeSet(Container pool, Adapter adapter)
         {
         f_container = pool;
+        f_adapter = adapter;
         }
 
     // ----- templates -----
@@ -50,7 +56,7 @@ public class TypeSet
         return template;
         }
 
-    public ClassTemplate getTemplate(ClassConstant constClass)
+    public ClassTemplate getTemplate(IdentityConstant constClass)
         {
         ClassTemplate template = m_mapTemplatesByConst.get(constClass);
         if (template == null)
@@ -66,7 +72,10 @@ public class TypeSet
                 {
                 Class<ClassTemplate> clz = (Class<ClassTemplate>) Class.forName(sClz);
 
-                template = clz.getConstructor(TypeSet.class).newInstance(this);
+                template = clz.getConstructor(TypeSet.class, ClassStructure.class, Boolean.TYPE).
+                        newInstance(this, structClass, Boolean.TRUE);
+
+                template.initDeclared();
                 }
             catch (ClassNotFoundException e)
                 {

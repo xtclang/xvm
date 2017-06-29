@@ -5,7 +5,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ClassTypeConstant;
 
 import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
@@ -50,7 +49,7 @@ public class xClass
                 return target.createConstHandle(constant, heap);
                 }
 
-            TypeComposition clzClass = resolve(new TypeComposition[] {clzTarget});
+            TypeComposition clzClass = resolve(new TypeComposition[]{clzTarget});
             return new ClassHandle(clzClass, clzTarget);
             }
         return null;

@@ -4,46 +4,43 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.template.xFunction;
+
 import org.xvm.util.Handy;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeMap;
 
 
 /**
- * A temporary intermediary between the RT and the ConstantPool
+ * A temporary intermediary between the RT, the ConstantPool and ClassStructure
  *
  * @author gg 2017.03.08
  */
-public class ConstantPoolAdapter
+public class Adapter
     {
-    public ConstantPool m_pool;
+    public final ConstantPool f_pool;
+    public final TypeSet f_types;
 
     // the template composition: name -> the corresponding ClassConstant id
     private Map<String, Integer> m_mapClasses = new HashMap<>();
 
-    // the property template: fully qualified name (x:collections.Map#size) -> the corresponding PropertyConstant id
-    private Map<String, Integer> m_mapProperties = new HashMap<>();
-
-    // the method template fully qualified name (x:collections.Map#get[KeyType]) -> the corresponding MethodConstant id
-    private Map<String, Integer> m_mapMethods = new TreeMap<>();
-
-    public ConstantPoolAdapter(ConstantPool pool)
+    public Adapter(Container container)
         {
-        m_pool = pool;
+        f_pool = container.f_pool;
+        f_types = container.f_types;
         }
 
     public int getClassTypeConstId(String sName)
@@ -71,7 +68,7 @@ public class ConstantPoolAdapter
                     aType[i] = getClassTypeConstant(getClassTypeConstId(sType));
                     }
 
-                int nTypeId = m_pool.ensureClassTypeConstant(
+                int nTypeId = f_pool.ensureClassTypeConstant(
                         constType.getClassConstant(), null, aType).getPosition();
 
                 m_mapClasses.put(sName, nTypeId);
@@ -91,14 +88,15 @@ public class ConstantPoolAdapter
 
     public ClassTypeConstant getClassTypeConstant(int nConstId)
         {
-        return (ClassTypeConstant) m_pool.getConstant(nConstId);
+        return (ClassTypeConstant) f_pool.getConstant(nConstId);
         }
 
     public int getPropertyConstId(String sClassName, String sPropName)
         {
         try
             {
-            return m_mapProperties.get(sClassName + '#' + sPropName);
+            return f_types.getTemplate(sClassName).getProperty(sPropName).
+                    getIdentityConstant().getPosition();
             }
         catch (NullPointerException e)
             {
@@ -106,16 +104,12 @@ public class ConstantPoolAdapter
             }
         }
 
-    public PropertyConstant getPropertyConstant(int nConstId)
-        {
-        return (PropertyConstant) m_pool.getConstant(nConstId);
-        }
-
     public int getMethodConstId(String sClassName, String sMethName)
         {
         try
             {
-            return m_mapMethods.get(sClassName + '#' + sMethName);
+            return f_types.getTemplate(sClassName).getMethod(sMethName, null, null).
+                    getIdentityConstant().getPosition();
             }
         catch (NullPointerException e)
             {
@@ -123,16 +117,7 @@ public class ConstantPoolAdapter
             }
         }
 
-    public MethodConstant getMethodConstant(int nConstId)
-        {
-        return (MethodConstant) m_pool.getConstant(nConstId);
-        }
-
     // FOR SIMULATION ONLY
-    public ModuleConstant ensureModuleConstant(String sModule)
-        {
-        return m_pool.ensureModuleConstant(sModule);
-        }
 
     public int ensureValueConstantId(Object oValue)
         {
@@ -143,17 +128,17 @@ public class ConstantPoolAdapter
         {
         if (oValue instanceof Integer || oValue instanceof Long)
             {
-            return m_pool.ensureIntConstant(((Number) oValue).longValue());
+            return f_pool.ensureIntConstant(((Number) oValue).longValue());
             }
 
         if (oValue instanceof String)
             {
-            return m_pool.ensureCharStringConstant((String) oValue);
+            return f_pool.ensureCharStringConstant((String) oValue);
             }
 
         if (oValue instanceof Character)
             {
-            return m_pool.ensureCharConstant(((Character) oValue).charValue());
+            return f_pool.ensureCharConstant(((Character) oValue).charValue());
             }
 
         if (oValue instanceof Boolean)
@@ -172,7 +157,7 @@ public class ConstantPoolAdapter
                 {
                 aconst[i] = ensureValueConstant(ao[i]);
                 }
-            return m_pool.ensureTupleConstant(aconst);
+            return f_pool.ensureTupleConstant(aconst);
             }
 
         throw new IllegalArgumentException();
@@ -221,16 +206,18 @@ public class ConstantPoolAdapter
         return (ClassStructure) (opt.isPresent() ? opt.get().getClassConstant().getComponent() : null);
         }
 
-    public static MethodStructure getMethod(ClassStructure structure, String sName, String[] asArgType)
+    public static MethodStructure getMethod(ClassStructure structure, String sName,
+                                            String[] asArgType, String[] asRetType)
         {
-        // TODO:
-        return null;
+        MultiMethodStructure mms = (MultiMethodStructure) structure.getChild(sName);
+
+        // TODO: use the types
+        return (MethodStructure) mms.children().get(0);
         }
 
     public static MethodStructure getDefaultConstructor(ClassStructure structure)
         {
-        // TODO:
-        return null;
+        return getMethod(structure, "default", ClassTemplate.VOID, ClassTemplate.VOID);
         }
 
     public static MethodStructure getSuper(MethodStructure structure)
@@ -239,34 +226,42 @@ public class ConstantPoolAdapter
         return null;
         }
 
-    public static int getScopeCount(MethodStructure method)
+    public int getScopeCount(MethodStructure method)
         {
-        // TODO:
-        return 5;
+        ClassStructure clazz = (ClassStructure) method.getParent();
+        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(method.getIdentityConstant());
+        return tm == null ? 1 : tm.m_cScopes;
         }
 
     public static int getArgCount(MethodStructure method)
         {
-        // TODO:
-        return 3;
+        MethodConstant constMethod = method.getIdentityConstant();
+        return constMethod.getRawParams().length;
         }
 
-    public static int getVarCount(MethodStructure method)
+    public int getVarCount(MethodStructure method)
         {
-        // TODO:
-        return 20;
+        ClassStructure clazz = (ClassStructure) method.getParent();
+        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(method.getIdentityConstant());
+        return tm == null ? 0 : tm.m_cVars;
         }
 
-    public static Op[] getOps(MethodStructure method)
+    public Op[] getOps(MethodStructure method)
         {
-        // TODO:
-        return null;
+        ClassStructure clazz = (ClassStructure) method.getParent();
+        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(method.getIdentityConstant());
+        return tm == null ? null : tm.m_aop;
         }
 
-    public static MethodStructure getFinalizer(MethodStructure constructor)
+    public MethodStructure getFinalizer(MethodStructure constructor)
         {
-        // TODO:
-        return null;
+        ClassStructure clazz = (ClassStructure) constructor.getParent();
+        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(constructor.getIdentityConstant());
+        return tm == null ? null : tm.m_mtFinally.f_struct;
         }
 
     public static Type getReturnType(MethodStructure method, int iRet, TypeComposition clzParent)
@@ -275,13 +270,15 @@ public class ConstantPoolAdapter
         return null;
         }
 
-    public static boolean isNative(MethodStructure method)
+    public boolean isNative(MethodStructure method)
         {
-        // TODO:
-        return false;
+        ClassStructure clazz = (ClassStructure) method.getParent();
+        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(method.getIdentityConstant());
+        return tm != null && tm.m_fNative;
         }
 
-    public static xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor, ObjectHandle[] ahArg)
+    public xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor, ObjectHandle[] ahArg)
         {
         MethodStructure methodFinally = getFinalizer(constructor);
 
@@ -325,11 +322,17 @@ public class ConstantPoolAdapter
 
     public static MethodStructure getGetter(PropertyStructure property)
         {
-        return null;
+        MultiMethodStructure mms = (MultiMethodStructure) property.getChild("get");
+
+        // TODO: use the type
+        return (MethodStructure) mms.children().get(0);
         }
 
     public static MethodStructure getSetter(PropertyStructure property)
         {
-        return null;
+        MultiMethodStructure mms = (MultiMethodStructure) property.getChild("set");
+
+        // TODO: use the type
+        return (MethodStructure) mms.children().get(0);
         }
     }

@@ -5,10 +5,10 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHeap;
@@ -16,6 +16,7 @@ import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.Utils;
+
 import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.concurrent.CompletableFuture;
@@ -79,7 +80,7 @@ public class xFunction
 
         public int getVarCount()
             {
-            return ConstantPoolAdapter.getVarCount(m_invoke);
+            return f_clazz.f_template.f_types.f_adapter.getVarCount(m_invoke);
             }
 
         // ----- FunctionHandle interface -----
@@ -351,7 +352,7 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) ahVar[0];
 
             // native method on the service means "execute on the caller's thread"
-            if (ConstantPoolAdapter.isNative(m_invoke) || frame.f_context == hService.m_context)
+            if (frame.f_adapter.isNative(m_invoke) || frame.f_context == hService.m_context)
                 {
                 return super.call1Impl(frame, ahVar, iReturn);
                 }
@@ -373,7 +374,7 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) ahVar[0];
 
             // native method on the service means "execute on the caller's thread"
-            if (ConstantPoolAdapter.isNative(m_invoke) || frame.f_context == hService.m_context)
+            if (frame.f_adapter.isNative(m_invoke) || frame.f_context == hService.m_context)
                 {
                 return super.callNImpl(frame, ahVar, aiReturn);
                 }

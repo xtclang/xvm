@@ -36,7 +36,7 @@ public class xRuntimeClock
     public void initDeclared()
         {
         // TODO: change when the DateTime is implemented
-        getMethodStructure("scheduleAlarm", new String[]{"x:Function", "x:Int64"}, new String[]{"x:Function"}).markNative();
+        getMethod("scheduleAlarm", new String[]{"x:Function", "x:Int64"}, new String[]{"x:Function"});
         }
 
     @Override

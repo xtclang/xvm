@@ -1,9 +1,8 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constants;
 
-import org.xvm.proto.ConstantPoolAdapter;
+import org.xvm.proto.Adapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
 
@@ -16,7 +15,7 @@ import org.xvm.proto.op.*;
  */
 public class xTestService extends xService
     {
-    private final ConstantPoolAdapter adapter;
+    private final Adapter adapter;
 
     public xTestService(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -28,9 +27,7 @@ public class xTestService extends xService
     @Override
     public void initDeclared()
         {
-
-        PropertyTemplate ptCounter = ensurePropertyTemplate("counter", "x:Int64");
-        MethodTemplate mtGetCounter = ptCounter.addGet();
+        MethodTemplate mtGetCounter = getGetter("counter");
         mtGetCounter.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.get #")),
@@ -40,7 +37,7 @@ public class xTestService extends xService
             };
         mtGetCounter.m_cVars = 2;
 
-        MethodTemplate mtSetCounter = ptCounter.addSet();
+        MethodTemplate mtSetCounter = getSetter("counter");
         mtSetCounter.m_aop = new Op[]
             { // #0 = this; #1 = newValue
             new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.set #")),
@@ -50,10 +47,7 @@ public class xTestService extends xService
             };
         mtSetCounter.m_cVars = 2;
 
-        PropertyTemplate ptCounter2 = ensurePropertyTemplate("counter2", "x:Int64");
-        ptCounter2.makeAtomicRef();
-
-        MethodStructure ftDefault = ensureDefaultMethodStructure(); // "default"
+        MethodTemplate ftDefault = getMethodTemplate("default", VOID, VOID);
         ftDefault.m_aop = new Op[]
             {
             new PSet(0, adapter.getPropertyConstId("x:TestService", "counter2"),
@@ -62,13 +56,7 @@ public class xTestService extends xService
             };
         ftDefault.m_cVars = 1;
 
-        PropertyTemplate ptClock = ensurePropertyTemplate("runtimeClock", "x:Clock");
-        ptClock.markInjectable();
-        ptClock.setGetAccess(Constants.Access.PRIVATE);
-        ptClock.setSetAccess(Constants.Access.PRIVATE);
-
-        MethodStructure constructor = ensureMethodStructure( // "construct"
-                new String[]{"x:TestService", "x:Int64"});
+        MethodTemplate constructor = getMethodTemplate("construct", new String[]{"x:TestService", "x:Int64"});
         constructor.m_aop = new Op[]
             {
             new PSet(0, adapter.getPropertyConstId("x:TestService", "counter"), 1),
@@ -76,7 +64,7 @@ public class xTestService extends xService
             };
         constructor.m_cVars = 2;
 
-        MethodTemplate mtIncrement = ensureMethodTemplate("increment", VOID, INT);
+        MethodTemplate mtIncrement = getMethodTemplate("increment", VOID, INT);
         mtIncrement.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.increment #")),
@@ -86,15 +74,14 @@ public class xTestService extends xService
             };
         mtIncrement.m_cVars = 3;
 
-        MethodStructure ftLambda$1 = ensureMethodStructure("lambda$1", new String[] {"x:Ref<x:Int64>", "x:Int64"}, VOID);
-        ftLambda$1.setAccess(Constants.Access.PRIVATE);
+        MethodTemplate ftLambda$1 = getMethodTemplate("lambda$1", new String[]{"x:Ref<x:Int64>", "x:Int64"});
         ftLambda$1.m_aop = new Op[]
             { // #0 = &iRet, #1 = cDelay
             new Invoke_10(0, adapter.getMethodConstId("x:Ref", "set"), 1),
             new Return_0()
             };
 
-        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", INT, INT);
+        MethodTemplate mtExceptional = getMethodTemplate("exceptional", INT, INT);
         mtExceptional.m_aop = new Op[]
             { // #0 - this; #1 - cDelay
             new Var(adapter.getClassTypeConstId("x:Boolean")), // #2

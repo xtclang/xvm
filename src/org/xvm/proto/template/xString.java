@@ -39,13 +39,9 @@ public class xString
         {
         //     Int length.get()
 
-        PropertyTemplate pt;
-
-        pt = ensurePropertyTemplate("length", "x:Int");
-        pt.addGet().markNative();
-
-        ensureMethodStructure("indexOf", STRING, INT).markNative();
-        ensureMethodStructure("indexOf", new String[]{"x:String", "x:Int"}, INT).markNative();
+        markNativeGetter("length");
+        markNativeMethod("indexOf", STRING);
+        markNativeMethod("indexOf", new String[]{"x:String", "x:Int"});
         }
 
     @Override

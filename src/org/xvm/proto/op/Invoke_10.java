@@ -2,7 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.ConstantPoolAdapter;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -45,7 +45,7 @@ public class Invoke_10 extends OpInvocable
             ClassTemplate template = hTarget.f_clazz.f_template;
             MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
 
-            if (ConstantPoolAdapter.isNative(method))
+            if (frame.f_adapter.isNative(method))
                 {
                 return template.invokeNative(frame, hTarget, method, hArg, Frame.RET_UNUSED);
                 }
@@ -56,7 +56,7 @@ public class Invoke_10 extends OpInvocable
                         call1(frame, new ObjectHandle[]{hTarget, hArg}, Frame.RET_UNUSED);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(method)];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
             ahVar[1] = hArg;
 
             return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);

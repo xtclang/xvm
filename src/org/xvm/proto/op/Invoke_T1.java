@@ -2,8 +2,8 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.proto.Adapter;
 import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.ConstantPoolAdapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -52,17 +52,17 @@ public class Invoke_T1 extends OpInvocable
 
             MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
 
-            if (ConstantPoolAdapter.isNative(method))
+            if (frame.f_adapter.isNative(method))
                 {
                 return template.invokeNative(frame, hTarget, method, ahArg, f_nRetValue);
                 }
 
-            if (ahArg.length != ConstantPoolAdapter.getArgCount(method))
+            if (ahArg.length != Adapter.getArgCount(method))
                 {
                 frame.m_hException = xException.makeHandle("Invalid tuple argument");
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(method)];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
             System.arraycopy(ahArg, 0, ahVar, 1, ahArg.length);
 
             if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)

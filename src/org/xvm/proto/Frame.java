@@ -27,6 +27,7 @@ import java.util.function.Supplier;
  */
 public class Frame
     {
+    public final Adapter f_adapter; // TEMPORARY
     public final Fiber f_fiber;
     public final ServiceContext f_context;      // same as f_fiber.f_context
     public final MethodStructure f_function;
@@ -74,24 +75,26 @@ public class Frame
         f_framePrev = framePrev;
         f_iPCPrev = framePrev.m_iPC;
 
+        f_adapter = f_context.f_types.f_adapter;
+
         f_function = function;
-        f_aOp = function == null ? Op.STUB : ConstantPoolAdapter.getOps(function);
+        f_aOp = function == null ? Op.STUB : f_adapter.getOps(function);
 
         f_hTarget = hTarget;
         f_ahVar = ahVar; // [0] - target:private for methods
         f_aInfo = new VarInfo[ahVar.length];
 
-        int cScopes = function == null ? 1 : ConstantPoolAdapter.getScopeCount(function);
+        int cScopes = function == null ? 1 : f_adapter.getScopeCount(function);
         f_anNextVar = new int[cScopes];
 
         if (hTarget == null)
             {
-            f_anNextVar[0] = function == null ? 0 : ConstantPoolAdapter.getArgCount(function);
+            f_anNextVar[0] = function == null ? 0 : Adapter.getArgCount(function);
             }
         else  // #0 - this:private
             {
             f_ahVar[0]     = hTarget.f_clazz.ensureAccess(hTarget, Access.PRIVATE);
-            f_anNextVar[0] = 1 + ConstantPoolAdapter.getArgCount(function);
+            f_anNextVar[0] = 1 + Adapter.getArgCount(function);
             }
 
         f_iReturn = iReturn;
@@ -103,6 +106,7 @@ public class Frame
                     ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
         f_context = fiber.f_context;
+        f_adapter = f_context.f_types.f_adapter;
         f_iId = f_context.m_iFrameCounter++;
         f_fiber = fiber;
         f_framePrev = null;
@@ -187,7 +191,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return xFunction.makeHandle(ConstantPoolAdapter.getSuper(f_function)).bind(0, f_hTarget);
+                return xFunction.makeHandle(Adapter.getSuper(f_function)).bind(0, f_hTarget);
 
             case Op.A_TARGET:
                 if (f_hTarget == null)
@@ -424,7 +428,7 @@ public class Frame
         Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
-            aType[i] = ConstantPoolAdapter.getReturnType(f_function, i, null);
+            aType[i] = Adapter.getReturnType(f_function, i, null);
             ahValue[i] = getReturnValue(aiArg[i]);
             }
 
@@ -607,12 +611,12 @@ public class Frame
 
             if (f_hTarget == null)
                 {
-                cArgs = ConstantPoolAdapter.getArgCount(f_function);
+                cArgs = Adapter.getArgCount(f_function);
                 sName = "<arg " + nVar + ">";
                 }
             else
                 {
-                cArgs = ConstantPoolAdapter.getArgCount(f_function) + 1;
+                cArgs = Adapter.getArgCount(f_function) + 1;
                 sName = nVar == 0 ? "<this>" : "<arg " + (nVar - 1) + ">";
                 }
 
@@ -689,7 +693,7 @@ public class Frame
                       .append(fnCaller.toString())
                       .append(" (iPC=").append(iPC)
                       .append(", op=")
-                      .append(ConstantPoolAdapter.getOps(fnCaller)[iPC].getClass().getSimpleName())
+                      .append(f_adapter.getOps(fnCaller)[iPC].getClass().getSimpleName())
                       .append(')');
                     break;
                     }

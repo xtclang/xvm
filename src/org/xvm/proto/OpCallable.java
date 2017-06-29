@@ -1,13 +1,12 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.constants.ClassConstant;
+
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-
 
 /**
  * Common base for CALL_ ops.
@@ -39,20 +38,20 @@ public abstract class OpCallable extends Op
     // call super() method or "getProperty", placing the return value into the specified frame slot
     protected int callSuper01(Frame frame, int iRet)
         {
-        MethodStructure methodSuper = ConstantPoolAdapter.getSuper(frame.f_function);
+        MethodStructure methodSuper = Adapter.getSuper(frame.f_function);
 
         ObjectHandle hThis = frame.getThis();
 
         if (methodSuper.getParent() instanceof PropertyStructure)
             {
             PropertyStructure property = (PropertyStructure) methodSuper.getParent();
-            ClassConstant constClass = (ClassConstant) property.getParent().getIdentityConstant();
+            IdentityConstant constClass = (IdentityConstant) property.getParent().getIdentityConstant();
             ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
             return template.getFieldValue(frame, hThis, property, iRet);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(methodSuper)];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
         ahVar[0] = hThis;
 
         return frame.call1(methodSuper, hThis, ahVar, iRet);
@@ -61,7 +60,7 @@ public abstract class OpCallable extends Op
     // call super() method or "setProperty"
     protected int callSuper10(Frame frame, int nArgValue)
         {
-        MethodStructure methodSuper = ConstantPoolAdapter.getSuper(frame.f_function);
+        MethodStructure methodSuper = Adapter.getSuper(frame.f_function);
 
         ObjectHandle hThis = frame.getThis();
         ObjectHandle hArg;
@@ -82,7 +81,7 @@ public abstract class OpCallable extends Op
         if (methodSuper.getParent() instanceof PropertyStructure)
             {
             PropertyStructure property = (PropertyStructure) methodSuper.getParent();
-            ClassConstant constClass = (ClassConstant) property.getParent().getIdentityConstant();
+            IdentityConstant constClass = (IdentityConstant) property.getParent().getIdentityConstant();
             ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
             ExceptionHandle hException = template.setFieldValue(hThis, property, hArg);
@@ -94,7 +93,7 @@ public abstract class OpCallable extends Op
             return R_NEXT;
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[ConstantPoolAdapter.getVarCount(methodSuper)];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
         ahVar[1] = hArg;
 
         return frame.call1(methodSuper, hThis, ahVar, Frame.RET_UNUSED);
@@ -104,11 +103,11 @@ public abstract class OpCallable extends Op
     // (cannot be properties)
     protected int callSuperN1(Frame frame, int[] anArgValue, int iReturn)
         {
-        MethodStructure methodSuper = ConstantPoolAdapter.getSuper(frame.f_function);
+        MethodStructure methodSuper = Adapter.getSuper(frame.f_function);
 
         try
             {
-            ObjectHandle[] ahVar = frame.getArguments(anArgValue, ConstantPoolAdapter.getVarCount(methodSuper), 1);
+            ObjectHandle[] ahVar = frame.getArguments(anArgValue, frame.f_adapter.getVarCount(methodSuper), 1);
             if (ahVar == null)
                 {
                 return R_REPEAT;
@@ -126,11 +125,11 @@ public abstract class OpCallable extends Op
     // call super() methods with multiple arguments and multiple returns
     protected int callSuperNN(Frame frame, int[] anArgValue, int[] aiReturn)
         {
-        MethodStructure methodSuper = ConstantPoolAdapter.getSuper(frame.f_function);
+        MethodStructure methodSuper = Adapter.getSuper(frame.f_function);
 
         try
             {
-            ObjectHandle[] ahVar = frame.getArguments(anArgValue, ConstantPoolAdapter.getVarCount(methodSuper), 1);
+            ObjectHandle[] ahVar = frame.getArguments(anArgValue, frame.f_adapter.getVarCount(methodSuper), 1);
             if (ahVar == null)
                 {
                 return R_REPEAT;

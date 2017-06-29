@@ -10,7 +10,6 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ModuleConstant;
 
-import org.xvm.proto.template.xClock;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
@@ -35,7 +34,7 @@ public class Container
     final public Runtime f_runtime;
     final public TypeSet f_types;
     final public ConstantPool f_pool;
-    final public ConstantPoolAdapter f_adapter;
+    final public Adapter f_adapter;
     final public ObjectHeap f_heapGlobal;
 
     final protected ModuleStructure f_module;
@@ -63,25 +62,27 @@ public class Container
         f_constModule = (ModuleConstant) f_module.getIdentityConstant();
 
         f_pool = f_module.getConstantPool();
-        f_types = new TypeSet(this);
+        f_adapter = new Adapter(this);
+
+        f_types = new TypeSet(this, f_adapter);
         f_heapGlobal = new ObjectHeap(f_pool, f_types);
 
-        f_adapter = new ConstantPoolAdapter(f_pool);
         }
 
     protected void initResources()
         {
+        ClassTemplate templateClock = f_types.getTemplate("x:Clock");
+
         Supplier<ObjectHandle> supplierClock = () ->
             {
             ServiceContext ctxClock = createServiceContext("RuntimeClock");
             return xService.makeHandle(ctxClock,
                     xRuntimeClock.INSTANCE.f_clazzCanonical,
-                    xClock.INSTANCE.f_clazzCanonical.ensurePublicType());
+                    templateClock.f_clazzCanonical.ensurePublicType());
             };
 
         ClassTypeConstant typeClock = f_pool.ensureClassTypeConstant(
                 f_pool.ensureClassConstant(f_constModule, "Clock"), null);
-
         f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
         }
 
@@ -104,7 +105,8 @@ public class Container
             String sModule = f_constModule.getName();
             xModule module = (xModule) f_types.getTemplate(sModule);
 
-            MethodStructure mtRun = ConstantPoolAdapter.getMethod(module.f_struct, "run", new String[0]);
+            MethodStructure mtRun = Adapter.getMethod(module.f_struct,
+                    "run", ClassTemplate.VOID, ClassTemplate.VOID);
             if (mtRun == null)
                 {
                 throw new IllegalArgumentException("Missing run() method for " + f_constModule);
