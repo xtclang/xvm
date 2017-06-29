@@ -103,7 +103,8 @@ public class FileStructureTest
         ClassStructure clzHashMap = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "HashMap", null);
         clzHashMap.addTypeParam("KeyType", ((ClassConstant) clzHash.getIdentityConstant()).asTypeConstant());
         clzHashMap.addTypeParam("ValueType", ((ClassConstant) clzObj.getIdentityConstant()).asTypeConstant());
-        clzHashMap.addContribution(ClassStructure.Composition.Implements, ((ClassConstant) clzMap.getIdentityConstant()));
+        clzHashMap.addContribution(ClassStructure.Composition.Implements,
+                file.getConstantPool().ensureClassTypeConstant((ClassConstant) clzMap.getIdentityConstant(), Constants.Access.PUBLIC));
 
         testFileStructure(file);
         }
@@ -211,7 +212,7 @@ public class FileStructureTest
             structfile2.dump(new PrintWriter(System.out, true));
             }
 
-        Assert.assertEquals(structfile, structfile2);
+        Assert.assertTrue(structfile.equals(structfile2));
 
         out = new ByteArrayOutputStream();
         structfile2.writeTo(out);

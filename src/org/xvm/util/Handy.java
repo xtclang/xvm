@@ -1564,6 +1564,34 @@ public class Handy
         }
 
     /**
+     * Compare two arrays for equality, but treat a null array as if it were a zero-length array.
+     *
+     * @param ao1  the first array
+     * @param ao2  the second array
+     *
+     * @return true iff the arrays are equal, with the caveat that a null array is treated as if it
+     *         were a zero-length array
+     */
+    public static boolean equalArraysNullOk(final Object[] ao1, final Object[] ao2)
+        {
+        if (ao1 == ao2)
+            {
+            return true;
+            }
+
+        if (ao1 == null)
+            {
+            return ao2.length == 0;
+            }
+        if (ao2 == null)
+            {
+            return ao1.length == 0;
+            }
+
+        return Arrays.deepEquals(ao1, ao2);
+        }
+
+    /**
      * Perform a comparison of two arrays for ordering. This performs a deep
      * comparison on the arrays.
      *

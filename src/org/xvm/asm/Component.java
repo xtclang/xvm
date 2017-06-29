@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -21,6 +22,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -31,9 +33,11 @@ import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.util.Handy;
 import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 
+import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -352,6 +356,83 @@ public abstract class Component
     protected boolean isChildLessVisible()
         {
         return false;
+        }
+
+    /**
+     * Obtain the class contributions as a list.
+     *
+     * @return a read-only list of class contributions
+     */
+    public List<Contribution> getContributionsAsList()
+        {
+        List<Contribution> list = m_listContribs;
+        if (list == null)
+            {
+            return Collections.EMPTY_LIST;
+            }
+        assert (list = Collections.unmodifiableList(m_listContribs)) != null;
+        return list;
+        }
+
+    /**
+     * Add a class type contribution.
+     *
+     * @param composition  the contribution category
+     * @param constType    the contribution class type
+     */
+    public void addContribution(Composition composition, ClassTypeConstant constType)
+        {
+        addContribution(new Contribution(composition, constType));
+        }
+
+    /**
+     * Add a module import contribution.
+     *
+     * @param composition  the contribution type
+     * @param constModule   the contribution class
+     */
+    public void addImport(Composition composition, ModuleConstant constModule)
+        {
+        addContribution(new Contribution(composition, constModule));
+        }
+
+    /**
+     * Add an annotation.
+     *
+     * @param constType    the annotation class type
+     * @param aconstParam  the annotation parameters (optional)
+     */
+    public void addAnnotation(ClassTypeConstant constType, Constant[] aconstParam)
+        {
+        addContribution(new Contribution(constType, aconstParam));
+        }
+
+    /**
+     * Add an interface delegation.
+     *
+     * @param constClass  the class type to delegate
+     * @param constProp   the property specifying the reference to delegate to
+     */
+    public void addDelegation(ClassTypeConstant constClass, PropertyConstant constProp)
+        {
+        addContribution(new Contribution(constClass, constProp));
+        }
+
+    /**
+     * Helper to add a contribution to the lazily-instantiated list of contributions.
+     *
+     * @param contrib  the contribution to add to the end of the list
+     */
+    protected void addContribution(Contribution contrib)
+        {
+        List<Contribution> list = m_listContribs;
+        if (list == null)
+            {
+            m_listContribs = list = new ArrayList<>();
+            }
+
+        list.add(contrib);
+        markModified();
         }
 
     /**
@@ -1427,8 +1508,20 @@ public abstract class Component
             throws IOException
         {
         assert getContaining() == null || getContaining() instanceof Component;
-        // there's nothing to do here, since the disassembly of the common body parts that all
-        // Component's share is done by the readComponent() and Format.instantiate() methods
+
+        // read in the "contributions"
+        int c = readMagnitude(in);
+        if (c > 0)
+            {
+            final List<Contribution> list = new ArrayList<>();
+            final ConstantPool       pool = getConstantPool();
+            for (int i = 0; i < c; ++i)
+                {
+                list.add(new Contribution(in, pool));
+                }
+            m_listContribs = list;
+            }
+
         }
 
     /**
@@ -1446,6 +1539,16 @@ public abstract class Component
 
         m_constId = (IdentityConstant   ) pool.register(m_constId);
         m_cond    = (ConditionalConstant) pool.register(m_cond);
+
+        // register the contributions
+        final List<Contribution> listContribs = m_listContribs;
+        if (listContribs != null  && listContribs.size() > 0)
+            {
+            for (Contribution contribution : listContribs)
+                {
+                contribution.registerConstants(pool);
+                }
+            }
         }
 
     /**
@@ -1464,6 +1567,18 @@ public abstract class Component
 
         out.writeShort(m_nFlags);
         writePackedLong(out, m_constId.getPosition());
+
+        // write out the contributions
+        final List<Contribution> listContribs = m_listContribs;
+        final int cContribs = listContribs == null ? 0 : listContribs.size();
+        writePackedLong(out, cContribs);
+        if (cContribs > 0)
+            {
+            for (Contribution contribution : listContribs)
+                {
+                contribution.assemble(out);
+                }
+            }
         }
 
     @Override
@@ -1506,6 +1621,18 @@ public abstract class Component
         {
         out.print(sIndent);
         out.println(toString());
+
+        final List<Contribution> listContribs = m_listContribs;
+        final int cContribs = listContribs == null ? 0 : listContribs.size();
+        if (cContribs > 0)
+            {
+            out.print(sIndent);
+            out.println("Contributions");
+            for (int i = 0; i < cContribs; ++i)
+                {
+                out.println(sIndent + '[' + i + "]=" + listContribs.get(i));
+                }
+            }
         }
 
 
@@ -1533,7 +1660,22 @@ public abstract class Component
         if (obj instanceof Component)
             {
             Component that = (Component) obj;
-            return isBodyIdentical(that) && areChildrenIdentical(that);
+            if (!isBodyIdentical(that) || !areChildrenIdentical(that))
+                {
+                return false;
+                }
+
+            // contributions (order is considered important)
+            final List<Contribution> listThisContribs = this.m_listContribs;
+            final List<Contribution> listThatContribs = that.m_listContribs;
+            final int cThisContribs = listThisContribs == null ? 0 : listThisContribs.size();
+            final int cThatContribs = listThatContribs == null ? 0 : listThatContribs.size();
+            if (cThisContribs != cThatContribs || (cThisContribs > 0 && !listThisContribs.equals(listThatContribs)))
+                {
+                return  false;
+                }
+
+            return true;
             }
 
         return false;
@@ -1801,6 +1943,464 @@ public abstract class Component
         }
 
 
+    // ----- enumeration: Component Composition ----------------------------------------------------
+
+    /**
+     * Types of composition.
+     */
+    public enum Composition
+        {
+        /**
+         * Represents an annotation. 
+         * <p/>
+         * The constant is a ClassTypeConstant. (It could be a ClassConstant, but ClassTypeConstant
+         * was selected to keep it compatible with the other compositions.) An annotation has
+         * optional annotation parameters, each of which is also a constant from the ConstantPool.
+         */
+        Annotation,
+        /**
+         * Represents class inheritance.
+         * <p/>
+         * The constant is a ClassTypeConstant.
+         */
+        Extends,
+        /**
+         * Represents interface inheritance.
+         * <p/>
+         * The constant is a ClassTypeConstant.
+         */
+        Implements,
+        /**
+         * Represents interface inheritance plus default delegation of interface functionality.
+         * <p/>
+         * The constant is a ClassTypeConstant. A delegates composition must specify a property that
+         * provides the reference to which it delegates; this is represented by a PropertyConstant.
+         */
+        Delegates,
+        /**
+         * Represents that the class being composed is a mixin that applies to the specified type.
+         * <p/>
+         * The constant is a ClassTypeConstant.
+         */
+        Into,
+        /**
+         * Represents the combining-in of a trait or mix-in.
+         * <p/>
+         * The constant is a ClassTypeConstant.
+         */
+        Incorporates,
+        /**
+         * Represents that the class being composed is one of the enumeration of a specified type.
+         * <p/>
+         * The constant is a ClassTypeConstant.
+         */
+        Enumerates,
+        /**
+         * Represents that the package being composed represents an optional module.
+         * <p/>
+         * The constant is a ModuleConstant.
+         */
+        ImportOptional,
+        /**
+         * Represents that the package being composed represents an optional-but-desired module.
+         * <p/>
+         * The constant is a ModuleConstant.
+         */
+        ImportDesired,
+        /**
+         * Represents that the package being composed represents a required module.
+         * <p/>
+         * The constant is a ModuleConstant.
+         */
+        ImportRequired,
+        /**
+         * Represents that the package being composed represents an embedded module.
+         * <p/>
+         * The constant is a ModuleConstant.
+         */
+        ImportEmbedded,
+        ;
+
+        /**
+         * Look up a Composition enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Composition enum for the specified ordinal
+         */
+        public static Composition valueOf(int i)
+            {
+            return COMPOSITIONS[i];
+            }
+
+        /**
+         * All of the Composition enums.
+         */
+        private static final Composition[] COMPOSITIONS = Composition.values();
+        }
+
+
+    // ----- inner class: Component Contribution ---------------------------------------------------
+
+
+    /**
+     * Represents one contribution to the definition of a class. A class (with the term used in the
+     * abstract sense, meaning any class, interface, mixin, trait, value, enum, or service) can be
+     * composed of any number of contributing components.
+     */
+    public static class Contribution
+        {
+        /**
+         * @see XvmStructure#disassemble(DataInput)
+         */
+        protected Contribution(DataInput in, ConstantPool pool)
+                throws IOException
+            {
+            m_composition = Composition.valueOf(in.readUnsignedByte());
+            m_constContrib = (ClassConstant) pool.getConstant(readIndex(in));
+            switch (m_composition)
+                {
+                case Delegates:
+                    m_constProp = (PropertyConstant) pool.getConstant(readIndex(in));
+                    break;
+
+                case Annotation:
+                    final int cConsts = readMagnitude(in);
+                    final Constant[] aconst = new Constant[cConsts];
+                    for (int i = 0; i < cConsts; ++i)
+                        {
+                        aconst[i] = pool.getConstant(readIndex(in));
+                        }
+                    m_aconstParam = aconst;
+                    break;
+                }
+            }
+
+        /**
+         * Construct an Annotation, Extends, Implements, Into, Incorporates, or Enumerates
+         * Contribution.
+         *
+         * @param composition  specifies the type of composition; one of Annotation, Extends,
+         *                     Implements, Into, Incorporates, or Enumerates
+         * @param constType    specifies the class type being contributed
+         */
+        protected Contribution(Composition composition, ClassTypeConstant constType)
+            {
+            assert composition != null && constType != null;
+
+            switch (composition)
+                {
+                case Annotation:
+                case Extends:
+                case Implements:
+                case Into:
+                case Incorporates:
+                case Enumerates:
+                    if (constType == null)
+                        {
+                        throw new IllegalArgumentException("type is required");
+                        }
+                    break;
+
+
+                case Delegates:
+                    throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
+
+                case ImportOptional:
+                case ImportDesired:
+                case ImportRequired:
+                case ImportEmbedded:
+                    throw new IllegalArgumentException("imports uses the constructor with a ModuleConstant");
+
+                default:
+                    throw new UnsupportedOperationException("composition=" + composition);
+                }
+
+            m_composition  = composition;
+            m_constContrib = constType;
+            }
+
+        /**
+         * Construct an import Contribution.
+         *
+         * @param composition  specifies the type of composition; one of ImportOptional,
+         *                     ImportDesired, ImportRequired, or ImportEmbedded
+         * @param constModule  specifies the module being imported
+         */
+        protected Contribution(Composition composition, ModuleConstant constModule)
+            {
+            assert composition != null && constModule != null;
+
+            switch (composition)
+                {
+                case ImportOptional:
+                case ImportDesired:
+                case ImportRequired:
+                case ImportEmbedded:
+                    if (constModule == null)
+                        {
+                        throw new IllegalArgumentException("module is required");
+                        }
+                    break;
+
+                case Annotation:
+                case Extends:
+                case Implements:
+                case Into:
+                case Incorporates:
+                case Enumerates:
+                    throw new IllegalArgumentException(composition + " uses the constructor with a ClassTypeConstant");
+
+                case Delegates:
+                    throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
+
+                default:
+                    throw new UnsupportedOperationException("composition=" + composition);
+                }
+
+            m_composition  = composition;
+            m_constContrib = constModule;
+            }
+
+        /**
+         * Construct a delegation Contribution.
+         *
+         * @param constant     specifies the class being contributed
+         * @param delegate     for a Delegates composition, this is the property that provides the
+         *                     delegate reference
+         */
+        protected Contribution(ClassTypeConstant constant, PropertyConstant delegate)
+            {
+            assert constant != null && delegate != null;
+
+            m_composition  = Composition.Delegates;
+            m_constContrib = constant;
+            m_constProp    = delegate;
+            }
+
+        /**
+         * Construct an annotation Contribution with optional parameters.
+         *
+         * @param constType    specifies the class type of the annotation
+         * @param aconstParam  an array of annotation parameters; may be null
+         */
+        protected Contribution(ClassTypeConstant constType, Constant[] aconstParam)
+            {
+            assert constType != null;
+
+            if (aconstParam != null)
+                {
+                checkElementsNonNull(aconstParam);
+                }
+
+            m_composition  = Composition.Annotation;
+            m_constContrib = constType;
+            m_aconstParam  = aconstParam;
+            }
+
+        /**
+         * Obtain the form of composition represented by this contribution.
+         *
+         * @return the Composition type for this contribution
+         */
+        public Composition getComposition()
+            {
+            return m_composition;
+            }
+
+        /**
+         * Obtain the constant identifying the module being imported by this contribution.
+         *
+         * @return the ModuleConstant for this contribution, or null if this is not an "imports"
+         *         contribution
+         */
+        public ModuleConstant getModuleConstant()
+            {
+            return m_constContrib instanceof ModuleConstant
+                    ? (ModuleConstant) m_constContrib
+                    : null;
+            }
+
+        /**
+         * Obtain the constant identifying the class type being contributed by this contribution.
+         *
+         * @return the ClassTypeConstant for this contribution
+         */
+        public ClassTypeConstant getClassConstant()
+            {
+            return m_constContrib instanceof ClassTypeConstant
+                    ? (ClassTypeConstant) m_constContrib
+                    : null;
+            }
+
+        /**
+         * The "contributed" class type or module. This may be an unresolved constant during the
+         * early stages of compilation.
+         *
+         * @return the contributed constant, as is
+         */
+        public Constant getRawConstant()
+            {
+            return m_constContrib;
+            }
+
+        /**
+         * @return the PropertyConstant specifying the reference to delegate to; never null
+         */
+        public PropertyConstant getDelegatePropertyConstant()
+            {
+            assert m_composition == Composition.Delegates;
+            return m_constProp;
+            }
+
+        /**
+         * @return a list of annotation parameters; never null
+         */
+        public List<Constant> getAnnotationParameters()
+            {
+            assert m_composition == Composition.Annotation;
+            return m_aconstParam == null ? Collections.EMPTY_LIST : Arrays.asList(m_aconstParam);
+            }
+
+        /**
+         * @see XvmStructure#registerConstants(ConstantPool)
+         */
+        protected void registerConstants(ConstantPool pool)
+            {
+            m_constContrib = (IdentityConstant) pool.register(m_constContrib);
+            m_constProp = (PropertyConstant) pool.register(m_constProp);
+
+            final Constant[] aconst = m_aconstParam;
+            if (aconst != null)
+                {
+                for (int i = 0, c = aconst.length; i < c; ++i)
+                    {
+                    aconst[i] = pool.register(aconst[i]);
+                    }
+                }
+            }
+
+        /**
+         * @see XvmStructure#registerConstants(ConstantPool)
+         */
+        protected void assemble(DataOutput out)
+                throws IOException
+            {
+            out.writeByte(m_composition.ordinal());
+            writePackedLong(out, m_constContrib.getPosition());
+            switch (m_composition)
+                {
+                case Delegates:
+                    writePackedLong(out, Constant.indexOf(m_constProp));
+                    break;
+
+                case Annotation:
+                    final Constant[] aconst = m_aconstParam;
+                    final int cConsts = aconst == null ? 0 : aconst.length;
+                    writePackedLong(out, cConsts);
+                    for (int i = 0; i < cConsts; ++i)
+                        {
+                        writePackedLong(out, aconst[i].getPosition());
+                        }
+                    break;
+                }
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            if (this == obj)
+                {
+                return true;
+                }
+
+            if (!(obj instanceof Contribution))
+                {
+                return false;
+                }
+
+            Contribution that = (Contribution) obj;
+            return this.m_composition == that.m_composition
+                    && this.m_constContrib.equals(that.m_constContrib)
+                    && Handy.equals(this.m_constProp, that.m_constProp)
+                    && Handy.equalArraysNullOk(this.m_aconstParam, that.m_aconstParam);
+            }
+
+        @Override
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+
+            if (m_composition == Composition.Annotation)
+                {
+                sb.append('@');
+                }
+            else
+                {
+                sb.append(m_composition.toString().toLowerCase())
+                  .append(' ');
+                }
+
+            sb.append(m_constContrib.getDescription());
+
+            if (m_composition == Composition.Annotation)
+                {
+                if (m_aconstParam != null && m_aconstParam.length > 0)
+                    {
+                    sb.append('(');
+
+                    boolean fFirst = true;
+                    for (Constant constParam : m_aconstParam)
+                        {
+                        if (fFirst)
+                            {
+                            fFirst = false;
+                            }
+                        else
+                            {
+                            sb.append(", ");
+                            }
+
+                        sb.append(constParam.getValueString());
+                        }
+
+                    sb.append(')');
+                    }
+                }
+            else if (m_composition == Composition.Delegates)
+                {
+                sb.append('(')
+                  .append(m_constProp.getDescription())
+                  .append(')');
+                }
+
+            return sb.toString();
+            }
+
+        /**
+         * Defines the form of composition that this component contributes to the class.
+         */
+        private Composition m_composition;
+
+        /**
+         * Defines the module (ModuleConstant) or class (ClassTypeConstant) that was used as part
+         * of the composition.
+         */
+        private Constant m_constContrib;
+
+        /**
+         * The property specifying the delegate, if this Composition represents a "delegates"
+         * clause.
+         */
+        private PropertyConstant m_constProp;
+
+        /**
+         * The optional parameters, if this Composition represents an annotation.
+         */
+        private Constant[] m_aconstParam;
+        }
+
+
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -1812,16 +2412,16 @@ public abstract class Component
      * for the conditional constant ID followed by the body of the component. (The children that go
      * with the various conditional components occur in the stream after the <b>last</b> body.)
      */
-    public static final int CONDITIONAL_BIT =   0x80;
+    public static final int CONDITIONAL_BIT  =   0x80;
 
-    public static final int FORMAT_MASK     = 0x000F, FORMAT_SHIFT    = 0;
-    public static final int ACCESS_MASK     = 0x0300, ACCESS_SHIFT    = 8;
-    public static final int ACCESS_PUBLIC   = 0x0100;
-    public static final int ACCESS_PROTECTED= 0x0200;
-    public static final int ACCESS_PRIVATE  = 0x0300;
-    public static final int ABSTRACT_BIT    = 0x0400, ABSTRACT_SHIFT  = 10;
-    public static final int STATIC_BIT      = 0x0800, STATIC_SHIFT    = 11;
-    public static final int SYNTHETIC_BIT   = 0x1000, SYNTHETIC_SHIFT = 12;
+    public static final int FORMAT_MASK      = 0x000F, FORMAT_SHIFT     = 0;
+    public static final int ACCESS_MASK      = 0x0300, ACCESS_SHIFT     = 8;
+    public static final int ACCESS_PUBLIC    = 0x0100;
+    public static final int ACCESS_PROTECTED = 0x0200;
+    public static final int ACCESS_PRIVATE   = 0x0300;
+    public static final int ABSTRACT_BIT     = 0x0400, ABSTRACT_SHIFT   = 10;
+    public static final int STATIC_BIT       = 0x0800, STATIC_SHIFT     = 11;
+    public static final int SYNTHETIC_BIT    = 0x1000, SYNTHETIC_SHIFT  = 12;
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -1857,6 +2457,17 @@ public abstract class Component
     private short m_nFlags;
 
     /**
+     * The contributions that make up this class.
+     */
+    private List<Contribution> m_listContribs;
+
+    /**
+     * The documentation.
+     * TODO convert this to a doc annotation/contribution?
+     */
+    private String m_sDoc;
+
+    /**
      * This is a non-deserialized form of all of the children. When a Component is read from disk,
      * it can optionally lazily deserialize its children. This is possible because the "children"
      * block is length-encoded.
@@ -1878,11 +2489,6 @@ public abstract class Component
      * This holds all of the method children. See the explanation of {@link #m_childByName}.
      */
     private Map<MethodConstant, MethodStructure> m_methodByConstant;
-
-    /**
-     * The documentation.
-     */
-    private String m_sDoc;
 
     /**
      * For XVM structures that can be modified, this flag tracks whether or not

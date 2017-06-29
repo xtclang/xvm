@@ -21,14 +21,11 @@ import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.constants.UnresolvedClassConstant;
-import org.xvm.asm.constants.UnresolvedNameConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorListener;
@@ -764,7 +761,7 @@ public class TypeCompositionStatement
                             {
                             // when an interface "extends" an interface, it is actually implementing
                             struct.addContribution(ClassStructure.Composition.Implements,
-                                    new UnresolvedClassConstant(pool, composition.getType().toString()));
+                                    composition.getType().asUnresolvedClassTypeConstant(pool));
                             }
                         }
                     else
@@ -789,7 +786,7 @@ public class TypeCompositionStatement
                                 {
                                 // register the class that the component extends
                                 struct.addContribution(ClassStructure.Composition.Extends,
-                                        new UnresolvedClassConstant(pool, composition.getType().toString()));
+                                        composition.getType().asUnresolvedClassTypeConstant(pool));
                                 }
                             }
                         }
@@ -966,7 +963,7 @@ public class TypeCompositionStatement
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                                 {
                                 struct.addContribution(ClassStructure.Composition.Into,
-                                        new UnresolvedClassConstant(pool, composition.getType().toString()));
+                                        composition.getType().asUnresolvedClassTypeConstant(pool));
                                 }
                             }
                         }
@@ -989,22 +986,21 @@ public class TypeCompositionStatement
                         for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                             {
                             struct.addContribution(ClassStructure.Composition.Implements,
-                                    new UnresolvedClassConstant(pool, composition.getType().toString()));
+                                    composition.getType().asUnresolvedClassTypeConstant(pool));
                             }
                         }
                     break;
 
                 case DELEGATES:
                     // these are all OK; other checks will be done after the types are resolvable
-                    ClassConstant    constClass = new UnresolvedClassConstant(pool, composition.getType().toString());
-                    PropertyConstant constProp  = pool.ensurePropertyConstant(
-                            component.getIdentityConstant(),
-                            ((Composition.Delegates) composition).getPropertyName());
+                    ClassTypeConstant constClass = composition.getType().asUnresolvedClassTypeConstant(pool);
+                    PropertyConstant  constProp  = pool.ensurePropertyConstant(component.getIdentityConstant(),
+                            ((Composition.Delegates) composition).getPropertyName()); // TODO change back from prop -> expr
                     for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                         {
                         // register the class whose interface the component delegates, and the
                         // property whose value indicates the object to delegate to
-                        struct.addContribution(constClass, constProp);
+                        struct.addDelegation(constClass, constProp);
                         }
                     break;
 
@@ -1014,7 +1010,7 @@ public class TypeCompositionStatement
                         {
                         // register the mixin/trait that the component incorporates
                         struct.addContribution(ClassStructure.Composition.Incorporates,
-                                new UnresolvedClassConstant(pool, composition.getType().toString()));
+                                composition.getType().asUnresolvedClassTypeConstant(pool));
                         }
                     break;
 
@@ -1052,12 +1048,11 @@ public class TypeCompositionStatement
                     case IMPORT_REQ:
                     case IMPORT_WANT:
                     case IMPORT_OPT:
-                        // here's the question: do we try to pick a particular version to load right
-                        // now? or do we load some sort of "composite" version? or do we just verify
-                        // that the name exists and that's good enough for now?
-                        NamedTypeExpression type = (NamedTypeExpression)
-                                ((Composition.Import) composition).type;
-                        String sModule = type.getName();
+                        PackageStructure structPkg = (PackageStructure) getComponent();
+                        ModuleStructure  structMod = structPkg.getImportedModule();
+                        // load the module
+                        NamedTypeExpression type    = (NamedTypeExpression) ((Composition.Import) composition).type;
+                        String              sModule = type.getName();
                         if (repos.getModuleNames().contains(sModule))
                             {
                             // TODO
@@ -1066,7 +1061,7 @@ public class TypeCompositionStatement
                             {
                             // this is obviously an error -- we can't compile without the module
                             // being available
-                            log(errs, Severity.ERROR, Compiler.MODULE_MISSING, sModule);
+                            type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, sModule);
                             }
                         break;
                     }
@@ -1081,6 +1076,8 @@ public class TypeCompositionStatement
 
         super.resolveGlobalVisibility(repos, errs);
         }
+
+    // TODO next we need to recursively resolve visibility down each level of nesting
 
     private void disallowTypeParams(ErrorListener errs)
         {

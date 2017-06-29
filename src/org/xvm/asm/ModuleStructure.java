@@ -55,7 +55,8 @@ public class ModuleStructure
         // when the main module is created in the FileStructure, the name has not yet been
         // configured, so if this is being created and the file already has a main module name, then
         // this module is being created to act as a fingerprint
-        if (xsParent.getFileStructure().getModuleName() != null)
+        String sPrimary = xsParent.getFileStructure().getModuleName();
+        if (sPrimary != null && !sPrimary.equals(constId.getName()))
             {
             moduletype           = ModuleType.Optional;
             vtreeImportAllowVers = new VersionTree<>();
@@ -209,6 +210,25 @@ public class ModuleStructure
         {
         assert (moduletype == ModuleType.Embedded) == (!isMainModule() && !isFingerprint());
         return moduletype == ModuleType.Embedded;
+        }
+
+    public ModuleStructure loadFingerprintOrigin(ModuleRepository repos, ErrorListener errs)
+        {
+        assert isFingerprint();
+
+        if (moduleActual == null)
+            {
+            // load the module against which the compilation will occur
+            if (!repos.getModuleNames().contains(getName()))
+                {
+                // TODO
+                }
+
+            // TODO
+            // moduleActual = ... repos.
+            }
+
+        return moduleActual;
         }
 
 
@@ -444,7 +464,7 @@ public class ModuleStructure
      * structure that represents the set of external dependencies on a particular imported module
      * from the main module and any embedded modules.
      */
-    private ModuleType           moduletype = ModuleType.Primary;
+    private ModuleType moduletype = ModuleType.Primary;
 
     /**
      * If this is a fingerprint, then this will be a non-null version tree (but potentially empty)
@@ -456,5 +476,11 @@ public class ModuleStructure
      * If this is a fingerprint, then this will be a non-null (but potentially empty) list of
      * versions that are specified as preferred, in their order of preference.
      */
-    private List<Version>        listImportPreferVers;
+    private List<Version> listImportPreferVers;
+
+    /**
+     * If this is a fingerprint, during compilation this will hold the actual module from which the
+     * fingerprint is being created.
+     */
+    transient private ModuleStructure moduleActual;
     }

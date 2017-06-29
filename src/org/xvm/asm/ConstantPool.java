@@ -598,10 +598,14 @@ public class ConstantPool
         }
 
     /**
-     * Given the
-     * @param constClass
-     * @param access
-     * @return
+     * Given the specified class, access, and optional type parameters, obtain a ClassTypeConstant
+     * that represents that combination.
+     *
+     * @param constClass  a class constant
+     * @param access      the access level
+     * @param constTypes  the optional type parameters
+     *
+     * @return a ClassTypeConstant
      */
     public ClassTypeConstant ensureClassTypeConstant(ClassConstant constClass,
                                                      Access access, TypeConstant... constTypes)
