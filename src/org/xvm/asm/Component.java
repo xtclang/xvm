@@ -1521,7 +1521,6 @@ public abstract class Component
                 }
             m_listContribs = list;
             }
-
         }
 
     /**

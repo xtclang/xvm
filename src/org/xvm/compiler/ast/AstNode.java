@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ModuleRepository;
 
@@ -182,9 +183,7 @@ public abstract class AstNode
      *
      * <li>Type parameters for the types must also be registered, because they are also types, and
      * they will be required to already be present when the second pass begins.</li>
-     * <li></li>
      * </ul>
-     *
      *
      * @param parent  the parent of this node to tie into (if necessary / appropriate)
      * @param errs    the error list to log any errors etc. to
@@ -226,6 +225,22 @@ public abstract class AstNode
             {
             node.resolveGlobalVisibility(repos, errs);
             }
+        }
+
+    /**
+     * Resolve a simple name.
+     * <p/>
+     * When evaluating a name, without any knowledge about the name, determine what the name refers
+     * to. In the case of a multi-part name, this specifically is the resolution of just the first
+     * part, i.e. up to the first dot.
+     *
+     * @param sName
+     * @return
+     */
+    protected Constant resolveFirstName(String sName)
+        {
+        // TODO
+        return null;
         }
 
     /**

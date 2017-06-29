@@ -6,8 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeDefConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import static org.xvm.util.Handy.readIndex;
@@ -15,24 +15,25 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * An XVM Structure that represents a property.
+ * An XVM Structure that represents a "typedef" statement, which acts as a way to name an arbitrary
+ * type, by associating a named structure (this) with a type constant.
  *
- * @author cp 2016.04.25
+ * @author cp 2016.06.27
  */
-public class PropertyStructure
+public class TypeDefStructure
         extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a PropertyStructure with the specified identity.
+     * Construct a TypeDefStructure with the specified identity.
      *
      * @param xsParent   the XvmStructure that contains this structure
      * @param nFlags     the Component bit flags
-     * @param constId    the constant that specifies the identity of the Property
-     * @param condition  the optional condition for this PropertyStructure
+     * @param constId    the constant that specifies the identity of the TypeDef
+     * @param condition  the optional condition for this TypeDefStructure
      */
-    protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId, ConditionalConstant condition)
+    protected TypeDefStructure(XvmStructure xsParent, int nFlags, TypeDefConstant constId, ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
         }
@@ -41,13 +42,13 @@ public class PropertyStructure
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public PropertyConstant getIdentityConstant()
+    public TypeDefConstant getIdentityConstant()
         {
-        return (PropertyConstant) super.getIdentityConstant();
+        return (TypeDefConstant) super.getIdentityConstant();
         }
 
     /**
-     * @return the TypeConstant representing the data type of the property value
+     * @return the TypeConstant representing the data type of the typedef
      */
     public TypeConstant getType()
         {
@@ -55,9 +56,9 @@ public class PropertyStructure
         }
 
     /**
-     * Configure the property's type.
+     * Configure the typedef's type.
      *
-     * @param type  the type constant that indicates the property's type
+     * @param type  the type constant that indicates the typedef's type
      */
     public void setType(TypeConstant type)
         {
@@ -79,15 +80,6 @@ public class PropertyStructure
 
         ((UnresolvedTypeConstant) m_type).resolve(type);
         m_type = type;
-        }
-
-
-    // ----- component methods ---------------------------------------------------------------------
-
-    @Override
-    public boolean isMethodContainer()
-        {
-        return true;
         }
 
 
@@ -133,5 +125,8 @@ public class PropertyStructure
 
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * The actual type that the typedef represents.
+     */
     private TypeConstant m_type;
     }

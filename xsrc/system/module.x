@@ -30,23 +30,6 @@ module ecstasy.xtclang.org
      */
     enum Ordered(String symbol) {Lesser("<"), Equal("="), Greater(">")}
 
-    typedef Nullable.Null           null;
-    typedef Boolean.False           false;
-    typedef Boolean.True            true;
-    typedef UInt8                   Byte;
-    typedef Int64                   Int;
-    typedef UInt64                  UInt;
-    typedef Decimal64               Dec;
-    typedef Tuple<>                 Void;
-    typedef annotations.AtomicRef   atomic;
-    typedef annotations.Automagic   auto;
-    typedef annotations.FutureRef   future;
-    typedef annotations.LazyRef     lazy;
-    typedef annotations.ReadOnly    ro;
-    typedef annotations.SoftRef     soft;
-    typedef annotations.WatchRef    watch;
-    typedef annotations.WeakRef     weak;
-
     /**
      * A DeadlockException is raised by the runtime in response to a situation in which re-entrancy
      * to a service is necessary, but for one of several reasons cannot be accomplished.
