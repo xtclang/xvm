@@ -52,6 +52,15 @@ public class StatementBlock
         stmts.add(stmt);
         }
 
+    /**
+     * Mark the statement block as representing a file boundary, such that the parent (if any) and
+     * each of the child (if any) statements are each assumed to be from separate files.
+     */
+    public void markFileBoundary()
+        {
+        boundary = true;
+        }
+
     @Override
     public Source getSource()
         {
@@ -148,6 +157,7 @@ public class StatementBlock
     protected List<Statement> stmts;
     protected long            lStartPos;
     protected long            lEndPos;
+    protected boolean         boundary;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
     }

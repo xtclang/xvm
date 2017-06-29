@@ -257,6 +257,7 @@ public class TypeCompositionStatement
                 }
 
             enclosed = new StatementBlock(new ArrayList<>());
+            enclosed.markFileBoundary();
             body.addStatement(enclosed);
             }
 
