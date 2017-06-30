@@ -1,12 +1,14 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.compiler.Token;
-
-import java.util.List;
 
 
 /**
@@ -28,6 +30,13 @@ public abstract class ComponentStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public ComponentStatement getComponentStatement()
+        {
+        return this;
+        }
+
+    @Override
     public Component getComponent()
         {
         return component;
@@ -36,6 +45,34 @@ public abstract class ComponentStatement
     protected void setComponent(Component component)
         {
         this.component = component;
+        }
+
+    /**
+     * Register the presence of an ImportStatement.
+     *
+     * @param stmt  an ImportStatement
+     */
+    protected void registerImport(ImportStatement stmt)
+        {
+        assert stmt != null;
+        if (imports == null)
+            {
+            imports = new HashMap<>();
+            }
+        ImportStatement stmtPrev = imports.put(stmt.getAliasName(), stmt);
+        assert stmtPrev == null;
+        }
+
+    /**
+     * Look up the specified simple name to see if there is an ImportStatement associated with it.
+     *
+     * @param sName  the alias name of an import
+     *
+     * @return the associated ImportStatement, or null if there is none by that simple alias name
+     */
+    public ImportStatement getImportStatement(String sName)
+        {
+        return imports == null ? null : imports.get(sName);
         }
 
     @Override
@@ -94,4 +131,6 @@ public abstract class ComponentStatement
     protected Component component;
     protected long      lStartPos;
     protected long      lEndPos;
+
+    protected Map<String, ImportStatement> imports;
     }

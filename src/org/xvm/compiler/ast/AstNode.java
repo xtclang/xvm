@@ -140,16 +140,26 @@ public abstract class AstNode
     public abstract long getEndPosition();
 
     /**
+     * Obtain the ComponentStatement for this AstNode, if any.
+     *
+     * @return the first (walking up the tree) ComponentStatement containing this AstNode
+     */
+    public ComponentStatement getComponentStatement()
+        {
+        AstNode parent = getParent();
+        return parent == null
+                ? null
+                : parent.getComponentStatement();
+        }
+
+    /**
      * Obtain the Component for this AstNode, if any.
      *
      * @return the Component containing this AstNode
      */
     public Component getComponent()
         {
-        AstNode parent = getParent();
-        return parent == null
-                ? null
-                : parent.getComponent();
+        return getComponentStatement().getComponent();
         }
 
     /**

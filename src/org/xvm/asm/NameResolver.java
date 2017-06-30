@@ -11,5 +11,12 @@ import org.xvm.asm.constants.IdentityConstant;
  */
 public interface NameResolver
     {
-    IdentityConstant resolveFirstName(String sName);
+    /**
+     *
+     * @param sName    the name to resolve
+     * @param compPOV  the "point of view": the location at which the resolution is occurring from
+     *
+     * @return an IdentityConstant, if the name is resolvable, or null if it is not resolvable
+     */
+    IdentityConstant resolveFirstName(String sName, Component compPOV);
     }
