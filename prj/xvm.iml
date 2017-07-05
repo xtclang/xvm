@@ -12,6 +12,9 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$" />
     </content>
+    <content url="file://$MODULE_DIR$/../resources">
+      <sourceFolder url="file://$MODULE_DIR$/../resources" type="java-resource" />
+    </content>
     <content url="file://$MODULE_DIR$/../src">
       <sourceFolder url="file://$MODULE_DIR$/../src" isTestSource="false" />
     </content>

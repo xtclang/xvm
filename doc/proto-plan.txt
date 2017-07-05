@@ -40,6 +40,15 @@
 
 + try-finally
 
+=== compilation issues
+    - constructor, finalizer, default constructor
+    - interface not inheriting Object methods
+    - const not inheriting interface methods
+    - properties not defined by the class declarations (e.g. class TestClass(String prop1))
+    - "extend" contribution is not resolved
+    = module inside "x" - NPE in MethodDeclarationStatement.registerStruct (container is null)
+
+
 - op-code deserialization
 
 - Property and Method

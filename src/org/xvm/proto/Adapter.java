@@ -1,11 +1,6 @@
 package org.xvm.proto;
 
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.*;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
@@ -17,6 +12,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.template.xFunction;
 
+import org.xvm.proto.template.xObject;
+import org.xvm.proto.template.xService;
 import org.xvm.util.Handy;
 
 import java.util.HashMap;
@@ -31,16 +28,14 @@ import java.util.Optional;
  */
 public class Adapter
     {
-    public final ConstantPool f_pool;
-    public final TypeSet f_types;
+    public final Container f_container;
 
     // the template composition: name -> the corresponding ClassConstant id
     private Map<String, Integer> m_mapClasses = new HashMap<>();
 
     public Adapter(Container container)
         {
-        f_pool = container.f_pool;
-        f_types = container.f_types;
+        f_container = container;
         }
 
     public int getClassTypeConstId(String sName)
@@ -60,16 +55,22 @@ public class Adapter
             if (constType != null)
                 {
                 String[] asType = Handy.parseDelimitedString(sParam, ',');
-                int cTypes = asType.length;
-                TypeConstant[] aType = new TypeConstant[cTypes];
-                for (int i = 0; i < cTypes; i++)
-                    {
-                    String sType = asType[i].trim();
-                    aType[i] = getClassTypeConstant(getClassTypeConstId(sType));
-                    }
 
-                int nTypeId = f_pool.ensureClassTypeConstant(
-                        constType.getClassConstant(), null, aType).getPosition();
+                int nTypeId = f_container.f_pool.ensureClassTypeConstant(
+                        constType.getClassConstant(), null, getTypeConstants(asType)).getPosition();
+
+                m_mapClasses.put(sName, nTypeId);
+
+                return nTypeId;
+                }
+            }
+        else
+            {
+            ClassTypeConstant constType = getClassTypeConstant(sName);
+            if (constType != null)
+                {
+                int nTypeId = f_container.f_pool.ensureClassTypeConstant(
+                        constType.getClassConstant(), null).getPosition();
 
                 m_mapClasses.put(sName, nTypeId);
 
@@ -80,22 +81,35 @@ public class Adapter
         throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
         }
 
+    private TypeConstant[] getTypeConstants(String[] asType)
+        {
+        int cTypes = asType.length;
+        TypeConstant[] aType = new TypeConstant[cTypes];
+        for (int i = 0; i < cTypes; i++)
+            {
+            String sType = asType[i].trim();
+            aType[i] = getClassTypeConstant(getClassTypeConstId(sType));
+            }
+        return aType;
+        }
+
     protected ClassTypeConstant getClassTypeConstant(String sName)
         {
-        Integer IClass = m_mapClasses.get(sName);
-        return IClass == null ? null : getClassTypeConstant(IClass.intValue());
+        ClassConstant constClass = (ClassConstant)
+                f_container.f_types.getTemplate(sName).f_struct.getIdentityConstant();
+        return constClass.asTypeConstant();
         }
 
     public ClassTypeConstant getClassTypeConstant(int nConstId)
         {
-        return (ClassTypeConstant) f_pool.getConstant(nConstId);
+        return (ClassTypeConstant) f_container.f_pool.getConstant(nConstId);
         }
 
     public int getPropertyConstId(String sClassName, String sPropName)
         {
         try
             {
-            return f_types.getTemplate(sClassName).getProperty(sPropName).
+            return f_container.f_types.getTemplate(sClassName).getProperty(sPropName).
                     getIdentityConstant().getPosition();
             }
         catch (NullPointerException e)
@@ -106,10 +120,21 @@ public class Adapter
 
     public int getMethodConstId(String sClassName, String sMethName)
         {
+        return getMethodConstId(sClassName, sMethName, null, null);
+        }
+
+    public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
+        {
         try
             {
-            return f_types.getTemplate(sClassName).getMethod(sMethName, null, null).
-                    getIdentityConstant().getPosition();
+            ClassTemplate template = f_container.f_types.getTemplate(sClassName);
+            MethodStructure method = template.getMethod(sMethName, asArgType, asRetType);
+            while (method == null)
+                {
+                template = template.getSuper();
+                method = template.getMethod(sMethName, asArgType, asRetType);
+                }
+            return method.getIdentityConstant().getPosition();
             }
         catch (NullPointerException e)
             {
@@ -128,24 +153,24 @@ public class Adapter
         {
         if (oValue instanceof Integer || oValue instanceof Long)
             {
-            return f_pool.ensureIntConstant(((Number) oValue).longValue());
+            return f_container.f_pool.ensureIntConstant(((Number) oValue).longValue());
             }
 
         if (oValue instanceof String)
             {
-            return f_pool.ensureCharStringConstant((String) oValue);
+            return f_container.f_pool.ensureCharStringConstant((String) oValue);
             }
 
         if (oValue instanceof Character)
             {
-            return f_pool.ensureCharConstant(((Character) oValue).charValue());
+            return f_container.f_pool.ensureCharConstant(((Character) oValue).charValue());
             }
 
         if (oValue instanceof Boolean)
             {
             return getClassTypeConstant(
                     ((Boolean) oValue).booleanValue() ?
-                            "x:Boolean$True" : "x:Boolean$False");
+                            "Boolean.True" : "Boolean.False");
             }
 
         if (oValue instanceof Object[])
@@ -157,7 +182,7 @@ public class Adapter
                 {
                 aconst[i] = ensureValueConstant(ao[i]);
                 }
-            return f_pool.ensureTupleConstant(aconst);
+            return f_container.f_pool.ensureTupleConstant(aconst);
             }
 
         throw new IllegalArgumentException();
@@ -199,11 +224,52 @@ public class Adapter
             }
         }
 
-    public static ClassStructure getSuper(ClassStructure structure)
+    public ClassStructure getSuper(ClassStructure structure)
         {
         Optional<ClassStructure.Contribution> opt = structure.getContributionsAsList().stream().
                 filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
-        return (ClassStructure) (opt.isPresent() ? opt.get().getClassConstant().getComponent() : null);
+        if (opt.isPresent())
+            {
+            ClassConstant constClass = opt.get().getClassConstant().getClassConstant();
+            try
+                {
+                return (ClassStructure) constClass.getComponent();
+                }
+            catch (RuntimeException e)
+                {
+                // TODO: remove when getComponent() is fixed
+                String sName = constClass.getName();
+                ClassTemplate templateSuper = f_container.f_types.getTemplate(sName);
+                return templateSuper.f_struct;
+                }
+            }
+        else
+            {
+            switch (structure.getFormat())
+                {
+                case SERVICE:
+                    return xService.INSTANCE.f_struct;
+
+                case CLASS:
+                    if (structure.getName().equals("Object"))
+                        {
+                        return null;
+                        }
+                    // break through
+                case INTERFACE:
+                case CONST:
+                    return xObject.INSTANCE.f_struct;
+                }
+            }
+        return null;
+        }
+
+    public MethodStructure addMethod(ClassStructure structure, String sName,
+                                            String[] asArgType, String[] asRetType)
+        {
+        MultiMethodStructure mms = structure.ensureMultiMethodStructure(sName);
+        return mms.createMethod(false, Constants.Access.PUBLIC,
+                getTypeConstants(asRetType), getTypeConstants(asArgType));
         }
 
     public static MethodStructure getMethod(ClassStructure structure, String sName,
@@ -212,7 +278,7 @@ public class Adapter
         MultiMethodStructure mms = (MultiMethodStructure) structure.getChild(sName);
 
         // TODO: use the types
-        return (MethodStructure) mms.children().get(0);
+        return mms == null ? null : (MethodStructure) mms.children().get(0);
         }
 
     public static MethodStructure getDefaultConstructor(ClassStructure structure)
@@ -228,9 +294,7 @@ public class Adapter
 
     public int getScopeCount(MethodStructure method)
         {
-        ClassStructure clazz = (ClassStructure) method.getParent();
-        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
-        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(method.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
         return tm == null ? 1 : tm.m_cScopes;
         }
 
@@ -242,25 +306,19 @@ public class Adapter
 
     public int getVarCount(MethodStructure method)
         {
-        ClassStructure clazz = (ClassStructure) method.getParent();
-        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
-        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(method.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
         return tm == null ? 0 : tm.m_cVars;
         }
 
     public Op[] getOps(MethodStructure method)
         {
-        ClassStructure clazz = (ClassStructure) method.getParent();
-        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
-        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(method.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
         return tm == null ? null : tm.m_aop;
         }
 
     public MethodStructure getFinalizer(MethodStructure constructor)
         {
-        ClassStructure clazz = (ClassStructure) constructor.getParent();
-        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
-        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(constructor.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = getMethodTemplate(constructor);
         return tm == null ? null : tm.m_mtFinally.f_struct;
         }
 
@@ -272,10 +330,19 @@ public class Adapter
 
     public boolean isNative(MethodStructure method)
         {
-        ClassStructure clazz = (ClassStructure) method.getParent();
-        ClassTemplate template = f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
-        ClassTemplate.MethodTemplate tm = template.getMethodTemplate(method.getIdentityConstant());
+        ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
         return tm != null && tm.m_fNative;
+        }
+
+    private ClassTemplate.MethodTemplate getMethodTemplate(MethodStructure method)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) method.getParent();
+        Component parent = mms.getParent();
+
+        // the parent is either class or a property
+        ClassStructure clazz = (ClassStructure) (parent instanceof ClassStructure ? parent : parent.getParent());
+        ClassTemplate template = f_container.f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
+        return template.getMethodTemplate(method.getIdentityConstant());
         }
 
     public xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor, ObjectHandle[] ahArg)
@@ -325,7 +392,7 @@ public class Adapter
         MultiMethodStructure mms = (MultiMethodStructure) property.getChild("get");
 
         // TODO: use the type
-        return (MethodStructure) mms.children().get(0);
+        return mms == null ? null : (MethodStructure) mms.children().get(0);
         }
 
     public static MethodStructure getSetter(PropertyStructure property)
@@ -333,6 +400,6 @@ public class Adapter
         MultiMethodStructure mms = (MultiMethodStructure) property.getChild("set");
 
         // TODO: use the type
-        return (MethodStructure) mms.children().get(0);
+        return mms == null ? null : (MethodStructure) mms.children().get(0);
         }
     }

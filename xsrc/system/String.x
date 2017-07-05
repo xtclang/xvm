@@ -3,6 +3,11 @@ const String
     {
     private construct String() {}
 
+    conditional Int indexOf(ElementType value, Range<Int>? range = null)
+        {
+        return super(value, range);
+        }
+
     Char get(Int index);
 
     Iterator<Char> iterator()
@@ -46,7 +51,7 @@ const String
         {
         return chars;
         }
-        
+
     //
     const StringAscii(Byte[] bytes)
         {

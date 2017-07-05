@@ -36,7 +36,7 @@ public class xRuntimeClock
     public void initDeclared()
         {
         // TODO: change when the DateTime is implemented
-        getMethod("scheduleAlarm", new String[]{"x:Function", "x:Int64"}, new String[]{"x:Function"});
+        getMethod("scheduleAlarm", new String[]{"Function", "Int64"}, new String[]{"Function"});
         }
 
     @Override

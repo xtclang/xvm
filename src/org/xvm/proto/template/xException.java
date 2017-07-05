@@ -36,11 +36,14 @@ public class xException
     @Override
     public void initDeclared()
         {
-        MethodTemplate ct = getMethodTemplate("construct", new String[]{"x:Exception", "x:String|x:Nullable"});
+        // TODO: remove
+        f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"Exception", "String"}, VOID);
+
+        MethodTemplate ct = getMethodTemplate("construct", new String[]{"Exception", "String|x:Nullable"});
         ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
             {
-            new PSet(0, f_types.f_adapter.getPropertyConstId("x:Exception", "text"), 1),
-            new PSet(0, f_types.f_adapter.getPropertyConstId("x:Exception", "cause"), 2),
+            new PSet(0, f_types.f_adapter.getPropertyConstId("Exception", "text"), 1),
+            new PSet(0, f_types.f_adapter.getPropertyConstId("Exception", "cause"), 2),
             new Return_0(),
             };
         ct.m_cVars = 3;

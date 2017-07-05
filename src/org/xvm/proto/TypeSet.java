@@ -6,6 +6,8 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.proto.template.xObject;
+import org.xvm.proto.template.xService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -35,10 +37,10 @@ public class TypeSet
     // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
     private Map<Integer, TypeComposition> m_mapConstCompositions = new TreeMap<>(Integer::compare);
 
-    TypeSet(Container pool, Adapter adapter)
+    TypeSet(Container pool)
         {
         f_container = pool;
-        f_adapter = adapter;
+        f_adapter = pool.f_adapter;
         }
 
     // ----- templates -----
@@ -62,8 +64,12 @@ public class TypeSet
         if (template == null)
             {
             ClassStructure structClass = (ClassStructure) constClass.getComponent();
-            String sName = structClass.getName();
+            if (structClass == null)
+                {
+                throw new RuntimeException("Missing class structure: " + constClass);
+                }
 
+            String sName = structClass.getName();
             String sSuffix = sName.substring(sName.indexOf(':') + 1);
             sSuffix = sSuffix.substring(sSuffix.lastIndexOf('.') + 1);
 
@@ -74,19 +80,38 @@ public class TypeSet
 
                 template = clz.getConstructor(TypeSet.class, ClassStructure.class, Boolean.TYPE).
                         newInstance(this, structClass, Boolean.TRUE);
+                m_mapTemplatesByConst.put(constClass, template);
 
                 template.initDeclared();
                 }
             catch (ClassNotFoundException e)
                 {
-                System.out.println("Missing template for " + sName);
-                // throw new RuntimeException(e);
+                System.out.println("Generating template for " + sName);
+
+                switch (structClass.getFormat())
+                    {
+                    case CLASS:
+                    case ENUMVALUE:
+                    case INTERFACE:
+                        template = new xObject(this, structClass, false);
+                        break;
+
+                    case SERVICE:
+                        template = new xService(this, structClass, false);
+                        break;
+
+                    default:
+                        throw new UnsupportedOperationException("Format is not supported: " + structClass);
+                    }
+
+
+                m_mapTemplatesByConst.put(constClass, template);
+                template.initDeclared();
                 }
             catch (Throwable e)
                 {
                 e.printStackTrace();
                 }
-            m_mapTemplatesByConst.put(constClass, template);
             }
         return template;
         }

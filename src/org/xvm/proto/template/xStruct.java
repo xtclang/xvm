@@ -9,7 +9,7 @@ import org.xvm.proto.TypeSet;
  *
  * @author gg 2017.02.27
  */
-public class xStruct
+public class  xStruct
         extends ClassTemplate
     {
     public xStruct(TypeSet types, ClassStructure structure, boolean fInstance)

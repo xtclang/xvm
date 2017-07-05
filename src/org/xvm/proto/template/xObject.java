@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -34,14 +35,17 @@ public class xObject
         if (fInstance)
             {
             INSTANCE = this;
-            CLASS = resolve(Utils.TYPE_NONE);
+            CLASS = f_clazzCanonical;
             }
         }
 
     @Override
     public void initDeclared()
         {
-        markNativeMethod("to", VOID);
+        if (f_struct.getFormat() == Component.Format.CLASS)
+            {
+            markNativeMethod("to", VOID);
+            }
         }
 
     @Override
@@ -65,7 +69,10 @@ public class xObject
         return s_mapCanonical.computeIfAbsent(c, x ->
             {
             Type[] aType = new Type[c];
-            Arrays.fill(aType, CLASS.ensurePublicType());
+            if (c > 0)
+                {
+                Arrays.fill(aType, CLASS.ensurePublicType());
+                }
             return aType;
             });
         }

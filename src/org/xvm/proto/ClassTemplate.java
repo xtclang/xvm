@@ -57,10 +57,11 @@ public abstract class ClassTemplate
         f_types = types;
         f_struct = structClass;
         f_sName = structClass.getName();
-        f_clazzCanonical = new TypeComposition(this,
-                xObject.getTypeArray(structClass.getTypeParamsAsList().size()));
 
-        f_structSuper = Adapter.getSuper(structClass);
+        int cParams = structClass.getTypeParamsAsList().size();
+        f_clazzCanonical = new TypeComposition(this, xObject.getTypeArray(cParams));
+
+        f_structSuper = f_types.f_adapter.getSuper(structClass);
         }
 
     public boolean isRootObject()
@@ -103,7 +104,7 @@ public abstract class ClassTemplate
                 {
                 return true;
                 }
-            structSuper = Adapter.getSuper(structSuper);
+            structSuper = f_types.f_adapter.getSuper(structSuper);
             }
 
         m_mapRelations.put(structThat, Relation.INCOMPATIBLE);
@@ -134,9 +135,17 @@ public abstract class ClassTemplate
     public MethodStructure getMethod(String sName, String[] asArgType, String[] asRetType)
         {
         MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(sName);
+        if (mms != null)
+            {
+            List<Component> list = mms.children();
 
-        // TODO: pick the correct one based on the type
-        return (MethodStructure) mms.children().get(0);
+            // TODO: pick the correct one based on the type
+            if (!list.isEmpty())
+                {
+                return (MethodStructure) list.get(0);
+                }
+            }
+        return null;
         }
 
     // produce a TypeComposition for this template by resolving the generic type compositions
@@ -603,16 +612,17 @@ public abstract class ClassTemplate
         {
         PropertyStructure prop = getProperty(sPropName);
         MethodStructure getter = Adapter.getGetter(prop);
-
-        return m_mapMethods.computeIfAbsent(getter.getIdentityConstant(), (id) -> new MethodTemplate(getter));
+        IdentityConstant constId = getter == null ? prop.getIdentityConstant() : getter.getIdentityConstant();
+        return m_mapMethods.computeIfAbsent(constId, (id) -> new MethodTemplate(getter));
         }
 
     public MethodTemplate getSetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
         MethodStructure setter = Adapter.getSetter(prop);
+        IdentityConstant constId = setter == null ? prop.getIdentityConstant() : setter.getIdentityConstant();
 
-        return m_mapMethods.computeIfAbsent(setter.getIdentityConstant(), (id) -> new MethodTemplate(setter));
+        return m_mapMethods.computeIfAbsent(constId, (id) -> new MethodTemplate(setter));
         }
 
     public static class MethodTemplate
@@ -621,7 +631,7 @@ public abstract class ClassTemplate
         public boolean m_fNative;
         public Op[] m_aop;
         public int m_cVars;
-        public int m_cScopes;
+        public int m_cScopes = 1;
         public MethodTemplate m_mtFinally;
 
         public MethodTemplate(MethodStructure struct)
@@ -633,8 +643,6 @@ public abstract class ClassTemplate
     private Map<IdentityConstant, MethodTemplate> m_mapMethods = new HashMap<>();
 
     public static String[] VOID = new String[0];
-    public static String[] BOOLEAN = new String[]{"x:Boolean"};
-    public static String[] INT = new String[]{"x:Int64"};
-    public static String[] STRING = new String[]{"x:String"};
-    public static String[] CONDITIONAL_THIS = new String[]{"x:ConditionalTuple<this.Type>"};
+    public static String[] INT = new String[]{"Int64"};
+    public static String[] STRING = new String[]{"String"};
     }

@@ -41,7 +41,7 @@ public class xString
 
         markNativeGetter("length");
         markNativeMethod("indexOf", STRING);
-        markNativeMethod("indexOf", new String[]{"x:String", "x:Int"});
+        markNativeMethod("indexOf", new String[]{"String", "Int"});
         }
 
     @Override

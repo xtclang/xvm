@@ -35,6 +35,8 @@ public class xTuple
     @Override
     public void initDeclared()
         {
+        // TODO: remove
+        f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"collections.Sequence<Object>"}, VOID);
         }
 
     @Override

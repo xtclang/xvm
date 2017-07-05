@@ -44,7 +44,7 @@ public class xFutureRef
         //    private NotifyDependent? notify = null;
 
         // FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
-        markNativeMethod("whenComplete", new String[]{"x:Function"});
+        markNativeMethod("whenComplete", new String[]{"Function"});
         }
 
     @Override

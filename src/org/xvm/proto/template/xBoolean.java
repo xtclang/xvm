@@ -27,8 +27,8 @@ public class xBoolean
     @Override
     public void initDeclared()
         {
-        TypeComposition clzTrue = f_types.getTemplate("x:Boolean$True").f_clazzCanonical;
-        TypeComposition clzFalse = f_types.getTemplate("x:Boolean$True").f_clazzCanonical;
+        TypeComposition clzTrue = f_types.getTemplate("Boolean.True").f_clazzCanonical;
+        TypeComposition clzFalse = f_types.getTemplate("Boolean.False").f_clazzCanonical;
 
         TRUE = new BooleanHandle(clzTrue, true);
         FALSE = new BooleanHandle(clzFalse, false);

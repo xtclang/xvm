@@ -9,6 +9,9 @@
  */
 const Exception(String? text, Exception? cause = null)
     {
+    String? text;
+    Exception? cause;
+
     @inject Iterable<StackFrame> stackTrace;
 
     String to<String>()

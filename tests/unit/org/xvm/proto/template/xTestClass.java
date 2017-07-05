@@ -27,14 +27,16 @@ public class xTestClass extends ClassTemplate
     public void initDeclared()
         {
         // --- constructor()
-        MethodTemplate construct = getMethodTemplate("construct", new String[]{"x:TestClass", "x:String"});
-        MethodTemplate ftFinally = getMethodTemplate(
-                "finally", new String[]{"x:TestClass", "x:String"});
+        adapter.addMethod(f_struct, "construct", new String[]{"TestApp.TestClass", "String"}, VOID);
+        adapter.addMethod(f_struct, "finally", new String[]{"TestApp.TestClass", "String"}, VOID);
+
+        MethodTemplate construct = getMethodTemplate("construct", new String[]{"TestApp.TestClass", "String"});
+        MethodTemplate ftFinally = getMethodTemplate("finally", new String[]{"TestApp.TestClass", "String"});
 
         construct.m_aop = new Op[]
             { // #0 = this:struct; #1 = s
             new X_Print(-adapter.ensureValueConstantId("\n# in constructor: TestClass #")),
-            new PSet(0, adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
+            new PSet(0, adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
             new Return_0(),
             };
         construct.m_cVars = 2;
@@ -53,16 +55,16 @@ public class xTestClass extends ClassTemplate
         mtMethod1.m_aop = new Op[]
             { // #0 (this)
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
-            new NVar(adapter.getClassTypeConstId("x:String"),
+            new NVar(adapter.getClassTypeConstId("String"),
                      adapter.ensureValueConstantId("s")), // #1 (s)
-            new LGet(adapter.getPropertyConstId("x:TestClass", "prop1"), 1),
-            new NVar(adapter.getClassTypeConstId("x:Int64"),
+            new LGet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
+            new NVar(adapter.getClassTypeConstId("Int64"),
                      adapter.ensureValueConstantId("of")), // #2 (of)
-            new IVar(adapter.getClassTypeConstId("x:String"),
+            new IVar(adapter.getClassTypeConstId("String"),
                      -adapter.ensureValueConstantId("world")), // #3
-            new Invoke_11(1, adapter.getMethodConstId("x:String", "indexOf"), 3, 2),
-            new Var(adapter.getClassTypeConstId("x:Int64")), // #4
-            new PGet(1, adapter.getPropertyConstId("x:String", "length"), 4),
+            new Invoke_11(1, adapter.getMethodConstId("String", "indexOf"), 3, 2),
+            new Var(adapter.getClassTypeConstId("Int64")), // #4
+            new PGet(1, adapter.getPropertyConstId("String", "length"), 4),
             new Add(4, 2, 4),
             new Return_1(4),
             };
@@ -71,9 +73,9 @@ public class xTestClass extends ClassTemplate
         MethodTemplate mtExceptional = getMethodTemplate("exceptional", STRING);
         mtExceptional.m_aop = new Op[]
             { // #0 (this), #1 (s)
-            new Var(adapter.getClassTypeConstId("x:Exception")), // #2
-            new New_N(adapter.getMethodConstId("x:Exception", "construct"),
-                        new int[]{1, -adapter.getClassTypeConstId("x:Nullable$Null")}, 2),
+            new Var(adapter.getClassTypeConstId("Exception")), // #2
+            new New_N(adapter.getMethodConstId("Exception", "construct"),
+                        new int[]{1, -adapter.getClassTypeConstId("Nullable.Null")}, 2),
             new Throw(2),
             };
         mtExceptional.m_cVars = 3;

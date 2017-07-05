@@ -46,7 +46,7 @@ public class xService
     public void initDeclared()
         {
         markNativeMethod("yield", VOID);
-        markNativeMethod("invokeLater", new String[]{"x:Function"});
+        markNativeMethod("invokeLater", new String[]{"Function"});
         markNativeMethod("registerTimeout", INT);
         }
 

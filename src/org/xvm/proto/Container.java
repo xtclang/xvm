@@ -6,12 +6,10 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xModule.ModuleHandle;
 import org.xvm.proto.template.xRuntimeClock;
 import org.xvm.proto.template.xService;
@@ -51,27 +49,28 @@ public class Container
 
     // the module
     private ModuleHandle m_hModule;
+    private ObjectHandle m_hApp;
+    private String f_sAppName;
 
     // the values are: ObjectHandle | Supplier<ObjectHandle>
     final Map<InjectionKey, Object> f_mapResources = new HashMap<>();
 
-    public Container(Runtime runtime, String sModuleName, ModuleRepository repository)
+    public Container(Runtime runtime, String sAppName, ModuleRepository repository)
         {
         f_runtime = runtime;
-        f_module = repository.loadModule(sModuleName);
+        f_module = repository.loadModule("ecstasy.xtclang.org");
+        f_sAppName = sAppName;
         f_constModule = (ModuleConstant) f_module.getIdentityConstant();
 
         f_pool = f_module.getConstantPool();
         f_adapter = new Adapter(this);
-
-        f_types = new TypeSet(this, f_adapter);
+        f_types = new TypeSet(this);
         f_heapGlobal = new ObjectHeap(f_pool, f_types);
-
         }
 
     protected void initResources()
         {
-        ClassTemplate templateClock = f_types.getTemplate("x:Clock");
+        ClassTemplate templateClock = f_types.getTemplate("Clock");
 
         Supplier<ObjectHandle> supplierClock = () ->
             {
@@ -93,6 +92,14 @@ public class Container
             throw new IllegalStateException("Already started");
             }
 
+        f_types.getTemplate("Object");
+        f_types.getTemplate("Service");
+        f_types.getTemplate("Function");
+        f_types.getTemplate("Exception");
+        f_types.getTemplate("Ref");
+        f_types.getTemplate("annotations.FutureRef");
+        f_types.getTemplate("collections.Array");
+
         m_contextMain = createServiceContext("main");
         xService.makeHandle(m_contextMain,
                 xService.INSTANCE.f_clazzCanonical,
@@ -102,19 +109,20 @@ public class Container
 
         try
             {
-            String sModule = f_constModule.getName();
-            xModule module = (xModule) f_types.getTemplate(sModule);
+            // xModule module = (xModule) f_types.getTemplate(sModule);
+            ClassTemplate app = f_types.getTemplate(f_sAppName);
 
-            MethodStructure mtRun = Adapter.getMethod(module.f_struct,
+            MethodStructure mtRun = Adapter.getMethod(app.f_struct,
                     "run", ClassTemplate.VOID, ClassTemplate.VOID);
             if (mtRun == null)
                 {
-                throw new IllegalArgumentException("Missing run() method for " + f_constModule);
+                throw new IllegalArgumentException("Missing run() method for " + f_sAppName);
                 }
 
-            m_hModule = (ModuleHandle) module.createConstHandle(f_constModule, f_heapGlobal);
+            // m_hModule = (ModuleHandle) app.createConstHandle(f_constModule, f_heapGlobal);
+            m_hApp = app.createConstHandle(app.f_struct.getIdentityConstant(), f_heapGlobal);
 
-            m_contextMain.callLater(xFunction.makeHandle(mtRun), new ObjectHandle[]{m_hModule});
+            m_contextMain.callLater(xFunction.makeHandle(mtRun), new ObjectHandle[]{m_hApp});
             }
         catch (Exception e)
             {
