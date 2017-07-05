@@ -554,7 +554,7 @@ public class ConstantPool
      *         specified parameters and return values
      */
     public MethodConstant ensureMethodConstant(Constant constParent, String sName, Access access,
-            TypeConstant[] aconstParams, TypeConstant[] aconstReturns)
+            TypeConstant[] aconstReturns, TypeConstant[] aconstParams)
         {
         assert constParent != null;
 

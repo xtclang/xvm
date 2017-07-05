@@ -100,58 +100,66 @@ public class CommandLine
     protected ModuleRepository      repoResult;
 
     public static void main(String[] args)
-            throws Exception
         {
         // parse all the command line arguments, etc.
-        CommandLine cmd = new CommandLine();
-        cmd.parseArgs(args);
-        cmd.checkTerminalFailure();
-        cmd.showCompilerOptions();
+        CommandLine cmd = new CommandLine(args);
 
-        cmd.configureRepository();
+        cmd.build();
+        }
+
+    public CommandLine(String[] args)
+        {
+        this.args = args;
+        }
+
+    public ModuleRepository build()
+        {
+        // parse all the command line arguments, etc.
+        parseArgs();
+        checkTerminalFailure();
+        showCompilerOptions();
+
+        configureRepository();
 
         // what are the modules that need to be compiled?
-        cmd.selectCompileTargets();
-        cmd.checkTerminalFailure();
+        selectCompileTargets();
+        checkTerminalFailure();
 
         // parse the modules
-        cmd.parseSource();
-        cmd.checkTerminalFailure();
+        parseSource();
+        checkTerminalFailure();
 
         // assign names
-        cmd.populateTypeNamespace();
-        cmd.checkCompilerErrors();
-        cmd.checkTerminalFailure();
+        populateTypeNamespace();
+        checkCompilerErrors();
+        checkTerminalFailure();
 
         // syntax check
-        cmd.populateMembersNamespace();
-        cmd.checkCompilerErrors();
-        cmd.checkTerminalFailure();
+        populateMembersNamespace();
+        checkCompilerErrors();
+        checkTerminalFailure();
 
         // dependency resolution
-        cmd.resolveDependencies();
-        cmd.checkTerminalFailure();
+        resolveDependencies();
+        checkTerminalFailure();
 
         // write out the results
-        cmd.produceModules();
-        cmd.checkTerminalFailure();
+        produceModules();
+        checkTerminalFailure();
 
-        if (cmd.opts.verbose)
+        if (opts.verbose)
             {
-            cmd.dump();
+            dump();
             }
+
+        return repoBuild;
         }
 
     /**
      * Parse and store off the command line arguments.
-     *
-     * @param args  the arguments from the command line, in the format passed to a "main" method
      */
-    protected void parseArgs(String[] args)
+    protected void parseArgs()
         {
-        assert this.args == null;
-        this.args = args;
-
         if (args != null)
             {
             String sContinued = null;
@@ -477,15 +485,16 @@ public class CommandLine
             }
 
         Statement stmt = null;
+        ErrorList errlist = new ErrorList(100);
         try
             {
             Source    source  = new Source(file);
-            ErrorList errlist = new ErrorList(100);
             Parser    parser  = new Parser(source, errlist);
             stmt = parser.parseSource();
             }
         catch (CompilerException e)
             {
+            System.out.println(errlist.getErrors());
             deferred.add("xtc: An exception occurred parsing \"" + file + "\": " + e);
             }
         catch (IOException e)
@@ -642,6 +651,7 @@ public class CommandLine
             FileStructure struct   = compiler.generateInitialFileStructure();
             assert struct != null;
             modulesByName.put(name, compiler);
+            repoBuild.storeModule(struct.getModule());
             }
         }
 
