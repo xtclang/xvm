@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.util.IdentityArrayList;
@@ -55,10 +56,10 @@ public class CompositeComponent
     // ----- Component methods ---------------------------------------------------------------------
 
     @Override
-    public Constant getIdentityConstant()
+    public IdentityConstant getIdentityConstant()
         {
         // this is a legal request iff all of the siblings have the same identity constant
-        Constant constId = null;
+        IdentityConstant constId = null;
         for (Component sibling : m_siblings)
             {
             if (constId == null)

@@ -583,21 +583,6 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified type and name, obtain a ParameterConstant that represents it.
-     *
-     * @param constType  the type of the parameter
-     * @param sName      the name of the parameter
-     *
-     * @return a ParameterConstant
-     */
-    public ParameterConstant ensureParameterConstant(TypeConstant constType, String sName)
-        {
-        // note: the parameter constant is NOT registered, because it is not an actual constant
-        // type; it is simply a sub-component of a method constant
-        return new ParameterConstant(this, constType, sName);
-        }
-
-    /**
      * Given the specified class, access, and optional type parameters, obtain a ClassTypeConstant
      * that represents that combination.
      *
@@ -828,7 +813,6 @@ public class ConstantPool
                     constant = new AnnotatedTypeConstant(this, format, in);
                     break;
 
-                case Parameter:
                 case Unresolved:
                 default:
                     throw new IOException("Unsupported constant format: " + nFmt);
@@ -1059,11 +1043,6 @@ public class ConstantPool
 
 
     // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * An immutable, empty, zero-length array of parameters.
-     */
-    public static final ParameterConstant[] NO_PARAMS = new ParameterConstant[0];
 
     /**
      * An immutable, empty, zero-length array of types.

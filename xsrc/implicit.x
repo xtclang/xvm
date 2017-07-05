@@ -15,3 +15,6 @@ import x.UInt8 as Byte;
 import x.Int64 as Int;
 import x.UInt64 as UInt;
 import x.Decimal64 as Dec;
+
+import x.Tuple;
+typedef Tuple<> Void;

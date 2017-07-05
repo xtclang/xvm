@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -29,6 +30,46 @@ public class ImportStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the import alias
+     */
+    public String getAliasName()
+        {
+        return (String) alias.getValue();
+        }
+
+    /**
+     * @return the number of simple names in the imported name
+     */
+    public int getQualifiedNameLength()
+        {
+        return qualifiedName.size();
+        }
+
+    /**
+     * @param i  indicates which simple name of the imported name to obtain
+     *
+     * @return the i-th simple names in the imported name
+     */
+    public String getQualifiedNamePart(int i)
+        {
+        return (String) qualifiedName.get(i).getValue();
+        }
+
+    /**
+     * @return the imported name as an array of simple names
+     */
+    public String[] getQualifiedName()
+        {
+        int      cNames = qualifiedName.size();
+        String[] asName = new String[cNames];
+        for (int i = 0; i < cNames; ++i)
+            {
+            asName[i] = (String) qualifiedName.get(i).getValue();
+            }
+        return asName;
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -47,6 +88,15 @@ public class ImportStatement
         return CHILD_FIELDS;
         }
 
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    protected void registerStructures(AstNode parent, ErrorListener errs)
+        {
+        // TODO ComponentStatement parent.getComponentStatement().registerImport(this);
+        super.registerStructures(parent, errs);
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
