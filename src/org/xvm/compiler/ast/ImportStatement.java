@@ -1,12 +1,15 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.ErrorListener;
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
 
 import java.util.List;
+
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -43,7 +46,9 @@ public class ImportStatement
      */
     public int getQualifiedNameLength()
         {
-        return qualifiedName.size();
+        return importExpand == null
+                ? qualifiedName.size()
+                : importExpand.getQualifiedNameLength() + qualifiedName.size() - 1;
         }
 
     /**
@@ -53,6 +58,18 @@ public class ImportStatement
      */
     public String getQualifiedNamePart(int i)
         {
+        if (importExpand != null)
+            {
+            int cExpand = importExpand.getQualifiedNameLength();
+            if (i < cExpand)
+                {
+                return importExpand.getQualifiedNamePart(i);
+                }
+
+            // consider imports of "a.b.c" and "c.d.e", so expand "c.d.e" to "a.b.c.d.e"
+            i = i - cExpand + 1;
+            }
+
         return (String) qualifiedName.get(i).getValue();
         }
 
@@ -61,13 +78,26 @@ public class ImportStatement
      */
     public String[] getQualifiedName()
         {
-        int      cNames = qualifiedName.size();
+        int      cNames = getQualifiedNameLength();
         String[] asName = new String[cNames];
         for (int i = 0; i < cNames; ++i)
             {
-            asName[i] = (String) qualifiedName.get(i).getValue();
+            asName[i] = getQualifiedNamePart(i);
             }
         return asName;
+        }
+
+    /**
+     * If this import statement begins with another import statement's alias, expand this import
+     * statement using that import statement.
+     *
+     * @param importExpand  the ImportStatement that this ImportStatement can use to expand itself
+     */
+    protected void expand(ImportStatement importExpand)
+        {
+        assert importExpand.getAliasName().equals(getQualifiedNamePart(0));
+        assert this.importExpand == null;
+        this.importExpand = importExpand;
         }
 
     @Override
@@ -94,9 +124,28 @@ public class ImportStatement
     @Override
     protected void registerStructures(AstNode parent, ErrorListener errs)
         {
-        // TODO ComponentStatement parent.getComponentStatement().registerImport(this);
+        if (cond != null)
+            {
+            log(errs, Severity.WARNING, Compiler.CONDITIONAL_IMPORT);
+            }
         super.registerStructures(parent, errs);
         }
+
+    @Override
+    public void resolveGlobalVisibility(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        // as global visibility is resolved, each import statement registers itself so that anything
+        // following it can see the import, but anything preceding it does not
+        AstNode parent = getParent();
+        while (!(parent instanceof StatementBlock))
+            {
+            parent = parent.getParent();
+            }
+        ((StatementBlock) parent).registerImport(this, errs);
+
+        super.resolveGlobalVisibility(listRevisit, errs);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -153,6 +202,8 @@ public class ImportStatement
     protected Token       keyword;
     protected Token       alias;
     protected List<Token> qualifiedName;
+
+    private ImportStatement importExpand;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");
     }

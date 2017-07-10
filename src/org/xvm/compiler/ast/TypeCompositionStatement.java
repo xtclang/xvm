@@ -15,7 +15,6 @@ import org.xvm.asm.ComponentBifurcator;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Version;
@@ -1035,7 +1034,7 @@ public class TypeCompositionStatement
         }
 
     @Override
-    protected void resolveGlobalVisibility(ModuleRepository repos, ErrorListener errs)
+    public void resolveGlobalVisibility(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (getComponent().getFormat() == Format.PACKAGE)
             {
@@ -1050,19 +1049,19 @@ public class TypeCompositionStatement
                     case IMPORT_WANT:
                     case IMPORT_OPT:
                         PackageStructure structPkg = (PackageStructure) getComponent();
-                        ModuleStructure  structMod = structPkg.getImportedModule();
-                        // load the module
-                        NamedTypeExpression type    = (NamedTypeExpression) ((Composition.Import) composition).type;
-                        String              sModule = type.getName();
-                        if (repos.getModuleNames().contains(sModule))
-                            {
-                            // TODO
-                            }
-                        else
+                        ModuleStructure  structMod = structPkg == null ? null : structPkg.getImportedModule();
+                        ModuleStructure  structAct = structMod == null ? null : structMod.getFingerprintOrigin();
+                        if (structAct == null)
                             {
                             // this is obviously an error -- we can't compile without the module
                             // being available
+                            NamedTypeExpression type = (NamedTypeExpression) ((Composition.Import) composition).type;
+                            String              sModule = type.getName();
                             type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, sModule);
+                            }
+                        else
+                            {
+                            moduleImported = structAct;
                             }
                         break;
                     }
@@ -1075,7 +1074,7 @@ public class TypeCompositionStatement
         // module is a singleton, and is automatically created, i.e. it has to have all of its
         // construction parameters available)
 
-        super.resolveGlobalVisibility(repos, errs);
+        super.resolveGlobalVisibility(listRevisit, errs);
         }
 
     // TODO next we need to recursively resolve visibility down each level of nesting
@@ -1488,6 +1487,13 @@ public class TypeCompositionStatement
     protected StatementBlock       body;
     protected Token                doc;
     protected StatementBlock       enclosed;
+
+    /**
+     * For a package that imports a module, this is the actual module that is imported (not just the
+     * fingerprint.) Note that during compilation, the other module may itself be in the process of
+     * compilation, so it may be in the same "compiler pass" as this module for any given pass.
+     */
+    transient private ModuleStructure moduleImported;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "annotations", "typeParams", "constructorParams", "typeArgs", "args", "compositions",

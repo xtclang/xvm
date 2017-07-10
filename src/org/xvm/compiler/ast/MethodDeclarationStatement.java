@@ -12,7 +12,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.*;
@@ -116,12 +115,12 @@ public class MethodDeclarationStatement
         }
 
     @Override
-    protected void resolveGlobalVisibility(ModuleRepository repos, ErrorListener errs)
+    public void resolveGlobalVisibility(List<AstNode> listRevisit, ErrorListener errs)
         {
         // TODO evaluate condition
 
         // methods represent a barrier beyond which global visibility cannot see, so this method
-        // must not call super
+        // does not call super
         }
 
     protected List<TypeExpression> toTypeExpressions(List<Parameter> params)

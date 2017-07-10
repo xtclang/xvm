@@ -1,12 +1,20 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.xvm.asm.Component;
+
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
-import java.lang.reflect.Field;
-
-import java.util.List;
+import org.xvm.util.Severity;
 
 
 /**
@@ -56,9 +64,100 @@ public class StatementBlock
      * Mark the statement block as representing a file boundary, such that the parent (if any) and
      * each of the child (if any) statements are each assumed to be from separate files.
      */
-    public void markFileBoundary()
+    protected void markFileBoundary()
         {
         boundary = true;
+        }
+
+    /**
+     * @return true if this StatementBlock has been marked as a file boundary
+     */
+    public boolean isFileBoundary()
+        {
+        return boundary;
+        }
+
+    /**
+     * Register an import statement that occurs within this StatementBlock.
+     *
+     * @param stmt  the ImportStatement to register
+     * @param errs  the ErrorListener to use to log any errors
+     */
+    protected void registerImport(ImportStatement stmt, ErrorListener errs)
+        {
+        if (imports == null)
+            {
+            imports = new HashMap<>();
+            }
+
+        // make sure that no existing import uses the same alias
+        String sAlias = stmt.getAliasName();
+        if (imports.containsKey(sAlias))
+            {
+            log(errs, Severity.ERROR, Compiler.DUPLICATE_IMPORT, sAlias);
+            // fall through; don't stop compilation at this point, and just use the new import to
+            // overwrite the old
+            }
+
+        // check if the import is itself referencing an import, i.e. if it starts with an alias
+        String  sFirst = stmt.getQualifiedNamePart(0);
+        AstNode node   = this;
+        assert !this.isFileBoundary();  // a file boundary block cannot contain an import directly
+        while (node != null)
+            {
+            if (node instanceof StatementBlock)
+                {
+                StatementBlock block = (StatementBlock) node;
+                if (block.isFileBoundary())
+                    {
+                    break;
+                    }
+
+                ImportStatement stmtExpand = imports.get(sFirst);
+                if (stmtExpand != null)
+                    {
+                    stmt.expand(stmtExpand);
+                    }
+                }
+            else if (node instanceof ComponentStatement)
+                {
+                Component component = ((ComponentStatement) node).getComponent();
+                if (component != null)
+                    {
+                    if (component.getName().equals(sFirst) || component.getChild(sFirst) != null)
+                        {
+                        // the import is referring to the component or a child of the component, so
+                        // the import does not get expanded (at this point)
+                        break;
+                        }
+                    }
+                }
+            }
+
+        imports.put(stmt.getAliasName(), stmt);
+        }
+
+    /**
+     * Obtain the ImportStatement for a particular import alias. This method has different behaviors
+     * depending on the phase of compilation. During the phase in which the imports are registered,
+     * this will only provide an answer for the imports that have already been registered. For
+     * example, the {@link AstNode#resolveGlobalVisibility(List, ErrorListener)} method
+     * is used to resolve all global names (all names, down to the method level, but not resolving
+     * within any methods), and thus imports outside of methods are all registered during that
+     * phase, such that only the ones registered will be visible via this method. The reason for
+     * this approach is that imports are not visible outside of a file, and furthermore, because
+     * they can occur at any point within the file, only those encountered "above" some current
+     * point in that file are considered to be visible at that point.
+     *
+     * @param sName  the import alias
+     *
+     * @return the ImportStatement, or null
+     */
+    public ImportStatement getImport(String sName)
+        {
+        return imports == null
+                ? null
+                : imports.get(sName);
         }
 
     @Override
@@ -158,6 +257,8 @@ public class StatementBlock
     protected long            lStartPos;
     protected long            lEndPos;
     protected boolean         boundary;
+
+    protected Map<String, ImportStatement> imports;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
     }
