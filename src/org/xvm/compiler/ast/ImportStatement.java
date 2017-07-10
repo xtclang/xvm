@@ -132,7 +132,7 @@ public class ImportStatement
         }
 
     @Override
-    public void resolveGlobalVisibility(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         // as global visibility is resolved, each import statement registers itself so that anything
         // following it can see the import, but anything preceding it does not
@@ -143,7 +143,7 @@ public class ImportStatement
             }
         ((StatementBlock) parent).registerImport(this, errs);
 
-        super.resolveGlobalVisibility(listRevisit, errs);
+        super.resolveNames(listRevisit, errs);
         }
 
 

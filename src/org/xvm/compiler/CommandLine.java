@@ -130,17 +130,17 @@ public class CommandLine
         checkTerminalFailure();
 
         // assign names
-        populateTypeNamespace();
+        populateNamespace();
         checkCompilerErrors();
         checkTerminalFailure();
 
         // syntax check
-        populateMembersNamespace();
+        resolveDependencies();
         checkCompilerErrors();
         checkTerminalFailure();
 
         // dependency resolution
-        resolveDependencies();
+        validate();
         checkTerminalFailure();
 
         // write out the results
@@ -622,10 +622,10 @@ public class CommandLine
         }
 
     /**
-     * Link all of the AST objects for each module into a single parse tree, and start the
-     * compilation by populating the global type namespace.
+     * Link all of the AST objects for each module into a single parse tree, and create the outline
+     * of the finished FileStructure.
      */
-    protected void populateTypeNamespace()
+    protected void populateNamespace()
         {
         for (Node module : modules.values())
             {
@@ -655,22 +655,48 @@ public class CommandLine
             }
         }
 
-    protected void populateMembersNamespace()
-        {
-        for (Compiler compiler : modulesByName.values())
-            {
-            compiler.resolveRemainder();
-            }
-        }
-
+    /**
+     * Resolve dependencies, both within and among modules, including among multiple modules that
+     * are being compiled at the same time.
+     */
     protected void resolveDependencies()
         {
+        int cTries = 0;
+        do
+            {
+            boolean fDone = true;
+            for (Compiler compiler : modulesByName.values())
+                {
+                fDone &= compiler.namesResolved();
+                }
+            if (fDone)
+                {
+                return;
+                }
+            }
+        while (++cTries < 0x3F);
+
+        // something couldn't get resolved; must be a bug in the compiler
         for (Compiler compiler : modulesByName.values())
             {
-            // TODO compiler.doSomeNextStep();
+            compiler.reportUnresolvableNames();
             }
         }
 
+    /**
+     * After names/dependencies are resolved, determine if the result of compilation will be valid.
+     */
+    protected void validate()
+        {
+        for (Compiler compiler : modulesByName.values())
+            {
+            compiler.validate();
+            }
+        }
+
+    /**
+     * Emit the results of compilation.
+     */
     protected void produceModules()
         {
         for (Node module : modules.values())
@@ -702,19 +728,18 @@ public class CommandLine
                     }
 
                 FileStructure struct = module.getType().getComponent().getFileStructure();
-// TODO this won't work until we start resolving types
-//                try
-//                    {
-//                    struct.writeTo(file);
-//                    }
-//                catch (IOException e)
-//                    {
-//                    deferred.add("xtc: Exception (" + e
-//                            + ") occurred while attempting to write module file \""
-//                            + file.getAbsolutePath() + "\"");
-//                    error = true;
-//                    }
-//                module.checkErrors();
+                try
+                    {
+                    struct.writeTo(file);
+                    }
+                catch (IOException e)
+                    {
+                    deferred.add("xtc: Exception (" + e
+                            + ") occurred while attempting to write module file \""
+                            + file.getAbsolutePath() + "\"");
+                    error = true;
+                    }
+                module.checkErrors();
                 }
             }
         }

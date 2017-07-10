@@ -115,7 +115,7 @@ public class MethodDeclarationStatement
         }
 
     @Override
-    public void resolveGlobalVisibility(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         // TODO evaluate condition
 

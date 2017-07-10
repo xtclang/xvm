@@ -10,7 +10,6 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.util.Severity;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 
@@ -83,7 +82,13 @@ public class Compiler
      */
     public FileStructure generateInitialFileStructure()
         {
+        if (m_stage != Stage.Initial)
+            {
+            throw new IllegalStateException("Stage=" + m_stage + " (expected: Initial)");
+            }
+
         m_struct = m_module.createModuleStructure(m_errs);
+        m_stage = Stage.Registered;
         return m_struct;
         }
 
@@ -94,63 +99,112 @@ public class Compiler
      * This method is uses the ModuleRepository.
      * <p/>
      * Any error results are logged to the ErrorListener.
+     *
+     * @return true iff all of the names have been resolved
      */
-    public void resolveGlobalNames()
+    public boolean namesResolved()
         {
-        // first, load any module dependencies
-        boolean fFatal = false;
-        for (String sModule : m_struct.moduleNames())
+        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        if (m_stage == Stage.Resolved)
             {
-            if (!sModule.equals(m_struct.getModuleName()))
-                {
-                ModuleStructure structFingerprint = m_struct.getModule(sModule);
-                assert structFingerprint.isFingerprint();
-                assert structFingerprint.getFingerprintOrigin() == null;
+            return true;
+            }
 
-                // load the module against which the compilation will occur
-                if (!m_repos.getModuleNames().contains(sModule))
+        if (m_stage != Stage.Registered)
+            {
+            throw new IllegalStateException("Stage=" + m_stage + " (expected: Registered)");
+            }
+
+        if (m_listUnresolved == null)
+            {
+            // first time through, load any module dependencies
+            boolean fFatal = false;
+            for (String sModule : m_struct.moduleNames())
+                {
+                if (!sModule.equals(m_struct.getModuleName()))
                     {
-                    // no error is logged here; the package that imports the module will detect the
-                    // error when it is asked to resolve global names; see TypeCompositionStatement
-                    continue;
+                    ModuleStructure structFingerprint = m_struct.getModule(sModule);
+                    assert structFingerprint.isFingerprint();
+                    assert structFingerprint.getFingerprintOrigin() == null;
+
+                    // load the module against which the compilation will occur
+                    if (!m_repos.getModuleNames().contains(sModule))
+                        {
+                        // no error is logged here; the package that imports the module will detect
+                        // the error when it is asked to resolve global names; see
+                        // TypeCompositionStatement
+                        continue;
+                        }
+
+                    ModuleStructure structActual = m_repos.loadModule(sModule); // TODO versions etc.
+                    structFingerprint.setFingerprintOrigin(structActual);
                     }
-
-                ModuleStructure structActual = m_repos.loadModule(sModule); // TODO versions etc.
-                structFingerprint.setFingerprintOrigin(structActual);
                 }
-            }
-        if (fFatal)
-            {
-            return;
-            }
-
-        // second, recursively resolve all of the unresolved global names, and if anything couldn't
-        // get done in one pass, then repeat
-        int cTries = 0;
-        List<AstNode> listTodo = Collections.singletonList(m_module);
-        do
-            {
-            List<AstNode> listDeferred = new ArrayList<>();
-            for (AstNode node : listTodo)
+            if (fFatal)
                 {
-                node.resolveGlobalVisibility(listDeferred, m_errs);
+                return false;
                 }
-            listTodo = listDeferred;
             }
-        while (!listTodo.isEmpty() && cTries < 0x3F);
-        for (AstNode node : listTodo)
+
+        // recursively resolve all of the unresolved global names, and if anything couldn't get done
+        // in one pass, then store it off in a list to tackle next time
+        List<AstNode> listDeferred = new ArrayList<>();
+        if (m_listUnresolved == null)
             {
-            node.log(m_errs, Severity.FATAL, INFINITE_RESOLVE_LOOP, node.getComponent().getIdentityConstant().toString());
+            // first time through: resolve starting from the module, and recurse down
+            m_module.resolveNames(listDeferred, m_errs);
+            }
+        else
+            {
+            // second through n-th time through: resolve starting from whatever didn't get resolved
+            // last time, and recurse down
+            for (AstNode node : (List<AstNode>) m_listUnresolved)
+                {
+                node.resolveNames(listDeferred, m_errs);
+                }
+            }
+
+        // when there is nothing left deferred, the resolution stage is completed
+        boolean fResolved = listDeferred.isEmpty();
+        if (fResolved)
+            {
+            m_listUnresolved = null;
+            m_stage          = Stage.Resolved;
+            }
+        else
+            {
+            m_listUnresolved = listDeferred;
+            }
+        return fResolved;
+        }
+
+    /**
+     * After a certain number of attempts to resolve names by invoking {@link #namesResolved}, this
+     * method will report any unresolved names as fatal errors.
+     */
+    public void reportUnresolvableNames()
+        {
+        if (m_stage == Stage.Registered && m_listUnresolved != null && !m_listUnresolved.isEmpty())
+            {
+            for (AstNode node : m_listUnresolved)
+                {
+                node.log(m_errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP,
+                        node.getComponent().getIdentityConstant().toString());
+                }
             }
         }
 
     /**
-     * Third pass: Resolve names and structures within methods.
-     * <p/>
-     * Any error results are logged to the ErrorListener.
+     * After the names are resolved, the tree can be validated. Once validated, the result can be
+     * emitted.
      */
-    public void resolveRemainder()
+    public void validate()
         {
+        if (m_stage != Stage.Resolved)
+            {
+            throw new IllegalStateException("Stage=" + m_stage + " (expected: Resolved)");
+            }
+
         // TODO
         }
 
@@ -282,6 +336,16 @@ public class Compiler
     // ----- data members --------------------------------------------------------------------------
 
     /**
+     * The stages of compilation.
+     */
+    public enum Stage {Initial, Registered, Resolved, Validated, };
+
+    /**
+     * Current compilation stage.
+     */
+    private Stage m_stage = Stage.Initial;
+
+    /**
      * The module repository to use.
      */
     private final ModuleRepository m_repos;
@@ -302,5 +366,14 @@ public class Compiler
      */
     private FileStructure m_struct;
 
+    /**
+     * True if this is the compiler for the Ecstasy module itself.
+     */
     private boolean m_fRoot;
+
+    /**
+     * After the compiler stage reaches Registered, but before it reaches Resolved, this holds a
+     * list of AstNode objects that need to be resolved.
+     */
+    private transient List<AstNode> m_listUnresolved;
     }

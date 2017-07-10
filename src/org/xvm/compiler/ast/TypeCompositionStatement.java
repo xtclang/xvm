@@ -1034,7 +1034,7 @@ public class TypeCompositionStatement
         }
 
     @Override
-    public void resolveGlobalVisibility(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (getComponent().getFormat() == Format.PACKAGE)
             {
@@ -1068,13 +1068,24 @@ public class TypeCompositionStatement
                 }
             }
 
+        //
+        protected Expression           condition;
+        protected List<Annotation>     annotations;
+        protected List<Parameter>      typeParams;
+        protected List<Parameter>      constructorParams;
+        protected List<TypeExpression> typeArgs;
+        protected List<Expression>     args;
+        protected List<Composition>    compositions;
+        protected StatementBlock       body;
+
+
         // validation of constructor parameters happens in a
         // TODO validate any constructor parameters and their default values, and transfer the info to the constructor
         // constructor parameters are not permitted unless they all have default values (since the
         // module is a singleton, and is automatically created, i.e. it has to have all of its
         // construction parameters available)
 
-        super.resolveGlobalVisibility(listRevisit, errs);
+        super.resolveNames(listRevisit, errs);
         }
 
     // TODO next we need to recursively resolve visibility down each level of nesting

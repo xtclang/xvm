@@ -20,6 +20,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.IdentityConstant;
+
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 
@@ -211,35 +213,48 @@ public abstract class AstNode
         }
 
     /**
-     * Second logical compiler pass. This pass has access to imported modules, and is able to
-     * resolve names for all globally visible structures.
+     * Second logical compiler pass. This pass has access to imported modules, and is responsible
+     * for resolving names.
      * <p/>
      * The rule of thumb is that no questions should be asked of other modules that could not have
      * been answered by this module before this call; in other words, the order of the module
      * compilation is not only unpredictable, but the potential exists for dependencies in either
      * direction (first to last and/or vice versa).
      * <p/>
+     * As a result, some questions may come to an AstNode to resolve that it is not yet prepared to
+     * resolve, in which case the caller (another AstNode) has to add itself to the list of nodes
+     * that require another pass.
+     * <p/>
      * <ul>
-     * <li>Packages that import modules need to validate that those modules are available to
-     * compile against, and that the corresponding "fingerprint" module structure is present in the
-     * FileStructure;</li>
+     * <li>Packages that import modules are able to verify that those modules are available to
+     * compile against;</li>
      *
-     * <li>Globally visible types must resolve and validate all of their conditionals, i.e. the
-     * link-time conditionals defining which types are present and which of their Compositions are
-     * in effect.</li>
+     * <li>Conditionals must be resolvable, e.g. the link-time conditionals defining which types are
+     * present and which of their Compositions are in effect.</li>
      * </ul>
+     *
      * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
      *                     pass
      * @param errs         the error list to log any errors etc. to
      */
-    public void resolveGlobalVisibility(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
+        // before resolving any children, mark this node as resolved, so that it is able to help
+        // resolve things on requests from children
+        stage = Stage.Resolved;
+
         for (AstNode node : children())
             {
-            node.resolveGlobalVisibility(listRevisit, errs);
+            node.resolveNames(listRevisit, errs);
             }
+        }
 
-        stage = Stage.NamesResolved;
+    /**
+     * @return true iff this AstNode should be able to resolve names
+     */
+    protected boolean canResolve()
+        {
+        return stage.ordinal() >= Stage.Resolved.ordinal();
         }
 
     /**
@@ -249,11 +264,11 @@ public abstract class AstNode
      *
      * @param errs  the error list to log any errors etc. to
      */
-    protected void registerRemainingStructures(ErrorListener errs)
+    protected void validate(ErrorListener errs)
         {
         for (AstNode node : children())
             {
-            node.registerRemainingStructures(errs);
+            node.validate(errs);
             }
         }
 
@@ -789,8 +804,6 @@ public abstract class AstNode
     // ----- fields --------------------------------------------------------------------------------
 
     protected static final Field[] NO_FIELDS = new Field[0];
-
-    public enum Stage {Initial, Registered, NamesResolved, };
 
     private Stage stage = Stage.Initial;
 
