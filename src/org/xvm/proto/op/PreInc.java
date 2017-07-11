@@ -5,15 +5,15 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.OpInvocable;
-import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.OpProperty;
+import org.xvm.proto.TypeComposition;
 
 /**
  * PREINC lvalue-target, lvalue-return  ; ++T -> T
  *
  * @author gg 2017.03.08
  */
-public class PreInc extends OpInvocable
+public class PreInc extends OpProperty
     {
     private final int f_nArgValue;
     private final int f_nRetValue;
@@ -45,9 +45,9 @@ public class PreInc extends OpInvocable
                 {
                 // operation on a local property
                 ObjectHandle hTarget = frame.getThis();
-                ClassTemplate template = hTarget.f_clazz.f_template;
+                TypeComposition clazz = hTarget.f_clazz;
 
-                PropertyStructure property = getPropertyStructure(frame, template, -f_nArgValue);
+                PropertyStructure property = getPropertyStructure(frame, clazz, -f_nArgValue);
 
                 return hTarget.f_clazz.f_template.
                         invokePreInc(frame, hTarget, property, f_nRetValue);

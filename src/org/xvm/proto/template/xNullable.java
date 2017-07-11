@@ -21,9 +21,7 @@ public class xNullable
     @Override
     public void initDeclared()
         {
-        ClassTemplate template = f_types.getTemplate("Nullable.Null");
-
-        NULL = new NullHandle(template.f_clazzCanonical);
+        NULL = new NullHandle(f_clazzCanonical);
         }
 
     @Override

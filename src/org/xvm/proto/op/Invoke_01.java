@@ -2,12 +2,11 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.ClassTemplate;
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
 import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction;
@@ -42,17 +41,17 @@ public class Invoke_01 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            TypeComposition clz = hTarget.f_clazz;
 
-            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
+            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             if (frame.f_adapter.isNative(method))
                 {
-                return template.invokeNative(frame, hTarget, method,
+                return clz.f_template.invokeNative(frame, hTarget, method,
                         Utils.OBJECTS_NONE, f_nRetValue);
                 }
 
-            if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
                 return xFunction.makeAsyncHandle(method).
                         call1(frame, new ObjectHandle[]{hTarget}, f_nRetValue);

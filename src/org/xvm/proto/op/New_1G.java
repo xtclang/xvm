@@ -37,8 +37,7 @@ public class New_1G extends OpCallable
     public int process(Frame frame, int iPC)
         {
         MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
-        IdentityConstant constClass = (IdentityConstant) constructor.getParent().getIdentityConstant();
-        ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
+        IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
 
         try
             {
@@ -63,6 +62,8 @@ public class New_1G extends OpCallable
                 {
                 return R_REPEAT;
                 }
+
+            ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
             return template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
             }

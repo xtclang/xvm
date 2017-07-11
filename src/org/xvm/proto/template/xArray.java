@@ -8,7 +8,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-
 import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
@@ -17,6 +16,7 @@ import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
+import java.util.Collections;
 import java.util.function.Supplier;
 
 /**
@@ -37,6 +37,8 @@ public class xArray
         if (fInstance)
             {
             INSTANCE = this;
+
+            new xIntArray(f_types, f_struct, true); // TODO: how to do it right?
             }
         }
 
@@ -46,6 +48,7 @@ public class xArray
         // TODO: remove
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"Int64", "Function"}, VOID);
 
+        markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT);
         markNativeMethod("reify", VOID);
         }
@@ -54,7 +57,7 @@ public class xArray
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
-        Type typeEl = clzArray.f_atGenericActual[0];
+        Type typeEl = clzArray.f_mapGenericActual.get("ElementType");
         String sTemplate = typeEl.f_sName;
 
         ClassTemplate templateEl = sTemplate == null ?
@@ -71,18 +74,15 @@ public class xArray
 
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
 
-        if (ahVar.length == 2)
+        if (cCapacity > 0)
             {
             hArray.m_fFixed = true;
-            }
-        else
-            {
-            FunctionHandle hSupplier = (FunctionHandle) ahVar[2];
 
-            xArray array = (xArray) hArray.f_clazz.f_template;
-
-            if (cCapacity > 0)
+            if (ahVar.length == 3)
                 {
+                FunctionHandle hSupplier = (FunctionHandle) ahVar[2];
+                xArray array = (xArray) hArray.f_clazz.f_template;
+
                 int[] ai = new int[]{0}; // index holder
                 ObjectHandle[] ahArg = new ObjectHandle[1];
                 ahArg[0] = xInt64.makeHandle(ai[0]);
@@ -220,7 +220,7 @@ public class xArray
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
-        return hArray.f_clazz.f_atGenericActual[0];
+        return hArray.f_clazz.f_mapGenericActual.get("ElementType");
         }
 
     @Override
@@ -240,7 +240,8 @@ public class xArray
 
     public static GenericArrayHandle makeHandle(Type typeEl, ObjectHandle[] ahValue)
         {
-        return new GenericArrayHandle(INSTANCE.resolve(new Type[] {typeEl}), ahValue);
+        return new GenericArrayHandle(INSTANCE.resolve(
+                Collections.singletonMap("ElementType", typeEl)), ahValue);
         }
 
     public static GenericArrayHandle makeHandle(TypeComposition clzArray, long cCapacity)

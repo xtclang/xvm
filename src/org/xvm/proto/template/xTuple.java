@@ -8,8 +8,7 @@ import org.xvm.asm.constants.TupleConstant;
 import org.xvm.proto.*;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /**
  * TODO:
@@ -37,6 +36,8 @@ public class xTuple
         {
         // TODO: remove
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"collections.Sequence<Object>"}, VOID);
+
+        markNativeMethod("construct", new String[]{"collections.Sequence<Object>"}, VOID);
         }
 
     @Override
@@ -156,7 +157,21 @@ public class xTuple
 
     public static TupleHandle makeHandle(Type[] aType, ObjectHandle[] ahValue)
         {
-        return new TupleHandle(INSTANCE.resolve(aType), ahValue);
+        Map<String, Type> mapParams;
+        if (aType.length == 0)
+            {
+            mapParams = Collections.EMPTY_MAP;
+            }
+        else
+            {
+            mapParams = new HashMap<>();
+            for (int i = 0, c = aType.length; i < c; i++)
+                {
+                // TODO: how to name them?
+                mapParams.put("ElementTypes[" + i + ']', aType[i]);
+                }
+            }
+        return new TupleHandle(INSTANCE.resolve(mapParams), ahValue);
         }
 
     public static class TupleHandle

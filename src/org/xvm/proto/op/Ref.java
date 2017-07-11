@@ -7,6 +7,8 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
+import java.util.Collections;
+
 /**
  * REF lvalue ; next register represents the Variable ref for the specified variable
  *
@@ -36,7 +38,8 @@ public class Ref extends OpInvocable
             }
         else
             {
-            TypeComposition clzRef = xRef.INSTANCE.resolve(new TypeComposition[]{clzReferent});
+            TypeComposition clzRef = xRef.INSTANCE.resolve(
+                    Collections.singletonMap("RefType", infoSrc.f_clazz.ensurePublicType()));
 
             RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);
 

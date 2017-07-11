@@ -89,26 +89,26 @@ public class ObjectHandle
         protected void createFields()
             {
             f_clazz.f_template.f_struct.children().stream().forEach(child ->
-            {
-            if (!(child instanceof PropertyStructure))
                 {
-                return;
-                }
+                if (!(child instanceof PropertyStructure))
+                    {
+                    return;
+                    }
 
-            PropertyStructure prop = (PropertyStructure) child;
-            RefHandle hRef = null;
-            if (Adapter.isRef(prop))
-                {
-                xRef referent = (xRef) Adapter.getRefTemplate(f_clazz.f_template.f_types, prop);
+                PropertyStructure prop = (PropertyStructure) child;
+                RefHandle hRef = null;
+                if (Adapter.isRef(prop))
+                    {
+                    xRef referent = (xRef) Adapter.getRefTemplate(f_clazz.f_template.f_types, prop);
 
-                hRef = xRef.INSTANCE.createRefHandle(referent.f_clazzCanonical);
-                }
+                    hRef = xRef.INSTANCE.createRefHandle(referent.f_clazzCanonical);
+                    }
 
-            if (!Adapter.isReadOnly(prop) || hRef != null)
-                {
-                m_mapFields.put(prop.getName(), hRef);
-                }
-            });
+                if (!Adapter.isReadOnly(prop) || hRef != null)
+                    {
+                    m_mapFields.put(prop.getName(), hRef);
+                    }
+                });
             }
         @Override
         public String toString()

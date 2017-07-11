@@ -32,6 +32,7 @@ public class xInt64
     @Override
     public void initDeclared()
         {
+        markNativeMethod("to", VOID, STRING);
         }
 
     @Override

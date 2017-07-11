@@ -30,4 +30,11 @@ interface Clock
      * with the clock attempting to invoke the alarm.
      */
     Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp);
+
+    // well-known (injectable) implementations
+    static class RuntimeClock
+            implements Clock
+        {
+        Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp) {} // TODO: remove
+        }
     }

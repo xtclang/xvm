@@ -7,6 +7,8 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
+import java.util.Collections;
+
 /**
  * MOV_REF lvalue-src, lvalue-dest ; move reference-to-source to destination
  *
@@ -36,7 +38,8 @@ public class MoveRef extends OpInvocable
             }
         else
             {
-            TypeComposition clzRef = xRef.INSTANCE.resolve(new TypeComposition[]{infoSrc.f_clazz});
+            TypeComposition clzRef = xRef.INSTANCE.resolve(
+                    Collections.singletonMap("RefType", infoSrc.f_clazz.ensurePublicType()));
 
             hRef = new RefHandle(clzRef, frame, f_nSrcValue);
             }

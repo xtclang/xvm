@@ -5,15 +5,15 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.OpInvocable;
-import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.OpProperty;
+import org.xvm.proto.TypeComposition;
 
 /**
  * P_PREINC rvalue-target, CONST_PROPERTY, lvalue ; same as PREINC for a register
  *
  * @author gg 2017.03.08
  */
-public class PPreInc extends OpInvocable
+public class PPreInc extends OpProperty
     {
     private final int f_nTarget;
     private final int f_nPropConstId;
@@ -37,11 +37,11 @@ public class PPreInc extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            TypeComposition clazz = hTarget.f_clazz;
 
-            PropertyStructure property = getPropertyStructure(frame, template, f_nPropConstId);
+            PropertyStructure property = getPropertyStructure(frame, clazz, f_nPropConstId);
 
-            return template.invokePreInc(frame, hTarget, property, f_nRetValue);
+            return clazz.f_template.invokePreInc(frame, hTarget, property, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

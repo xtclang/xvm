@@ -583,7 +583,7 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    IdentityConstant constClass = (IdentityConstant) f_constructor.getParent().getIdentityConstant();
+                    IdentityConstant constClass = f_constructor.getParent().getParent().getIdentityConstant();
                     xService service = (xService) frame.f_context.f_types.getTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);

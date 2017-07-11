@@ -1,19 +1,18 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.PropertyStructure;
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.OpInvocable;
-import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.OpProperty;
+import org.xvm.proto.TypeComposition;
 
 /**
  * P_GET rvalue-target, CONST_PROPERTY, lvalue-return
  *
  * @author gg 2017.03.08
  */
-public class PGet extends OpInvocable
+public class PGet extends OpProperty
     {
     private final int f_nTarget;
     private final int f_nPropConstId;
@@ -38,11 +37,11 @@ public class PGet extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            TypeComposition clazz = hTarget.f_clazz;
 
-            PropertyStructure property = getPropertyStructure(frame, template, f_nPropConstId);
+            PropertyStructure property = getPropertyStructure(frame, clazz, f_nPropConstId);
 
-            return template.getPropertyValue(frame, hTarget, property, f_nRetValue);
+            return clazz.f_template.getPropertyValue(frame, hTarget, property, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

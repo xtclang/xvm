@@ -2,8 +2,11 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpCallable;
+import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -26,12 +29,7 @@ public class Call_00 extends OpCallable
         {
         if (f_nFunctionValue == A_SUPER)
             {
-            // in-lined version of "callSuperN"
-            MethodStructure methodSuper = Adapter.getSuper(frame.f_function);
-
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
-
-            return frame.call1(methodSuper, frame.getThis(), ahVar, Frame.RET_UNUSED);
+            return callSuperNN(frame, Utils.ARGS_NONE, Utils.ARGS_NONE);
             }
 
         if (f_nFunctionValue < 0)

@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.PropertyStructure;
 import org.xvm.proto.Adapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
@@ -29,8 +30,9 @@ public class xTestService extends xService
         {
         adapter.addMethod(f_struct, "construct", new String[]{"TestApp.TestService", "Int64"}, VOID);
         adapter.addMethod(f_struct, "default", VOID, VOID);
+        adapter.markInjectable(((PropertyStructure) f_struct.getChild("runtimeClock")));
 
-        MethodTemplate mtGetCounter = getGetter("counter");
+        MethodTemplate mtGetCounter = ensureGetter("counter");
         mtGetCounter.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.get #")),
@@ -40,7 +42,7 @@ public class xTestService extends xService
             };
         mtGetCounter.m_cVars = 2;
 
-        MethodTemplate mtSetCounter = getSetter("counter");
+        MethodTemplate mtSetCounter = ensureSetter("counter");
         mtSetCounter.m_aop = new Op[]
             { // #0 = this; #1 = newValue
             new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.set #")),
@@ -83,6 +85,7 @@ public class xTestService extends xService
             new Invoke_10(0, adapter.getMethodConstId("Ref", "set"), 1),
             new Return_0()
             };
+        ftLambda$1.m_cVars = 2;
 
         MethodTemplate mtExceptional = getMethodTemplate("exceptional", INT, INT);
         mtExceptional.m_aop = new Op[]

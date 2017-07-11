@@ -1,24 +1,28 @@
 package org.xvm.proto;
 
-import org.xvm.asm.*;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
+import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.proto.template.xFunction;
 
-import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xService;
 import org.xvm.util.Handy;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 
 
 /**
@@ -32,6 +36,9 @@ public class Adapter
 
     // the template composition: name -> the corresponding ClassConstant id
     private Map<String, Integer> m_mapClasses = new HashMap<>();
+
+    // a set of injectable properties
+    private Set<PropertyConstant> m_setInjectable = new HashSet<>();
 
     public Adapter(Container container)
         {
@@ -123,6 +130,7 @@ public class Adapter
         return getMethodConstId(sClassName, sMethName, null, null);
         }
 
+    // TODO: this will change when MethodIdConst is introduced
     public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
         {
         try
@@ -188,83 +196,7 @@ public class Adapter
         throw new IllegalArgumentException();
         }
 
-    // static helpers
-
-    public static String getClassName(ClassConstant constClass)
-        {
-        StringBuilder sb = new StringBuilder(constClass.getName());
-        Constant constParent = constClass.getNamespace();
-
-        while (true)
-            {
-            switch (constParent.getFormat())
-                {
-                case Module:
-                    sb.insert(0, ':')
-                      .insert(0, ((ModuleConstant) constParent).getName());
-                    return sb.toString();
-
-                case Package:
-                    PackageConstant constPackage = ((PackageConstant) constParent);
-                    sb.insert(0, '.')
-                      .insert(0, constPackage.getName());
-                    constParent = constPackage.getNamespace();
-                    break;
-
-                case Class:
-                    ClassConstant constParentClass = ((ClassConstant) constParent);
-                    sb.insert(0, '$')
-                      .insert(0, constParentClass.getName());
-                    constParent = constParentClass.getNamespace();
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-        }
-
-    public ClassStructure getSuper(ClassStructure structure)
-        {
-        Optional<ClassStructure.Contribution> opt = structure.getContributionsAsList().stream().
-                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
-        if (opt.isPresent())
-            {
-            ClassConstant constClass = opt.get().getClassConstant().getClassConstant();
-            try
-                {
-                return (ClassStructure) constClass.getComponent();
-                }
-            catch (RuntimeException e)
-                {
-                // TODO: remove when getComponent() is fixed
-                String sName = constClass.getName();
-                ClassTemplate templateSuper = f_container.f_types.getTemplate(sName);
-                return templateSuper.f_struct;
-                }
-            }
-        else
-            {
-            switch (structure.getFormat())
-                {
-                case SERVICE:
-                    return xService.INSTANCE.f_struct;
-
-                case CLASS:
-                    if (structure.getName().equals("Object"))
-                        {
-                        return null;
-                        }
-                    // break through
-                case INTERFACE:
-                case CONST:
-                    return xObject.INSTANCE.f_struct;
-                }
-            }
-        return null;
-        }
-
-    public MethodStructure addMethod(ClassStructure structure, String sName,
+    public MethodStructure addMethod(Component structure, String sName,
                                             String[] asArgType, String[] asRetType)
         {
         MultiMethodStructure mms = structure.ensureMultiMethodStructure(sName);
@@ -272,7 +204,7 @@ public class Adapter
                 getTypeConstants(asRetType), getTypeConstants(asArgType));
         }
 
-    public static MethodStructure getMethod(ClassStructure structure, String sName,
+    public static MethodStructure getMethod(Component structure, String sName,
                                             String[] asArgType, String[] asRetType)
         {
         MultiMethodStructure mms = (MultiMethodStructure) structure.getChild(sName);
@@ -284,12 +216,6 @@ public class Adapter
     public static MethodStructure getDefaultConstructor(ClassStructure structure)
         {
         return getMethod(structure, "default", ClassTemplate.VOID, ClassTemplate.VOID);
-        }
-
-    public static MethodStructure getSuper(MethodStructure structure)
-        {
-        // TODO:
-        return null;
         }
 
     public int getScopeCount(MethodStructure method)
@@ -307,7 +233,10 @@ public class Adapter
     public int getVarCount(MethodStructure method)
         {
         ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
-        return tm == null ? 0 : tm.m_cVars;
+        return tm == null ? 0 :
+                tm.m_fNative ? // this can only be a constructor; add 1 for this:struct
+                    method.getIdentityConstant().getRawParams().length + 1:
+                    tm.m_cVars;
         }
 
     public Op[] getOps(MethodStructure method)
@@ -318,8 +247,9 @@ public class Adapter
 
     public MethodStructure getFinalizer(MethodStructure constructor)
         {
-        ClassTemplate.MethodTemplate tm = getMethodTemplate(constructor);
-        return tm == null ? null : tm.m_mtFinally.f_struct;
+        ClassTemplate.MethodTemplate tmConstruct = getMethodTemplate(constructor);
+        ClassTemplate.MethodTemplate tmFinally = tmConstruct == null ? null : tmConstruct.m_mtFinally;
+        return tmFinally == null ? null : tmFinally.f_struct;
         }
 
     public static Type getReturnType(MethodStructure method, int iRet, TypeComposition clzParent)
@@ -328,6 +258,7 @@ public class Adapter
         return null;
         }
 
+    // TODO: replace Method
     public boolean isNative(MethodStructure method)
         {
         ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
@@ -337,11 +268,11 @@ public class Adapter
     private ClassTemplate.MethodTemplate getMethodTemplate(MethodStructure method)
         {
         MultiMethodStructure mms = (MultiMethodStructure) method.getParent();
-        Component parent = mms.getParent();
+        Component container = mms.getParent();
 
-        // the parent is either class or a property
-        ClassStructure clazz = (ClassStructure) (parent instanceof ClassStructure ? parent : parent.getParent());
-        ClassTemplate template = f_container.f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
+        // the container is either a class or a property
+        ClassStructure clazz = (ClassStructure) (container instanceof ClassStructure ? container : container.getParent());
+        ClassTemplate template = f_container.f_types.getTemplate(clazz.getIdentityConstant());
         return template.getMethodTemplate(method.getIdentityConstant());
         }
 
@@ -364,10 +295,14 @@ public class Adapter
         return false;
         }
 
-    public static boolean isInjectable(PropertyStructure property)
+    public void markInjectable(PropertyStructure property)
         {
-        // TODO:
-        return false;
+        m_setInjectable.add(property.getIdentityConstant());
+        }
+
+    public boolean isInjected(PropertyConstant constProperty)
+        {
+        return m_setInjectable.contains(constProperty);
         }
 
     public static boolean isRef(PropertyStructure property)
@@ -401,5 +336,24 @@ public class Adapter
 
         // TODO: use the type
         return mms == null ? null : (MethodStructure) mms.children().get(0);
+        }
+
+    public ClassTypeConstant resolveType(PropertyStructure property)
+        {
+        TypeConstant type = property.getType();
+        if (type instanceof ClassTypeConstant)
+            {
+            return (ClassTypeConstant) type;
+            }
+
+        if (type instanceof UnresolvedTypeConstant)
+            {
+            String sValue = type.getValueString(); // m_sType + " (unresolved)";
+            String sType = sValue.substring(0, sValue.indexOf(' '));
+            ClassTemplate template = f_container.f_types.getTemplate(sType);
+            return ((ClassConstant) template.f_struct.getIdentityConstant()).asTypeConstant();
+            }
+
+        throw new UnsupportedOperationException("Unsupported type: " + type + " for " + property);
         }
     }

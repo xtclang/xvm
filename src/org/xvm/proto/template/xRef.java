@@ -36,6 +36,8 @@ public class xRef
         {
         markNativeGetter("assigned");
         markNativeSetter("assigned");
+        markNativeMethod("get", VOID, new String[]{"RefType"});
+        markNativeMethod("set", new String[]{"RefType"}, VOID);
         }
 
     @Override

@@ -187,11 +187,14 @@ public class Frame
                 return m_hFrameLocal;
 
             case Op.A_SUPER:
-                if (f_hTarget == null)
+                ObjectHandle hThis = f_hTarget;
+                if (hThis == null)
                     {
                     throw new IllegalStateException();
                     }
-                return xFunction.makeHandle(Adapter.getSuper(f_function)).bind(0, f_hTarget);
+
+                MethodStructure method = hThis.f_clazz.resolveSuper(f_function);
+                return xFunction.makeHandle(method).bind(0, f_hTarget);
 
             case Op.A_TARGET:
                 if (f_hTarget == null)

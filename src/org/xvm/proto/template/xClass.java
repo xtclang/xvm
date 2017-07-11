@@ -4,11 +4,10 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ClassTypeConstant;
 
-import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHeap;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * TODO:
@@ -48,8 +47,13 @@ public class xClass
                 {
                 return target.createConstHandle(constant, heap);
                 }
+            Map<String, Type> mapParams = new HashMap<>();
+            mapParams.put("PublicType", clzTarget.ensurePublicType());
+            mapParams.put("ProtectedType", clzTarget.ensureProtectedType());
+            mapParams.put("PrivateType", clzTarget.ensurePrivateType());
+            mapParams.put("StructType", clzTarget.ensureStructType());
 
-            TypeComposition clzClass = resolve(new TypeComposition[]{clzTarget});
+            TypeComposition clzClass = resolve(mapParams);
             return new ClassHandle(clzClass, clzTarget);
             }
         return null;

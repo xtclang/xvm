@@ -6,7 +6,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xFunction;
 
@@ -39,11 +39,10 @@ public class MBind extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            TypeComposition clz = hTarget.f_clazz;
+            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
-            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
-
-            return frame.assignValue(f_nResultValue, template.isService() ?
+            return frame.assignValue(f_nResultValue, clz.f_template.isService() ?
                     xFunction.makeAsyncHandle(method).bind(0, hTarget) :
                     xFunction.makeHandle(method).bind(0, hTarget));
             }

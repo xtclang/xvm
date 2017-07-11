@@ -123,7 +123,8 @@ public class DaemonPool
                         catch (Throwable e)
                             {
                             // TODO: RTError
-                            Utils.log("\nUnhandled exception: " + e);
+                            Utils.log("\nUnhandled exception at " + frame.f_function.getName() +
+                                    ", iPC=" + frame.m_iPC);
                             e.printStackTrace(System.out);
                             System.exit(-1);
                             }

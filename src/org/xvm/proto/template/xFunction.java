@@ -413,7 +413,7 @@ public class xFunction
 
     public static AsyncHandle makeAsyncHandle(MethodStructure function)
         {
-        assert function.getParent().getFormat() == Component.Format.SERVICE;
+        assert function.getParent().getParent().getFormat() == Component.Format.SERVICE;
 
         return new AsyncHandle(INSTANCE.f_clazzCanonical, function);
         }

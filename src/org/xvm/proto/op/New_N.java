@@ -1,15 +1,14 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.proto.ClassTemplate;
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
-import org.xvm.proto.TypeComposition;
 
 
 /**
@@ -34,8 +33,7 @@ public class New_N extends OpCallable
     public int process(Frame frame, int iPC)
         {
         MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
-        IdentityConstant constClass = (IdentityConstant) constructor.getParent().getIdentityConstant();
-        ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
+        IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
 
         ExceptionHandle hException;
         try
@@ -46,9 +44,10 @@ public class New_N extends OpCallable
                 return R_REPEAT;
                 }
 
-            TypeComposition clzTarget = template.f_clazzCanonical;
+            ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
-            return template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
+            return template.construct(frame, constructor,
+                    template.f_clazzCanonical, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

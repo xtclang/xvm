@@ -29,7 +29,6 @@ public class TVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-
         ServiceContext context = frame.f_context;
 
         int[] anClassId = f_anClassConstId;

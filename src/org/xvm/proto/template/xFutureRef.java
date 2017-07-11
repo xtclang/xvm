@@ -45,6 +45,10 @@ public class xFutureRef
 
         // FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
         markNativeMethod("whenComplete", new String[]{"Function"});
+
+        // TODO: remove
+        markNativeMethod("get", VOID, new String[]{"RefType"});
+        markNativeMethod("set", new String[]{"RefType"}, VOID);
         }
 
     @Override

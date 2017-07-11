@@ -8,10 +8,9 @@ import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-
-
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.TypeComposition;
+
 import org.xvm.proto.template.xClass.ClassHandle;
 
 /**
@@ -36,8 +35,7 @@ public class New_0G extends OpCallable
     public int process(Frame frame, int iPC)
         {
         MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
-        IdentityConstant constClass = (IdentityConstant) constructor.getParent().getIdentityConstant();
-        ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
+        IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
 
         try
             {
@@ -55,6 +53,8 @@ public class New_0G extends OpCallable
                 {
                 clzTarget = frame.f_context.f_types.ensureComposition(frame, -f_nTypeValue);
                 }
+
+            ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(constructor)];
 

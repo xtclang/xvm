@@ -34,17 +34,18 @@ public class Invoke_00 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            TypeComposition clazz = hTarget.f_clazz;
 
-            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
+            MethodStructure method = getMethodStructure(frame, clazz, f_nMethodId);
 
             if (frame.f_adapter.isNative(method))
                 {
-                return template.invokeNative(frame, hTarget, method,
+                return clazz.f_template.invokeNative(frame, hTarget, method,
                         Utils.OBJECTS_NONE, Frame.RET_UNUSED);
                 }
 
-            if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+            if (clazz.f_template.isService() &&
+                    frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
                 return xFunction.makeAsyncHandle(method).
                         call1(frame, new ObjectHandle[]{hTarget}, Frame.RET_UNUSED);

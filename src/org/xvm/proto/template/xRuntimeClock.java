@@ -2,8 +2,13 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.proto.*;
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.Op;
+import org.xvm.proto.TypeSet;
+import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFunction.NativeMethodHandle;
@@ -35,8 +40,7 @@ public class xRuntimeClock
     @Override
     public void initDeclared()
         {
-        // TODO: change when the DateTime is implemented
-        getMethod("scheduleAlarm", new String[]{"Function", "Int64"}, new String[]{"Function"});
+        markNativeMethod("scheduleAlarm", new String[] {"Function", "DateTime"});
         }
 
     @Override

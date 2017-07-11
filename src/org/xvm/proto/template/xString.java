@@ -71,7 +71,7 @@ public class xString
             case 0:
                 switch (method.getName())
                     {
-                    case "length$get": // length.get()
+                    case "get": // length.get()
                         ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
                         return frame.assignValue(iReturn, hResult);
                     }

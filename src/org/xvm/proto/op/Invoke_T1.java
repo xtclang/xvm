@@ -3,11 +3,11 @@ package org.xvm.proto.op;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.proto.Adapter;
-import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
@@ -47,14 +47,14 @@ public class Invoke_T1 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            TypeComposition clz = hTarget.f_clazz;
             ObjectHandle[] ahArg = hArgTuple.m_ahValue;
 
-            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
+            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             if (frame.f_adapter.isNative(method))
                 {
-                return template.invokeNative(frame, hTarget, method, ahArg, f_nRetValue);
+                return clz.f_template.invokeNative(frame, hTarget, method, ahArg, f_nRetValue);
                 }
 
             if (ahArg.length != Adapter.getArgCount(method))
@@ -65,7 +65,7 @@ public class Invoke_T1 extends OpInvocable
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
             System.arraycopy(ahArg, 0, ahVar, 1, ahArg.length);
 
-            if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
                 ahVar[0] = hTarget;
                 return xFunction.makeAsyncHandle(method).call1(frame, ahVar, f_nRetValue);

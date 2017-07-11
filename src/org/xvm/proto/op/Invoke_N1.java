@@ -2,12 +2,11 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.ClassTemplate;
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
@@ -43,17 +42,17 @@ public class Invoke_N1 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
-            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
+            TypeComposition clz = hTarget.f_clazz;
+            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             if (frame.f_adapter.isNative(method))
                 {
-                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method), 0);
+                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length, 0);
                 if (ahArg == null)
                     {
                     return R_REPEAT;
                     }
-                return template.invokeNative(frame, hTarget, method, ahArg, f_nRetValue);
+                return clz.f_template.invokeNative(frame, hTarget, method, ahArg, f_nRetValue);
                 }
 
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method), 1);
@@ -62,7 +61,7 @@ public class Invoke_N1 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
                 ahVar[0] = hTarget;
                 return xFunction.makeAsyncHandle(method).call1(frame, ahVar, f_nRetValue);

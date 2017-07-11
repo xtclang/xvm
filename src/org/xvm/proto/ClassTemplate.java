@@ -3,12 +3,17 @@ package org.xvm.proto;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -18,12 +23,17 @@ import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef.RefHandle;
+import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xType;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.Supplier;
 
 /**
@@ -58,10 +68,66 @@ public abstract class ClassTemplate
         f_struct = structClass;
         f_sName = structClass.getName();
 
-        int cParams = structClass.getTypeParamsAsList().size();
-        f_clazzCanonical = new TypeComposition(this, xObject.getTypeArray(cParams));
+        Map<CharStringConstant, TypeConstant> mapParams = structClass.getTypeParams();
+        Map<String, Type> mapParamsActual;
+        if (mapParams.isEmpty())
+            {
+            mapParamsActual = Collections.EMPTY_MAP;
+            }
+        else
+            {
+            mapParamsActual = new HashMap<>(mapParams.size());
+            Type typeObject = xObject.INSTANCE.f_clazzCanonical.ensurePublicType();
+            for (CharStringConstant constName : mapParams.keySet())
+                {
+                mapParamsActual.put(constName.getValue(), typeObject);
+                }
+            }
 
-        f_structSuper = f_types.f_adapter.getSuper(structClass);
+        f_clazzCanonical = new TypeComposition(this, mapParamsActual);
+
+        f_structSuper = getSuper(structClass);
+        }
+
+    // find a super structure for the specified one
+    public ClassStructure getSuper(ClassStructure structure)
+        {
+        Optional<ClassStructure.Contribution> opt = structure.getContributionsAsList().stream().
+                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
+        if (opt.isPresent())
+            {
+            ClassConstant constClass = opt.get().getClassConstant().getClassConstant();
+            try
+                {
+                return (ClassStructure) constClass.getComponent();
+                }
+            catch (RuntimeException e)
+                {
+                // TODO: remove when getComponent() is fixed
+                String sName = constClass.getName();
+                ClassTemplate templateSuper = f_types.getTemplate(sName);
+                return templateSuper.f_struct;
+                }
+            }
+        else
+            {
+            switch (structure.getFormat())
+                {
+                case SERVICE:
+                    return xService.INSTANCE.f_struct;
+
+                case CLASS:
+                    if (structure.getName().equals("Object"))
+                        {
+                        return null;
+                        }
+                    // break through
+                case INTERFACE:
+                case CONST:
+                    return xObject.INSTANCE.f_struct;
+                }
+            }
+        return null;
         }
 
     public boolean isRootObject()
@@ -104,7 +170,7 @@ public abstract class ClassTemplate
                 {
                 return true;
                 }
-            structSuper = f_types.f_adapter.getSuper(structSuper);
+            structSuper = getSuper(structSuper);
             }
 
         m_mapRelations.put(structThat, Relation.INCOMPATIBLE);
@@ -114,7 +180,7 @@ public abstract class ClassTemplate
     public ClassTemplate getSuper()
         {
         return f_structSuper == null ? null :
-                f_types.getTemplate((IdentityConstant) f_structSuper.getIdentityConstant());
+                f_types.getTemplate(f_structSuper.getIdentityConstant());
         }
 
     public boolean isService()
@@ -139,7 +205,7 @@ public abstract class ClassTemplate
             {
             List<Component> list = mms.children();
 
-            // TODO: pick the correct one based on the type
+            // TODO: pick the correct one based on the signature
             if (!list.isEmpty())
                 {
                 return (MethodStructure) list.get(0);
@@ -148,30 +214,20 @@ public abstract class ClassTemplate
         return null;
         }
 
-    // produce a TypeComposition for this template by resolving the generic type compositions
-    public TypeComposition resolve(TypeComposition[] aclzGenericActual)
-        {
-        int    c = aclzGenericActual.length;
-        Type[] aType = new Type[c];
-        for (int i = 0; i < c; i++)
-            {
-            aType[i] = aclzGenericActual[i].ensurePublicType();
-            }
-        return resolve(aType);
-        }
-
     // produce a TypeComposition for this template by resolving the generic types
-    public TypeComposition resolve(Type[] atGenericActual)
+    public TypeComposition resolve(Map<String, Type> mapParamsActual)
         {
-        if (atGenericActual.length == 0)
+        if (mapParamsActual.isEmpty())
             {
             return f_clazzCanonical;
             }
 
-        List<Type> key = Arrays.asList(atGenericActual);
+        // sort the parameters by name and use the list of sorted types as a key
+        SortedMap<String, Type> mapSorted = new TreeMap<>(mapParamsActual);
+        List<Type> key = new ArrayList<>(mapSorted.values());
 
         return m_mapCompositions.computeIfAbsent(key,
-                (x) -> new TypeComposition(this, atGenericActual));
+                (x) -> new TypeComposition(this, mapParamsActual));
         }
 
     @Override
@@ -305,7 +361,7 @@ public abstract class ClassTemplate
         if (hProp == null)
             {
             throw new IllegalStateException((hTarget.m_mapFields.containsKey(property.getName()) ?
-                    "Un-initialized property " : "Invalid property ") + property);
+                    "Un-initialized property \"" : "Invalid property \"") + property + '"');
             }
         return hProp;
         }
@@ -404,7 +460,7 @@ public abstract class ClassTemplate
 
         if (Adapter.isGenericType(property))
             {
-            Type type = hThis.f_clazz.resolveFormalType(sName);
+            Type type = hThis.f_clazz.getFormalType(sName);
 
             return frame.assignValue(iReturn, xType.makeHandle(type));
             }
@@ -414,7 +470,7 @@ public abstract class ClassTemplate
         if (hValue == null)
             {
             String sErr;
-            if (Adapter.isInjectable(property))
+            if (frame.f_adapter.isInjected(property.getIdentityConstant()))
                 {
                 hValue = frame.f_context.f_container.getInjectable(hThis.f_clazz, property);
                 if (hValue != null)
@@ -427,10 +483,10 @@ public abstract class ClassTemplate
             else
                 {
                 sErr = hThis.m_mapFields.containsKey(sName) ?
-                        "Un-initialized property " : "Invalid property ";
+                        "Un-initialized property \"" : "Invalid property \"";
                 }
 
-            frame.m_hException = xException.makeHandle(sErr + property.getName());
+            frame.m_hException = xException.makeHandle(sErr + property.getName() + '"');
             return Op.R_EXCEPTION;
             }
 
@@ -471,7 +527,7 @@ public abstract class ClassTemplate
 
         if (hException == null)
             {
-            MethodStructure method = hTarget.isStruct() ? null : Adapter.getGetter(property);
+            MethodStructure method = hTarget.isStruct() ? null : Adapter.getSetter(property);
 
             if (method == null)
                 {
@@ -586,9 +642,33 @@ public abstract class ClassTemplate
         return getMethodTemplate(sName, asParam, VOID);
         }
 
-    public MethodTemplate getMethodTemplate(IdentityConstant constMethod)
+    public MethodTemplate getMethodTemplate(MethodConstant constMethod)
         {
         return m_mapMethods.get(constMethod);
+        }
+
+    public MethodTemplate getGetter(String sPropName)
+        {
+        PropertyStructure prop = getProperty(sPropName);
+        MethodStructure getter = Adapter.getGetter(prop);
+        IdentityConstant constId = getter == null ?
+                prop.getConstantPool().ensureMethodConstant(prop.getIdentityConstant(),
+                        "get", Constants.Access.PUBLIC,
+                        ConstantPool.NO_TYPES, ConstantPool.NO_TYPES) :
+                getter.getIdentityConstant();
+        return m_mapMethods.get(constId);
+        }
+
+    public MethodTemplate getSetter(String sPropName)
+        {
+        PropertyStructure prop = getProperty(sPropName);
+        MethodStructure getter = Adapter.getGetter(prop);
+        IdentityConstant constId = getter == null ?
+                prop.getConstantPool().ensureMethodConstant(prop.getIdentityConstant(),
+                        "set", Constants.Access.PUBLIC,
+                        ConstantPool.NO_TYPES, ConstantPool.NO_TYPES) :
+                getter.getIdentityConstant();
+        return m_mapMethods.get(constId);
         }
 
     public MethodTemplate getMethodTemplate(String sName, String[] asParam, String[] asRetType)
@@ -600,27 +680,36 @@ public abstract class ClassTemplate
 
     public void markNativeGetter(String sPropName)
         {
-        getGetter(sPropName).m_fNative = true;
+        ensureGetter(sPropName).m_fNative = true;
         }
 
     public void markNativeSetter(String sPropName)
         {
-        getSetter(sPropName).m_fNative = true;
+        ensureSetter(sPropName).m_fNative = true;
         }
 
-    public MethodTemplate getGetter(String sPropName)
+    public MethodTemplate ensureGetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
         MethodStructure getter = Adapter.getGetter(prop);
-        IdentityConstant constId = getter == null ? prop.getIdentityConstant() : getter.getIdentityConstant();
+        IdentityConstant constId = getter == null ?
+                prop.getConstantPool().ensureMethodConstant(prop.getIdentityConstant(),
+                        "get", Constants.Access.PUBLIC,
+                        ConstantPool.NO_TYPES, ConstantPool.NO_TYPES) :
+                getter.getIdentityConstant();
+
         return m_mapMethods.computeIfAbsent(constId, (id) -> new MethodTemplate(getter));
         }
 
-    public MethodTemplate getSetter(String sPropName)
+    public MethodTemplate ensureSetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
         MethodStructure setter = Adapter.getSetter(prop);
-        IdentityConstant constId = setter == null ? prop.getIdentityConstant() : setter.getIdentityConstant();
+        IdentityConstant constId = setter == null ?
+                prop.getConstantPool().ensureMethodConstant(prop.getIdentityConstant(),
+                        "set", Constants.Access.PUBLIC,
+                        ConstantPool.NO_TYPES, ConstantPool.NO_TYPES) :
+                setter.getIdentityConstant();
 
         return m_mapMethods.computeIfAbsent(constId, (id) -> new MethodTemplate(setter));
         }
@@ -640,6 +729,8 @@ public abstract class ClassTemplate
             }
         }
 
+    // the key should be a MethodConstant, but for the time being we use
+    // a PropertyConstant to
     private Map<IdentityConstant, MethodTemplate> m_mapMethods = new HashMap<>();
 
     public static String[] VOID = new String[0];

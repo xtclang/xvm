@@ -10,9 +10,7 @@ import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
-import org.xvm.proto.Utils;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,18 +60,5 @@ public class xObject
                     }
             }
         return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
-        }
-
-    public static Type[] getTypeArray(int c)
-        {
-        return s_mapCanonical.computeIfAbsent(c, x ->
-            {
-            Type[] aType = new Type[c];
-            if (c > 0)
-                {
-                Arrays.fill(aType, CLASS.ensurePublicType());
-                }
-            return aType;
-            });
         }
     }
