@@ -62,6 +62,19 @@ public abstract class AstNode
         }
 
     /**
+     * This method recurses through the tree of AstNode objects, allowing each node to introduce
+     * itself as the parent of each node under it.
+     */
+    protected void introduceParentage()
+        {
+        for (AstNode node : children())
+            {
+            node.setParent(this);
+            node.introduceParentage();
+            }
+        }
+
+    /**
      * Helper: Given an optional Iterable of child AstNode objects, set the parent of each of the
      * children to be this node.
      *
@@ -197,19 +210,16 @@ public abstract class AstNode
      * they will be required to already be present when the second pass begins.</li>
      * </ul>
      *
-     * @param parent  the parent of this node to tie into (if necessary / appropriate)
      * @param errs    the error list to log any errors etc. to
      */
-    protected void registerStructures(AstNode parent, ErrorListener errs)
+    protected void registerStructures(ErrorListener errs)
         {
-        setParent(parent);
+        stage = Stage.Registered;
 
         for (AstNode node : children())
             {
-            node.registerStructures(this, errs);
+            node.registerStructures(errs);
             }
-
-        stage = Stage.Registered;
         }
 
     /**
@@ -325,6 +335,12 @@ public abstract class AstNode
                 }
             }
 
+        if (constant == null)
+            {
+            // implicit names
+            constant = getComponent().getConstantPool().ensureImplicitlyImportedIdentityConstant(sName);
+            }
+
         return constant;
         }
 
@@ -344,6 +360,7 @@ public abstract class AstNode
     /**
      * Helper to log an error related to this AstNode.
      *
+     * @param errs        the ErrorListener to log to
      * @param severity    the severity level of the error; one of
      *                    {@link Severity#INFO}, {@link Severity#WARNING},
      *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
@@ -357,10 +374,10 @@ public abstract class AstNode
         {
         Source source = getSource();
         return errs == null
-                ? errs.log(severity, sCode, aoParam, source,
+                ? severity.ordinal() >= Severity.ERROR.ordinal()
+                : errs.log(severity, sCode, aoParam, source,
                         source == null ? 0L : getStartPosition(),
-                        source == null ? 0L : getEndPosition())
-                : severity.ordinal() >= Severity.ERROR.ordinal();
+                        source == null ? 0L : getEndPosition());
         }
 
 
@@ -805,7 +822,13 @@ public abstract class AstNode
 
     protected static final Field[] NO_FIELDS = new Field[0];
 
+    /**
+     * The stage of compilation.
+     */
     private Stage stage = Stage.Initial;
 
-    protected AstNode parent;
+    /**
+     * The parent of this AstNode.
+     */
+    private AstNode parent;
     }

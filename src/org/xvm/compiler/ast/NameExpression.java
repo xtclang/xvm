@@ -71,7 +71,7 @@ public class NameExpression
         {
         List<Token> names  = this.names;
         int         cNames = names.size();
-        return cNames > 1 && names.get(cNames-1).equals(sName) && (params == null || params.isEmpty());
+        return cNames > 1 && names.get(cNames-1).getValue().equals(sName) && (params == null || params.isEmpty());
         }
 
     /**

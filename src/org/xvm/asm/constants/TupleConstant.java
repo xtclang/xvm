@@ -1,16 +1,19 @@
 package org.xvm.asm.constants;
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-
-import org.xvm.util.Handy;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+
+import java.util.function.Consumer;
+
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.util.Handy;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -106,6 +109,15 @@ public class TupleConstant
         }
 
     @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        for (Constant constant : m_aconst)
+            {
+            visitor.accept(constant);
+            }
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
         return Handy.compareArrays(m_aconst, ((TupleConstant) that).m_aconst);
@@ -186,6 +198,7 @@ public class TupleConstant
         return "Tuple=" + getValueString();
         }
 
+
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -210,7 +223,7 @@ public class TupleConstant
     /**
      * The contained constant values.
      */
-    protected Constant[] m_aconst;
+    private Constant[] m_aconst;
 
     /**
      * Cached hash value.

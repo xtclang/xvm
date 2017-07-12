@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -81,6 +83,12 @@ public class ParameterTypeConstant
     public Format getFormat()
         {
         return Format.TypeParamType;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constName);
         }
 
     @Override

@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -152,6 +154,12 @@ public class ModuleConstant
     public Format getFormat()
         {
         return Format.Module;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constName);
         }
 
     @Override

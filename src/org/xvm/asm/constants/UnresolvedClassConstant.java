@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -14,6 +16,7 @@ import org.xvm.asm.ConstantPool;
  */
 public class UnresolvedClassConstant
         extends ClassConstant
+        implements ResolvableConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -26,7 +29,7 @@ public class UnresolvedClassConstant
     public UnresolvedClassConstant(ConstantPool pool, String name)
         {
         super(pool);
-        this.name = name;
+        this.m_sName = name;
         }
 
 
@@ -37,7 +40,7 @@ public class UnresolvedClassConstant
         {
         if (isClassResolved())
             {
-            return constant.getParentConstant();
+            return m_constId.getParentConstant();
             }
 
         throw new IllegalStateException("unresolved: " + getName());
@@ -47,19 +50,27 @@ public class UnresolvedClassConstant
     public String getName()
         {
         return isClassResolved()
-                ? constant.getName()
-                : name;
+                ? m_constId.getName()
+                : m_sName;
         }
 
     public boolean isClassResolved()
         {
-        return constant != null;
+        return m_constId != null;
         }
 
-    public void resolve(ClassConstant constant)
+    @Override
+    public IdentityConstant getResolvedConstant()
         {
-        assert this.constant == null || this.constant == constant;
-        this.constant = constant;
+        return m_constId;
+        }
+
+    @Override
+    public void resolve(Constant constant)
+        {
+        assert constant instanceof ClassConstant;
+        assert this.m_constId == null || this.m_constId == constant;
+        this.m_constId = (ClassConstant) constant;
         }
 
 
@@ -68,20 +79,29 @@ public class UnresolvedClassConstant
     @Override
     public Format getFormat()
         {
-        return isClassResolved() ? constant.getFormat() : Format.Unresolved;
+        return isClassResolved() ? m_constId.getFormat() : Format.Unresolved;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        if (m_constId != null)
+            {
+            visitor.accept(m_constId);
+            }
         }
 
     @Override
     public Object getLocator()
         {
-        return isClassResolved() ? constant.getLocator() : null;
+        return isClassResolved() ? m_constId.getLocator() : null;
         }
 
     @Override
     public String getValueString()
         {
         return isClassResolved()
-                ? constant.getValueString()
+                ? m_constId.getValueString()
                 : getName();
         }
 
@@ -92,13 +112,13 @@ public class UnresolvedClassConstant
             {
             if (that instanceof UnresolvedClassConstant && ((UnresolvedClassConstant) that).isClassResolved())
                 {
-                that = ((UnresolvedClassConstant) that).constant;
+                that = ((UnresolvedClassConstant) that).m_constId;
                 }
-            return constant.compareDetails(that);
+            return m_constId.compareDetails(that);
             }
         else if (that instanceof UnresolvedClassConstant)
             {
-            return this.name.compareTo(((UnresolvedClassConstant) that).name);
+            return this.m_sName.compareTo(((UnresolvedClassConstant) that).m_sName);
             }
         else
             {
@@ -121,7 +141,7 @@ public class UnresolvedClassConstant
         {
         if (isClassResolved())
             {
-            constant.registerConstants(pool);
+            m_constId.registerConstants(pool);
             }
         else
             {
@@ -135,7 +155,7 @@ public class UnresolvedClassConstant
         {
         if (isClassResolved())
             {
-            constant.assemble(out);
+            m_constId.assemble(out);
             }
         else
             {
@@ -147,7 +167,7 @@ public class UnresolvedClassConstant
     public String getDescription()
         {
         return isClassResolved()
-                ? constant.getDescription()
+                ? m_constId.getDescription()
                 : "name=" + getName();
         }
 
@@ -158,11 +178,11 @@ public class UnresolvedClassConstant
         {
         if (obj instanceof UnresolvedClassConstant && ((UnresolvedClassConstant) obj).isClassResolved())
             {
-            obj = ((UnresolvedClassConstant) obj).constant;
+            obj = ((UnresolvedClassConstant) obj).m_constId;
             }
 
         return isClassResolved()
-                ? constant.equals(obj)
+                ? m_constId.equals(obj)
                 : super.equals(obj);
         }
 
@@ -170,13 +190,13 @@ public class UnresolvedClassConstant
     public int hashCode()
         {
         return isClassResolved()
-                ? constant.hashCode()
-                : name.hashCode();
+                ? m_constId.hashCode()
+                : m_sName.hashCode();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private String           name;
-    private IdentityConstant constant;
+    private String           m_sName;
+    private IdentityConstant m_constId;
     }

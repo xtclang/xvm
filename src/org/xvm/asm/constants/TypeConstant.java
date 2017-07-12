@@ -1,12 +1,12 @@
 package org.xvm.asm.constants;
 
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 
 
 /**
@@ -93,7 +93,7 @@ public abstract class TypeConstant
         {
         if (obj instanceof UnresolvedTypeConstant)
             {
-            TypeConstant type = ((UnresolvedTypeConstant) obj).getResolvedType();
+            TypeConstant type = ((UnresolvedTypeConstant) obj).getResolvedConstant();
             if (type != null)
                 {
                 return equals(type);

@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -84,6 +86,13 @@ public class UnionTypeConstant
     public Format getFormat()
         {
         return Format.UnionType;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constType1);
+        visitor.accept(m_constType2);
         }
 
     @Override

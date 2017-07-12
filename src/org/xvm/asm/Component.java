@@ -2070,7 +2070,7 @@ public abstract class Component
                         {
                         aconst[i] = pool.getConstant(readIndex(in));
                         }
-                    m_aconstParam = aconst;
+                    m_aconstArgs = aconst;
                     break;
                 }
             }
@@ -2194,7 +2194,7 @@ public abstract class Component
 
             m_composition  = Composition.Annotation;
             m_constContrib = constType;
-            m_aconstParam  = aconstParam;
+            m_aconstArgs = aconstParam;
             }
 
         /**
@@ -2248,7 +2248,6 @@ public abstract class Component
          */
         public PropertyConstant getDelegatePropertyConstant()
             {
-            assert m_composition == Composition.Delegates;
             return m_constProp;
             }
 
@@ -2257,8 +2256,7 @@ public abstract class Component
          */
         public List<Constant> getAnnotationParameters()
             {
-            assert m_composition == Composition.Annotation;
-            return m_aconstParam == null ? Collections.EMPTY_LIST : Arrays.asList(m_aconstParam);
+            return m_aconstArgs == null ? Collections.EMPTY_LIST : Arrays.asList(m_aconstArgs);
             }
 
         /**
@@ -2269,7 +2267,7 @@ public abstract class Component
             m_constContrib = (IdentityConstant) pool.register(m_constContrib);
             m_constProp = (PropertyConstant) pool.register(m_constProp);
 
-            final Constant[] aconst = m_aconstParam;
+            final Constant[] aconst = m_aconstArgs;
             if (aconst != null)
                 {
                 for (int i = 0, c = aconst.length; i < c; ++i)
@@ -2294,7 +2292,7 @@ public abstract class Component
                     break;
 
                 case Annotation:
-                    final Constant[] aconst = m_aconstParam;
+                    final Constant[] aconst = m_aconstArgs;
                     final int cConsts = aconst == null ? 0 : aconst.length;
                     writePackedLong(out, cConsts);
                     for (int i = 0; i < cConsts; ++i)
@@ -2322,7 +2320,7 @@ public abstract class Component
             return this.m_composition == that.m_composition
                     && this.m_constContrib.equals(that.m_constContrib)
                     && Handy.equals(this.m_constProp, that.m_constProp)
-                    && Handy.equalArraysNullOk(this.m_aconstParam, that.m_aconstParam);
+                    && Handy.equalArraysNullOk(this.m_aconstArgs, that.m_aconstArgs);
             }
 
         @Override
@@ -2344,12 +2342,12 @@ public abstract class Component
 
             if (m_composition == Composition.Annotation)
                 {
-                if (m_aconstParam != null && m_aconstParam.length > 0)
+                if (m_aconstArgs != null && m_aconstArgs.length > 0)
                     {
                     sb.append('(');
 
                     boolean fFirst = true;
-                    for (Constant constParam : m_aconstParam)
+                    for (Constant constParam : m_aconstArgs)
                         {
                         if (fFirst)
                             {
@@ -2394,9 +2392,9 @@ public abstract class Component
         private PropertyConstant m_constProp;
 
         /**
-         * The optional parameters, if this Composition represents an annotation.
+         * The optional arguments, if this Composition represents an annotation.
          */
-        private Constant[] m_aconstParam;
+        private Constant[] m_aconstArgs;
         }
 
 

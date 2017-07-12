@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
@@ -158,6 +160,12 @@ public class VersionedCondition
     public Format getFormat()
         {
         return Format.ConditionVersioned;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constVer);
         }
 
     @Override

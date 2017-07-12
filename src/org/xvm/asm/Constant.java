@@ -8,6 +8,8 @@ import java.io.PrintWriter;
 
 import java.util.Comparator;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.constants.ConditionalConstant;
 
 
@@ -67,6 +69,16 @@ public abstract class Constant
      * @return the format for the Constant
      */
     public abstract Format getFormat();
+
+    /**
+     * Visit every underlying constant (if any).
+     *
+     * @param visitor  a Consumer&lt;Constant&gt; whose {@link Consumer#accept(Object)}that will be
+     *                 called with each underlying (i.e. referenced) constant
+     */
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        }
 
     /**
      * Determine the last known position that the Constant was located at in its ConstantPool.

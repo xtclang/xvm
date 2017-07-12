@@ -10,6 +10,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
@@ -153,6 +155,12 @@ public class NotCondition
     public Format getFormat()
         {
         return Format.ConditionNot;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constCond);
         }
 
     @Override

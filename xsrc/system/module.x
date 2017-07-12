@@ -15,20 +15,20 @@
  *
  * @Copyright 2016-2017 xqiz.it
  */
-module ecstasy.xtclang.org
+module Ecstasy.xtclang.org
     {
     /**
      * The Nullable type is the only type that can contain the value Null.
      *
      * Nullable is an Enumeration whose only value is the singleton enum value {@code Null}.
      */
-    enum Nullable {Null}
+    enum Nullable { Null }
 
     /**
      * The Ordered enumeration describes the result of comparing two items for the prurpose of
      * ordering.
      */
-    enum Ordered(String symbol) {Lesser("<"), Equal("="), Greater(">")}
+    enum Ordered(String symbol) { Lesser("<"), Equal("="), Greater(">") }
 
     /**
      * A DeadlockException is raised by the runtime in response to a situation in which re-entrancy
@@ -129,7 +129,7 @@ module ecstasy.xtclang.org
         // TODO list of depends-on other modules
 
         /**
-         * Objects within a module is subject to
+         * The set of auto-magic mixins that objects within the module are subject to.
          */
         @ro Iterable<Class> autoMixins;
         }

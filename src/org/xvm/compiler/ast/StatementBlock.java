@@ -57,6 +57,7 @@ public class StatementBlock
 
     public void addStatement(Statement stmt)
         {
+        stmt.setParent(this);
         stmts.add(stmt);
         }
 

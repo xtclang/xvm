@@ -84,7 +84,6 @@ public class PackageStructure
         {
         assert module != null;
         assert module.getFileStructure() == getFileStructure();
-        assert !module.isMainModule();
         assert m_constModule == null;
         assert getChildByNameMap().isEmpty();
 

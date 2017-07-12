@@ -5,9 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+
+import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -144,6 +144,12 @@ public class PresentCondition
     public Format getFormat()
         {
         return Format.ConditionPresent;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constStruct);
         }
 
     @Override

@@ -28,10 +28,33 @@ public interface Constants
      */
     public static final int VERSION_MINOR_CUR = 0;
 
-    public static final String ECSTASY_MODULE = "ecstasy.xtclang.org";
+    /**
+     * The qualified name of the Ecstasy core module. This is the only module that has no external
+     * dependencies.
+     */
+    public static final String ECSTASY_MODULE = "Ecstasy.xtclang.org";
 
-    public static final String CLASS_OBJECT   = "Object";
+    /**
+     * The name of the package within every module that iports the Ecstasy core module.
+     */
+    public static final String X_PKG_IMPORT = "Ecstasy";
 
+    /**
+     * The name of the root Ecstasy class.
+     */
+    public static final String X_CLASS_OBJECT = "Object";
+
+    /**
+     * The Access enumeration refers to the level of accessibility to a class that a reference will
+     * have:
+     * <ul>
+     * <li>{@link #STRUCT STRUCT} - direct access to the underlying data structure (but only to the
+     *     data structure);</li>
+     * <li>{@link #PUBLIC PUBLIC} - access to the public members of the object's class;</li>
+     * <li>{@link #PROTECTED PROTECTED} - access to the protected members of the object's class;</li>
+     * <li>{@link #PRIVATE PRIVATE} - access to the private members of the object's class;</li>
+     * </ul>
+     */
     public enum Access
         {
         STRUCT(0),
@@ -61,8 +84,20 @@ public interface Constants
          */
         private static final Access[] VALUES = Access.values();
 
+        /**
+         * The Ecstasy keyword associated with the Access enum.
+         */
         public final String KEYWORD = name().toLowerCase();
 
+        /**
+         * The integer flags used to encode the access enum.
+         *
+         * @see Component#ACCESS_MASK
+         * @see Component#ACCESS_SHIFT
+         * @see Component#ACCESS_PUBLIC
+         * @see Component#ACCESS_PROTECTED
+         * @see Component#ACCESS_PRIVATE
+         */
         public final int FLAGS;
         }
     }

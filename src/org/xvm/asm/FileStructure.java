@@ -251,7 +251,7 @@ public class FileStructure
     public ModuleStructure getModule(String sName)
         {
         Component child = getChild(sName);
-        if (child instanceof ModuleStructure)
+        if (child == null || child instanceof ModuleStructure)
             {
             return (ModuleStructure) child;
             }
@@ -756,7 +756,7 @@ public class FileStructure
                 {
                 if (first)
                     {
-                    sb.append("other-modules={");
+                    sb.append(", other-modules={");
                     first = false;
                     }
                 else

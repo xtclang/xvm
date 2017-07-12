@@ -8,12 +8,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.function.Consumer;
+
 
 /**
  * Represent a constant that will eventually be replaced with a real type.
  */
 public class UnresolvedTypeConstant
         extends TypeConstant
+        implements ResolvableConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -36,26 +39,26 @@ public class UnresolvedTypeConstant
      */
     public boolean isTypeResolved()
         {
-        return getResolvedType() != null;
+        return getResolvedConstant() != null;
         }
 
-    public void resolve(TypeConstant type)
+    @Override
+    public void resolve(Constant type)
         {
+        assert type instanceof TypeConstant;
         assert !isTypeResolved();
         if (m_resolved instanceof UnresolvedTypeConstant)
             {
-            ((UnresolvedTypeConstant) m_resolved).resolve(type);
+            ((UnresolvedTypeConstant) m_resolved).resolve((TypeConstant) type);
             }
         else
             {
-            m_resolved = type;
+            m_resolved = (TypeConstant) type;
             }
         }
 
-    /**
-     * @return the TypeConstant that this has been resolved to, or null if this is still unresolved
-     */
-    public TypeConstant getResolvedType()
+    @Override
+    public TypeConstant getResolvedConstant()
         {
         TypeConstant type = m_resolved;
         while (type instanceof UnresolvedTypeConstant)
@@ -72,6 +75,15 @@ public class UnresolvedTypeConstant
     public Format getFormat()
         {
         return m_resolved == null ? Format.Unresolved : m_resolved.getFormat();
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        if (m_resolved != null)
+            {
+            visitor.accept(m_resolved);
+            }
         }
 
     @Override

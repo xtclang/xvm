@@ -1,12 +1,14 @@
 package org.xvm.asm.constants;
 
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import java.util.function.Consumer;
+
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -94,6 +96,13 @@ public abstract class NamedConstant
 
     @Override
     public abstract Format getFormat();
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constParent);
+        visitor.accept(m_constName);
+        }
 
     @Override
     protected int compareDetails(Constant that)

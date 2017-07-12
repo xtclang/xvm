@@ -104,16 +104,14 @@ public class PropertyDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(AstNode parent, ErrorListener errs)
+    protected void registerStructures(ErrorListener errs)
         {
-        setParent(parent);
-
         // create the structure for this property
         if (getComponent() == null)
             {
             // create a structure for this type
             String sName = (String) name.getValue();
-            Component container = parent.getComponent();
+            Component container = getParent().getComponent();
             if (container.isClassContainer())
                 {
                 // another property by the same name should not already exist, but  the check for
@@ -134,7 +132,7 @@ public class PropertyDeclarationStatement
                 }
             }
 
-        super.registerStructures(parent, errs);
+        super.registerStructures(errs);
         }
 
 

@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -145,6 +147,20 @@ public class MethodConstant
     public Format getFormat()
         {
         return Format.Method;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constParent);
+        for (Constant constant : m_aconstReturns)
+            {
+            visitor.accept(constant);
+            }
+        for (Constant constant : m_aconstParams)
+            {
+            visitor.accept(constant);
+            }
         }
 
     @Override

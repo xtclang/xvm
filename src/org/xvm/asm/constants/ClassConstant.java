@@ -65,7 +65,7 @@ public class ClassConstant
      */
     public boolean isEcstasyObject()
         {
-        return getName().equals(CLASS_OBJECT)
+        return getName().equals(X_CLASS_OBJECT)
                 && getNamespace().getFormat() == Format.Module
                 && ((ModuleConstant) getNamespace()).isEcstasyModule();
         }

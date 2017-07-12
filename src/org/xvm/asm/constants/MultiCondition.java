@@ -5,13 +5,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -234,6 +231,15 @@ public abstract class MultiCondition
 
 
     // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        for (Constant constant : m_aconstCond)
+            {
+            visitor.accept(constant);
+            }
+        }
 
     @Override
     protected int compareDetails(Constant that)

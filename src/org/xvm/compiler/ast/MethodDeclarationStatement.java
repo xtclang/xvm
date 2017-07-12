@@ -83,15 +83,13 @@ public class MethodDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(AstNode parent, ErrorListener errs)
+    protected void registerStructures(ErrorListener errs)
         {
-        setParent(parent);
-
         // create the structure for this method
         if (getComponent() == null)
             {
             // create a structure for this type
-            Component container = parent.getComponent();
+            Component container = getParent().getComponent();
             String    sName     = (String) name.getValue();
             if (container.isMethodContainer())
                 {
@@ -111,7 +109,7 @@ public class MethodDeclarationStatement
                 }
             }
 
-        super.registerStructures(parent, errs);
+        super.registerStructures(errs);
         }
 
     @Override
@@ -147,7 +145,7 @@ public class MethodDeclarationStatement
 
         int i = 0;
         TypeConstant[] array     = new TypeConstant[types.size()];
-        Component      container = parent.getComponent();
+        Component      container = getParent().getComponent();
         for (TypeExpression type : types)
             {
             array[i++] = container.getConstantPool().createUnresolvedTypeConstant(type.toString());

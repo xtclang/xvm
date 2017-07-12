@@ -34,6 +34,8 @@ import org.xvm.compiler.Token;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
+import static org.xvm.compiler.Constants.ECSTASY_MODULE;
+import static org.xvm.compiler.Constants.X_PKG_IMPORT;
 import static org.xvm.compiler.Lexer.CR;
 import static org.xvm.compiler.Lexer.LF;
 import static org.xvm.compiler.Lexer.isLineTerminator;
@@ -82,8 +84,6 @@ public class TypeCompositionStatement
         this.compositions      = compositions;
         this.body              = body;
         this.doc               = doc;
-        
-        introduceParentage();
         }
 
     /**
@@ -107,22 +107,6 @@ public class TypeCompositionStatement
         this.args        = args;
         this.body        = body;
         this.doc         = doc;
-        this.lStartPos   = lStartPos;
-        this.lEndPos     = lEndPos;
-
-        introduceParentage();
-        }
-
-    private void introduceParentage()
-        {
-        introduceParentage(condition);
-        introduceParentage(annotations);
-        introduceParentage(typeParams);
-        introduceParentage(constructorParams);
-        introduceParentage(typeArgs);
-        introduceParentage(args);
-        introduceParentage(compositions);
-        introduceParentage(body);
         }
 
 
@@ -283,27 +267,21 @@ public class TypeCompositionStatement
             throw new CompilerException("unable to create module with illegal name: " + sName);
             }
 
-        registerStructures(null, errs);
+        registerStructures(errs);
 
         return getComponent().getFileStructure();
         }
 
     @Override
-    protected void registerStructures(AstNode parent, ErrorListener errs)
-        {
-        setParent(parent);
-        createStructure(errs);
-        super.registerStructures(parent, errs);
-        }
-
-    /**
-     * Create and populate the structure corresponding to this TypeCompositionStatement.
-     *
-     * @param errs  the error list to log any errors etc. to
-     */
-    protected void createStructure(ErrorListener errs)
+    protected void registerStructures(ErrorListener errs)
         {
         assert getComponent() == null;
+
+        AstNode parent = getParent();
+        if (parent == null)
+            {
+            introduceParentage();
+            }
 
         // create the structure for this module, package, or class (etc.)
         String              sName     = (String) name.getValue();
@@ -311,6 +289,13 @@ public class TypeCompositionStatement
         Component           container = parent == null ? null : parent.getComponent();
         ConstantPool        pool      = container == null ? null : container.getConstantPool();
         ConditionalConstant constCond = condition == null ? null : condition.toConditionalConstant();
+        if (container instanceof ModuleStructure && sName.equals(X_PKG_IMPORT))
+            {
+            // it is illegal to take the "Ecstasy" namespace, because doing so would effectively
+            // hide the Ecstasy core module
+            name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_COLLISION, X_PKG_IMPORT);
+            }
+
         ClassStructure component = null;
         switch (category.getId())
             {
@@ -325,6 +310,24 @@ public class TypeCompositionStatement
                     FileStructure struct = new FileStructure(getName());
                     component = struct.getModule();
                     pool      = struct.getConstantPool();
+
+                    // create Ecstasy package for auto-import of core Ecstasy library
+                    ModuleStructure modX;
+                    if (getName().equals(ECSTASY_MODULE))
+                        {
+                        // yes, the Ecstasy core module imports itself, so by the law of turtles,
+                        // there exists a class named Ecstasy.Ecstasy.Ecstasy.Ecstasy.Ecstasy.Object
+                        modX = (ModuleStructure) component;
+                        }
+                    else
+                        {
+                        modX = struct.ensureModule(ECSTASY_MODULE);
+                        modX.fingerprintRequired();
+                        }
+                    PackageStructure pkgX = component.createPackage(Access.PUBLIC, X_PKG_IMPORT, null);
+                    pkgX.setSynthetic(true);
+                    pkgX.setStatic(true);
+                    pkgX.setImportedModule(modX);
                     }
                 else
                     {
@@ -587,7 +590,7 @@ public class TypeCompositionStatement
                 // and a service can't capture an object that isn't either a const or a service)
                 if (container.getFormat() != Format.CONST && container.getFormat() != Format.SERVICE)
                     {
-                    log(errs, Severity.ERROR, Compiler.INNER_SERVIC_NOT_STATIC);
+                    log(errs, Severity.ERROR, Compiler.INNER_SERVICE_NOT_STATIC);
                     fExplicitlyStatic = true;
                     }
                 }
@@ -703,7 +706,8 @@ public class TypeCompositionStatement
         // [1] module/package/const/enum may explicitly extend a class or a const; otherwise extends
         //     Object
         // [2] package may import a module
-        // [3] class may explicitly extend a class; otherwise extends Object
+        // [3] class may explicitly extend a class; otherwise extends Object (the one exception is
+        //     Object itself, which does NOT extend itself)
         // [4] service may explicitly extend a class or service; otherwise extends Object
         // [5] enum values always implicitly extend the enum to which they belong
         // [6] trait may explicitly extend a trait
@@ -712,6 +716,7 @@ public class TypeCompositionStatement
         //     produces those relationships using the "implements" composition
         // [9] traits and interfaces can only incorporate traits
         // [10] traits and mixins may specify a type that they can be mixed into; otherwise any type
+        //      (i.e. implicitly Object)
         //
         // at this point, the class names are not yet resolvable, so defer most of these checks
         // until the next phase. what must be done at this point:
@@ -1031,6 +1036,8 @@ public class TypeCompositionStatement
                 log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
                 }
             }
+
+        super.registerStructures(errs);
         }
 
     @Override
@@ -1068,15 +1075,15 @@ public class TypeCompositionStatement
                 }
             }
 
-        //
-        protected Expression           condition;
-        protected List<Annotation>     annotations;
-        protected List<Parameter>      typeParams;
-        protected List<Parameter>      constructorParams;
-        protected List<TypeExpression> typeArgs;
-        protected List<Expression>     args;
-        protected List<Composition>    compositions;
-        protected StatementBlock       body;
+        // TODO
+//        protected Expression           condition;
+//        protected List<Annotation>     annotations;
+//        protected List<Parameter>      typeParams;
+//        protected List<Parameter>      constructorParams;
+//        protected List<TypeExpression> typeArgs;
+//        protected List<Expression>     args;
+//        protected List<Composition>    compositions;
+//        protected StatementBlock       body;
 
 
         // validation of constructor parameters happens in a

@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -128,6 +130,17 @@ public class AnnotatedTypeConstant
     public Format getFormat()
         {
         return Format.AnnotatedType;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constClass);
+        visitor.accept(m_constType);
+        for (Constant param : m_listParams)
+            {
+            visitor.accept(param);
+            }
         }
 
     @Override

@@ -5,8 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -146,6 +145,13 @@ public class VersionMatchesCondition
     public Format getFormat()
         {
         return Format.ConditionVersionMatches;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constStruct);
+        visitor.accept(m_constVer);
         }
 
     @Override

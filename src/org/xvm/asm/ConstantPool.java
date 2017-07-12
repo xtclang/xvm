@@ -86,6 +86,16 @@ public class ConstantPool
             return null;
             }
 
+        // if the constant is resolvable, and has been resolved, then use the resolved constant
+        if (constant instanceof ResolvableConstant)
+            {
+            Constant resolved = ((ResolvableConstant) constant).getResolvedConstant();
+            if (resolved != null)
+                {
+                constant = resolved;
+                }
+            }
+
         // check if the Constant is already registered
         final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
         final Constant constantOld = mapConstants.get(constant);
@@ -508,6 +518,81 @@ public class ConstantPool
             ofEnd   = sClass.indexOf('.', ofStart);
             }
         return ensureClassConstant(constParent, sClass.substring(ofStart));
+        }
+
+    /**
+     * This is the implementation of the "automatically imported" names that constitute the default
+     * set of known names in the language. This implementation should correspond to the source file
+     * "implicit.x".
+     *
+     * @param sName  the unqualified name to look up
+     *
+     * @return an IdentityConstant for, or null
+     */
+    public IdentityConstant ensureImplicitlyImportedIdentityConstant(String sName)
+        {
+        String sPkg = null;
+        String sClz = null;
+        String sSub = null;
+
+        switch (sName)
+            {
+            case "Ecstasy":
+            case "X":
+                break;
+
+            case "Boolean":
+            case "Char":
+            case "Class":
+            case "Object":
+            case "String":
+            case "Type":
+            case "Void":
+                sClz = sName;
+                break;
+
+            case "Int":
+                sClz = "Int64";
+                break;
+
+            case "Tuple":
+                sPkg = "collections";
+                sClz = sName;
+                break;
+
+            case "null":
+                sClz = "Nullable";
+                sSub = "Null";
+                break;
+
+            case "true":
+                sClz = "Boolean";
+                sSub = "True";
+                break;
+
+            case "false":
+                sClz = "Boolean";
+                sSub = "False";
+                break;
+
+            default:
+                return null;
+            }
+
+        IdentityConstant constId = ensureModuleConstant(ECSTASY_MODULE);
+        if (sPkg != null)
+            {
+            constId = ensurePackageConstant(constId, sPkg);
+            }
+        if (sClz != null)
+            {
+            constId = ensureClassConstant(constId, sClz);
+            if (sSub != null)
+                {
+                constId = ensureClassConstant(constId, sSub);
+                }
+            }
+        return constId;
         }
 
     /**

@@ -278,7 +278,7 @@ public class Compiler
     /**
      * Inner service class must be declared static if its outer class is not a const or service.
      */
-    public static final String INNER_SERVIC_NOT_STATIC            = "COMPILER-17";
+    public static final String INNER_SERVICE_NOT_STATIC           = "COMPILER-17";
     /**
      * Wrong number of type parameter values.
      */
@@ -331,6 +331,11 @@ public class Compiler
      * Unresolvable names.
      */
     public static final String INFINITE_RESOLVE_LOOP              = "COMPILER-30";
+    /**
+     * Name collision. For example, anything named "Ecstasy" nested under a module, or a property
+     * that has the same name as a type parameter or method, etc.
+     */
+    public static final String NAME_COLLISION                     = "COMPILER-31";
 
 
     // ----- data members --------------------------------------------------------------------------

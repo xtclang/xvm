@@ -9,6 +9,7 @@ import java.util.List;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 
