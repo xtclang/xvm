@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.asm.MethodStructure;
 import org.xvm.util.Notifier;
 import org.xvm.util.SimpleNotifier;
 
@@ -123,8 +124,9 @@ public class DaemonPool
                         catch (Throwable e)
                             {
                             // TODO: RTError
-                            Utils.log("\nUnhandled exception at " + frame.f_function.getName() +
-                                    ", iPC=" + frame.m_iPC);
+                            frame = context.getCurrentFrame();
+                            Utils.log("\nUnhandled exception at " +
+                                    frame + ", iPC=" + frame.m_iPC);
                             e.printStackTrace(System.out);
                             System.exit(-1);
                             }

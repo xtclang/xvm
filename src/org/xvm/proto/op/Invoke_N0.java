@@ -2,9 +2,11 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.*;
-
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
@@ -43,16 +45,16 @@ public class Invoke_N0 extends OpInvocable
 
             if (frame.f_adapter.isNative(method))
                 {
-                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length, 0);
+                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
                 if (ahArg == null)
                     {
                     return R_REPEAT;
                     }
 
-                return clz.f_template.invokeNative(frame, hTarget, method, ahArg, Frame.RET_UNUSED);
+                return clz.f_template.invokeNative(frame, method, hTarget, ahArg, Frame.RET_UNUSED);
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method), 1);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method));
             if (ahVar == null)
                 {
                 return R_REPEAT;
@@ -60,8 +62,7 @@ public class Invoke_N0 extends OpInvocable
 
             if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
-                ahVar[0] = hTarget;
-                return xFunction.makeAsyncHandle(method).call1(frame, ahVar, Frame.RET_UNUSED);
+                return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, Frame.RET_UNUSED);
                 }
 
             return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);

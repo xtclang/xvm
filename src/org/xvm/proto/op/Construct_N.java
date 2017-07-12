@@ -31,14 +31,13 @@ public class Construct_N extends OpCallable
             {
             MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor), 1);
+            ObjectHandle hStruct = frame.getThis();
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor));
             if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
-            ahVar[0] = frame.getArgument(0); // struct
-
-            frame.chainFinalizer(frame.f_adapter.makeFinalizer(constructor, ahVar));
+            frame.chainFinalizer(frame.f_adapter.makeFinalizer(constructor, hStruct, ahVar));
 
             return frame.call1(constructor, null, ahVar, Frame.RET_UNUSED);
             }

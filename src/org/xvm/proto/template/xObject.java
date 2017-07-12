@@ -47,8 +47,8 @@ public class xObject
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                            ObjectHandle[] ahArg, int iReturn)
         {
         switch (ahArg.length)
             {
@@ -59,6 +59,6 @@ public class xObject
                     return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
                     }
             }
-        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
+        return super.invokeNative(frame, method, hTarget, ahArg, iReturn);
         }
     }

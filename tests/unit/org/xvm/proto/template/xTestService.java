@@ -28,7 +28,7 @@ public class xTestService extends xService
     @Override
     public void initDeclared()
         {
-        adapter.addMethod(f_struct, "construct", new String[]{"TestApp.TestService", "Int64"}, VOID);
+        adapter.addMethod(f_struct, "construct", INT, VOID);
         adapter.addMethod(f_struct, "default", VOID, VOID);
         adapter.markInjectable(((PropertyStructure) f_struct.getChild("runtimeClock")));
 
@@ -36,35 +36,35 @@ public class xTestService extends xService
         mtGetCounter.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.get #")),
-            new Var(adapter.getClassTypeConstId("Int64")), // (#1)
-            new Call_01(Op.A_SUPER, 1),
-            new Return_1(1),
+            new Var(adapter.getClassTypeConstId("Int64")), // (#0)
+            new Call_01(Op.A_SUPER, 0),
+            new Return_1(0),
             };
-        mtGetCounter.m_cVars = 2;
+        mtGetCounter.m_cVars = 1;
 
         MethodTemplate mtSetCounter = ensureSetter("counter");
         mtSetCounter.m_aop = new Op[]
-            { // #0 = this; #1 = newValue
+            { // #0 = newValue
             new X_Print(-adapter.ensureValueConstantId("# in TestService.counter.set #")),
-            new X_Print(1),
-            new Call_10(Op.A_SUPER, 1),
+            new X_Print(0),
+            new Call_10(Op.A_SUPER, 0),
             new Return_0(),
             };
-        mtSetCounter.m_cVars = 2;
+        mtSetCounter.m_cVars = 1;
 
         MethodTemplate ftDefault = getMethodTemplate("default", VOID, VOID);
         ftDefault.m_aop = new Op[]
             {
-            new PSet(0, adapter.getPropertyConstId("TestApp.TestService", "counter2"),
+            new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
                     -adapter.ensureValueConstantId(5)),
             new Return_0(),
             };
         ftDefault.m_cVars = 1;
 
-        MethodTemplate constructor = getMethodTemplate("construct", new String[]{"TestApp.TestService", "Int64"});
+        MethodTemplate constructor = getMethodTemplate("construct", INT);
         constructor.m_aop = new Op[]
-            {
-            new PSet(0, adapter.getPropertyConstId("TestApp.TestService", "counter"), 1),
+            { // #0 - counter
+            new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
             new Return_0(),
             };
         constructor.m_cVars = 2;
@@ -73,11 +73,11 @@ public class xTestService extends xService
         mtIncrement.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.increment #")),
-            new Var(adapter.getClassTypeConstId("Int64")), // #1
-            new PreInc(-adapter.getPropertyConstId("TestApp.TestService", "counter"), 1),
-            new Return_1(1),
+            new Var(adapter.getClassTypeConstId("Int64")), // #0
+            new PreInc(-adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
+            new Return_1(0),
             };
-        mtIncrement.m_cVars = 3;
+        mtIncrement.m_cVars = 1;
 
         MethodTemplate ftLambda$1 = getMethodTemplate("lambda_1", new String[]{"Ref<Int64>", "Int64"});
         ftLambda$1.m_aop = new Op[]
@@ -89,34 +89,34 @@ public class xTestService extends xService
 
         MethodTemplate mtExceptional = getMethodTemplate("exceptional", INT, INT);
         mtExceptional.m_aop = new Op[]
-            { // #0 - this; #1 - cDelay
-            new Var(adapter.getClassTypeConstId("Boolean")), // #2
-            new IsZero(1, 2),
-            new JumpFalse(2, 6), // -> Enter
+            { // #0 - cDelay
+            new Var(adapter.getClassTypeConstId("Boolean")), // #1
+            new IsZero(0, 1),
+            new JumpFalse(1, 6), // -> Enter
 
             new Enter(),
-            new Var(this.adapter.getClassTypeConstId("Exception")), // #3
+            new Var(this.adapter.getClassTypeConstId("Exception")), // #2
             new New_N(adapter.getMethodConstId("Exception", "construct"),
                         new int[]{-adapter.ensureValueConstantId("test"),
-                                  -adapter.getClassTypeConstId("Nullable.Null")}, 3),
-            new Throw(3),
+                                  -adapter.getClassTypeConstId("Nullable.Null")}, 2),
+            new Throw(2),
             new Exit(), // optimize out; unreachable
 
             new Enter(),
             new DNVar(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
-                    adapter.ensureValueConstantId("iRet")), // #3 (iRet)
-            new Var(adapter.getClassTypeConstId("Clock")), // #4
-            new LGet(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"), 4),
+                    adapter.ensureValueConstantId("iRet")), // #2 (iRet)
+            new Var(adapter.getClassTypeConstId("Clock")), // #3
+            new LGet(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"), 3),
             new IVar(adapter.getClassTypeConstId("Function"),
-                    -adapter.getMethodConstId("TestApp.TestService", "lambda_1")), // #5
-            new Ref(3), // #6
-            new FBind(5, new int[] {0, 1}, new int[] {6, 1}, 5),
-            new Invoke_N0(4, adapter.getMethodConstId("Clock", "scheduleAlarm"),
-                    new int[] {5, 1}),
-            new Return_1(3),
+                    -adapter.getMethodConstId("TestApp.TestService", "lambda_1")), // #4
+            new Ref(2), // #5
+            new FBind(4, new int[] {0, 1}, new int[] {5, 0}, 4),
+            new Invoke_N0(3, adapter.getMethodConstId("Clock", "scheduleAlarm"),
+                    new int[] {4, 0}),
+            new Return_1(2),
             new Exit(), // optimized out; unreachable
             };
-        mtExceptional.m_cVars = 7;
+        mtExceptional.m_cVars = 6;
         mtExceptional.m_cScopes = 2;
         }
     }

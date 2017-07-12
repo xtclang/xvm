@@ -57,7 +57,6 @@ public abstract class OpCallable extends Op
             else
                 {
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
-                ahVar[0] = hThis;
 
                 return frame.call1(methodSuper, hThis, ahVar, iReturn);
                 }
@@ -80,8 +79,6 @@ public abstract class OpCallable extends Op
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
-        ahVar[0] = hThis;
-
         return frame.call1(methodSuper, hThis, ahVar, iReturn);
         }
 
@@ -122,7 +119,7 @@ public abstract class OpCallable extends Op
             else
                 {
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
-                ahVar[0] = hThis;
+                ahVar[0] = hArg;
 
                 return frame.call1(methodSuper, hThis, ahVar, Frame.RET_UNUSED);
                 }
@@ -177,13 +174,13 @@ public abstract class OpCallable extends Op
 
         try
             {
-            ObjectHandle[] ahVar = frame.getArguments(anArgValue, frame.f_adapter.getVarCount(methodSuper), 1);
+            ObjectHandle[] ahVar = frame.getArguments(anArgValue, frame.f_adapter.getVarCount(methodSuper));
             if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
 
-            return frame.call1(methodSuper, frame.getThis(), ahVar, iReturn);
+            return frame.call1(methodSuper, hThis, ahVar, iReturn);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -213,13 +210,13 @@ public abstract class OpCallable extends Op
 
         try
             {
-            ObjectHandle[] ahVar = frame.getArguments(anArgValue, frame.f_adapter.getVarCount(methodSuper), 1);
+            ObjectHandle[] ahVar = frame.getArguments(anArgValue, frame.f_adapter.getVarCount(methodSuper));
             if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
 
-            return frame.callN(methodSuper, frame.getThis(), ahVar, aiReturn);
+            return frame.callN(methodSuper, hThis, ahVar, aiReturn);
             }
         catch (ExceptionHandle.WrapperException e)
             {

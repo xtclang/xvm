@@ -51,7 +51,7 @@ public class New_0G extends OpCallable
                 }
             else
                 {
-                clzTarget = frame.f_context.f_types.ensureComposition(frame, -f_nTypeValue);
+                clzTarget = frame.f_context.f_types.ensureComposition(-f_nTypeValue);
                 }
 
             ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);

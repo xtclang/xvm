@@ -49,7 +49,7 @@ public class Call_00 extends OpCallable
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, Utils.OBJECTS_NONE, Frame.RET_UNUSED);
+            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

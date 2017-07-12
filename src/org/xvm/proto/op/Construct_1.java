@@ -31,7 +31,7 @@ public class Construct_1 extends OpCallable
             {
             MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
 
-            ObjectHandle hStruct = frame.getArgument(0);
+            ObjectHandle hStruct = frame.getThis();
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
             if (hArg == null)
                 {
@@ -39,12 +39,11 @@ public class Construct_1 extends OpCallable
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(constructor)];
-            ahVar[0] = hStruct;
-            ahVar[1] = hArg;
+            ahVar[0] = hArg;
 
-            frame.chainFinalizer(frame.f_adapter.makeFinalizer(constructor, ahVar));
+            frame.chainFinalizer(frame.f_adapter.makeFinalizer(constructor, hStruct, ahVar));
 
-            return frame.call1(constructor, null, ahVar, Frame.RET_UNUSED);
+            return frame.call1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

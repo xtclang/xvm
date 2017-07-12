@@ -380,7 +380,7 @@ public class xTestApp extends xModule
             new X_Print(1),
 
             new NVar(adapter.getClassTypeConstId("collections.Array<String>"),
-                     adapter.ensureValueConstantId("as")),   // #2 (as)
+                     adapter.ensureValueConstantId("as1")),   // #2 (as1)
             new New_NG(adapter.getMethodConstId("collections.Array", "construct"),
                        -adapter.getClassTypeConstId("collections.Array<String>"),
                        new int[] {-adapter.ensureValueConstantId(5),

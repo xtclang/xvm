@@ -38,7 +38,7 @@ public class Ref extends OpInvocable
             }
         else
             {
-            TypeComposition clzRef = xRef.INSTANCE.resolve(
+            TypeComposition clzRef = xRef.INSTANCE.ensureClass(
                     Collections.singletonMap("RefType", infoSrc.f_clazz.ensurePublicType()));
 
             RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);

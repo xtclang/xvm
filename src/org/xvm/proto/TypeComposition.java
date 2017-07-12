@@ -10,6 +10,7 @@ import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.proto.template.xTuple;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,7 +40,8 @@ public class TypeComposition
 
     public TypeComposition(ClassTemplate template, Map<String, Type> mapParamsActual)
         {
-        assert(mapParamsActual.size() == template.f_struct.getTypeParams().size());
+        assert(mapParamsActual.size() == template.f_struct.getTypeParams().size() ||
+              template instanceof xTuple);
 
         f_template = template;
         f_mapGenericActual = mapParamsActual;
@@ -55,7 +57,7 @@ public class TypeComposition
 
             if (mapFormalTypes.isEmpty())
                 {
-                return templateSuper.resolve(Collections.EMPTY_MAP);
+                return templateSuper.ensureClass(Collections.EMPTY_MAP);
                 }
 
             Map<String, Type> mapParams = new HashMap<>();
@@ -65,7 +67,7 @@ public class TypeComposition
                 mapParams.put(sParamName, f_mapGenericActual.get(sParamName));
                 }
 
-            return templateSuper.resolve(mapParams);
+            return templateSuper.ensureClass(mapParams);
             }
 
         return null;
@@ -198,21 +200,22 @@ public class TypeComposition
         }
 
     // create a sequence of frames to be called in the inverse order (the base super first)
-    public Frame callDefaultConstructors(Frame frame, ObjectHandle[] ahVar, Supplier<Frame> continuation)
+    public Frame callDefaultConstructors(Frame frame, ObjectHandle hStruct, ObjectHandle[] ahVar,
+                                         Supplier<Frame> continuation)
         {
         ClassTemplate template = f_template;
-        MethodStructure ftDefault = Adapter.getDefaultConstructor(template.f_struct);
+        MethodStructure methodDefault = Adapter.getDefaultConstructor(template.f_struct);
         ClassTemplate templateSuper = template.getSuper();
 
         Frame frameDefault;
-        if (ftDefault == null)
+        if (methodDefault == null)
             {
             frameDefault = null;
             }
         else
             {
-            frameDefault = frame.f_context.createFrame1(frame, ftDefault,
-                                ahVar[0], ahVar, Frame.RET_UNUSED);
+            frameDefault = frame.f_context.createFrame1(frame, methodDefault,
+                    hStruct, ahVar, Frame.RET_UNUSED);
             frameDefault.m_continuation = continuation;
             continuation = null;
             }
@@ -220,8 +223,8 @@ public class TypeComposition
         Frame frameSuper = null;
         if (templateSuper != null)
             {
-            TypeComposition clazzSuper = templateSuper.resolve(f_mapGenericActual);
-            frameSuper = clazzSuper.callDefaultConstructors(frame, ahVar, continuation);
+            TypeComposition clazzSuper = templateSuper.ensureClass(f_mapGenericActual);
+            frameSuper = clazzSuper.callDefaultConstructors(frame, hStruct, ahVar, continuation);
             }
 
         if (frameSuper == null)

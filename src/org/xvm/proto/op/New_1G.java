@@ -53,11 +53,11 @@ public class New_1G extends OpCallable
                 }
             else
                 {
-                clzTarget = frame.f_context.f_types.ensureComposition(frame, -f_nTypeValue);
+                clzTarget = frame.f_context.f_types.ensureComposition(-f_nTypeValue);
                 }
 
             ObjectHandle[] ahVar = frame.getArguments(
-                    new int[] {f_nArgValue}, frame.f_adapter.getVarCount(constructor), 1);
+                    new int[] {f_nArgValue}, frame.f_adapter.getVarCount(constructor));
             if (ahVar == null)
                 {
                 return R_REPEAT;

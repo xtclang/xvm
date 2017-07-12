@@ -189,8 +189,8 @@
  NEWC_N     CONST-CONSTRUCT, rvalue-parent, #params:(rvalue), lvalue-return
  NEWC_T     CONST-CONSTRUCT, rvalue-parent, rvalue-params-tuple, lvalue-return
  CONSTR_0   CONST-CONSTRUCT                                                         ; "super" construct call
- CONSTR_1   CONST-CONSTRUCT, rvalue-param
- CONSTR_N   CONST-CONSTRUCT, #params:(rvalue)
++CONSTR_1   CONST-CONSTRUCT, rvalue-param
++CONSTR_N   CONST-CONSTRUCT, #params:(rvalue)
  CONSTR_T   CONST-CONSTRUCT, rvalue-params-tuple
 
  RTYPE_1    CLASS_TYPE_CONST, rvalue-type, lvalue-return                    ; resolve generic type; lvalue-return - a Type object

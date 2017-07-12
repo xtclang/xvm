@@ -66,16 +66,22 @@ public class xIntArray
 
         int cSize = hArray.m_cSize;
 
-        if (lIndex < 0 || lIndex >= cSize)
+        if (lIndex < 0 || lIndex > cSize)
             {
-            if (hArray.m_fFixed || lIndex != cSize)
-                {
-                return IndexSupport.outOfRange(lIndex, cSize);
-                }
+            return IndexSupport.outOfRange(lIndex, cSize);
+            }
 
+        if (lIndex == cSize)
+            {
+            // an array can only grow without any "holes"
             int cCapacity = hArray.m_alValue.length;
-            if (cCapacity <= cSize)
+            if (cSize == cCapacity)
                 {
+                if (hArray.m_fFixed)
+                    {
+                    return IndexSupport.outOfRange(lIndex, cSize);
+                    }
+
                 // resize (TODO: we should be much smarter here)
                 cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
 

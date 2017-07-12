@@ -61,7 +61,7 @@ public class xString
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodStructure method,
+    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
                             ObjectHandle[] ahArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
@@ -91,11 +91,11 @@ public class xString
 
             }
 
-        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
+        return super.invokeNative(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodStructure method,
+    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
                             ObjectHandle hArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
@@ -112,7 +112,7 @@ public class xString
                     }
             }
 
-        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
+        return super.invokeNative(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override

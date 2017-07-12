@@ -1,5 +1,7 @@
 package org.xvm.proto;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.CharStringConstant;
@@ -81,21 +83,13 @@ public class Frame
         f_aOp = function == null ? Op.STUB : f_adapter.getOps(function);
 
         f_hTarget = hTarget;
-        f_ahVar = ahVar; // [0] - target:private for methods
+
+        f_ahVar = ahVar;
         f_aInfo = new VarInfo[ahVar.length];
 
         int cScopes = function == null ? 1 : f_adapter.getScopeCount(function);
         f_anNextVar = new int[cScopes];
-
-        if (hTarget == null)
-            {
-            f_anNextVar[0] = function == null ? 0 : Adapter.getArgCount(function);
-            }
-        else  // #0 - this:private
-            {
-            f_ahVar[0]     = hTarget.f_clazz.ensureAccess(hTarget, Access.PRIVATE);
-            f_anNextVar[0] = 1 + Adapter.getArgCount(function);
-            }
+        f_anNextVar[0] = function == null ? 0 : Adapter.getArgCount(function);
 
         f_iReturn = iReturn;
         f_aiReturn = aiReturn;
@@ -125,16 +119,14 @@ public class Frame
         }
 
     // a convenience method; ahVar - prepared variables
-    public int call1(MethodStructure template, ObjectHandle hTarget,
-                                 ObjectHandle[] ahVar, int iReturn)
+    public int call1(MethodStructure template, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         m_frameNext = f_context.createFrame1(this, template, hTarget, ahVar, iReturn);
         return Op.R_CALL;
         }
 
     // a convenience method
-    public int callN(MethodStructure template, ObjectHandle hTarget,
-                                 ObjectHandle[] ahVar, int[] aiReturn)
+    public int callN(MethodStructure template, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         m_frameNext = f_context.createFrameN(this, template, hTarget, ahVar, aiReturn);
         return Op.R_CALL;
@@ -196,7 +188,7 @@ public class Frame
                 MethodStructure method = hThis.f_clazz.resolveSuper(f_function);
                 return xFunction.makeHandle(method).bind(0, f_hTarget);
 
-            case Op.A_TARGET:
+            case Op.A_TARGET: // same as this:private; never used
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
@@ -539,7 +531,7 @@ public class Frame
 
     // return the ObjectHandle[] or null if the value is "pending future", or
     // throw if the async assignment has failed
-    public ObjectHandle[] getArguments(int[] aiArg, int cVars, int ofStart)
+    public ObjectHandle[] getArguments(int[] aiArg, int cVars)
                 throws ExceptionHandle.WrapperException
         {
         int cArgs = aiArg.length;
@@ -556,7 +548,7 @@ public class Frame
                 return null;
                 }
 
-            ahArg[ofStart + i] = hArg;
+            ahArg[i] = hArg;
             }
 
         return ahArg;
@@ -609,19 +601,8 @@ public class Frame
         VarInfo info = f_aInfo[nVar];
         if (info == null)
             {
-            int cArgs;
-            String sName;
-
-            if (f_hTarget == null)
-                {
-                cArgs = Adapter.getArgCount(f_function);
-                sName = "<arg " + nVar + ">";
-                }
-            else
-                {
-                cArgs = Adapter.getArgCount(f_function) + 1;
-                sName = nVar == 0 ? "<this>" : "<arg " + (nVar - 1) + ">";
-                }
+            int cArgs = Adapter.getArgCount(f_function);
+            String sName = "<arg " + nVar + ">";
 
             if (nVar >= cArgs)
                 {
@@ -712,9 +693,26 @@ public class Frame
     @Override
     public String toString()
         {
-        MethodStructure fn = f_function;
+        MethodStructure function = f_function;
+        String sFunction;
 
-        return "Frame: " + (fn == null ? '<' + f_context.f_sName + '>' : fn);
+        if (function == null)
+            {
+            sFunction = '<' + f_context.f_sName + '>';
+            }
+        else
+            {
+            Component container = function.getParent().getParent();
+            sFunction = container.getName() + '.' + function.getName();
+
+            while (!(container instanceof ClassStructure))
+                {
+                container = container.getParent();
+                sFunction = container.getName() + '.' + sFunction;
+                }
+            }
+
+        return "Frame: " + sFunction;
         }
 
     // try-catch support
@@ -795,7 +793,7 @@ public class Frame
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {
                 TypeComposition clzCatch = context.f_types.
-                        ensureComposition(frame, f_anClassConstId[iCatch]);
+                        ensureComposition(f_anClassConstId[iCatch]);
                 if (clzException.extends_(clzCatch))
                     {
                     CharStringConstant constVarName = (CharStringConstant)

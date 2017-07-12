@@ -39,7 +39,7 @@ public class Call_N0 extends OpCallable
                 {
                 MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(function), 0);
+                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(function));
                 if (ahVar == null)
                     {
                     return R_REPEAT;
@@ -49,13 +49,13 @@ public class Call_N0 extends OpCallable
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount(), 0);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount());
             if (hFunction == null || ahVar == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, ahVar, Frame.RET_UNUSED);
+            return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

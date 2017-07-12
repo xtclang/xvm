@@ -47,15 +47,15 @@ public class Invoke_N1 extends OpInvocable
 
             if (frame.f_adapter.isNative(method))
                 {
-                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length, 0);
+                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
                 if (ahArg == null)
                     {
                     return R_REPEAT;
                     }
-                return clz.f_template.invokeNative(frame, hTarget, method, ahArg, f_nRetValue);
+                return clz.f_template.invokeNative(frame, method, hTarget, ahArg, f_nRetValue);
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method), 1);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method));
             if (ahVar == null)
                 {
                 return R_REPEAT;
@@ -63,8 +63,7 @@ public class Invoke_N1 extends OpInvocable
 
             if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
-                ahVar[0] = hTarget;
-                return xFunction.makeAsyncHandle(method).call1(frame, ahVar, f_nRetValue);
+                return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, f_nRetValue);
                 }
 
             return frame.call1(method, hTarget, ahVar, f_nRetValue);

@@ -38,7 +38,7 @@ public class New_N extends OpCallable
         ExceptionHandle hException;
         try
             {
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor), 1);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor));
             if (ahVar == null)
                 {
                 return R_REPEAT;

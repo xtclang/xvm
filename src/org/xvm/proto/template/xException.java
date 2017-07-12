@@ -10,8 +10,9 @@ import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+
+import org.xvm.proto.op.LSet;
 import org.xvm.proto.op.Return_0;
-import org.xvm.proto.op.PSet;
 
 /**
  * TODO:
@@ -37,16 +38,16 @@ public class xException
     public void initDeclared()
         {
         // TODO: remove
-        f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"Exception", "String"}, VOID);
+        f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
 
-        MethodTemplate ct = getMethodTemplate("construct", new String[]{"Exception", "String|x:Nullable"});
-        ct.m_aop = new Op[] // #0 - this:struct, #1 - text, #2 - cause
+        MethodTemplate ct = getMethodTemplate("construct", new String[]{"String|Nullable", "Exception|Nullable"});
+        ct.m_aop = new Op[] // #0 - text, #1 - cause
             {
-            new PSet(0, f_types.f_adapter.getPropertyConstId("Exception", "text"), 1),
-            new PSet(0, f_types.f_adapter.getPropertyConstId("Exception", "cause"), 2),
+            new LSet(f_types.f_adapter.getPropertyConstId("Exception", "text"), 0),
+            new LSet(f_types.f_adapter.getPropertyConstId("Exception", "cause"), 1),
             new Return_0(),
             };
-        ct.m_cVars = 3;
+        ct.m_cVars = 2;
         }
 
     @Override

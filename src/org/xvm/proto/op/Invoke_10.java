@@ -47,17 +47,17 @@ public class Invoke_10 extends OpInvocable
 
             if (frame.f_adapter.isNative(method))
                 {
-                return clz.f_template.invokeNative(frame, hTarget, method, hArg, Frame.RET_UNUSED);
+                return clz.f_template.invokeNative(frame, method, hTarget, hArg, Frame.RET_UNUSED);
                 }
+
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
+            ahVar[0] = hArg;
 
             if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
                 return xFunction.makeAsyncHandle(method).
-                        call1(frame, new ObjectHandle[]{hTarget, hArg}, Frame.RET_UNUSED);
+                        call1(frame, hTarget, ahVar, Frame.RET_UNUSED);
                 }
-
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-            ahVar[1] = hArg;
 
             return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);
             }

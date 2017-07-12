@@ -43,8 +43,8 @@ public class MBind extends OpInvocable
             MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             return frame.assignValue(f_nResultValue, clz.f_template.isService() ?
-                    xFunction.makeAsyncHandle(method).bind(0, hTarget) :
-                    xFunction.makeHandle(method).bind(0, hTarget));
+                    xFunction.makeAsyncHandle(method).bindTarget(hTarget) :
+                    xFunction.makeHandle(method).bindTarget(hTarget));
             }
         catch (ExceptionHandle.WrapperException e)
             {

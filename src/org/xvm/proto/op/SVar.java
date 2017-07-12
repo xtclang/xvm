@@ -30,7 +30,7 @@ public class SVar extends Op
         {
         ServiceContext context = frame.f_context;
 
-        TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
+        TypeComposition clazz = context.f_types.ensureComposition(f_nClassConstId);
         int[] anArg = f_anArgValue;
         int cArgs = anArg.length;
 

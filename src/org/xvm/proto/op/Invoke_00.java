@@ -1,8 +1,12 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
-import org.xvm.proto.*;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
@@ -40,18 +44,18 @@ public class Invoke_00 extends OpInvocable
 
             if (frame.f_adapter.isNative(method))
                 {
-                return clazz.f_template.invokeNative(frame, hTarget, method,
+                return clazz.f_template.invokeNative(frame, method, hTarget,
                         Utils.OBJECTS_NONE, Frame.RET_UNUSED);
                 }
+
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
 
             if (clazz.f_template.isService() &&
                     frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
                 return xFunction.makeAsyncHandle(method).
-                        call1(frame, new ObjectHandle[]{hTarget}, Frame.RET_UNUSED);
+                        call1(frame, hTarget, ahVar, Frame.RET_UNUSED);
                 }
-
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
 
             return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);
             }

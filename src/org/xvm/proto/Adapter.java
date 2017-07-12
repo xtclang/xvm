@@ -234,8 +234,8 @@ public class Adapter
         {
         ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
         return tm == null ? 0 :
-                tm.m_fNative ? // this can only be a constructor; add 1 for this:struct
-                    method.getIdentityConstant().getRawParams().length + 1:
+                tm.m_fNative ? // this can only be a constructor
+                    method.getIdentityConstant().getRawParams().length:
                     tm.m_cVars;
         }
 
@@ -276,11 +276,12 @@ public class Adapter
         return template.getMethodTemplate(method.getIdentityConstant());
         }
 
-    public xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor, ObjectHandle[] ahArg)
+    public xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor,
+                                                    ObjectHandle hStruct, ObjectHandle[] ahArg)
         {
         MethodStructure methodFinally = getFinalizer(constructor);
 
-        return methodFinally == null ? null : xFunction.makeHandle(methodFinally).bindAll(ahArg);
+        return methodFinally == null ? null : xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
         }
 
     public static boolean isAtomic(PropertyStructure property)

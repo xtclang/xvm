@@ -11,10 +11,13 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
@@ -68,8 +71,15 @@ public abstract class ClassTemplate
         f_struct = structClass;
         f_sName = structClass.getName();
 
-        Map<CharStringConstant, TypeConstant> mapParams = structClass.getTypeParams();
+        f_clazzCanonical = createCanonicalClass();
+        f_structSuper = getSuper(structClass);
+        }
+
+    protected TypeComposition createCanonicalClass()
+        {
+        Map<CharStringConstant, TypeConstant> mapParams = f_struct.getTypeParams();
         Map<String, Type> mapParamsActual;
+
         if (mapParams.isEmpty())
             {
             mapParamsActual = Collections.EMPTY_MAP;
@@ -84,9 +94,7 @@ public abstract class ClassTemplate
                 }
             }
 
-        f_clazzCanonical = new TypeComposition(this, mapParamsActual);
-
-        f_structSuper = getSuper(structClass);
+        return new TypeComposition(this, mapParamsActual);
         }
 
     // find a super structure for the specified one
@@ -215,19 +223,56 @@ public abstract class ClassTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
-    public TypeComposition resolve(Map<String, Type> mapParamsActual)
+    public TypeComposition resolve(ClassTypeConstant constClassType)
         {
-        if (mapParamsActual.isEmpty())
+        List<TypeConstant> listParams = constClassType.getTypeConstants();
+
+        int cParams = listParams.size();
+        if (cParams == 0)
             {
             return f_clazzCanonical;
             }
 
-        // sort the parameters by name and use the list of sorted types as a key
-        SortedMap<String, Type> mapSorted = new TreeMap<>(mapParamsActual);
+        List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes =
+                f_struct.getTypeParamsAsList();
+
+        assert listFormalTypes.size() == listParams.size();
+
+        Map<String, Type> mapParams = new HashMap<>();
+        for (int i = 0, c = listParams.size(); i < c; i++)
+            {
+            Map.Entry<CharStringConstant, TypeConstant> entryFormal = listFormalTypes.get(i);
+            String sParamName = entryFormal.getKey().getValue();
+            TypeConstant constTypeActual = listParams.get(i);
+
+            if (constTypeActual instanceof ClassTypeConstant)
+                {
+                mapParams.put(sParamName,
+                        f_types.resolve((ClassTypeConstant) constTypeActual).ensurePublicType());
+                }
+            else if (constTypeActual instanceof IntersectionTypeConstant ||
+                    constTypeActual instanceof UnionTypeConstant)
+                {
+                throw new UnsupportedOperationException("TODO");
+                }
+            else
+                {
+                throw new IllegalArgumentException("Unresolved type constant: " + constTypeActual);
+                }
+            }
+        return ensureClass(mapParams);
+        }
+
+    // produce a TypeComposition for this template using the actual types for formal parameters
+    public TypeComposition ensureClass(Map<String, Type> mapParams)
+        {
+        // sort the parameters by name and use the list of sorted (by formal name) types as a key
+        Map<String, Type> mapSorted = mapParams.size() > 1 ?
+                new TreeMap<>(mapParams) : mapParams;
         List<Type> key = new ArrayList<>(mapSorted.values());
 
         return m_mapCompositions.computeIfAbsent(key,
-                (x) -> new TypeComposition(this, mapParamsActual));
+                (x) -> new TypeComposition(this, mapParams));
         }
 
     @Override
@@ -267,7 +312,7 @@ public abstract class ClassTemplate
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
-        ahVar[0] = createStruct(frame, clazz); // this:struct
+        ObjectHandle hStruct = createStruct(frame, clazz); // this:struct
 
         // assume that we have C1 extending C0 with default constructors (DC),
         // regular constructors (RC), and finalizers (F);
@@ -285,18 +330,17 @@ public abstract class ClassTemplate
 
         Supplier<Frame> contAssign = () ->
             {
-            ObjectHandle hNew = ahVar[0];
             frame.assignValue(iReturn,
-                    hNew.f_clazz.ensureAccess(hNew, Constants.Access.PUBLIC));
+                    hStruct.f_clazz.ensureAccess(hStruct, Constants.Access.PUBLIC));
             return null;
             };
 
-        Frame frameRC = frame.f_context.createFrame1(frame, constructor, null, ahVar, Frame.RET_UNUSED);
+        Frame frameRC = frame.f_context.createFrame1(frame, constructor, hStruct, ahVar, Frame.RET_UNUSED);
 
-        Frame frameDC = clazz.callDefaultConstructors(frame, ahVar, () -> frameRC);
+        Frame frameDC = clazz.callDefaultConstructors(frame, hStruct, ahVar, () -> frameRC);
 
         // we need a non-null anchor (see Frame#chainFinalizer)
-        FullyBoundHandle hF1 = f_types.f_adapter.makeFinalizer(constructor, ahVar);
+        FullyBoundHandle hF1 = f_types.f_adapter.makeFinalizer(constructor, hStruct, ahVar);
         frameRC.m_hfnFinally = hF1 == null ? FullyBoundHandle.NO_OP : hF1;
 
         frameRC.m_continuation = () ->
@@ -317,16 +361,16 @@ public abstract class ClassTemplate
     // invokeNative with exactly one argument and zero or one return value
     // place the result into the specified frame register
     // return one of the Op.R_ values
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle hArg, int iReturn)
+    public int invokeNative(Frame frame, MethodStructure method,
+                            ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
         }
 
     // invokeNative with zero or more than one arguments and zero or one return values
     // return one of the Op.R_ values
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, MethodStructure method,
+                            ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
         // many classes don't have native methods
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
@@ -439,7 +483,7 @@ public abstract class ClassTemplate
 
         if (frame.f_adapter.isNative(method))
             {
-            return invokeNative(frame, hTarget, method, Utils.OBJECTS_NONE, iReturn);
+            return invokeNative(frame, method, hTarget, Utils.OBJECTS_NONE, iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
@@ -537,7 +581,7 @@ public abstract class ClassTemplate
                 {
                 if (f_types.f_adapter.isNative(method))
                     {
-                    return invokeNative(frame, hTarget, method, hValue, Frame.RET_UNUSED);
+                    return invokeNative(frame, method, hTarget, hValue, Frame.RET_UNUSED);
                     }
 
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];

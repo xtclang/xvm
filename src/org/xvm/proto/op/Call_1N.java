@@ -63,7 +63,7 @@ public class Call_1N extends OpCallable
             ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
             ahVar[0] = hArg;
 
-            return hFunction.callN(frame, ahVar, f_anRetValue);
+            return hFunction.callN(frame, null, ahVar, f_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

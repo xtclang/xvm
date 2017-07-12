@@ -52,8 +52,8 @@ public class xFutureRef
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle hArg, int iReturn)
+    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                            ObjectHandle hArg, int iReturn)
         {
         FutureHandle hThis = (FutureHandle) hTarget;
 
@@ -75,7 +75,7 @@ public class xFutureRef
                 return frame.assignValue(iReturn, makeHandle(cf));
             }
 
-        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
+        return super.invokeNative(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override

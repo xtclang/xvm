@@ -50,7 +50,7 @@ public class Call_01 extends OpCallable
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, Utils.OBJECTS_NONE, f_nRetValue);
+            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

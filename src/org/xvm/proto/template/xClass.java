@@ -42,18 +42,19 @@ public class xClass
             ClassTypeConstant constClass = (ClassTypeConstant) constant;
             TypeComposition clzTarget = f_types.resolve(constClass);
 
-            ClassTemplate target = clzTarget.f_template;
-            if (target.isSingleton())
+            ClassTemplate template = clzTarget.f_template;
+            if (template.isSingleton())
                 {
-                return target.createConstHandle(constant, heap);
+                return template.createConstHandle(constant, heap);
                 }
+
             Map<String, Type> mapParams = new HashMap<>();
             mapParams.put("PublicType", clzTarget.ensurePublicType());
             mapParams.put("ProtectedType", clzTarget.ensureProtectedType());
             mapParams.put("PrivateType", clzTarget.ensurePrivateType());
             mapParams.put("StructType", clzTarget.ensureStructType());
 
-            TypeComposition clzClass = resolve(mapParams);
+            TypeComposition clzClass = ensureClass(mapParams);
             return new ClassHandle(clzClass, clzTarget);
             }
         return null;

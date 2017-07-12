@@ -3,12 +3,28 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
+
+import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.TupleConstant;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
 
-import org.xvm.proto.*;
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.Op;
+import org.xvm.proto.Type;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * TODO:
@@ -41,6 +57,48 @@ public class xTuple
         }
 
     @Override
+    protected TypeComposition createCanonicalClass()
+        {
+        // this is Void.class
+        return new TypeComposition(this, Collections.EMPTY_MAP);
+        }
+
+    @Override
+    public TypeComposition resolve(ClassTypeConstant constClassType)
+        {
+        List<TypeConstant> listParams = constClassType.getTypeConstants();
+
+        int cParams = listParams.size();
+        if (cParams == 0)
+            {
+            return f_clazzCanonical;
+            }
+
+        Map<String, Type> mapParams = new HashMap<>();
+        for (int i = 0, c = listParams.size(); i < c; i++)
+            {
+            String sParamName = "ElementTypes[" + i + ']';
+            TypeConstant constTypeActual = listParams.get(i);
+
+            if (constTypeActual instanceof ClassTypeConstant)
+                {
+                mapParams.put(sParamName,
+                        f_types.resolve((ClassTypeConstant) constTypeActual).ensurePublicType());
+                }
+            else if (constTypeActual instanceof IntersectionTypeConstant ||
+                    constTypeActual instanceof UnionTypeConstant)
+                {
+                throw new UnsupportedOperationException("TODO");
+                }
+            else
+                {
+                throw new IllegalArgumentException("Unresolved type constant: " + constTypeActual);
+                }
+            }
+        return ensureClass(mapParams);
+        }
+
+    @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         TupleConstant constTuple = (TupleConstant) constant;
@@ -66,7 +124,7 @@ public class xTuple
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
-        ObjectHandle hSequence = ahVar[1];
+        ObjectHandle hSequence = ahVar[0];
         IndexSupport support = (IndexSupport) hSequence.f_clazz.f_template;
 
         int cValues = (int) support.size(hSequence);
@@ -90,7 +148,7 @@ public class xTuple
         return frame.assignValue(iReturn, hTuple);
         }
 
-// ----- IndexSupport methods -----
+    // ----- IndexSupport methods -----
 
     @Override
     public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
@@ -171,7 +229,7 @@ public class xTuple
                 mapParams.put("ElementTypes[" + i + ']', aType[i]);
                 }
             }
-        return new TupleHandle(INSTANCE.resolve(mapParams), ahValue);
+        return new TupleHandle(INSTANCE.ensureClass(mapParams), ahValue);
         }
 
     public static class TupleHandle

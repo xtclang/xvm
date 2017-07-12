@@ -39,7 +39,7 @@ public interface IndexSupport
             {
             Type typeReferent = getElementType(hTarget, lIndex);
 
-            TypeComposition clzRef = xRef.INSTANCE.resolve(
+            TypeComposition clzRef = xRef.INSTANCE.ensureClass(
                     Collections.singletonMap("RefType", typeReferent));
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);

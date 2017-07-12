@@ -27,57 +27,58 @@ public class xTestClass extends ClassTemplate
     public void initDeclared()
         {
         // --- constructor()
-        adapter.addMethod(f_struct, "construct", new String[]{"TestApp.TestClass", "String"}, VOID);
-        adapter.addMethod(f_struct, "finally", new String[]{"TestApp.TestClass", "String"}, VOID);
+        adapter.addMethod(f_struct, "construct",STRING, VOID);
+        adapter.addMethod(f_struct, "finally", STRING, VOID);
 
-        MethodTemplate construct = getMethodTemplate("construct", new String[]{"TestApp.TestClass", "String"});
-        MethodTemplate ftFinally = getMethodTemplate("finally", new String[]{"TestApp.TestClass", "String"});
+        MethodTemplate construct = getMethodTemplate("construct", STRING);
+        MethodTemplate ftFinally = getMethodTemplate("finally", STRING);
 
         construct.m_aop = new Op[]
-            { // #0 = this:struct; #1 = s
+            { // #0 = s
             new X_Print(-adapter.ensureValueConstantId("\n# in constructor: TestClass #")),
-            new PSet(0, adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
+            new LSet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
             new Return_0(),
             };
-        construct.m_cVars = 2;
+        construct.m_cVars = 1;
         construct.m_mtFinally = ftFinally;
 
         ftFinally.m_aop = new Op[]
-            { // #0 = this:private; #1 = s
+            { // #0  = s
             new X_Print(-adapter.ensureValueConstantId("# in finally: TestClass #")),
-            new X_Print(1),
+            new X_Print(0),
             new Return_0(),
             };
-        ftFinally.m_cVars = 2;
+        ftFinally.m_cVars = 1;
 
         // --- method1()
         MethodTemplate mtMethod1 = getMethodTemplate("method1", VOID);
         mtMethod1.m_aop = new Op[]
-            { // #0 (this)
+            {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
             new NVar(adapter.getClassTypeConstId("String"),
-                     adapter.ensureValueConstantId("s")), // #1 (s)
-            new LGet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
+                     adapter.ensureValueConstantId("s")), // #0 (s)
+            new LGet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
             new NVar(adapter.getClassTypeConstId("Int64"),
-                     adapter.ensureValueConstantId("of")), // #2 (of)
+                     adapter.ensureValueConstantId("of")), // #1 (of)
             new IVar(adapter.getClassTypeConstId("String"),
-                     -adapter.ensureValueConstantId("world")), // #3
-            new Invoke_11(1, adapter.getMethodConstId("String", "indexOf"), 3, 2),
-            new Var(adapter.getClassTypeConstId("Int64")), // #4
-            new PGet(1, adapter.getPropertyConstId("String", "length"), 4),
-            new Add(4, 2, 4),
-            new Return_1(4),
+                     -adapter.ensureValueConstantId("world")), // #2
+            new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"), 2, 1),
+            new Var(adapter.getClassTypeConstId("Int64")), // #3
+            new PGet(0, adapter.getPropertyConstId("String", "length"), 3),
+            new Add(3, 1, 3),
+            new Return_1(3),
             };
-        mtMethod1.m_cVars = 5;
+        mtMethod1.m_cVars = 4;
 
+        // --- exceptional()
         MethodTemplate mtExceptional = getMethodTemplate("exceptional", STRING);
         mtExceptional.m_aop = new Op[]
-            { // #0 (this), #1 (s)
-            new Var(adapter.getClassTypeConstId("Exception")), // #2
+            { // #0 = s
+            new Var(adapter.getClassTypeConstId("Exception")), // #1
             new New_N(adapter.getMethodConstId("Exception", "construct"),
-                        new int[]{1, -adapter.getClassTypeConstId("Nullable.Null")}, 2),
-            new Throw(2),
+                        new int[]{0, -adapter.getClassTypeConstId("Nullable.Null")}, 1),
+            new Throw(1),
             };
-        mtExceptional.m_cVars = 3;
+        mtExceptional.m_cVars = 2;
         }
     }

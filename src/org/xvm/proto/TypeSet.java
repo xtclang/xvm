@@ -132,47 +132,12 @@ public class TypeSet
     // produce a TypeComposition based on the specified ClassTypeConstant
     public TypeComposition resolve(ClassTypeConstant constClassType)
         {
-        ClassConstant constClass = constClassType.getClassConstant();
-        List<TypeConstant> listParams = constClassType.getTypeConstants();
-
-        int cParams = listParams.size();
-        if (cParams == 0)
-            {
-            return getTemplate(constClass).resolve(Collections.EMPTY_MAP);
-            }
-
-        ClassStructure clazz = (ClassStructure) constClass.getComponent();
-        List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes = clazz.getTypeParamsAsList();
-
-        assert listFormalTypes.size() == listParams.size();
-
-        Map<String, Type> mapParams = new HashMap<>();
-        for (int i = 0, c = listParams.size(); i < c; i++)
-            {
-            Map.Entry<CharStringConstant, TypeConstant> entryFormal = listFormalTypes.get(i);
-            String sParamName = entryFormal.getKey().getValue();
-            TypeConstant constTypeActual = listParams.get(i);
-
-            if (constTypeActual instanceof ClassTypeConstant)
-                {
-                ClassTypeConstant constParamClass = (ClassTypeConstant) constTypeActual;
-                mapParams.put(sParamName, resolve(constParamClass).ensurePublicType());
-                }
-            else if (constTypeActual instanceof IntersectionTypeConstant ||
-                    constTypeActual instanceof UnionTypeConstant)
-                {
-                throw new UnsupportedOperationException("TODO");
-                }
-            else
-                {
-                throw new IllegalArgumentException("Unresolved type constant: " + constTypeActual);
-                }
-            }
-        return getTemplate(constClass).resolve(mapParams);
+        ClassTemplate template = getTemplate(constClassType.getClassConstant());
+        return template.resolve(constClassType);
         }
 
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
-    public TypeComposition ensureComposition(Frame frame, int nClassConstId)
+    public TypeComposition ensureComposition(int nClassConstId)
         {
         TypeComposition typeComposition = m_mapConstCompositions.get(nClassConstId);
         if (typeComposition == null)

@@ -37,8 +37,8 @@ public class xAtomicRef
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                            ObjectHandle[] ahArg, int iReturn)
         {
         AtomicHandle hThis = (AtomicHandle) hTarget;
 
@@ -55,7 +55,7 @@ public class xAtomicRef
                     }
             }
 
-        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
+        return super.invokeNative(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override

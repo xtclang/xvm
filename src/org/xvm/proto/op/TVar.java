@@ -49,7 +49,7 @@ public class TVar extends Op
                     {
                     return R_REPEAT;
                     }
-                TypeComposition clazz = context.f_types.ensureComposition(frame, anClassId[i]);
+                TypeComposition clazz = context.f_types.ensureComposition(anClassId[i]);
 
                 aType[i] = clazz.ensurePublicType();
                 ahArg[i] = hArg;

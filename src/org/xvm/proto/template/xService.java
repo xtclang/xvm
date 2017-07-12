@@ -63,8 +63,8 @@ public class xService
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle hArg, int iReturn)
+    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                            ObjectHandle hArg, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -86,12 +86,12 @@ public class xService
                 }
             }
 
-        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
+        return super.invokeNative(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                            ObjectHandle[] ahArg, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -103,7 +103,7 @@ public class xService
                 }
             }
 
-        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
+        return super.invokeNative(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
