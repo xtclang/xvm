@@ -18,8 +18,8 @@ import java.util.NoSuchElementException;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ModuleRepository;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 
@@ -206,15 +206,18 @@ public abstract class AstNode
             {
             node.registerStructures(this, errs);
             }
+
+        stage = Stage.Registered;
         }
 
     /**
-     * Second logical compiler pass. This pass introduces the ModuleRepository, which allows the
-     * module that is being compiled to see other modules, including other modules that are being
-     * compiled in parallel with this module. The rule of thumb is that no questions should be
-     * asked of other modules that could not have been answered by this module before this call; in
-     * other words, the order of the module compilation is not only unpredictable, but the potential
-     * exists for dependencies in either direction (first to last and/or vice versa).
+     * Second logical compiler pass. This pass has access to imported modules, and is able to
+     * resolve names for all globally visible structures.
+     * <p/>
+     * The rule of thumb is that no questions should be asked of other modules that could not have
+     * been answered by this module before this call; in other words, the order of the module
+     * compilation is not only unpredictable, but the potential exists for dependencies in either
+     * direction (first to last and/or vice versa).
      * <p/>
      * <ul>
      * <li>Packages that import modules need to validate that those modules are available to
@@ -225,39 +228,24 @@ public abstract class AstNode
      * link-time conditionals defining which types are present and which of their Compositions are
      * in effect.</li>
      * </ul>
-     *
-     * @param repos  the module repository
-     * @param errs   the error list to log any errors to
+     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     *                     pass
+     * @param errs         the error list to log any errors etc. to
      */
-    protected void resolveGlobalVisibility(ModuleRepository repos, ErrorListener errs)
+    public void resolveGlobalVisibility(List<AstNode> listRevisit, ErrorListener errs)
         {
         for (AstNode node : children())
             {
-            node.resolveGlobalVisibility(repos, errs);
+            node.resolveGlobalVisibility(listRevisit, errs);
             }
+
+        stage = Stage.NamesResolved;
         }
 
     /**
-     * Resolve a simple name.
-     * <p/>
-     * When evaluating a name, without any knowledge about the name, determine what the name refers
-     * to. In the case of a multi-part name, this specifically is the resolution of just the first
-     * part, i.e. up to the first dot.
-     *
-     * @param sName
-     * @return
-     */
-    protected Constant resolveFirstName(String sName)
-        {
-        // TODO
-        return null;
-        }
-
-    /**
-     * Second logical compiler pass. This pass is responsible for populating the remaining items in
-     * the module structure, including properties, methods, and any structures (e.g. classes) nested
-     * thereunder. To accomplish this, this pass must be able to resolve type names, which is why
-     * the first pass was necessarily a separate pass.
+     * Third logical compiler pass. This pass is responsible for resolving names and structures
+     * within methods. To accomplish this, this pass must be able to resolve type names, which is
+     * why the first pass was necessarily a separate pass.
      *
      * @param errs  the error list to log any errors etc. to
      */
@@ -267,6 +255,75 @@ public abstract class AstNode
             {
             node.registerRemainingStructures(errs);
             }
+        }
+
+    /**
+     * Resolve a simple name.
+     * <p/>
+     * When evaluating a name, without any knowledge about the name, determine what the name refers
+     * to. In the case of a multi-part name, this specifically is the resolution of just the first
+     * part, i.e. up to the first dot.
+     * TODO conditional support, and possibly a CompositeConstant a la the CompositeComponent
+     *
+     * @param sName  the name to resolve
+     *
+     * @return the Constant that the name refers to
+     */
+    public Constant resolveFirstName(String sName)
+        {
+        // first see if one of the parents answers to that name (this ensures that we can always
+        // get to any global name by starting from the root)
+        Constant constant = resolveParentBySingleName(sName);
+
+        // next, walk up the AST tree, looking for that simple name. this has three sub-steps:
+        // 1) if the AST node is a statement block, then it may know an import by that name
+        // 2) if the AST node is a component statement, then the component may have a child by that
+        //    name
+        // 3) if the AST node is a component statement, then the component may know the name via one
+        //    or more of its compositions. if only by one, then that result is used. if by more than
+        //    one, then the results must all refer to the same thing, or the result is ambiguous,
+        //    and the name is unresolvable.
+        if (constant == null)
+            {
+            AstNode node = this;
+            while (node != null)
+                {
+                if (node instanceof StatementBlock)
+                    {
+                    ImportStatement stmt = ((StatementBlock) node).getImport(sName);
+                    if (stmt != null)
+                        {
+                        // the result can be determined by resolving the sequence of names
+                        // represented by the import
+                        // TODO
+                        }
+
+
+                    }
+                else if (node instanceof ComponentStatement)
+                    {
+                    ComponentStatement stmt = (ComponentStatement) node;
+                    // TODO
+                    }
+
+                node = node.getParent();
+                }
+            }
+
+        return constant;
+        }
+
+    /**
+     * From the root down, see if one of the parents answers to the specified name.
+     *
+     * @param sName  a simple name
+     *
+     * @return the Constant of one of the parents that answers to the specified name, or null
+     */
+    protected IdentityConstant resolveParentBySingleName(String sName)
+        {
+        AstNode parent = getParent();
+        return parent == null ? null : parent.resolveParentBySingleName(sName);
         }
 
     /**
@@ -732,6 +789,10 @@ public abstract class AstNode
     // ----- fields --------------------------------------------------------------------------------
 
     protected static final Field[] NO_FIELDS = new Field[0];
+
+    public enum Stage {Initial, Registered, NamesResolved, };
+
+    private Stage stage = Stage.Initial;
 
     protected AstNode parent;
     }

@@ -2,8 +2,8 @@
  * A range is an interval whose values are known to be sequential. A range adds some capabilities,
  * including the ability to union two adjoining ranges, and to iterate over the values in the range.
  */
-@auto mixin Range<ElementType>
-        into Interval<Sequential>
+@auto mixin Range<ElementType extends Sequential>
+        into Interval<ElementType>
         implements Iterable<ElementType>
     {
     /**

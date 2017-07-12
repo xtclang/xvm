@@ -1,12 +1,13 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ModuleStructure;
+
+import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.compiler.Token;
 
@@ -47,32 +48,19 @@ public abstract class ComponentStatement
         this.component = component;
         }
 
-    /**
-     * Register the presence of an ImportStatement.
-     *
-     * @param stmt  an ImportStatement
-     */
-    protected void registerImport(ImportStatement stmt)
+    @Override
+    protected IdentityConstant resolveParentBySingleName(String sName)
         {
-        assert stmt != null;
-        if (imports == null)
+        IdentityConstant constant = resolveParentBySingleName(sName);
+        if (constant == null && component != null)
             {
-            imports = new HashMap<>();
+            if (component.getName().equals(sName) || (component instanceof ModuleStructure &&
+                    ((ModuleStructure) component).getModuleConstant().getUnqualifiedName().equals(sName)))
+                {
+                constant = component.getIdentityConstant();
+                }
             }
-        ImportStatement stmtPrev = imports.put(stmt.getAliasName(), stmt);
-        assert stmtPrev == null;
-        }
-
-    /**
-     * Look up the specified simple name to see if there is an ImportStatement associated with it.
-     *
-     * @param sName  the alias name of an import
-     *
-     * @return the associated ImportStatement, or null if there is none by that simple alias name
-     */
-    public ImportStatement getImportStatement(String sName)
-        {
-        return imports == null ? null : imports.get(sName);
+        return constant;
         }
 
     @Override
@@ -131,6 +119,4 @@ public abstract class ComponentStatement
     protected Component component;
     protected long      lStartPos;
     protected long      lEndPos;
-
-    protected Map<String, ImportStatement> imports;
     }

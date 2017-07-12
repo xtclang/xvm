@@ -212,22 +212,24 @@ public class ModuleStructure
         return moduletype == ModuleType.Embedded;
         }
 
-    public ModuleStructure loadFingerprintOrigin(ModuleRepository repos, ErrorListener errs)
+    /**
+     * Specify the ModuleStructure that corresponds to the fingerprint.
+     *
+     * @param structModule  the actual ModuleStructure that the fingerprint is based on
+     */
+    public void setFingerprintOrigin(ModuleStructure structModule)
         {
         assert isFingerprint();
+        moduleActual = structModule;
+        }
 
-        if (moduleActual == null)
-            {
-            // load the module against which the compilation will occur
-            if (!repos.getModuleNames().contains(getName()))
-                {
-                // TODO
-                }
-
-            // TODO
-            // moduleActual = ... repos.
-            }
-
+    /**
+     * Obtain the ModuleStructure that corresponds to the fingerprint.
+     *
+     * @return the actual ModuleStructure that the fingerprint is based on
+     */
+    public ModuleStructure getFingerprintOrigin()
+        {
         return moduleActual;
         }
 

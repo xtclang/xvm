@@ -4,7 +4,14 @@ package org.xvm.compiler;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 
+import org.xvm.asm.ModuleStructure;
+import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.util.Severity;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 /**
@@ -81,21 +88,70 @@ public class Compiler
         }
 
     /**
-     * Second pass: Add the properties, methods, and the remainder of the classes that are located
-     * within the properties and methods to the existing FileStructure.
+     * Second pass: Resolve all of the globally-visible dependencies and names. This pass does not
+     * recurse into methods.
      * <p/>
-     * This method uses the ModuleRepository to obtain type resolution information from other
-     * modules. Specifically, type resolution information is the same set of information that was
-     * produced by the first pass of this compiler, which allows two different modules with
-     * co-dependencies to be jointly compiled.
+     * This method is uses the ModuleRepository.
      * <p/>
      * Any error results are logged to the ErrorListener.
-     *
-     * @return the FileStructure with the methods and properties added
      */
-    public void populateMembers()
+    public void resolveGlobalNames()
         {
-        // TODO - this is the next project to do
+        // first, load any module dependencies
+        boolean fFatal = false;
+        for (String sModule : m_struct.moduleNames())
+            {
+            if (!sModule.equals(m_struct.getModuleName()))
+                {
+                ModuleStructure structFingerprint = m_struct.getModule(sModule);
+                assert structFingerprint.isFingerprint();
+                assert structFingerprint.getFingerprintOrigin() == null;
+
+                // load the module against which the compilation will occur
+                if (!m_repos.getModuleNames().contains(sModule))
+                    {
+                    // no error is logged here; the package that imports the module will detect the
+                    // error when it is asked to resolve global names; see TypeCompositionStatement
+                    continue;
+                    }
+
+                ModuleStructure structActual = m_repos.loadModule(sModule); // TODO versions etc.
+                structFingerprint.setFingerprintOrigin(structActual);
+                }
+            }
+        if (fFatal)
+            {
+            return;
+            }
+
+        // second, recursively resolve all of the unresolved global names, and if anything couldn't
+        // get done in one pass, then repeat
+        int cTries = 0;
+        List<AstNode> listTodo = Collections.singletonList(m_module);
+        do
+            {
+            List<AstNode> listDeferred = new ArrayList<>();
+            for (AstNode node : listTodo)
+                {
+                node.resolveGlobalVisibility(listDeferred, m_errs);
+                }
+            listTodo = listDeferred;
+            }
+        while (!listTodo.isEmpty() && cTries < 0x3F);
+        for (AstNode node : listTodo)
+            {
+            node.log(m_errs, Severity.FATAL, INFINITE_RESOLVE_LOOP, node.getComponent().getIdentityConstant().toString());
+            }
+        }
+
+    /**
+     * Third pass: Resolve names and structures within methods.
+     * <p/>
+     * Any error results are logged to the ErrorListener.
+     */
+    public void resolveRemainder()
+        {
+        // TODO
         }
 
 
@@ -209,6 +265,18 @@ public class Compiler
      * Illegal link-time conditional.
      */
     public static final String ILLEGAL_CONDITIONAL                = "COMPILER-27";
+    /**
+     * Duplicate import with the same alias.
+     */
+    public static final String DUPLICATE_IMPORT                   = "COMPILER-28";
+    /**
+     * Import cannot be conditional; condition ignored.
+     */
+    public static final String CONDITIONAL_IMPORT                 = "COMPILER-29";
+    /**
+     * Unresolvable names.
+     */
+    public static final String INFINITE_RESOLVE_LOOP              = "COMPILER-30";
 
 
     // ----- data members --------------------------------------------------------------------------

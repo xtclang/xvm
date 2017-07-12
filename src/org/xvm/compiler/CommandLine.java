@@ -659,7 +659,7 @@ public class CommandLine
         {
         for (Compiler compiler : modulesByName.values())
             {
-            compiler.populateMembers();
+            compiler.resolveRemainder();
             }
         }
 
