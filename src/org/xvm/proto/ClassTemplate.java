@@ -23,6 +23,7 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xArray;
 import org.xvm.proto.template.xException;
+import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef.RefHandle;
@@ -340,7 +341,7 @@ public abstract class ClassTemplate
         Frame frameDC = clazz.callDefaultConstructors(frame, hStruct, ahVar, () -> frameRC);
 
         // we need a non-null anchor (see Frame#chainFinalizer)
-        FullyBoundHandle hF1 = f_types.f_adapter.makeFinalizer(constructor, hStruct, ahVar);
+        FullyBoundHandle hF1 = makeFinalizer(constructor, hStruct, ahVar);
         frameRC.m_hfnFinally = hF1 == null ? FullyBoundHandle.NO_OP : hF1;
 
         frameRC.m_continuation = () ->
@@ -354,6 +355,15 @@ public abstract class ClassTemplate
 
         frame.m_frameNext = frameDC == null ? frameRC : frameDC;
         return Op.R_CALL;
+        }
+
+    public FullyBoundHandle makeFinalizer(MethodStructure constructor,
+                                          ObjectHandle hStruct, ObjectHandle[] ahArg)
+        {
+        MethodStructure methodFinally = f_types.f_adapter.getFinalizer(constructor);
+
+        return methodFinally == null ? null :
+                xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
         }
 
     // ----- OpCode support ------
@@ -726,7 +736,7 @@ public abstract class ClassTemplate
 
     public MethodTemplate ensureMethodTemplate(String sName, String[] asParam, String[] asRetType)
         {
-        MethodStructure method = Adapter.getMethod(f_struct, sName, asParam, asRetType);
+        MethodStructure method = getMethod(sName, asParam, asRetType);
 
         return m_mapMethods.computeIfAbsent(method.getIdentityConstant(), (id) -> new MethodTemplate(method));
         }

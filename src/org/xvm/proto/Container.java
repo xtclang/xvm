@@ -119,8 +119,7 @@ public class Container
             // xModule module = (xModule) f_types.getTemplate(sModule);
             ClassTemplate app = f_types.getTemplate(f_sAppName);
 
-            MethodStructure mtRun = Adapter.getMethod(app.f_struct,
-                    "run", ClassTemplate.VOID, ClassTemplate.VOID);
+            MethodStructure mtRun = app.getMethod("run", ClassTemplate.VOID, ClassTemplate.VOID);
             if (mtRun == null)
                 {
                 throw new IllegalArgumentException("Missing run() method for " + f_sAppName);

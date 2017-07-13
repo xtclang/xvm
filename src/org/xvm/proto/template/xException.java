@@ -43,8 +43,8 @@ public class xException
         MethodTemplate ct = ensureMethodTemplate("construct", new String[]{"String|Nullable", "Exception|Nullable"});
         ct.m_aop = new Op[] // #0 - text, #1 - cause
             {
-            new LSet(f_types.f_adapter.getPropertyConstId("Exception", "text"), 0),
-            new LSet(f_types.f_adapter.getPropertyConstId("Exception", "cause"), 1),
+            new LSet(getProperty("text").getIdentityConstant().getPosition(), 0),
+            new LSet(getProperty("cause").getIdentityConstant().getPosition(), 1),
             new Return_0(),
             };
         ct.m_cVars = 2;

@@ -3,6 +3,7 @@ package org.xvm.proto;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
@@ -11,22 +12,20 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.UnresolvedTypeConstant;
+
 import org.xvm.proto.template.xFunction;
 
 import org.xvm.util.Handy;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 
 /**
- * A temporary intermediary between the RT, the ConstantPool and ClassStructure
+ * A temporary intermediary between the RT, the ConstantPool and ClassStructure;
+ * FOR SIMULATION ONLY
  *
  * @author gg 2017.03.08
  */
@@ -36,9 +35,6 @@ public class Adapter
 
     // the template composition: name -> the corresponding ClassConstant id
     private Map<String, Integer> m_mapClasses = new HashMap<>();
-
-    // a set of injectable properties
-    private Set<PropertyConstant> m_setInjectable = new HashSet<>();
 
     public Adapter(Container container)
         {
@@ -88,43 +84,6 @@ public class Adapter
         throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
         }
 
-    private TypeConstant[] getTypeConstants(String[] asType)
-        {
-        int cTypes = asType.length;
-        TypeConstant[] aType = new TypeConstant[cTypes];
-        for (int i = 0; i < cTypes; i++)
-            {
-            String sType = asType[i].trim();
-            aType[i] = getClassTypeConstant(getClassTypeConstId(sType));
-            }
-        return aType;
-        }
-
-    protected ClassTypeConstant getClassTypeConstant(String sName)
-        {
-        ClassConstant constClass = (ClassConstant)
-                f_container.f_types.getTemplate(sName).f_struct.getIdentityConstant();
-        return constClass.asTypeConstant();
-        }
-
-    public ClassTypeConstant getClassTypeConstant(int nConstId)
-        {
-        return (ClassTypeConstant) f_container.f_pool.getConstant(nConstId);
-        }
-
-    public int getPropertyConstId(String sClassName, String sPropName)
-        {
-        try
-            {
-            return f_container.f_types.getTemplate(sClassName).getProperty(sPropName).
-                    getIdentityConstant().getPosition();
-            }
-        catch (NullPointerException e)
-            {
-            throw new IllegalArgumentException("Property is not defined: " + sClassName + '#' + sPropName);
-            }
-        }
-
     public int getMethodConstId(String sClassName, String sMethName)
         {
         return getMethodConstId(sClassName, sMethName, null, null);
@@ -150,11 +109,42 @@ public class Adapter
             }
         }
 
-    // FOR SIMULATION ONLY
+    public int getPropertyConstId(String sClassName, String sPropName)
+        {
+        try
+            {
+            return f_container.f_types.getTemplate(sClassName).getProperty(sPropName).
+                    getIdentityConstant().getPosition();
+            }
+        catch (NullPointerException e)
+            {
+            throw new IllegalArgumentException("Property is not defined: " + sClassName + '#' + sPropName);
+            }
+        }
 
     public int ensureValueConstantId(Object oValue)
         {
         return ensureValueConstant(oValue).getPosition();
+        }
+
+    private TypeConstant[] getTypeConstants(String[] asType)
+        {
+        ConstantPool pool = f_container.f_pool;
+        int cTypes = asType.length;
+        TypeConstant[] aType = new TypeConstant[cTypes];
+        for (int i = 0; i < cTypes; i++)
+            {
+            String sType = asType[i].trim();
+            aType[i] = (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType));
+            }
+        return aType;
+        }
+
+    private ClassTypeConstant getClassTypeConstant(String sClassName)
+        {
+        ClassConstant constClass = (ClassConstant)
+                f_container.f_types.getTemplate(sClassName).f_struct.getIdentityConstant();
+        return constClass.asTypeConstant();
         }
 
     protected Constant ensureValueConstant(Object oValue)
@@ -202,20 +192,6 @@ public class Adapter
         MultiMethodStructure mms = structure.ensureMultiMethodStructure(sName);
         return mms.createMethod(false, Constants.Access.PUBLIC,
                 getTypeConstants(asRetType), getTypeConstants(asArgType));
-        }
-
-    public static MethodStructure getMethod(Component structure, String sName,
-                                            String[] asArgType, String[] asRetType)
-        {
-        MultiMethodStructure mms = (MultiMethodStructure) structure.getChild(sName);
-
-        // TODO: use the types
-        return mms == null ? null : (MethodStructure) mms.children().get(0);
-        }
-
-    public static MethodStructure getDefaultConstructor(ClassStructure structure)
-        {
-        return getMethod(structure, "default", ClassTemplate.VOID, ClassTemplate.VOID);
         }
 
     public int getScopeCount(MethodStructure method)
@@ -267,14 +243,6 @@ public class Adapter
         ClassStructure clazz = (ClassStructure) (container instanceof ClassStructure ? container : container.getParent());
         ClassTemplate template = f_container.f_types.getTemplate(clazz.getIdentityConstant());
         return template.getMethodTemplate(method.getIdentityConstant());
-        }
-
-    public xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor,
-                                                    ObjectHandle hStruct, ObjectHandle[] ahArg)
-        {
-        MethodStructure methodFinally = getFinalizer(constructor);
-
-        return methodFinally == null ? null : xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
         }
 
     public static MethodStructure getGetter(PropertyStructure property)

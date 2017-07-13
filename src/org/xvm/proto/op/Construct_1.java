@@ -2,7 +2,6 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -41,7 +40,7 @@ public class Construct_1 extends OpCallable
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(constructor)];
             ahVar[0] = hArg;
 
-            frame.chainFinalizer(frame.f_adapter.makeFinalizer(constructor, hStruct, ahVar));
+            frame.chainFinalizer(hStruct.f_clazz.f_template.makeFinalizer(constructor, hStruct, ahVar));
 
             return frame.call1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
             }
