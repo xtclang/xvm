@@ -30,8 +30,8 @@ public class xTestClass extends ClassTemplate
         adapter.addMethod(f_struct, "construct",STRING, VOID);
         adapter.addMethod(f_struct, "finally", STRING, VOID);
 
-        MethodTemplate construct = getMethodTemplate("construct", STRING);
-        MethodTemplate ftFinally = getMethodTemplate("finally", STRING);
+        MethodTemplate construct = ensureMethodTemplate("construct", STRING);
+        MethodTemplate ftFinally = ensureMethodTemplate("finally", STRING);
 
         construct.m_aop = new Op[]
             { // #0 = s
@@ -51,7 +51,7 @@ public class xTestClass extends ClassTemplate
         ftFinally.m_cVars = 1;
 
         // --- method1()
-        MethodTemplate mtMethod1 = getMethodTemplate("method1", VOID);
+        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID);
         mtMethod1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
@@ -71,7 +71,7 @@ public class xTestClass extends ClassTemplate
         mtMethod1.m_cVars = 4;
 
         // --- exceptional()
-        MethodTemplate mtExceptional = getMethodTemplate("exceptional", STRING);
+        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", STRING);
         mtExceptional.m_aop = new Op[]
             { // #0 = s
             new Var(adapter.getClassTypeConstId("Exception")), // #1

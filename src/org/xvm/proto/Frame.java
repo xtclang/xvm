@@ -420,14 +420,13 @@ public class Frame
 
         int c = aiArg.length;
         ObjectHandle[] ahValue = new ObjectHandle[c];
-        Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
-            aType[i] = Adapter.getReturnType(f_function, i, null);
             ahValue[i] = getReturnValue(aiArg[i]);
             }
 
-        int iResult = f_framePrev.assignValue(iReturn, xTuple.makeHandle(aType, ahValue));
+        TypeComposition clazz = f_framePrev.getVarInfo(iReturn).f_clazz;
+        int iResult = f_framePrev.assignValue(iReturn, xTuple.makeHandle(clazz, ahValue));
         switch (iResult)
             {
             case Op.R_EXCEPTION:
@@ -645,14 +644,7 @@ public class Frame
         while (true)
             {
             sb.append("\n  - ")
-              .append(frame);
-
-            if (iPC >= 0)
-                {
-                sb.append(" (iPC=").append(iPC)
-                  .append(", op=").append(frame.f_aOp[iPC].getClass().getSimpleName())
-                  .append(')');
-                }
+              .append(formatFrameDetails(f_context, frame.f_function, iPC, frame.f_aOp));
 
             iPC = frame.f_iPCPrev;
             frame = frame.f_framePrev;
@@ -674,11 +666,8 @@ public class Frame
                     // simply show the calling function
                     MethodStructure fnCaller = fiber.f_fnCaller;
                     sb.append("\n  ")
-                      .append(fnCaller.toString())
-                      .append(" (iPC=").append(iPC)
-                      .append(", op=")
-                      .append(f_adapter.getOps(fnCaller)[iPC].getClass().getSimpleName())
-                      .append(')');
+                      .append(formatFrameDetails(fiberCaller.f_context, fnCaller,
+                              iPC, f_adapter.getOps(fnCaller)));
                     break;
                     }
                 fiber = fiberCaller;
@@ -690,29 +679,44 @@ public class Frame
         return sb.toString();
         }
 
-    @Override
-    public String toString()
+    protected static String formatFrameDetails(ServiceContext ctx, MethodStructure function,
+                                               int iPC, Op[] aOp)
         {
-        MethodStructure function = f_function;
-        String sFunction;
+        StringBuilder sb = new StringBuilder("Frame: ");
 
         if (function == null)
             {
-            sFunction = '<' + f_context.f_sName + '>';
+            sb.append('<').append(ctx.f_sName).append('>');
             }
         else
             {
             Component container = function.getParent().getParent();
-            sFunction = container.getName() + '.' + function.getName();
+
+            sb.append(container.getName())
+                    .append('.')
+                    .append(function.getName());
 
             while (!(container instanceof ClassStructure))
                 {
                 container = container.getParent();
-                sFunction = container.getName() + '.' + sFunction;
+                sb.insert(0, container.getName() + '.');
                 }
             }
 
-        return "Frame: " + sFunction;
+        if (iPC >= 0)
+            {
+            sb.append(" (iPC=").append(iPC)
+              .append(", op=").append(aOp[iPC].getClass().getSimpleName())
+              .append(')');
+            }
+
+        return sb.toString();
+        }
+
+    @Override
+    public String toString()
+        {
+        return formatFrameDetails(f_context, f_function, -1, null);
         }
 
     // try-catch support

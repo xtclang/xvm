@@ -252,13 +252,6 @@ public class Adapter
         return tmFinally == null ? null : tmFinally.f_struct;
         }
 
-    public static Type getReturnType(MethodStructure method, int iRet, TypeComposition clzParent)
-        {
-        // TODO: may need to resolve
-        return null;
-        }
-
-    // TODO: replace Method
     public boolean isNative(MethodStructure method)
         {
         ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
@@ -282,45 +275,6 @@ public class Adapter
         MethodStructure methodFinally = getFinalizer(constructor);
 
         return methodFinally == null ? null : xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
-        }
-
-    public static boolean isAtomic(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public static boolean isReadOnly(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public void markInjectable(PropertyStructure property)
-        {
-        m_setInjectable.add(property.getIdentityConstant());
-        }
-
-    public boolean isInjected(PropertyConstant constProperty)
-        {
-        return m_setInjectable.contains(constProperty);
-        }
-
-    public static boolean isRef(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public static boolean isGenericType(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public static ClassTemplate getRefTemplate(TypeSet types, PropertyStructure property)
-        {
-        return null;
         }
 
     public static MethodStructure getGetter(PropertyStructure property)
@@ -351,6 +305,11 @@ public class Adapter
             {
             String sValue = type.getValueString(); // m_sType + " (unresolved)";
             String sType = sValue.substring(0, sValue.indexOf(' '));
+            // hand code aliases
+            if (sType.equals("Int"))
+                {
+                sType = "Int64";
+                }
             ClassTemplate template = f_container.f_types.getTemplate(sType);
             return ((ClassConstant) template.f_struct.getIdentityConstant()).asTypeConstant();
             }

@@ -5,7 +5,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.Adapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
@@ -111,7 +110,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(property))
             {
             return super.invokePreInc(frame, hTarget, property, iReturn);
             }
@@ -127,7 +126,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(property))
             {
             return super.invokePostInc(frame, hTarget, property, iReturn);
             }
@@ -143,7 +142,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(property))
             {
             return super.getPropertyValue(frame, hTarget, property, iReturn);
             }
@@ -159,7 +158,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(property))
             {
             return super.getFieldValue(frame, hTarget, property, iReturn);
             }
@@ -172,7 +171,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || Adapter.isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(property))
             {
             return super.setPropertyValue(frame, hTarget, property, hValue);
             }
@@ -190,7 +189,7 @@ public class xService
         ServiceContext context = hService.m_context;
         ServiceContext contextCurrent = ServiceContext.getCurrentContext();
 
-        if (context == null || context == contextCurrent || Adapter.isAtomic(property))
+        if (context == null || context == contextCurrent || isAtomic(property))
             {
             return super.setFieldValue(hTarget, property, hValue);
             }

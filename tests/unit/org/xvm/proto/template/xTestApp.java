@@ -35,7 +35,7 @@ public class xTestApp extends xModule
         f_types.getTemplate("TestApp.TestService");
 
         // --- getIntValue
-        MethodTemplate ftGetInt = getMethodTemplate("getIntValue", VOID);
+        MethodTemplate ftGetInt = ensureMethodTemplate("getIntValue", VOID);
         ftGetInt.m_aop = new Op[]
             {
             new Return_1(-adapter.ensureValueConstantId(42)),
@@ -43,7 +43,7 @@ public class xTestApp extends xModule
         ftGetInt.m_cVars = 1;
 
         // --- test1()
-        MethodTemplate ftTest1 = getMethodTemplate("test1", VOID);
+        MethodTemplate ftTest1 = ensureMethodTemplate("test1", VOID);
         ftTest1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
@@ -78,7 +78,7 @@ public class xTestApp extends xModule
 
         // --- test2()
 
-        MethodTemplate ftTest2 = getMethodTemplate("test2", VOID);
+        MethodTemplate ftTest2 = ensureMethodTemplate("test2", VOID);
         ftTest2.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test2() #")),
@@ -125,7 +125,7 @@ public class xTestApp extends xModule
 
         // --- testService()
 
-        MethodTemplate ftLambda$1 = getMethodTemplate("lambda_1",
+        MethodTemplate ftLambda$1 = ensureMethodTemplate("lambda_1",
                 new String[]{"Int64", "Int64", "Exception"});
         ftLambda$1.m_aop = new Op[]
             { // #0 = c; #1 = r, #2 = x
@@ -137,7 +137,7 @@ public class xTestApp extends xModule
             };
         ftLambda$1.m_cVars = 3;
 
-        MethodTemplate ftTestService = getMethodTemplate("testService", VOID);
+        MethodTemplate ftTestService = ensureMethodTemplate("testService", VOID);
         ftTestService.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testService() #")),
@@ -222,7 +222,7 @@ public class xTestApp extends xModule
 
         // --- testService2 ---
 
-        MethodTemplate ftTestReturn = getMethodTemplate("testBlockingReturn",
+        MethodTemplate ftTestReturn = ensureMethodTemplate("testBlockingReturn",
                 new String[]{"TestApp.TestService"});
         ftTestReturn.m_aop = new Op[]
             { // #0 = svc
@@ -232,7 +232,7 @@ public class xTestApp extends xModule
             };
         ftTestReturn.m_cVars = 2;
 
-        MethodTemplate ftTestService2 = getMethodTemplate("testService2", VOID);
+        MethodTemplate ftTestService2 = ensureMethodTemplate("testService2", VOID);
         ftTestService2.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testService2() #")),
@@ -297,7 +297,7 @@ public class xTestApp extends xModule
 
         // --- testRef()
 
-        MethodTemplate ftTestRef = getMethodTemplate("testRef", STRING);
+        MethodTemplate ftTestRef = ensureMethodTemplate("testRef", STRING);
         ftTestRef.m_aop = new Op[]
             { // #0 = arg
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testRef() #")),
@@ -347,7 +347,7 @@ public class xTestApp extends xModule
 
         // --- testArray()
 
-        MethodTemplate ftLambda$2 = getMethodTemplate("lambda_2", INT, STRING);
+        MethodTemplate ftLambda$2 = ensureMethodTemplate("lambda_2", INT, STRING);
         ftLambda$2.m_aop = new Op[]
             { // #0 = i
             new IVar(adapter.getClassTypeConstId("String"),
@@ -359,7 +359,7 @@ public class xTestApp extends xModule
             };
         ftLambda$2.m_cVars = 3;
 
-        MethodTemplate ftTestArray = getMethodTemplate("testArray", VOID);
+        MethodTemplate ftTestArray = ensureMethodTemplate("testArray", VOID);
         ftTestArray.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testArray() #")),
@@ -404,7 +404,7 @@ public class xTestApp extends xModule
             };
         ftTestArray.m_cVars = 5;
 
-        MethodTemplate ftTestCond = getMethodTemplate("testConditional", INT);
+        MethodTemplate ftTestCond = ensureMethodTemplate("testConditional", INT);
         ftTestCond.m_aop = new Op[]
             { // #0 - i
             new Var(adapter.getClassTypeConstId("Boolean")), // #1
@@ -417,11 +417,12 @@ public class xTestApp extends xModule
             };
         ftTestCond.m_cVars = 2;
 
-        MethodTemplate ftTestTuple = getMethodTemplate("testTuple", VOID);
+        MethodTemplate ftTestTuple = ensureMethodTemplate("testTuple", VOID);
         ftTestTuple.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")),
-            new INVar(adapter.getClassTypeConstId("collections.Tuple"), adapter.ensureValueConstantId("t"),
+            new INVar(adapter.getClassTypeConstId("collections.Tuple"),
+                      adapter.ensureValueConstantId("t"),
                       -adapter.ensureValueConstantId(new Object[] {"zero", Integer.valueOf(0)})), // #0 (t)
 
             new Enter(),
@@ -442,7 +443,8 @@ public class xTestApp extends xModule
                      adapter.ensureValueConstantId("t2")), // #2 (t2)
             new TVar(new int[] {adapter.getClassTypeConstId("String"), adapter.getClassTypeConstId("Int64")},
                     new int[] {-adapter.ensureValueConstantId(""), 1}), // #3
-            new New_1(adapter.getMethodConstId("collections.Tuple", "construct"), 3, 2),
+            new New_1G(adapter.getMethodConstId("collections.Tuple", "construct"),
+                      -adapter.getClassTypeConstId("collections.Tuple<String,Int64>"), 3, 2),
             new X_Print(2),
 
             new ISet(2, -adapter.ensureValueConstantId(0), -adapter.ensureValueConstantId("t")),
@@ -468,7 +470,7 @@ public class xTestApp extends xModule
             new X_Print(7),
             new Exit(),
 
-            new Var(adapter.getClassTypeConstId("collections.Tuple")), // #6
+            new Var(adapter.getClassTypeConstId("collections.Tuple<Boolean,String>")), // #6
             new Call_1T(-adapter.getMethodConstId("TestApp", "testConditional"),
                         -adapter.ensureValueConstantId(-1), 6),
             new X_Print(6),
@@ -479,7 +481,7 @@ public class xTestApp extends xModule
         ftTestTuple.m_cScopes = 2;
 
         // --- run()
-        MethodTemplate mtRun = getMethodTemplate("run", VOID, VOID);
+        MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);
         mtRun.m_aop = new Op[]
             {
             new Call_00(-adapter.getMethodConstId("TestApp", "test1")),

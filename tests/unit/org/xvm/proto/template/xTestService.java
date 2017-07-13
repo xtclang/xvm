@@ -2,7 +2,6 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.PropertyStructure;
 import org.xvm.proto.Adapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
@@ -30,7 +29,9 @@ public class xTestService extends xService
         {
         adapter.addMethod(f_struct, "construct", INT, VOID);
         adapter.addMethod(f_struct, "default", VOID, VOID);
-        adapter.markInjectable(((PropertyStructure) f_struct.getChild("runtimeClock")));
+
+        ensurePropertyTemplate("runtimeClock").m_fInjectable = true;
+        ensurePropertyTemplate("counter2").markAsAtomicRef();
 
         MethodTemplate mtGetCounter = ensureGetter("counter");
         mtGetCounter.m_aop = new Op[]
@@ -52,7 +53,7 @@ public class xTestService extends xService
             };
         mtSetCounter.m_cVars = 1;
 
-        MethodTemplate ftDefault = getMethodTemplate("default", VOID, VOID);
+        MethodTemplate ftDefault = ensureMethodTemplate("default", VOID, VOID);
         ftDefault.m_aop = new Op[]
             {
             new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
@@ -61,7 +62,7 @@ public class xTestService extends xService
             };
         ftDefault.m_cVars = 1;
 
-        MethodTemplate constructor = getMethodTemplate("construct", INT);
+        MethodTemplate constructor = ensureMethodTemplate("construct", INT);
         constructor.m_aop = new Op[]
             { // #0 - counter
             new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
@@ -69,7 +70,7 @@ public class xTestService extends xService
             };
         constructor.m_cVars = 2;
 
-        MethodTemplate mtIncrement = getMethodTemplate("increment", VOID, INT);
+        MethodTemplate mtIncrement = ensureMethodTemplate("increment", VOID, INT);
         mtIncrement.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("# in TestService.increment #")),
@@ -79,7 +80,7 @@ public class xTestService extends xService
             };
         mtIncrement.m_cVars = 1;
 
-        MethodTemplate ftLambda$1 = getMethodTemplate("lambda_1", new String[]{"Ref<Int64>", "Int64"});
+        MethodTemplate ftLambda$1 = ensureMethodTemplate("lambda_1", new String[]{"Ref<Int64>", "Int64"});
         ftLambda$1.m_aop = new Op[]
             { // #0 = &iRet, #1 = cDelay
             new Invoke_10(0, adapter.getMethodConstId("Ref", "set"), 1),
@@ -87,7 +88,7 @@ public class xTestService extends xService
             };
         ftLambda$1.m_cVars = 2;
 
-        MethodTemplate mtExceptional = getMethodTemplate("exceptional", INT, INT);
+        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", INT, INT);
         mtExceptional.m_aop = new Op[]
             { // #0 - cDelay
             new Var(adapter.getClassTypeConstId("Boolean")), // #1

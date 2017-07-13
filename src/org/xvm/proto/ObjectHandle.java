@@ -88,7 +88,8 @@ public class ObjectHandle
 
         protected void createFields()
             {
-            f_clazz.f_template.f_struct.children().stream().forEach(child ->
+            ClassTemplate template = f_clazz.f_template;
+            template.f_struct.children().stream().forEach(child ->
                 {
                 if (!(child instanceof PropertyStructure))
                     {
@@ -97,14 +98,14 @@ public class ObjectHandle
 
                 PropertyStructure prop = (PropertyStructure) child;
                 RefHandle hRef = null;
-                if (Adapter.isRef(prop))
+                if (template.isRef(prop))
                     {
-                    xRef referent = (xRef) Adapter.getRefTemplate(f_clazz.f_template.f_types, prop);
+                    xRef referent = (xRef) template.getRefTemplate(template.f_types, prop);
 
-                    hRef = xRef.INSTANCE.createRefHandle(referent.f_clazzCanonical);
+                    hRef = referent.createRefHandle(referent.f_clazzCanonical);
                     }
 
-                if (!Adapter.isReadOnly(prop) || hRef != null)
+                if (!template.isReadOnly(prop) || hRef != null)
                     {
                     m_mapFields.put(prop.getName(), hRef);
                     }

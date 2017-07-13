@@ -266,14 +266,15 @@ public class ServiceContext
                     }
 
                 iPC = abOp[iPC].process(frame, iPCLast = iPC);
+
+                if (iPC == Op.R_NEXT)
+                    {
+                    iPC = iPCLast + 1;
+                    }
                 }
 
             switch (iPC)
                 {
-                case Op.R_NEXT:
-                    iPC = iPCLast + 1;
-                    break;
-
                 case Op.R_CALL:
                     m_frameCurrent = frame.m_frameNext;
                     frame.m_iPC = iPCLast + 1;
@@ -391,6 +392,9 @@ public class ServiceContext
                     frame.m_iPC = iPCLast + 1;
                     fiber.setStatus(FiberStatus.Yielded);
                     return frame;
+
+                default:
+                    throw new IllegalStateException("Invalid code: " + iPC);
                 }
             }
         }

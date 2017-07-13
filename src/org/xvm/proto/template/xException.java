@@ -40,7 +40,7 @@ public class xException
         // TODO: remove
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
 
-        MethodTemplate ct = getMethodTemplate("construct", new String[]{"String|Nullable", "Exception|Nullable"});
+        MethodTemplate ct = ensureMethodTemplate("construct", new String[]{"String|Nullable", "Exception|Nullable"});
         ct.m_aop = new Op[] // #0 - text, #1 - cause
             {
             new LSet(f_types.f_adapter.getPropertyConstId("Exception", "text"), 0),

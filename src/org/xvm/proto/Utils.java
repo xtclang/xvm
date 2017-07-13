@@ -1,5 +1,9 @@
 package org.xvm.proto;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
+import org.xvm.asm.MethodStructure;
+
 import java.sql.Timestamp;
 
 

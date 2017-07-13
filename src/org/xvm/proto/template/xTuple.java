@@ -232,6 +232,11 @@ public class xTuple
         return new TupleHandle(INSTANCE.ensureClass(mapParams), ahValue);
         }
 
+    public static TupleHandle makeHandle(TypeComposition clazz, ObjectHandle[] ahValue)
+        {
+        return new TupleHandle(clazz, ahValue);
+        }
+
     public static class TupleHandle
             extends ObjectHandle
         {
