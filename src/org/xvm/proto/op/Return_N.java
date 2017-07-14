@@ -41,12 +41,18 @@ public class Return_N extends Op
                     int iResult = frame.returnValue(aiRet[i], f_anArgValue[i]);
                     switch (iResult)
                         {
-                        case Op.R_EXCEPTION:
+                        case Op.R_RETURN_EXCEPTION:
                             return Op.R_RETURN_EXCEPTION;
 
-                        case Op.R_BLOCK:
+                        case Op.R_BLOCK_RETURN:
                             fBlock = true;
                             break;
+
+                        case Op.R_RETURN:
+                            continue;
+
+                        default:
+                            throw new IllegalStateException();
                         }
                     }
 

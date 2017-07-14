@@ -37,7 +37,7 @@ public class Frame
     public final ObjectHandle   f_hTarget;      // target
     public final ObjectHandle[] f_ahVar;        // arguments/local var registers
     public final VarInfo[]      f_aInfo;        // optional info for var registers
-    public final int            f_iReturn;      // an index for a single return value
+    public final int            f_iReturn;      // an index for a single return value;
                                                 // a negative value below -65000 indicates an
                                                 // automatic tuple conversion into a (-i-1) register
     public final int[]          f_aiReturn;     // indexes for multiple return values
@@ -386,16 +386,16 @@ public class Frame
             case RET_UNUSED:
                 return Op.R_NEXT;
 
-            case RET_MULTI:
-                throw new IllegalStateException();
-
-            default:
-                // any other negative value indicates an automatic tuple conversion
+            case RET_LOCAL:
                 m_hFrameLocal = hValue;
                 return Op.R_NEXT;
+
+            default:
+                throw new IllegalArgumentException("nVar=" + nVar);
             }
         }
 
+    // return R_RETURN, R_RETURN_EXCEPTION or R_BLOCK_RETURN
     public int returnValue(int iReturn, int iArg)
         {
         assert iReturn >= 0 || iReturn == RET_LOCAL;
@@ -409,11 +409,15 @@ public class Frame
             case Op.R_BLOCK:
                 return Op.R_BLOCK_RETURN;
 
-            default:
+            case Op.R_NEXT:
                 return Op.R_RETURN;
+
+            default:
+                throw new IllegalArgumentException("iResult=" + iResult);
             }
         }
 
+    // return R_RETURN, R_RETURN_EXCEPTION or R_BLOCK_RETURN
     public int returnTuple(int iReturn, int[] aiArg)
         {
         assert iReturn >= 0;
@@ -435,8 +439,11 @@ public class Frame
             case Op.R_BLOCK:
                 return Op.R_BLOCK_RETURN;
 
-            default:
+            case Op.R_NEXT:
                 return Op.R_RETURN;
+
+            default:
+                throw new IllegalArgumentException("iResult=" + iResult);
             }
         }
 
