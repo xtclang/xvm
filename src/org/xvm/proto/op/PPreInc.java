@@ -8,6 +8,10 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpProperty;
 import org.xvm.proto.TypeComposition;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * P_PREINC rvalue-target, CONST_PROPERTY, lvalue ; same as PREINC for a register
  *
@@ -24,6 +28,24 @@ public class PPreInc extends OpProperty
         f_nTarget = nTarget;
         f_nPropConstId = nArg;
         f_nRetValue = nRet;
+        }
+
+    public PPreInc(DataInput in)
+            throws IOException
+        {
+        f_nTarget = in.readInt();
+        f_nPropConstId = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_P_PREINC);
+        out.writeInt(f_nTarget);
+        out.writeInt(f_nPropConstId);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

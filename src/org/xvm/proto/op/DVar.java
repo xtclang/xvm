@@ -5,6 +5,10 @@ import org.xvm.proto.Op;
 
 import org.xvm.proto.template.xRef.RefHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * DVAR CONST_REF_CLASS ; next register is an anonymous "dynamic reference" variable
  *
@@ -17,6 +21,20 @@ public class DVar extends Op
     public DVar(int nClassConstId)
         {
         f_nClassConstId = nClassConstId;
+        }
+
+    public DVar(DataInput in)
+            throws IOException
+        {
+        f_nClassConstId = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_DVAR);
+        out.writeInt(f_nClassConstId);
         }
 
     @Override

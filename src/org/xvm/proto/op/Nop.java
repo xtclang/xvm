@@ -3,8 +3,11 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.OpInvocable;
 
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
- * Nop
+ * NOP
  *
  * @author gg 2017.03.08
  */
@@ -12,6 +15,13 @@ public class Nop extends OpInvocable
     {
     public Nop()
         {
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_NOP);
         }
 
     @Override

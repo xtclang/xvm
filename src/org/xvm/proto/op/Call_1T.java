@@ -10,6 +10,10 @@ import org.xvm.proto.OpCallable;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * CALL_1T rvalue-function, rvalue-param, lvalue-return-tuple
  *
@@ -29,6 +33,23 @@ public class Call_1T extends OpCallable
         f_nFunctionValue = nFunction;
         f_nArgValue = nArg;
         f_nRetValue = nRet;
+        }
+
+    public Call_1T(DataInput in)
+            throws IOException
+        {
+        f_nFunctionValue = in.readInt();
+        f_nArgValue = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_CALL_1T);
+        out.writeInt(f_nFunctionValue);
+        out.writeInt(f_nArgValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

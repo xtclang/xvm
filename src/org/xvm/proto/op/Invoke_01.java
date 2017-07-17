@@ -12,6 +12,10 @@ import org.xvm.proto.Utils;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * INVOKE_01 rvalue-target, rvalue-method, lvalue-return
  *
@@ -28,6 +32,24 @@ public class Invoke_01 extends OpInvocable
         f_nTargetValue = nTarget;
         f_nMethodId = nMethodId;
         f_nRetValue = nRet;
+        }
+
+    public Invoke_01(DataInput in)
+            throws IOException
+        {
+        f_nTargetValue = in.readInt();
+        f_nMethodId = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_INVOKE_01);
+        out.writeInt(f_nTargetValue);
+        out.writeInt(f_nMethodId);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

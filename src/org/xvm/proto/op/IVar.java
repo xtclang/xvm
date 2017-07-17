@@ -6,6 +6,10 @@ import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * IVAR CONST_CLASS, rvalue-src ; (next register is an initialized anonymous variable)
  *
@@ -20,6 +24,22 @@ public class IVar extends Op
         {
         f_nClassConstId = nClassConstId;
         f_nArgValue = nValue;
+        }
+
+    public IVar(DataInput in)
+            throws IOException
+        {
+        f_nClassConstId = in.readInt();
+        f_nArgValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_IVAR);
+        out.writeInt(f_nClassConstId);
+        out.writeInt(f_nArgValue);
         }
 
     @Override

@@ -7,6 +7,10 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpProperty;
 import org.xvm.proto.TypeComposition;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * LGET CONST_PROPERTY, lvalue ; local get (target=this)
  *
@@ -21,6 +25,22 @@ public class LGet extends OpProperty
         {
         f_nPropConstId = nPropId;
         f_nRetValue = nRet;
+        }
+
+    public LGet(DataInput in)
+            throws IOException
+        {
+        f_nPropConstId = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_L_GET);
+        out.writeInt(f_nPropConstId);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

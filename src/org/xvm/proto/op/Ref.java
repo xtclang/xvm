@@ -7,6 +7,10 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 import java.util.Collections;
 
 /**
@@ -21,6 +25,20 @@ public class Ref extends OpInvocable
     public Ref(int nSrc)
         {
         f_nSrcValue = nSrc;
+        }
+
+    public Ref(DataInput in)
+            throws IOException
+        {
+        f_nSrcValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_REF);
+        out.writeInt(f_nSrcValue);
         }
 
     @Override

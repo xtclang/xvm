@@ -7,6 +7,10 @@ import org.xvm.proto.Op;
 
 import org.xvm.proto.template.xTuple.TupleHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * RETURN_T rvalue-tuple ; return (a tuple of return values)
  *
@@ -22,6 +26,20 @@ public class Return_T extends Op
     public Return_T(int nValue)
         {
         f_nArgValue = nValue;
+        }
+
+    public Return_T(DataInput in)
+            throws IOException
+        {
+        f_nArgValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_RETURN_T);
+        out.writeInt(f_nArgValue);
         }
 
     @Override

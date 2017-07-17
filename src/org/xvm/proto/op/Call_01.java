@@ -7,7 +7,12 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.Utils;
+
 import org.xvm.proto.template.xFunction.FunctionHandle;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * CALL_01 rvalue-function, lvalue-return
@@ -23,6 +28,22 @@ public class Call_01 extends OpCallable
         {
         f_nFunctionValue = nFunction;
         f_nRetValue = nRet;
+        }
+
+    public Call_01(DataInput in)
+            throws IOException
+        {
+        f_nFunctionValue = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_CALL_01);
+        out.writeInt(f_nFunctionValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

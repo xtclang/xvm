@@ -7,6 +7,10 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpProperty;
 import org.xvm.proto.TypeComposition;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * P_GET rvalue-target, CONST_PROPERTY, lvalue-return
  *
@@ -25,10 +29,27 @@ public class PGet extends OpProperty
         f_nRetValue = nRet;
         }
 
+    public PGet(DataInput in)
+            throws IOException
+        {
+        f_nTarget = in.readInt();
+        f_nPropConstId = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_P_GET);
+        out.writeInt(f_nTarget);
+        out.writeInt(f_nPropConstId);
+        out.writeInt(f_nRetValue);
+        }
+
     @Override
     public int process(Frame frame, int iPC)
         {
-
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTarget);

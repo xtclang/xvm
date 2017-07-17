@@ -3,8 +3,12 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
- * ENDGUARD rel_addr
+ * END_GUARD rel_addr
  *
  * @author gg 2017.03.08
  */
@@ -15,6 +19,20 @@ public class GuardEnd extends Op
     public GuardEnd(int iRelAddr)
         {
         f_nRelAddr = iRelAddr;
+        }
+
+    public GuardEnd(DataInput in)
+            throws IOException
+        {
+        f_nRelAddr = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_END_GUARD);
+        out.writeInt(f_nRelAddr);
         }
 
     @Override

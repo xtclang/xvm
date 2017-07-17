@@ -4,9 +4,14 @@ import org.xvm.asm.constants.CharStringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * INVAR CONST_CLASS, CONST_STRING, rvalue-src ; (next register is an initialized named variable)
@@ -24,6 +29,24 @@ public class INVar extends Op
         f_nClassConstId = nClassConstId;
         f_nNameConstId = nNamedConstId;
         f_nArgValue = nValue;
+        }
+
+    public INVar(DataInput in)
+            throws IOException
+        {
+        f_nClassConstId = in.readInt();
+        f_nNameConstId = in.readInt();
+        f_nArgValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_INVAR);
+        out.writeInt(f_nClassConstId);
+        out.writeInt(f_nNameConstId);
+        out.writeInt(f_nArgValue);
         }
 
     @Override
@@ -47,7 +70,7 @@ public class INVar extends Op
 
             return iPC + 1;
             }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+        catch (ExceptionHandle.WrapperException e)
             {
             frame.m_hException = e.getExceptionHandle();
             return R_EXCEPTION;

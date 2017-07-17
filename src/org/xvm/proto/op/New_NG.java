@@ -13,6 +13,10 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xClass.ClassHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  *  NEW_NG CONST-CONSTRUCT, rvalue-type, #params:(rvalue), lvalue-return
  *
@@ -31,6 +35,26 @@ public class New_NG extends OpCallable
         f_nTypeValue = nType;
         f_anArgValue = anArg;
         f_nRetValue = nRet;
+        }
+
+    public New_NG(DataInput in)
+            throws IOException
+        {
+        f_nConstructId = in.readInt();
+        f_nTypeValue = in.readInt();
+        f_anArgValue = readIntArray(in);
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_NEW_1G);
+        out.writeInt(f_nConstructId);
+        out.writeInt(f_nTypeValue);
+        writeIntArray(out, f_anArgValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

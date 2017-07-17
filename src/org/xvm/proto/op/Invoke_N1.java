@@ -11,6 +11,10 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * INVOKE_N1  rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return
  *
@@ -29,6 +33,26 @@ public class Invoke_N1 extends OpInvocable
         f_nMethodId = nMethodId;
         f_anArgValue = anArg;
         f_nRetValue = nRet;
+        }
+
+    public Invoke_N1(DataInput in)
+            throws IOException
+        {
+        f_nTargetValue = in.readInt();
+        f_nMethodId = in.readInt();
+        f_anArgValue = readIntArray(in);
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_INVOKE_N1);
+        out.writeInt(f_nTargetValue);
+        out.writeInt(f_nMethodId);
+        writeIntArray(out, f_anArgValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

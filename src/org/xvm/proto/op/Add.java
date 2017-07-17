@@ -6,6 +6,10 @@ import org.xvm.proto.Op;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T
  *
@@ -22,6 +26,23 @@ public class Add extends Op
         f_nTargetValue = nTarget;
         f_nArgValue = nArg;
         f_nRetValue = nRet;
+        }
+
+    public Add(DataInput in)
+            throws IOException
+        {
+        f_nTargetValue = in.readInt();
+        f_nArgValue = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_ADD);
+        out.writeInt(f_nTargetValue);
+        out.writeInt(f_nArgValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

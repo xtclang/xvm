@@ -3,6 +3,9 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.OpInvocable;
 
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * HANDLER ; begin an exception handler (implicit ENTER)
  *
@@ -12,6 +15,13 @@ public class HandlerStart extends OpInvocable
     {
     public HandlerStart()
         {
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_HANDLER);
         }
 
     @Override

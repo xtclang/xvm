@@ -7,6 +7,10 @@ import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * NVAR CONST_CLASS, CONST_STRING ; (next register is an uninitialized named variable)
  *
@@ -21,6 +25,22 @@ public class NVar extends Op
         {
         f_nClassConstId = nClassConstId;
         f_nNameConstId = nNameConstId;
+        }
+
+    public NVar(DataInput in)
+            throws IOException
+        {
+        f_nClassConstId = in.readInt();
+        f_nNameConstId = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_NVAR);
+        out.writeInt(f_nClassConstId);
+        out.writeInt(f_nNameConstId);
         }
 
     @Override

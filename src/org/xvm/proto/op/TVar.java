@@ -10,6 +10,10 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xTuple;
 import org.xvm.proto.template.xTuple.TupleHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * TVAR #values:(TYPE_CONST, rvalue-src) ; next register is an initialized anonymous Tuple variable
  *
@@ -26,6 +30,35 @@ public class TVar extends Op
         f_anArgValue = anValue;
         }
 
+    public TVar(DataInput in)
+            throws IOException
+        {
+        int c = in.readUnsignedByte();
+
+        f_anClassConstId = new int[c];
+        f_anArgValue = new int[c];
+        for (int i = 0; i < c; i++)
+            {
+            f_anClassConstId[i] = in.readInt();
+            f_anArgValue[i] = in.readInt();
+            }
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_TVAR);
+
+        int c = f_anArgValue.length;
+        out.write(c);
+        for (int i = 0; i < c; i++)
+            {
+            out.writeInt(f_anClassConstId[i]);
+            out.writeInt(f_anArgValue[i]);
+            }
+        }
+
     @Override
     public int process(Frame frame, int iPC)
         {
@@ -39,20 +72,18 @@ public class TVar extends Op
 
         try
             {
-            Type[] aType = new Type[cArgs];
-            ObjectHandle[] ahArg = new ObjectHandle[cArgs];
+            ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, cArgs);
+            if (ahArg == null)
+                {
+                return R_REPEAT;
+                }
 
+            Type[] aType = new Type[cArgs];
             for (int i = 0; i < cArgs; i++)
                 {
-                ObjectHandle hArg = frame.getArgument(anArg[i]);
-                if (hArg == null)
-                    {
-                    return R_REPEAT;
-                    }
                 TypeComposition clazz = context.f_types.ensureComposition(anClassId[i]);
 
                 aType[i] = clazz.ensurePublicType();
-                ahArg[i] = hArg;
                 }
 
             TupleHandle hTuple = xTuple.makeHandle(aType, ahArg);

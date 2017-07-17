@@ -9,6 +9,10 @@ import org.xvm.proto.OpCallable;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * CALL_N0 rvalue-function, #params:(rvalue)
  *
@@ -23,6 +27,23 @@ public class Call_N0 extends OpCallable
         {
         f_nFunctionValue = nFunction;
         f_anArgValue = anArg;
+        }
+
+    public Call_N0(DataInput in)
+            throws IOException
+        {
+        f_nFunctionValue = in.readInt();
+        f_anArgValue = readIntArray(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_CALL_N0);
+        out.writeInt(f_nFunctionValue);
+
+        writeIntArray(out, f_anArgValue);
         }
 
     @Override

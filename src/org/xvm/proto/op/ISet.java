@@ -7,6 +7,10 @@ import org.xvm.proto.Op;
 
 import org.xvm.proto.template.IndexSupport;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * A_SET rvalue-target, rvalue-index, rvalue-new-value ; T[Ti] = T
  *
@@ -23,6 +27,24 @@ public class ISet extends Op
         f_nTargetValue = nTarget;
         f_nIndexValue = nIndex;
         f_nValue = nValue;
+        }
+
+    public ISet(DataInput in)
+            throws IOException
+        {
+        f_nTargetValue = in.readInt();
+        f_nIndexValue = in.readInt();
+        f_nValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_I_SET);
+        out.writeInt(f_nTargetValue);
+        out.writeInt(f_nIndexValue);
+        out.writeInt(f_nValue);
         }
 
     @Override

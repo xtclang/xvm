@@ -8,6 +8,10 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpProperty;
 import org.xvm.proto.TypeComposition;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * POSTINC lvalue-target, lvalue-return ; T++ -> T
  *
@@ -22,6 +26,22 @@ public class PostInc extends OpProperty
         {
         f_nArgValue = nArg;
         f_nRetValue = nRet;
+        }
+
+    public PostInc(DataInput in)
+            throws IOException
+        {
+        f_nArgValue = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_POSTINC);
+        out.writeInt(f_nArgValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

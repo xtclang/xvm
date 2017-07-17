@@ -13,6 +13,10 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xClass.ClassHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * NEW_1G CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
  *
@@ -31,6 +35,26 @@ public class New_1G extends OpCallable
         f_nTypeValue = nType;
         f_nArgValue = nArg;
         f_nRetValue = nRet;
+        }
+
+    public New_1G(DataInput in)
+            throws IOException
+        {
+        f_nConstructId = in.readInt();
+        f_nTypeValue = in.readInt();
+        f_nArgValue = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_NEW_1G);
+        out.writeInt(f_nConstructId);
+        out.writeInt(f_nTypeValue);
+        out.writeInt(f_nArgValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

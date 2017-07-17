@@ -6,6 +6,10 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.ClassTemplate;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * NEG rvalue-target, lvalue-return   ; -T -> T
  *
@@ -20,6 +24,22 @@ public class Neg extends OpInvocable
         {
         f_nArgValue = nArg;
         f_nRetValue = nRet;
+        }
+
+    public Neg(DataInput in)
+            throws IOException
+        {
+        f_nArgValue = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_NEG);
+        out.writeInt(f_nArgValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

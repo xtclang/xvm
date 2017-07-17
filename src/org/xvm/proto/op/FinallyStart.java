@@ -3,6 +3,9 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.OpInvocable;
 
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * FINALLY ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)
  *
@@ -12,6 +15,13 @@ public class FinallyStart extends OpInvocable
     {
     public FinallyStart()
         {
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_FINALLY);
         }
 
     @Override

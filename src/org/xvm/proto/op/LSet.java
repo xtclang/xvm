@@ -8,6 +8,10 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpProperty;
 import org.xvm.proto.TypeComposition;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * LSET CONST_PROPERTY, rvalue ; local set (target=this)
  *
@@ -22,6 +26,22 @@ public class LSet extends OpProperty
         {
         f_nPropConstId = nPropId;
         f_nValue = nValue;
+        }
+
+    public LSet(DataInput in)
+            throws IOException
+        {
+        f_nPropConstId = in.readInt();
+        f_nValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_L_SET);
+        out.writeInt(f_nPropConstId);
+        out.writeInt(f_nValue);
         }
 
     @Override

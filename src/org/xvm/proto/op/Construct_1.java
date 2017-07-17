@@ -7,6 +7,10 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * CONSTR_1 CONST-CONSTRUCT, rvalue
  *
@@ -21,6 +25,22 @@ public class Construct_1 extends OpCallable
         {
         f_nConstructId = nConstructorId;
         f_nArgValue = anArg;
+        }
+
+    public Construct_1(DataInput in)
+            throws IOException
+        {
+        f_nConstructId = in.readInt();
+        f_nArgValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_CONSTR_1);
+        out.writeInt(f_nConstructId);
+        out.writeInt(f_nArgValue);
         }
 
     @Override

@@ -10,6 +10,10 @@ import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * CALL_00 rvalue-function.
  *
@@ -22,6 +26,20 @@ public class Call_00 extends OpCallable
     public Call_00(int nFunction)
         {
         f_nFunctionValue = nFunction;
+        }
+
+    public Call_00(DataInput in)
+            throws IOException
+        {
+        f_nFunctionValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_CALL_00);
+        out.writeInt(f_nFunctionValue);
         }
 
     @Override

@@ -4,6 +4,10 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * THROW rvalue
  *
@@ -16,6 +20,20 @@ public class Throw extends Op
     public Throw(int nValue)
         {
         f_nArgValue = nValue;
+        }
+
+    public Throw(DataInput in)
+            throws IOException
+        {
+        f_nArgValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_THROW);
+        out.writeInt(f_nArgValue);
         }
 
     @Override

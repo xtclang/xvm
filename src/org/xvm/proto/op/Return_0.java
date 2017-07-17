@@ -3,6 +3,9 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * RETURN_0 ; (no return value)
  *
@@ -14,6 +17,13 @@ public class Return_0 extends Op
 
     public Return_0()
         {
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_RETURN_0);
         }
 
     @Override

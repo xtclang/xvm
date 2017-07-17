@@ -14,6 +14,10 @@ import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
 import org.xvm.proto.template.xTuple.TupleHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * INVOKE_T1  rvalue-target, CONST-METHOD, rvalue-params-tuple, lvalue-return
  *
@@ -32,6 +36,26 @@ public class Invoke_T1 extends OpInvocable
         f_nMethodId = nMethodId;
         f_nArgTupleValue = nArg;
         f_nRetValue = nRet;
+        }
+
+    public Invoke_T1(DataInput in)
+            throws IOException
+        {
+        f_nTargetValue = in.readInt();
+        f_nMethodId = in.readInt();
+        f_nArgTupleValue = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_INVOKE_T1);
+        out.writeInt(f_nTargetValue);
+        out.writeInt(f_nMethodId);
+        out.writeInt(f_nArgTupleValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

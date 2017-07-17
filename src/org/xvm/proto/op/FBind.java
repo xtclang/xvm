@@ -7,6 +7,10 @@ import org.xvm.proto.OpInvocable;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * FBIND rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
  *
@@ -25,6 +29,39 @@ public class FBind extends OpInvocable
         f_anParamIx = nParamIx;
         f_anParamValue = nParamValue;
         f_nResultValue = nRet;
+        }
+
+    public FBind(DataInput in)
+            throws IOException
+        {
+        f_nFunctionValue = in.readInt();
+
+        int c = in.readUnsignedByte();
+        f_anParamIx = new int[c];
+        f_anParamValue = new int[c];
+        for (int i = 0; i < c; i++)
+            {
+            f_anParamIx[i] = in.readInt();
+            f_anParamValue[i] = in.readInt();
+            }
+        f_nResultValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_MBIND);
+        out.writeInt(f_nFunctionValue);
+
+        int c = f_anParamIx.length;
+        out.write(c);
+        for (int i = 0; i < c; i++)
+            {
+            out.writeInt(f_anParamIx[i]);
+            out.writeInt(f_anParamValue[i]);
+            }
+        out.writeInt(f_nResultValue);
         }
 
     @Override

@@ -4,6 +4,9 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * END_FINALLY ; finish a "finally" handler // note: EXIT
  *
@@ -13,6 +16,13 @@ public class FinallyEnd extends Op
     {
     public FinallyEnd()
         {
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_END_FINALLY);
         }
 
     @Override
