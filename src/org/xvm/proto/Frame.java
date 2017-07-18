@@ -309,7 +309,7 @@ public class Frame
         return m_hFrameLocal;
         }
 
-    // return R_NEXT, R_EXCEPTION or R_BLOCK
+    // return R_NEXT, R_EXCEPTION or R_BLOCK (only if hValue is a FutureRef)
     public int assignValue(int nVar, ObjectHandle hValue)
         {
         if (nVar >= 0)

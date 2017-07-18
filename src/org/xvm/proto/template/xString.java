@@ -9,6 +9,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
@@ -37,11 +38,9 @@ public class xString
     @Override
     public void initDeclared()
         {
-        //     Int length.get()
-
-        markNativeGetter("length");
-        markNativeMethod("indexOf", STRING);
-        markNativeMethod("indexOf", new String[]{"String", "Int"});
+        markNativeGetter("size");
+        markNativeMethod("indexOf", new String[]{"String", "Range<Int>|Nullable"},
+                new String[]{"collections.Tuple<Boolean,Int>"});
         }
 
     @Override
@@ -61,8 +60,8 @@ public class xString
         }
 
     @Override
-    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                            ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -71,7 +70,9 @@ public class xString
             case 0:
                 switch (method.getName())
                     {
-                    case "get": // length.get()
+                    case "get": // size.get()
+                        assert method.getParent().getParent().getName().equals("size");
+
                         ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
                         return frame.assignValue(iReturn, hResult);
                     }
@@ -91,12 +92,12 @@ public class xString
 
             }
 
-        return super.invokeNative(frame, method, hTarget, ahArg, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
-    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                            ObjectHandle hArg, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -107,12 +108,51 @@ public class xString
                     {
                     int nOf = hThis.m_sValue.indexOf(((StringHandle) hArg).m_sValue);
 
-                    ObjectHandle hResult = xInt64.makeHandle(nOf);
-                    return frame.assignValue(iReturn, hResult);
+                    return frame.assignValue(iReturn, xInt64.makeHandle(nOf));
                     }
             }
 
-        return super.invokeNative(frame, method, hTarget, hArg, iReturn);
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        StringHandle hThis = (StringHandle) hTarget;
+
+        switch (ahArg.length)
+            {
+
+            case 2:
+                switch (method.getName())
+                    {
+                    case "indexOf": // (Boolean, Int) indexOf(String s, Range<Int>? range)
+                        String s = ((StringHandle) ahArg[0]).getValue();
+                        ObjectHandle hRange = ahArg[1];
+                        if (hRange == xNullable.NULL)
+                            {
+                            int of = hThis.m_sValue.indexOf(s);
+                            if (of >= 0)
+                                {
+                                int nR = frame.assignValue(aiReturn[0], xBoolean.TRUE);
+                                if (nR == Op.R_EXCEPTION)
+                                    {
+                                    return Op.R_EXCEPTION;
+                                    }
+                                return frame.assignValue(aiReturn[1], xInt64.makeHandle(of));
+                                }
+                            }
+                        else
+                            {
+                            // TODO: parse the range
+                            }
+                    }
+                break;
+
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     @Override

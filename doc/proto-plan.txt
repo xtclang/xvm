@@ -49,7 +49,7 @@
     = module inside "x" - NPE in MethodDeclarationStatement.registerStruct (container is null)
 
 
-- op-code deserialization
++ op-code serialization/deserialization
 
 - Property and Method
 

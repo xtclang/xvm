@@ -78,7 +78,7 @@ public class Invoke_T1 extends OpInvocable
 
             if (frame.f_adapter.isNative(method))
                 {
-                return clz.f_template.invokeNative(frame, method, hTarget, ahArg, f_nRetValue);
+                return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, f_nRetValue);
                 }
 
             if (ahArg.length != Adapter.getArgCount(method))

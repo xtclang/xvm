@@ -57,24 +57,32 @@ public class xTestApp extends xModule
             new Call_01(-adapter.getMethodConstId("TestApp", "getIntValue"), 1),
             new X_Print(1),
 
+            new Enter(),
+            new Var(adapter.getClassTypeConstId("Boolean")), // #2
             new NVar(adapter.getClassTypeConstId("Int64"),
-                     adapter.ensureValueConstantId("of")), // #2 (of)
-            new IVar(adapter.getClassTypeConstId("String"),
-                     -adapter.ensureValueConstantId("world")), // #3
-            new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"), 3, 2),
+                     adapter.ensureValueConstantId("of")), // #3 (of)
+            new Invoke_NN(0, adapter.getMethodConstId("String", "indexOf"),
+                        new int[] {-adapter.ensureValueConstantId("world"),
+                                   -adapter.ensureValueConstantId(null)},
+                        new int[] {2, 3}),
+            new JumpFalse(2, 10), // -> Exit
 
             new Var(adapter.getClassTypeConstId("Int64")), // #4
-            new PGet(0, adapter.getPropertyConstId("String", "length"), 4),
-            new Add(4, 2, 4),
-            new X_Print(4),
+            new PGet(0, adapter.getPropertyConstId("String", "size"), 4),
+            new Add(4, 3, 4),
+            new Var(adapter.getClassTypeConstId("Boolean")), // #5
+            new IsEq(4, -adapter.ensureValueConstantId(18), 5),
+            new Assert(5),
 
-            new Var(adapter.getClassTypeConstId("String")), // #5
-            new Invoke_01(2, adapter.getMethodConstId("Int64", "to", VOID, STRING), 5),
-            new X_Print(5),
+            new Var(adapter.getClassTypeConstId("String")), // #6
+            new Invoke_01(3, adapter.getMethodConstId("Int64", "to", VOID, STRING), 6),
+            new X_Print(6),
+            new Exit(),
 
             new Return_0(),
             };
-        ftTest1.m_cVars = 6;
+        ftTest1.m_cScopes = 2;
+        ftTest1.m_cVars = 7;
 
         // --- test2()
 

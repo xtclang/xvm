@@ -14,7 +14,7 @@ interface Sequence<ElementType>
 
     /**
      * Returns a sub-sequence of this Sequence. The new Sequence will likely be backed by this
-     * Sequence, which means is this Sequence is mutable, that changes made to this Sequence may be
+     * Sequence, which means that if this Sequence is mutable, changes made to this Sequence may be
      * visible through the new Sequence, and vice versa; if that behavior is not desired, {@link
      * reify} the value returned from this method.
      *
@@ -61,7 +61,7 @@ interface Sequence<ElementType>
         return new Iterator<ElementType>()
             {
             private Int i = 0;
-            
+
             conditional ElementType next()
                 {
                 if (i < Sequence.this.size)

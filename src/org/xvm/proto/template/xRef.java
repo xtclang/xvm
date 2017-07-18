@@ -41,8 +41,8 @@ public class xRef
         }
 
     @Override
-    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                            ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
@@ -64,12 +64,12 @@ public class xRef
                     }
             }
 
-        return super.invokeNative(frame, method, hTarget, ahArg, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
-    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                            ObjectHandle hArg, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
@@ -84,7 +84,7 @@ public class xRef
                     }
                 return Op.R_NEXT;
             }
-        return super.invokeNative(frame, method, hTarget, hArg, iReturn);
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override

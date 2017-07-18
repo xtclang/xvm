@@ -69,7 +69,7 @@ public class Invoke_10 extends OpInvocable
 
             if (frame.f_adapter.isNative(method))
                 {
-                return clz.f_template.invokeNative(frame, method, hTarget, hArg, Frame.RET_UNUSED);
+                return clz.f_template.invokeNative1(frame, method, hTarget, hArg, Frame.RET_UNUSED);
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];

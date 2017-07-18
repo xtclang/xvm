@@ -222,11 +222,17 @@ public abstract class Op
             case OP_INVOKE_11:
                 list.add(new Invoke_11(in));
                 break;
+            case OP_INVOKE_1N:
+                list.add(new Invoke_1N(in));
+                break;
             case OP_INVOKE_N0:
                 list.add(new Invoke_N0(in));
                 break;
             case OP_INVOKE_N1:
                 list.add(new Invoke_N1(in));
+                break;
+            case OP_INVOKE_NN:
+                list.add(new Invoke_NN(in));
                 break;
             case OP_INVOKE_T1:
                 list.add(new Invoke_T1(in));

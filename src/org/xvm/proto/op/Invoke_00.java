@@ -65,7 +65,7 @@ public class Invoke_00 extends OpInvocable
 
             if (frame.f_adapter.isNative(method))
                 {
-                return clazz.f_template.invokeNative(frame, method, hTarget,
+                return clazz.f_template.invokeNativeN(frame, method, hTarget,
                         Utils.OBJECTS_NONE, Frame.RET_UNUSED);
                 }
 

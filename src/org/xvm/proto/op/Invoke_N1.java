@@ -76,7 +76,7 @@ public class Invoke_N1 extends OpInvocable
                     {
                     return R_REPEAT;
                     }
-                return clz.f_template.invokeNative(frame, method, hTarget, ahArg, f_nRetValue);
+                return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, f_nRetValue);
                 }
 
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method));

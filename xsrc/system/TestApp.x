@@ -18,15 +18,17 @@ class TestApp
 
     static Void test1()
         {
-        String s = "Hello world";
+        String s = "Hello world!";
         print(s);
 
         Int i = getIntValue();
         print(i);
 
-        Int of = s.indexOf("world");
-        print(of + s.length);
-        print(of.toString());
+        if (Int of : s.indexOf("world"))
+            {
+            assert(of + s.size == 6 + 12);
+            print(of.toString());
+            }
         }
 
     static Void test2()

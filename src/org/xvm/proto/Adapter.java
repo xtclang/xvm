@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import com.sun.istack.internal.Nullable;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -17,6 +18,7 @@ import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.template.xFunction;
 
+import org.xvm.proto.template.xNullable;
 import org.xvm.util.Handy;
 
 import java.util.HashMap;
@@ -181,6 +183,11 @@ public class Adapter
                 aconst[i] = ensureValueConstant(ao[i]);
                 }
             return f_container.f_pool.ensureTupleConstant(aconst);
+            }
+
+        if (oValue == null)
+            {
+            return getClassTypeConstant("Nullable.Null");
             }
 
         throw new IllegalArgumentException();

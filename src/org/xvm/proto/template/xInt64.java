@@ -113,8 +113,8 @@ public class xInt64
         }
 
     @Override
-    public int invokeNative(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                            ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
@@ -128,7 +128,7 @@ public class xInt64
                             xString.makeHandle(String.valueOf(hThis.getValue())));
                     }
             }
-        return super.invokeNative(frame, method, hTarget, ahArg, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     // ----- ComparisonSupport -----

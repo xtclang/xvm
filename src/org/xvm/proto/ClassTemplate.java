@@ -371,16 +371,25 @@ public abstract class ClassTemplate
     // invokeNative with exactly one argument and zero or one return value
     // place the result into the specified frame register
     // return one of the Op.R_ values
-    public int invokeNative(Frame frame, MethodStructure method,
-                            ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method,
+                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
         }
 
     // invokeNative with zero or more than one arguments and zero or one return values
     // return one of the Op.R_ values
-    public int invokeNative(Frame frame, MethodStructure method,
-                            ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method,
+                             ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        {
+        // many classes don't have native methods
+        throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
+        }
+
+    // invokeNative with zero or more arguments and more than one return values
+    // return one of the Op.R_ values
+    public int invokeNativeNN(Frame frame, MethodStructure method,
+                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
         // many classes don't have native methods
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
@@ -493,7 +502,7 @@ public abstract class ClassTemplate
 
         if (frame.f_adapter.isNative(method))
             {
-            return invokeNative(frame, method, hTarget, Utils.OBJECTS_NONE, iReturn);
+            return invokeNativeN(frame, method, hTarget, Utils.OBJECTS_NONE, iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
@@ -591,7 +600,7 @@ public abstract class ClassTemplate
                 {
                 if (f_types.f_adapter.isNative(method))
                     {
-                    return invokeNative(frame, method, hTarget, hValue, Frame.RET_UNUSED);
+                    return invokeNative1(frame, method, hTarget, hValue, Frame.RET_UNUSED);
                     }
 
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];

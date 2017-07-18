@@ -64,7 +64,7 @@ public class xTestClass extends ClassTemplate
                      -adapter.ensureValueConstantId("world")), // #2
             new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"), 2, 1),
             new Var(adapter.getClassTypeConstId("Int64")), // #3
-            new PGet(0, adapter.getPropertyConstId("String", "length"), 3),
+            new PGet(0, adapter.getPropertyConstId("String", "size"), 3),
             new Add(3, 1, 3),
             new Return_1(3),
             };
@@ -76,7 +76,7 @@ public class xTestClass extends ClassTemplate
             { // #0 = s
             new Var(adapter.getClassTypeConstId("Exception")), // #1
             new New_N(adapter.getMethodConstId("Exception", "construct"),
-                        new int[]{0, -adapter.getClassTypeConstId("Nullable.Null")}, 1),
+                        new int[]{0, -adapter.ensureValueConstantId(null)}, 1),
             new Throw(1),
             };
         mtExceptional.m_cVars = 2;

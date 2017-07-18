@@ -99,7 +99,7 @@ public class xTestService extends xService
             new Var(this.adapter.getClassTypeConstId("Exception")), // #2
             new New_N(adapter.getMethodConstId("Exception", "construct"),
                         new int[]{-adapter.ensureValueConstantId("test"),
-                                  -adapter.getClassTypeConstId("Nullable.Null")}, 2),
+                                  -adapter.ensureValueConstantId(null)}, 2),
             new Throw(2),
             new Exit(), // optimize out; unreachable
 

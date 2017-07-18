@@ -141,7 +141,7 @@
  INVOKE_0T  rvalue-target, CONST-METHOD, lvalue-return-tuple
 +INVOKE_10  rvalue-target, CONST-METHOD, rvalue-param
 +INVOKE_11  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return
- INVOKE_1N  rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
++INVOKE_1N  rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
  INVOKE_1T  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return-tuple
 +INVOKE_N0  rvalue-target, CONST-METHOD, #params:(rvalue)
 +INVOKE_N1  rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return
