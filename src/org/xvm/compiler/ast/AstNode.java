@@ -127,6 +127,23 @@ public abstract class AstNode
         }
 
     /**
+     * @return the current compilation stage for this node
+     */
+    public Stage getStage()
+        {
+        return stage;
+        }
+
+    /**
+     * @param stage the updated compilation stage for this node
+     */
+    void setStage(Stage stage)
+        {
+        assert stage.ordinal() >= this.stage.ordinal();
+        this.stage = stage;
+        }
+
+    /**
      * Obtain the Source for this AstNode, if any. By default, a node uses the same source as its
      * parent.
      *
@@ -218,7 +235,10 @@ public abstract class AstNode
 
         for (AstNode node : children())
             {
-            node.registerStructures(errs);
+            if (node.stage.ordinal() < Stage.Registered.ordinal())
+                {
+                node.registerStructures(errs);
+                }
             }
         }
 
@@ -255,14 +275,17 @@ public abstract class AstNode
 
         for (AstNode node : children())
             {
-            node.resolveNames(listRevisit, errs);
+            if (node.stage.ordinal() < Stage.Resolved.ordinal())
+                {
+                node.resolveNames(listRevisit, errs);
+                }
             }
         }
 
     /**
      * @return true iff this AstNode should be able to resolve names
      */
-    protected boolean canResolve()
+    protected boolean canResolveName()
         {
         return stage.ordinal() >= Stage.Resolved.ordinal();
         }
@@ -318,17 +341,21 @@ public abstract class AstNode
                     ImportStatement stmt = ((StatementBlock) node).getImport(sName);
                     if (stmt != null)
                         {
+                        if (!stmt.canResolveName())
+                            {
+                            // TODO queue this resolve & return failure - need errs & retry list & a way to say "failure"
+                            }
+
                         // the result can be determined by resolving the sequence of names
                         // represented by the import
-                        // TODO
+                        // TODO = resolveFirstName(stmt.getQualifiedNamePart(0));
+                        // TODO need errs & retry list & a way to say "failure"
                         }
-
-
                     }
                 else if (node instanceof ComponentStatement)
                     {
                     ComponentStatement stmt = (ComponentStatement) node;
-                    // TODO
+                    // TODO name could reference a child
                     }
 
                 node = node.getParent();

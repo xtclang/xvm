@@ -90,36 +90,38 @@ public abstract class ComponentStatement
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
+        boolean   fResolved = true;
         Component component = getComponent();
-        if (component != null)
+        if (component instanceof CompositeComponent)
             {
-            if (component instanceof CompositeComponent)
+            for (Component componentEach : ((CompositeComponent) component).components())
                 {
-                for (Component componentEach : ((CompositeComponent) component).components())
-                    {
-                    if (!resolveConstants(componentEach, errs))
-                        {
-                        listRevisit.add(this);
-                        return;
-                        }
-                    }
-                }
-            else
-                {
-                if (!resolveConstants(component, errs))
-                    {
-                    listRevisit.add(this);
-                    return;
-                    }
+                fResolved &= resolveConstants(componentEach, errs);
                 }
             }
+        else
+            {
+            fResolved = resolveConstants(component, errs);
+            }
 
-        super.resolveNames(listRevisit, errs);
+        if (fResolved)
+            {
+            super.resolveNames(listRevisit, errs);
+            }
+        else
+            {
+            listRevisit.add(this);
+            }
         }
 
     private boolean resolveConstants(Component component, ErrorListener errs)
         {
-        boolean fDone = true;
+        if (component == null)
+            {
+            return true;
+            }
+
+        boolean fResolved = true;
 
         // component condition
         ConditionalConstant cond = component.getCondition();
@@ -129,7 +131,7 @@ public abstract class ComponentStatement
                 {
                 if (condTerm instanceof PresentCondition)
                     {
-                    fDone &= resolveConstant(((PresentCondition) condTerm).getPresentConstant(), errs);
+                    fResolved &= resolveConstant(((PresentCondition) condTerm).getPresentConstant(), errs);
                     }
                 }
             }
@@ -137,11 +139,11 @@ public abstract class ComponentStatement
         // contributions
         for (Component.Contribution contribution : component.getContributionsAsList())
             {
-            fDone &= resolveConstant(contribution.getRawConstant(), errs);
-            fDone &= resolveConstant(contribution.getDelegatePropertyConstant(), errs);
+            fResolved &= resolveConstant(contribution.getRawConstant(), errs);
+            fResolved &= resolveConstant(contribution.getDelegatePropertyConstant(), errs);
             }
 
-        return fDone;
+        return fResolved;
         }
 
     private boolean resolveConstant(Constant constantUnknown, ErrorListener errs)
@@ -180,7 +182,7 @@ public abstract class ComponentStatement
                 IdentityConstant       constId  = (IdentityConstant) resolveFirstName(constant.getName(0));
                 for (int i = 1, c = constant.getNameCount(); i < c; ++i)
                     {
-                    // TODO
+                    // TODO resolve constant.getName(i) against constId to obtain the corresponding constId
                     throw new UnsupportedOperationException();
                     }
                 constant.resolve(constId);

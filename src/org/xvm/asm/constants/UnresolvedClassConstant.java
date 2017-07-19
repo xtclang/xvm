@@ -24,12 +24,14 @@ public class UnresolvedClassConstant
      * Construct a place-holder constant that will eventually be replaced with a real ClassConstant.
      *
      * @param pool  the ConstantPool that will contain this Constant
-     * @param name  the name of the unresolved class
+     * @param oSrc  the source information that will be used to resolve the class identity; not null
      */
-    public UnresolvedClassConstant(ConstantPool pool, String name)
+    public UnresolvedClassConstant(ConstantPool pool, Object oSrc)
         {
         super(pool);
-        this.m_sName = name;
+
+        assert oSrc != null;
+        this.m_oSrc = oSrc;
         }
 
 
@@ -51,24 +53,48 @@ public class UnresolvedClassConstant
         {
         return isClassResolved()
                 ? m_constId.getName()
-                : m_sName;
+                : m_oSrc.toString() + " (unresolved)";
         }
 
+    /**
+     * Obtain the source of the class information, which is an opaque object that provides a {@link
+     * Object#toString} implementation.
+     *
+     * @return the source information that is used to resolve the type constant; never null
+     */
+    public Object getUnresolvedSource()
+        {
+        return m_oSrc;
+        }
+
+    /**
+     * @return true iff the UnresolvedClassConstant has been resolved
+     */
     public boolean isClassResolved()
         {
-        return m_constId != null;
+        return m_constId != null && (!(m_constId instanceof UnresolvedClassConstant)
+                || ((UnresolvedClassConstant) m_constId).isResolved());
         }
 
     @Override
     public IdentityConstant getResolvedConstant()
         {
-        return m_constId;
+        IdentityConstant constId = m_constId;
+        while (constId instanceof UnresolvedClassConstant)
+            {
+            constId = ((UnresolvedClassConstant) constId).m_constId;
+            }
+        return constId;
         }
 
     @Override
     public void resolve(Constant constant)
         {
-        assert constant instanceof ClassConstant;
+        if (!(constant instanceof ClassConstant))
+            {
+            throw new IllegalArgumentException("constant must be ClassConstant (" + constant + ")");
+            }
+
         assert this.m_constId == null || this.m_constId == constant;
         this.m_constId = (ClassConstant) constant;
         }
@@ -108,22 +134,28 @@ public class UnresolvedClassConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (this == that)
+            {
+            return 0;
+            }
+
         if (isClassResolved())
             {
-            if (that instanceof UnresolvedClassConstant && ((UnresolvedClassConstant) that).isClassResolved())
+            if (that instanceof UnresolvedClassConstant)
                 {
-                that = ((UnresolvedClassConstant) that).m_constId;
+                if (((UnresolvedClassConstant) that).isClassResolved())
+                    {
+                    that = ((UnresolvedClassConstant) that).getResolvedConstant();
+                    }
+                else
+                    {
+                    return -1;
+                    }
                 }
             return m_constId.compareDetails(that);
             }
-        else if (that instanceof UnresolvedClassConstant)
-            {
-            return this.m_sName.compareTo(((UnresolvedClassConstant) that).m_sName);
-            }
-        else
-            {
-            return -1;
-            }
+
+        return -1;
         }
 
 
@@ -191,12 +223,12 @@ public class UnresolvedClassConstant
         {
         return isClassResolved()
                 ? m_constId.hashCode()
-                : m_sName.hashCode();
+                : m_oSrc.hashCode();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private String           m_sName;
+    private Object           m_oSrc;
     private IdentityConstant m_constId;
     }

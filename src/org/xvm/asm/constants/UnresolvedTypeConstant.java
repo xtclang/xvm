@@ -1,14 +1,14 @@
 package org.xvm.asm.constants;
 
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.function.Consumer;
+
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 
 
 /**
@@ -23,16 +23,29 @@ public class UnresolvedTypeConstant
     /**
      * Construct a place-holder constant that will eventually be replaced with a real constant
      *
-     * @param pool         the ConstantPool that will contain this Constant
+     * @param pool  the ConstantPool that will contain this Constant
+     * @param oSrc  the opaque source of the type information; must implement toString()
      */
-    public UnresolvedTypeConstant(ConstantPool pool, String sType)
+    public UnresolvedTypeConstant(ConstantPool pool, Object oSrc)
         {
         super(pool);
-        m_sType = sType;
+        m_oSrc = oSrc;
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
+
+    /**
+     * Obtain the source of the type information, which is an opaque object that provides a {@link
+     * Object#toString} implementation.
+     *
+     * @return the source information that is used to resolve the type constant, or null if no
+     *         source information was provided
+     */
+    public Object getUnresolvedSource()
+        {
+        return m_oSrc;
+        }
 
     /**
      * @return true iff the type has been resolved
@@ -97,7 +110,7 @@ public class UnresolvedTypeConstant
     @Override
     public String getValueString()
         {
-        return m_sType == null ? "<unresolved-type>" : m_sType + " (unresolved)";
+        return m_oSrc == null ? this.getClass().getSimpleName() : (m_oSrc + " (unresolved)");
         }
 
 
@@ -141,7 +154,7 @@ public class UnresolvedTypeConstant
         {
         if (m_resolved == null)
             {
-            return m_sType == null ? -314159265 : m_sType.hashCode();
+            return m_oSrc == null ? -314159265 : m_oSrc.hashCode();
             }
         else
             {
@@ -152,19 +165,12 @@ public class UnresolvedTypeConstant
     @Override
     public boolean equals(Object obj)
         {
-        if (m_resolved == null)
-            {
-            return this == obj;
-            }
-        else
-            {
-            return m_resolved.equals(obj);
-            }
+        return this == obj || (m_resolved != null && m_resolved.equals(obj));
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     private TypeConstant m_resolved;
-    private String m_sType;
+    private Object m_oSrc;
     }

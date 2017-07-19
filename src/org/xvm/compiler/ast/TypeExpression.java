@@ -35,7 +35,7 @@ public abstract class TypeExpression
      */
     public TypeConstant asUnresolvedTypeConstant(ConstantPool pool)
         {
-        return new UnresolvedTypeConstant(pool, toString());
+        return new UnresolvedTypeConstant(pool, this);
         }
 
     /**
@@ -48,7 +48,7 @@ public abstract class TypeExpression
      */
     public ClassConstant asUnresolvedClassConstant(ConstantPool pool)
         {
-        return new UnresolvedClassConstant(pool, toString());
+        return new UnresolvedClassConstant(pool, this);
         }
 
     /**
