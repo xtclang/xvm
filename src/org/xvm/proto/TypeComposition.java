@@ -3,13 +3,16 @@ package org.xvm.proto;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
-
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.CharStringConstant;
+
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.proto.template.xTuple;
 
 import java.util.Collections;
@@ -128,8 +131,7 @@ public class TypeComposition
         Type type = m_typePublic;
         if (type == null)
             {
-            m_typePublic = type = f_template.f_types.createType(
-                    f_template, f_mapGenericActual, Constants.Access.PUBLIC);
+            m_typePublic = type = f_template.f_types.createType(this, Constants.Access.PUBLIC);
             }
         return type;
         }
@@ -138,8 +140,7 @@ public class TypeComposition
         Type type = m_typeProtected;
         if (type == null)
             {
-            m_typeProtected = type = f_template.f_types.createType(
-                    f_template, f_mapGenericActual, Constants.Access.PROTECTED);
+            m_typeProtected = type = f_template.f_types.createType(this, Constants.Access.PROTECTED);
             }
         return type;
         }
@@ -149,8 +150,7 @@ public class TypeComposition
         Type type = m_typePrivate;
         if (type == null)
             {
-            m_typePrivate = type = f_template.f_types.createType(
-                    f_template, f_mapGenericActual, Constants.Access.PRIVATE);
+            m_typePrivate = type = f_template.f_types.createType(this, Constants.Access.PRIVATE);
             }
         return type;
         }
@@ -160,8 +160,7 @@ public class TypeComposition
         Type type = m_typeStruct;
         if (type == null)
             {
-            m_typeStruct = type = f_template.f_types.createType(
-                    f_template, f_mapGenericActual, Constants.Access.STRUCT);
+            m_typeStruct = type = f_template.f_types.createType(this, Constants.Access.STRUCT);
             }
         return type;
         }
@@ -185,6 +184,38 @@ public class TypeComposition
         return false;
         }
 
+    // given a TypeConstant, return a corresponding TypeComposition within this class's context;
+    // null if the type cannot be resolved
+    // for example, List<KeyType> in the context of Map<String, Int>
+    // will resolve in List<String>
+    public TypeComposition resolve(TypeConstant constType)
+        {
+        if (constType instanceof ClassTypeConstant)
+            {
+            if (f_template != null)
+                {
+                return f_template.resolve((ClassTypeConstant) constType, f_mapGenericActual);
+                }
+            }
+        else if (constType instanceof ParameterTypeConstant)
+            {
+            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
+            Type type = f_mapGenericActual.get(constParam.getName());
+            if (type != null && type.f_clazz != null)
+                {
+                return type.f_clazz;
+                }
+            }
+
+        return null;
+        }
+
+    // compare two object handles that both belong to this class for equality
+    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return f_template != null && f_template.callEquals(this, hValue1, hValue2);
+        }
+
     // retrieve the actual type for the specified formal parameter name
     public Type getFormalType(String sFormalName)
         {
@@ -194,7 +225,7 @@ public class TypeComposition
             // TODO: check the super class?
 
             throw new IllegalArgumentException(
-                    "Invalid formal name: " + sFormalName + " for " + f_template);
+                    "Invalid formal name: " + sFormalName + " for " + this);
             }
         return type;
         }
@@ -272,12 +303,12 @@ public class TypeComposition
         MethodConstant constMethod = method.getIdentityConstant();
 
         List<MethodStructure> listMethods = m_mapMethods.computeIfAbsent(constMethod, cm ->
-        {
-        Component container = method.getParent().getParent();
-        return container instanceof PropertyStructure ?
-                collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
-                collectMethodCallChain(cm, new LinkedList<>());
-        });
+            {
+            Component container = method.getParent().getParent();
+            return container instanceof PropertyStructure ?
+                    collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
+                    collectMethodCallChain(cm, new LinkedList<>());
+            });
 
         for (int i = 0, c = listMethods.size(); i < c - 1; i++)
             {

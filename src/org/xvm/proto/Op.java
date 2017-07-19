@@ -294,6 +294,9 @@ public abstract class Op
             case OP_IS_ZERO:
                 list.add(new IsZero(in));
                 break;
+            case OP_IS_NZERO:
+                list.add(new IsNotZero(in));
+                break;
             case OP_IS_NULL:
                 list.add(new IsNull(in));
                 break;

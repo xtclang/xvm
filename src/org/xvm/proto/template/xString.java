@@ -51,7 +51,7 @@ public class xString
         }
 
     @Override
-    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
         {
         StringHandle h1 = (StringHandle) hValue1;
         StringHandle h2 = (StringHandle) hValue2;

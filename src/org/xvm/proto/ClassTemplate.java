@@ -12,9 +12,9 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.constants.UnionTypeConstant;
@@ -223,8 +223,10 @@ public abstract class ClassTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
-    public TypeComposition resolve(ClassTypeConstant constClassType)
+    public TypeComposition resolve(ClassTypeConstant constClassType, Map<String, Type> mapActual)
         {
+        assert constClassType.getClassConstant().getName().equals(f_sName);
+
         List<TypeConstant> listParams = constClassType.getTypeConstants();
 
         int cParams = listParams.size();
@@ -242,25 +244,42 @@ public abstract class ClassTemplate
         for (int i = 0, c = listParams.size(); i < c; i++)
             {
             Map.Entry<CharStringConstant, TypeConstant> entryFormal = listFormalTypes.get(i);
-            String sParamName = entryFormal.getKey().getValue();
-            TypeConstant constTypeActual = listParams.get(i);
 
-            if (constTypeActual instanceof ClassTypeConstant)
-                {
-                mapParams.put(sParamName,
-                        f_types.resolve((ClassTypeConstant) constTypeActual).ensurePublicType());
-                }
-            else if (constTypeActual instanceof IntersectionTypeConstant ||
-                    constTypeActual instanceof UnionTypeConstant)
-                {
-                throw new UnsupportedOperationException("TODO");
-                }
-            else
-                {
-                throw new IllegalArgumentException("Unresolved type constant: " + constTypeActual);
-                }
+            mapParams.put(entryFormal.getKey().getValue(),
+                    resolveParameterType(listParams.get(i), mapActual));
             }
         return ensureClass(mapParams);
+        }
+
+    // resolve a parameter type
+    protected Type resolveParameterType(TypeConstant constParamType, Map<String, Type> mapActual)
+        {
+        if (constParamType instanceof ClassTypeConstant)
+            {
+            ClassTypeConstant constClass = (ClassTypeConstant) constParamType;
+            ClassTemplate template = f_types.getTemplate(constClass.getClassConstant());
+            return template.resolve(constClass, mapActual).ensurePublicType();
+            }
+
+        if (constParamType instanceof ParameterTypeConstant)
+            {
+            ParameterTypeConstant constParam = (ParameterTypeConstant) constParamType;
+            Type type = mapActual.get(constParam.getName());
+
+            if (type == null)
+                {
+                throw new IllegalArgumentException("Unresolved type parameter: " + constParam);
+                }
+            return type;
+            }
+
+        if (constParamType instanceof IntersectionTypeConstant ||
+                constParamType instanceof UnionTypeConstant)
+            {
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        throw new IllegalArgumentException("Unresolved type constant: " + constParamType);
         }
 
     // produce a TypeComposition for this template using the actual types for formal parameters
@@ -639,37 +658,32 @@ public abstract class ClassTemplate
         return null;
         }
 
-    // compare two object handles for equality
-    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+    // compare two object handles that both belong to the specified class for equality
+    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        if (f_struct.getFormat() == Component.Format.ENUMVALUE)
+        ClassStructure struct = f_struct;
+
+        if (struct.getFormat() == Component.Format.ENUMVALUE)
             {
             return hValue1 == hValue2;
             }
 
-        if (hValue1.f_clazz != hValue2.f_clazz)
-            {
-            return false;
-            }
+        GenericHandle hV1 = (GenericHandle) hValue1;
+        GenericHandle hV2 = (GenericHandle) hValue2;
 
-        Map<String, ObjectHandle> map1 = ((GenericHandle) hValue1).m_mapFields;
-        Map<String, ObjectHandle> map2 = ((GenericHandle) hValue2).m_mapFields;
+        return struct.children().stream().
+               filter(comp -> comp instanceof PropertyStructure).
+               allMatch(comp ->
+                   {
+                   PropertyStructure property = (PropertyStructure) comp;
+                   TypeComposition classProp = clazz.resolve(property.getType());
 
-        for (String sField : map1.keySet())
-            {
-            ObjectHandle h1 = map1.get(sField);
-            ObjectHandle h2 = map2.get(sField);
-
-            PropertyStructure property = getProperty(sField);
-            IdentityConstant constClass = property.getParent().getIdentityConstant();
-            ClassTemplate template = f_types.getTemplate(constClass);
-
-            if (!template.callEquals(h1, h2))
-                {
-                return false;
-                }
-            }
-        return true;
+                   String sProp = property.getName();
+                   ObjectHandle h1 = hV1.getField(sProp);
+                   ObjectHandle h2 = hV2.getField(sProp);
+                   // TODO: null
+                   return classProp.callEquals(h1, h2);
+                   });
         }
 
     // ----- Op-code support: array operations -----

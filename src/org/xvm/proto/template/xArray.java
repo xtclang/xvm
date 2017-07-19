@@ -58,10 +58,9 @@ public class xArray
                          TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
         Type typeEl = clzArray.f_mapGenericActual.get("ElementType");
-        String sTemplate = typeEl.f_sName;
+        TypeComposition clzEl = typeEl.f_clazz;
 
-        ClassTemplate templateEl = sTemplate == null ?
-                xObject.INSTANCE : f_types.getTemplate(sTemplate);
+        ClassTemplate templateEl = clzEl == null ? xObject.INSTANCE : clzEl.f_template;
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
 
@@ -126,7 +125,7 @@ public class xArray
         }
 
     @Override
-    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
         {
         GenericArrayHandle h1 = (GenericArrayHandle) hValue1;
         GenericArrayHandle h2 = (GenericArrayHandle) hValue2;
@@ -142,28 +141,20 @@ public class xArray
         Type type1 = getElementType(h1, 0);
         Type type2 = getElementType(h2, 0);
 
-        if (!type1.equals(type2))
+        TypeComposition clazzEl = type1.f_clazz;
+        if (clazzEl == null || clazzEl != type2.f_clazz)
             {
             return false;
             }
 
-        String sTemplate = type1.f_sName;
-        if (sTemplate != null)
+        for (int i = 0, c = ah1.length; i < c; i++)
             {
-            ClassTemplate template = f_types.getTemplate(sTemplate);
-
-            for (int i = 0, c = ah1.length; i < c; i++)
+            if (!clazzEl.callEquals(ah1[i], ah2[i]))
                 {
-                if (!template.callEquals(ah1[i], ah2[i]))
-                    {
-                    return false;
-                    }
+                return false;
                 }
-            return true;
             }
-
-        // TODO: in a general case can we know the "compile time" class?
-        return false;
+        return true;
         }
 
     // ----- IndexSupport methods -----

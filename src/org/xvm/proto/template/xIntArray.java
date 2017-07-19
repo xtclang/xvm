@@ -38,7 +38,7 @@ public class xIntArray
         }
 
     @Override
-    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
         {
         IntArrayHandle h1 = (IntArrayHandle) hValue1;
         IntArrayHandle h2 = (IntArrayHandle) hValue2;

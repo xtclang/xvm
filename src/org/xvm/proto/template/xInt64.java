@@ -43,7 +43,7 @@ public class xInt64
         }
 
     @Override
-    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
+    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
         {
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;

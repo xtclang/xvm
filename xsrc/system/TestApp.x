@@ -213,7 +213,7 @@ class TestApp
             }
         }
 
-    service TestService(Int counter = 48)
+    static service TestService(Int counter = 48)
         {
         String serviceName; // TODO: remove
         Int counter

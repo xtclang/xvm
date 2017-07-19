@@ -111,6 +111,12 @@ public class ObjectHandle
                     }
                 });
             }
+
+        public ObjectHandle getField(String sName)
+            {
+            return m_mapFields.get(sName);
+            }
+
         @Override
         public String toString()
             {

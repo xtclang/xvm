@@ -69,9 +69,8 @@ public class IsEq extends Op
                 frame.assignValue(f_nRetValue, xBoolean.FALSE);
                 }
 
-            frame.assignValue(f_nRetValue,
-                    clz1.f_template.callEquals(hValue1, hValue2) ?
-                            xBoolean.TRUE : xBoolean.FALSE);
+            frame.assignValue(f_nRetValue, clz1.callEquals(hValue1, hValue2)
+                    ? xBoolean.TRUE : xBoolean.FALSE);
             return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)

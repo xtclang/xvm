@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public class Type
     {
-    final public String f_sName; // optional
+    final public TypeComposition f_clazz; // optional
     private int m_nId;
 
     private Map<String, PropertyTypelet> m_props = new HashMap<>();
@@ -20,9 +20,9 @@ public class Type
 
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
 
-    public Type(String sName)
+    public Type(TypeComposition clazz)
         {
-        f_sName = sName;
+        f_clazz = clazz;
         }
 
     public int getId()
@@ -87,7 +87,7 @@ public class Type
     @Override
     public String toString()
         {
-        return f_sName;
+        return f_clazz.toString();
         }
 
     // ----- debugging support ------
@@ -96,9 +96,9 @@ public class Type
         {
         StringBuilder sb = new StringBuilder();
         sb.append("Id=").append(m_nId);
-        if (f_sName != null)
+        if (f_clazz != null)
             {
-            sb.append(" Name=").append(f_sName);
+            sb.append(" Name=").append(f_clazz);
             }
         if (m_fConstant)
             {

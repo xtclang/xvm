@@ -1,6 +1,7 @@
 package org.xvm.proto;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -14,6 +15,7 @@ import org.xvm.proto.template.xModule.ModuleHandle;
 import org.xvm.proto.template.xRuntimeClock;
 import org.xvm.proto.template.xService;
 
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -58,7 +60,8 @@ public class Container
     public Container(Runtime runtime, String sAppName, ModuleRepository repository)
         {
         f_runtime = runtime;
-        f_module = repository.loadModule("ecstasy.xtclang.org");
+        f_module = repository.loadModule(Constants.ECSTASY_MODULE);
+        // f_module.getFileStructure().dump(new PrintWriter(System.out, true));
         f_sAppName = sAppName;
         f_constModule = (ModuleConstant) f_module.getIdentityConstant();
 

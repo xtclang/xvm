@@ -64,7 +64,7 @@ public class xTuple
         }
 
     @Override
-    public TypeComposition resolve(ClassTypeConstant constClassType)
+    public TypeComposition resolve(ClassTypeConstant constClassType, Map<String, Type> mapActual)
         {
         List<TypeConstant> listParams = constClassType.getTypeConstants();
 
@@ -77,23 +77,8 @@ public class xTuple
         Map<String, Type> mapParams = new HashMap<>();
         for (int i = 0, c = listParams.size(); i < c; i++)
             {
-            String sParamName = "ElementTypes[" + i + ']';
-            TypeConstant constTypeActual = listParams.get(i);
-
-            if (constTypeActual instanceof ClassTypeConstant)
-                {
-                mapParams.put(sParamName,
-                        f_types.resolve((ClassTypeConstant) constTypeActual).ensurePublicType());
-                }
-            else if (constTypeActual instanceof IntersectionTypeConstant ||
-                    constTypeActual instanceof UnionTypeConstant)
-                {
-                throw new UnsupportedOperationException("TODO");
-                }
-            else
-                {
-                throw new IllegalArgumentException("Unresolved type constant: " + constTypeActual);
-                }
+            mapParams.put("ElementTypes[" + i + ']',
+                    resolveParameterType(listParams.get(i), mapActual));
             }
         return ensureClass(mapParams);
         }

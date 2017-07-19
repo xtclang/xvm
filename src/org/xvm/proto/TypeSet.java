@@ -133,7 +133,7 @@ public class TypeSet
     public TypeComposition resolve(ClassTypeConstant constClassType)
         {
         ClassTemplate template = getTemplate(constClassType.getClassConstant());
-        return template.resolve(constClassType);
+        return template.resolve(constClassType, Collections.EMPTY_MAP);
         }
 
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
@@ -194,9 +194,9 @@ public class TypeSet
         return type;
         }
 
-    public Type createType(ClassTemplate template, Map<String, Type> mapGenericActual, Constant.Access access)
+    public Type createType(TypeComposition clazz, Constant.Access access)
         {
-        Type type = new Type(template.f_sName);
+        Type type = new Type(clazz);
         // TODO create the specified type
 
         addType(type);

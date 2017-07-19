@@ -3,7 +3,7 @@
  * interface is identical to that of the Collection, its default behavior is subtly different.
  */
 interface Set<ElementType>
-        implements Collection<ElementType>
+        extends Collection<ElementType>
     {
     // ----- read operations -----------------------------------------------------------------------
 
