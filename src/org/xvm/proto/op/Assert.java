@@ -7,6 +7,10 @@ import org.xvm.proto.OpCallable;
 import org.xvm.proto.template.xBoolean.BooleanHandle;
 import org.xvm.proto.template.xException;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * ASSERT rvalue
  *
@@ -19,6 +23,20 @@ public class Assert extends OpCallable
     public Assert(int nValue)
         {
         f_nValue = nValue;
+        }
+
+    public Assert(DataInput in)
+            throws IOException
+        {
+        f_nValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_ASSERT);
+        out.writeInt(f_nValue);
         }
 
     @Override

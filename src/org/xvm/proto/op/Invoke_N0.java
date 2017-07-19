@@ -2,14 +2,18 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.ClassTemplate;
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
+
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * INVOKE_N0  rvalue-target, CONST-METHOD, #params:(rvalue)
@@ -29,6 +33,24 @@ public class Invoke_N0 extends OpInvocable
         f_anArgValue = anArg;
         }
 
+    public Invoke_N0(DataInput in)
+            throws IOException
+        {
+        f_nTargetValue = in.readInt();
+        f_nMethodId = in.readInt();
+        f_anArgValue = readIntArray(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_INVOKE_N0);
+        out.writeInt(f_nTargetValue);
+        out.writeInt(f_nMethodId);
+        writeIntArray(out, f_anArgValue);
+        }
+
     @Override
     public int process(Frame frame, int iPC)
         {
@@ -40,30 +62,29 @@ public class Invoke_N0 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
-            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
+            TypeComposition clz = hTarget.f_clazz;
+            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             if (frame.f_adapter.isNative(method))
                 {
-                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method), 0);
+                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
                 if (ahArg == null)
                     {
                     return R_REPEAT;
                     }
 
-                return template.invokeNative(frame, hTarget, method, ahArg, Frame.RET_UNUSED);
+                return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_UNUSED);
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method), 1);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method));
             if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
-                ahVar[0] = hTarget;
-                return xFunction.makeAsyncHandle(method).call1(frame, ahVar, Frame.RET_UNUSED);
+                return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, Frame.RET_UNUSED);
                 }
 
             return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);

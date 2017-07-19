@@ -5,6 +5,10 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * MOV rvalue-src, lvalue-dest
  *
@@ -19,6 +23,22 @@ public class Move extends Op
         {
         f_nToValue = nTo;
         f_nFromValue = nFrom;
+        }
+
+    public Move(DataInput in)
+            throws IOException
+        {
+        f_nFromValue = in.readInt();
+        f_nToValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_MOV);
+        out.writeInt(f_nFromValue);
+        out.writeInt(f_nToValue);
         }
 
     @Override

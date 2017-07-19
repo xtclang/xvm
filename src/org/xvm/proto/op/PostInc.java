@@ -5,15 +5,19 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.OpInvocable;
-import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.OpProperty;
+import org.xvm.proto.TypeComposition;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * POSTINC lvalue-target, lvalue-return ; T++ -> T
  *
  * @author gg 2017.03.08
  */
-public class PostInc extends OpInvocable
+public class PostInc extends OpProperty
     {
     private final int f_nArgValue;
     private final int f_nRetValue;
@@ -22,6 +26,22 @@ public class PostInc extends OpInvocable
         {
         f_nArgValue = nArg;
         f_nRetValue = nRet;
+        }
+
+    public PostInc(DataInput in)
+            throws IOException
+        {
+        f_nArgValue = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_POSTINC);
+        out.writeInt(f_nArgValue);
+        out.writeInt(f_nRetValue);
         }
 
     @Override
@@ -45,9 +65,9 @@ public class PostInc extends OpInvocable
                 {
                 // operation on a local property
                 ObjectHandle hTarget = frame.getThis();
-                ClassTemplate template = hTarget.f_clazz.f_template;
+                TypeComposition clazz = hTarget.f_clazz;
 
-                PropertyStructure property = getPropertyStructure(frame, template, -f_nArgValue);
+                PropertyStructure property = getPropertyStructure(frame, clazz, -f_nArgValue);
 
                 return hTarget.f_clazz.f_template.
                         invokePostInc(frame, hTarget, property, f_nRetValue);

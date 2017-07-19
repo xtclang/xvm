@@ -6,9 +6,13 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
-import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xFunction;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * MBIND rvalue-target, CONST-METHOD, lvalue-fn-result
@@ -28,6 +32,24 @@ public class MBind extends OpInvocable
         f_nResultValue = nRet;
         }
 
+    public MBind(DataInput in)
+            throws IOException
+        {
+        f_nTargetValue = in.readInt();
+        f_nMethodId = in.readInt();
+        f_nResultValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_MBIND);
+        out.writeInt(f_nTargetValue);
+        out.writeInt(f_nMethodId);
+        out.writeInt(f_nResultValue);
+        }
+
     @Override
     public int process(Frame frame, int iPC)
         {
@@ -39,13 +61,12 @@ public class MBind extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            TypeComposition clz = hTarget.f_clazz;
+            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
-            MethodStructure method = getMethodStructure(frame, template, f_nMethodId);
-
-            return frame.assignValue(f_nResultValue, template.isService() ?
-                    xFunction.makeAsyncHandle(method).bind(0, hTarget) :
-                    xFunction.makeHandle(method).bind(0, hTarget));
+            return frame.assignValue(f_nResultValue, clz.f_template.isService() ?
+                    xFunction.makeAsyncHandle(method).bindTarget(hTarget) :
+                    xFunction.makeHandle(method).bindTarget(hTarget));
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -6,6 +6,10 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xBoolean.BooleanHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * JMP_FALSE rvalue-bool, rel-addr ; jump if value is false
  *
@@ -22,6 +26,21 @@ public class JumpFalse extends Op
         f_nRelAddr = nRelAddr;
         }
 
+    public JumpFalse(DataInput in)
+            throws IOException
+        {
+        f_nValue = in.readInt();
+        f_nRelAddr = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_JMP_FALSE);
+        out.writeInt(f_nValue);
+        out.writeInt(f_nRelAddr);
+        }
 
     @Override
     public int process(Frame frame, int iPC)

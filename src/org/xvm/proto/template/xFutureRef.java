@@ -45,11 +45,15 @@ public class xFutureRef
 
         // FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
         markNativeMethod("whenComplete", new String[]{"Function"});
+
+        // TODO: remove
+        markNativeMethod("get", VOID, new String[]{"RefType"});
+        markNativeMethod("set", new String[]{"RefType"}, VOID);
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle hArg, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
         {
         FutureHandle hThis = (FutureHandle) hTarget;
 
@@ -71,7 +75,7 @@ public class xFutureRef
                 return frame.assignValue(iReturn, makeHandle(cf));
             }
 
-        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override

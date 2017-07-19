@@ -8,6 +8,10 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xBoolean;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * IS_EQ rvalue, rvalue, lvalue-return ; T == T -> Boolean
  *
@@ -24,6 +28,24 @@ public class IsEq extends Op
         f_nValue1 = nValue1;
         f_nValue2 = nValue2;
         f_nRetValue = nRet;
+        }
+
+    public IsEq(DataInput in)
+            throws IOException
+        {
+        f_nValue1 = in.readInt();
+        f_nValue2 = in.readInt();
+        f_nRetValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_IS_EQ);
+        out.writeInt(f_nValue1);
+        out.writeInt(f_nValue2);
+        out.writeInt(f_nRetValue);
         }
 
     @Override

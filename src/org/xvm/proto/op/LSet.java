@@ -5,15 +5,19 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.OpInvocable;
-import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.OpProperty;
+import org.xvm.proto.TypeComposition;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * LSET CONST_PROPERTY, rvalue ; local set (target=this)
  *
  * @author gg 2017.03.08
  */
-public class LSet extends OpInvocable
+public class LSet extends OpProperty
     {
     private final int f_nPropConstId;
     private final int f_nValue;
@@ -22,6 +26,22 @@ public class LSet extends OpInvocable
         {
         f_nPropConstId = nPropId;
         f_nValue = nValue;
+        }
+
+    public LSet(DataInput in)
+            throws IOException
+        {
+        f_nPropConstId = in.readInt();
+        f_nValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_L_SET);
+        out.writeInt(f_nPropConstId);
+        out.writeInt(f_nValue);
         }
 
     @Override
@@ -36,11 +56,11 @@ public class LSet extends OpInvocable
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            TypeComposition clazz = hTarget.f_clazz;
 
-            PropertyStructure property = getPropertyStructure(frame, template, f_nPropConstId);
+            PropertyStructure property = getPropertyStructure(frame, clazz, f_nPropConstId);
 
-            return template.setPropertyValue(frame, hTarget, property, hValue);
+            return clazz.f_template.setPropertyValue(frame, hTarget, property, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -70,11 +70,6 @@
 +NEG        rvalue-target, lvalue-return                                            ; -T -> T
  COMPL      rvalue-target, lvalue-return                                            ; ~T -> T                ; WHY DOES THIS EXIST?
 
-// local property based
-+L_GET      CONST_PROPERTY, lvalue                 ; local get property (target=this)
-+L_SET      CONST_PROPERTY, rvalue                 ; local set property (target=this)
- L_REF      CONST_PROPERTY                         ; next register represents the Property ref for the specified local property (target=this)
-
 // in this group, the lvalue-target could be either a positive number, representing
 // a register, or a negative - representing a local CONST_PROPERTY
 +POSTINC    lvalue-target, lvalue-return                                            ; T++ -> T
@@ -116,6 +111,11 @@
  P_OR_ASGN    lvalue-target, CONST_PROPERTY, rvalue-second
  P_XOR_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
 
+// local property based
++L_GET      CONST_PROPERTY, lvalue                 ; local get property (target=this)
++L_SET      CONST_PROPERTY, rvalue                 ; local set property (target=this)
+ L_REF      CONST_PROPERTY                         ; next register represents the Property ref for the specified local property (target=this)
+
 // function calls
 +CALL_00    rvalue-function
 +CALL_01    rvalue-function, lvalue-return
@@ -141,7 +141,7 @@
  INVOKE_0T  rvalue-target, CONST-METHOD, lvalue-return-tuple
 +INVOKE_10  rvalue-target, CONST-METHOD, rvalue-param
 +INVOKE_11  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return
- INVOKE_1N  rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
++INVOKE_1N  rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
  INVOKE_1T  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return-tuple
 +INVOKE_N0  rvalue-target, CONST-METHOD, #params:(rvalue)
 +INVOKE_N1  rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return
@@ -189,8 +189,8 @@
  NEWC_N     CONST-CONSTRUCT, rvalue-parent, #params:(rvalue), lvalue-return
  NEWC_T     CONST-CONSTRUCT, rvalue-parent, rvalue-params-tuple, lvalue-return
  CONSTR_0   CONST-CONSTRUCT                                                         ; "super" construct call
- CONSTR_1   CONST-CONSTRUCT, rvalue-param
- CONSTR_N   CONST-CONSTRUCT, #params:(rvalue)
++CONSTR_1   CONST-CONSTRUCT, rvalue-param
++CONSTR_N   CONST-CONSTRUCT, #params:(rvalue)
  CONSTR_T   CONST-CONSTRUCT, rvalue-params-tuple
 
  RTYPE_1    CLASS_TYPE_CONST, rvalue-type, lvalue-return                    ; resolve generic type; lvalue-return - a Type object

@@ -92,13 +92,20 @@ public class Container
             throw new IllegalStateException("Already started");
             }
 
+        // evert native class that has an INSTANCE static variable needs to be here
         f_types.getTemplate("Object");
+        f_types.getTemplate("String");
         f_types.getTemplate("Service");
         f_types.getTemplate("Function");
         f_types.getTemplate("Exception");
         f_types.getTemplate("Ref");
+        f_types.getTemplate("Class");
+        f_types.getTemplate("Module");
         f_types.getTemplate("annotations.FutureRef");
         f_types.getTemplate("collections.Array");
+        f_types.getTemplate("collections.Tuple");
+        f_types.getTemplate("types.Method");
+        f_types.getTemplate("Clock.RuntimeClock");
 
         m_contextMain = createServiceContext("main");
         xService.makeHandle(m_contextMain,
@@ -112,8 +119,7 @@ public class Container
             // xModule module = (xModule) f_types.getTemplate(sModule);
             ClassTemplate app = f_types.getTemplate(f_sAppName);
 
-            MethodStructure mtRun = Adapter.getMethod(app.f_struct,
-                    "run", ClassTemplate.VOID, ClassTemplate.VOID);
+            MethodStructure mtRun = app.getMethod("run", ClassTemplate.VOID, ClassTemplate.VOID);
             if (mtRun == null)
                 {
                 throw new IllegalArgumentException("Missing run() method for " + f_sAppName);
@@ -152,7 +158,7 @@ public class Container
     // TODO: need an "override" name or better yet "injectionAttributes"
     public ObjectHandle getInjectable(TypeComposition clzParent, PropertyStructure property)
         {
-        InjectionKey key = new InjectionKey(property.getName(), (ClassTypeConstant) property.getType());
+        InjectionKey key = new InjectionKey(property.getName(), f_adapter.resolveType(property));
         Object oResource = f_mapResources.get(key);
 
         if (oResource instanceof ObjectHandle)

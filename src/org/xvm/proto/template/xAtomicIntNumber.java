@@ -1,8 +1,8 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.PropertyStructure;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;

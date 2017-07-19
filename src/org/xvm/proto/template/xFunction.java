@@ -87,23 +87,23 @@ public class xFunction
 
         // call with one return value to be placed into the specified slot
         // return either R_CALL or R_NEXT
-        public int call1(Frame frame, ObjectHandle[] ahArg, int iReturn)
+        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
             ObjectHandle[] ahVar = prepareVars(ahArg);
 
             addBoundArguments(ahVar);
 
-            return call1Impl(frame, ahVar, iReturn);
+            return call1Impl(frame, hTarget, ahVar, iReturn);
             }
 
         // calls with multiple return values
-        public int callN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
+        public int callN(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
             {
             ObjectHandle[] ahVar = prepareVars(ahArg);
 
             addBoundArguments(ahVar);
 
-            return callNImpl(frame, ahVar, aiReturn);
+            return callNImpl(frame, hTarget, ahVar, aiReturn);
             }
 
         // ----- internal implementation -----
@@ -141,29 +141,32 @@ public class xFunction
             }
 
         // invoke with zero or one return to be placed into the specified register;
-        protected int call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
+        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            ObjectHandle hTarget = m_invoke instanceof MethodStructure ? ahVar[0] : null;
-
             return frame.call1(m_invoke, hTarget, ahVar, iReturn);
             }
 
         // invoke with multiple return values;
-        protected int callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
+        protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            ObjectHandle hTarget = m_invoke instanceof MethodStructure ? ahVar[0] : null;
-
             return frame.callN(m_invoke, hTarget, ahVar, aiReturn);
             }
 
+        // bind a specified argument
         public FunctionHandle bind(int iArg, ObjectHandle hArg)
             {
             return new SingleBoundHandle(f_clazz, this, iArg, hArg);
             }
 
-        public FullyBoundHandle bindAll(ObjectHandle[] ahArg)
+        // bind the target
+        public FunctionHandle bindTarget(ObjectHandle hArg)
             {
-            return new FullyBoundHandle(f_clazz, this, ahArg);
+            return new SingleBoundHandle(f_clazz, this, -1, hArg);
+            }
+
+        public FullyBoundHandle bindAll(ObjectHandle hTarget, ObjectHandle[] ahArg)
+            {
+            return new FullyBoundHandle(f_clazz, this, hTarget, ahArg);
             }
 
         protected void addBoundArguments(ObjectHandle[] ahVar)
@@ -190,15 +193,15 @@ public class xFunction
             }
 
         @Override
-        protected int call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
+        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            return m_hDelegate.call1Impl(frame, ahVar, iReturn);
+            return m_hDelegate.call1Impl(frame, hTarget, ahVar, iReturn);
             }
 
         @Override
-        protected int callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
+        protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            return m_hDelegate.callNImpl(frame, ahVar, aiReturn);
+            return m_hDelegate.callNImpl(frame, hTarget, ahVar, aiReturn);
             }
 
         @Override
@@ -227,7 +230,7 @@ public class xFunction
             }
 
         @Override
-        public int call1(Frame frame, ObjectHandle[] ahArg, int iReturn)
+        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
             return f_op.invoke(frame, ahArg, iReturn);
             }
@@ -237,7 +240,7 @@ public class xFunction
     public static class SingleBoundHandle
             extends DelegatingHandle
         {
-        protected int m_iArg; // the bound argument index
+        protected int m_iArg; // the bound argument index; -1 stands for the target binding
         protected ObjectHandle m_hArg;
 
         protected SingleBoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
@@ -250,16 +253,41 @@ public class xFunction
             }
 
         @Override
+        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            if (m_iArg == -1)
+                {
+                assert hTarget == null;
+                hTarget = m_hArg;
+                }
+            return super.call1Impl(frame, hTarget, ahVar, iReturn);
+            }
+
+        @Override
+        protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+            {
+            if (m_iArg == -1)
+                {
+                assert hTarget == null;
+                hTarget = m_hArg;
+                }
+            return super.callNImpl(frame, hTarget, ahVar, aiReturn);
+            }
+
+        @Override
         protected void addBoundArguments(ObjectHandle[] ahVar)
             {
             super.addBoundArguments(ahVar);
 
-            int cMove = getVarCount() - (m_iArg + 1); // number of args to move to the right
-            if (cMove > 0)
+            if (m_iArg >= 0)
                 {
-                System.arraycopy(ahVar, m_iArg, ahVar, m_iArg + 1, cMove);
+                int cMove = getVarCount() - (m_iArg + 1); // number of args to move to the right
+                if (cMove > 0)
+                    {
+                    System.arraycopy(ahVar, m_iArg, ahVar, m_iArg + 1, cMove);
+                    }
+                ahVar[m_iArg] = m_hArg;
                 }
-            ahVar[m_iArg] = m_hArg;
             }
         }
 
@@ -267,14 +295,17 @@ public class xFunction
     public static class FullyBoundHandle
             extends DelegatingHandle
         {
-        protected ObjectHandle[] m_ahArg;
+        protected final ObjectHandle f_hTarget;
+        protected final ObjectHandle[] f_ahArg;
         protected FullyBoundHandle m_next;
 
-        protected FullyBoundHandle(TypeComposition clazz, FunctionHandle hDelegate, ObjectHandle[] ahArg)
+        protected FullyBoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
+                                   ObjectHandle hTarget, ObjectHandle[] ahArg)
             {
             super(clazz, hDelegate);
 
-            m_ahArg = ahArg;
+            f_hTarget = hTarget;
+            f_ahArg = ahArg;
             }
 
         @Override
@@ -283,7 +314,7 @@ public class xFunction
             super.addBoundArguments(ahVar);
 
             // to avoid extra array creation, the argument array may contain unused null elements
-            System.arraycopy(m_ahArg, 0, ahVar, 0, Math.min(ahVar.length, m_ahArg.length));
+            System.arraycopy(f_ahArg, 0, ahVar, 0, Math.min(ahVar.length, f_ahArg.length));
             }
 
         public FullyBoundHandle chain(FullyBoundHandle handle)
@@ -299,15 +330,15 @@ public class xFunction
         // @return the very first frame to be called
         public Frame callChain(Frame frame, Constants.Access access, Supplier<Frame> continuation)
             {
+            ObjectHandle hTarget = f_hTarget;
             if (access != null)
                 {
-                ObjectHandle hThis = m_ahArg[0];
-                m_ahArg[0] = hThis.f_clazz.ensureAccess(hThis, access);
+                hTarget = hTarget.f_clazz.ensureAccess(hTarget, access);
                 }
 
             Frame frameSave = frame.m_frameNext;
 
-            call1(frame, Utils.OBJECTS_NONE, Frame.RET_UNUSED);
+            call1(frame, hTarget, Utils.OBJECTS_NONE, Frame.RET_UNUSED);
 
             // TODO: what if this function is async and frameThis is null
             Frame frameThis = frame.m_frameNext;
@@ -326,7 +357,7 @@ public class xFunction
             }
 
         public static FullyBoundHandle NO_OP = new FullyBoundHandle(
-                INSTANCE.f_clazzCanonical, null, null)
+                INSTANCE.f_clazzCanonical, null, null, null)
             {
             @Override
             public Frame callChain(Frame frame, Constants.Access access, Supplier<Frame> continuation)
@@ -347,14 +378,14 @@ public class xFunction
         // ----- FunctionHandle interface -----
 
         @Override
-        protected int call1Impl(Frame frame, ObjectHandle[] ahVar, int iReturn)
+        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            ServiceHandle hService = (ServiceHandle) ahVar[0];
+            ServiceHandle hService = (ServiceHandle) hTarget;
 
             // native method on the service means "execute on the caller's thread"
             if (frame.f_adapter.isNative(m_invoke) || frame.f_context == hService.m_context)
                 {
-                return super.call1Impl(frame, ahVar, iReturn);
+                return super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
             // TODO: validate that all the arguments are immutable or ImmutableAble;
@@ -369,14 +400,14 @@ public class xFunction
             }
 
         @Override
-        protected int callNImpl(Frame frame, ObjectHandle[] ahVar, int[] aiReturn)
+        protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            ServiceHandle hService = (ServiceHandle) ahVar[0];
+            ServiceHandle hService = (ServiceHandle) hTarget;
 
             // native method on the service means "execute on the caller's thread"
             if (frame.f_adapter.isNative(m_invoke) || frame.f_context == hService.m_context)
                 {
-                return super.callNImpl(frame, ahVar, aiReturn);
+                return super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
             // TODO: validate that all the arguments are immutable or ImmutableAble
@@ -413,7 +444,7 @@ public class xFunction
 
     public static AsyncHandle makeAsyncHandle(MethodStructure function)
         {
-        assert function.getParent().getFormat() == Component.Format.SERVICE;
+        assert function.getParent().getParent().getFormat() == Component.Format.SERVICE;
 
         return new AsyncHandle(INSTANCE.f_clazzCanonical, function);
         }

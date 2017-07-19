@@ -97,6 +97,11 @@ public class ServiceContext
         return s_tloContext.get();
         }
 
+    public ServiceHandle getService()
+        {
+        return m_hService;
+        }
+
     public void setService(ServiceHandle hService)
         {
         assert m_hService == null;
@@ -261,14 +266,15 @@ public class ServiceContext
                     }
 
                 iPC = abOp[iPC].process(frame, iPCLast = iPC);
+
+                if (iPC == Op.R_NEXT)
+                    {
+                    iPC = iPCLast + 1;
+                    }
                 }
 
             switch (iPC)
                 {
-                case Op.R_NEXT:
-                    iPC = iPCLast + 1;
-                    break;
-
                 case Op.R_CALL:
                     m_frameCurrent = frame.m_frameNext;
                     frame.m_iPC = iPCLast + 1;
@@ -386,6 +392,9 @@ public class ServiceContext
                     frame.m_iPC = iPCLast + 1;
                     fiber.setStatus(FiberStatus.Yielded);
                     return frame;
+
+                default:
+                    throw new IllegalStateException("Invalid code: " + iPC);
                 }
             }
         }
@@ -583,7 +592,7 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    IdentityConstant constClass = (IdentityConstant) f_constructor.getParent().getIdentityConstant();
+                    IdentityConstant constClass = f_constructor.getParent().getParent().getIdentityConstant();
                     xService service = (xService) frame.f_context.f_types.getTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
@@ -633,7 +642,7 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.call1(frame, f_ahArg, f_cReturns == 1 ? 0 : Frame.RET_UNUSED);
+                    return f_hFunction.call1(frame, context.getService(), f_ahArg, f_cReturns == 1 ? 0 : Frame.RET_UNUSED);
                     }
                 };
 
@@ -697,7 +706,7 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.callN(frame, f_ahArg, aiReturn);
+                    return f_hFunction.callN(frame, context.getService(), f_ahArg, aiReturn);
                     }
                 };
 

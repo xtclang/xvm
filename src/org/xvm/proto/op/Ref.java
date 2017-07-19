@@ -7,6 +7,12 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import java.util.Collections;
+
 /**
  * REF lvalue ; next register represents the Variable ref for the specified variable
  *
@@ -19,6 +25,20 @@ public class Ref extends OpInvocable
     public Ref(int nSrc)
         {
         f_nSrcValue = nSrc;
+        }
+
+    public Ref(DataInput in)
+            throws IOException
+        {
+        f_nSrcValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_REF);
+        out.writeInt(f_nSrcValue);
         }
 
     @Override
@@ -36,7 +56,8 @@ public class Ref extends OpInvocable
             }
         else
             {
-            TypeComposition clzRef = xRef.INSTANCE.resolve(new TypeComposition[]{clzReferent});
+            TypeComposition clzRef = xRef.INSTANCE.ensureClass(
+                    Collections.singletonMap("RefType", infoSrc.f_clazz.ensurePublicType()));
 
             RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);
 

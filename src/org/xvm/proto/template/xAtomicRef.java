@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.TypeComposition;
@@ -37,8 +38,8 @@ public class xAtomicRef
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         AtomicHandle hThis = (AtomicHandle) hTarget;
 
@@ -55,7 +56,7 @@ public class xAtomicRef
                     }
             }
 
-        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override

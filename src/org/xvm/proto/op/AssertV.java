@@ -1,12 +1,17 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.constants.CharStringConstant;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.template.xBoolean.BooleanHandle;
 import org.xvm.proto.template.xException;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * ASSERT_V rvalue, CONST_STRING, #vals(rvalue)
@@ -24,6 +29,24 @@ public class AssertV extends OpCallable
         f_nValue = nValue;
         f_nTextConstId = nTextId;
         f_anValue = anValue;
+        }
+
+    public AssertV(DataInput in)
+            throws IOException
+        {
+        f_nValue = in.readInt();
+        f_nTextConstId = in.readInt();
+        f_anValue = readIntArray(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_ASSERT_V);
+        out.writeInt(f_nValue);
+        out.writeInt(f_nTextConstId);
+        writeIntArray(out, f_anValue);
         }
 
     @Override

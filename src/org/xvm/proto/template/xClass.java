@@ -4,11 +4,10 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ClassTypeConstant;
 
-import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHeap;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeSet;
+import org.xvm.proto.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * TODO:
@@ -43,13 +42,19 @@ public class xClass
             ClassTypeConstant constClass = (ClassTypeConstant) constant;
             TypeComposition clzTarget = f_types.resolve(constClass);
 
-            ClassTemplate target = clzTarget.f_template;
-            if (target.isSingleton())
+            ClassTemplate template = clzTarget.f_template;
+            if (template.isSingleton())
                 {
-                return target.createConstHandle(constant, heap);
+                return template.createConstHandle(constant, heap);
                 }
 
-            TypeComposition clzClass = resolve(new TypeComposition[]{clzTarget});
+            Map<String, Type> mapParams = new HashMap<>();
+            mapParams.put("PublicType", clzTarget.ensurePublicType());
+            mapParams.put("ProtectedType", clzTarget.ensureProtectedType());
+            mapParams.put("PrivateType", clzTarget.ensurePrivateType());
+            mapParams.put("StructType", clzTarget.ensureStructType());
+
+            TypeComposition clzClass = ensureClass(mapParams);
             return new ClassHandle(clzClass, clzTarget);
             }
         return null;

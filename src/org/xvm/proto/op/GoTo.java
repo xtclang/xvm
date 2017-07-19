@@ -3,6 +3,10 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * GOTO abs-addr
  *
@@ -15,6 +19,20 @@ public class GoTo extends Op
     public GoTo(int nAbsAddr)
         {
         f_nAbsAddr = nAbsAddr;
+        }
+
+    public GoTo(DataInput in)
+            throws IOException
+        {
+        f_nAbsAddr = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_GOTO);
+        out.writeInt(f_nAbsAddr);
         }
 
 

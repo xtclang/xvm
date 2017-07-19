@@ -5,6 +5,10 @@ import org.xvm.proto.Frame.AllGuard;
 import org.xvm.proto.Frame.Guard;
 import org.xvm.proto.Op;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * GUARD_ALL rel_addr ; ENTER
  *
@@ -19,6 +23,20 @@ public class GuardAll extends Op
     public GuardAll(int nRelAddress)
         {
         f_nFinallyRelAddress = nRelAddress;
+        }
+
+    public GuardAll(DataInput in)
+            throws IOException
+        {
+        f_nFinallyRelAddress = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_END_HANDLER);
+        out.writeInt(f_nFinallyRelAddress);
         }
 
     @Override

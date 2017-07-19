@@ -1,14 +1,13 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-
 import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
@@ -17,6 +16,7 @@ import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
+import java.util.Collections;
 import java.util.function.Supplier;
 
 /**
@@ -37,6 +37,8 @@ public class xArray
         if (fInstance)
             {
             INSTANCE = this;
+
+            new xIntArray(f_types, f_struct, true); // TODO: how to do it right?
             }
         }
 
@@ -46,6 +48,7 @@ public class xArray
         // TODO: remove
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"Int64", "Function"}, VOID);
 
+        markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT);
         markNativeMethod("reify", VOID);
         }
@@ -54,14 +57,13 @@ public class xArray
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
-        Type typeEl = clzArray.f_atGenericActual[0];
+        Type typeEl = clzArray.f_mapGenericActual.get("ElementType");
         String sTemplate = typeEl.f_sName;
 
         ClassTemplate templateEl = sTemplate == null ?
                 xObject.INSTANCE : f_types.getTemplate(sTemplate);
 
-        // argument [0] is reserved for this:struct
-        long cCapacity = ((JavaLong) ahVar[1]).getValue();
+        long cCapacity = ((JavaLong) ahVar[0]).getValue();
 
         int nR = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.RET_LOCAL);
         if (nR == Op.R_EXCEPTION)
@@ -71,24 +73,21 @@ public class xArray
 
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
 
-        if (ahVar.length == 2)
+        if (cCapacity > 0)
             {
             hArray.m_fFixed = true;
-            }
-        else
-            {
-            FunctionHandle hSupplier = (FunctionHandle) ahVar[2];
 
-            xArray array = (xArray) hArray.f_clazz.f_template;
-
-            if (cCapacity > 0)
+            if (ahVar.length == 2)
                 {
+                FunctionHandle hSupplier = (FunctionHandle) ahVar[1];
+                xArray array = (xArray) hArray.f_clazz.f_template;
+
                 int[] ai = new int[]{0}; // index holder
                 ObjectHandle[] ahArg = new ObjectHandle[1];
                 ahArg[0] = xInt64.makeHandle(ai[0]);
 
                 // TODO: what if the supplier produces a "future" result
-                hSupplier.call1(frame, ahArg, Frame.RET_LOCAL);
+                hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
                 Frame frame0 = frame.m_frameNext;
 
                 frame0.m_continuation = new Supplier<Frame>()
@@ -108,7 +107,7 @@ public class xArray
                             {
                             ahArg[0] = xInt64.makeHandle(i);
                             // TODO: ditto
-                            hSupplier.call1(frame, ahArg, Frame.RET_LOCAL);
+                            hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
                             Frame frameNext = frame.m_frameNext;
                             frameNext.m_continuation = this;
                             return frameNext;
@@ -190,16 +189,22 @@ public class xArray
 
         int cSize = hArray.m_cSize;
 
-        if (lIndex < 0 || lIndex >= cSize)
+        if (lIndex < 0 || lIndex > cSize)
             {
-            if (hArray.m_fFixed || lIndex != cSize)
-                {
-                return IndexSupport.outOfRange(lIndex, cSize);
-                }
+            return IndexSupport.outOfRange(lIndex, cSize);
+            }
 
+        if (lIndex == cSize)
+            {
+            // an array can only grow without any "holes"
             int cCapacity = hArray.m_ahValue.length;
-            if (cCapacity <= cSize)
+            if (cSize == cCapacity)
                 {
+                if (hArray.m_fFixed)
+                    {
+                    return IndexSupport.outOfRange(lIndex, cSize);
+                    }
+
                 // resize (TODO: we should be much smarter here)
                 cCapacity = cCapacity + Math.max(cCapacity >> 2, 16);
 
@@ -220,7 +225,7 @@ public class xArray
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
-        return hArray.f_clazz.f_atGenericActual[0];
+        return hArray.f_clazz.f_mapGenericActual.get("ElementType");
         }
 
     @Override
@@ -240,7 +245,8 @@ public class xArray
 
     public static GenericArrayHandle makeHandle(Type typeEl, ObjectHandle[] ahValue)
         {
-        return new GenericArrayHandle(INSTANCE.resolve(new Type[] {typeEl}), ahValue);
+        return new GenericArrayHandle(INSTANCE.ensureClass(
+                Collections.singletonMap("ElementType", typeEl)), ahValue);
         }
 
     public static GenericArrayHandle makeHandle(TypeComposition clzArray, long cCapacity)

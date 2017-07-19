@@ -1,11 +1,16 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.constants.CharStringConstant;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 
 import org.xvm.proto.template.xRef.RefHandle;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * DNVAR CONST_REF_CLASS, CONST_STRING ; next register is a named "dynamic reference" variable
@@ -21,6 +26,22 @@ public class DNVar extends Op
         {
         f_nClassConstId = nClassConstId;
         f_nNameConstId = nNameConstId;
+        }
+
+    public DNVar(DataInput in)
+            throws IOException
+        {
+        f_nClassConstId = in.readInt();
+        f_nNameConstId = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_DNVAR);
+        out.writeInt(f_nClassConstId);
+        out.writeInt(f_nNameConstId);
         }
 
     @Override

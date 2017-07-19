@@ -2,8 +2,13 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.proto.*;
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.Op;
+import org.xvm.proto.TypeSet;
+import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 import org.xvm.proto.template.xFunction.NativeMethodHandle;
@@ -35,18 +40,17 @@ public class xRuntimeClock
     @Override
     public void initDeclared()
         {
-        // TODO: change when the DateTime is implemented
-        getMethod("scheduleAlarm", new String[]{"Function", "Int64"}, new String[]{"Function"});
+        markNativeMethod("scheduleAlarm", new String[] {"Function", "DateTime"});
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle hArg, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
         switch (method.getName())
             {
@@ -68,7 +72,7 @@ public class xRuntimeClock
                 }
             }
 
-        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     protected class CancellableTask

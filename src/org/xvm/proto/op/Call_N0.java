@@ -9,6 +9,10 @@ import org.xvm.proto.OpCallable;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * CALL_N0 rvalue-function, #params:(rvalue)
  *
@@ -25,6 +29,23 @@ public class Call_N0 extends OpCallable
         f_anArgValue = anArg;
         }
 
+    public Call_N0(DataInput in)
+            throws IOException
+        {
+        f_nFunctionValue = in.readInt();
+        f_anArgValue = readIntArray(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_CALL_N0);
+        out.writeInt(f_nFunctionValue);
+
+        writeIntArray(out, f_anArgValue);
+        }
+
     @Override
     public int process(Frame frame, int iPC)
         {
@@ -39,7 +60,7 @@ public class Call_N0 extends OpCallable
                 {
                 MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(function), 0);
+                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(function));
                 if (ahVar == null)
                     {
                     return R_REPEAT;
@@ -49,13 +70,13 @@ public class Call_N0 extends OpCallable
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount(), 0);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount());
             if (hFunction == null || ahVar == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, ahVar, Frame.RET_UNUSED);
+            return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

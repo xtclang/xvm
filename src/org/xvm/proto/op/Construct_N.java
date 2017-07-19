@@ -2,11 +2,14 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * CONSTR_N CONST-CONSTRUCT, #params:(rvalue)
@@ -24,6 +27,22 @@ public class Construct_N extends OpCallable
         f_anArgValue = anArg;
         }
 
+    public Construct_N(DataInput in)
+            throws IOException
+        {
+        f_nConstructId = in.readInt();
+        f_anArgValue = readIntArray(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_CONSTR_N);
+        out.writeInt(f_nConstructId);
+        writeIntArray(out, f_anArgValue);
+        }
+
     @Override
     public int process(Frame frame, int iPC)
         {
@@ -31,14 +50,13 @@ public class Construct_N extends OpCallable
             {
             MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor), 1);
+            ObjectHandle hStruct = frame.getThis();
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor));
             if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
-            ahVar[0] = frame.getArgument(0); // struct
-
-            frame.chainFinalizer(frame.f_adapter.makeFinalizer(constructor, ahVar));
+            frame.chainFinalizer(hStruct.f_clazz.f_template.makeFinalizer(constructor, hStruct, ahVar));
 
             return frame.call1(constructor, null, ahVar, Frame.RET_UNUSED);
             }

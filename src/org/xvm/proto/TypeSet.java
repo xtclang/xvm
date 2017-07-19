@@ -2,17 +2,12 @@ package org.xvm.proto;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.*;
+import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xService;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -70,19 +65,9 @@ public class TypeSet
                 }
 
             String sName = structClass.getName();
-            String sSuffix = sName.substring(sName.indexOf(':') + 1);
-            sSuffix = sSuffix.substring(sSuffix.lastIndexOf('.') + 1);
-
-            String sClz= "org.xvm.proto.template.x" + sSuffix;
             try
                 {
-                Class<ClassTemplate> clz = (Class<ClassTemplate>) Class.forName(sClz);
-
-                template = clz.getConstructor(TypeSet.class, ClassStructure.class, Boolean.TYPE).
-                        newInstance(this, structClass, Boolean.TRUE);
-                m_mapTemplatesByConst.put(constClass, template);
-
-                template.initDeclared();
+                template = loadCustomTemplate(sName, structClass);
                 }
             catch (ClassNotFoundException e)
                 {
@@ -90,8 +75,19 @@ public class TypeSet
 
                 switch (structClass.getFormat())
                     {
-                    case CLASS:
                     case ENUMVALUE:
+                        try
+                            {
+                            String sEnumName = structClass.getParent().getName();
+                            template = loadCustomTemplate(sEnumName, structClass);
+                            }
+                        catch (ClassNotFoundException e2)
+                            {
+                            template = new xEnum(this, structClass, false);
+                            }
+                        break;
+
+                    case CLASS:
                     case INTERFACE:
                         template = new xObject(this, structClass, false);
                         break;
@@ -103,17 +99,32 @@ public class TypeSet
                     default:
                         throw new UnsupportedOperationException("Format is not supported: " + structClass);
                     }
-
-
-                m_mapTemplatesByConst.put(constClass, template);
-                template.initDeclared();
                 }
-            catch (Throwable e)
-                {
-                e.printStackTrace();
-                }
+
+            m_mapTemplatesByConst.put(constClass, template);
+            template.initDeclared();
             }
+
         return template;
+        }
+
+    private ClassTemplate loadCustomTemplate(String sName, ClassStructure structClass)
+            throws ClassNotFoundException
+        {
+        String sSuffix = sName.substring(sName.lastIndexOf('.') + 1);
+
+        String sClz= "org.xvm.proto.template.x" + sSuffix;
+        Class<ClassTemplate> clz = (Class<ClassTemplate>) Class.forName(sClz);
+
+        try
+            {
+            return clz.getConstructor(TypeSet.class, ClassStructure.class, Boolean.TYPE).
+                    newInstance(this, structClass, Boolean.TRUE);
+            }
+        catch (Exception e)
+            {
+            throw new RuntimeException("Constructor failed for " + clz.getName(), e);
+            }
         }
 
     // ----- TypeCompositions -----
@@ -121,52 +132,12 @@ public class TypeSet
     // produce a TypeComposition based on the specified ClassTypeConstant
     public TypeComposition resolve(ClassTypeConstant constClassType)
         {
-        ClassConstant constClass = constClassType.getClassConstant();
-        List<TypeConstant> listParams = constClassType.getTypeConstants();
-
-        int cParams = listParams.size();
-        if (cParams == 0)
-            {
-            return resolve(constClass, Utils.TYPE_NONE);
-            }
-
-        TypeComposition[] aClz = new TypeComposition[cParams];
-        int iParam = 0;
-        for (TypeConstant constParamType : listParams)
-            {
-            if (constParamType instanceof ClassTypeConstant)
-                {
-                ClassTypeConstant constParamClass = (ClassTypeConstant) constParamType;
-                aClz[iParam++] = resolve(constParamClass);
-                }
-            else
-                {
-                throw new IllegalArgumentException("Invalid param type constant: " + constParamType);
-                }
-            }
-        return resolve(constClass, aClz);
-        }
-
-    // produce a TypeComposition for the ClassConstant by resolving the generic types
-    public TypeComposition resolve(ClassConstant constClass, TypeComposition[] aclzGenericActual)
-        {
-        int    c = aclzGenericActual.length;
-        Type[] aType = new Type[c];
-        for (int i = 0; i < c; i++)
-            {
-            aType[i] = aclzGenericActual[i].ensurePublicType();
-            }
-        return resolve(constClass, aType);
-        }
-
-    // produce a TypeComposition for the ClassConstant by resolving the generic types
-    public TypeComposition resolve(ClassConstant constClass, Type[] atGenericActual)
-        {
-        return getTemplate(constClass).resolve(atGenericActual);
+        ClassTemplate template = getTemplate(constClassType.getClassConstant());
+        return template.resolve(constClassType);
         }
 
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
-    public TypeComposition ensureComposition(Frame frame, int nClassConstId)
+    public TypeComposition ensureComposition(int nClassConstId)
         {
         TypeComposition typeComposition = m_mapConstCompositions.get(nClassConstId);
         if (typeComposition == null)
@@ -223,7 +194,7 @@ public class TypeSet
         return type;
         }
 
-    public Type createType(ClassTemplate template, Type[] atGenericActual, Constant.Access access)
+    public Type createType(ClassTemplate template, Map<String, Type> mapGenericActual, Constant.Access access)
         {
         Type type = new Type(template.f_sName);
         // TODO create the specified type

@@ -36,11 +36,13 @@ public class xRef
         {
         markNativeGetter("assigned");
         markNativeSetter("assigned");
+        markNativeMethod("get", VOID, new String[]{"RefType"});
+        markNativeMethod("set", new String[]{"RefType"}, VOID);
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
@@ -62,12 +64,12 @@ public class xRef
                     }
             }
 
-        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle hArg, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
         {
         RefHandle hThis = (RefHandle) hTarget;
 
@@ -82,7 +84,7 @@ public class xRef
                     }
                 return Op.R_NEXT;
             }
-        return super.invokeNative(frame, hTarget, method, hArg, iReturn);
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override

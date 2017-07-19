@@ -9,6 +9,8 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xRef.IndexedRefHandle;
 
+import java.util.Collections;
+
 /**
  * Support for index-based (array or tuple) op-codes.
  *
@@ -37,7 +39,8 @@ public interface IndexSupport
             {
             Type typeReferent = getElementType(hTarget, lIndex);
 
-            TypeComposition clzRef = xRef.INSTANCE.resolve(new Type[]{typeReferent});
+            TypeComposition clzRef = xRef.INSTANCE.ensureClass(
+                    Collections.singletonMap("RefType", typeReferent));
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 

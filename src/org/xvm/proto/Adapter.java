@@ -1,28 +1,33 @@
 package org.xvm.proto;
 
-import org.xvm.asm.*;
+import com.sun.istack.internal.Nullable;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.template.xFunction;
 
-import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xService;
+import org.xvm.proto.template.xNullable;
 import org.xvm.util.Handy;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 
 /**
- * A temporary intermediary between the RT, the ConstantPool and ClassStructure
+ * A temporary intermediary between the RT, the ConstantPool and ClassStructure;
+ * FOR SIMULATION ONLY
  *
  * @author gg 2017.03.08
  */
@@ -81,48 +86,12 @@ public class Adapter
         throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
         }
 
-    private TypeConstant[] getTypeConstants(String[] asType)
-        {
-        int cTypes = asType.length;
-        TypeConstant[] aType = new TypeConstant[cTypes];
-        for (int i = 0; i < cTypes; i++)
-            {
-            String sType = asType[i].trim();
-            aType[i] = getClassTypeConstant(getClassTypeConstId(sType));
-            }
-        return aType;
-        }
-
-    protected ClassTypeConstant getClassTypeConstant(String sName)
-        {
-        ClassConstant constClass = (ClassConstant)
-                f_container.f_types.getTemplate(sName).f_struct.getIdentityConstant();
-        return constClass.asTypeConstant();
-        }
-
-    public ClassTypeConstant getClassTypeConstant(int nConstId)
-        {
-        return (ClassTypeConstant) f_container.f_pool.getConstant(nConstId);
-        }
-
-    public int getPropertyConstId(String sClassName, String sPropName)
-        {
-        try
-            {
-            return f_container.f_types.getTemplate(sClassName).getProperty(sPropName).
-                    getIdentityConstant().getPosition();
-            }
-        catch (NullPointerException e)
-            {
-            throw new IllegalArgumentException("Property is not defined: " + sClassName + '#' + sPropName);
-            }
-        }
-
     public int getMethodConstId(String sClassName, String sMethName)
         {
         return getMethodConstId(sClassName, sMethName, null, null);
         }
 
+    // TODO: this will change when MethodIdConst is introduced
     public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
         {
         try
@@ -142,11 +111,42 @@ public class Adapter
             }
         }
 
-    // FOR SIMULATION ONLY
+    public int getPropertyConstId(String sClassName, String sPropName)
+        {
+        try
+            {
+            return f_container.f_types.getTemplate(sClassName).getProperty(sPropName).
+                    getIdentityConstant().getPosition();
+            }
+        catch (NullPointerException e)
+            {
+            throw new IllegalArgumentException("Property is not defined: " + sClassName + '#' + sPropName);
+            }
+        }
 
     public int ensureValueConstantId(Object oValue)
         {
         return ensureValueConstant(oValue).getPosition();
+        }
+
+    private TypeConstant[] getTypeConstants(String[] asType)
+        {
+        ConstantPool pool = f_container.f_pool;
+        int cTypes = asType.length;
+        TypeConstant[] aType = new TypeConstant[cTypes];
+        for (int i = 0; i < cTypes; i++)
+            {
+            String sType = asType[i].trim();
+            aType[i] = (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType));
+            }
+        return aType;
+        }
+
+    private ClassTypeConstant getClassTypeConstant(String sClassName)
+        {
+        ClassConstant constClass = (ClassConstant)
+                f_container.f_types.getTemplate(sClassName).f_struct.getIdentityConstant();
+        return constClass.asTypeConstant();
         }
 
     protected Constant ensureValueConstant(Object oValue)
@@ -185,111 +185,20 @@ public class Adapter
             return f_container.f_pool.ensureTupleConstant(aconst);
             }
 
+        if (oValue == null)
+            {
+            return getClassTypeConstant("Nullable.Null");
+            }
+
         throw new IllegalArgumentException();
         }
 
-    // static helpers
-
-    public static String getClassName(ClassConstant constClass)
-        {
-        StringBuilder sb = new StringBuilder(constClass.getName());
-        Constant constParent = constClass.getNamespace();
-
-        while (true)
-            {
-            switch (constParent.getFormat())
-                {
-                case Module:
-                    sb.insert(0, ':')
-                      .insert(0, ((ModuleConstant) constParent).getName());
-                    return sb.toString();
-
-                case Package:
-                    PackageConstant constPackage = ((PackageConstant) constParent);
-                    sb.insert(0, '.')
-                      .insert(0, constPackage.getName());
-                    constParent = constPackage.getNamespace();
-                    break;
-
-                case Class:
-                    ClassConstant constParentClass = ((ClassConstant) constParent);
-                    sb.insert(0, '$')
-                      .insert(0, constParentClass.getName());
-                    constParent = constParentClass.getNamespace();
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-        }
-
-    public ClassStructure getSuper(ClassStructure structure)
-        {
-        Optional<ClassStructure.Contribution> opt = structure.getContributionsAsList().stream().
-                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
-        if (opt.isPresent())
-            {
-            ClassConstant constClass = opt.get().getClassConstant().getClassConstant();
-            try
-                {
-                return (ClassStructure) constClass.getComponent();
-                }
-            catch (RuntimeException e)
-                {
-                // TODO: remove when getComponent() is fixed
-                String sName = constClass.getName();
-                ClassTemplate templateSuper = f_container.f_types.getTemplate(sName);
-                return templateSuper.f_struct;
-                }
-            }
-        else
-            {
-            switch (structure.getFormat())
-                {
-                case SERVICE:
-                    return xService.INSTANCE.f_struct;
-
-                case CLASS:
-                    if (structure.getName().equals("Object"))
-                        {
-                        return null;
-                        }
-                    // break through
-                case INTERFACE:
-                case CONST:
-                    return xObject.INSTANCE.f_struct;
-                }
-            }
-        return null;
-        }
-
-    public MethodStructure addMethod(ClassStructure structure, String sName,
+    public MethodStructure addMethod(Component structure, String sName,
                                             String[] asArgType, String[] asRetType)
         {
         MultiMethodStructure mms = structure.ensureMultiMethodStructure(sName);
         return mms.createMethod(false, Constants.Access.PUBLIC,
                 getTypeConstants(asRetType), getTypeConstants(asArgType));
-        }
-
-    public static MethodStructure getMethod(ClassStructure structure, String sName,
-                                            String[] asArgType, String[] asRetType)
-        {
-        MultiMethodStructure mms = (MultiMethodStructure) structure.getChild(sName);
-
-        // TODO: use the types
-        return mms == null ? null : (MethodStructure) mms.children().get(0);
-        }
-
-    public static MethodStructure getDefaultConstructor(ClassStructure structure)
-        {
-        return getMethod(structure, "default", ClassTemplate.VOID, ClassTemplate.VOID);
-        }
-
-    public static MethodStructure getSuper(MethodStructure structure)
-        {
-        // TODO:
-        return null;
         }
 
     public int getScopeCount(MethodStructure method)
@@ -307,7 +216,10 @@ public class Adapter
     public int getVarCount(MethodStructure method)
         {
         ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
-        return tm == null ? 0 : tm.m_cVars;
+        return tm == null ? 0 :
+                tm.m_fNative ? // this can only be a constructor
+                    method.getIdentityConstant().getRawParams().length:
+                    tm.m_cVars;
         }
 
     public Op[] getOps(MethodStructure method)
@@ -318,14 +230,9 @@ public class Adapter
 
     public MethodStructure getFinalizer(MethodStructure constructor)
         {
-        ClassTemplate.MethodTemplate tm = getMethodTemplate(constructor);
-        return tm == null ? null : tm.m_mtFinally.f_struct;
-        }
-
-    public static Type getReturnType(MethodStructure method, int iRet, TypeComposition clzParent)
-        {
-        // TODO: may need to resolve
-        return null;
+        ClassTemplate.MethodTemplate tmConstruct = getMethodTemplate(constructor);
+        ClassTemplate.MethodTemplate tmFinally = tmConstruct == null ? null : tmConstruct.m_mtFinally;
+        return tmFinally == null ? null : tmFinally.f_struct;
         }
 
     public boolean isNative(MethodStructure method)
@@ -337,54 +244,12 @@ public class Adapter
     private ClassTemplate.MethodTemplate getMethodTemplate(MethodStructure method)
         {
         MultiMethodStructure mms = (MultiMethodStructure) method.getParent();
-        Component parent = mms.getParent();
+        Component container = mms.getParent();
 
-        // the parent is either class or a property
-        ClassStructure clazz = (ClassStructure) (parent instanceof ClassStructure ? parent : parent.getParent());
-        ClassTemplate template = f_container.f_types.getTemplate((IdentityConstant) clazz.getIdentityConstant());
+        // the container is either a class or a property
+        ClassStructure clazz = (ClassStructure) (container instanceof ClassStructure ? container : container.getParent());
+        ClassTemplate template = f_container.f_types.getTemplate(clazz.getIdentityConstant());
         return template.getMethodTemplate(method.getIdentityConstant());
-        }
-
-    public xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor, ObjectHandle[] ahArg)
-        {
-        MethodStructure methodFinally = getFinalizer(constructor);
-
-        return methodFinally == null ? null : xFunction.makeHandle(methodFinally).bindAll(ahArg);
-        }
-
-    public static boolean isAtomic(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public static boolean isReadOnly(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public static boolean isInjectable(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public static boolean isRef(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public static boolean isGenericType(PropertyStructure property)
-        {
-        // TODO:
-        return false;
-        }
-
-    public static ClassTemplate getRefTemplate(TypeSet types, PropertyStructure property)
-        {
-        return null;
         }
 
     public static MethodStructure getGetter(PropertyStructure property)
@@ -401,5 +266,29 @@ public class Adapter
 
         // TODO: use the type
         return mms == null ? null : (MethodStructure) mms.children().get(0);
+        }
+
+    public ClassTypeConstant resolveType(PropertyStructure property)
+        {
+        TypeConstant type = property.getType();
+        if (type instanceof ClassTypeConstant)
+            {
+            return (ClassTypeConstant) type;
+            }
+
+        if (type instanceof UnresolvedTypeConstant)
+            {
+            String sValue = type.getValueString(); // m_sType + " (unresolved)";
+            String sType = sValue.substring(0, sValue.indexOf(' '));
+            // hand code aliases
+            if (sType.equals("Int"))
+                {
+                sType = "Int64";
+                }
+            ClassTemplate template = f_container.f_types.getTemplate(sType);
+            return ((ClassConstant) template.f_struct.getIdentityConstant()).asTypeConstant();
+            }
+
+        throw new UnsupportedOperationException("Unsupported type: " + type + " for " + property);
         }
     }

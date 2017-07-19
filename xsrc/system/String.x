@@ -3,7 +3,7 @@ const String
     {
     private construct String() {}
 
-    conditional Int indexOf(ElementType value, Range<Int>? range = null)
+    conditional Int indexOf(String value, Range<Int>? range = null)
         {
         return super(value, range);
         }
@@ -42,7 +42,7 @@ const String
 
     // TODO Sequence<Char>
 
-    Int length.get()
+    Int size.get()
         {
         return chars.length;
         }

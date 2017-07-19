@@ -10,9 +10,7 @@ import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
-import org.xvm.proto.Utils;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,8 +47,8 @@ public class xObject
         }
 
     @Override
-    public int invokeNative(Frame frame, ObjectHandle hTarget,
-                            MethodStructure method, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         switch (ahArg.length)
             {
@@ -61,19 +59,6 @@ public class xObject
                     return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
                     }
             }
-        return super.invokeNative(frame, hTarget, method, ahArg, iReturn);
-        }
-
-    public static Type[] getTypeArray(int c)
-        {
-        return s_mapCanonical.computeIfAbsent(c, x ->
-            {
-            Type[] aType = new Type[c];
-            if (c > 0)
-                {
-                Arrays.fill(aType, CLASS.ensurePublicType());
-                }
-            return aType;
-            });
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
     }

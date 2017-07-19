@@ -3,6 +3,10 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * RETURN_1 rvalue
  *
@@ -15,6 +19,20 @@ public class Return_1 extends Op
     public Return_1(int nValue)
         {
         f_nArgValue = nValue;
+        }
+
+    public Return_1(DataInput in)
+            throws IOException
+        {
+        f_nArgValue = in.readInt();
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_RETURN_1);
+        out.writeInt(f_nArgValue);
         }
 
     @Override

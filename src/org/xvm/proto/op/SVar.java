@@ -9,6 +9,10 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xArray;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * SVAR TYPE_CONST, #values:(rvalue-src) ; next register is an initialized anonymous Sequence variable
  *
@@ -25,31 +29,37 @@ public class SVar extends Op
         f_anArgValue = anValue;
         }
 
+    public SVar(DataInput in)
+            throws IOException
+        {
+        f_nClassConstId = in.readInt();
+        f_anArgValue = readIntArray(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_SVAR);
+        writeIntArray(out, f_anArgValue);
+        }
+
     @Override
     public int process(Frame frame, int iPC)
         {
         ServiceContext context = frame.f_context;
 
-        TypeComposition clazz = context.f_types.ensureComposition(frame, f_nClassConstId);
-        int[] anArg = f_anArgValue;
-        int cArgs = anArg.length;
+        TypeComposition clazzEl = context.f_types.ensureComposition(f_nClassConstId);
 
         try
             {
-            ObjectHandle[] ahArg = new ObjectHandle[cArgs];
-
-            for (int i = 0; i < cArgs; i++)
+            ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
+            if (ahArg == null)
                 {
-                ObjectHandle hArg = frame.getArgument(anArg[i]);
-                if (hArg == null)
-                    {
-                    return R_REPEAT;
-                    }
-
-                ahArg[i] = hArg;
+                return R_REPEAT;
                 }
 
-            ArrayHandle hArray = xArray.makeHandle(clazz.ensurePublicType(), ahArg);
+            ArrayHandle hArray = xArray.makeHandle(clazzEl.ensurePublicType(), ahArg);
             hArray.makeImmutable();
 
             frame.introduceVar(hArray.f_clazz, null, Frame.VAR_STANDARD, hArray);
@@ -62,5 +72,4 @@ public class SVar extends Op
             return R_EXCEPTION;
             }
         }
-
     }

@@ -10,6 +10,10 @@ import org.xvm.proto.OpCallable;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * CALL_1N rvalue-function, rvalue-param, #returns:(lvalue)
  *
@@ -26,6 +30,24 @@ public class Call_1N extends OpCallable
         f_nFunctionValue = nFunction;
         f_nArgValue = nArg;
         f_anRetValue = anRet;
+        }
+
+    public Call_1N(DataInput in)
+            throws IOException
+        {
+        f_nFunctionValue = in.readInt();
+        f_nArgValue = in.readInt();
+        f_anRetValue = readIntArray(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_CALL_1N);
+        out.writeInt(f_nFunctionValue);
+        out.writeInt(f_nArgValue);
+        writeIntArray(out, f_anRetValue);
         }
 
     @Override
@@ -63,7 +85,7 @@ public class Call_1N extends OpCallable
             ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
             ahVar[0] = hArg;
 
-            return hFunction.callN(frame, ahVar, f_anRetValue);
+            return hFunction.callN(frame, null, ahVar, f_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

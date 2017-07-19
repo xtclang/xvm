@@ -11,8 +11,8 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TupleConstant;
 
 import org.xvm.proto.template.xClass;
+import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xInt64;
-import org.xvm.proto.template.xMethod;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xString;
@@ -42,7 +42,7 @@ public class ObjectHeap
     // nClassConstId - ClassTypeConstant in the ConstantPool
     public RefHandle createRefHandle(Frame frame, int nClassConstId)
         {
-        TypeComposition typeComposition = f_types.ensureComposition(frame, nClassConstId);
+        TypeComposition typeComposition = f_types.ensureComposition(nClassConstId);
 
         return typeComposition.f_template.createRefHandle(typeComposition);
         }
@@ -99,7 +99,7 @@ public class ObjectHeap
 
         if (constValue instanceof MethodConstant)
             {
-            return xMethod.INSTANCE;
+            return xFunction.INSTANCE;
             }
 
         throw new UnsupportedOperationException("Unknown constant " + constValue);
