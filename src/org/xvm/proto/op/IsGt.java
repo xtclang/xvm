@@ -3,10 +3,10 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.ComparisonSupport;
 import org.xvm.proto.template.xBoolean;
 
 import java.io.DataInput;
@@ -62,14 +62,24 @@ public class IsGt extends Op
                 return R_REPEAT;
                 }
 
-            TypeComposition clz = frame.getArgumentClass(f_nValue1);
-            assert (clz == frame.getArgumentClass(f_nValue2));
+            TypeComposition clz1 = frame.getArgumentClass(f_nValue1);
+            TypeComposition clz2 = frame.getArgumentClass(f_nValue2);
+            if (clz1 != clz2)
+                {
+                // this should've not compiled
+                throw new IllegalStateException();
+                }
 
-            ComparisonSupport template = (ComparisonSupport) clz.f_template;
+            int iResult = clz1.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL);
+            if (iResult == R_EXCEPTION)
+                {
+                return R_EXCEPTION;
+                }
+
+            JavaLong hResult = (JavaLong) frame.getFrameLocal();
 
             frame.assignValue(f_nRetValue,
-                    template.compare(hValue1, hValue2) > 0 ?
-                            xBoolean.TRUE : xBoolean.FALSE);
+                    xBoolean.makeHandle(hResult.getValue() > 0)); // cannot fail
             return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)

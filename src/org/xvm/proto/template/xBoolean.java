@@ -56,6 +56,11 @@ public class xBoolean
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
 
+    public static BooleanHandle makeHandle(boolean f)
+        {
+        return f ? TRUE : FALSE;
+        }
+
     public static class BooleanHandle
                 extends JavaLong
         {

@@ -16,15 +16,18 @@ import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.UnionTypeConstant;
+
+import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xArray;
+import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
+import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xService;
@@ -658,32 +661,130 @@ public abstract class ClassTemplate
         return null;
         }
 
-    // compare two object handles that both belong to the specified class for equality
-    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
+    // ----- support for equality and comparison ------
+
+    // compare for equality two object handles that both belong to the specified class
+    // return R_NEXT or R_EXCEPTION
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
+        // if there is an "equals" function, we need to call it
+        MethodStructure functionEquals = getMethod("equals", new String[] {f_sName, f_sName}, BOOLEAN);
+        if (functionEquals != null && functionEquals.isStatic())
+            {
+            return frame.call1(functionEquals, null,
+                    new ObjectHandle[]{hValue1, hValue2}, iReturn);
+            }
+
         ClassStructure struct = f_struct;
 
-        if (struct.getFormat() == Component.Format.ENUMVALUE)
+        if (struct.getFormat() != Component.Format.CONST)
             {
-            return hValue1 == hValue2;
+            // only const classes have an automatic implementations
+            return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
             }
 
         GenericHandle hV1 = (GenericHandle) hValue1;
         GenericHandle hV2 = (GenericHandle) hValue2;
 
-        return struct.children().stream().
-               filter(comp -> comp instanceof PropertyStructure).
-               allMatch(comp ->
-                   {
-                   PropertyStructure property = (PropertyStructure) comp;
-                   TypeComposition classProp = clazz.resolve(property.getType());
+        for (Component comp : struct.children())
+            {
+            if (comp instanceof PropertyStructure)
+                {
+                PropertyStructure property = (PropertyStructure) comp;
+                if (isReadOnly(property))
+                    {
+                    continue;
+                    }
 
-                   String sProp = property.getName();
-                   ObjectHandle h1 = hV1.getField(sProp);
-                   ObjectHandle h2 = hV2.getField(sProp);
-                   // TODO: null
-                   return classProp.callEquals(h1, h2);
-                   });
+                String sProp = property.getName();
+                ObjectHandle h1 = hV1.getField(sProp);
+                ObjectHandle h2 = hV2.getField(sProp);
+
+                if (h1 == null || h2 == null)
+                    {
+                    frame.m_hException = xException.makeHandle("Unassigned property " + sProp);
+                    return Op.R_EXCEPTION;
+                    }
+
+                TypeComposition classProp = clazz.resolve(property.getType());
+
+                int iRet = classProp.callEquals(frame, h1, h2, Frame.RET_LOCAL);
+                if (iRet == Op.R_EXCEPTION)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+
+                ObjectHandle hResult = frame.getFrameLocal();
+                if (hResult == xBoolean.FALSE)
+                    {
+                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    }
+                }
+            }
+        return frame.assignValue(iReturn, xBoolean.TRUE);
+        }
+
+    // compare for order two object handles that both belong to the specified class
+    // return R_NEXT or R_EXCEPTION
+    public int callCompare(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        // if there is an "compare" function, we need to call it
+        MethodStructure functionCompare = getMethod("compare", new String[] {f_sName, f_sName}, INT);
+        if (functionCompare != null && functionCompare.isStatic())
+            {
+            return frame.call1(functionCompare, null,
+                    new ObjectHandle[]{hValue1, hValue2}, iReturn);
+            }
+
+        ClassStructure struct = f_struct;
+
+        if (struct.getFormat() != Component.Format.CONST)
+            {
+            // only const classes have an automatic implementations
+            return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
+            }
+
+        GenericHandle hV1 = (GenericHandle) hValue1;
+        GenericHandle hV2 = (GenericHandle) hValue2;
+
+        for (Component comp : struct.children())
+            {
+            if (comp instanceof PropertyStructure)
+                {
+                PropertyStructure property = (PropertyStructure) comp;
+                if (isReadOnly(property))
+                    {
+                    continue;
+                    }
+
+                String sProp = property.getName();
+                ObjectHandle h1 = hV1.getField(sProp);
+                ObjectHandle h2 = hV2.getField(sProp);
+
+                if (h1 == null || h2 == null)
+                    {
+                    frame.m_hException = xException.makeHandle("Unassigned property " + sProp);
+                    return Op.R_EXCEPTION;
+                    }
+
+                TypeComposition classProp = clazz.resolve(property.getType());
+
+                int iRet = classProp.callCompare(frame, h1, h2, Frame.RET_LOCAL);
+                if (iRet == Op.R_EXCEPTION)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+
+                JavaLong hResult = (JavaLong) frame.getFrameLocal();
+                if (hResult.getValue() != 0)
+                    {
+                    return frame.assignValue(iReturn, hResult);
+                    }
+                }
+            }
+        return frame.assignValue(iReturn, xInt64.makeHandle(0));
         }
 
     // ----- Op-code support: array operations -----
@@ -867,5 +968,6 @@ public abstract class ClassTemplate
 
     public static String[] VOID = new String[0];
     public static String[] INT = new String[]{"Int64"};
+    public static String[] BOOLEAN = new String[]{"Boolean"};
     public static String[] STRING = new String[]{"String"};
     }

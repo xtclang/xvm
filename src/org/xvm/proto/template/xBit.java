@@ -3,6 +3,8 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.IntConstant;
+
+import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
@@ -37,11 +39,22 @@ public class xBit
         }
 
     @Override
-    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;
 
-        return h1.getValue() == h2.getValue();
+        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue() == h2.getValue()));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(h1.getValue() - h2.getValue()));
         }
     }

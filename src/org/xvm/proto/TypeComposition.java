@@ -5,8 +5,8 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.constants.CharStringConstant;
 
+import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
@@ -23,7 +23,10 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * TypeComposition represents a fully resolved class (e.g. ArrayList<String>)
+ * TypeComposition represents a fully resolved class (e.g. ArrayList<String>).
+ *
+ * NOTE: methods that rely on the associated ClassTemplate must be overridden by
+ *       the extended classes (UnionComposition, InterComposition and ConstComposition)
  *
  * @author gg 2017.02.23
  */
@@ -192,10 +195,8 @@ public class TypeComposition
         {
         if (constType instanceof ClassTypeConstant)
             {
-            if (f_template != null)
-                {
-                return f_template.resolve((ClassTypeConstant) constType, f_mapGenericActual);
-                }
+            assert f_template != null;
+            return f_template.resolve((ClassTypeConstant) constType, f_mapGenericActual);
             }
         else if (constType instanceof ParameterTypeConstant)
             {
@@ -208,12 +209,6 @@ public class TypeComposition
             }
 
         return null;
-        }
-
-    // compare two object handles that both belong to this class for equality
-    public boolean callEquals(ObjectHandle hValue1, ObjectHandle hValue2)
-        {
-        return f_template != null && f_template.callEquals(this, hValue1, hValue2);
         }
 
     // retrieve the actual type for the specified formal parameter name
@@ -303,12 +298,12 @@ public class TypeComposition
         MethodConstant constMethod = method.getIdentityConstant();
 
         List<MethodStructure> listMethods = m_mapMethods.computeIfAbsent(constMethod, cm ->
-            {
-            Component container = method.getParent().getParent();
-            return container instanceof PropertyStructure ?
-                    collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
-                    collectMethodCallChain(cm, new LinkedList<>());
-            });
+        {
+        Component container = method.getParent().getParent();
+        return container instanceof PropertyStructure ?
+                collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
+                collectMethodCallChain(cm, new LinkedList<>());
+        });
 
         for (int i = 0, c = listMethods.size(); i < c - 1; i++)
             {
@@ -325,8 +320,7 @@ public class TypeComposition
     protected List<MethodStructure> collectAccessorCallChain(
             String sPropName, MethodConstant constMethod, List<MethodStructure> list)
         {
-        ClassTemplate template = f_template;
-        PropertyStructure property = template.getProperty(sPropName);
+        PropertyStructure property = f_template.getProperty(sPropName);
 
         if (property != null)
             {
@@ -367,6 +361,22 @@ public class TypeComposition
             }
 
         return null;
+        }
+
+    // ---- support for op-codes that require class specific information -----
+
+    // compare for equality (==) two object handles that both belong to this class
+    // return R_NEXT or R_EXCEPTION
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return f_template.callEquals(frame, this, hValue1, hValue2, iReturn);
+        }
+
+    // compare for order (<=>) two object handles that both belong to this class
+    // return R_NEXT or R_EXCEPTION
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return f_template.callCompare(frame, this, hValue1, hValue2, iReturn);
         }
 
     @Override

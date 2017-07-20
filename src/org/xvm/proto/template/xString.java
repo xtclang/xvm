@@ -21,7 +21,6 @@ import org.xvm.proto.TypeSet;
  */
 public class xString
         extends ClassTemplate
-        implements ComparisonSupport
     {
     public static xString INSTANCE;
 
@@ -48,15 +47,6 @@ public class xString
         {
         return constant instanceof CharStringConstant ? new StringHandle(f_clazzCanonical,
                 ((CharStringConstant) constant).getValue()) : null;
-        }
-
-    @Override
-    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
-        {
-        StringHandle h1 = (StringHandle) hValue1;
-        StringHandle h2 = (StringHandle) hValue2;
-
-        return h1.getValue().equals(h2.getValue());
         }
 
     @Override
@@ -164,15 +154,28 @@ public class xString
         return frame.assignValue(iReturn, makeHandle(hThis.m_sValue + hThat.m_sValue));
         }
 
-    // ----- ComparisonSupport -----
+    // ----- comparison support -----
 
     @Override
-    public int compare(ObjectHandle hValue1, ObjectHandle hValue2)
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         StringHandle h1 = (StringHandle) hValue1;
         StringHandle h2 = (StringHandle) hValue2;
 
-        return h1.getValue().compareTo(h2.getValue());
+        return frame.assignValue(iReturn,
+                xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        StringHandle h1 = (StringHandle) hValue1;
+        StringHandle h2 = (StringHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+                xInt64.makeHandle(h1.getValue().compareTo(h2.getValue())));
         }
 
     public static class StringHandle

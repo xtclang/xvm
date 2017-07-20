@@ -125,7 +125,7 @@ public class xArray
         }
 
     @Override
-    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
+    public int callEquals(Frame frame, TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         GenericArrayHandle h1 = (GenericArrayHandle) hValue1;
         GenericArrayHandle h2 = (GenericArrayHandle) hValue2;
@@ -135,7 +135,7 @@ public class xArray
 
         if (ah1.length != ah2.length)
             {
-            return false;
+            return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
         Type type1 = getElementType(h1, 0);
@@ -144,17 +144,24 @@ public class xArray
         TypeComposition clazzEl = type1.f_clazz;
         if (clazzEl == null || clazzEl != type2.f_clazz)
             {
-            return false;
+            return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
         for (int i = 0, c = ah1.length; i < c; i++)
             {
-            if (!clazzEl.callEquals(ah1[i], ah2[i]))
+            int iRet = clazzEl.callEquals(frame, h1, h2, Frame.RET_LOCAL);
+            if (iRet == Op.R_EXCEPTION)
                 {
-                return false;
+                return Op.R_EXCEPTION;
+                }
+
+            ObjectHandle hResult = frame.getFrameLocal();
+            if (hResult == xBoolean.FALSE)
+                {
+                return frame.assignValue(iReturn, xBoolean.FALSE);
                 }
             }
-        return true;
+        return frame.assignValue(iReturn, xBoolean.TRUE);
         }
 
     // ----- IndexSupport methods -----
