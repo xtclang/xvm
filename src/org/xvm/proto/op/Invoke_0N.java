@@ -1,8 +1,14 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
-import org.xvm.proto.*;
+
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.Utils;
+
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
 
@@ -11,7 +17,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * rvalue-target, CONST-METHOD, #returns:(lvalue)
+ * INVOKE_0N rvalue-target, CONST-METHOD, #returns:(lvalue)
  *
  * @author gg 2017.03.08
  */
@@ -52,7 +58,6 @@ public class Invoke_0N extends OpInvocable
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-
             if (hTarget == null)
                 {
                 return R_REPEAT;

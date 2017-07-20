@@ -1,8 +1,13 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
-import org.xvm.proto.*;
+
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
+
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
 
@@ -11,7 +16,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * INVOKE_1T  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return-tuple
+ * INVOKE_1T rvalue-target, CONST-METHOD, rvalue-param, lvalue-return-tuple
  *
  * @author gg 2017.03.08
  */
@@ -43,7 +48,7 @@ public class Invoke_1T extends OpInvocable
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_INVOKE_T1);
+        out.write(OP_INVOKE_1T);
         out.writeInt(f_nTargetValue);
         out.writeInt(f_nMethodId);
         out.writeInt(f_nArgValue);
@@ -58,7 +63,7 @@ public class Invoke_1T extends OpInvocable
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
 
-            if ((hTarget == null) || (hArg == null))
+            if (hTarget == null || hArg == null)
                 {
                 return R_REPEAT;
                 }
@@ -68,7 +73,7 @@ public class Invoke_1T extends OpInvocable
 
             if (frame.f_adapter.isNative(method))
                 {
-                return clz.f_template.invokeNativeN(frame, method, hTarget, new ObjectHandle[]{hArg}, f_nTupleRetValue);
+                return clz.f_template.invokeNative1(frame, method, hTarget, hArg, -f_nTupleRetValue - 1);
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
@@ -76,11 +81,10 @@ public class Invoke_1T extends OpInvocable
 
             if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
-                return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, f_nTupleRetValue);
+                return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, -f_nTupleRetValue - 1);
                 }
 
-
-            return frame.call1(method, hTarget, ahVar, f_nTupleRetValue);
+            return frame.call1(method, hTarget, ahVar, -f_nTupleRetValue - 1);
             }
         catch (ExceptionHandle.WrapperException e)
             {
