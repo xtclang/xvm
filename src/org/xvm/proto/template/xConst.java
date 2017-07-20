@@ -21,4 +21,5 @@ public class xConst
     public void initDeclared()
         {
         }
+
     }

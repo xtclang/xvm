@@ -301,7 +301,7 @@ public abstract class Op
                 list.add(new IsNull(in));
                 break;
             case OP_IS_NNULL:
-                list.add(new IsNNull(in));
+                list.add(new IsNotNull(in));
                 break;
             case OP_IS_EQ:
                 list.add(new IsEq(in));

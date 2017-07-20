@@ -87,13 +87,13 @@ public class Invoke_T1 extends OpInvocable
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-            System.arraycopy(ahArg, 0, ahVar, 1, ahArg.length);
+
+            System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
 
             if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
                 return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, f_nRetValue);
                 }
-
 
             return frame.call1(method, hTarget, ahVar, f_nRetValue);
             }

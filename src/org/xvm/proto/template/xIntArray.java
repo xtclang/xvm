@@ -38,15 +38,6 @@ public class xIntArray
         }
 
     @Override
-    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
-        {
-        IntArrayHandle h1 = (IntArrayHandle) hValue1;
-        IntArrayHandle h2 = (IntArrayHandle) hValue2;
-
-        return Arrays.equals(h1.m_alValue, h2.m_alValue);
-        }
-
-    @Override
     public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException
         {
@@ -109,6 +100,17 @@ public class xIntArray
 
         return frame.assignValue(iReturn,
                 xInt64.makeHandle(++hArray.m_alValue[(int) lIndex]));
+        }
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        IntArrayHandle h1 = (IntArrayHandle) hValue1;
+        IntArrayHandle h2 = (IntArrayHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+                xBoolean.makeHandle(Arrays.equals(h1.m_alValue, h2.m_alValue)));
         }
 
     public static IntArrayHandle makeIntArrayInstance(long cCapacity)

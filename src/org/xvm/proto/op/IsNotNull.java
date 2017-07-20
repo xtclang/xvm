@@ -17,18 +17,18 @@ import java.io.IOException;
  *
  * @author gg 2017.03.08
  */
-public class IsNNull extends Op
+public class IsNotNull extends Op
     {
     private final int f_nValue;
     private final int f_nRetValue;
 
-    public IsNNull(int nValue, int nRet)
+    public IsNotNull(int nValue, int nRet)
         {
         f_nValue = nValue;
         f_nRetValue = nRet;
         }
 
-    public IsNNull(DataInput in)
+    public IsNotNull(DataInput in)
             throws IOException
         {
         f_nValue = in.readInt();

@@ -6,8 +6,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.xBoolean;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -65,13 +63,11 @@ public class IsEq extends Op
             TypeComposition clz2 = frame.getArgumentClass(f_nValue2);
             if (clz1 != clz2)
                 {
-                // TODO: this would not compile; assert?
-                frame.assignValue(f_nRetValue, xBoolean.FALSE);
+                // this should've not compiled
+                throw new IllegalStateException();
                 }
 
-            frame.assignValue(f_nRetValue, clz1.callEquals(hValue1, hValue2)
-                    ? xBoolean.TRUE : xBoolean.FALSE);
-            return iPC + 1;
+            return clz1.callEquals(frame, hValue1, hValue2, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

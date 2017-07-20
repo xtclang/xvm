@@ -5,8 +5,15 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.proto.*;
+
+import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.Op;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -15,7 +22,6 @@ import org.xvm.proto.ObjectHandle.JavaLong;
  */
 public class xInt64
         extends ClassTemplate
-        implements ComparisonSupport
     {
     public static xInt64 INSTANCE;
 
@@ -26,6 +32,8 @@ public class xInt64
         if (fInstance)
             {
             INSTANCE = this;
+
+            // TODO: cache some often used numbers
             }
         }
 
@@ -40,15 +48,6 @@ public class xInt64
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
             (((IntConstant) constant).getValue().getLong())) : null;
-        }
-
-    @Override
-    public boolean callEquals(TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2)
-        {
-        JavaLong h1 = (JavaLong) hValue1;
-        JavaLong h2 = (JavaLong) hValue2;
-
-        return h1.getValue() == h2.getValue();
         }
 
     @Override
@@ -84,11 +83,6 @@ public class xInt64
         // TODO: check overflow
         ObjectHandle hResult = makeHandle(-hThis.getValue());
         return frame.assignValue(iReturn, hResult);
-        }
-
-    public static JavaLong makeHandle(long lValue)
-        {
-        return new JavaLong(INSTANCE.f_clazzCanonical, lValue);
         }
 
     @Override
@@ -131,14 +125,30 @@ public class xInt64
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    // ----- ComparisonSupport -----
+    // ----- comparison support -----
 
     @Override
-    public int compare(ObjectHandle hValue1, ObjectHandle hValue2)
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;
 
-        return (int) (h1.getValue() - h2.getValue());
+        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue() == h2.getValue()));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return frame.assignValue(iReturn, makeHandle(h1.getValue() - h2.getValue()));
+        }
+
+    public static JavaLong makeHandle(long lValue)
+        {
+        return new JavaLong(INSTANCE.f_clazzCanonical, lValue);
         }
     }
