@@ -38,7 +38,7 @@ public class Frame
     public final ObjectHandle[] f_ahVar;        // arguments/local var registers
     public final VarInfo[]      f_aInfo;        // optional info for var registers
     public final int            f_iReturn;      // an index for a single return value;
-                                                // a negative value below -65000 indicates an
+                                                // a negative value below RET_LOCAL indicates an
                                                 // automatic tuple conversion into a (-i-1) register
     public final int[]          f_aiReturn;     // indexes for multiple return values
     public final Frame          f_framePrev;    // the caller's frame

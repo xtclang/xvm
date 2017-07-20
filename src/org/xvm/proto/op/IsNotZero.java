@@ -4,6 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.Op;
+
 import org.xvm.proto.template.xBoolean;
 
 import java.io.DataInput;
@@ -54,8 +55,7 @@ public class IsNotZero extends Op
                 return R_REPEAT;
                 }
 
-            frame.assignValue(f_nRetValue, hValue.getValue() == 0 ?
-                            xBoolean.FALSE : xBoolean.TRUE);
+            frame.assignValue(f_nRetValue, xBoolean.makeHandle(hValue.getValue() != 0));
             return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)

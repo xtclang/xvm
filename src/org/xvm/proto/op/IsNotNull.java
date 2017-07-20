@@ -56,8 +56,7 @@ public class IsNotNull extends Op
                 return R_REPEAT;
                 }
 
-            frame.assignValue(f_nRetValue, hValue != xNullable.NULL ?
-                            xBoolean.TRUE : xBoolean.FALSE);
+            frame.assignValue(f_nRetValue, xBoolean.makeHandle(hValue != xNullable.NULL));
             return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)
