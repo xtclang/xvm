@@ -3,12 +3,10 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xEnum.EnumHandle;
 import org.xvm.proto.template.xOrdered;
 

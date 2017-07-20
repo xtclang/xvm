@@ -25,7 +25,7 @@ module Ecstasy.xtclang.org
     enum Nullable { Null }
 
     /**
-     * The Ordered enumeration describes the result of comparing two items for the prurpose of
+     * The Ordered enumeration describes the result of comparing two items for the purpose of
      * ordering.
      */
     enum Ordered(String symbol) { Lesser("<"), Equal("="), Greater(">") }
