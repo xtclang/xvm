@@ -257,7 +257,7 @@ public abstract class Component
 
     /**
      * Specify whether or not the component is abstract.
-     * 
+     *
      * @param fAbstract  true to specify the component is abstract; false otherwise
      */
     public void setAbstract(boolean fAbstract)
@@ -270,7 +270,7 @@ public abstract class Component
             markModified();
             }
         }
-    
+
     /**
      * @return true iff the component is marked as static
      */
@@ -521,7 +521,7 @@ public abstract class Component
         Map<String, Component> map = m_childByName;
         if (map == null)
             {
-            map = new HashMap<>(7);
+            map = new ListMap<>();
 
             // store the map on every one of the siblings (including this component)
             for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
@@ -1950,7 +1950,7 @@ public abstract class Component
     public enum Composition
         {
         /**
-         * Represents an annotation. 
+         * Represents an annotation.
          * <p/>
          * The constant is a ClassTypeConstant. (It could be a ClassConstant, but ClassTypeConstant
          * was selected to keep it compatible with the other compositions.) An annotation has

@@ -8,6 +8,9 @@ import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xBoolean;
+import org.xvm.proto.template.xEnum;
+import org.xvm.proto.template.xEnum.EnumHandle;
+import org.xvm.proto.template.xOrdered;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -76,10 +79,10 @@ public class IsGt extends Op
                 return R_EXCEPTION;
                 }
 
-            JavaLong hResult = (JavaLong) frame.getFrameLocal();
+            EnumHandle hResult = (EnumHandle) frame.getFrameLocal();
 
             frame.assignValue(f_nRetValue,
-                    xBoolean.makeHandle(hResult.getValue() > 0)); // cannot fail
+                    xBoolean.makeHandle(hResult == xOrdered.GREATER));
             return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)

@@ -144,7 +144,7 @@ public class xInt64
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;
 
-        return frame.assignValue(iReturn, makeHandle(h1.getValue() - h2.getValue()));
+        return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue() - h2.getValue()));
         }
 
     public static JavaLong makeHandle(long lValue)

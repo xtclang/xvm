@@ -175,7 +175,7 @@ public class xString
         StringHandle h2 = (StringHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xInt64.makeHandle(h1.getValue().compareTo(h2.getValue())));
+                xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
         }
 
     public static class StringHandle

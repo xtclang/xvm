@@ -24,11 +24,14 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xArray;
 import org.xvm.proto.template.xBoolean;
+import org.xvm.proto.template.xEnum;
+import org.xvm.proto.template.xEnum.EnumHandle;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xObject;
+import org.xvm.proto.template.xOrdered;
 import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xType;
@@ -680,7 +683,8 @@ public abstract class ClassTemplate
 
         if (struct.getFormat() != Component.Format.CONST)
             {
-            // only const classes have an automatic implementations
+            // only const classes have an automatic implementation;
+            // for everyone else it's a ref equality
             return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
             }
 
@@ -731,7 +735,8 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = getMethod("compare", new String[] {f_sName, f_sName}, INT);
+        MethodStructure functionCompare = getMethod("compare",
+                new String[] {f_sName, f_sName}, new String[] {"Ordered"});
         if (functionCompare != null && functionCompare.isStatic())
             {
             return frame.call1(functionCompare, null,
@@ -740,10 +745,21 @@ public abstract class ClassTemplate
 
         ClassStructure struct = f_struct;
 
-        if (struct.getFormat() != Component.Format.CONST)
+        // only Const and Enum classes have automatic implementations
+        switch (struct.getFormat())
             {
-            // only const classes have an automatic implementations
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
+            default:
+                throw new IllegalStateException();
+
+            case ENUMVALUE:
+                EnumHandle hV1 = (EnumHandle) hValue1;
+                EnumHandle hV2 = (EnumHandle) hValue2;
+
+                return frame.assignValue(iReturn,
+                        xOrdered.makeHandle(hV1.getValue() - hV2.getValue()));
+
+            case CONST:
+                break;
             }
 
         GenericHandle hV1 = (GenericHandle) hValue1;
@@ -777,14 +793,14 @@ public abstract class ClassTemplate
                     return Op.R_EXCEPTION;
                     }
 
-                JavaLong hResult = (JavaLong) frame.getFrameLocal();
-                if (hResult.getValue() != 0)
+                EnumHandle hResult = (EnumHandle) frame.getFrameLocal();
+                if (hResult != xOrdered.EQUAL)
                     {
                     return frame.assignValue(iReturn, hResult);
                     }
                 }
             }
-        return frame.assignValue(iReturn, xInt64.makeHandle(0));
+        return frame.assignValue(iReturn, xOrdered.EQUAL);
         }
 
     // ----- Op-code support: array operations -----

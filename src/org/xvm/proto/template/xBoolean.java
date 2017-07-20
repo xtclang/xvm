@@ -2,13 +2,12 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+
 import org.xvm.asm.constants.ClassTypeConstant;
 
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
-import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -17,21 +16,21 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xBoolean
-        extends ClassTemplate
+        extends xEnum
     {
+    public static BooleanHandle TRUE;
+    public static BooleanHandle FALSE;
+
     public xBoolean(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(types, structure, fInstance);
         }
 
     @Override
     public void initDeclared()
         {
-        TypeComposition clzTrue = f_types.getTemplate("Boolean.True").f_clazzCanonical;
-        TypeComposition clzFalse = f_types.getTemplate("Boolean.False").f_clazzCanonical;
-
-        TRUE = new BooleanHandle(clzTrue, true);
-        FALSE = new BooleanHandle(clzFalse, false);
+        FALSE = new BooleanHandle(f_clazzCanonical, false);
+        TRUE = new BooleanHandle(f_clazzCanonical, true);
         }
 
     @Override
@@ -41,20 +40,17 @@ public class xBoolean
             {
             ClassTypeConstant constClass = (ClassTypeConstant) constant;
             String sName = constClass.getClassConstant().getName();
-            if (sName.equals("True"))
-                {
-                return TRUE;
-                }
             if (sName.equals("False"))
                 {
                 return FALSE;
                 }
+            if (sName.equals("True"))
+                {
+                return TRUE;
+                }
             }
         return null;
         }
-
-    public static BooleanHandle TRUE;
-    public static BooleanHandle FALSE;
 
     public static BooleanHandle makeHandle(boolean f)
         {
@@ -62,7 +58,7 @@ public class xBoolean
         }
 
     public static class BooleanHandle
-                extends JavaLong
+                extends EnumHandle
         {
         BooleanHandle(TypeComposition clz, boolean f)
             {
@@ -77,7 +73,7 @@ public class xBoolean
         @Override
         public String toString()
             {
-            return m_lValue > 0 ? "true" : "false";
+            return m_lValue == 0 ? "false" : "true";
             }
         }
     }

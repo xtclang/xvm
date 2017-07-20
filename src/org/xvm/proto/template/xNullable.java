@@ -2,8 +2,13 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+
 import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.proto.*;
+
+import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.ObjectHeap;
+import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 /**
  * TODO:
@@ -11,11 +16,11 @@ import org.xvm.proto.*;
  * @author gg 2017.02.27
  */
 public class xNullable
-        extends ClassTemplate
+        extends xEnum
     {
     public xNullable(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(types, structure, fInstance);
         }
 
     @Override

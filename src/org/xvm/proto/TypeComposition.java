@@ -382,6 +382,7 @@ public class TypeComposition
     @Override
     public String toString()
         {
-        return f_template.f_sName + Utils.formatArray(f_mapGenericActual.values().toArray(), "<", ">", ", ");
+        return f_template.f_sName +
+                Utils.formatArray(f_mapGenericActual.values().toArray(), "<", ">", ", ");
         }
     }
