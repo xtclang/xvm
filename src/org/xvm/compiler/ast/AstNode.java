@@ -348,8 +348,7 @@ public abstract class AstNode
         }
 
     /**
-     * From this node up (until a file barrier is reached), see if one of the parents knows an
-     * import by the specified name.
+     * Determine if this particular node has an import registered on it of the specified name.
      *
      * @param sName  a simple name
      *
