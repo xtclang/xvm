@@ -9,6 +9,8 @@ import java.util.Map;
 
 import org.xvm.asm.Component;
 
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
@@ -133,6 +135,8 @@ public class StatementBlock
                         }
                     }
                 }
+
+            node = node.getParent();
             }
 
         imports.put(stmt.getAliasName(), stmt);
@@ -189,6 +193,25 @@ public class StatementBlock
 
 
     // ----- compile phases ------------------------------------------------------------------------
+
+
+    // ----- name resolution -----------------------------------------------------------------------
+
+    @Override
+    protected ImportStatement resolveImportBySingleName(String sName)
+        {
+        // if this is a synthetic block statement that acts as a collection of multiple files, then
+        // the search for the import has just crossed a file boundary, and nothing was found
+        if (isFileBoundary())
+            {
+            return null;
+            }
+
+        ImportStatement stmtImport = getImport(sName);
+        return stmtImport == null
+                ? super.resolveImportBySingleName(sName)
+                : stmtImport;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------

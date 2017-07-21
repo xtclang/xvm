@@ -11,12 +11,12 @@ import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
-
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.UnresolvedClassConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
+
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
@@ -55,21 +55,6 @@ public abstract class ComponentStatement
     protected void setComponent(Component component)
         {
         this.component = component;
-        }
-
-    @Override
-    protected IdentityConstant resolveParentBySingleName(String sName)
-        {
-        IdentityConstant constant = super.resolveParentBySingleName(sName);
-        if (constant == null && component != null)
-            {
-            if (component.getName().equals(sName) || (component instanceof ModuleStructure &&
-                    ((ModuleStructure) component).getModuleConstant().getUnqualifiedName().equals(sName)))
-                {
-                constant = component.getIdentityConstant();
-                }
-            }
-        return constant;
         }
 
     @Override
@@ -112,6 +97,24 @@ public abstract class ComponentStatement
             {
             listRevisit.add(this);
             }
+        }
+
+
+    // ----- name resolution -----------------------------------------------------------------------
+
+    @Override
+    protected IdentityConstant resolveParentBySingleName(String sName)
+        {
+        IdentityConstant constant = super.resolveParentBySingleName(sName);
+        if (constant == null && component != null)
+            {
+            if (component.getName().equals(sName) || (component instanceof ModuleStructure &&
+                    ((ModuleStructure) component).getModuleConstant().getUnqualifiedName().equals(sName)))
+                {
+                constant = component.getIdentityConstant();
+                }
+            }
+        return constant;
         }
 
     private boolean resolveConstants(Component component, ErrorListener errs)
@@ -179,6 +182,7 @@ public abstract class ComponentStatement
             else if (constantUnknown instanceof UnresolvedNameConstant)
                 {
                 UnresolvedNameConstant constant = (UnresolvedNameConstant) constantUnknown;
+// TODO
                 IdentityConstant       constId  = (IdentityConstant) resolveFirstName(constant.getName(0));
                 for (int i = 1, c = constant.getNameCount(); i < c; ++i)
                     {

@@ -63,4 +63,52 @@ public abstract class TypeExpression
         {
         return new ClassTypeConstant(pool, asUnresolvedClassConstant(pool), Constants.Access.PUBLIC);
         }
+
+    /**
+     * Obtain the TypeConstant currently associated with this TypeExpression, creating an unresolved
+     * TypeConstant if necessary.
+     *
+     * @return a TypeConstant
+     */
+    public TypeConstant ensureTypeConstant()
+        {
+        TypeConstant constType = getTypeConstant();
+        if (constType == null)
+            {
+            constType = asUnresolvedTypeConstant(getComponent().getConstantPool());
+            setTypeConstant(constType);
+            }
+        return constType;
+        }
+
+    /**
+     * @return the TypeConstant currently associated with this TypeExpression, or null
+     */
+    public TypeConstant getTypeConstant()
+        {
+        TypeConstant constType = m_constType;
+        if (constType instanceof UnresolvedTypeConstant)
+            {
+            TypeConstant constResolved = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+            if (constResolved != null)
+                {
+                constType = constResolved;
+                setTypeConstant(constType);
+                }
+            }
+        return constType;
+        }
+
+    /**
+     * @param constType  the TypeConstant to associate with this TypeExpression
+     */
+    protected void setTypeConstant(TypeConstant constType)
+        {
+        m_constType = constType;
+        }
+
+    /**
+     * The TypeConstant currently associated with this TypeExpression.
+     */
+    private TypeConstant m_constType;
     }

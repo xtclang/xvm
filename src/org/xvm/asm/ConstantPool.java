@@ -705,15 +705,69 @@ public class ConstantPool
         }
 
     /**
+     * TODO
+     *
+     * @param constType
+     *
+     * @return
+     */
+    public ImmutableTypeConstant ensureImmutableTypeConstant(TypeConstant constType)
+        {
+        ImmutableTypeConstant constant;
+        if (constType instanceof ImmutableTypeConstant)
+            {
+            constant = (ImmutableTypeConstant) constType;
+            }
+        else
+            {
+            constant = (ImmutableTypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
+            if (constant != null)
+                {
+                return constant;
+                }
+
+            constant = new ImmutableTypeConstant(this, constType);
+            }
+
+        return (ImmutableTypeConstant) register(constant);
+        }
+
+    /**
+     * TODO
+     *
+     * @param constType1
+     * @param constType2
+     *
+     * @return
+     */
+    public IntersectionTypeConstant ensureIntersectionTypeConstant(TypeConstant constType1, TypeConstant constType2)
+        {
+        return (IntersectionTypeConstant) register(new IntersectionTypeConstant(this, constType1, constType2));
+        }
+
+    /**
+     * TODO
+     *
+     * @param constType1
+     * @param constType2
+     *
+     * @return
+     */
+    public UnionTypeConstant ensureUnionTypeConstant(TypeConstant constType1, TypeConstant constType2)
+        {
+        return (UnionTypeConstant) register(new UnionTypeConstant(this, constType1, constType2));
+        }
+
+    /**
      * Create a new TypeConstant whose exact type will eventually be resolved.
      *
-     * @param sType  the String representation of the type
+     * @param oType  some opaque representation of the type
      *
      * @return a new TypeConstant
      */
-    public UnresolvedTypeConstant createUnresolvedTypeConstant(String sType)
+    public UnresolvedTypeConstant createUnresolvedTypeConstant(Object oType)
         {
-        return new UnresolvedTypeConstant(this, sType);
+        return new UnresolvedTypeConstant(this, oType);
         }
 
 

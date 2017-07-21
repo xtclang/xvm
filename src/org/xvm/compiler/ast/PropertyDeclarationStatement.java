@@ -121,7 +121,7 @@ public class PropertyDeclarationStatement
                 // if (container.getProperty(sName) != null) ...
 
                 ConstantPool      pool      = container.getConstantPool();
-                TypeConstant      constType = pool.createUnresolvedTypeConstant(type.toString());
+                TypeConstant      constType = pool.createUnresolvedTypeConstant(type);
                 PropertyStructure prop      = container.createProperty(isStatic(), getDefaultAccess(),
                                                                        constType, sName);
                 setComponent(prop);

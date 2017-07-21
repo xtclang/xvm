@@ -662,7 +662,7 @@ public class TypeCompositionStatement
                             TypeExpression exprType  = param.getType();
                             TypeConstant   constType = exprType == null
                                     ? pool.ensureEcstasyClassConstant("Object").asTypeConstant()
-                                    : pool.createUnresolvedTypeConstant(exprType.toString());
+                                    : pool.createUnresolvedTypeConstant(exprType);
                             component.addTypeParam(sParam, constType);
                             }
                         }

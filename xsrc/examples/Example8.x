@@ -300,3 +300,10 @@ if (!C1 & !C2)
         extends B2
         implements I2
     }
+
+
+// import expansion
+
+import a.b.c; // c -> a.b.c
+import c.d.e; // e -> a.b.c.d.e
+

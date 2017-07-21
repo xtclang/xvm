@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -208,6 +207,29 @@ public abstract class AstNode
                 : parent.getDefaultAccess();
         }
 
+    /**
+     * Helper to log an error related to this AstNode.
+     *
+     * @param errs        the ErrorListener to log to
+     * @param severity    the severity level of the error; one of
+     *                    {@link Severity#INFO}, {@link Severity#WARNING},
+     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
+     * @param sCode       the error code that identifies the error message
+     * @param aoParam     the parameters for the error message; may be null
+     *
+     * @return true to attempt to abort the process that reported the error, or
+     *         false to attempt continue the process
+     */
+    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam)
+        {
+        Source source = getSource();
+        return errs == null
+                ? severity.ordinal() >= Severity.ERROR.ordinal()
+                : errs.log(severity, sCode, aoParam, source,
+                        source == null ? 0L : getStartPosition(),
+                        source == null ? 0L : getEndPosition());
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -269,6 +291,18 @@ public abstract class AstNode
      */
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
+        assert stage.ordinal() <= Stage.Resolved.ordinal();
+
+        // if this node is a NameResolver, then make sure it resolves itself first
+        if (this instanceof NameResolver.NameResolving && stage.ordinal() < Stage.Resolved.ordinal())
+            {
+            NameResolver resolver = ((NameResolver.NameResolving) this).getNameResolver();
+            if (resolver != null && resolver.resolve(listRevisit, errs) == NameResolver.Result.DEFERRED)
+                {
+                return;
+                }
+            }
+
         // before resolving any children, mark this node as resolved, so that it is able to help
         // resolve things on requests from children
         stage = Stage.Resolved;
@@ -280,14 +314,6 @@ public abstract class AstNode
                 node.resolveNames(listRevisit, errs);
                 }
             }
-        }
-
-    /**
-     * @return true iff this AstNode should be able to resolve names
-     */
-    protected boolean canResolveName()
-        {
-        return stage.ordinal() >= Stage.Resolved.ordinal();
         }
 
     /**
@@ -305,71 +331,8 @@ public abstract class AstNode
             }
         }
 
-    /**
-     * Resolve a simple name.
-     * <p/>
-     * When evaluating a name, without any knowledge about the name, determine what the name refers
-     * to. In the case of a multi-part name, this specifically is the resolution of just the first
-     * part, i.e. up to the first dot.
-     * TODO conditional support, and possibly a CompositeConstant a la the CompositeComponent
-     *
-     * @param sName  the name to resolve
-     *
-     * @return the Constant that the name refers to
-     */
-    public Constant resolveFirstName(String sName)
-        {
-        // first see if one of the parents answers to that name (this ensures that we can always
-        // get to any global name by starting from the root)
-        Constant constant = resolveParentBySingleName(sName);
 
-        // next, walk up the AST tree, looking for that simple name. this has three sub-steps:
-        // 1) if the AST node is a statement block, then it may know an import by that name
-        // 2) if the AST node is a component statement, then the component may have a child by that
-        //    name
-        // 3) if the AST node is a component statement, then the component may know the name via one
-        //    or more of its compositions. if only by one, then that result is used. if by more than
-        //    one, then the results must all refer to the same thing, or the result is ambiguous,
-        //    and the name is unresolvable.
-        if (constant == null)
-            {
-            AstNode node = this;
-            while (node != null)
-                {
-                if (node instanceof StatementBlock)
-                    {
-                    ImportStatement stmt = ((StatementBlock) node).getImport(sName);
-                    if (stmt != null)
-                        {
-                        if (!stmt.canResolveName())
-                            {
-                            // TODO queue this resolve & return failure - need errs & retry list & a way to say "failure"
-                            }
-
-                        // the result can be determined by resolving the sequence of names
-                        // represented by the import
-                        // TODO = resolveFirstName(stmt.getQualifiedNamePart(0));
-                        // TODO need errs & retry list & a way to say "failure"
-                        }
-                    }
-                else if (node instanceof ComponentStatement)
-                    {
-                    ComponentStatement stmt = (ComponentStatement) node;
-                    // TODO name could reference a child
-                    }
-
-                node = node.getParent();
-                }
-            }
-
-        if (constant == null)
-            {
-            // implicit names
-            constant = getComponent().getConstantPool().ensureImplicitlyImportedIdentityConstant(sName);
-            }
-
-        return constant;
-        }
+    // ----- name resolution -----------------------------------------------------------------------
 
     /**
      * From the root down, see if one of the parents answers to the specified name.
@@ -385,26 +348,25 @@ public abstract class AstNode
         }
 
     /**
-     * Helper to log an error related to this AstNode.
+     * From this node up (until a file barrier is reached), see if one of the parents knows an
+     * import by the specified name.
      *
-     * @param errs        the ErrorListener to log to
-     * @param severity    the severity level of the error; one of
-     *                    {@link Severity#INFO}, {@link Severity#WARNING},
-     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
-     * @param sCode       the error code that identifies the error message
-     * @param aoParam     the parameters for the error message; may be null
+     * @param sName  a simple name
      *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt continue the process
+     * @return an ImportStatement, or null
      */
-    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam)
+    protected ImportStatement resolveImportBySingleName(String sName)
         {
-        Source source = getSource();
-        return errs == null
-                ? severity.ordinal() >= Severity.ERROR.ordinal()
-                : errs.log(severity, sCode, aoParam, source,
-                        source == null ? 0L : getStartPosition(),
-                        source == null ? 0L : getEndPosition());
+        AstNode parent = getParent();
+        return parent == null ? null : parent.resolveImportBySingleName(sName);
+        }
+
+    /**
+     * @return true iff this AstNode should be able to resolve names
+     */
+    protected boolean canResolveName()       // TODO need a better name for this? or delete this?
+        {
+        return stage.ordinal() >= Stage.Resolved.ordinal();
         }
 
 

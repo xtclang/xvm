@@ -1,9 +1,15 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
+
+import java.util.List;
+
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Token;
 
 
 /**
@@ -44,6 +50,30 @@ public class BiTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+            {
+            // resolve the sub-types
+            type1.resolveNames(listRevisit, errs);
+            type2.resolveNames(listRevisit, errs);
+
+            TypeConstant constType1 = type1.ensureTypeConstant();
+            TypeConstant constType2 = type2.ensureTypeConstant();
+
+            ConstantPool pool = getComponent().getConstantPool();
+            setTypeConstant(operator.getId() == Token.Id.ADD
+                    ? pool.ensureUnionTypeConstant(constType1, constType2)
+                    : pool.ensureIntersectionTypeConstant(constType1, constType2));
+
+            super.resolveNames(listRevisit, errs);
+            }
         }
 
 

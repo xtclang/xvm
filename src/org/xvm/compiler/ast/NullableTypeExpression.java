@@ -3,6 +3,14 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.List;
+
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.compiler.*;
+
+
 /**
  * A nullable type expression is a type expression followed by a question mark.
  *
@@ -42,6 +50,31 @@ public class NullableTypeExpression
         }
 
 
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+            {
+            // resolve the sub-type
+            type.resolveNames(listRevisit, errs);
+            TypeConstant constSub = type.ensureTypeConstant();
+
+            // obtain the Nullable type
+            ConstantPool pool = getComponent().getConstantPool();
+            TypeConstant constNullable = pool.ensureClassTypeConstant(
+                    pool.ensureEcstasyClassConstant(Constants.X_CLASS_NULLABLE),
+                    org.xvm.asm.Constants.Access.PUBLIC);
+
+            // store off the Nullable form of the sub-type
+            setTypeConstant(pool.ensureIntersectionTypeConstant(constNullable, constSub));
+
+            super.resolveNames(listRevisit, errs);
+            }
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -66,7 +99,6 @@ public class NullableTypeExpression
 
     protected TypeExpression type;
     protected long           lEndPos;
-
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NullableTypeExpression.class, "type");
     }
