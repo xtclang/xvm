@@ -56,7 +56,7 @@ public class xService
 
         ServiceHandle hService = makeHandle(context, clazz, clazz.ensureStructType());
 
-        setFieldValue(hService, getProperty("serviceName"), xString.makeHandle(f_sName));
+        setFieldValue(hService, clazz.getProperty("serviceName"), xString.makeHandle(f_sName));
 
         return hService;
         }

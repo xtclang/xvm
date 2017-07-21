@@ -1,19 +1,23 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.CharStringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
+import org.xvm.proto.OpInvocable;
+import org.xvm.proto.TypeComposition;
 import org.xvm.proto.Utils;
+import org.xvm.proto.template.xString;
 
 /**
  * Debugging only.
  *
  * @author gg 2017.03.08
  */
-public class X_Print extends Op
+public class X_Print extends OpInvocable
     {
     private final int f_nValue;
 
@@ -58,7 +62,15 @@ public class X_Print extends Op
                     Utils.log(sb.toString());
                     return R_REPEAT;
                     }
-                sb.append(hValue);
+
+                // call the "to" method for the object to get the value
+                TypeComposition clz = hValue.f_clazz;
+                MethodStructure methodTo = getMethodStructure(frame, clz,
+                        frame.f_adapter.getMethodConstId("Object", "to"));
+
+                clz.f_template.invokeNativeN(frame, methodTo, hValue, Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+
+                sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
                 }
             catch (ObjectHandle.ExceptionHandle.WrapperException e)
                 {

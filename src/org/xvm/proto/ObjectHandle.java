@@ -83,33 +83,7 @@ public class ObjectHandle
 
             m_fMutable = true;
 
-            createFields();
-            }
-
-        protected void createFields()
-            {
-            ClassTemplate template = f_clazz.f_template;
-            template.f_struct.children().stream().forEach(child ->
-                {
-                if (!(child instanceof PropertyStructure))
-                    {
-                    return;
-                    }
-
-                PropertyStructure prop = (PropertyStructure) child;
-                RefHandle hRef = null;
-                if (template.isRef(prop))
-                    {
-                    xRef referent = (xRef) template.getRefTemplate(template.f_types, prop);
-
-                    hRef = referent.createRefHandle(referent.f_clazzCanonical);
-                    }
-
-                if (!template.isReadOnly(prop) || hRef != null)
-                    {
-                    m_mapFields.put(prop.getName(), hRef);
-                    }
-                });
+            clazz.createFields(m_mapFields);
             }
 
         public ObjectHandle getField(String sName)

@@ -97,6 +97,7 @@ public class Container
 
         // evert native class that has an INSTANCE static variable needs to be here
         f_types.getTemplate("Object");
+        f_types.getTemplate("Const");
         f_types.getTemplate("Ordered");
         f_types.getTemplate("String");
         f_types.getTemplate("Service");

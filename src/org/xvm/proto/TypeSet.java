@@ -2,7 +2,11 @@ package org.xvm.proto;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.*;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
+
+import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xService;
@@ -68,6 +72,9 @@ public class TypeSet
             try
                 {
                 template = loadCustomTemplate(sName, structClass);
+
+                m_mapTemplatesByConst.put(constClass, template);
+                template.initDeclared();
                 }
             catch (ClassNotFoundException e)
                 {
@@ -80,6 +87,8 @@ public class TypeSet
                             {
                             String sEnumName = structClass.getParent().getName();
                             template = loadCustomTemplate(sEnumName, structClass);
+                            template.initDeclared();
+                            break;
                             }
                         catch (ClassNotFoundException e2)
                             {
@@ -96,13 +105,17 @@ public class TypeSet
                         template = new xService(this, structClass, false);
                         break;
 
+                    case CONST:
+                        template = new xConst(this, structClass, false);
+                        break;
+
                     default:
                         throw new UnsupportedOperationException("Format is not supported: " + structClass);
                     }
-                }
 
-            m_mapTemplatesByConst.put(constClass, template);
-            template.initDeclared();
+                // we don't call initDeclared again
+                m_mapTemplatesByConst.put(constClass, template);
+                }
             }
 
         return template;
