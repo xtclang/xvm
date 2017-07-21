@@ -4,9 +4,11 @@ package org.xvm.compiler.ast;
 import java.util.Iterator;
 import java.util.List;
 
-import org.xvm.asm.Constant;
-
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.constants.AmbiguousIdentityConstant;
+import org.xvm.asm.constants.IdentityConstant;
+
 import org.xvm.compiler.ErrorListener;
 
 
@@ -24,6 +26,11 @@ public class NameResolver
 
         m_node = node;
         m_iter = iterNames;
+        }
+
+    public boolean isFirstTime()
+        {
+        return m_status == Status.INITIAL;
         }
 
     /**
@@ -70,60 +77,106 @@ public class NameResolver
                 // the first name is, then check if it is an implicitly imported identity.
 
                 // check if the name is an unhideable name
-                m_constResult = m_node.resolveParentBySingleName(m_sName);
+                IdentityConstant constResult = m_node.resolveParentBySingleName(m_sName);
 
-                if (m_constResult == null)
+                // if there is no obvious (unhideable) component that the name refers to, then we
+                // need to start with the current node, and one by one walk up to the root, asking
+                // at each level for the node to resolve the name
+                if (constResult == null)
                     {
                     AstNode node = m_node;
-                    while (node != null)
+                    WalkUpToTheRoot: while (node != null)
                         {
+                        // if the first name refers to an import, then ask that import to figure out
+                        // what the corresponding qualified name refers to (i.e. delegate!)
+                        if (node == m_blockImport)
+                            {
+                            NameResolver resolver = m_stmtImport.getNameResolver();
+                            switch (resolver.resolve(listRevisit, errs))
+                                {
+                                case RESOLVED:
+                                    constResult = resolver.getIdentityConstant();
+                                    break WalkUpToTheRoot;
 
+                                case DEFERRED:
+                                    // dependent on a node that is deferred, so this is deferred
+                                    listRevisit.add(m_node);
+                                    return Result.DEFERRED;
+
+                                default:
+                                case ERROR:
+                                    // no need to log an error; the import already should have
+                                    m_status = Status.ERROR;
+                                    return Result.ERROR;
+                                }
+                            }
+
+                        // otherwise, ask the node to resolve the name, and if it can't, we'll come
+                        // back later
+                        if (node.canResolveSingleName())
+                            {
+                            constResult = node.resolveSingleName(m_sName);
+                            if (constResult instanceof AmbiguousIdentityConstant)
+                                {
+                                // TODO log error - name is ambiguous (info is in the constant)
+                                m_status = Status.ERROR;
+                                return Result.ERROR;
+                                }
+
+                            if (constResult != null)
+                                {
+                                break WalkUpToTheRoot;
+                                }
+                            }
+                        else
+                            {
+                            listRevisit.add(m_node);
+                            return Result.DEFERRED;
+                            }
+
+                        node = node.getParent();
                         }
                     }
 
                 // last chance: check the implicitly imported names
-                if (m_constResult == null)
+                if (constResult == null)
                     {
-                    m_constResult = getPool().ensureImplicitlyImportedIdentityConstant(m_sName);
+                    constResult = getPool().ensureImplicitlyImportedIdentityConstant(m_sName);
                     }
 
-                if (m_constResult == null)
+                if (constResult == null)
                     {
-                    // TODO log error
+                    // TODO log error - name is not resolvable
                     m_status = Status.ERROR;
                     return Result.ERROR;
                     }
-                else if (!m_iter.hasNext())
-                    {
-                    // there was only one name to resolve, and it was a parent node; we're done
-                    m_status = Status.RESOLVED;
-                    return Result.RESOLVED;
-                    }
 
                 // first name has been resolved
-                m_sName  = m_iter.next();
-                m_status = Status.RESOLVED_PARTIAL;
+                m_component = constResult.getComponent();
+                m_sName     = m_iter.hasNext() ? m_iter.next() : null;
+                m_status    = Status.RESOLVED_PARTIAL;
                 // fall through
 
             case RESOLVED_PARTIAL:
-                // TODO - attempt to resolve the next name (previously resolved name will be spec'd by the constant)
-                if (false)
+                // at this point, we have a component to work from, so the next name has to be
+                // relative to that component
+                while (m_sName != null)
                     {
+                    // TODO need some sort of resolve (not just a "get" at this level)
+                    Component componentNext = m_component.getChild(m_sName);
+                    if (componentNext == null)
+                        {
+                        // TODO log error - dot-name is not resolvable
+                        m_status = Status.ERROR;
+                        return Result.ERROR;
+                        }
+
+                    m_sName = m_iter.hasNext() ? m_iter.next() : null;
                     }
-                else if (m_iter.hasNext())
-                    {
-                    // first name was the name of one of the parent nodes; additional names to
-                    // resolve from that parent
-                    m_sName  = m_iter.next();
-                    m_status = Status.RESOLVED_PARTIAL;
-                    return resolve(listRevisit, errs);
-                    }
-                else
-                    {
-                    // there was only one name to resolve, and it was a parent node; we're done
-                    m_status = Status.RESOLVED;
-                    return Result.RESOLVED;
-                    }
+
+                // no names left to resolve
+                m_status = Status.RESOLVED;
+                // fall through
 
             case RESOLVED:
                 // already resolved
@@ -136,45 +189,15 @@ public class NameResolver
             }
         }
 
-//        // next, walk up the AST tree, looking for that simple name. this has three sub-steps:
-//        // 1) if the AST node is a statement block, then it may know an import by that name
-//        // 2) if the AST node is a component statement, then the component may have a child by that
-//        //    name
-//        // 3) if the AST node is a component statement, then the component may know the name via one
-//        //    or more of its compositions. if only by one, then that result is used. if by more than
-//        //    one, then the results must all refer to the same thing, or the result is ambiguous,
-//        //    and the name is unresolvable.
-//        if (constant == null)
-//            {
-//            AstNode node = this;
-//            while (node != null)
-//                {
-//                if (node instanceof StatementBlock)
-//                    {
-//                    ImportStatement stmt = ((StatementBlock) node).getImport(sName);
-//                    if (stmt != null)
-//                        {
-//                        if (!stmt.canResolveName())
-//                            {
-//                            // TODO queue this resolve & return failure - need errs & retry list & a way to say "failure"
-//                            }
-//
-//                        // the result can be determined by resolving the sequence of names
-//                        // represented by the import
-//                        // TODO = resolveFirstName(stmt.getQualifiedNamePart(0));
-//                        // TODO need errs & retry list & a way to say "failure"
-//                        }
-//                    }
-//                else if (node instanceof ComponentStatement)
-//                    {
-//                    ComponentStatement stmt = (ComponentStatement) node;
-//                    // TODO name could reference a child
-//                    }
-//
-//                node = node.getParent();
-//                }
-//            }
-//
+    public Component getComponent()
+        {
+        return m_component;
+        }
+
+    public IdentityConstant getIdentityConstant()
+        {
+        return m_component == null ? null : m_component.getIdentityConstant();
+        }
 
     private ConstantPool getPool()
         {
@@ -207,7 +230,7 @@ public class NameResolver
     /**
      * The node that this NameResolver is working for.
      */
-    private AstNode          m_node;
+    private AstNode m_node;
 
     /**
      * The sequence of names to resolve.
@@ -217,25 +240,25 @@ public class NameResolver
     /**
      * The current simple name to resolve.
      */
-    private String           m_sName;
+    private String m_sName;
 
     /**
      * The current internal status of the name resolution.
      */
-    private Status           m_status;
+    private Status m_status;
 
     /**
      * The import statement selected by the import-checking phase, if any possible match was found.
      */
-    private ImportStatement  m_stmtImport;
+    private ImportStatement m_stmtImport;
 
     /**
      * The node that the import was registered with, if any possible import match was found.
      */
-    private StatementBlock   m_blockImport;
+    private StatementBlock m_blockImport;
 
     /**
-     * The constant representing what the node has thus far resolved to.
+     * The component representing what the node has thus far resolved to.
      */
-    private Constant         m_constResult;
+    private Component      m_component;
     }

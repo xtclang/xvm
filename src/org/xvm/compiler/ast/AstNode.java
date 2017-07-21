@@ -294,18 +294,27 @@ public abstract class AstNode
         assert stage.ordinal() <= Stage.Resolved.ordinal();
 
         // if this node is a NameResolver, then make sure it resolves itself first
+        boolean fResolved = true;
         if (this instanceof NameResolver.NameResolving && stage.ordinal() < Stage.Resolved.ordinal())
             {
-            NameResolver resolver = ((NameResolver.NameResolving) this).getNameResolver();
+            NameResolver resolver   = ((NameResolver.NameResolving) this).getNameResolver();
+            boolean      fFirstTime = resolver.isFirstTime();
             if (resolver != null && resolver.resolve(listRevisit, errs) == NameResolver.Result.DEFERRED)
                 {
-                return;
+                if (!fFirstTime)
+                    {
+                    return;
+                    }
+                fResolved = false;
                 }
             }
 
         // before resolving any children, mark this node as resolved, so that it is able to help
         // resolve things on requests from children
-        stage = Stage.Resolved;
+        if (fResolved)
+            {
+            stage = Stage.Resolved;
+            }
 
         for (AstNode node : children())
             {
@@ -363,9 +372,26 @@ public abstract class AstNode
     /**
      * @return true iff this AstNode should be able to resolve names
      */
-    protected boolean canResolveName()       // TODO need a better name for this? or delete this?
+    protected boolean canResolveSingleName()
         {
+        // TODO - verify that this is correct
         return stage.ordinal() >= Stage.Resolved.ordinal();
+        }
+
+    /**
+     * Evaluates the simple name to determine if it refers to some part of the structure for the
+     * current node, and if so, returns the identity constant that identifies that part of the
+     * structure.
+     *
+     * @param sName  the simple name
+     *
+     * @return an IdentityConstant that specifies a structure, an AmbiguousIdentityConstant if more
+     *         than one structure is identified by the name, or null if no structure was identified
+     *         by the name
+     */
+    protected IdentityConstant resolveSingleName(String sName)
+        {
+        return null;
         }
 
 

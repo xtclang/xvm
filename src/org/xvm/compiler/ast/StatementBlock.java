@@ -102,43 +102,6 @@ public class StatementBlock
             // overwrite the old
             }
 
-        // check if the import is itself referencing an import, i.e. if it starts with an alias
-        String  sFirst = stmt.getQualifiedNamePart(0);
-        AstNode node   = this;
-        assert !this.isFileBoundary();  // a file boundary block cannot contain an import directly
-        while (node != null)
-            {
-            if (node instanceof StatementBlock)
-                {
-                StatementBlock block = (StatementBlock) node;
-                if (block.isFileBoundary())
-                    {
-                    break;
-                    }
-
-                ImportStatement stmtExpand = imports.get(sFirst);
-                if (stmtExpand != null)
-                    {
-                    stmt.expand(stmtExpand);
-                    }
-                }
-            else if (node instanceof ComponentStatement)
-                {
-                Component component = ((ComponentStatement) node).getComponent();
-                if (component != null)
-                    {
-                    if (component.getName().equals(sFirst) || component.getChild(sFirst) != null)
-                        {
-                        // the import is referring to the component or a child of the component, so
-                        // the import does not get expanded (at this point)
-                        break;
-                        }
-                    }
-                }
-
-            node = node.getParent();
-            }
-
         imports.put(stmt.getAliasName(), stmt);
         }
 

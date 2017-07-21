@@ -19,6 +19,7 @@ import org.xvm.util.Severity;
  */
 public class ImportStatement
         extends Statement
+        implements NameResolver.NameResolving
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -28,6 +29,9 @@ public class ImportStatement
         this.keyword       = keyword;
         this.alias         = alias;
         this.qualifiedName = qualifiedName;
+
+        // the qualified name will have to be resolved
+        this.resolver = new NameResolver(this, qualifiedName.stream().map(token -> (String) token.getValue()).iterator());
         }
 
 
@@ -46,9 +50,7 @@ public class ImportStatement
      */
     public int getQualifiedNameLength()
         {
-        return importExpand == null
-                ? qualifiedName.size()
-                : importExpand.getQualifiedNameLength() + qualifiedName.size() - 1;
+        return qualifiedName.size();
         }
 
     /**
@@ -58,18 +60,6 @@ public class ImportStatement
      */
     public String getQualifiedNamePart(int i)
         {
-        if (importExpand != null)
-            {
-            int cExpand = importExpand.getQualifiedNameLength();
-            if (i < cExpand)
-                {
-                return importExpand.getQualifiedNamePart(i);
-                }
-
-            // consider imports of "a.b.c" and "c.d.e", so expand "c.d.e" to "a.b.c.d.e"
-            i = i - cExpand + 1;
-            }
-
         return (String) qualifiedName.get(i).getValue();
         }
 
@@ -85,19 +75,6 @@ public class ImportStatement
             asName[i] = getQualifiedNamePart(i);
             }
         return asName;
-        }
-
-    /**
-     * If this import statement begins with another import statement's alias, expand this import
-     * statement using that import statement.
-     *
-     * @param importExpand  the ImportStatement that this ImportStatement can use to expand itself
-     */
-    protected void expand(ImportStatement importExpand)
-        {
-        assert importExpand.getAliasName().equals(getQualifiedNamePart(0));
-        assert this.importExpand == null;
-        this.importExpand = importExpand;
         }
 
     @Override
@@ -116,6 +93,15 @@ public class ImportStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- NameResolving interface ---------------------------------------------------------------
+
+    @Override
+    public NameResolver getNameResolver()
+        {
+        return resolver;
         }
 
 
@@ -203,7 +189,7 @@ public class ImportStatement
     protected Token       alias;
     protected List<Token> qualifiedName;
 
-    private ImportStatement importExpand;
+    private NameResolver  resolver;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");
     }

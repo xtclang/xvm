@@ -117,6 +117,13 @@ public abstract class ComponentStatement
         return constant;
         }
 
+    @Override
+    protected IdentityConstant resolveSingleName(String sName)
+        {
+        // TODO
+        return null;
+        }
+
     private boolean resolveConstants(Component component, ErrorListener errs)
         {
         if (component == null)
@@ -183,7 +190,7 @@ public abstract class ComponentStatement
                 {
                 UnresolvedNameConstant constant = (UnresolvedNameConstant) constantUnknown;
 // TODO
-                IdentityConstant       constId  = (IdentityConstant) resolveFirstName(constant.getName(0));
+                IdentityConstant       constId  = null; // TODO (IdentityConstant) resolveFirstName(constant.getName(0));
                 for (int i = 1, c = constant.getNameCount(); i < c; ++i)
                     {
                     // TODO resolve constant.getName(i) against constId to obtain the corresponding constId
