@@ -336,6 +336,10 @@ public class Compiler
      * that has the same name as a type parameter or method, etc.
      */
     public static final String NAME_COLLISION                     = "COMPILER-31";
+    /**
+     * Not a class type.
+     */
+    public static final String NOT_CLASS_TYPE                     = "COMPILER-32";
 
 
     // ----- data members --------------------------------------------------------------------------

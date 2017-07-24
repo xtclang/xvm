@@ -7,8 +7,14 @@ import java.util.List;
 
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.compiler.*;
+
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Constants;
+import org.xvm.compiler.ErrorListener;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -18,6 +24,7 @@ import org.xvm.compiler.*;
  */
 public class NullableTypeExpression
         extends TypeExpression
+        implements NameResolver.NameResolving
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -30,6 +37,12 @@ public class NullableTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public ClassTypeConstant asClassTypeConstant(ErrorListener errs)
+        {
+        log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
+        return super.asClassTypeConstant(errs);
+        }
 
     @Override
     public long getStartPosition()
@@ -50,12 +63,21 @@ public class NullableTypeExpression
         }
 
 
+    // ----- NameResolving methods -----------------------------------------------------------------
+
+    @Override
+    public NameResolver getNameResolver()
+        {
+        return m_resolver;
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+        if (getStage().ordinal() < Compiler.Stage.Resolved.ordinal())
             {
             // resolve the sub-type
             type.resolveNames(listRevisit, errs);
@@ -65,7 +87,7 @@ public class NullableTypeExpression
             ConstantPool pool = getComponent().getConstantPool();
             TypeConstant constNullable = pool.ensureClassTypeConstant(
                     pool.ensureEcstasyClassConstant(Constants.X_CLASS_NULLABLE),
-                    org.xvm.asm.Constants.Access.PUBLIC);
+                    Constants.Access.PUBLIC);
 
             // store off the Nullable form of the sub-type
             setTypeConstant(pool.ensureIntersectionTypeConstant(constNullable, constSub));
@@ -99,6 +121,8 @@ public class NullableTypeExpression
 
     protected TypeExpression type;
     protected long           lEndPos;
+
+    protected transient NameResolver m_resolver;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NullableTypeExpression.class, "type");
     }

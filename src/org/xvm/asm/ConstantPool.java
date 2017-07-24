@@ -90,7 +90,12 @@ public class ConstantPool
         if (constant instanceof ResolvableConstant)
             {
             Constant resolved = ((ResolvableConstant) constant).getResolvedConstant();
-            if (resolved != null)
+            if (resolved == null)
+                {
+                // resolvable constants are not themselves registered
+                return null;
+                }
+            else
                 {
                 constant = resolved;
                 }
@@ -671,37 +676,33 @@ public class ConstantPool
      * Given the specified class, access, and optional type parameters, obtain a ClassTypeConstant
      * that represents that combination.
      *
-     * @param constClass  a class constant
+     * @param constClass  a ModuleConstant, PackageConstant, or ClassConstant
      * @param access      the access level
      * @param constTypes  the optional type parameters
      *
      * @return a ClassTypeConstant
      */
-    public ClassTypeConstant ensureClassTypeConstant(ClassConstant constClass,
+    public ClassTypeConstant ensureClassTypeConstant(IdentityConstant constClass,
                                                      Access access, TypeConstant... constTypes)
         {
-        assert constClass != null;
-        switch (constClass.getFormat())
+        if (constClass instanceof ModuleConstant
+                || constClass instanceof PackageConstant
+                || constClass instanceof ClassConstant)
             {
-            case Module:
-            case Package:
-            case Class:
-                ClassTypeConstant constant = null;
-                if (access == Access.PUBLIC && constTypes == null)
-                    {
-                    constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constClass);
-                    }
-                if (constant == null)
-                    {
-                    constant = (ClassTypeConstant) register(
-                            new ClassTypeConstant(this, constClass, access, constTypes));
-                    }
-                return constant;
-
-            default:
-                throw new IllegalArgumentException("constant " + constClass.getFormat()
-                        + " is not a Module, Package, or Class");
+            ClassTypeConstant constant = null;
+            if (constClass.getFormat() == Format.Class && access == Access.PUBLIC && constTypes == null)
+                {
+                constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constClass);
+                }
+            if (constant == null)
+                {
+                constant = (ClassTypeConstant) register(new ClassTypeConstant(this, constClass, access, constTypes));
+                }
+            return constant;
             }
+
+        throw new IllegalArgumentException("constant " + constClass.getFormat()
+                + " is not a Module, Package, or Class");
         }
 
     /**

@@ -6,10 +6,15 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -20,6 +25,7 @@ import org.xvm.compiler.Token;
  */
 public class BiTypeExpression
         extends TypeExpression
+        implements NameResolver.NameResolving
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -33,6 +39,12 @@ public class BiTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public ClassTypeConstant asClassTypeConstant(ErrorListener errs)
+        {
+        log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
+        return super.asClassTypeConstant(errs);
+        }
 
     @Override
     public long getStartPosition()
@@ -50,6 +62,15 @@ public class BiTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- NameResolving methods -----------------------------------------------------------------
+
+    @Override
+    public NameResolver getNameResolver()
+        {
+        return m_resolver;
         }
 
 
@@ -105,6 +126,8 @@ public class BiTypeExpression
     protected TypeExpression type1;
     protected Token operator;
     protected TypeExpression type2;
+
+    protected transient NameResolver m_resolver;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BiTypeExpression.class, "type1", "type2");
     }

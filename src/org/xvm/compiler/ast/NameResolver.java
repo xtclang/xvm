@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.AmbiguousIdentityConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
@@ -164,7 +165,7 @@ public class NameResolver
                     {
                     // TODO need some sort of resolve (not just a "get" at this level)
                     Component componentNext = m_component.getChild(m_sName);
-                    if (componentNext == null)
+                    if (componentNext == null) // TODO or ambiguous
                         {
                         // TODO log error - dot-name is not resolvable
                         m_status = Status.ERROR;
@@ -185,6 +186,27 @@ public class NameResolver
             default:
             case ERROR:
                 // already determined to be unresolvable
+                return Result.ERROR;
+            }
+        }
+
+    public Result getResult()
+        {
+        switch (m_status)
+            {
+            case INITIAL:
+            case CHECKED_IMPORTS:
+            case RESOLVED_PARTIAL:
+                // not done yet
+                return Result.DEFERRED;
+
+            case RESOLVED:
+                // completed successfully
+                return Result.RESOLVED;
+
+            default:
+            case ERROR:
+                // cannot complete successfully
                 return Result.ERROR;
             }
         }
@@ -230,7 +252,7 @@ public class NameResolver
     /**
      * The node that this NameResolver is working for.
      */
-    private AstNode m_node;
+    private AstNode          m_node;
 
     /**
      * The sequence of names to resolve.
@@ -240,25 +262,25 @@ public class NameResolver
     /**
      * The current simple name to resolve.
      */
-    private String m_sName;
+    private String           m_sName;
 
     /**
      * The current internal status of the name resolution.
      */
-    private Status m_status;
+    private Status           m_status = Status.INITIAL;
 
     /**
      * The import statement selected by the import-checking phase, if any possible match was found.
      */
-    private ImportStatement m_stmtImport;
+    private ImportStatement  m_stmtImport;
 
     /**
      * The node that the import was registered with, if any possible import match was found.
      */
-    private StatementBlock m_blockImport;
+    private StatementBlock   m_blockImport;
 
     /**
      * The component representing what the node has thus far resolved to.
      */
-    private Component      m_component;
+    private Component        m_component;
     }

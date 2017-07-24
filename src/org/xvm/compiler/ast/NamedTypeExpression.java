@@ -5,13 +5,22 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
+
+import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
+
+import org.xvm.compiler.ast.NameResolver.Result;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
@@ -23,6 +32,7 @@ import static org.xvm.compiler.Lexer.isValidQualifiedModule;
  */
 public class NamedTypeExpression
         extends TypeExpression
+        implements NameResolver.NameResolving
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -33,15 +43,37 @@ public class NamedTypeExpression
         this.access     = access;
         this.paramTypes = params;
         this.lEndPos    = lEndPos;
+
+        this.m_resolver = new NameResolver(this, names.stream().map(
+                token -> (String) token.getValue()).iterator());
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public ClassTypeConstant asClassTypeConstant(ErrorListener errs)
+        {
+        TypeConstant constType = getTypeConstant();
+        if (constType instanceof ClassTypeConstant)
+            {
+            return (ClassTypeConstant) constType;
+            }
+
+        // if there's already a type, and it's not a ClassType, then it's an error
+        // if there's an immutable keyword, then it _can't_ be a ClassType
+        if (constType != null && !(constType instanceof ResolvableConstant) || immutable != null)
+            {
+            log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
+            }
+
+        return super.asClassTypeConstant(errs);
+        }
+
     /**
      * Assemble the qualified name.
      *
-     * @return the dot-delimited name                       ≤
+     * @return the dot-delimited name
      */
     public String getName()
         {
@@ -95,108 +127,84 @@ public class NamedTypeExpression
         }
 
 
+    // ----- NameResolving methods -----------------------------------------------------------------
+
+    @Override
+    public NameResolver getNameResolver()
+        {
+        return m_resolver;
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < Compiler.Stage.Resolved.ordinal())
+        boolean fWasResolved = getStage().ordinal() >= Stage.Resolved.ordinal();
+        super.resolveNames(listRevisit, errs);
+        boolean fIsResolved  = getStage().ordinal() >= Stage.Resolved.ordinal();
+
+        if (fIsResolved && !fWasResolved)
             {
-            ConstantPool pool = getComponent().getConstantPool();
-            TypeConstant constType = null;
-
-            // stages of resolving (so that this method can be invoked idempotently)
-            switch (m_nResolving)
+            NameResolver resolver = m_resolver;
+            if (resolver.getResult() == Result.RESOLVED)
                 {
-                case 0: // evaluate imports
+                // determine the type's class
+                IdentityConstant constId = resolver.getIdentityConstant();
+                if (getIdentityConstant() != null)
                     {
-                    // the process of evaluating imports is done first (and must be done once and
-                    // only once) the first time that this is invoked, because that is the "natural"
-                    // occurrance of the invocation of this method, occurring as the recursive
-                    // descent through the AST is conducted, such that only those imports that this
-                    // particular AST node should be able to use will have been registered; because
-                    // this may occur long before the name can be unambiguously resolved, the type
-                    // expression stores off the import answer (if one is found) as as "possible
-                    // answer" for resolving the first name, and remembers which AST node held the
-                    // import information from whence the answer was obtained, so that a subsequent
-                    // pass can determine if another possible answer (obtained by a later resolving
-                    // stage) will hide the import, or alternatively if the import hides that second
-                    // answer
-                    String  sName = (String) names.get(0).getValue();
-                    AstNode node  = this;
-                    while (node != null)
+                    setIdentityConstant(constId);
+                    }
+
+                // determine the type accessibility
+                Access accessType = Access.PUBLIC;
+                if (access != null)
+                    {
+                    switch (access.getId())
                         {
-                        if (node instanceof StatementBlock)
-                            {
-                            StatementBlock block = (StatementBlock) node;
-                            if (block.isFileBoundary())
-                                {
-                                // we've traversed up to a synthetic StatementBlock that is used to
-                                // enclose the AST nodes from logically nested files; that means
-                                // that we've hit a file boundary, and no imports beyond that are
-                                // visible within the file that contains the TypeExpression that is
-                                // currently being resolved
-                                break;
-                                }
+                        case PUBLIC:
+                            accessType = Access.PUBLIC;
+                            break;
 
-                            ImportStatement stmtImport = ((StatementBlock) node).getImport(sName);
-                            if (stmtImport != null)
-                                {
-                                // if no other name preempts this import statement, then it will be
-                                // used as the substitution for the first name
-                                m_stmtImport  = stmtImport;
-                                m_blockImport = block;      // remember where the import was found
-                                break;
-                                }
-                            }
-                        node = node.getParent();
+                        case PROTECTED:
+                            accessType = Access.PROTECTED;
+                            break;
+
+                        case PRIVATE:
+                            accessType = Access.PRIVATE;
+                            break;
+
+                        default:
+                            throw new IllegalStateException("access=" + access);
                         }
-                    ++m_nResolving;
                     }
-                    // fall through
-                case 1: // evaluate first name
+
+                // determine the type parameters
+                TypeConstant[] aconstParams = null;
+                if (paramTypes != null)
                     {
-                    // the only names not "hideable" are those in the "parent chain" from this node
-                    // to the root, i.e. the name of the module, package(s), class(es), and so on,
-                    // leading from the root down to the current node
-                    String   sName    = (String) names.get(0).getValue();
-                    Constant constant = resolveParentBySingleName(sName);
-                    if (constant == null)
+                    int cParams = paramTypes.size();
+                    aconstParams = new TypeConstant[cParams];
+                    for (int i = 0; i < cParams; ++i)
                         {
-                        // starting at this point, walk up the AST node chain, asking each level if
-                        // it knows what the name is that we're looking for; if we reach the node
-                        // associated with the import of the name (from step 0), then use that name
-                        // TODO
+                        aconstParams[i] = paramTypes.get(i).getTypeConstant();
                         }
-// need a "names left to resolve" list?
-                    ++m_nResolving;
                     }
-                    // fall through
-                case 2: // evaluate additional names
+
+                // create the ClassTypeConstant that represents the type expression
+                ConstantPool pool      = getComponent().getConstantPool();
+                TypeConstant constType = pool.ensureClassTypeConstant(constId, accessType, aconstParams);
+
+                // if it is immutable, then it must be an ImmutableTypeConstant (which is _NOT_ a
+                // ClassTypeConstant)
+                if (immutable != null)
                     {
-                    // TODO
-                    ++m_nResolving;
+                    constType = pool.ensureImmutableTypeConstant(constType);
                     }
-                    // fall through
-                case 3: // resolved
+
+                setTypeConstant(constType);
                 }
-
-            // if there is an access specified, or parameter types are non-null, then it must be a
-            // ClassTypeConstant
-            if (access != null || paramTypes != null)
-                {
-                // TODO
-                }
-
-            // if it is immutable, then it must be an ImmutableTypeConstant
-            if (immutable != null)
-                {
-                constType = pool.ensureImmutableTypeConstant(constType);
-                }
-
-            setTypeConstant(constType);
-
-            super.resolveNames(listRevisit, errs);
             }
         }
 
@@ -258,9 +266,7 @@ public class NamedTypeExpression
     protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;
 
-    protected transient int             m_nResolving;
-    protected transient ImportStatement m_stmtImport;
-    protected transient StatementBlock  m_blockImport;
+    protected transient NameResolver m_resolver;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "paramTypes");
     }

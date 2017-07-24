@@ -72,32 +72,33 @@ public abstract class ComponentStatement
 
     // ----- compile phases ------------------------------------------------------------------------
 
-    @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        boolean   fResolved = true;
-        Component component = getComponent();
-        if (component instanceof CompositeComponent)
-            {
-            for (Component componentEach : ((CompositeComponent) component).components())
-                {
-                fResolved &= resolveConstants(componentEach, errs);
-                }
-            }
-        else
-            {
-            fResolved = resolveConstants(component, errs);
-            }
-
-        if (fResolved)
-            {
-            super.resolveNames(listRevisit, errs);
-            }
-        else
-            {
-            listRevisit.add(this);
-            }
-        }
+// TODO - can this be disposed of now?
+//    @Override
+//    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+//        {
+//        boolean   fResolved = true;
+//        Component component = getComponent();
+//        if (component instanceof CompositeComponent)
+//            {
+//            for (Component componentEach : ((CompositeComponent) component).components())
+//                {
+//                fResolved &= resolveConstants(componentEach, errs);
+//                }
+//            }
+//        else
+//            {
+//            fResolved = resolveConstants(component, errs);
+//            }
+//
+//        if (fResolved)
+//            {
+//            super.resolveNames(listRevisit, errs);
+//            }
+//        else
+//            {
+//            listRevisit.add(this);
+//            }
+//        }
 
 
     // ----- name resolution -----------------------------------------------------------------------
@@ -124,6 +125,7 @@ public abstract class ComponentStatement
         return null;
         }
 
+    // TODO - can this be disposed of now?
     private boolean resolveConstants(Component component, ErrorListener errs)
         {
         if (component == null)
@@ -156,6 +158,7 @@ public abstract class ComponentStatement
         return fResolved;
         }
 
+    // TODO - can this be disposed of now?
     private boolean resolveConstant(Constant constantUnknown, ErrorListener errs)
         {
         if (constantUnknown == null)

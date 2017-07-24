@@ -766,7 +766,7 @@ public class TypeCompositionStatement
                             {
                             // when an interface "extends" an interface, it is actually implementing
                             struct.addContribution(ClassStructure.Composition.Implements,
-                                    composition.getType().asUnresolvedClassTypeConstant(pool));
+                                    composition.getType().asClassTypeConstant(errs));
                             }
                         }
                     else
@@ -791,7 +791,7 @@ public class TypeCompositionStatement
                                 {
                                 // register the class that the component extends
                                 struct.addContribution(ClassStructure.Composition.Extends,
-                                        composition.getType().asUnresolvedClassTypeConstant(pool));
+                                        composition.getType().asClassTypeConstant(errs));
                                 }
                             }
                         }
@@ -968,7 +968,7 @@ public class TypeCompositionStatement
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                                 {
                                 struct.addContribution(ClassStructure.Composition.Into,
-                                        composition.getType().asUnresolvedClassTypeConstant(pool));
+                                        composition.getType().asClassTypeConstant(errs));
                                 }
                             }
                         }
@@ -991,14 +991,14 @@ public class TypeCompositionStatement
                         for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                             {
                             struct.addContribution(ClassStructure.Composition.Implements,
-                                    composition.getType().asUnresolvedClassTypeConstant(pool));
+                                    composition.getType().asClassTypeConstant(errs));
                             }
                         }
                     break;
 
                 case DELEGATES:
                     // these are all OK; other checks will be done after the types are resolvable
-                    ClassTypeConstant constClass = composition.getType().asUnresolvedClassTypeConstant(pool);
+                    ClassTypeConstant constClass = composition.getType().asClassTypeConstant(errs);
                     PropertyConstant  constProp  = pool.ensurePropertyConstant(component.getIdentityConstant(),
                             ((Composition.Delegates) composition).getPropertyName()); // TODO change back from prop -> expr
                     for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
@@ -1015,7 +1015,7 @@ public class TypeCompositionStatement
                         {
                         // register the mixin/trait that the component incorporates
                         struct.addContribution(ClassStructure.Composition.Incorporates,
-                                composition.getType().asUnresolvedClassTypeConstant(pool));
+                                composition.getType().asClassTypeConstant(errs));
                         }
                     break;
 

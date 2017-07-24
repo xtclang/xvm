@@ -62,19 +62,20 @@ public class ClassTypeConstant
     /**
      * Construct a constant whose value is a data type.
      *
-     * @param pool        the ConstantPool that will contain this Constant
-     * @param constClass  a ModuleConstant, PackageConstant, or ClassConstant
+     * @param pool     the ConstantPool that will contain this Constant
+     * @param constId  a ModuleConstant, PackageConstant, or ClassConstant
      */
-    public ClassTypeConstant(ConstantPool pool, ClassConstant constClass, Access access, TypeConstant... constTypes)
+    public ClassTypeConstant(ConstantPool pool, IdentityConstant constId, Access access, TypeConstant... constTypes)
         {
         super(pool);
 
-        if (constClass == null)
+        if (!(constId instanceof ClassConstant || constId instanceof PackageConstant
+                || constId instanceof ModuleConstant))
             {
             throw new IllegalArgumentException("module, package, or class required");
             }
 
-        m_constClass = constClass;
+        m_constId    = constId;
         m_access     = access == null ? Access.PUBLIC : access;
         m_listParams = constTypes == null ? Collections.EMPTY_LIST : Arrays.asList(constTypes);
         }
@@ -85,15 +86,16 @@ public class ClassTypeConstant
     /**
      * @return a ModuleConstant, PackageConstant, or ClassConstant
      */
-    public ClassConstant getClassConstant()
+    public IdentityConstant getClassConstant()
         {
-        return m_constClass;
+        return m_constId;
         }
 
     @Override
     public boolean isEcstasyObject()
         {
-        return m_constClass.isEcstasyObject() && m_access == Access.PUBLIC;
+        return m_constId instanceof ClassConstant && ((ClassConstant) m_constId).isEcstasyObject()
+                && m_access == Access.PUBLIC;
         }
 
     /**
@@ -126,7 +128,7 @@ public class ClassTypeConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        visitor.accept(m_constClass);
+        visitor.accept(m_constId);
         for (Constant param : m_listParams)
             {
             visitor.accept(param);
@@ -137,7 +139,7 @@ public class ClassTypeConstant
     protected Object getLocator()
         {
         return m_access == Access.PUBLIC && m_listParams.isEmpty()
-                ? m_constClass
+                ? m_constId
                 : null;
         }
 
@@ -145,7 +147,7 @@ public class ClassTypeConstant
     protected int compareDetails(Constant obj)
         {
         ClassTypeConstant that = (ClassTypeConstant) obj;
-        int n = this.m_constClass.compareTo(that.m_constClass);
+        int n = this.m_constId.compareTo(that.m_constId);
         if (n == 0)
             {
             n = this.m_access.compareTo(that.m_access);
@@ -172,7 +174,7 @@ public class ClassTypeConstant
     public String getValueString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(m_constClass.getValueString());
+        sb.append(m_constId.getValueString());
 
         if (!m_listParams.isEmpty())
             {
@@ -212,7 +214,7 @@ public class ClassTypeConstant
         {
         ConstantPool pool = getConstantPool();
 
-        m_constClass = (ClassConstant) pool.getConstant(m_iClass);
+        m_constId = (IdentityConstant) pool.getConstant(m_iClass);
 
         if (m_aiType == null)
             {
@@ -233,7 +235,7 @@ public class ClassTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constClass = (ClassConstant) pool.register(m_constClass);
+        m_constId = (IdentityConstant) pool.register(m_constId);
 
         List<TypeConstant> listParams = m_listParams;
         for (int i = 0, c = listParams.size(); i < c; ++i)
@@ -252,7 +254,7 @@ public class ClassTypeConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, indexOf(m_constClass));
+        writePackedLong(out, indexOf(m_constId));
         writePackedLong(out, m_access.ordinal());
         writePackedLong(out, m_listParams.size());
         for (TypeConstant constType : m_listParams)
@@ -267,14 +269,14 @@ public class ClassTypeConstant
     @Override
     public int hashCode()
         {
-        return m_constClass.hashCode() + m_access.ordinal() + m_listParams.hashCode();
+        return m_constId.hashCode() + m_access.ordinal() + m_listParams.hashCode();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * During disassembly, this holds the index of the class constant.
+     * During disassembly, this holds the index of the module, package, or class constant.
      */
     private int m_iClass;
 
@@ -286,7 +288,7 @@ public class ClassTypeConstant
     /**
      * The class referred to. May be a ModuleConstant, PackageConstant, or ClassConstant.
      */
-    private ClassConstant m_constClass;
+    private IdentityConstant m_constId;
 
     /**
      * The public/private/etc. modifier for the class referred to.
