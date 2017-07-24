@@ -40,6 +40,7 @@ public class xString
         markNativeGetter("size");
         markNativeMethod("indexOf", new String[]{"String", "Range<Int>|Nullable"},
                 new String[]{"collections.Tuple<Boolean,Int>"});
+        markNativeMethod("to", VOID, STRING);
         }
 
     @Override
@@ -65,6 +66,9 @@ public class xString
 
                         ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
                         return frame.assignValue(iReturn, hResult);
+
+                    case "to":
+                        return frame.assignValue(iReturn, hThis);
                     }
                 break;
 

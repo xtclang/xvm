@@ -503,7 +503,7 @@ public class ServiceContext
     public Frame callUnhandledExceptionHandler(Frame frame)
         {
         // TODO: call the handler (via invokeLater)
-        Utils.log("Unhandled exception: " + frame.m_hException);
+        Utils.log("Unhandled exception: " + frame.m_hException + " " + frame.m_hException.m_mapFields);
         return null;
         }
 

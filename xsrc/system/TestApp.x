@@ -254,6 +254,11 @@ class TestApp
                 return iRet;
                 }
             }
+
+        String to<String>()
+            {
+            return super() + ": counter2=" + counter2;
+            }
         }
 
     static Void testRef(String arg)

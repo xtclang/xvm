@@ -70,7 +70,7 @@ public class ObjectHandle
             extends ObjectHandle
         {
         // keyed by the property name
-        protected Map<String, ObjectHandle> m_mapFields = new ListMap<>();
+        public Map<String, ObjectHandle> m_mapFields = new ListMap<>();
 
         public GenericHandle(TypeComposition clazz)
             {
@@ -89,12 +89,6 @@ public class ObjectHandle
         public ObjectHandle getField(String sName)
             {
             return m_mapFields.get(sName);
-            }
-
-        @Override
-        public String toString()
-            {
-            return super.toString() + m_mapFields;
             }
         }
 

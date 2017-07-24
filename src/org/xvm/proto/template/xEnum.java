@@ -3,9 +3,12 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
+
 import org.xvm.asm.constants.ClassTypeConstant;
 
 import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
@@ -23,6 +26,9 @@ import java.util.List;
 public class xEnum
         extends ClassTemplate
     {
+    protected List<String> m_listNames;
+    protected List<EnumHandle> m_listHandles;
+
     public xEnum(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
@@ -67,8 +73,21 @@ public class xEnum
         return null;
         }
 
-    public List<String> m_listNames;
-    public List<EnumHandle> m_listHandles;
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        EnumHandle hEnum = (EnumHandle) hTarget;
+
+        switch (method.getName())
+            {
+            case "to":
+                return frame.assignValue(iReturn, xString.makeHandle(
+                        m_listNames.get((int) hEnum.getValue())));
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
 
     public static class EnumHandle
                 extends JavaLong
@@ -76,12 +95,6 @@ public class xEnum
         EnumHandle(TypeComposition clz, long lIndex)
             {
             super(clz, lIndex);
-            }
-
-        @Override
-        public String toString()
-            {
-            return ((xEnum) f_clazz.f_template).m_listNames.get((int) m_lValue);
             }
         }
     }

@@ -6,10 +6,10 @@ import org.xvm.asm.constants.CharStringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.Op;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.Utils;
+
 import org.xvm.proto.template.xString;
 
 /**
@@ -63,14 +63,29 @@ public class X_Print extends OpInvocable
                     return R_REPEAT;
                     }
 
-                // call the "to" method for the object to get the value
+                // call the "to<String>()" method for the object to get the value
                 TypeComposition clz = hValue.f_clazz;
                 MethodStructure methodTo = getMethodStructure(frame, clz,
                         frame.f_adapter.getMethodConstId("Object", "to"));
 
-                clz.f_template.invokeNativeN(frame, methodTo, hValue, Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+                if (frame.f_adapter.isNative(methodTo))
+                    {
+                    clz.f_template.invokeNativeN(frame, methodTo, hValue, Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+                    sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                    }
+                else
+                    {
+                    ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodTo)];
 
-                sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                    frame.call1(methodTo, hValue, ahVar, Frame.RET_LOCAL);
+                    frame.m_frameNext.m_continuation = () ->
+                        {
+                        sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                        Utils.log(sb.toString());
+                        return null;
+                        };
+                    return R_CALL;
+                    }
                 }
             catch (ObjectHandle.ExceptionHandle.WrapperException e)
                 {

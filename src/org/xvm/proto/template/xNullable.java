@@ -1,14 +1,11 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constant;
 
-import org.xvm.asm.constants.ClassTypeConstant;
-
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+
+import java.util.Collections;
 
 /**
  * TODO:
@@ -18,45 +15,28 @@ import org.xvm.proto.TypeSet;
 public class xNullable
         extends xEnum
     {
+    public static NullHandle NULL;
+
     public xNullable(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, fInstance);
+        super(types, structure, false);
         }
 
     @Override
     public void initDeclared()
         {
         NULL = new NullHandle(f_clazzCanonical);
-        }
 
-    @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
-        {
-        if (constant instanceof ClassTypeConstant)
-            {
-            ClassTypeConstant constClass = (ClassTypeConstant) constant;
-            if (constClass.getClassConstant().getName().equals("Null"))
-                {
-                return NULL;
-                }
-            }
-        return null;
+        m_listNames = Collections.singletonList("Null");
+        m_listHandles = Collections.singletonList(NULL);
         }
-
-    public static NullHandle NULL;
 
     private static class NullHandle
-                extends ObjectHandle
+                extends EnumHandle
         {
         NullHandle(TypeComposition clz)
             {
-            super(clz);
-            }
-
-        @Override
-        public String toString()
-            {
-            return "null";
+            super(clz, 0);
             }
         }
     }

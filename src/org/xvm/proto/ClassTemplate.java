@@ -160,6 +160,7 @@ public abstract class ClassTemplate
      */
     public void initDeclared()
         {
+        markNativeMethod("to", VOID, STRING);
         }
 
     // does this template extend that?
@@ -416,6 +417,7 @@ public abstract class ClassTemplate
             case 0:
                 if (method.getName().equals("to"))
                     {
+                    // TODO: introduce a "callToString" method to be overridden when appropriate
                     // how to differentiate; check the method's return type?
                     return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
                     }

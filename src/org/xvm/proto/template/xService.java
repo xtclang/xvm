@@ -96,10 +96,11 @@ public class xService
 
         switch (method.getName())
             {
+            case "to":
+                return frame.assignValue(iReturn, xString.makeHandle(hService.m_context.toString()));
+
             case "yield":
-                {
                 return frame.f_context == hService.m_context ? Op.R_YIELD : Op.R_NEXT;
-                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

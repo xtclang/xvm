@@ -39,7 +39,7 @@ public class xObject
     @Override
     public void initDeclared()
         {
-        markNativeMethod("to", VOID);
+        markNativeMethod("to", VOID, STRING);
         }
 
     @Override

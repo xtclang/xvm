@@ -119,5 +119,21 @@ public class xTestService extends xService
             };
         mtExceptional.m_cVars = 6;
         mtExceptional.m_cScopes = 2;
+
+        MethodTemplate mtTo = ensureMethodTemplate("to", VOID, STRING);
+        mtTo.m_aop = new Op[]
+            {
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestService.to<String>() #")),
+            new Var(adapter.getClassTypeConstId("String")), // #0
+            new Call_01(Op.A_SUPER, 0),
+            new Add(0, -adapter.ensureValueConstantId(": counter2="), 0),
+            new Var(adapter.getClassTypeConstId("Int64")), // #1
+            new LGet(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 1),
+            new Var(adapter.getClassTypeConstId("String")), // #2
+            new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
+            new Add(0, 2, 0),
+            new Return_1(0),
+            };
+        mtTo.m_cVars = 3;
         }
     }
