@@ -173,11 +173,7 @@ public class UnresolvedClassConstant
         {
         if (isClassResolved())
             {
-            m_constId.registerConstants(pool);
-            }
-        else
-            {
-            throw new IllegalStateException("unresolved: " + getName());
+            m_constId = (IdentityConstant) pool.register(m_constId);
             }
         }
 
