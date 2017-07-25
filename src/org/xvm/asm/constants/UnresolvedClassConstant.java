@@ -53,7 +53,7 @@ public class UnresolvedClassConstant
         {
         return isClassResolved()
                 ? m_constId.getName()
-                : m_oSrc.toString() + " (unresolved)";
+                : m_oSrc.toString();
         }
 
     /**
