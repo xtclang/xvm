@@ -84,7 +84,6 @@ class TestApp
     class TestClass2
             extends TestApp.TestClass // TODO: should be allowed to be non-qualified
         {
-        String prop1; // TODO: remove
         Int prop2;
 
         construct TestClass2(Int i, String s)
@@ -174,7 +173,7 @@ class TestApp
         {
         TestService svc = new TestService();
 
-        Int testBlockingReturn()
+        static Int testBlockingReturn()
             {
             return svc.increment();
             }
@@ -215,7 +214,6 @@ class TestApp
 
     static service TestService(Int counter = 48)
         {
-        String serviceName; // TODO: remove
         Int counter
             {
             Int get()
@@ -255,6 +253,11 @@ class TestApp
                 runtimeClock.scheduleAlarm(() -> {iRet = cDelay;}, cDelay); // &iRet.set(0)
                 return iRet;
                 }
+            }
+
+        String to<String>()
+            {
+            return super() + ": counter2=" + counter2;
             }
         }
 

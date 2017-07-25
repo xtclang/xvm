@@ -52,6 +52,13 @@ public class xFutureRef
         }
 
     @Override
+    protected ClassStructure getSuperStructure()
+        {
+        // REVIEW: FutureRef is a mixin, but xFutureRef is native; is this right?
+        return xObject.INSTANCE.f_struct;
+        }
+
+    @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {

@@ -2,7 +2,6 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -20,13 +19,13 @@ import org.xvm.proto.op.Return_0;
  * @author gg 2017.02.27
  */
 public class xException
-        extends ClassTemplate
+        extends xConst
     {
     public static xException INSTANCE;
 
     public xException(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(types, structure, false);
 
         if (fInstance)
             {
@@ -37,8 +36,9 @@ public class xException
     @Override
     public void initDeclared()
         {
-        // TODO: remove
+        // TODO: remove next two lines
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
+        markNativeMethod("to", VOID, STRING);
 
         MethodTemplate ct = ensureMethodTemplate("construct", new String[]{"String|Nullable", "Exception|Nullable"});
         ct.m_aop = new Op[] // #0 - text, #1 - cause

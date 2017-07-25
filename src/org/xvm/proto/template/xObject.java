@@ -2,7 +2,6 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -40,10 +39,7 @@ public class xObject
     @Override
     public void initDeclared()
         {
-        if (f_struct.getFormat() == Component.Format.CLASS)
-            {
-            markNativeMethod("to", VOID);
-            }
+        markNativeMethod("to", VOID, STRING);
         }
 
     @Override

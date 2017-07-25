@@ -18,22 +18,20 @@ import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
 
-import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.ObjectHandle.GenericHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.ObjectHandle.GenericHandle;
 
 import org.xvm.proto.template.xArray;
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xEnum.EnumHandle;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
-import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xOrdered;
 import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xService;
+import org.xvm.proto.template.xString;
 import org.xvm.proto.template.xType;
 
 import java.util.ArrayList;
@@ -78,7 +76,7 @@ public abstract class ClassTemplate
         f_sName = structClass.getName();
 
         f_clazzCanonical = createCanonicalClass();
-        f_structSuper = getSuper(structClass);
+        f_structSuper = getSuperStructure();
         }
 
     protected TypeComposition createCanonicalClass()
@@ -103,9 +101,11 @@ public abstract class ClassTemplate
         return new TypeComposition(this, mapParamsActual);
         }
 
-    // find a super structure for the specified one
-    public ClassStructure getSuper(ClassStructure structure)
+    // find a super structure for this template
+    protected ClassStructure getSuperStructure()
         {
+        ClassStructure structure = f_struct;
+
         Optional<ClassStructure.Contribution> opt = structure.getContributionsAsList().stream().
                 filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
         if (opt.isPresent())
@@ -127,6 +127,9 @@ public abstract class ClassTemplate
             {
             switch (structure.getFormat())
                 {
+                case ENUMVALUE:
+                    return (ClassStructure) structure.getParent();
+
                 case SERVICE:
                     return xService.INSTANCE.f_struct;
 
@@ -136,6 +139,7 @@ public abstract class ClassTemplate
                         return null;
                         }
                     // break through
+                case ENUM:
                 case INTERFACE:
                 case CONST:
                     return xObject.INSTANCE.f_struct;
@@ -156,6 +160,7 @@ public abstract class ClassTemplate
      */
     public void initDeclared()
         {
+        markNativeMethod("to", VOID, STRING);
         }
 
     // does this template extend that?
@@ -184,7 +189,7 @@ public abstract class ClassTemplate
                 {
                 return true;
                 }
-            structSuper = getSuper(structSuper);
+            structSuper = getSuper().f_struct;
             }
 
         m_mapRelations.put(structThat, Relation.INCOMPATIBLE);
@@ -407,7 +412,17 @@ public abstract class ClassTemplate
     public int invokeNativeN(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
-        // many classes don't have native methods
+        switch (ahArg.length)
+            {
+            case 0:
+                if (method.getName().equals("to"))
+                    {
+                    // TODO: introduce a "callToString" method to be overridden when appropriate
+                    // how to differentiate; check the method's return type?
+                    return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
+                    }
+            }
+
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
         }
 
@@ -416,7 +431,6 @@ public abstract class ClassTemplate
     public int invokeNativeNN(Frame frame, MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        // many classes don't have native methods
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
         }
 

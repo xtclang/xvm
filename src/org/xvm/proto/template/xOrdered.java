@@ -18,7 +18,7 @@ public class xOrdered
 
     public xOrdered(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, fInstance);
+        super(types, structure, false);
         }
 
     @Override

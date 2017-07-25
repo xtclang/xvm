@@ -13,6 +13,8 @@ import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xTuple;
 
 import java.util.Collections;
@@ -298,12 +300,12 @@ public class TypeComposition
         MethodConstant constMethod = method.getIdentityConstant();
 
         List<MethodStructure> listMethods = m_mapMethods.computeIfAbsent(constMethod, cm ->
-        {
-        Component container = method.getParent().getParent();
-        return container instanceof PropertyStructure ?
-                collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
-                collectMethodCallChain(cm, new LinkedList<>());
-        });
+            {
+            Component container = method.getParent().getParent();
+            return container instanceof PropertyStructure ?
+                    collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
+                    collectMethodCallChain(cm, new LinkedList<>());
+            });
 
         for (int i = 0, c = listMethods.size(); i < c - 1; i++)
             {
@@ -346,7 +348,13 @@ public class TypeComposition
     // TODO: replace PropertyConstant with PropertyIdConstant (or String)
     public PropertyStructure getProperty(PropertyConstant constProperty)
         {
-        String sPropName = constProperty.getName();
+        return getProperty(constProperty.getName());
+        }
+
+    // retrieve the property structure for the specified property
+    // for any of the structures in the inheritance tree
+    public PropertyStructure getProperty(String sPropName)
+        {
         PropertyStructure property = f_template.getProperty(sPropName);
 
         if (property != null)
@@ -354,13 +362,47 @@ public class TypeComposition
             return property;
             }
 
+        // TODO: check the interfaces, traits and mix-ins
+
         TypeComposition clzSuper = getSuper();
         if (clzSuper != null)
             {
-            return clzSuper.getProperty(constProperty);
+            return clzSuper.getProperty(sPropName);
             }
 
         return null;
+        }
+
+    protected void createFields(Map<String, ObjectHandle> mapFields)
+        {
+        ClassTemplate template = f_template;
+
+        while (!template.isRootObject())
+            {
+            for (Component child : template.f_struct.children())
+                {
+                if (child instanceof PropertyStructure)
+                    {
+                    PropertyStructure prop = (PropertyStructure) child;
+
+                    RefHandle hRef = null;
+                    if (template.isRef(prop))
+                        {
+                        xRef referent = (xRef) template.getRefTemplate(template.f_types, prop);
+
+                        hRef = referent.createRefHandle(referent.f_clazzCanonical);
+                        }
+
+                    if (!template.isReadOnly(prop) || hRef != null)
+                        {
+                        mapFields.put(prop.getName(), hRef);
+                        }
+                    }
+                }
+            // TODO: process the mix-ins
+
+            template = template.getSuper();
+            }
         }
 
     // ---- support for op-codes that require class specific information -----

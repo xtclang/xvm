@@ -70,7 +70,7 @@ public class ObjectHandle
             extends ObjectHandle
         {
         // keyed by the property name
-        protected Map<String, ObjectHandle> m_mapFields = new ListMap<>();
+        public Map<String, ObjectHandle> m_mapFields = new ListMap<>();
 
         public GenericHandle(TypeComposition clazz)
             {
@@ -83,44 +83,12 @@ public class ObjectHandle
 
             m_fMutable = true;
 
-            createFields();
-            }
-
-        protected void createFields()
-            {
-            ClassTemplate template = f_clazz.f_template;
-            template.f_struct.children().stream().forEach(child ->
-                {
-                if (!(child instanceof PropertyStructure))
-                    {
-                    return;
-                    }
-
-                PropertyStructure prop = (PropertyStructure) child;
-                RefHandle hRef = null;
-                if (template.isRef(prop))
-                    {
-                    xRef referent = (xRef) template.getRefTemplate(template.f_types, prop);
-
-                    hRef = referent.createRefHandle(referent.f_clazzCanonical);
-                    }
-
-                if (!template.isReadOnly(prop) || hRef != null)
-                    {
-                    m_mapFields.put(prop.getName(), hRef);
-                    }
-                });
+            clazz.createFields(m_mapFields);
             }
 
         public ObjectHandle getField(String sName)
             {
             return m_mapFields.get(sName);
-            }
-
-        @Override
-        public String toString()
-            {
-            return super.toString() + m_mapFields;
             }
         }
 

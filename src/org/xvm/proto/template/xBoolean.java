@@ -23,7 +23,7 @@ public class xBoolean
 
     public xBoolean(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, fInstance);
+        super(types, structure, false);
         }
 
     @Override

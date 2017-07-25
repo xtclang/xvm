@@ -54,12 +54,15 @@ public abstract class OpCallable extends Op
                 {
                 return m_propertyTemplate.getFieldValue(frame, hThis, m_propertySuper, iReturn);
                 }
-            else
-                {
-                ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
 
-                return frame.call1(methodSuper, hThis, ahVar, iReturn);
+            if (frame.f_adapter.isNative(methodSuper))
+                {
+                return clzThis.f_template.invokeNativeN(frame, methodSuper, hThis, Utils.OBJECTS_NONE, iReturn);
                 }
+
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
+
+            return frame.call1(methodSuper, hThis, ahVar, iReturn);
             }
 
         m_clz = clzThis;
@@ -76,6 +79,11 @@ public abstract class OpCallable extends Op
             m_propertyTemplate = template;
 
             return template.getFieldValue(frame, hThis, property, iReturn);
+            }
+
+        if (frame.f_adapter.isNative(methodSuper))
+            {
+            return clzThis.f_template.invokeNativeN(frame, methodSuper, hThis, Utils.OBJECTS_NONE, iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
@@ -116,13 +124,16 @@ public abstract class OpCallable extends Op
                     }
                 return R_NEXT;
                 }
-            else
-                {
-                ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
-                ahVar[0] = hArg;
 
-                return frame.call1(methodSuper, hThis, ahVar, Frame.RET_UNUSED);
+            if (frame.f_adapter.isNative(methodSuper))
+                {
+                return clzThis.f_template.invokeNative1(frame, methodSuper, hThis, hArg, Frame.RET_UNUSED);
                 }
+
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
+            ahVar[0] = hArg;
+
+            return frame.call1(methodSuper, hThis, ahVar, Frame.RET_UNUSED);
             }
 
         m_clz = clzThis;
@@ -145,6 +156,11 @@ public abstract class OpCallable extends Op
                 return R_EXCEPTION;
                 }
             return R_NEXT;
+            }
+
+        if (frame.f_adapter.isNative(methodSuper))
+            {
+            return clzThis.f_template.invokeNative1(frame, methodSuper, hThis, hArg, Frame.RET_UNUSED);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodSuper)];
@@ -174,6 +190,16 @@ public abstract class OpCallable extends Op
 
         try
             {
+            if (frame.f_adapter.isNative(methodSuper))
+                {
+                ObjectHandle[] ahArg = frame.getArguments(anArgValue, anArgValue.length);
+                if (ahArg == null)
+                    {
+                    return R_REPEAT;
+                    }
+                return clzThis.f_template.invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
+                }
+
             ObjectHandle[] ahVar = frame.getArguments(anArgValue, frame.f_adapter.getVarCount(methodSuper));
             if (ahVar == null)
                 {
@@ -210,6 +236,16 @@ public abstract class OpCallable extends Op
 
         try
             {
+            if (frame.f_adapter.isNative(methodSuper))
+                {
+                ObjectHandle[] ahArg = frame.getArguments(anArgValue, anArgValue.length);
+                if (ahArg == null)
+                    {
+                    return R_REPEAT;
+                    }
+                return clzThis.f_template.invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
+                }
+
             ObjectHandle[] ahVar = frame.getArguments(anArgValue, frame.f_adapter.getVarCount(methodSuper));
             if (ahVar == null)
                 {
