@@ -17,6 +17,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
@@ -659,11 +660,21 @@ public class TypeCompositionStatement
                             }
                         else
                             {
+                            // add the type parameter information to the component
                             TypeExpression exprType  = param.getType();
                             TypeConstant   constType = exprType == null
                                     ? pool.ensureEcstasyClassConstant("Object").asTypeConstant()
                                     : pool.createUnresolvedTypeConstant(exprType);
                             component.addTypeParam(sParam, constType);
+
+                            // each type parameter also has a synthetic property of the same name,
+                            // whose type is of type"Type<exprType>"
+                            TypeConstant constPropType = pool.ensureClassTypeConstant(pool
+                                    .ensureEcstasyClassConstant("Type"), Access.PUBLIC, constType);
+
+                            // create the property and mark it as synthetic
+                            component.createProperty(false, Access.PUBLIC, constPropType, sParam)
+                                    .setSynthetic(true);
                             }
                         }
                     }
@@ -1038,6 +1049,19 @@ public class TypeCompositionStatement
             }
 
         super.registerStructures(errs);
+
+        if (constructorParams != null && !constructorParams.isEmpty())
+            {
+            // if there are any constructor parameters, then that implies the existence both of
+            // properties and of a constructor; make sure that those exist (and that there are no
+            // obvious conflicts)
+            // TODO for each constructor parameter, create the property if it does not already exist
+            // TODO make sure the constructor exists
+            // for a singleton, constructor parameters are not permitted unless they all have default
+            // values (since the module is a singleton, and is automatically created, i.e. it has to
+            // have all of its construction parameters available)
+            // TODO verify that singletons have values for all constructor params
+            }
         }
 
     @Override
@@ -1075,27 +1099,8 @@ public class TypeCompositionStatement
                 }
             }
 
-        // TODO
-//        protected Expression           condition;
-//        protected List<Annotation>     annotations;
-//        protected List<Parameter>      typeParams;
-//        protected List<Parameter>      constructorParams;
-//        protected List<TypeExpression> typeArgs;
-//        protected List<Expression>     args;
-//        protected List<Composition>    compositions;
-//        protected StatementBlock       body;
-
-
-        // validation of constructor parameters happens in a
-        // TODO validate any constructor parameters and their default values, and transfer the info to the constructor
-        // constructor parameters are not permitted unless they all have default values (since the
-        // module is a singleton, and is automatically created, i.e. it has to have all of its
-        // construction parameters available)
-
         super.resolveNames(listRevisit, errs);
         }
-
-    // TODO next we need to recursively resolve visibility down each level of nesting
 
     private void disallowTypeParams(ErrorListener errs)
         {

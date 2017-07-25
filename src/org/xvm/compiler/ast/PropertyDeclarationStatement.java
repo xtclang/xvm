@@ -114,7 +114,7 @@ public class PropertyDeclarationStatement
             Component container = getParent().getComponent();
             if (container.isClassContainer())
                 {
-                // another property by the same name should not already exist, but  the check for
+                // another property by the same name should not already exist, but the check for
                 // duplicates is deferred, since it is possible (thanks to the complexity of
                 // conditionals) to have multiple components occupying the same location within the
                 // namespace at this point in the compilation

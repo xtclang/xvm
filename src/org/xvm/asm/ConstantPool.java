@@ -92,8 +92,11 @@ public class ConstantPool
             Constant resolved = ((ResolvableConstant) constant).getResolvedConstant();
             if (resolved == null)
                 {
-                // resolvable constants are not themselves registered
-                return constant;
+                if (m_fRecurseReg)
+                    {
+                    // when assembling the pool, resolvable constants are not themselves registered
+                    return constant;
+                    }
                 }
             else
                 {
@@ -706,11 +709,12 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Given the specified type, obtain a TypeConstant that represents the explicitly immutable form
+     * of that type.
      *
-     * @param constType
+     * @param constType  the TypeConstant to obtain an explicitly immutable form of
      *
-     * @return
+     * @return the explicitly immutable form of the passed TypeConstant
      */
     public ImmutableTypeConstant ensureImmutableTypeConstant(TypeConstant constType)
         {
@@ -734,12 +738,14 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Given two types, obtain a TypeConstant that represents the intersection of those two types.
+     * This corresponds to the "|" operator when applied to types, and is also used when a type is
+     * permitted to be null (i.e. "intersection of Nullable and the other type").
      *
-     * @param constType1
-     * @param constType2
+     * @param constType1  the first type
+     * @param constType2  the second type
      *
-     * @return
+     * @return the intersection of the two specified types
      */
     public IntersectionTypeConstant ensureIntersectionTypeConstant(TypeConstant constType1, TypeConstant constType2)
         {
@@ -747,12 +753,13 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Given two types, obtain a TypeConstant that represents the union of those two types. This
+     * corresponds to the "+" operator when applied to types.
      *
-     * @param constType1
-     * @param constType2
+     * @param constType1  the first type
+     * @param constType2  the second type
      *
-     * @return
+     * @return the union of the two specified types
      */
     public UnionTypeConstant ensureUnionTypeConstant(TypeConstant constType1, TypeConstant constType2)
         {
