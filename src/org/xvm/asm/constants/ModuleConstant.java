@@ -151,6 +151,12 @@ public class ModuleConstant
         return struct;
         }
 
+    @Override
+    protected StringBuilder buildPath()
+        {
+        return new StringBuilder();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

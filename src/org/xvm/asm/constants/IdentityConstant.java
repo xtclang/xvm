@@ -79,6 +79,25 @@ public abstract class IdentityConstant
         }
 
     /**
+     * @return a dot-delimited string of IdentityConstant names that makes up the path to
+     *         this IdentityConstant
+     */
+    public String getPathString()
+        {
+        return buildPath().substring(1);
+        }
+
+    /**
+     * Support for {@link #getPathString()}; overridden at {@link ModuleConstant}.
+     */
+    protected StringBuilder buildPath()
+        {
+        return getParentConstant().buildPath()
+                .append('.')
+                .append(getName());
+        }
+
+    /**
      * @return the Component structure that is identified by this IdentityConstant
      */
     public Component getComponent()
