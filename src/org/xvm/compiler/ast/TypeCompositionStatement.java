@@ -21,6 +21,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -605,6 +606,7 @@ public class TypeCompositionStatement
 
         // validate that type parameters are allowed, and register them (the actual validation of
         // the type parameters themselves happens in a later phase)
+        final ClassConstant OBJECT_CLASS = pool.ensureEcstasyClassConstant("Object");
         switch (component.getFormat())
             {
             case MODULE:
@@ -663,7 +665,7 @@ public class TypeCompositionStatement
                             // add the type parameter information to the component
                             TypeExpression exprType  = param.getType();
                             TypeConstant   constType = exprType == null
-                                    ? pool.ensureEcstasyClassConstant("Object").asTypeConstant()
+                                    ? OBJECT_CLASS.asTypeConstant()
                                     : pool.createUnresolvedTypeConstant(exprType);
                             component.addTypeParam(sParam, constType);
 
@@ -737,15 +739,45 @@ public class TypeCompositionStatement
         // 3. verify that nore more than one "extends", "import*", or "into" clause is used (subject
         //    to the exception defined by rule #8 above)
         // 4. verify that a package with an import does not have a body
-        boolean              fAlreadyExtends = false;
-        boolean              fAlreadyImports = false;
-        boolean              fAlreadyIntos   = false;
-        int                  cImports        = 0;
-        ModuleStructure      moduleImport    = null;
-        Format               format          = component.getFormat();
-        ComponentBifurcator  bifurcator      = new ComponentBifurcator(component);
-        ConditionalConstant  condPrev        = null;
-        List<Component>      componentList   = new ArrayList<>();
+        boolean       fAlreadyExtends   = false;
+        boolean       fAlreadyImports   = false;
+        boolean       fAlreadyIntos     = false;
+        ClassConstant constDefaultSuper = OBJECT_CLASS;
+        ClassConstant constDefaultInto  = null;
+        switch (component.getFormat())
+            {
+            case CLASS:
+                if (component.getIdentityConstant().equals(OBJECT_CLASS))
+                    {
+                    // Object has no super
+                    constDefaultSuper = null;
+                    }
+                break;
+
+            case INTERFACE:
+                // interface has no super
+                constDefaultSuper = null;
+                break;
+
+            case ENUMVALUE:
+                // enum values extend their abstract enum class
+                assert container != null && container.getFormat() == Format.ENUM;
+                constDefaultSuper = (ClassConstant) container.getIdentityConstant();
+                break;
+
+            case TRAIT:
+            case MIXIN:
+                // traits and mixins apply to ("mix into") any Object by default
+                constDefaultInto = OBJECT_CLASS;
+                break;
+            }
+
+        int                 cImports      = 0;
+        ModuleStructure     moduleImport  = null;
+        Format              format        = component.getFormat();
+        ComponentBifurcator bifurcator    = new ComponentBifurcator(component);
+        ConditionalConstant condPrev      = null;
+        List<Component>     componentList = new ArrayList<>();
         componentList.add(component);
         // note: from this point down (and through the remainder of compilation), the component may
         // be conditionally bifurcated. (it's even possible that already there are multiple
@@ -1032,6 +1064,39 @@ public class TypeCompositionStatement
 
                 default:
                     throw new IllegalStateException("illegal composition: " + composition);
+                }
+            }
+
+        // need to go through all components for the next bit
+        componentList.clear();
+        bifurcator.collectMatchingComponents(null, componentList);
+
+        // add default super ("extends")
+        if (!fAlreadyExtends && constDefaultSuper != null)
+            {
+            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                {
+                if (!struct.getContributionsAsList().stream().anyMatch(contribution ->
+                        contribution.getComposition() == Component.Composition.Extends))
+                    {
+                    struct.addContribution(ClassStructure.Composition.Extends,
+                            pool.ensureClassTypeConstant(constDefaultSuper, Access.PUBLIC));
+                    }
+                }
+            }
+
+        // add default applies-to ("into")
+        if (!fAlreadyIntos && constDefaultInto != null)
+            {
+            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                {
+                if (!struct.getContributionsAsList().stream().anyMatch(contribution ->
+                        contribution.getComposition() == Component.Composition.Into))
+                    {
+                    // TODO there is still an issue with this w.r.t. conditionals; verify there is no "into" on this struct
+                    struct.addContribution(ClassStructure.Composition.Into,
+                            pool.ensureClassTypeConstant(constDefaultInto, Access.PUBLIC));
+                    }
                 }
             }
 
