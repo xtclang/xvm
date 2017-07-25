@@ -114,7 +114,7 @@ public class NameResolver
 
                         // otherwise, ask the node to resolve the name, and if it can't, we'll come
                         // back later
-                        if (node.canResolveSingleName())
+                        if (node == m_node || node.canResolveSingleName())
                             {
                             constResult = node.resolveSingleName(m_sName);
                             if (constResult instanceof AmbiguousIdentityConstant)

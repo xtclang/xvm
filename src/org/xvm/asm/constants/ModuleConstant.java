@@ -144,6 +144,10 @@ public class ModuleConstant
             {
             throw new IllegalStateException("could not find module: " + sName);
             }
+        else if (struct.getFingerprintOrigin() != null)
+            {
+            struct = struct.getFingerprintOrigin();
+            }
         return struct;
         }
 

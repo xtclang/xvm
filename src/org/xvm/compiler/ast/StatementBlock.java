@@ -7,10 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.Component;
-
-import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;

@@ -93,7 +93,7 @@ public class ConstantPool
             if (resolved == null)
                 {
                 // resolvable constants are not themselves registered
-                return null;
+                return constant;
                 }
             else
                 {

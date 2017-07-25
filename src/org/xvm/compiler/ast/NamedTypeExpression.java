@@ -152,7 +152,7 @@ public class NamedTypeExpression
                 {
                 // determine the type's class
                 IdentityConstant constId = resolver.getIdentityConstant();
-                if (getIdentityConstant() != null)
+                if (constId != null)
                     {
                     setIdentityConstant(constId);
                     }

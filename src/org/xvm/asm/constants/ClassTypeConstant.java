@@ -269,7 +269,7 @@ public class ClassTypeConstant
     @Override
     public int hashCode()
         {
-        return m_constId.hashCode() + m_access.ordinal() + m_listParams.hashCode();
+        return m_constId.hashCode() + m_access.ordinal() + (m_listParams == null ? 0 : m_listParams.hashCode());
         }
 
 

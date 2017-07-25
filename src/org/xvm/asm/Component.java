@@ -2264,8 +2264,8 @@ public abstract class Component
          */
         protected void registerConstants(ConstantPool pool)
             {
-            m_constContrib = (IdentityConstant) pool.register(m_constContrib);
-            m_constProp = (PropertyConstant) pool.register(m_constProp);
+            m_constContrib =                    pool.register(m_constContrib);
+            m_constProp    = (PropertyConstant) pool.register(m_constProp);
 
             final Constant[] aconst = m_aconstArgs;
             if (aconst != null)
