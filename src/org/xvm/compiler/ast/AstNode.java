@@ -374,7 +374,6 @@ public abstract class AstNode
      */
     protected boolean canResolveSingleName()
         {
-        // TODO - verify that this is correct
         return stage.ordinal() >= Stage.Resolved.ordinal();
         }
 

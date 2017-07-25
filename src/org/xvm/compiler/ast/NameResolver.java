@@ -35,7 +35,7 @@ public class NameResolver
         }
 
     /**
-     * TODO
+     * Resolve the name, or at least try to make progress doing so.
      *
      * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
      *                     pass
