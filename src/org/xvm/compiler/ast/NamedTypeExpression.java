@@ -1,13 +1,26 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.Constants;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
 
 import java.util.List;
+
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
+
+import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.ResolvableConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Token;
+
+import org.xvm.compiler.ast.NameResolver.Result;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
@@ -19,6 +32,7 @@ import static org.xvm.compiler.Lexer.isValidQualifiedModule;
  */
 public class NamedTypeExpression
         extends TypeExpression
+        implements NameResolver.NameResolving
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -29,10 +43,32 @@ public class NamedTypeExpression
         this.access     = access;
         this.paramTypes = params;
         this.lEndPos    = lEndPos;
+
+        this.m_resolver = new NameResolver(this, names.stream().map(
+                token -> (String) token.getValue()).iterator());
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public ClassTypeConstant asClassTypeConstant(ErrorListener errs)
+        {
+        TypeConstant constType = getTypeConstant();
+        if (constType instanceof ClassTypeConstant)
+            {
+            return (ClassTypeConstant) constType;
+            }
+
+        // if there's already a type, and it's not a ClassType, then it's an error
+        // if there's an immutable keyword, then it _can't_ be a ClassType
+        if (constType != null && !(constType instanceof ResolvableConstant) || immutable != null)
+            {
+            log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
+            }
+
+        return super.asClassTypeConstant(errs);
+        }
 
     /**
      * Assemble the qualified name.
@@ -88,6 +124,88 @@ public class NamedTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- NameResolving methods -----------------------------------------------------------------
+
+    @Override
+    public NameResolver getNameResolver()
+        {
+        return m_resolver;
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        boolean fWasResolved = getStage().ordinal() >= Stage.Resolved.ordinal();
+        super.resolveNames(listRevisit, errs);
+        boolean fIsResolved  = getStage().ordinal() >= Stage.Resolved.ordinal();
+
+        if (fIsResolved && !fWasResolved)
+            {
+            NameResolver resolver = m_resolver;
+            if (resolver.getResult() == Result.RESOLVED)
+                {
+                // determine the type's class
+                IdentityConstant constId = resolver.getIdentityConstant();
+                if (constId != null)
+                    {
+                    setIdentityConstant(constId);
+                    }
+
+                // determine the type accessibility
+                Access accessType = Access.PUBLIC;
+                if (access != null)
+                    {
+                    switch (access.getId())
+                        {
+                        case PUBLIC:
+                            accessType = Access.PUBLIC;
+                            break;
+
+                        case PROTECTED:
+                            accessType = Access.PROTECTED;
+                            break;
+
+                        case PRIVATE:
+                            accessType = Access.PRIVATE;
+                            break;
+
+                        default:
+                            throw new IllegalStateException("access=" + access);
+                        }
+                    }
+
+                // determine the type parameters
+                TypeConstant[] aconstParams = null;
+                if (paramTypes != null)
+                    {
+                    int cParams = paramTypes.size();
+                    aconstParams = new TypeConstant[cParams];
+                    for (int i = 0; i < cParams; ++i)
+                        {
+                        aconstParams[i] = paramTypes.get(i).getTypeConstant();
+                        }
+                    }
+
+                // create the ClassTypeConstant that represents the type expression
+                ConstantPool pool      = getComponent().getConstantPool();
+                TypeConstant constType = pool.ensureClassTypeConstant(constId, accessType, aconstParams);
+
+                // if it is immutable, then it must be an ImmutableTypeConstant (which is _NOT_ a
+                // ClassTypeConstant)
+                if (immutable != null)
+                    {
+                    constType = pool.ensureImmutableTypeConstant(constType);
+                    }
+
+                setTypeConstant(constType);
+                }
+            }
         }
 
 
@@ -147,6 +265,8 @@ public class NamedTypeExpression
     protected Token                access;
     protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;
+
+    protected transient NameResolver m_resolver;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "paramTypes");
     }

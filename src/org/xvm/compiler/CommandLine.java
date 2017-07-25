@@ -667,7 +667,7 @@ public class CommandLine
             boolean fDone = true;
             for (Compiler compiler : modulesByName.values())
                 {
-                fDone &= compiler.namesResolved();
+                fDone &= compiler.resolveNames();
                 }
             if (fDone)
                 {

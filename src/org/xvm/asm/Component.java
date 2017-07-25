@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.CharStringConstant;
@@ -2264,8 +2265,8 @@ public abstract class Component
          */
         protected void registerConstants(ConstantPool pool)
             {
-            m_constContrib = (IdentityConstant) pool.register(m_constContrib);
-            m_constProp = (PropertyConstant) pool.register(m_constProp);
+            m_constContrib =                    pool.register(m_constContrib);
+            m_constProp    = (PropertyConstant) pool.register(m_constProp);
 
             final Constant[] aconst = m_aconstArgs;
             if (aconst != null)

@@ -90,9 +90,9 @@ public class UnresolvedClassConstant
     @Override
     public void resolve(Constant constant)
         {
-        if (!(constant instanceof ClassConstant))
+        if (!(constant instanceof ModuleConstant || constant instanceof PackageConstant || constant instanceof ClassConstant))
             {
-            throw new IllegalArgumentException("constant must be ClassConstant (" + constant + ")");
+            throw new IllegalArgumentException("constant must be ModuleConstant, PackageConstant, or ClassConstant (" + constant + ")");
             }
 
         assert this.m_constId == null || this.m_constId == constant;

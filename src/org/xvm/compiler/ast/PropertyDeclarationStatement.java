@@ -114,14 +114,14 @@ public class PropertyDeclarationStatement
             Component container = getParent().getComponent();
             if (container.isClassContainer())
                 {
-                // another property by the same name should not already exist, but  the check for
+                // another property by the same name should not already exist, but the check for
                 // duplicates is deferred, since it is possible (thanks to the complexity of
                 // conditionals) to have multiple components occupying the same location within the
                 // namespace at this point in the compilation
                 // if (container.getProperty(sName) != null) ...
 
                 ConstantPool      pool      = container.getConstantPool();
-                TypeConstant      constType = pool.createUnresolvedTypeConstant(type.toString());
+                TypeConstant      constType = pool.createUnresolvedTypeConstant(type);
                 PropertyStructure prop      = container.createProperty(isStatic(), getDefaultAccess(),
                                                                        constType, sName);
                 setComponent(prop);

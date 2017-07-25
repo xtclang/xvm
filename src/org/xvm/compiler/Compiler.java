@@ -102,7 +102,7 @@ public class Compiler
      *
      * @return true iff all of the names have been resolved
      */
-    public boolean namesResolved()
+    public boolean resolveNames()
         {
         // idempotent: allow this to be called more than necessary without any errors/side-effects
         if (m_stage == Stage.Resolved)
@@ -158,7 +158,7 @@ public class Compiler
             {
             // second through n-th time through: resolve starting from whatever didn't get resolved
             // last time, and recurse down
-            for (AstNode node : (List<AstNode>) m_listUnresolved)
+            for (AstNode node : m_listUnresolved)
                 {
                 node.resolveNames(listDeferred, m_errs);
                 }
@@ -179,7 +179,7 @@ public class Compiler
         }
 
     /**
-     * After a certain number of attempts to resolve names by invoking {@link #namesResolved}, this
+     * After a certain number of attempts to resolve names by invoking {@link #resolveNames}, this
      * method will report any unresolved names as fatal errors.
      */
     public void reportUnresolvableNames()
@@ -336,6 +336,10 @@ public class Compiler
      * that has the same name as a type parameter or method, etc.
      */
     public static final String NAME_COLLISION                     = "COMPILER-31";
+    /**
+     * Not a class type.
+     */
+    public static final String NOT_CLASS_TYPE                     = "COMPILER-32";
 
 
     // ----- data members --------------------------------------------------------------------------

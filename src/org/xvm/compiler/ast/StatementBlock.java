@@ -7,8 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.Component;
-
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
@@ -100,41 +98,6 @@ public class StatementBlock
             // overwrite the old
             }
 
-        // check if the import is itself referencing an import, i.e. if it starts with an alias
-        String  sFirst = stmt.getQualifiedNamePart(0);
-        AstNode node   = this;
-        assert !this.isFileBoundary();  // a file boundary block cannot contain an import directly
-        while (node != null)
-            {
-            if (node instanceof StatementBlock)
-                {
-                StatementBlock block = (StatementBlock) node;
-                if (block.isFileBoundary())
-                    {
-                    break;
-                    }
-
-                ImportStatement stmtExpand = imports.get(sFirst);
-                if (stmtExpand != null)
-                    {
-                    stmt.expand(stmtExpand);
-                    }
-                }
-            else if (node instanceof ComponentStatement)
-                {
-                Component component = ((ComponentStatement) node).getComponent();
-                if (component != null)
-                    {
-                    if (component.getName().equals(sFirst) || component.getChild(sFirst) != null)
-                        {
-                        // the import is referring to the component or a child of the component, so
-                        // the import does not get expanded (at this point)
-                        break;
-                        }
-                    }
-                }
-            }
-
         imports.put(stmt.getAliasName(), stmt);
         }
 
@@ -189,6 +152,25 @@ public class StatementBlock
 
 
     // ----- compile phases ------------------------------------------------------------------------
+
+
+    // ----- name resolution -----------------------------------------------------------------------
+
+    @Override
+    protected ImportStatement resolveImportBySingleName(String sName)
+        {
+        // if this is a synthetic block statement that acts as a collection of multiple files, then
+        // the search for the import has just crossed a file boundary, and nothing was found
+        if (isFileBoundary())
+            {
+            return null;
+            }
+
+        ImportStatement stmtImport = getImport(sName);
+        return stmtImport == null
+                ? super.resolveImportBySingleName(sName)
+                : stmtImport;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------

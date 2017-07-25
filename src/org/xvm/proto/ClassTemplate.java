@@ -110,7 +110,7 @@ public abstract class ClassTemplate
                 filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
         if (opt.isPresent())
             {
-            ClassConstant constClass = opt.get().getClassConstant().getClassConstant();
+            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassConstant();
             try
                 {
                 return (ClassStructure) constClass.getComponent();

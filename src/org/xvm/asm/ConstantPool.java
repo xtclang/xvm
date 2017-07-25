@@ -90,7 +90,15 @@ public class ConstantPool
         if (constant instanceof ResolvableConstant)
             {
             Constant resolved = ((ResolvableConstant) constant).getResolvedConstant();
-            if (resolved != null)
+            if (resolved == null)
+                {
+                if (m_fRecurseReg)
+                    {
+                    // when assembling the pool, resolvable constants are not themselves registered
+                    return constant;
+                    }
+                }
+            else
                 {
                 constant = resolved;
                 }
@@ -671,49 +679,103 @@ public class ConstantPool
      * Given the specified class, access, and optional type parameters, obtain a ClassTypeConstant
      * that represents that combination.
      *
-     * @param constClass  a class constant
+     * @param constClass  a ModuleConstant, PackageConstant, or ClassConstant
      * @param access      the access level
      * @param constTypes  the optional type parameters
      *
      * @return a ClassTypeConstant
      */
-    public ClassTypeConstant ensureClassTypeConstant(ClassConstant constClass,
+    public ClassTypeConstant ensureClassTypeConstant(IdentityConstant constClass,
                                                      Access access, TypeConstant... constTypes)
         {
-        assert constClass != null;
-        switch (constClass.getFormat())
+        if (constClass instanceof ModuleConstant
+                || constClass instanceof PackageConstant
+                || constClass instanceof ClassConstant)
             {
-            case Module:
-            case Package:
-            case Class:
-                ClassTypeConstant constant = null;
-                if (access == Access.PUBLIC && constTypes == null)
-                    {
-                    constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constClass);
-                    }
-                if (constant == null)
-                    {
-                    constant = (ClassTypeConstant) register(
-                            new ClassTypeConstant(this, constClass, access, constTypes));
-                    }
-                return constant;
-
-            default:
-                throw new IllegalArgumentException("constant " + constClass.getFormat()
-                        + " is not a Module, Package, or Class");
+            ClassTypeConstant constant = null;
+            if (constClass.getFormat() == Format.Class && access == Access.PUBLIC && constTypes == null)
+                {
+                constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constClass);
+                }
+            if (constant == null)
+                {
+                constant = (ClassTypeConstant) register(new ClassTypeConstant(this, constClass, access, constTypes));
+                }
+            return constant;
             }
+
+        throw new IllegalArgumentException("constant " + constClass.getFormat()
+                + " is not a Module, Package, or Class");
+        }
+
+    /**
+     * Given the specified type, obtain a TypeConstant that represents the explicitly immutable form
+     * of that type.
+     *
+     * @param constType  the TypeConstant to obtain an explicitly immutable form of
+     *
+     * @return the explicitly immutable form of the passed TypeConstant
+     */
+    public ImmutableTypeConstant ensureImmutableTypeConstant(TypeConstant constType)
+        {
+        ImmutableTypeConstant constant;
+        if (constType instanceof ImmutableTypeConstant)
+            {
+            constant = (ImmutableTypeConstant) constType;
+            }
+        else
+            {
+            constant = (ImmutableTypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
+            if (constant != null)
+                {
+                return constant;
+                }
+
+            constant = new ImmutableTypeConstant(this, constType);
+            }
+
+        return (ImmutableTypeConstant) register(constant);
+        }
+
+    /**
+     * Given two types, obtain a TypeConstant that represents the intersection of those two types.
+     * This corresponds to the "|" operator when applied to types, and is also used when a type is
+     * permitted to be null (i.e. "intersection of Nullable and the other type").
+     *
+     * @param constType1  the first type
+     * @param constType2  the second type
+     *
+     * @return the intersection of the two specified types
+     */
+    public IntersectionTypeConstant ensureIntersectionTypeConstant(TypeConstant constType1, TypeConstant constType2)
+        {
+        return (IntersectionTypeConstant) register(new IntersectionTypeConstant(this, constType1, constType2));
+        }
+
+    /**
+     * Given two types, obtain a TypeConstant that represents the union of those two types. This
+     * corresponds to the "+" operator when applied to types.
+     *
+     * @param constType1  the first type
+     * @param constType2  the second type
+     *
+     * @return the union of the two specified types
+     */
+    public UnionTypeConstant ensureUnionTypeConstant(TypeConstant constType1, TypeConstant constType2)
+        {
+        return (UnionTypeConstant) register(new UnionTypeConstant(this, constType1, constType2));
         }
 
     /**
      * Create a new TypeConstant whose exact type will eventually be resolved.
      *
-     * @param sType  the String representation of the type
+     * @param oType  some opaque representation of the type
      *
      * @return a new TypeConstant
      */
-    public UnresolvedTypeConstant createUnresolvedTypeConstant(String sType)
+    public UnresolvedTypeConstant createUnresolvedTypeConstant(Object oType)
         {
-        return new UnresolvedTypeConstant(this, sType);
+        return new UnresolvedTypeConstant(this, oType);
         }
 
 

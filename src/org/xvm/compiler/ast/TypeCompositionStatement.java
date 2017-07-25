@@ -17,9 +17,11 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -604,6 +606,7 @@ public class TypeCompositionStatement
 
         // validate that type parameters are allowed, and register them (the actual validation of
         // the type parameters themselves happens in a later phase)
+        final ClassConstant OBJECT_CLASS = pool.ensureEcstasyClassConstant("Object");
         switch (component.getFormat())
             {
             case MODULE:
@@ -659,11 +662,21 @@ public class TypeCompositionStatement
                             }
                         else
                             {
+                            // add the type parameter information to the component
                             TypeExpression exprType  = param.getType();
                             TypeConstant   constType = exprType == null
-                                    ? pool.ensureEcstasyClassConstant("Object").asTypeConstant()
-                                    : pool.createUnresolvedTypeConstant(exprType.toString());
+                                    ? OBJECT_CLASS.asTypeConstant()
+                                    : pool.createUnresolvedTypeConstant(exprType);
                             component.addTypeParam(sParam, constType);
+
+                            // each type parameter also has a synthetic property of the same name,
+                            // whose type is of type"Type<exprType>"
+                            TypeConstant constPropType = pool.ensureClassTypeConstant(pool
+                                    .ensureEcstasyClassConstant("Type"), Access.PUBLIC, constType);
+
+                            // create the property and mark it as synthetic
+                            component.createProperty(false, Access.PUBLIC, constPropType, sParam)
+                                    .setSynthetic(true);
                             }
                         }
                     }
@@ -726,15 +739,45 @@ public class TypeCompositionStatement
         // 3. verify that nore more than one "extends", "import*", or "into" clause is used (subject
         //    to the exception defined by rule #8 above)
         // 4. verify that a package with an import does not have a body
-        boolean              fAlreadyExtends = false;
-        boolean              fAlreadyImports = false;
-        boolean              fAlreadyIntos   = false;
-        int                  cImports        = 0;
-        ModuleStructure      moduleImport    = null;
-        Format               format          = component.getFormat();
-        ComponentBifurcator  bifurcator      = new ComponentBifurcator(component);
-        ConditionalConstant  condPrev        = null;
-        List<Component>      componentList   = new ArrayList<>();
+        boolean       fAlreadyExtends   = false;
+        boolean       fAlreadyImports   = false;
+        boolean       fAlreadyIntos     = false;
+        ClassConstant constDefaultSuper = OBJECT_CLASS;
+        ClassConstant constDefaultInto  = null;
+        switch (component.getFormat())
+            {
+            case CLASS:
+                if (component.getIdentityConstant().equals(OBJECT_CLASS))
+                    {
+                    // Object has no super
+                    constDefaultSuper = null;
+                    }
+                break;
+
+            case INTERFACE:
+                // interface has no super
+                constDefaultSuper = null;
+                break;
+
+            case ENUMVALUE:
+                // enum values extend their abstract enum class
+                assert container != null && container.getFormat() == Format.ENUM;
+                constDefaultSuper = (ClassConstant) container.getIdentityConstant();
+                break;
+
+            case TRAIT:
+            case MIXIN:
+                // traits and mixins apply to ("mix into") any Object by default
+                constDefaultInto = OBJECT_CLASS;
+                break;
+            }
+
+        int                 cImports      = 0;
+        ModuleStructure     moduleImport  = null;
+        Format              format        = component.getFormat();
+        ComponentBifurcator bifurcator    = new ComponentBifurcator(component);
+        ConditionalConstant condPrev      = null;
+        List<Component>     componentList = new ArrayList<>();
         componentList.add(component);
         // note: from this point down (and through the remainder of compilation), the component may
         // be conditionally bifurcated. (it's even possible that already there are multiple
@@ -766,7 +809,7 @@ public class TypeCompositionStatement
                             {
                             // when an interface "extends" an interface, it is actually implementing
                             struct.addContribution(ClassStructure.Composition.Implements,
-                                    composition.getType().asUnresolvedClassTypeConstant(pool));
+                                    composition.getType().asClassTypeConstant(errs));
                             }
                         }
                     else
@@ -791,7 +834,7 @@ public class TypeCompositionStatement
                                 {
                                 // register the class that the component extends
                                 struct.addContribution(ClassStructure.Composition.Extends,
-                                        composition.getType().asUnresolvedClassTypeConstant(pool));
+                                        composition.getType().asClassTypeConstant(errs));
                                 }
                             }
                         }
@@ -968,7 +1011,7 @@ public class TypeCompositionStatement
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                                 {
                                 struct.addContribution(ClassStructure.Composition.Into,
-                                        composition.getType().asUnresolvedClassTypeConstant(pool));
+                                        composition.getType().asClassTypeConstant(errs));
                                 }
                             }
                         }
@@ -991,14 +1034,14 @@ public class TypeCompositionStatement
                         for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                             {
                             struct.addContribution(ClassStructure.Composition.Implements,
-                                    composition.getType().asUnresolvedClassTypeConstant(pool));
+                                    composition.getType().asClassTypeConstant(errs));
                             }
                         }
                     break;
 
                 case DELEGATES:
                     // these are all OK; other checks will be done after the types are resolvable
-                    ClassTypeConstant constClass = composition.getType().asUnresolvedClassTypeConstant(pool);
+                    ClassTypeConstant constClass = composition.getType().asClassTypeConstant(errs);
                     PropertyConstant  constProp  = pool.ensurePropertyConstant(component.getIdentityConstant(),
                             ((Composition.Delegates) composition).getPropertyName()); // TODO change back from prop -> expr
                     for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
@@ -1015,12 +1058,45 @@ public class TypeCompositionStatement
                         {
                         // register the mixin/trait that the component incorporates
                         struct.addContribution(ClassStructure.Composition.Incorporates,
-                                composition.getType().asUnresolvedClassTypeConstant(pool));
+                                composition.getType().asClassTypeConstant(errs));
                         }
                     break;
 
                 default:
                     throw new IllegalStateException("illegal composition: " + composition);
+                }
+            }
+
+        // need to go through all components for the next bit
+        componentList.clear();
+        bifurcator.collectMatchingComponents(null, componentList);
+
+        // add default super ("extends")
+        if (!fAlreadyExtends && constDefaultSuper != null)
+            {
+            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                {
+                if (!struct.getContributionsAsList().stream().anyMatch(contribution ->
+                        contribution.getComposition() == Component.Composition.Extends))
+                    {
+                    struct.addContribution(ClassStructure.Composition.Extends,
+                            pool.ensureClassTypeConstant(constDefaultSuper, Access.PUBLIC));
+                    }
+                }
+            }
+
+        // add default applies-to ("into")
+        if (!fAlreadyIntos && constDefaultInto != null)
+            {
+            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                {
+                if (!struct.getContributionsAsList().stream().anyMatch(contribution ->
+                        contribution.getComposition() == Component.Composition.Into))
+                    {
+                    // TODO there is still an issue with this w.r.t. conditionals; verify there is no "into" on this struct
+                    struct.addContribution(ClassStructure.Composition.Into,
+                            pool.ensureClassTypeConstant(constDefaultInto, Access.PUBLIC));
+                    }
                 }
             }
 
@@ -1038,6 +1114,19 @@ public class TypeCompositionStatement
             }
 
         super.registerStructures(errs);
+
+        if (constructorParams != null && !constructorParams.isEmpty())
+            {
+            // if there are any constructor parameters, then that implies the existence both of
+            // properties and of a constructor; make sure that those exist (and that there are no
+            // obvious conflicts)
+            // TODO for each constructor parameter, create the property if it does not already exist
+            // TODO make sure the constructor exists
+            // for a singleton, constructor parameters are not permitted unless they all have default
+            // values (since the module is a singleton, and is automatically created, i.e. it has to
+            // have all of its construction parameters available)
+            // TODO verify that singletons have values for all constructor params
+            }
         }
 
     @Override
@@ -1075,27 +1164,8 @@ public class TypeCompositionStatement
                 }
             }
 
-        // TODO
-//        protected Expression           condition;
-//        protected List<Annotation>     annotations;
-//        protected List<Parameter>      typeParams;
-//        protected List<Parameter>      constructorParams;
-//        protected List<TypeExpression> typeArgs;
-//        protected List<Expression>     args;
-//        protected List<Composition>    compositions;
-//        protected StatementBlock       body;
-
-
-        // validation of constructor parameters happens in a
-        // TODO validate any constructor parameters and their default values, and transfer the info to the constructor
-        // constructor parameters are not permitted unless they all have default values (since the
-        // module is a singleton, and is automatically created, i.e. it has to have all of its
-        // construction parameters available)
-
         super.resolveNames(listRevisit, errs);
         }
-
-    // TODO next we need to recursively resolve visibility down each level of nesting
 
     private void disallowTypeParams(ErrorListener errs)
         {
