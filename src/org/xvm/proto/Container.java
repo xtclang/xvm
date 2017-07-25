@@ -5,7 +5,6 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -14,8 +13,8 @@ import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xModule.ModuleHandle;
 import org.xvm.proto.template.xRuntimeClock;
 import org.xvm.proto.template.xService;
+import org.xvm.proto.template.xTerminalConsole;
 
-import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -73,19 +72,41 @@ public class Container
 
     protected void initResources()
         {
+        // +++ RuntimeClock
         ClassTemplate templateClock = f_types.getTemplate("Clock");
-
-        Supplier<ObjectHandle> supplierClock = () ->
+        if (templateClock != null)
             {
-            ServiceContext ctxClock = createServiceContext("RuntimeClock");
-            return xService.makeHandle(ctxClock,
-                    xRuntimeClock.INSTANCE.f_clazzCanonical,
-                    templateClock.f_clazzCanonical.ensurePublicType());
-            };
+            f_types.getTemplate("Clock.RuntimeClock"); // to init xRuntimeClock.INSTANCE
 
-        ClassTypeConstant typeClock = f_pool.ensureClassTypeConstant(
-                f_pool.ensureClassConstant(f_constModule, "Clock"), null);
-        f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
+            Supplier<ObjectHandle> supplierClock = () ->
+                {
+                ServiceContext ctxClock = createServiceContext("RuntimeClock");
+                return xService.makeHandle(ctxClock,
+                        xRuntimeClock.INSTANCE.f_clazzCanonical,
+                        templateClock.f_clazzCanonical.ensurePublicType());
+                };
+
+            f_mapResources.put(
+                    new InjectionKey("runtimeClock", templateClock.f_clazzCanonical), supplierClock);
+            }
+
+        // +++ Console
+        ClassTemplate templateConsole = f_types.getTemplate("io.Console");
+        if (templateConsole != null)
+            {
+            f_types.getTemplate("io.Console.TerminalConsole"); // to init xTerminalConsole.INSTANCE
+
+            Supplier<ObjectHandle> supplierConsole = () ->
+                {
+                ServiceContext ctxConsole = createServiceContext("Console");
+                return xService.makeHandle(ctxConsole,
+                        xTerminalConsole.INSTANCE.f_clazzCanonical,
+                        templateConsole.f_clazzCanonical.ensurePublicType());
+                };
+
+            f_mapResources.put(
+                    new InjectionKey("console", templateConsole.f_clazzCanonical), supplierConsole);
+            }
         }
 
     public void start()
@@ -107,10 +128,10 @@ public class Container
         f_types.getTemplate("Class");
         f_types.getTemplate("Module");
         f_types.getTemplate("annotations.FutureRef");
+        f_types.getTemplate("annotations.InjectedRef");
         f_types.getTemplate("collections.Array");
         f_types.getTemplate("collections.Tuple");
         f_types.getTemplate("types.Method");
-        f_types.getTemplate("Clock.RuntimeClock");
 
         m_contextMain = createServiceContext("main");
         xService.makeHandle(m_contextMain,
@@ -158,12 +179,10 @@ public class Container
         }
 
     // return the injectable handle or null, if not resolvable
-    // clzParent - the class of the object for which the property needs to be injected
-    //             (may need to be used to resolve a composite type)
     // TODO: need an "override" name or better yet "injectionAttributes"
-    public ObjectHandle getInjectable(TypeComposition clzParent, PropertyStructure property)
+    public ObjectHandle getInjectable(String sName, TypeComposition clz)
         {
-        InjectionKey key = new InjectionKey(property.getName(), f_adapter.resolveType(property));
+        InjectionKey key = new InjectionKey(sName, clz);
         Object oResource = f_mapResources.get(key);
 
         if (oResource instanceof ObjectHandle)
@@ -209,12 +228,12 @@ public class Container
     public static class InjectionKey
         {
         public final String f_sName;
-        public final ClassTypeConstant f_type;
+        public final TypeComposition f_clazz;
 
-        public InjectionKey(String sName, ClassTypeConstant typeName)
+        public InjectionKey(String sName, TypeComposition clazz)
             {
             f_sName = sName;
-            f_type = typeName;
+            f_clazz = clazz;
             }
 
         @Override
@@ -233,19 +252,19 @@ public class Container
             InjectionKey that = (InjectionKey) o;
 
             return Objects.equals(this.f_sName, that.f_sName) &&
-                   Objects.equals(this.f_type, that.f_type);
+                   Objects.equals(this.f_clazz, that.f_clazz);
             }
 
         @Override
         public int hashCode()
             {
-            return f_sName.hashCode() + f_type.hashCode();
+            return f_sName.hashCode() + f_clazz.hashCode();
             }
 
         @Override
         public String toString()
             {
-            return "Key: " + f_sName + ", " + f_type;
+            return "Key: " + f_sName + ", " + f_clazz;
             }
         }
     }

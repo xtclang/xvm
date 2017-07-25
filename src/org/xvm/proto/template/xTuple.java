@@ -5,10 +5,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.TupleConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
@@ -112,15 +110,11 @@ public class xTuple
         ObjectHandle hSequence = ahVar[0];
         IndexSupport support = (IndexSupport) hSequence.f_clazz.f_template;
 
-        int cValues = (int) support.size(hSequence);
-        ObjectHandle[] ahValue = new ObjectHandle[cValues];
+        ObjectHandle[] ahValue;
 
         try
             {
-            for (int i = 0; i < cValues; i++)
-                {
-                ahValue[i] = support.extractArrayValue(hSequence, i);
-                }
+            ahValue = support.toArray(hSequence);
             }
         catch (ExceptionHandle.WrapperException e)
             {

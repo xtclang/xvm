@@ -5,6 +5,7 @@ import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
+import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xRef.RefHandle;
 
@@ -49,12 +50,15 @@ public class DNVar extends Op
         {
         ServiceContext context = frame.f_context;
 
-        RefHandle hRef = context.f_heapGlobal.createRefHandle(frame, f_nClassConstId);
-
         CharStringConstant constName =
                 (CharStringConstant) context.f_pool.getConstant(f_nNameConstId);
+        String sName = constName.getValue();
 
-        frame.introduceVar(hRef.f_clazz, constName.getValue(), Frame.VAR_DYNAMIC_REF, hRef);
+        TypeComposition clz = context.f_types.ensureComposition(f_nClassConstId);
+
+        RefHandle hRef = clz.f_template.createRefHandle(clz, sName);
+
+        frame.introduceVar(clz, sName, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }

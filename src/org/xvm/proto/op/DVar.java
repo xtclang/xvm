@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
+import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xRef.RefHandle;
 
@@ -40,9 +41,11 @@ public class DVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        RefHandle hRef = frame.f_context.f_heapGlobal.createRefHandle(frame, f_nClassConstId);
+        TypeComposition clz = frame.f_context.f_types.ensureComposition(f_nClassConstId);
 
-        frame.introduceVar(hRef.f_clazz, null, Frame.VAR_DYNAMIC_REF, hRef);
+        RefHandle hRef = clz.f_template.createRefHandle(clz, null);
+
+        frame.introduceVar(clz, null, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }

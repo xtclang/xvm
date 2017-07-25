@@ -102,9 +102,9 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
         {
-        return new AtomicIntRefHandle(clazz);
+        return new AtomicIntRefHandle(clazz, sName);
         }
 
     public static class AtomicIntRefHandle
@@ -112,9 +112,9 @@ public class xAtomicIntNumber
         {
         protected AtomicLong m_atomicValue;
 
-        protected AtomicIntRefHandle(TypeComposition clazz)
+        protected AtomicIntRefHandle(TypeComposition clazz, String sName)
             {
-            super(clazz);
+            super(clazz, sName);
             }
 
         @Override

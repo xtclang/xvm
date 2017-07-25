@@ -2,6 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -50,6 +51,7 @@ public class TypeSet
         ClassTemplate template = m_mapTemplatesByName.get(sName);
         if (template == null)
             {
+            // TODO: plug in module repositories
             ClassConstant constClass = f_container.f_pool.ensureEcstasyClassConstant(sName);
             template = getTemplate(constClass);
             m_mapTemplatesByName.put(sName, template);

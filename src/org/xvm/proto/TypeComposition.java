@@ -214,7 +214,7 @@ public class TypeComposition
         }
 
     // retrieve the actual type for the specified formal parameter name
-    public Type getFormalType(String sFormalName)
+    public Type getActualType(String sFormalName)
         {
         Type type = f_mapGenericActual.get(sFormalName);
         if (type == null)
@@ -390,7 +390,7 @@ public class TypeComposition
                         {
                         xRef referent = (xRef) template.getRefTemplate(template.f_types, prop);
 
-                        hRef = referent.createRefHandle(referent.f_clazzCanonical);
+                        hRef = referent.createRefHandle(referent.f_clazzCanonical, null);
                         }
 
                     if (!template.isReadOnly(prop) || hRef != null)
@@ -422,9 +422,22 @@ public class TypeComposition
         }
 
     @Override
+    public int hashCode()
+        {
+        return f_template.f_sName.hashCode();
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        // type compositions are singletons
+        return this == obj;
+        }
+
+    @Override
     public String toString()
         {
-        return f_template.f_sName +
+        return f_template.f_struct.getIdentityConstant().getPathString() +
                 Utils.formatArray(f_mapGenericActual.values().toArray(), "<", ">", ", ");
         }
     }

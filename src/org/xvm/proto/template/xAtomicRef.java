@@ -18,16 +18,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class xAtomicRef
         extends xRef
     {
-    public static xAtomicRef INSTANCE;
-
     public xAtomicRef(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure, false);
-
-        if (fInstance)
-            {
-            INSTANCE = this;
-            }
         }
 
 
@@ -60,9 +53,9 @@ public class xAtomicRef
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
         {
-        return new AtomicHandle(clazz, null);
+        return new AtomicHandle(clazz, sName, null);
         }
 
     public static class AtomicHandle
@@ -70,9 +63,9 @@ public class xAtomicRef
         {
         protected AtomicReference<ObjectHandle> m_atomic = new AtomicReference<>();
 
-        protected AtomicHandle(TypeComposition clazz, ObjectHandle hValue)
+        protected AtomicHandle(TypeComposition clazz, String sName, ObjectHandle hValue)
             {
-            super(clazz);
+            super(clazz, sName);
 
             if (hValue != null)
                 {
@@ -104,10 +97,5 @@ public class xAtomicRef
             {
             return f_clazz + " -> " + m_atomic.get();
             }
-        }
-
-    public static AtomicHandle makeHandle(ObjectHandle hValue)
-        {
-        return new AtomicHandle(INSTANCE.f_clazzCanonical, hValue);
         }
     }

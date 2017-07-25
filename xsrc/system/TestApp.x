@@ -18,8 +18,10 @@ class TestApp
 
     static Void test1()
         {
+        @inject Console console;
+
         String s = "Hello world!";
-        print(s);
+        console.print(s);
 
         Int i = getIntValue();
         print(i);
@@ -35,6 +37,7 @@ class TestApp
         {
         TestClass t = new TestClass("Hello World!");
 
+        print(t);
         print(t.prop1);
         print(t.method1());
 
@@ -48,6 +51,7 @@ class TestApp
             }
 
         TestClass t2 = new TestClass2(42, "Goodbye");
+        print(t2);
         print(t2.prop1);
         print(t2.method1());
 
@@ -79,6 +83,11 @@ class TestApp
             {
             throw new Exception(s);
             }
+
+        String to<String>()
+            {
+            return super() + ": prop1=" + prop1;
+            }
         }
 
     class TestClass2
@@ -101,6 +110,11 @@ class TestApp
         Int method1()
             {
             return super() + prop2;
+            }
+
+        String to<String>()
+            {
+            return super() + ": prop2=" + prop2;
             }
         }
 

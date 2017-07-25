@@ -314,8 +314,9 @@ public abstract class ClassTemplate
     // ---- OpCode support: construction and initialization -----
 
     // create a RefHandle for the specified class
+    // sName is an optional ref name
     // TODO: consider moving this method up to xRef
-    public RefHandle createRefHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
         {
         throw new IllegalStateException("Invalid op for " + f_sName);
         }
@@ -562,7 +563,7 @@ public abstract class ClassTemplate
 
         if (isGenericType(property))
             {
-            Type type = hThis.f_clazz.getFormalType(sName);
+            Type type = hThis.f_clazz.getActualType(sName);
 
             return frame.assignValue(iReturn, xType.makeHandle(type));
             }
@@ -574,7 +575,10 @@ public abstract class ClassTemplate
             String sErr;
             if (isInjectable(property))
                 {
-                hValue = frame.f_context.f_container.getInjectable(hThis.f_clazz, property);
+                ClassTypeConstant constType = frame.f_adapter.resolveType(property);
+                TypeComposition clz = f_types.resolve(constType);
+
+                hValue = frame.f_context.f_container.getInjectable(sName, clz);
                 if (hValue != null)
                     {
                     hThis.m_mapFields.put(sName, hValue);
@@ -588,7 +592,7 @@ public abstract class ClassTemplate
                         "Un-initialized property \"" : "Invalid property \"";
                 }
 
-            frame.m_hException = xException.makeHandle(sErr + property.getName() + '"');
+            frame.m_hException = xException.makeHandle(sErr + sName + '"');
             return Op.R_EXCEPTION;
             }
 
@@ -693,54 +697,9 @@ public abstract class ClassTemplate
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
             }
 
-        ClassStructure struct = f_struct;
-
-        if (struct.getFormat() != Component.Format.CONST)
-            {
-            // only const classes have an automatic implementation;
-            // for everyone else it's a ref equality
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
-            }
-
-        GenericHandle hV1 = (GenericHandle) hValue1;
-        GenericHandle hV2 = (GenericHandle) hValue2;
-
-        for (Component comp : struct.children())
-            {
-            if (comp instanceof PropertyStructure)
-                {
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
-                    {
-                    continue;
-                    }
-
-                String sProp = property.getName();
-                ObjectHandle h1 = hV1.getField(sProp);
-                ObjectHandle h2 = hV2.getField(sProp);
-
-                if (h1 == null || h2 == null)
-                    {
-                    frame.m_hException = xException.makeHandle("Unassigned property " + sProp);
-                    return Op.R_EXCEPTION;
-                    }
-
-                TypeComposition classProp = clazz.resolve(property.getType());
-
-                int iRet = classProp.callEquals(frame, h1, h2, Frame.RET_LOCAL);
-                if (iRet == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-
-                ObjectHandle hResult = frame.getFrameLocal();
-                if (hResult == xBoolean.FALSE)
-                    {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
-                    }
-                }
-            }
-        return frame.assignValue(iReturn, xBoolean.TRUE);
+        // only Const classes have an automatic implementation;
+        // for everyone else it's either a native method or a ref equality
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
         }
 
     // compare for order two object handles that both belong to the specified class
@@ -757,14 +716,9 @@ public abstract class ClassTemplate
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
             }
 
-        ClassStructure struct = f_struct;
-
         // only Const and Enum classes have automatic implementations
-        switch (struct.getFormat())
+        switch (f_struct.getFormat())
             {
-            default:
-                throw new IllegalStateException();
-
             case ENUMVALUE:
                 EnumHandle hV1 = (EnumHandle) hValue1;
                 EnumHandle hV2 = (EnumHandle) hValue2;
@@ -772,49 +726,9 @@ public abstract class ClassTemplate
                 return frame.assignValue(iReturn,
                         xOrdered.makeHandle(hV1.getValue() - hV2.getValue()));
 
-            case CONST:
-                break;
+            default:
+                throw new IllegalStateException("No implementation for \"compare()\" function");
             }
-
-        GenericHandle hV1 = (GenericHandle) hValue1;
-        GenericHandle hV2 = (GenericHandle) hValue2;
-
-        for (Component comp : struct.children())
-            {
-            if (comp instanceof PropertyStructure)
-                {
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
-                    {
-                    continue;
-                    }
-
-                String sProp = property.getName();
-                ObjectHandle h1 = hV1.getField(sProp);
-                ObjectHandle h2 = hV2.getField(sProp);
-
-                if (h1 == null || h2 == null)
-                    {
-                    frame.m_hException = xException.makeHandle("Unassigned property " + sProp);
-                    return Op.R_EXCEPTION;
-                    }
-
-                TypeComposition classProp = clazz.resolve(property.getType());
-
-                int iRet = classProp.callCompare(frame, h1, h2, Frame.RET_LOCAL);
-                if (iRet == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-
-                EnumHandle hResult = (EnumHandle) frame.getFrameLocal();
-                if (hResult != xOrdered.EQUAL)
-                    {
-                    return frame.assignValue(iReturn, hResult);
-                    }
-                }
-            }
-        return frame.assignValue(iReturn, xOrdered.EQUAL);
         }
 
     // ----- Op-code support: array operations -----
@@ -997,6 +911,7 @@ public abstract class ClassTemplate
     private Map<String, PropertyTemplate> m_mapProperties = new HashMap<>();
 
     public static String[] VOID = new String[0];
+    public static String[] OBJECT = new String[]{"Object"};
     public static String[] INT = new String[]{"Int64"};
     public static String[] BOOLEAN = new String[]{"Boolean"};
     public static String[] STRING = new String[]{"String"};

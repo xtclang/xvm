@@ -10,6 +10,7 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xRef.IndexedRefHandle;
 
 import java.util.Collections;
+import java.util.function.Consumer;
 
 /**
  * Support for index-based (array or tuple) op-codes.
@@ -68,6 +69,31 @@ public interface IndexSupport
             {
             frame.m_hException = e.getExceptionHandle();
             return Op.R_EXCEPTION;
+            }
+        }
+
+    // trivial helpers
+    default ObjectHandle[] toArray(ObjectHandle hTarget)
+            throws ExceptionHandle.WrapperException
+        {
+        int cValues = (int) size(hTarget);
+        ObjectHandle[] ahValue = new ObjectHandle[cValues];
+
+        for (int i = 0; i < cValues; i++)
+            {
+            ahValue[i] = extractArrayValue(hTarget, i);
+            }
+        return ahValue;
+        }
+
+    default void forEach(ObjectHandle hTarget, Consumer<ObjectHandle> consumer)
+            throws ExceptionHandle.WrapperException
+        {
+        int cValues = (int) size(hTarget);
+
+        for (int i = 0; i < cValues; i++)
+            {
+            consumer.accept(extractArrayValue(hTarget, i));
             }
         }
 
