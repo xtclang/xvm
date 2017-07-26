@@ -382,6 +382,18 @@ public abstract class AstNode
      */
     protected boolean canResolveSimpleName()
         {
+        if (this instanceof NameResolver.NameResolving)
+            {
+            // the problem is this: that a NameResolver that hasn't been invoked as part of the
+            // natural pass of the resolveNames() recursion has not had a chance to figure out what
+            // the effect its imports may have on name resolution, and thus we can't ask it what a
+            // name means
+            return !((NameResolver.NameResolving) this).getNameResolver().isFirstTime();
+            }
+
+        // for all other components (that don't override this method because they know more about
+        // whether or not they can resolve names), we'll assume that if they haven't been resolved,
+        // then they don't know how to resolve names
         return stage.ordinal() >= Stage.Resolved.ordinal();
         }
 

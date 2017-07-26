@@ -44,6 +44,12 @@ public class NullableTypeExpression
         }
 
     @Override
+    protected boolean canResolveSimpleName()
+        {
+        return super.canResolveSimpleName() || type.canResolveSimpleName();
+        }
+
+    @Override
     public long getStartPosition()
         {
         return type.getStartPosition();

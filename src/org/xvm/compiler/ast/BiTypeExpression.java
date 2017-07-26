@@ -46,6 +46,13 @@ public class BiTypeExpression
         }
 
     @Override
+    protected boolean canResolveSimpleName()
+        {
+        return super.canResolveSimpleName() ||
+                (type1.canResolveSimpleName() && type2.canResolveSimpleName());
+        }
+
+    @Override
     public long getStartPosition()
         {
         return type1.getStartPosition();
