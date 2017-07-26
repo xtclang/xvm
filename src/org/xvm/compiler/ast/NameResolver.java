@@ -173,7 +173,8 @@ public class NameResolver
                         return Result.ERROR;
                         }
 
-                    m_sName = m_iter.hasNext() ? m_iter.next() : null;
+                    m_component = componentNext;
+                    m_sName     = m_iter.hasNext() ? m_iter.next() : null;
                     }
 
                 // no names left to resolve
