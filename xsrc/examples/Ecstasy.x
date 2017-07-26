@@ -1,5 +1,7 @@
 module Ecstasy.xtclang.org
     {
+    typedef Tuple<> Void;
+
     class Object
         {
         }
@@ -11,8 +13,12 @@ module Ecstasy.xtclang.org
     enum Nullable{Null}
     enum Boolean{False, True}
 
-    package Collections
+    package collections
         {
+        interface Tuple // <ElementTypes extends Tuple<ElementTypes...>>
+            {
+            }
+
         interface Iterator<ElementType>
             {
             conditional ElementType next();

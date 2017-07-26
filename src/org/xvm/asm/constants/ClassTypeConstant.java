@@ -69,15 +69,18 @@ public class ClassTypeConstant
         {
         super(pool);
 
-        if (!(constId instanceof ClassConstant || constId instanceof PackageConstant
-                || constId instanceof ModuleConstant))
+        if (!(constId instanceof ModuleConstant
+                || constId instanceof PackageConstant
+                || constId instanceof ClassConstant
+                || constId instanceof PropertyConstant))
             {
-            throw new IllegalArgumentException("module, package, or class required");
+            throw new IllegalArgumentException("constant " + constId.getFormat()
+                    + " is not a Module, Package, Class, or Property (formal type parameter)");
             }
 
         m_constId    = constId;
         m_access     = access == null ? Access.PUBLIC : access;
-        m_listParams = constTypes == null ? Collections.EMPTY_LIST : Arrays.asList(constTypes);
+        m_listParams = constTypes == null || constTypes.length == 0 ? Collections.EMPTY_LIST : Arrays.asList(constTypes);
         }
 
 

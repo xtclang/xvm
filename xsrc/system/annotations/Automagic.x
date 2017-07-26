@@ -1,6 +1,7 @@
 /**
  * The Automagic mixin is used as an annotation for two purposes:
  *
+ * TODO this is no longer true (need a different annotation for it?)
  * * When the compiler is faced with an incompatible assignment from type A to type B, if type A
  *   contains a no-parameter method annotated with Automagic that returns type B, then the compiler
  *   will automatically add an invocation of that method to achieve the necessary type conversion.
@@ -30,6 +31,6 @@
  * almost *always* incorrect.
  */
 mixin Automagic
-        into Method | Mixin
+        into Mixin
     {
     }

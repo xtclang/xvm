@@ -243,6 +243,12 @@ public class ModuleStructure
         }
 
     @Override
+    public String getSimpleName()
+        {
+        return getModuleConstant().getUnqualifiedName();
+        }
+
+    @Override
     public boolean isGloballyVisible()
         {
         // modules are always public, and always "top level" visible
