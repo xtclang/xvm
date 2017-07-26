@@ -77,7 +77,7 @@ public class ClassTypeConstant
 
         m_constId    = constId;
         m_access     = access == null ? Access.PUBLIC : access;
-        m_listParams = constTypes == null ? Collections.EMPTY_LIST : Arrays.asList(constTypes);
+        m_listParams = constTypes == null || constTypes.length == 0 ? Collections.EMPTY_LIST : Arrays.asList(constTypes);
         }
 
 
