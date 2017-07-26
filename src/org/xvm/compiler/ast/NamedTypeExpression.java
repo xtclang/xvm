@@ -148,63 +148,61 @@ public class NamedTypeExpression
         if (fIsResolved && !fWasResolved)
             {
             NameResolver resolver = m_resolver;
-            if (resolver.getResult() == Result.RESOLVED)
+            assert resolver.getResult() == Result.RESOLVED;
+
+            // determine the type's class
+            IdentityConstant constId = resolver.getIdentityConstant();
+            assert constId != null;
+            setIdentityConstant(constId);
+
+            // determine the type accessibility
+            Access accessType = Access.PUBLIC;
+            if (access != null)
                 {
-                // determine the type's class
-                IdentityConstant constId = resolver.getIdentityConstant();
-                if (constId != null)
+                switch (access.getId())
                     {
-                    setIdentityConstant(constId);
+                    case PUBLIC:
+                        accessType = Access.PUBLIC;
+                        break;
+
+                    case PROTECTED:
+                        accessType = Access.PROTECTED;
+                        break;
+
+                    case PRIVATE:
+                        accessType = Access.PRIVATE;
+                        break;
+
+                    default:
+                        throw new IllegalStateException("access=" + access);
                     }
-
-                // determine the type accessibility
-                Access accessType = Access.PUBLIC;
-                if (access != null)
-                    {
-                    switch (access.getId())
-                        {
-                        case PUBLIC:
-                            accessType = Access.PUBLIC;
-                            break;
-
-                        case PROTECTED:
-                            accessType = Access.PROTECTED;
-                            break;
-
-                        case PRIVATE:
-                            accessType = Access.PRIVATE;
-                            break;
-
-                        default:
-                            throw new IllegalStateException("access=" + access);
-                        }
-                    }
-
-                // determine the type parameters
-                TypeConstant[] aconstParams = null;
-                if (paramTypes != null)
-                    {
-                    int cParams = paramTypes.size();
-                    aconstParams = new TypeConstant[cParams];
-                    for (int i = 0; i < cParams; ++i)
-                        {
-                        aconstParams[i] = paramTypes.get(i).getTypeConstant();
-                        }
-                    }
-
-                // create the ClassTypeConstant that represents the type expression
-                ConstantPool pool      = getComponent().getConstantPool();
-                TypeConstant constType = pool.ensureClassTypeConstant(constId, accessType, aconstParams);
-
-                // if it is immutable, then it must be an ImmutableTypeConstant (which is _NOT_ a
-                // ClassTypeConstant)
-                if (immutable != null)
-                    {
-                    constType = pool.ensureImmutableTypeConstant(constType);
-                    }
-
-                setTypeConstant(constType);
                 }
+
+            // determine the type parameters
+            TypeConstant[] aconstParams = null;
+            if (paramTypes != null)
+                {
+                int cParams = paramTypes.size();
+                aconstParams = new TypeConstant[cParams];
+                for (int i = 0; i < cParams; ++i)
+                    {
+                    aconstParams[i] = paramTypes.get(i).getTypeConstant();
+                    assert aconstParams[i] != null;
+                    }
+                }
+
+            // create the ClassTypeConstant that represents the type expression
+            ConstantPool pool      = getComponent().getConstantPool();
+            TypeConstant constType = pool.ensureClassTypeConstant(constId, accessType, aconstParams);
+
+            // if it is immutable, then it must be an ImmutableTypeConstant (which is _NOT_ a
+            // ClassTypeConstant)
+            if (immutable != null)
+                {
+                constType = pool.ensureImmutableTypeConstant(constType);
+                }
+
+            setTypeConstant(constType);
             }
         }
 
