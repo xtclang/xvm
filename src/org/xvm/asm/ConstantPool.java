@@ -537,7 +537,7 @@ public class ConstantPool
      *
      * @return an IdentityConstant for, or null
      */
-    public IdentityConstant ensureImplicitlyImportedIdentityConstant(String sName)
+    public Component getImplicitlyImportedComponent(String sName)
         {
         String sPkg = null;
         String sClz = null;
@@ -600,7 +600,13 @@ public class ConstantPool
                 constId = ensureClassConstant(constId, sSub);
                 }
             }
-        return constId;
+
+        Component component = constId.getComponent();
+        if (component == null)
+            {
+            throw new IllegalStateException("missing Ecstasy component: " + constId);
+            }
+        return component;
         }
 
     /**
@@ -688,24 +694,25 @@ public class ConstantPool
     public ClassTypeConstant ensureClassTypeConstant(IdentityConstant constClass,
                                                      Access access, TypeConstant... constTypes)
         {
-        if (constClass instanceof ModuleConstant
+        if (!(constClass instanceof ModuleConstant
                 || constClass instanceof PackageConstant
-                || constClass instanceof ClassConstant)
+                || constClass instanceof ClassConstant
+                || constClass instanceof PropertyConstant))
             {
-            ClassTypeConstant constant = null;
-            if (constClass.getFormat() == Format.Class && access == Access.PUBLIC && constTypes == null)
-                {
-                constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constClass);
-                }
-            if (constant == null)
-                {
-                constant = (ClassTypeConstant) register(new ClassTypeConstant(this, constClass, access, constTypes));
-                }
-            return constant;
+            throw new IllegalArgumentException("constant " + constClass.getFormat()
+                    + " is not a Module, Package, Class, or Property (formal type parameter)");
             }
 
-        throw new IllegalArgumentException("constant " + constClass.getFormat()
-                + " is not a Module, Package, or Class");
+        ClassTypeConstant constant = null;
+        if (constClass.getFormat() == Format.Class && access == Access.PUBLIC && constTypes == null)
+            {
+            constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constClass);
+            }
+        if (constant == null)
+            {
+            constant = (ClassTypeConstant) register(new ClassTypeConstant(this, constClass, access, constTypes));
+            }
+        return constant;
         }
 
     /**

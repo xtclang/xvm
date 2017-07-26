@@ -297,15 +297,22 @@ public abstract class AstNode
         boolean fResolved = true;
         if (this instanceof NameResolver.NameResolving && stage.ordinal() < Stage.Resolved.ordinal())
             {
-            NameResolver resolver   = ((NameResolver.NameResolving) this).getNameResolver();
-            boolean      fFirstTime = resolver.isFirstTime();
-            if (resolver != null && resolver.resolve(listRevisit, errs) == NameResolver.Result.DEFERRED)
+            NameResolver resolver = ((NameResolver.NameResolving) this).getNameResolver();
+            if (resolver != null)
                 {
-                if (!fFirstTime)
+                boolean fFirstTime = resolver.isFirstTime();
+                if (resolver.resolve(listRevisit, errs) == NameResolver.Result.DEFERRED)
                     {
-                    return;
+                    // the first time through the recursive descent of AST nodes, we need to visit
+                    // every node. subsequent visits are only to the nodes that registered
+                    // themselves for re-visits due to their inability to resolve themselves fully
+                    // in previous visits
+                    if (!fFirstTime)
+                        {
+                        return;
+                        }
+                    fResolved = false;
                     }
-                fResolved = false;
                 }
             }
 
@@ -318,6 +325,7 @@ public abstract class AstNode
 
         for (AstNode node : children())
             {
+            // don't visit children that have already successfully resolved
             if (node.stage.ordinal() < Stage.Resolved.ordinal())
                 {
                 node.resolveNames(listRevisit, errs);
@@ -350,10 +358,10 @@ public abstract class AstNode
      *
      * @return the Constant of one of the parents that answers to the specified name, or null
      */
-    protected IdentityConstant resolveParentBySingleName(String sName)
+    protected Component resolveParentBySimpleName(String sName)
         {
         AstNode parent = getParent();
-        return parent == null ? null : parent.resolveParentBySingleName(sName);
+        return parent == null ? null : parent.resolveParentBySimpleName(sName);
         }
 
     /**
@@ -372,7 +380,7 @@ public abstract class AstNode
     /**
      * @return true iff this AstNode should be able to resolve names
      */
-    protected boolean canResolveSingleName()
+    protected boolean canResolveSimpleName()
         {
         return stage.ordinal() >= Stage.Resolved.ordinal();
         }
@@ -388,7 +396,7 @@ public abstract class AstNode
      *         than one structure is identified by the name, or null if no structure was identified
      *         by the name
      */
-    protected IdentityConstant resolveSingleName(String sName)
+    protected Component resolveSimpleName(String sName)
         {
         return null;
         }

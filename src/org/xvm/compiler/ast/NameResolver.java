@@ -5,9 +5,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.AmbiguousIdentityConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.compiler.ErrorListener;
@@ -78,12 +78,12 @@ public class NameResolver
                 // the first name is, then check if it is an implicitly imported identity.
 
                 // check if the name is an unhideable name
-                IdentityConstant constResult = m_node.resolveParentBySingleName(m_sName);
+                Component component = m_node.resolveParentBySimpleName(m_sName);
 
                 // if there is no obvious (unhideable) component that the name refers to, then we
                 // need to start with the current node, and one by one walk up to the root, asking
                 // at each level for the node to resolve the name
-                if (constResult == null)
+                if (component == null)
                     {
                     AstNode node = m_node;
                     WalkUpToTheRoot: while (node != null)
@@ -96,7 +96,7 @@ public class NameResolver
                             switch (resolver.resolve(listRevisit, errs))
                                 {
                                 case RESOLVED:
-                                    constResult = resolver.getIdentityConstant();
+                                    component = resolver.getComponent();
                                     break WalkUpToTheRoot;
 
                                 case DEFERRED:
@@ -114,17 +114,18 @@ public class NameResolver
 
                         // otherwise, ask the node to resolve the name, and if it can't, we'll come
                         // back later
-                        if (node == m_node || node.canResolveSingleName())
+                        if (node == m_node || node.canResolveSimpleName())
                             {
-                            constResult = node.resolveSingleName(m_sName);
-                            if (constResult instanceof AmbiguousIdentityConstant)
+                            component = node.resolveSimpleName(m_sName);
+                            if (component instanceof CompositeComponent)
                                 {
+                                // TODO walk through all of the components in the composite, and only if the components ***conflict*** should we log an error
                                 // TODO log error - name is ambiguous (info is in the constant)
                                 m_status = Status.ERROR;
                                 return Result.ERROR;
                                 }
 
-                            if (constResult != null)
+                            if (component != null)
                                 {
                                 break WalkUpToTheRoot;
                                 }
@@ -140,12 +141,12 @@ public class NameResolver
                     }
 
                 // last chance: check the implicitly imported names
-                if (constResult == null)
+                if (component == null)
                     {
-                    constResult = getPool().ensureImplicitlyImportedIdentityConstant(m_sName);
+                    component = getPool().getImplicitlyImportedComponent(m_sName);
                     }
 
-                if (constResult == null)
+                if (component == null)
                     {
                     // TODO log error - name is not resolvable
                     m_status = Status.ERROR;
@@ -153,7 +154,7 @@ public class NameResolver
                     }
 
                 // first name has been resolved
-                m_component = constResult.getComponent();
+                m_component = component;
                 m_sName     = m_iter.hasNext() ? m_iter.next() : null;
                 m_status    = Status.RESOLVED_PARTIAL;
                 // fall through

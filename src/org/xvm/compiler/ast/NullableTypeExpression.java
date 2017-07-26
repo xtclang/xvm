@@ -24,7 +24,6 @@ import org.xvm.util.Severity;
  */
 public class NullableTypeExpression
         extends TypeExpression
-        implements NameResolver.NameResolving
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -60,15 +59,6 @@ public class NullableTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
-        }
-
-
-    // ----- NameResolving methods -----------------------------------------------------------------
-
-    @Override
-    public NameResolver getNameResolver()
-        {
-        return m_resolver;
         }
 
 
@@ -121,8 +111,6 @@ public class NullableTypeExpression
 
     protected TypeExpression type;
     protected long           lEndPos;
-
-    protected transient NameResolver m_resolver;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NullableTypeExpression.class, "type");
     }

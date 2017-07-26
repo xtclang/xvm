@@ -342,6 +342,14 @@ public abstract class Component
         }
 
     /**
+     * @return the unqualified form of the component name
+     */
+    public String getSimpleName()
+        {
+        return getName();
+        }
+
+    /**
      * @return true if the identity of this component is visible from anywhere
      */
     public boolean isGloballyVisible()

@@ -5,9 +5,6 @@ import java.util.List;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ModuleStructure;
-
-import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.compiler.Token;
 
@@ -67,25 +64,22 @@ public abstract class ComponentStatement
     // ----- name resolution -----------------------------------------------------------------------
 
     @Override
-    protected IdentityConstant resolveParentBySingleName(String sName)
+    protected Component resolveParentBySimpleName(String sName)
         {
-        IdentityConstant constant = super.resolveParentBySingleName(sName);
-        if (constant == null && component != null)
-            {
-            if (component.getName().equals(sName) || (component instanceof ModuleStructure &&
-                    ((ModuleStructure) component).getModuleConstant().getUnqualifiedName().equals(sName)))
-                {
-                constant = component.getIdentityConstant();
-                }
-            }
-        return constant;
+        Component componentParent = super.resolveParentBySimpleName(sName);
+        return componentParent == null && component != null && sName.equals(component.getSimpleName())
+                ? component
+                : componentParent;
         }
 
     @Override
-    protected IdentityConstant resolveSingleName(String sName)
+    protected Component resolveSimpleName(String sName)
         {
         // TODO this needs to do roughly the same thing that the NameResolve does under "case RESOLVED_PARTIAL:"
-        return null;
+        // TODO WARNING this is just temporary!!! - needs to check supers, interfaces, mixins, ...
+        return component == null
+                ? null
+                : component.getChild(sName);
         }
 
 

@@ -18,6 +18,7 @@ import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.ast.NameResolver.NameResolving;
 import org.xvm.compiler.ast.NameResolver.Result;
 
 import org.xvm.util.Severity;
@@ -148,6 +149,10 @@ public class NamedTypeExpression
         if (fIsResolved && !fWasResolved)
             {
             NameResolver resolver = m_resolver;
+            if (resolver.getResult() == Result.ERROR)
+                {
+                return;
+                }
             assert resolver.getResult() == Result.RESOLVED;
 
             // determine the type's class
@@ -186,8 +191,15 @@ public class NamedTypeExpression
                 aconstParams = new TypeConstant[cParams];
                 for (int i = 0; i < cParams; ++i)
                     {
-                    aconstParams[i] = paramTypes.get(i).getTypeConstant();
-                    assert aconstParams[i] != null;
+                    TypeExpression paramType = paramTypes.get(i);
+                    TypeConstant   constType = paramType.getTypeConstant();
+                    if (constType == null)
+                        {
+                        assert !(paramType instanceof NameResolving) || ((NameResolving) paramType)
+                                .getNameResolver().getResult() == Result.ERROR;
+                        return;
+                        }
+                    aconstParams[i] = constType;
                     }
                 }
 

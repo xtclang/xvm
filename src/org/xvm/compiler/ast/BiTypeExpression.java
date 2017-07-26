@@ -25,7 +25,6 @@ import org.xvm.util.Severity;
  */
 public class BiTypeExpression
         extends TypeExpression
-        implements NameResolver.NameResolving
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -62,15 +61,6 @@ public class BiTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
-        }
-
-
-    // ----- NameResolving methods -----------------------------------------------------------------
-
-    @Override
-    public NameResolver getNameResolver()
-        {
-        return m_resolver;
         }
 
 
@@ -126,8 +116,6 @@ public class BiTypeExpression
     protected TypeExpression type1;
     protected Token operator;
     protected TypeExpression type2;
-
-    protected transient NameResolver m_resolver;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BiTypeExpression.class, "type1", "type2");
     }
