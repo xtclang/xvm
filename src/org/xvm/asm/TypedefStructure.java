@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  *
  * @author cp 2016.06.27
  */
-public class TypeDefStructure
+public class TypedefStructure
         extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -33,7 +33,8 @@ public class TypeDefStructure
      * @param constId    the constant that specifies the identity of the TypeDef
      * @param condition  the optional condition for this TypeDefStructure
      */
-    protected TypeDefStructure(XvmStructure xsParent, int nFlags, TypeDefConstant constId, ConditionalConstant condition)
+    protected TypedefStructure(XvmStructure xsParent, int nFlags, TypeDefConstant constId,
+            ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
         }

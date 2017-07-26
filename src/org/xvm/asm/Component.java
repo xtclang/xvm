@@ -813,9 +813,9 @@ public abstract class Component
      * Create and register a PropertyStructure with the specified name.
      *
      * @param fStatic    true if the property is marked as static
-     * @param access     the accessibility of the class to create
-     * @param constType  the category format of the class
-     * @param sName      the simple (unqualified) class name to create
+     * @param access     the accessibility of the property to create
+     * @param constType  the type of the property to create
+     * @param sName      the simple (unqualified) property name to create
      */
     public PropertyStructure createProperty(boolean fStatic, Access access, TypeConstant constType, String sName)
         {
@@ -845,6 +845,21 @@ public abstract class Component
         addChild(struct);
 
         return struct;
+        }
+
+    /**
+     * Create and register a PropertyStructure with the specified name.
+     *
+     * @param access     the accessibility of the typedef to create
+     * @param constType  the type of the typedef to create
+     * @param sName      the simple (unqualified) typedef name to create
+     *
+     * @return the new TypedefStructure
+     */
+    public TypedefStructure createTypedef(Access access, TypeConstant constType, String sName)
+        {
+        // TODO
+        return null;
         }
 
     /**

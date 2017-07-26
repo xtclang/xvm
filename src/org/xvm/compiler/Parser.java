@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token.Id;
@@ -468,7 +469,7 @@ public class Parser
      *     TypeCompositionComponents TypeCompositionComponent
      *
      * TypeCompositionComponent
-     *     TypedefStatement
+     *     AccessModifier-opt TypeDefStatement
      *     ImportStatement
      *     TypeComposition
      *     PropertyDeclaration
@@ -491,7 +492,7 @@ public class Parser
                     break;
 
                 case TYPEDEF:
-                    stmt = parseTypeDefStatement(exprCondition);
+                    stmt = parseTypeDefStatement(exprCondition, null);
                     break;
 
                 case IF:
@@ -683,6 +684,43 @@ public class Parser
                 // it's definitely a type composition
                 return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
                         modifiers, annotations);
+
+            case TYPEDEF:
+                // evaluate annotations
+                if (annotations != null)
+                    {
+                    // TODO log error - annotations of a typedef are not allowed
+                    }
+
+                // evaluate modifers looking for an access modifier
+                Token tokAccess = null;
+                if (modifiers != null)
+                    {
+                    for (Token modifier : modifiers)
+                        {
+                        boolean fOverride = tokAccess != null;
+                        switch (modifier.getId())
+                            {
+                            case PUBLIC:
+                            case PROTECTED:
+                            case PRIVATE:
+                                tokAccess = modifier;
+                                break;
+
+                            default:
+                                // TODO log error - illegal modifier
+                                fOverride = false;
+                                break;
+                            }
+
+                        if (fOverride)
+                            {
+                            // TODO log error - multiple access modifiers
+                            }
+                        }
+                    }
+
+                return parseTypeDefStatement(exprCondition, tokAccess);
 
             case L_PAREN:
                 {
@@ -1288,7 +1326,7 @@ public class Parser
                 return parseTryStatement();
 
             case TYPEDEF:
-                return parseTypeDefStatement(null);
+                return parseTypeDefStatement(null, null);
 
             case USING:
                 return parseUsingStatement();
@@ -1747,9 +1785,12 @@ public class Parser
      *     "typedef" Type Name ";"
      * </pre></code>
      *
+     * @param tokenAccess  if the typedef is a type composition component, it can be declared with
+     *                     an access modifier
+     *
      * @return a TypedefStatement
      */
-    TypedefStatement parseTypeDefStatement(Expression exprCond)
+    TypedefStatement parseTypeDefStatement(Expression exprCond, Token tokenAccess)
         {
         Token keyword = expect(Id.TYPEDEF);
 
@@ -1759,7 +1800,7 @@ public class Parser
 
         expect(Id.SEMICOLON);
 
-        return new TypedefStatement(exprCond, keyword, type, simpleName);
+        return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess, type, simpleName);
         }
 
     /**
