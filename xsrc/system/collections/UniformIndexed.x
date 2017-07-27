@@ -36,12 +36,12 @@ interface UniformIndexed<IndexType, ElementType>
                 return true;
                 }
 
-            RefType get()
+            ElementType get()
                 {
                 return UniformIndexed.this.get(index);
                 }
 
-            Void set(RefType value)
+            Void set(ElementType value)
                 {
                 UniformIndexed.this.set(index, value);
                 }

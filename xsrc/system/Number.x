@@ -67,7 +67,8 @@ interface Number
      * Division and Modulo: Divide this number by another number, and return both the
      * quotient and the modulo.
      */
-    @op (@Desc("quotient") Number, @Desc("modulo") Number) divmod(Number n)
+//    @op (@Desc("quotient") Number, @Desc("modulo") Number) divmod(Number n)
+    @op (Number, Number) divmod(Number n)
         {
         return (this / n, this % n);
         }

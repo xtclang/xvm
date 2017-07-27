@@ -215,7 +215,7 @@ class ExtHashMap<KeyType, ValueType>
      * A representation of all of the HashEntry objects in the Map.
      */
     class HashEntrySet
-            extends KeyBasedEntriesSet<HashEntry>
+            // extends KeyBasedEntriesSet<HashEntry> // TODO
         {
         @Override
         Iterator<HashEntry> iterator()
@@ -467,8 +467,8 @@ class ExtHashMap<KeyType, ValueType>
      * @return the suggested number of buckets to achieve the specified capacity, and the
      *         suggested grow and shrink thresholds
      */
-    protected static (@Desc("bucketCount") Int, @Desc("growAt") Int, @Desc("shrinkAt") Int)
-            calcBucketCount(Int capacity)
+//    protected static (@Desc("bucketCount") Int, @Desc("growAt") Int, @Desc("shrinkAt") Int)
+    protected static (Int, Int, Int) calcBucketCount(Int capacity)
         {
         assert capacity >= 0;
 

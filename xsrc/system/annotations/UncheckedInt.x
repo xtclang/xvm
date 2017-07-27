@@ -7,6 +7,8 @@
 mixin UncheckedInt
         into IntNumber
     {
+    static const MathException extends Exception {}
+
     @op IntNumber nextValue()
         {
         try

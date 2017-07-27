@@ -19,7 +19,7 @@ class TestApp
 
     static Void test1()
         {
-        @inject Console console;
+        @inject io.Console console;
 
         String s = "Hello world!";
         console.print("\n*** ");
@@ -195,7 +195,7 @@ class TestApp
             return svc.increment();
             }
 
-        int c = testBlockingReturn();
+        Int c = testBlockingReturn();
         print(c);
 
         @future Int fc = svc.increment();
@@ -338,7 +338,7 @@ class TestApp
         t2[1] = 2;
         print(t2);
 
-        int of = "the test".indexOf(t2); // same as "the test".indexOf("t", 2);
+        Int of = "the test".indexOf(t2); // same as "the test".indexOf("t", 2);
         assert(of == 4);
 
         if (String s : testConditional(1))

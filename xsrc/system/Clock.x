@@ -13,7 +13,7 @@ typedef function Void () Cancellable;
 interface Clock
     {
     @ro DateTime epoch;
-    @ro TimeZone timezone;
+//    @ro TimeZone timezone;
     @ro Interval precision;
     @ro Boolean monotonic;
     @ro Boolean realtime;

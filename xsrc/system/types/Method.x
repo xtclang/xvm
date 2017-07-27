@@ -162,7 +162,7 @@ const Method<TargetType,
      * Given an object reference of a type that contains this method, invoke that method passing
      * the specified arguments, and returning the results.
      */
-    ReturnType invoke(TargetType target, ParamTypes args)
+    ReturnTypes invoke(TargetType target, ParamTypes args)
         {
         return bindTarget(target).invoke(args);
         }

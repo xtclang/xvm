@@ -599,6 +599,11 @@ public class ConstantPool
                 sClz = "UInt8";
                 break;
 
+            case "Signum":
+                sClz = "Number";
+                sSub = "Signum";
+                break;
+
             case "Int":
                 sClz = "Int64";
                 break;
@@ -609,10 +614,17 @@ public class ConstantPool
 
             case "Tuple":
             case "Map":
+            case "Set":
             case "Sequence":
             case "Array":
                 sPkg = "collections";
                 sClz = sName;
+                break;
+
+            case "Entry":
+                sPkg = "collections";
+                sClz = "Map";
+                sSub = "Entry";
                 break;
 
             case "Property":

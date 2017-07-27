@@ -74,7 +74,7 @@ interface Map<KeyType, ValueType>
         /**
          * Two entries are equal iff they contain equal keys and equal values.
          */
-        static Boolean equals(Type<Entry> EntryType, EntryType entry1, EntryType entry2)
+        static Boolean equals(Entry entry1, Entry entry2)
             {
             return entry1.key == entry2.key
                 && entry1.exists && entry2.exists

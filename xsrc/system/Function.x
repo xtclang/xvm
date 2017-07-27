@@ -25,10 +25,11 @@ interface Function<ReturnTypes extends Tuple<ReturnTypes...>, ParamTypes extends
      * Binds a single parameter of the Function, resulting in a new Function that does not contain
      * that parameter.
      */
-    Function bind(Parameter param, param.ParamType value)
-        {
-        return bind(Map:{param=value});
-        }
+//     TODO
+//    Function bind(Parameter param, param.ParamType value)
+//        {
+//        return bind(Map:{param=value});
+//        }
 
     /**
      * Binds any number of parameters of the Function, resulting in a new Function that does not
