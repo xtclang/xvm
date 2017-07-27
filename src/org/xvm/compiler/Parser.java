@@ -689,7 +689,10 @@ public class Parser
                 // evaluate annotations
                 if (annotations != null)
                     {
-                    // TODO log error - annotations of a typedef are not allowed
+                    for (Annotation annotation : annotations)
+                        {
+                        annotation.log(m_errorListener, Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
+                        }
                     }
 
                 // evaluate modifers looking for an access modifier
@@ -698,24 +701,20 @@ public class Parser
                     {
                     for (Token modifier : modifiers)
                         {
-                        boolean fOverride = tokAccess != null;
                         switch (modifier.getId())
                             {
                             case PUBLIC:
                             case PROTECTED:
                             case PRIVATE:
-                                tokAccess = modifier;
-                                break;
-
+                                if (tokAccess == null)
+                                    {
+                                    tokAccess = modifier;
+                                    break;
+                                    }
+                                // fall through
                             default:
-                                // TODO log error - illegal modifier
-                                fOverride = false;
+                                modifier.log(m_errorListener, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
                                 break;
-                            }
-
-                        if (fOverride)
-                            {
-                            // TODO log error - multiple access modifiers
                             }
                         }
                     }
@@ -3157,7 +3156,6 @@ s     *
      *     NonBiTypeExpression "..."
      *     "conditional" NonBiTypeExpression
      *     "immutable" NonBiTypeExpression
-     *     "T0D0" TodoFinish-opt
      *
      * NamedTypeExpression
      *     QualifiedName TypeParameterTypeList-opt
@@ -3204,10 +3202,6 @@ s     *
             case CONDITIONAL:
             case IMMUTABLE:
                 type = new DecoratedTypeExpression(current(), parseNonBiTypeExpression());
-                break;
-
-            case TODO:
-                type = parseTodoExpression();
                 break;
 
             default:

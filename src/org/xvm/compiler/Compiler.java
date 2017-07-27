@@ -348,6 +348,10 @@ public class Compiler
      * Cannot nest a typedef.
      */
     public static final String TYPEDEF_UNEXPECTED                 = "COMPILER-34";
+    /**
+     * Cannot have an annotation here.
+     */
+    public static final String ANNOTATION_UNEXPECTED              = "COMPILER-35";
 
 
     // ----- data members --------------------------------------------------------------------------

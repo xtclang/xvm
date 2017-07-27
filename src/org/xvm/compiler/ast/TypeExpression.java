@@ -1,7 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.ClassTypeConstant;
