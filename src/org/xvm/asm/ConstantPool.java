@@ -712,10 +712,11 @@ public class ConstantPool
         if (!(constClass instanceof ModuleConstant
                 || constClass instanceof PackageConstant
                 || constClass instanceof ClassConstant
-                || constClass instanceof PropertyConstant))
+                || constClass instanceof PropertyConstant
+                || constClass instanceof TypedefConstant))
             {
             throw new IllegalArgumentException("constant " + constClass.getFormat()
-                    + " is not a Module, Package, Class, or Property (formal type parameter)");
+                    + " is not a Module, Package, Class, Typedef, or Property (formal type parameter)");
             }
 
         ClassTypeConstant constant = null;

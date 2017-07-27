@@ -1,7 +1,9 @@
 module Test
     {
-    class List<ElementType extends Int>
-        {
-        Void add(ElementType value);
-        }
+    Void foo(Int i) {}
+
+//    class List<ElementType extends Int>
+//        {
+//        Void add(ElementType value);
+//        }
     }

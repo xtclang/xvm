@@ -79,14 +79,13 @@ public class TypedefStatement
             if (container.isClassContainer())
                 {
                 Access           access    = getDefaultAccess();
-                TypeConstant     constType = type.ensureTypeConstant(); // TODO or ensureIdentityConstant();
+                TypeConstant     constType = type.ensureTypeConstant();
                 TypedefStructure typedef   = container.createTypedef(access, constType, sName);
                 setComponent(typedef);
                 }
             else
                 {
-                // TODO need a "typedef unexpected" error code
-                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.PROP_UNEXPECTED, sName, container);
+                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.TYPEDEF_UNEXPECTED, sName, container);
                 throw new UnsupportedOperationException("not a typedef container: " + container);
                 }
             }

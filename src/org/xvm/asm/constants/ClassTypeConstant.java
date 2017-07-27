@@ -72,10 +72,11 @@ public class ClassTypeConstant
         if (!(constId instanceof ModuleConstant
                 || constId instanceof PackageConstant
                 || constId instanceof ClassConstant
-                || constId instanceof PropertyConstant))
+                || constId instanceof PropertyConstant
+                || constId instanceof TypedefConstant))
             {
             throw new IllegalArgumentException("constant " + constId.getFormat()
-                    + " is not a Module, Package, Class, or Property (formal type parameter)");
+                    + " is not a Module, Package, Class, Typedef, or Property (formal type parameter)");
             }
 
         m_constId    = constId;
