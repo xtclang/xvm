@@ -76,6 +76,26 @@ public class CompositeComponent
         return constId;
         }
 
+    /**
+     * @return true if the composite component refers to more than one identity
+     */
+    public boolean isAmbiguous()
+        {
+        IdentityConstant constId = null;
+        for (Component sibling : m_siblings)
+            {
+            if (constId == null)
+                {
+                constId = sibling.getIdentityConstant();
+                }
+            else if (!constId.equals(sibling.getIdentityConstant()))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
     @Override
     public Format getFormat()
         {

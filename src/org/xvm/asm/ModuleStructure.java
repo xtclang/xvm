@@ -261,6 +261,14 @@ public class ModuleStructure
         return true;
         }
 
+    @Override
+    public Component resolveName(String sName)
+        {
+        return moduleActual == null
+                ? super.resolveName(sName)
+                : moduleActual.resolveName(sName);
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

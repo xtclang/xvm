@@ -17,7 +17,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
@@ -326,6 +325,8 @@ public class TypeCompositionStatement
                         modX = struct.ensureModule(ECSTASY_MODULE);
                         modX.fingerprintRequired();
                         }
+
+                    // "ecstasy" package
                     PackageStructure pkgX = component.createPackage(Access.PUBLIC, X_PKG_IMPORT, null);
                     pkgX.setSynthetic(true);
                     pkgX.setStatic(true);
