@@ -584,7 +584,9 @@ public class ConstantPool
             case "X":
                 break;
 
+            case "Bit":
             case "Boolean":
+            case "Byte":
             case "Char":
             case "Class":
             case "Object":
@@ -596,6 +598,10 @@ public class ConstantPool
 
             case "Int":
                 sClz = "Int64";
+                break;
+
+            case "UInt":
+                sClz = "UInt64";
                 break;
 
             case "Tuple":
@@ -618,9 +624,24 @@ public class ConstantPool
                 sSub = "False";
                 break;
 
+            case "auto":
+                sPkg = "annotations";
+                sClz = "Automagic";
+                break;
+
             case "inject":
                 sPkg = "annotations";
                 sClz = "InjectedRef";
+                break;
+
+            case "op":
+                sPkg = "annotations";
+                sClz = "Operator";
+                break;
+
+            case "ro":
+                sPkg = "annotations";
+                sClz = "ReadOnly";
                 break;
 
             default:
