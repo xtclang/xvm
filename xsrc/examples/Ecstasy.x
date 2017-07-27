@@ -13,6 +13,11 @@ module Ecstasy.xtclang.org
     enum Nullable{Null}
     enum Boolean{False, True}
 
+    package annotations
+        {
+        mixin InjectedRef {}
+        }
+
     package collections
         {
         interface Tuple // <ElementTypes extends Tuple<ElementTypes...>>

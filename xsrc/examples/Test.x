@@ -1,6 +1,7 @@
 module Test
     {
-    Test.ecstasy.ecstasy.ecstasy.Object? o;
+    Int[] numbers;
+    Object... params;
 
 //    Void foo(Int i) {}
 

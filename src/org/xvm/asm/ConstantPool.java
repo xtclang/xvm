@@ -618,6 +618,11 @@ public class ConstantPool
                 sSub = "False";
                 break;
 
+            case "inject":
+                sPkg = "annotations";
+                sClz = "InjectedRef";
+                break;
+
             default:
                 return null;
             }
@@ -793,6 +798,21 @@ public class ConstantPool
             }
 
         return (ImmutableTypeConstant) register(constant);
+        }
+
+    /**
+     * TODO
+     *
+     * @param constClass
+     * @param aconstParam
+     * @param constType
+     *
+     * @return
+     */
+    public AnnotatedTypeConstant ensureAnnotatedTypeConstant(ClassConstant constClass,
+            Constant[] aconstParam, TypeConstant constType)
+        {
+        return (AnnotatedTypeConstant) register(new AnnotatedTypeConstant(this, constClass, aconstParam, constType));
         }
 
     /**
