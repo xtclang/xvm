@@ -111,7 +111,7 @@ public class ConstantPool
             {
             if (constant.getContaining() != this)
                 {
-                throw new UnsupportedOperationException("need to clone constant into this pool?");
+                constant = constant.adoptedBy(this);
                 }
 
             // add the Constant

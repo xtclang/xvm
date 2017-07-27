@@ -46,7 +46,7 @@ import org.xvm.asm.constants.ConditionalConstant;
  */
 public abstract class Constant
         extends XvmStructure
-        implements Comparable<Constant>
+        implements Comparable<Constant>, Cloneable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -69,6 +69,28 @@ public abstract class Constant
      * @return the format for the Constant
      */
     public abstract Format getFormat();
+
+    /**
+     * TODO
+     *
+     * @param pool
+     *
+     * @return
+     */
+    Constant adoptedBy(ConstantPool pool)
+        {
+        Constant that;
+        try
+            {
+            that = (Constant) super.clone();
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new IllegalStateException(e);
+            }
+        that.setContaining(pool);
+        return that;
+        }
 
     /**
      * Visit every underlying constant (if any).
