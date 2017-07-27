@@ -13,6 +13,8 @@ import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnresolvedTypeConstant;
+import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xTuple;
@@ -190,17 +192,24 @@ public class TypeComposition
         }
 
     // given a TypeConstant, return a corresponding TypeComposition within this class's context;
-    // null if the type cannot be resolved
+    // Object.class if the type cannot be resolved
     // for example, List<KeyType> in the context of Map<String, Int>
     // will resolve in List<String>
     public TypeComposition resolve(TypeConstant constType)
         {
+        if (constType instanceof UnresolvedTypeConstant)
+            {
+            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+            }
+
         if (constType instanceof ClassTypeConstant)
             {
-            assert f_template != null;
-            return f_template.resolve((ClassTypeConstant) constType, f_mapGenericActual);
+            ClassTypeConstant constClass = (ClassTypeConstant) constType;
+            ClassTemplate template = f_template.f_types.getTemplate(constClass.getClassConstant());
+            return template.resolve(constClass, f_mapGenericActual);
             }
-        else if (constType instanceof ParameterTypeConstant)
+
+        if (constType instanceof ParameterTypeConstant)
             {
             ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
             Type type = f_mapGenericActual.get(constParam.getName());
@@ -210,7 +219,7 @@ public class TypeComposition
                 }
             }
 
-        return null;
+        return xObject.CLASS;
         }
 
     // retrieve the actual type for the specified formal parameter name

@@ -116,11 +116,12 @@ public class Container
             throw new IllegalStateException("Already started");
             }
 
-        // evert native class that has an INSTANCE static variable needs to be here
+        // every native class that has an INSTANCE static variable needs to be here
         f_types.getTemplate("Object");
         f_types.getTemplate("Const");
-        f_types.getTemplate("Ordered");
         f_types.getTemplate("String");
+        f_types.getTemplate("Enum");
+        f_types.getTemplate("Ordered");
         f_types.getTemplate("Service");
         f_types.getTemplate("Function");
         f_types.getTemplate("Exception");

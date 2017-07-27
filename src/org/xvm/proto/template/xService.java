@@ -96,9 +96,6 @@ public class xService
 
         switch (method.getName())
             {
-            case "to":
-                return frame.assignValue(iReturn, xString.makeHandle(hService.m_context.toString()));
-
             case "yield":
                 return frame.f_context == hService.m_context ? Op.R_YIELD : Op.R_NEXT;
             }
@@ -209,6 +206,15 @@ public class xService
         return frame.assignValue(iReturn, xFutureRef.makeHandle(cfService));
         }
 
+    @Override
+    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+        sb.append(hService.m_context);
+        return null;
+        }
+
+
     // ----- Service API -----
 
     public int constructSync(Frame frame, MethodStructure constructor,
@@ -216,7 +222,6 @@ public class xService
         {
         return super.construct(frame, constructor, clazz, ahArg, iReturn);
         }
-
 
     // ----- ObjectHandle -----
 

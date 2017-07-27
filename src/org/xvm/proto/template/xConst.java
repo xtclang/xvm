@@ -21,31 +21,32 @@ import org.xvm.proto.TypeSet;
 public class xConst
         extends ClassTemplate
     {
+    public static xConst INSTANCE;
+
     public xConst(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
+        ensurePropertyTemplate("hash").m_fReadOnly = true;
+        markNativeMethod("to", VOID, STRING);
         }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        GenericHandle hConst = (GenericHandle) hTarget;
-
-        switch (method.getName())
-            {
-            case "to":
-                return frame.assignValue(iReturn, xString.makeHandle(
-                        hConst.m_mapFields.toString()));
-            }
-
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
+
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
@@ -158,5 +159,53 @@ public class xConst
                 }
             }
         return frame.assignValue(iReturn, xOrdered.EQUAL);
+        }
+
+    @Override
+    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        ClassStructure struct = f_struct;
+
+        GenericHandle hConst = (GenericHandle) hTarget;
+
+        sb.append(hConst.f_clazz.toString())
+          .append('{');
+
+        boolean fFirst = true;
+        for (Component comp : struct.children())
+            {
+            if (comp instanceof PropertyStructure)
+                {
+                PropertyStructure property = (PropertyStructure) comp;
+                if (isReadOnly(property))
+                    {
+                    continue;
+                    }
+
+                String sProp = property.getName();
+                ObjectHandle hProp = hConst.getField(sProp);
+
+                if (hProp == null)
+                    {
+                    // be tolerant here
+                    continue;
+                    }
+
+                if (fFirst)
+                    {
+                    fFirst = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(sProp).append('=');
+
+                hProp.f_clazz.f_template.buildStringValue(hProp, sb);
+                }
+            }
+        sb.append('}');
+
+        return null;
         }
     }

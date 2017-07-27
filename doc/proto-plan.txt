@@ -45,11 +45,15 @@
     - properties not defined by the class declarations (e.g. class TestClass(String prop1))
     - "extend" contribution is not resolved
     = module inside "x" - NPE in MethodDeclarationStatement.registerStruct (container is null)
-
+    - giving a wrong name to "construct" of a const class throws an assert
 
 + op-code serialization/deserialization
 
 - Const
+
+- introduce "native super" in ClassTemplate to allow Object -> MyClass -> MyService inheritance
+
+- a new DVAR like op-code to provide additional parameters (e.g. injection name)
 
 - Property and Method
 

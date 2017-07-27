@@ -47,7 +47,7 @@ public class xInt64
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
-            (((IntConstant) constant).getValue().getLong())) : null;
+                (((IntConstant) constant).getValue().getLong())) : null;
         }
 
     @Override
@@ -110,18 +110,6 @@ public class xInt64
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
-
-        switch (ahArg.length)
-            {
-            case 0:
-                if (method.getName().equals("to"))
-                    {
-                    // how to differentiate; check the method's return type?
-                    return frame.assignValue(iReturn,
-                            xString.makeHandle(String.valueOf(hThis.getValue())));
-                    }
-            }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
@@ -145,6 +133,16 @@ public class xInt64
         JavaLong h2 = (JavaLong) hValue2;
 
         return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue() - h2.getValue()));
+        }
+
+    // ----- Object methods -----
+
+    @Override
+    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+        sb.append(hThis.getValue());
+        return null;
         }
 
     public static JavaLong makeHandle(long lValue)

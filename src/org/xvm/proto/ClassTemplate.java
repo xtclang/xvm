@@ -23,6 +23,8 @@ import org.xvm.proto.ObjectHandle.GenericHandle;
 
 import org.xvm.proto.template.xArray;
 import org.xvm.proto.template.xBoolean;
+import org.xvm.proto.template.xConst;
+import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xEnum.EnumHandle;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
@@ -105,47 +107,46 @@ public abstract class ClassTemplate
     protected ClassStructure getSuperStructure()
         {
         ClassStructure structure = f_struct;
+        ClassStructure structureParent = null;
 
         Optional<ClassStructure.Contribution> opt = structure.getContributionsAsList().stream().
                 filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
+
         if (opt.isPresent())
             {
             ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassConstant();
             try
                 {
-                return (ClassStructure) constClass.getComponent();
+                structureParent = (ClassStructure) constClass.getComponent();
                 }
             catch (RuntimeException e)
                 {
                 // TODO: remove when getComponent() is fixed
                 String sName = constClass.getName();
+                System.out.println("getComponent() is broken for " + sName);
                 ClassTemplate templateSuper = f_types.getTemplate(sName);
-                return templateSuper.f_struct;
+                structureParent = templateSuper.f_struct;
                 }
             }
-        else
+
+        switch (structure.getFormat())
             {
-            switch (structure.getFormat())
-                {
-                case ENUMVALUE:
-                    return (ClassStructure) structure.getParent();
+            case SERVICE:
+                return xService.INSTANCE.f_struct;
 
-                case SERVICE:
-                    return xService.INSTANCE.f_struct;
+            case CONST:
+                return xConst.INSTANCE.f_struct;
 
-                case CLASS:
-                    if (structure.getName().equals("Object"))
-                        {
-                        return null;
-                        }
-                    // break through
-                case ENUM:
-                case INTERFACE:
-                case CONST:
-                    return xObject.INSTANCE.f_struct;
-                }
+            case ENUM:
+                // TODO: native parent
+                return xEnum.INSTANCE.f_struct;
+
+            case CLASS:
+                return structureParent;
+
+            default:
+                return structureParent == null ? xObject.INSTANCE.f_struct : structureParent;
             }
-        return null;
         }
 
     public boolean isRootObject()
@@ -350,18 +351,17 @@ public abstract class ClassTemplate
         // regular constructors (RC), and finalizers (F);
         // the call sequence should be:
         //
-        //  ("new" op-code) => DC0 -> DC1 -> C1 => C0 -> F0 -> F1 -> "assign" (continuation)
+        //  ("new" op-code) => DC0 -> DC1 -> RC1 => RC0 -> F0 -> F1 -> "assign" (continuation)
         //
         // -> indicates a call via continuation
         // => indicates a call via Construct op-cod
         //
-        // we need to create the call chain in the revers order
-        // (note that the C0 and F0 are added by the Construct op-code)
-        //
+        // we need to create the call chain in the revers order;
         // the very last frame should also assign the resulting new object
 
         Supplier<Frame> contAssign = () ->
             {
+            // this:private -> this:public
             frame.assignValue(iReturn,
                     hStruct.f_clazz.ensureAccess(hStruct, Constants.Access.PUBLIC));
             return null;
@@ -377,15 +377,25 @@ public abstract class ClassTemplate
 
         frameRC.m_continuation = () ->
             {
+            if (isConstructImmutable())
+                {
+                hStruct.makeImmutable();
+                }
+
             // this:struct -> this:private
             FullyBoundHandle hF = frameRC.m_hfnFinally;
-            return hF == FullyBoundHandle.NO_OP ?
-                    contAssign == null ? null : contAssign.get() :
+            return hF == FullyBoundHandle.NO_OP ? contAssign.get() :
                     hF.callChain(frame, Constants.Access.PRIVATE, contAssign);
             };
 
         frame.m_frameNext = frameDC == null ? frameRC : frameDC;
         return Op.R_CALL;
+        }
+
+    // make a final change to the struct that has been fully assigned
+    protected boolean isConstructImmutable()
+        {
+        return this instanceof xConst;
         }
 
     public FullyBoundHandle makeFinalizer(MethodStructure constructor,
@@ -418,9 +428,10 @@ public abstract class ClassTemplate
             case 0:
                 if (method.getName().equals("to"))
                     {
-                    // TODO: introduce a "callToString" method to be overridden when appropriate
                     // how to differentiate; check the method's return type?
-                    return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
+                    StringBuilder sb = new StringBuilder();
+                    buildStringValue(hTarget, sb);
+                    return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
                     }
             }
 
@@ -727,8 +738,16 @@ public abstract class ClassTemplate
                         xOrdered.makeHandle(hV1.getValue() - hV2.getValue()));
 
             default:
-                throw new IllegalStateException("No implementation for \"compare()\" function");
+                throw new IllegalStateException(
+                        "No implementation for \"compare()\" function at " + f_sName);
             }
+        }
+
+    // get the String representation of the target handle
+    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        sb.append(hTarget.toString());
+        return null;
         }
 
     // ----- Op-code support: array operations -----

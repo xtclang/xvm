@@ -9,6 +9,7 @@ class TestApp
         testRef("hi");
         testArray();
         testTuple();
+        testConst();
         }
 
     static Int getIntValue()
@@ -21,7 +22,9 @@ class TestApp
         @inject Console console;
 
         String s = "Hello world!";
-        console.print(s);
+        console.print("\n*** ");
+        console.println(s);
+        console.println();
 
         Int i = getIntValue();
         print(i);
@@ -354,5 +357,22 @@ class TestApp
                 }
              return false;
              }
+        }
+
+    static const Point(Int x, Int y)
+        {
+        Int x; // TODO: remove
+        Int y; // TODO: remove
+        }
+
+    static Void testConst()
+        {
+        Point p1 = new Point(0, 1);
+        Point p2 = new Point(1, 0);
+
+        print(p1);
+        print(p2);
+        print(p1 == p2);
+        print(p2 > p1);
         }
     }

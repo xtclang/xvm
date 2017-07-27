@@ -6,17 +6,13 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
-
-import org.xvm.proto.template.xString.StringHandle;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.Reader;
 
 /**
  * TODO:
@@ -45,7 +41,6 @@ public class xTerminalConsole
         {
         markNativeMethod("print", OBJECT, VOID);
         markNativeMethod("println", OBJECT, VOID);
-        markNativeMethod("format", new String[]{"String", "collections.Sequence"}, VOID);
         markNativeMethod("readLine", VOID, STRING);
         }
 
@@ -53,17 +48,20 @@ public class xTerminalConsole
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
+        StringBuilder sb = new StringBuilder();
         switch (method.getName())
             {
             case "print": // Object o
                 {
-                CONSOLE_OUT.print(hArg.toString());
+                hArg.f_clazz.f_template.buildStringValue(hArg, sb);
+                CONSOLE_OUT.print(sb.toString());
                 return Op.R_NEXT;
                 }
 
             case "println": // Object o
                 {
-                CONSOLE_OUT.println(hArg.toString());
+                hArg.f_clazz.f_template.buildStringValue(hArg, sb);
+                CONSOLE_OUT.println(sb.toString());
                 return Op.R_NEXT;
                 }
             }
@@ -76,25 +74,6 @@ public class xTerminalConsole
         {
         switch (method.getName())
             {
-            case "format": // String format, Sequence<Object> args
-                {
-                StringHandle hFormat = (StringHandle) ahArg[0];
-                ObjectHandle hSequence = ahArg[1];
-                IndexSupport support = (IndexSupport) hSequence.f_clazz.f_template;
-
-                try
-                    {
-                    ObjectHandle[] ahValue = support.toArray(hSequence); // TODO: wrong
-                    CONSOLE_OUT.format(hFormat.getValue(), ahValue);
-                    return Op.R_NEXT;
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    frame.m_hException = e.getExceptionHandle();
-                    return Op.R_EXCEPTION;
-                    }
-                }
-
             case "readLine": // String format, Sequence<Object> args
                 {
                 try

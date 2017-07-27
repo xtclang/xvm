@@ -29,6 +29,8 @@ public class xBoolean
     @Override
     public void initDeclared()
         {
+        markNativeMethod("to", VOID, STRING);
+
         FALSE = new BooleanHandle(f_clazzCanonical, false);
         TRUE = new BooleanHandle(f_clazzCanonical, true);
         }
@@ -49,6 +51,13 @@ public class xBoolean
                 return TRUE;
                 }
             }
+        return null;
+        }
+
+    @Override
+    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        sb.append(hTarget == FALSE ? "False" : "True");
         return null;
         }
 

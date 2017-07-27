@@ -190,6 +190,30 @@ public class xTuple
         return hTuple.m_ahValue.length;
         }
 
+    @Override
+    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        TupleHandle hTuple = (TupleHandle) hTarget;
+
+        sb.append(hTuple.f_clazz.toString())
+          .append('{');
+
+        ObjectHandle[] ahValue = hTuple.m_ahValue;
+        for (int i = 0, c = ahValue.length; i < c; i++)
+            {
+            ObjectHandle hValue = ahValue[i];
+
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+
+            hValue.f_clazz.f_template.buildStringValue(hValue, sb);
+            }
+        sb.append('}');
+        return null;
+        }
+
     // ----- ObjectHandle helpers -----
 
     public static TupleHandle makeHandle(Type[] aType, ObjectHandle[] ahValue)

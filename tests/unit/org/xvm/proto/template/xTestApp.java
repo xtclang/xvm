@@ -3,6 +3,7 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.proto.Adapter;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.op.*;
@@ -51,12 +52,15 @@ public class xTestApp extends xModule
             {
             new DNVar(adapter.getClassTypeConstId("annotations.InjectedRef<io.Console>"),
                       adapter.ensureValueConstantId("console")), // #0 (console)
-            new Invoke_10(0, adapter.getMethodConstId("io.Console", "println"),
-                    -adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
             new INVar(adapter.getClassTypeConstId("String"),
                       adapter.ensureValueConstantId("s"),
                       -adapter.ensureValueConstantId("Hello world!")), // #1 (s)
-            new X_Print(1),
+            new Invoke_10(0, adapter.getMethodConstId("io.Console", "print"),
+                    -adapter.ensureValueConstantId("\n***** ")),
+            new Invoke_10(0, adapter.getMethodConstId("io.Console", "println"), 1),
+            new Invoke_10(0, adapter.getMethodConstId("io.Console", "println"),
+                    -adapter.ensureValueConstantId("")),
 
             new NVar(adapter.getClassTypeConstId("Int64"),
                      adapter.ensureValueConstantId("i")), // #2 (i)
@@ -420,6 +424,8 @@ public class xTestApp extends xModule
             };
         ftTestArray.m_cVars = 5;
 
+        // ----- testTuple()
+
         MethodTemplate ftTestCond = ensureMethodTemplate("testConditional", INT);
         ftTestCond.m_aop = new Op[]
             { // #0 - i
@@ -496,6 +502,48 @@ public class xTestApp extends xModule
         ftTestTuple.m_cVars = 8;
         ftTestTuple.m_cScopes = 2;
 
+        // ----- testConst()
+
+        ClassTemplate ctPoint = f_types.getTemplate("TestApp.Point");
+        adapter.addMethod(ctPoint.f_struct, "construct", new String[] {"Int64", "Int64"}, VOID);
+        MethodTemplate mtConst = ctPoint.ensureMethodTemplate("construct", new String[]{"Int64", "Int64"});
+        mtConst.m_aop = new Op[]
+            { // #0 = x; #1 = y
+            new LSet(adapter.getPropertyConstId("TestApp.Point", "x"), 0),
+            new LSet(adapter.getPropertyConstId("TestApp.Point", "y"), 1),
+            new Return_0()
+            };
+        mtConst.m_cVars = 2;
+
+        MethodTemplate ftTestConst = ensureMethodTemplate("testConst", VOID);
+        ftTestConst.m_aop = new Op[]
+            {
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testConst() #")),
+            new NVar(adapter.getClassTypeConstId("TestApp.Point"),
+                    adapter.ensureValueConstantId("p1")), // #0 (p1)
+            new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+                    new int[]{-adapter.ensureValueConstantId(0), -adapter.ensureValueConstantId(1)},
+                    0),
+            new X_Print(0),
+
+            new NVar(adapter.getClassTypeConstId("TestApp.Point"),
+                    adapter.ensureValueConstantId("p1")), // #1 (p2)
+            new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+                    new int[]{-adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(0)},
+                    1),
+            new X_Print(1),
+
+            new Var(adapter.getClassTypeConstId("Boolean")), // #2
+            new IsEq(0, 1, 2),
+            new X_Print(2),
+
+            new IsGt(1, 0, 2),
+            new X_Print(2),
+
+            new Return_0()
+            };
+        ftTestConst.m_cVars = 3;
+
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);
         mtRun.m_aop = new Op[]
@@ -508,6 +556,7 @@ public class xTestApp extends xModule
                         -adapter.ensureValueConstantId("hi")),
             new Call_00(-adapter.getMethodConstId("TestApp", "testArray")),
             new Call_00(-adapter.getMethodConstId("TestApp", "testTuple")),
+            new Call_00(-adapter.getMethodConstId("TestApp", "testConst")),
             new Return_0()
             };
         mtRun.m_cVars = 2;

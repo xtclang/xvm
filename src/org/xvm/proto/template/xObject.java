@@ -46,15 +46,6 @@ public class xObject
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        switch (ahArg.length)
-            {
-            case 0:
-                if (method.getName().equals("to"))
-                    {
-                    // how to differentiate; check the method's return type?
-                    return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
-                    }
-            }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
     }

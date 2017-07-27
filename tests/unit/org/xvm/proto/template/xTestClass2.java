@@ -72,7 +72,7 @@ public class xTestClass2 extends ClassTemplate
             {
             new Var(adapter.getClassTypeConstId("String")), // #0
             new Call_01(Op.A_SUPER, 0),
-            new Add(0, -adapter.ensureValueConstantId(": prop2="), 0),
+            new Add(0, -adapter.ensureValueConstantId(", prop2="), 0),
             new Var(adapter.getClassTypeConstId("Int64")), // #1
             new LGet(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 1),
             new Var(adapter.getClassTypeConstId("String")), // #2
