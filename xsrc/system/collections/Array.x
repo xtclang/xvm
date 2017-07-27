@@ -111,7 +111,7 @@ class Array<ElementType>
     private class Element(ElementType value)
             delegates Ref<ElementType>(valueRef)
         {
-        Element<RefType>? next;
+        Element<ElementType>? next;
         private Ref<ElementType> valueRef.get()
             {
             return &value;

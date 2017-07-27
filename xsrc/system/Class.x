@@ -1,5 +1,6 @@
 import types.MultiMethod;
 import types.MultiFunction;
+import types.TypeParameter;
 
 /**
  * A Class represents the following information about an Ecstasy type composition:
@@ -32,7 +33,7 @@ import types.MultiFunction;
  * references using {@code const} classes.)
  */
 class Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>
-        implements Const, Constable
+//        implements Const, Constable
     {
     // ----- data types ----------------------------------------------------------------------------
 
@@ -51,7 +52,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * A class contains other named child structures.
      */
-    typedef Class | MultiMethod | Property | MultiFunction | Literal NamedChild;
+//    typedef Class | MultiMethod | Property | MultiFunction | Literal NamedChild;
 
     /**
      * A normal constructor is a function that operates on a read/write structure that will contain

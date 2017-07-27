@@ -19,7 +19,7 @@ const Char
         }
 
     UInt32 codepoint;
-    
+
     /**
      * A direct conversion from the Char to a Byte is supported because of ASCII. An
      * out-of-range value will result in an exception.
@@ -96,7 +96,7 @@ const Char
         //  21   U+10000   - U+1FFFFF    11110xxx    10xxxxxx      3
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
-        int cTrail;
+        Int cTrail;
         switch (codepoint.highestBit())             // REVIEW method or @ro property?
             {
             case 0b00000000000000000000000010000000:

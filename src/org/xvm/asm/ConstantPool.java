@@ -586,7 +586,6 @@ public class ConstantPool
 
             case "Bit":
             case "Boolean":
-            case "Byte":
             case "Char":
             case "Class":
             case "Object":
@@ -594,6 +593,10 @@ public class ConstantPool
             case "Type":
             case "Void":
                 sClz = sName;
+                break;
+
+            case "Byte":
+                sClz = "UInt8";
                 break;
 
             case "Int":
@@ -605,7 +608,16 @@ public class ConstantPool
                 break;
 
             case "Tuple":
+            case "Map":
+            case "Sequence":
+            case "Array":
                 sPkg = "collections";
+                sClz = sName;
+                break;
+
+            case "Property":
+            case "Method":
+                sPkg = "types";
                 sClz = sName;
                 break;
 
@@ -634,9 +646,30 @@ public class ConstantPool
                 sClz = "InjectedRef";
                 break;
 
+            case "atomic":
+                sPkg = "annotations";
+                sClz = "AtomicRef";
+                break;
+
+            case "FutureRef":
+            case "future":
+                sPkg = "annotations";
+                sClz = "FutureRef";
+                break;
+
+            case "lazy":
+                sPkg = "annotations";
+                sClz = "LazyRef";
+                break;
+
             case "op":
                 sPkg = "annotations";
                 sClz = "Operator";
+                break;
+
+            case "Override":
+                sPkg = "annotations";
+                sClz = "Override";
                 break;
 
             case "ro":

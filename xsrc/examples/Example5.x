@@ -121,7 +121,7 @@ Stage<InType, OutType> implements Stream
             {
             Iterator iterOuter = head.iterator();
 
-            @override
+            @Override
             conditional OutType next()
                 {
                 nextElement:
@@ -167,7 +167,7 @@ Stage<InType, OutType> implements Stream
                 (Collector<ElementType, AccumulatorType, ResultType) collector)
             implements TerminalOp<ElementType, ResultType>
         {
-        @override
+        @Override
         conditional ResultType process(Iterator<ElementType> iter)
             {
             AccumulatorType container = collector.supply();
@@ -186,7 +186,7 @@ Stage<InType, OutType> implements Stream
                 (function Boolean (ElementType) match)
             implements TerminalOp<ElementType, ResultType>
         {
-        @override
+        @Override
         conditional ResultType process(Iterator<ElementType> iter)
             {
             for (ElementType element : iter)

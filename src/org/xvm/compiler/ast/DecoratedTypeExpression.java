@@ -74,7 +74,8 @@ public class DecoratedTypeExpression
 
                 case CONDITIONAL:
                     // TODO
-                    throw new UnsupportedOperationException();
+                    // throw new UnsupportedOperationException();
+                    break;
 
                 default:
                     throw new IllegalStateException("keyword=" + keyword);

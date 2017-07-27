@@ -46,7 +46,7 @@ module Ecstasy.xtclang.org
          * The stack traces of the various other threads-of-execution contributing to the deadlock,
          * if any.
          */
-        @inject Iterable<StackFrame>[] stackTraces;
+        // @inject Iterable<StackFrame>[] stackTraces;
         }
 
     /**
