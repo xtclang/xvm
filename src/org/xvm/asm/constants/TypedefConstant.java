@@ -9,9 +9,9 @@ import org.xvm.asm.ConstantPool;
 
 
 /**
- * Represent a TypeDef constant.
+ * Represent a "typedef" constant.
  */
-public class TypeDefConstant
+public class TypedefConstant
         extends NamedConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -25,7 +25,7 @@ public class TypeDefConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public TypeDefConstant(ConstantPool pool, Format format, DataInput in)
+    public TypedefConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool, format, in);
@@ -38,7 +38,7 @@ public class TypeDefConstant
      * @param constParent  the structure that contains the typedef
      * @param sName        the typedef name
      */
-    public TypeDefConstant(ConstantPool pool, Constant constParent, String sName)
+    public TypedefConstant(ConstantPool pool, Constant constParent, String sName)
         {
         super(pool, constParent, sName);
 
@@ -57,7 +57,7 @@ public class TypeDefConstant
     @Override
     public Format getFormat()
         {
-        return Format.TypeDef;
+        return Format.Typedef;
         }
 
 

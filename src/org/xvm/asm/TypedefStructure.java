@@ -7,7 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeDefConstant;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import static org.xvm.util.Handy.readIndex;
@@ -30,10 +30,10 @@ public class TypedefStructure
      *
      * @param xsParent   the XvmStructure that contains this structure
      * @param nFlags     the Component bit flags
-     * @param constId    the constant that specifies the identity of the TypeDef
+     * @param constId    the constant that specifies the identity of the Typedef
      * @param condition  the optional condition for this TypeDefStructure
      */
-    protected TypedefStructure(XvmStructure xsParent, int nFlags, TypeDefConstant constId,
+    protected TypedefStructure(XvmStructure xsParent, int nFlags, TypedefConstant constId,
             ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
@@ -43,9 +43,9 @@ public class TypedefStructure
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public TypeDefConstant getIdentityConstant()
+    public TypedefConstant getIdentityConstant()
         {
-        return (TypeDefConstant) super.getIdentityConstant();
+        return (TypedefConstant) super.getIdentityConstant();
         }
 
     /**

@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.util.List;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.compiler.Token;
@@ -43,6 +44,14 @@ public abstract class ComponentStatement
     protected void setComponent(Component component)
         {
         this.component = component;
+        }
+
+    @Override
+    protected ConstantPool getConstantPool()
+        {
+        return component == null
+                ? super.getConstantPool()
+                : component.getConstantPool();
         }
 
     @Override

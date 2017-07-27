@@ -204,7 +204,7 @@ public class NamedTypeExpression
                 }
 
             // create the ClassTypeConstant that represents the type expression
-            ConstantPool pool      = getComponent().getConstantPool();
+            ConstantPool pool      = getConstantPool();
             TypeConstant constType = pool.ensureClassTypeConstant(constId, accessType, aconstParams);
 
             // if it is immutable, then it must be an ImmutableTypeConstant (which is _NOT_ a

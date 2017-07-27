@@ -373,7 +373,7 @@ public abstract class Constant
         IntersectionType,
         AnnotatedType,
         TypeParamType,
-        TypeDef,
+            Typedef,
         Tuple,
         Unresolved,
         ;

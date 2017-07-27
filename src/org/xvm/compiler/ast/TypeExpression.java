@@ -52,7 +52,7 @@ public abstract class TypeExpression
         IdentityConstant constClass = getIdentityConstant();
         if (constClass == null)
             {
-            constClass = new UnresolvedClassConstant(getComponent().getConstantPool(), this);
+            constClass = new UnresolvedClassConstant(getConstantPool(), this);
             setIdentityConstant(constClass);
             }
         return constClass;
@@ -69,7 +69,7 @@ public abstract class TypeExpression
         TypeConstant constType = getTypeConstant();
         if (constType == null)
             {
-            constType = new UnresolvedTypeConstant(getComponent().getConstantPool(), this);
+            constType = new UnresolvedTypeConstant(getConstantPool(), this);
             setTypeConstant(constType);
             }
         return constType;
@@ -93,8 +93,7 @@ public abstract class TypeExpression
             return (ClassTypeConstant) constType;
             }
 
-        ConstantPool pool = getComponent().getConstantPool();
-        return pool.ensureClassTypeConstant(ensureIdentityConstant(), Access.PUBLIC);
+        return getConstantPool().ensureClassTypeConstant(ensureIdentityConstant(), Access.PUBLIC);
         }
 
 

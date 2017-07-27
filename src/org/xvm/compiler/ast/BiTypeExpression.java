@@ -85,7 +85,7 @@ public class BiTypeExpression
             TypeConstant constType1 = type1.ensureTypeConstant();
             TypeConstant constType2 = type2.ensureTypeConstant();
 
-            ConstantPool pool = getComponent().getConstantPool();
+            ConstantPool pool = getConstantPool();
             setTypeConstant(operator.getId() == Token.Id.ADD
                     ? pool.ensureUnionTypeConstant(constType1, constType2)
                     : pool.ensureIntersectionTypeConstant(constType1, constType2));

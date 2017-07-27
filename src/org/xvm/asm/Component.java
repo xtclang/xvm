@@ -21,18 +21,7 @@ import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.constants.CharStringConstant;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.MultiMethodConstant;
-import org.xvm.asm.constants.NamedConstant;
-import org.xvm.asm.constants.PackageConstant;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.*;
 
 import org.xvm.util.Handy;
 import org.xvm.util.LinkedIterator;
@@ -848,7 +837,7 @@ public abstract class Component
         }
 
     /**
-     * Create and register a PropertyStructure with the specified name.
+     * Create and register a TypedefStructure with the specified name.
      *
      * @param access     the accessibility of the typedef to create
      * @param constType  the type of the typedef to create
@@ -858,8 +847,22 @@ public abstract class Component
      */
     public TypedefStructure createTypedef(Access access, TypeConstant constType, String sName)
         {
-        // TODO
-        return null;
+        assert sName != null;
+        assert access != null;
+        assert constType != null;
+
+        if (!isClassContainer())
+            {
+            throw new IllegalStateException("this (" + this + ") cannot contain a typedef");
+            }
+
+        int              nFlags  = Format.TYPEDEF.ordinal() | access.FLAGS;
+        TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(), sName);
+        TypedefStructure struct  = new TypedefStructure(this, nFlags, constId, null);
+        struct.setType(constType);
+        addChild(struct);
+
+        return struct;
         }
 
     /**
@@ -1731,9 +1734,9 @@ public abstract class Component
         SERVICE,
         PACKAGE,
         MODULE,
+        TYPEDEF,
         PROPERTY,
         METHOD,
-        RSVD_C,
         RSVD_D,
         MULTIMETHOD,
         FILE;
@@ -1791,6 +1794,9 @@ public abstract class Component
                 case SERVICE:
                     return new ClassStructure(xsParent, nFlags, (ClassConstant) constId, condition);
 
+                case TYPEDEF:
+                    return new TypedefStructure(xsParent, nFlags, (TypedefConstant) constId, condition);
+
                 case PROPERTY:
                     return new PropertyStructure(xsParent, nFlags, (PropertyConstant) constId, condition);
 
@@ -1824,6 +1830,7 @@ public abstract class Component
                 case PROPERTY:
                 case MULTIMETHOD:
                 case METHOD:
+                case TYPEDEF:
                     return false;
 
                 default:

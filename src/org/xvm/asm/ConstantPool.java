@@ -610,6 +610,21 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified typedef name and the context (module, package, class, method) within
+     * which it exists, obtain a TypedefConstant that represents it.
+     *
+     * @param constParent  the constant representing the container of the typedef, for example a
+     *                     ClassConstant
+     * @param sName        the name of the typedef
+     *
+     * @return the specified TypedefConstant
+     */
+    public TypedefConstant ensureTypedefConstant(Constant constParent, String sName)
+        {
+        return (TypedefConstant) register(new TypedefConstant(this, constParent, sName));
+        }
+
+    /**
      * Given the specified property name and the context (module, package, class, method) within
      * which it exists, obtain a PropertyConstant that represents it.
      *
@@ -901,6 +916,10 @@ public class ConstantPool
 
                 case Class:
                     constant = new ClassConstant(this, format, in);
+                    break;
+
+                case Typedef:
+                    constant = new TypedefConstant(this, format, in);
                     break;
 
                 case Property:

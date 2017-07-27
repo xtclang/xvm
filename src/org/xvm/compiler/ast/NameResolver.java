@@ -225,7 +225,7 @@ public class NameResolver
 
     private ConstantPool getPool()
         {
-        return m_node.getComponent().getConstantPool();
+        return m_node.getConstantPool();
         }
 
     // ----- inner classes -------------------------------------------------------------------------

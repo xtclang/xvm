@@ -80,7 +80,7 @@ public class NullableTypeExpression
             TypeConstant constSub = type.ensureTypeConstant();
 
             // obtain the Nullable type
-            ConstantPool pool = getComponent().getConstantPool();
+            ConstantPool pool = getConstantPool();
             TypeConstant constNullable = pool.ensureClassTypeConstant(
                     pool.ensureEcstasyClassConstant(Constants.X_CLASS_NULLABLE),
                     Constants.Access.PUBLIC);

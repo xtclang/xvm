@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -191,6 +192,17 @@ public abstract class AstNode
     public Component getComponent()
         {
         return getComponentStatement().getComponent();
+        }
+
+    /**
+     * @return the constant pool
+     */
+    protected ConstantPool getConstantPool()
+        {
+        AstNode nodeParent = getParent();
+        return nodeParent == null
+                ? null
+                : nodeParent.getConstantPool();
         }
 
     /**
