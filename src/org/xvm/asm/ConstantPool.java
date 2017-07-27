@@ -13,7 +13,37 @@ import java.util.Iterator;
 
 import org.xvm.asm.Constant.Format;
 
-import org.xvm.asm.constants.*;
+import org.xvm.asm.constants.AllCondition;
+import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.AnyCondition;
+import org.xvm.asm.constants.ByteConstant;
+import org.xvm.asm.constants.ByteStringConstant;
+import org.xvm.asm.constants.CharConstant;
+import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.ImmutableTypeConstant;
+import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.NamedCondition;
+import org.xvm.asm.constants.NotCondition;
+import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.PresentCondition;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.ResolvableConstant;
+import org.xvm.asm.constants.TupleConstant;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypedefConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
+import org.xvm.asm.constants.VersionConstant;
+import org.xvm.asm.constants.VersionMatchesCondition;
+import org.xvm.asm.constants.VersionedCondition;
 
 import org.xvm.util.PackedInteger;
 

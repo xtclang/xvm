@@ -71,11 +71,11 @@ public abstract class Constant
     public abstract Format getFormat();
 
     /**
-     * TODO
+     * Create a clone of this Constant so that it can be adopted by a different ConstantPool.
      *
-     * @param pool
+     * @param pool  the pool that will hold the clone of this Constant
      *
-     * @return
+     * @return the new Constant
      */
     Constant adoptedBy(ConstantPool pool)
         {
@@ -395,7 +395,7 @@ public abstract class Constant
         IntersectionType,
         AnnotatedType,
         TypeParamType,
-            Typedef,
+        Typedef,
         Tuple,
         Unresolved,
         ;

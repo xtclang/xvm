@@ -14,7 +14,8 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.*;
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 

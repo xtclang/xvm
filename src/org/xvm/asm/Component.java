@@ -21,7 +21,19 @@ import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.constants.*;
+import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.NamedConstant;
+import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.util.Handy;
 import org.xvm.util.LinkedIterator;

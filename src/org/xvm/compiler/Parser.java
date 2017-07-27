@@ -7,10 +7,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token.Id;
+
 import org.xvm.compiler.ast.*;
 
 import org.xvm.util.Handy;
