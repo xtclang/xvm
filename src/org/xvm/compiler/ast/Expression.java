@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ConditionalConstant;
 
 import org.xvm.compiler.Compiler;
@@ -18,6 +19,20 @@ public abstract class Expression
         extends AstNode
     {
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return true iff the Expression is a constant value
+     */
+    public boolean isConstant()
+        {
+        return false;
+        }
+
+    public Constant toConstant()
+        {
+        assert isConstant();
+        throw new UnsupportedOperationException();
+        }
 
     /**
      * @return this expression, converted to a type expression

@@ -50,6 +50,16 @@ public interface Constants
     public static final String X_CLASS_NULLABLE = "Nullable";
 
     /**
+     * The name of the Array class.
+     */
+    public static final String X_CLASS_ARRAY = "collections.Array";
+
+    /**
+     * The name of the Sequence interface.
+     */
+    public static final String X_CLASS_SEQUENCE = "collections.Sequence";
+
+    /**
      * The name of the null value (a singleton), which is a child of {@link #X_CLASS_NULLABLE}.
      */
     public static final String X_CLASS_NULL = "Nullable.Null";

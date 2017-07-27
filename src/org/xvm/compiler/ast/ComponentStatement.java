@@ -84,11 +84,9 @@ public abstract class ComponentStatement
     @Override
     protected Component resolveSimpleName(String sName)
         {
-        // TODO this needs to do roughly the same thing that the NameResolve does under "case RESOLVED_PARTIAL:"
-        // TODO WARNING this is just temporary!!! - needs to check supers, interfaces, mixins, ...
         return component == null
                 ? null
-                : component.getChild(sName);
+                : component.resolveName(sName);
         }
 
 

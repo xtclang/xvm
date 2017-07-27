@@ -27,6 +27,21 @@ public class Annotation
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public NamedTypeExpression getType()
+        {
+        return type;
+        }
+
+    public List<Expression> getArguments()
+        {
+        return args;
+        }
+
+    @Override
+    protected boolean canResolveSimpleName()
+        {
+        return super.canResolveSimpleName() || type.canResolveSimpleName();
+        }
 
     @Override
     public long getStartPosition()

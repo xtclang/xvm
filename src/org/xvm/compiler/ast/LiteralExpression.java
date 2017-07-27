@@ -1,9 +1,12 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
+
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Handy;
+import org.xvm.util.PackedInteger;
 
 
 /**
@@ -23,6 +26,31 @@ public class LiteralExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+
+    @Override
+    public boolean isConstant()
+        {
+        return true;
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        switch (literal.getId())
+            {
+            case LIT_INT:
+                return getConstantPool().ensureIntConstant((PackedInteger) literal.getValue());
+
+            case LIT_STRING:
+                return getConstantPool().ensureCharStringConstant((String) literal.getValue());
+
+            default:
+                // TODO
+                throw new UnsupportedOperationException(
+                        "LiteralExpression.toConstant() not implemented for " + literal.getId());
+            }
+        }
 
     @Override
     public long getStartPosition()
