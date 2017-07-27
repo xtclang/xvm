@@ -237,7 +237,7 @@ interface Collection<ElementType>
             }
         return result, modified;
         }
-    
+
     /**
      * Remove all of the values from this collection that do not occur in the specified collection.
      *
@@ -277,7 +277,7 @@ interface Collection<ElementType>
     /**
      * Two collections are equal iff they are they contain the same values.
      */
-    static Boolean equals(Type<Collection> CollectionType, CollectionType collection1, CollectionType collection2)
+    static Boolean equals(Collection collection1, Collection collection2)
         {
         // they must be of the same arity
         if (collection1.size != collection2.size)
@@ -290,11 +290,11 @@ interface Collection<ElementType>
             // if either is sorted, then both must be of the same order
             Iterator iter1 = collection1.iterator();
             Iterator iter2 = collection2.iterator();
-            while (CollectionType.ElementType value1 : iter1.next())
+            while (ElementType value1 : iter1.next())
                 {
                 // the collections were of the same arity, so the second iterator shouldn't run out
                 // before the first
-                CollectionType.ElementType value2;
+                ElementType value2;
                 assert value2 : iter2.next();
 
                 if (value1 != value2)

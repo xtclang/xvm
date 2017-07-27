@@ -85,15 +85,14 @@ class Array<ElementType>
     @op Array.Type<ElementType> add(Array.Type<ElementType> that);
     @op Array.Type<ElementType> replace(Int index, ElementType value);
 
-    static Boolean equals(Type<Array> ArrayType, ArrayType a1, ArrayType a2)
+    static Boolean equals(Array a1, Array a2)
         {
         if (a1.size != a2.size)
             {
             return false;
             }
 
-        for (ArrayType.ElementType v1 : a1,
-             ArrayType.ElementType v2 : a2)
+        for (ElementType v1 : a1, ElementType v2 : a2)
             {
             if (v1 != v2)
                 {

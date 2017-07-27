@@ -511,16 +511,17 @@ interface Map<KeyType, ValueType>
      * each key in the first map is equal to the value associated with the same key in the second
      * map.
      */
-    static Boolean equals(Type<Map> MapType, MapType map1, MapType map2)
+    static Boolean equals(Map map1, Map map2)
         {
         if (map1.size != map2.size)
             {
             return false;
             }
 
-        for (Map.Entry<MapType.KeyType, MapType.ValueType> entry : map1)
+        // for (Map.Entry<map1.KeyType, map1.ValueType> entry : map1) // TODO
+        for (Map.Entry<KeyType, ValueType> entry : map1)
             {
-            if (MapType.ValueType value : map2.get(entry.key))
+            if (ValueType value : map2.get(entry.key))
                 {
                 if (entry.value != value)
                     {
