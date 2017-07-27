@@ -1,0 +1,4 @@
+const VarDec
+        implements DecimalFPNumber
+    {
+    }

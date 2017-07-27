@@ -1,0 +1,4 @@
+const VarFloat
+        implements BinaryFPNumber
+    {
+    }
