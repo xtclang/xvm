@@ -2719,6 +2719,17 @@ s     *
                                 // fall through
                             case L_CURLY:
                                 return parseCustomLiteral(new NamedTypeExpression(null, names, access, params, lEndPos));
+
+                            case LIT_STRING:
+                                if (names.size() == 1)
+                                    {
+                                    String sName = (String) names.get(0).getValue();
+                                    if (sName.equals("v") || sName.equals("Version"))
+                                        {
+                                        return parseCustomLiteral(new NamedTypeExpression(null, names, access, params, lEndPos));
+                                        }
+                                    }
+                                break;
                             }
                         }
 

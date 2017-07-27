@@ -110,7 +110,9 @@ public class UnresolvedTypeConstant
     @Override
     public String getValueString()
         {
-        return m_oSrc == null ? this.getClass().getSimpleName() : (m_oSrc + " (unresolved)");
+        return m_resolved == null
+                ? m_oSrc == null ? this.getClass().getSimpleName() : (m_oSrc + " (unresolved)")
+                : m_resolved.getValueString();
         }
 
 
@@ -166,6 +168,14 @@ public class UnresolvedTypeConstant
     public boolean equals(Object obj)
         {
         return this == obj || (m_resolved != null && m_resolved.equals(obj));
+        }
+
+    @Override
+    public String toString()
+        {
+        return m_resolved == null
+                ? super.toString()
+                : m_resolved.toString();
         }
 
 

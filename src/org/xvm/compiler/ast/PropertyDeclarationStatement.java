@@ -122,9 +122,13 @@ public class PropertyDeclarationStatement
 
                 ConstantPool      pool      = getConstantPool();
                 TypeConstant      constType = pool.createUnresolvedTypeConstant(type);
-                PropertyStructure prop      = container.createProperty(isStatic(), getDefaultAccess(),
-                                                                       constType, sName);
+                PropertyStructure prop      = container.createProperty(
+                        isStatic(), getDefaultAccess(), constType, sName);
                 setComponent(prop);
+
+                // introduce the unresolved type constant to the type expression, so that when the
+                // type expression resolves, it can resolve the unresolved type constant
+                type.setTypeConstant(constType);
                 }
             else
                 {

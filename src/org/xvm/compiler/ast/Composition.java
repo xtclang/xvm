@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Version;
@@ -329,18 +330,22 @@ public abstract class Composition
         public VersionTree<Boolean> getAllowVersionTree()
             {
             VersionTree<Boolean> vtree = new VersionTree<>();
-            for (VersionOverride override : vers)
+            if (vers != null)
                 {
-                Version ver        = override.getVersion();
-                Boolean BPrevAllow = vtree.get(ver);
-                boolean fAllow     = override.isAllowed();
-                if (BPrevAllow != null && fAllow != BPrevAllow.booleanValue())
+                for (VersionOverride override : vers)
                     {
-                    throw new IllegalStateException("version " + ver + " is both allowed and disallowed");
-                    }
-                else
-                    {
-                    vtree.put(ver, fAllow);
+                    Version ver = override.getVersion();
+                    Boolean BPrevAllow = vtree.get(ver);
+                    boolean fAllow = override.isAllowed();
+                    if (BPrevAllow != null && fAllow != BPrevAllow.booleanValue())
+                        {
+                        throw new IllegalStateException(
+                                "version " + ver + " is both allowed and disallowed");
+                        }
+                    else
+                        {
+                        vtree.put(ver, fAllow);
+                        }
                     }
                 }
             return vtree;
@@ -351,6 +356,11 @@ public abstract class Composition
          */
         public List<Version> getPreferVersionList()
             {
+            if (vers == null)
+                {
+                return Collections.EMPTY_LIST;
+                }
+
             List<Version> list = new ArrayList<>();
             for (VersionOverride override : vers)
                 {
@@ -403,10 +413,14 @@ public abstract class Composition
             return sb.toString();
             }
 
+        /**
+         * The version overrides; could be null.
+         */
         protected List<VersionOverride> vers;
         protected long                  lEndPos;
 
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Import.class, "condition", "type", "vers");
+        private static final Field[] CHILD_FIELDS =
+                fieldsForNames(Import.class, "condition", "type", "vers");
         }
 
 
@@ -416,5 +430,6 @@ public abstract class Composition
     protected Token          keyword;
     protected TypeExpression type;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(Composition.class, "condition", "type");
+    private static final Field[] CHILD_FIELDS =
+            fieldsForNames(Composition.class, "condition", "type");
     }

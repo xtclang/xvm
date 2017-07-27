@@ -1167,6 +1167,13 @@ public class TypeCompositionStatement
         super.resolveNames(listRevisit, errs);
         }
 
+    @Override
+    public void validate(ErrorListener errs)
+        {
+        // TODO
+        super.validate(errs);
+        }
+
     private void disallowTypeParams(ErrorListener errs)
         {
         // type parameters are not permitted

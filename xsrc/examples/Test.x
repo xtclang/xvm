@@ -1,6 +1,8 @@
 module Test
     {
-    Void foo(Int i) {}
+    Object? o;
+
+//    Void foo(Int i) {}
 
 //    class List<ElementType extends Int>
 //        {

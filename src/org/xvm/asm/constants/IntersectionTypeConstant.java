@@ -85,7 +85,7 @@ public class IntersectionTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.UnionType;
+        return Format.IntersectionType;
         }
 
     @Override

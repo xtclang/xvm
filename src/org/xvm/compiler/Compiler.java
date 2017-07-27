@@ -1,16 +1,17 @@
 package org.xvm.compiler;
 
 
-import org.xvm.asm.FileStructure;
-import org.xvm.asm.ModuleRepository;
-
-import org.xvm.asm.ModuleStructure;
-import org.xvm.compiler.ast.AstNode;
-import org.xvm.compiler.ast.TypeCompositionStatement;
-import org.xvm.util.Severity;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.xvm.asm.FileStructure;
+import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+
+import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -205,7 +206,7 @@ public class Compiler
             throw new IllegalStateException("Stage=" + m_stage + " (expected: Resolved)");
             }
 
-        // TODO
+        m_module.validate(m_errs);
         }
 
 

@@ -18,19 +18,19 @@ module Ecstasy.xtclang.org
         interface Tuple // <ElementTypes extends Tuple<ElementTypes...>>
             {
             }
-
-        interface Iterator<ElementType>
-            {
-            conditional ElementType next();
-            }
-
-        class List<ElementType>
-            {
-            ElementType first;
-
-            Void add(ElementType value);
-
-            Iterator<ElementType> iterator();
-            }
+    //
+    //    interface Iterator<ElementType>
+    //        {
+    //        conditional ElementType next();
+    //        }
+    //
+    //    class List<ElementType>
+    //        {
+    //        ElementType first;
+    //
+    //        Void add(ElementType value);
+    //
+    //        Iterator<ElementType> iterator();
+    //        }
         }
     }
