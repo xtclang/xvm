@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -67,22 +66,6 @@ public class TypedefStructure
         m_type = type;
         }
 
-    /**
-     * For a PropertyStructure whose type is unresolved, provide the type that the property will
-     * be using. (If the PropertyStructure has a resolved type, this will fail.)
-     *
-     * @param type  the new type for the property to use
-     */
-    public void resolveType(TypeConstant type)
-        {
-        assert type != null;
-        assert m_type instanceof UnresolvedTypeConstant;
-        assert !((UnresolvedTypeConstant) m_type).isTypeResolved();
-
-        ((UnresolvedTypeConstant) m_type).resolve(type);
-        m_type = type;
-        }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -100,7 +83,7 @@ public class TypedefStructure
         {
         super.registerConstants(pool);
 
-        ((Constant) m_type).registerConstants(pool);
+        m_type = (TypeConstant) pool.register(m_type);
         }
 
     @Override

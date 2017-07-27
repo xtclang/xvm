@@ -1,6 +1,6 @@
 module Test
     {
-    Object? o;
+    Test.ecstasy.ecstasy.ecstasy.Object? o;
 
 //    Void foo(Int i) {}
 

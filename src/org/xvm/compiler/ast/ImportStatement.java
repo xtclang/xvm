@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Component;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -120,6 +121,13 @@ public class ImportStatement
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
+        // check if the alieas name is an unhideable name
+        Component component = resolveParentBySimpleName(getAliasName());
+        if (component != null)
+            {
+            log(errs, Severity.ERROR, Compiler.NAME_UNHIDEABLE, getAliasName(), component.getIdentityConstant());
+            }
+
         // as global visibility is resolved, each import statement registers itself so that anything
         // following it can see the import, but anything preceding it does not
         AstNode parent = getParent();

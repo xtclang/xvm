@@ -1100,6 +1100,20 @@ public abstract class Component
         }
 
     /**
+     * TODO
+     *
+     * @param sName
+     *
+     * @return
+     */
+    public Component resolveName(String sName)
+        {
+        Component component = getChild(sName);
+        // TODO
+        return component;
+        }
+
+    /**
      * For all but the multi-method, this obtains a child by the specified name. (Unlike all other
      * components, the multi-method identifies its children by method signature information.)
      *

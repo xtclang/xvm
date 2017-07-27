@@ -174,7 +174,7 @@ public class UnresolvedNameConstant
         {
         if (isNameResolved())
             {
-            m_constId.registerConstants(pool);
+            m_constId = (IdentityConstant) pool.register(m_constId);
             }
         else
             {

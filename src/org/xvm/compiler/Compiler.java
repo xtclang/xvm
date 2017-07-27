@@ -333,7 +333,7 @@ public class Compiler
      */
     public static final String INFINITE_RESOLVE_LOOP              = "COMPILER-30";
     /**
-     * Name collision. For example, anything named "Ecstasy" nested under a module, or a property
+     * Name collision. For example, anything named "ecstasy" nested under a module, or a property
      * that has the same name as a type parameter or method, etc.
      */
     public static final String NAME_COLLISION                     = "COMPILER-31";
@@ -353,6 +353,22 @@ public class Compiler
      * Cannot have an annotation here.
      */
     public static final String ANNOTATION_UNEXPECTED              = "COMPILER-35";
+    /**
+     * Cannot find name within context.
+     */
+    public static final String NAME_MISSING                       = "COMPILER-36";
+    /**
+     * Found name within context, but name is ambiguous.
+     */
+    public static final String NAME_AMBIGUOUS                     = "COMPILER-37";
+    /**
+     * Cannot find name.
+     */
+    public static final String NAME_UNRESOLVABLE                  = "COMPILER-38";
+    /**
+     * Cannot hide name.
+     */
+    public static final String NAME_UNHIDEABLE                    = "COMPILER-39";
 
 
     // ----- data members --------------------------------------------------------------------------

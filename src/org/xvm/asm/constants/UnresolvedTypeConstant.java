@@ -130,7 +130,7 @@ public class UnresolvedTypeConstant
         {
         if (m_resolved != null)
             {
-            m_resolved.registerConstants(pool);
+            m_resolved = (TypeConstant) pool.register(m_resolved);
             }
         }
 

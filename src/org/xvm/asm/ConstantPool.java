@@ -137,6 +137,7 @@ public class ConstantPool
         // check if the Constant is already registered
         final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
         final Constant constantOld = mapConstants.get(constant);
+        boolean fRegisterRecursively = false;
         if (constantOld == null)
             {
             if (constant.getContaining() != this)
@@ -158,7 +159,7 @@ public class ConstantPool
 
             // make sure that the recursively referenced constants are all
             // registered (and that they are aware of their being referenced)
-            constant.registerConstants(this);
+            fRegisterRecursively = true;
             }
         else
             {
@@ -167,14 +168,18 @@ public class ConstantPool
 
         if (m_fRecurseReg)
             {
-            final boolean fDidHaveRefs = constant.hasRefs();
+            // the first time that this constant is registered, the constant has to recursively
+            // register any constants that it refers to
+            fRegisterRecursively = !constant.hasRefs();
+
+            // .. and each time the constant is registered, we tally that registration so that we
+            // can later order the constants from most to least referenced
             constant.addRef();
-            if (!fDidHaveRefs)
-                {
-                // first time to register this constant; recursively register
-                // any constants that it refers to
-                constant.registerConstants(this);
-                }
+            }
+
+        if (fRegisterRecursively)
+            {
+            constant.registerConstants(this);
             }
 
         return constant;

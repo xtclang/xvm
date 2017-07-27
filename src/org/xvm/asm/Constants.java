@@ -35,9 +35,9 @@ public interface Constants
     public static final String ECSTASY_MODULE = "Ecstasy.xtclang.org";
 
     /**
-     * The name of the package within every module that iports the Ecstasy core module.
+     * The name of the package within every module that imports the Ecstasy core module.
      */
-    public static final String X_PKG_IMPORT = "Ecstasy";
+    public static final String X_PKG_IMPORT = "ecstasy";
 
     /**
      * The name of the root Ecstasy class.

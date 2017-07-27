@@ -10,7 +10,10 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.IdentityConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -29,6 +32,9 @@ public class NameResolver
         m_iter = iterNames;
         }
 
+    /**
+     * @return true iff the NameResolver has not begun the process of resolving the name
+     */
     public boolean isFirstTime()
         {
         return m_status == Status.INITIAL;
@@ -117,10 +123,9 @@ public class NameResolver
                         if (node == m_node || node.canResolveSimpleName())
                             {
                             component = node.resolveSimpleName(m_sName);
-                            if (component instanceof CompositeComponent)
+                            if (isAmbiguous(component))
                                 {
-                                // TODO walk through all of the components in the composite, and only if the components ***conflict*** should we log an error
-                                // TODO log error - name is ambiguous (info is in the constant)
+                                m_node.log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName, node);
                                 m_status = Status.ERROR;
                                 return Result.ERROR;
                                 }
@@ -148,7 +153,7 @@ public class NameResolver
 
                 if (component == null)
                     {
-                    // TODO log error - name is not resolvable
+                    m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
                     m_status = Status.ERROR;
                     return Result.ERROR;
                     }
@@ -164,11 +169,13 @@ public class NameResolver
                 // relative to that component
                 while (m_sName != null)
                     {
-                    // TODO need some sort of resolve (not just a "get" at this level)
-                    Component componentNext = m_component.getChild(m_sName);
-                    if (componentNext == null) // TODO or ambiguous
+                    Component componentNext = m_component.resolveName(m_sName);
+                    boolean   fAmbiguous    = componentNext != null && isAmbiguous(componentNext);
+                    if (componentNext == null || fAmbiguous)
                         {
-                        // TODO log error - dot-name is not resolvable
+                        m_node.log(errs, Severity.ERROR,
+                                fAmbiguous ? Compiler.NAME_AMBIGUOUS : Compiler.NAME_MISSING,
+                                m_sName, m_component.getIdentityConstant());
                         m_status = Status.ERROR;
                         return Result.ERROR;
                         }
@@ -192,6 +199,22 @@ public class NameResolver
             }
         }
 
+    /**
+     * Determine if the specified component refers to a single identity.
+     *
+     * @param component  the component to test
+     *
+     * @return true if the specified component refers to more than one identity
+     */
+    private static boolean isAmbiguous(Component component)
+        {
+        return component instanceof CompositeComponent && ((CompositeComponent) component).isAmbiguous();
+        }
+
+    /**
+     * @return the result of the NameResolver thus far; the ERROR and RESOLVED states are the
+     *         terminal states
+     */
     public Result getResult()
         {
         switch (m_status)
@@ -213,16 +236,26 @@ public class NameResolver
             }
         }
 
+    /**
+     * @return the Component that the NameResolver has resolved to thus far; this value can only be
+     *         used when the NameResolver result is RESOLVED
+     */
     public Component getComponent()
         {
         return m_component;
         }
 
+    /**
+     * @return the IdentityConstant that the NameResolver has resolved to, or null
+     */
     public IdentityConstant getIdentityConstant()
         {
         return m_component == null ? null : m_component.getIdentityConstant();
         }
 
+    /**
+     * @return the ConstantPool
+     */
     private ConstantPool getPool()
         {
         return m_node.getConstantPool();
