@@ -43,8 +43,7 @@ class Object
      */
     Object[] to<Object[]>()
         {
-// TODO
-//        return {this}.as(this:type[]);
+        return {this}.as(Object[]);
         }
 
     /**

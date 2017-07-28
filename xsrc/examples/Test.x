@@ -11,13 +11,7 @@ module Test
 //          return t;
 //          }
 
-// problem #2 - hmmm ...
-//      Void bar()
-//          {
-//          this:type x;
-//          }
-
-// problem #3 ".Type" resolution ... kind of like problem #2 ... hmmm ...
+// problem #2 ".Type" resolution ... kind of like problem #2 ... hmmm ...
         Fubar.Type fn()
             {
             return this;
