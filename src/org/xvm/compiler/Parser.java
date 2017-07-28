@@ -366,7 +366,7 @@ public class Parser
                                               keyword  = current();
                         List<Token>           names    = parseQualifiedName();
                         NamedTypeExpression   module   = new NamedTypeExpression(null, names, null,
-                                null, names.get(names.size()-1).getEndPosition());
+                                null, null, names.get(names.size()-1).getEndPosition());
                         List<VersionOverride> versions = parseVersionRequirement(false);
                         compositions.add(new Composition.Import(exprCondition, keyword, module,
                                 versions, getLastMatch().getEndPosition()));
@@ -2682,6 +2682,11 @@ s     *
                         }
                     }
 
+                // test for a non-auto-narrowing modifier ("!")
+                Token tokNarrow = !peek().hasLeadingWhitespace()
+                        ? match(Id.NOT)
+                        : null;
+
                 // test to see if there is a type parameter list (implying the expression is a type)
                 List<TypeExpression> params = null;
                 if (peek().getId() == Id.COMP_LT)
@@ -2718,7 +2723,8 @@ s     *
                                     }
                                 // fall through
                             case L_CURLY:
-                                return parseCustomLiteral(new NamedTypeExpression(null, names, access, params, lEndPos));
+                                return parseCustomLiteral(new NamedTypeExpression(
+                                        null, names, access, tokNarrow, params, lEndPos));
 
                             case LIT_STRING:
                                 if (names.size() == 1)
@@ -2726,7 +2732,8 @@ s     *
                                     String sName = (String) names.get(0).getValue();
                                     if (sName.equals("v") || sName.equals("Version"))
                                         {
-                                        return parseCustomLiteral(new NamedTypeExpression(null, names, access, params, lEndPos));
+                                        return parseCustomLiteral(new NamedTypeExpression(
+                                                null, names, access, tokNarrow, params, lEndPos));
                                         }
                                     }
                                 break;
@@ -2738,7 +2745,7 @@ s     *
 
                 return access == null
                         ? new NameExpression(names, params, lEndPos)
-                        : new NamedTypeExpression(null, names, access, params, lEndPos);
+                        : new NamedTypeExpression(null, names, access, tokNarrow, params, lEndPos);
                 }
 
             case L_PAREN:
@@ -3332,14 +3339,18 @@ s     *
     /**
      * Parse a type expression in the form:
      *
-     *   "immutable name.name.name<param, param>"
+     *   "immutable name.name.name!<param, param>"
      *
      * <p/><code><pre>
      * NamedTypeExpression
-     *     QualifiedName TypeAccessModifier-opt TypeParameterTypeList-opt
+     *     QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
      *
      * TypeAccessModifier
      *     NoWhitespace ":" NoWhitespace AccessModifier
+     *
+     * NoAutoNarrowModifier
+     *     NoWhitespace "!"
+     *
      * </pre></code>
      *
      * @return a NamedTypeExpression
@@ -3347,8 +3358,11 @@ s     *
     NamedTypeExpression parseNamedTypeExpression()
         {
         Token immutable = match(Id.IMMUTABLE);
+
+        // QualifiedName
         List<Token> names = parseQualifiedName();
 
+        // TypeAccessModifier
         Token tokAccess = null;
         Token tokNext   = peek();
         if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace() && !tokNext.hasTrailingWhitespace())
@@ -3369,8 +3383,15 @@ s     *
                 }
             }
 
+        // NoAutoNarrowModifier
+        Token tokNarrow = !peek().hasLeadingWhitespace()
+                ? match(Id.NOT)
+                : null;
+
+        // TypeParameterTypeList
         List<TypeExpression> params = parseTypeParameterTypeList(false);
-        return new NamedTypeExpression(immutable, names, tokAccess, params, getLastMatch().getEndPosition());
+
+        return new NamedTypeExpression(immutable, names, tokAccess, tokNarrow, params, getLastMatch().getEndPosition());
         }
 
     /**

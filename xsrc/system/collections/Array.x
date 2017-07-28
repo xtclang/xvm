@@ -78,12 +78,12 @@ class Array<ElementType>
         return element;
         }
 
-    @op Array.Type<ElementType> slice(Range<Int> range);
+    @op Array!<ElementType> slice(Range<Int> range);
 
-    Array.Type<ElementType> reify();
+    Array!<ElementType> reify();
 
-    @op Array.Type<ElementType> add(Array.Type<ElementType> that);
-    @op Array.Type<ElementType> replace(Int index, ElementType value);
+    @op Array!<ElementType> add(Array!<ElementType> that);
+    @op Array!<ElementType> replace(Int index, ElementType value);
 
     static Boolean equals(Array a1, Array a2)
         {
@@ -118,7 +118,7 @@ class Array<ElementType>
         }
 
     @Override
-    Array.Type<ElementType> ensureMutable()
+    Array!<ElementType> ensureMutable()
         {
         return TODO
         }
@@ -128,7 +128,7 @@ class Array<ElementType>
      * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
      */
     @Override
-    Array.Type<ElementType> ensureFixedSize();
+    Array!<ElementType> ensureFixedSize();
 
     /**
      * Return a persistent array of the same element types and values as are present in this array.
@@ -138,7 +138,7 @@ class Array<ElementType>
      * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
      */
     @Override
-    Array.Type<ElementType> ensurePersistent();
+    Array!<ElementType> ensurePersistent();
 
     /**
      * Return a {@code const} array of the same type and contents as this array.
@@ -150,5 +150,5 @@ class Array<ElementType>
      *         {@link ConstAble}
      */
     @Override
-    Const+Array.Type<ElementType> ensureConst();
+    Const+Array!<ElementType> ensureConst();
     }

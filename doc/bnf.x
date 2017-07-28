@@ -802,7 +802,6 @@ CustomLiteral
     TypeExpression NoWhitespace ":{" Expression "}"
 
 
-# (deferred idea)
 #   ╔═════════════════════╗
 #   ║This could be any    ║
 #   ║freeform text that   ║
@@ -817,11 +816,11 @@ CustomLiteral
 #        U+2550
 #
 #
-#        U+2500
+#           U+2500
 # U+256D ╭─────╮ U+256E
-# U+2502 │     │ U+2502
+# U+2502 │          │ U+2502
 # U+2570 ╰─────╯ U+256F
-#        U+2500
+#           U+2500
 #
 FreeformLiteral
     FreeformTop FreeformLines FreeformBottom
@@ -951,10 +950,13 @@ AnnotatedTypeExpression
     Annotation TypeExpression
 
 NamedTypeExpression
-    QualifiedName TypeAccessModifier-opt TypeParameterTypeList-opt
+    QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
 
 TypeAccessModifier
     NoWhitespace ":" NoWhitespace AccessModifier
+
+NoAutoNarrowModifier
+    NoWhitespace "!"
 
 # Note: in the case that the name precedes the ParameterTypeList, the token
 #       stream is re-ordered such that the name is deposited into the stream

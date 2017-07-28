@@ -37,11 +37,13 @@ public class NamedTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public NamedTypeExpression(Token immutable, List<Token> names, Token access, List<TypeExpression> params, long lEndPos)
+    public NamedTypeExpression(Token immutable, List<Token> names, Token access, Token nonnarrow,
+            List<TypeExpression> params, long lEndPos)
         {
         this.immutable  = immutable;
         this.names      = names;
         this.access     = access;
+        this.nonnarrow  = nonnarrow;
         this.paramTypes = params;
         this.lEndPos    = lEndPos;
 
@@ -97,6 +99,37 @@ public class NamedTypeExpression
         return sb.toString();
         }
 
+    /**
+     * @return null if no access is explicit; otherwise one of PUBLIC, PROTECTED, PRIVATE
+     */
+    public Access getExplicitAccess()
+        {
+        if (access == null)
+            {
+            return null;
+            }
+        
+        switch (access.getId())
+            {
+            case PUBLIC:
+                return Access.PUBLIC;
+            case PROTECTED:
+                return Access.PROTECTED;
+            case PRIVATE:
+                return Access.PRIVATE;
+            default:
+                throw new IllegalStateException("access=" + access);
+            }
+        }
+
+    /**
+     * @return true iff the type is explicitly non-auto-narrowing
+     */
+    public boolean isNonAutoNarrowing()
+        {
+        return nonnarrow != null;
+        }
+    
     /**
      * Determine if this NamedTypeExpression could be a module name.
      *
@@ -239,6 +272,11 @@ public class NamedTypeExpression
               .append(access.getId().TEXT);
             }
 
+        if (nonnarrow != null)
+            {
+            sb.append('!');
+            }
+        
         if (paramTypes != null)
             {
             sb.append('<');
@@ -273,6 +311,7 @@ public class NamedTypeExpression
     protected Token                immutable;
     protected List<Token>          names;
     protected Token                access;
+    protected Token                nonnarrow;
     protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;
 

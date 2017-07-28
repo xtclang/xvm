@@ -151,7 +151,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    (Collection<ElementType>, Boolean) addAll(Collection.Type<ElementType> values)
+    (Collection<ElementType>, Boolean) addAll(Collection!<ElementType> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
@@ -193,7 +193,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    (Collection<ElementType>, Boolean) removeAll(Collection.Type<ElementType> values)
+    (Collection<ElementType>, Boolean) removeAll(Collection!<ElementType> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
@@ -249,7 +249,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    (Collection<ElementType>, Boolean) retainAll(Collection.Type<ElementType> values)
+    (Collection<ElementType>, Boolean) retainAll(Collection!<ElementType> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
