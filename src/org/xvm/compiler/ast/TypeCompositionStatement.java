@@ -667,7 +667,7 @@ public class TypeCompositionStatement
                             TypeExpression exprType  = param.getType();
                             TypeConstant   constType = exprType == null
                                     ? OBJECT_CLASS.asTypeConstant()
-                                    : pool.createUnresolvedTypeConstant(exprType);
+                                    : exprType.ensureTypeConstant();
                             component.addTypeParam(sParam, constType);
 
                             // each type parameter also has a synthetic property of the same name,

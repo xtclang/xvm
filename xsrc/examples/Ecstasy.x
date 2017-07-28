@@ -10,6 +10,10 @@ module Ecstasy.xtclang.org
         {
         }
 
+    class String
+        {
+        }
+
     interface Type {}
 
     enum Nullable{Null}

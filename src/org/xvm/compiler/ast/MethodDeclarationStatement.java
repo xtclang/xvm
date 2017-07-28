@@ -139,7 +139,7 @@ public class MethodDeclarationStatement
         Component      container = getParent().getComponent();
         for (TypeExpression type : types)
             {
-            array[i++] = getConstantPool().createUnresolvedTypeConstant(type);
+            array[i++] = type.ensureTypeConstant();
             }
         return array;
         }
