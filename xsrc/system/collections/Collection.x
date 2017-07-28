@@ -91,7 +91,7 @@ interface Collection<ElementType>
      *
      * @return {@code true} iff the specified values all exist in this collection
      */
-    Boolean containsAll(Collection.Type<ElementType> values)
+    Boolean containsAll(Collection!<ElementType> values)
         {
         return values.iterator().matchAll(this.contains);
         }
