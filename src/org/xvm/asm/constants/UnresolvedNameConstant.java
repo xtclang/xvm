@@ -207,14 +207,6 @@ public class UnresolvedNameConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public boolean equals(Object obj)
-        {
-        return isNameResolved()
-                ? m_constId.equals(obj)
-                : super.equals(obj);
-        }
-
-    @Override
     public int hashCode()
         {
         if (isNameResolved())

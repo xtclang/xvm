@@ -165,12 +165,6 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public boolean equals(Object obj)
-        {
-        return this == obj || (m_resolved != null && m_resolved.equals(obj));
-        }
-
-    @Override
     public String toString()
         {
         return m_resolved == null

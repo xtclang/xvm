@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.ResolvableConstant;
 
 
 /**
@@ -305,13 +306,19 @@ public abstract class Constant
     @Override
     public boolean equals(Object obj)
         {
-        if (obj instanceof Constant)
+        if (!(obj instanceof Constant))
             {
-            Constant that = (Constant) obj;
-            return this == that || (this.getFormat() == that.getFormat() && this.compareDetails(that) == 0);
+            return false;
             }
 
-        return false;
+        Constant constThis = this instanceof ResolvableConstant
+                ? ((ResolvableConstant) this).unwrap()
+                : this;
+        Constant constThat = obj instanceof ResolvableConstant
+                ? ((ResolvableConstant) obj).unwrap()
+                : (Constant) obj;
+        return constThis == constThat || (constThis.getFormat() == constThat.getFormat()
+                && constThis.compareDetails(constThat) == 0);
         }
 
     @Override
@@ -375,6 +382,14 @@ public abstract class Constant
         Char,
         CharString,
         Int,
+        Tuple,
+        Module,
+        Package,
+        Class,
+        Typedef,
+        Property,
+        MultiMethod,
+        Method,
         Version,
         ConditionNot,
         ConditionAll,
@@ -383,20 +398,12 @@ public abstract class Constant
         ConditionPresent,
         ConditionVersionMatches,
         ConditionVersioned,
-        Module,
-        Package,
-        Class,
-        Property,
-        MultiMethod,
-        Method,
         ClassType,
         ImmutableType,
         UnionType,
         IntersectionType,
         AnnotatedType,
         TypeParamType,
-        Typedef,
-        Tuple,
         Unresolved,
         ;
 

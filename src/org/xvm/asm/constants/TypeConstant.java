@@ -88,22 +88,6 @@ public abstract class TypeConstant
     @Override
     public abstract int hashCode();
 
-    @Override
-    public boolean equals(Object obj)
-        {
-        if (obj instanceof UnresolvedTypeConstant)
-            {
-            TypeConstant type = ((UnresolvedTypeConstant) obj).getResolvedConstant();
-            if (type != null)
-                {
-                return equals(type);
-                }
-            }
-
-        return super.equals(obj);
-        }
-
-
     // ----- fields --------------------------------------------------------------------------------
 
     }

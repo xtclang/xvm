@@ -128,13 +128,6 @@ public class ImmutableTypeConstant
         return -m_constType.hashCode();
         }
 
-    @Override
-    public boolean equals(Object obj)
-        {
-        return obj instanceof ImmutableTypeConstant
-                && m_constType.equals(((ImmutableTypeConstant) obj).m_constType);
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -202,19 +202,6 @@ public class UnresolvedClassConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public boolean equals(Object obj)
-        {
-        if (obj instanceof UnresolvedClassConstant && ((UnresolvedClassConstant) obj).isClassResolved())
-            {
-            obj = ((UnresolvedClassConstant) obj).m_constId;
-            }
-
-        return isClassResolved()
-                ? m_constId.equals(obj)
-                : super.equals(obj);
-        }
-
-    @Override
     public int hashCode()
         {
         return isClassResolved()
