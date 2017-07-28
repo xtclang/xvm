@@ -10,6 +10,8 @@ module Ecstasy.xtclang.org
         {
         }
 
+    interface Type {}
+
     enum Nullable{Null}
     enum Boolean{False, True}
 
