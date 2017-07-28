@@ -33,6 +33,7 @@ import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.ResolvableConstant;
@@ -869,6 +870,24 @@ public class ConstantPool
     /**
      * TODO
      *
+     * @param sName
+     *
+     * @return
+     */
+    public ParameterTypeConstant ensureParameterTypeConstant(String sName)
+        {
+        // check the pre-existing constants first
+        ParameterTypeConstant constant = (ParameterTypeConstant) ensureLocatorLookup(Format.TypeParamType).get(sName);
+        if (constant == null)
+            {
+            constant = (ParameterTypeConstant) register(new ParameterTypeConstant(this, sName));
+            }
+        return constant;
+        }
+
+    /**
+     * TODO
+     *
      * @param constClass
      * @param aconstParam
      * @param constType
@@ -1106,6 +1125,10 @@ public class ConstantPool
 
                 case AnnotatedType:
                     constant = new AnnotatedTypeConstant(this, format, in);
+                    break;
+
+                case TypeParamType:
+                    constant = new ParameterTypeConstant(this, format, in);
                     break;
 
                 case Unresolved:
