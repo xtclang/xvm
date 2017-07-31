@@ -282,12 +282,12 @@ public class ClassTypeConstant
     /**
      * During disassembly, this holds the index of the module, package, or class constant.
      */
-    private int m_iClass;
+    private transient int m_iClass;
 
     /**
      * During disassembly, this holds the index of the the type parameters.
      */
-    private int[] m_aiType;
+    private transient int[] m_aiType;
 
     /**
      * The class referred to. May be a ModuleConstant, PackageConstant, or ClassConstant.

@@ -868,7 +868,7 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Given the specified parameter name, obtain a TypeConstant that represents the type parameter.
      *
      * @param sName
      *
