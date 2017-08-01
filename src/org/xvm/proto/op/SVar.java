@@ -7,7 +7,7 @@ import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.xArray;
+import org.xvm.proto.template.collections.xArray;
 
 import java.io.DataInput;
 import java.io.DataOutput;

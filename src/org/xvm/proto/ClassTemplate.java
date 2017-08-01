@@ -21,7 +21,7 @@ import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 
-import org.xvm.proto.template.xArray;
+import org.xvm.proto.template.collections.xArray;
 import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xEnum;

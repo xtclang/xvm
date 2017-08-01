@@ -10,9 +10,9 @@ import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xModule.ModuleHandle;
-import org.xvm.proto.template.xRuntimeClock;
+import org.xvm.proto.template.Clock.xRuntimeClock;
 import org.xvm.proto.template.xService;
-import org.xvm.proto.template.xTerminalConsole;
+import org.xvm.proto.template.io.Console.xTerminalConsole;
 
 import java.util.HashMap;
 import java.util.Map;

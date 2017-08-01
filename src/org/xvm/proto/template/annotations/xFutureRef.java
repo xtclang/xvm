@@ -1,4 +1,4 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.annotations;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -9,7 +9,10 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.xNullable;
+import org.xvm.proto.template.xRef;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;

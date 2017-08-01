@@ -41,14 +41,6 @@ public class xConst
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
-
-
-    @Override
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {

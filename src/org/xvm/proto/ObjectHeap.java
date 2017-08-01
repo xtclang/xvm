@@ -14,9 +14,8 @@ import org.xvm.proto.template.xClass;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xModule;
-import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xString;
-import org.xvm.proto.template.xTuple;
+import org.xvm.proto.template.collections.xTuple;
 
 import java.util.HashMap;
 import java.util.Map;

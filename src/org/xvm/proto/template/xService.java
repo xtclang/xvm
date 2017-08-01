@@ -17,6 +17,7 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.Utils;
 
+import org.xvm.proto.template.annotations.xFutureRef;
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
 import java.util.concurrent.CompletableFuture;

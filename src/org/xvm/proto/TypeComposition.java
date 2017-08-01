@@ -17,7 +17,7 @@ import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
-import org.xvm.proto.template.xTuple;
+import org.xvm.proto.template.collections.xTuple;
 
 import java.util.Collections;
 import java.util.HashMap;

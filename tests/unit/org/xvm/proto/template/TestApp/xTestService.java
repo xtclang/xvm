@@ -1,4 +1,4 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.TestApp;
 
 import org.xvm.asm.ClassStructure;
 
@@ -7,6 +7,7 @@ import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.op.*;
+import org.xvm.proto.template.xService;
 
 /**
  * A test service.

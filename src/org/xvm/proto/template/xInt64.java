@@ -14,6 +14,7 @@ import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+import org.xvm.proto.template.collections.xIntArray;
 
 /**
  * TODO:
