@@ -877,7 +877,7 @@ public class ConstantPool
     public ParameterTypeConstant ensureParameterTypeConstant(String sName)
         {
         // check the pre-existing constants first
-        ParameterTypeConstant constant = (ParameterTypeConstant) ensureLocatorLookup(Format.TypeParamType).get(sName);
+        ParameterTypeConstant constant = (ParameterTypeConstant) ensureLocatorLookup(Format.ParameterType).get(sName);
         if (constant == null)
             {
             constant = (ParameterTypeConstant) register(new ParameterTypeConstant(this, sName));
@@ -1127,7 +1127,7 @@ public class ConstantPool
                     constant = new AnnotatedTypeConstant(this, format, in);
                     break;
 
-                case TypeParamType:
+                case ParameterType:
                     constant = new ParameterTypeConstant(this, format, in);
                     break;
 

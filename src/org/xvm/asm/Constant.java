@@ -386,10 +386,24 @@ public abstract class Constant
         Module,
         Package,
         Class,
+        ThisClass,      // TODO
+        ParentClass,    // TODO
+        ChildClass,     // TODO
+        Register,       // TODO
         Typedef,
         Property,
         MultiMethod,
         Method,
+        ClassType,
+        ThisType,       // TODO
+        ParentType,     // TODO
+        ChildType,      // TODO
+        RegisterType,   // TODO
+        ParameterType,  // TODO
+        ImmutableType,
+        UnionType,
+        IntersectionType,
+        AnnotatedType,
         Version,
         ConditionNot,
         ConditionAll,
@@ -398,12 +412,6 @@ public abstract class Constant
         ConditionPresent,
         ConditionVersionMatches,
         ConditionVersioned,
-        ClassType,
-        ImmutableType,
-        UnionType,
-        IntersectionType,
-        AnnotatedType,
-        TypeParamType,
         Unresolved,
         ;
 

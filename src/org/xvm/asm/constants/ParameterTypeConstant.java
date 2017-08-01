@@ -82,7 +82,7 @@ public class ParameterTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.TypeParamType;
+        return Format.ParameterType;
         }
 
     @Override
