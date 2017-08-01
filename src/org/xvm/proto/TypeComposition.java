@@ -38,7 +38,7 @@ public class TypeComposition
     {
     public final ClassTemplate f_template;
 
-    public final Map<String, Type> f_mapGenericActual; // corresponding to the m_template's GenericTypeName
+    public final Map<String, Type> f_mapGenericActual; // corresponding to the template's GenericTypeName
 
     private Type m_typePublic;
     private Type m_typeProtected;

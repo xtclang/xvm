@@ -59,6 +59,7 @@ public abstract class ClassTemplate
     public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.AtomicRef)
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized class
+    public final List<String> f_listGenericParams; // param names
 
     public final ClassTemplate f_templateSuper;
     public final ClassTemplate f_templateCategory; // a native category
@@ -78,6 +79,26 @@ public abstract class ClassTemplate
         f_types = types;
         f_struct = structClass;
         f_sName = structClass.getName();
+
+        List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes =
+                structClass.getTypeParamsAsList();
+        int cParams = listFormalTypes.size();
+
+        List<String> listParams;
+        if (cParams == 0)
+            {
+            listParams = Collections.EMPTY_LIST;
+            }
+        else
+            {
+            listParams = new ArrayList<>(cParams);
+
+            for (int i = 0; i < cParams; i++)
+                {
+                listParams.add(listFormalTypes.get(i).getKey().getValue());
+                }
+            }
+        f_listGenericParams = listParams;
 
         // calculate the parents (inheritance and "native")
         ClassStructure structSuper = null;
@@ -232,7 +253,7 @@ public abstract class ClassTemplate
             nextMethod:
             for (MethodStructure method : ((List<MethodStructure>) (List) mms.children()))
                 {
-                // temporary shortcut
+                // TODO: temporary shortcut; remove
                 if (asArgType == null && asRetType == null)
                     {
                     return method;
@@ -249,7 +270,7 @@ public abstract class ClassTemplate
                     continue;
                     }
 
-                if (true) return method;
+                if (true) return method;  // TODO: remove
 
                 for (int i = 0, c = atParam.length; i < c; i++)
                     {
@@ -312,6 +333,23 @@ public abstract class ClassTemplate
         return null;
         }
 
+    // find a function  that matches the specified signature in the inheritance tree
+    public MethodStructure findFunction(String sName, String[] asArgType, String[] asRetType)
+        {
+        ClassTemplate template = this;
+        do
+            {
+            MethodStructure method = getDeclaredMethod("equals", asArgType, asRetType);
+            if  (method != null && method.isStatic())
+                {
+                return method;
+                }
+            template = template.f_templateSuper;
+            }
+        while (template != null);
+        return null;
+        }
+
     // produce a TypeComposition for this template by resolving the generic types
     public TypeComposition resolve(ClassTypeConstant constClassType, Map<String, Type> mapActual)
         {
@@ -325,20 +363,16 @@ public abstract class ClassTemplate
             return f_clazzCanonical;
             }
 
-        List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes =
-                f_struct.getTypeParamsAsList();
+        assert f_listGenericParams.size() == listParams.size();
 
-        assert listFormalTypes.size() == listParams.size();
-
-        Map<String, Type> mapParams = new HashMap<>();
-        for (int i = 0, c = listParams.size(); i < c; i++)
+        Map<String, Type> mapActualParams = new HashMap<>();
+        int ix = 0;
+        for (String sParamName : f_listGenericParams)
             {
-            Map.Entry<CharStringConstant, TypeConstant> entryFormal = listFormalTypes.get(i);
-
-            mapParams.put(entryFormal.getKey().getValue(),
-                    resolveParameterType(listParams.get(i), mapActual));
+            mapActualParams.put(sParamName,
+                    resolveParameterType(listParams.get(ix++), mapActual));
             }
-        return ensureClass(mapParams);
+        return ensureClass(mapActualParams);
         }
 
     // resolve a parameter type
@@ -650,7 +684,7 @@ public abstract class ClassTemplate
         GenericHandle hThis = (GenericHandle) hTarget;
         String sName = property.getName();
 
-        if (isGenericType(property))
+        if (isGenericType(sName))
             {
             Type type = hThis.f_clazz.getActualType(sName);
 
@@ -779,8 +813,8 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = getDeclaredMethod("equals", new String[]{f_sName, f_sName}, BOOLEAN);
-        if (functionEquals != null && functionEquals.isStatic())
+        MethodStructure functionEquals = findFunction("equals", new String[]{f_sName, f_sName}, BOOLEAN);
+        if (functionEquals != null)
             {
             return frame.call1(functionEquals, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
@@ -797,9 +831,9 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = getDeclaredMethod("compare",
+        MethodStructure functionCompare = findFunction("compare",
                 new String[]{f_sName, f_sName}, new String[]{"Ordered"});
-        if (functionCompare != null && functionCompare.isStatic())
+        if (functionCompare != null)
             {
             return frame.call1(functionCompare, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
@@ -876,10 +910,9 @@ public abstract class ClassTemplate
         return template == null ? null : template.m_templateRef;
         }
 
-    protected boolean isGenericType(PropertyStructure property)
+    protected boolean isGenericType(String sProperty)
         {
-        // TODO:
-        return false;
+        return f_listGenericParams.contains(sProperty);
         }
 
     // =========== TEMPORARY ========

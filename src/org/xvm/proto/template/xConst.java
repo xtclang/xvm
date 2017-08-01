@@ -45,8 +45,8 @@ public class xConst
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = getDeclaredMethod("equals", new String[]{f_sName, f_sName}, BOOLEAN);
-        if (functionEquals != null && functionEquals.isStatic())
+        MethodStructure functionEquals = findFunction("equals", new String[]{f_sName, f_sName}, BOOLEAN);
+        if (functionEquals != null)
             {
             return frame.call1(functionEquals, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
@@ -100,9 +100,9 @@ public class xConst
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = getDeclaredMethod("compare",
+        MethodStructure functionCompare = findFunction("compare",
                 new String[]{f_sName, f_sName}, new String[]{"Ordered"});
-        if (functionCompare != null && functionCompare.isStatic())
+        if (functionCompare != null)
             {
             return frame.call1(functionCompare, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
