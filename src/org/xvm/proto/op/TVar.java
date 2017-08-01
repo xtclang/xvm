@@ -7,8 +7,8 @@ import org.xvm.proto.ServiceContext;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.xTuple;
-import org.xvm.proto.template.xTuple.TupleHandle;
+import org.xvm.proto.template.collections.xTuple;
+import org.xvm.proto.template.collections.xTuple.TupleHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;

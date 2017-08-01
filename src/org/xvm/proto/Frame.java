@@ -11,13 +11,13 @@ import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xFunction.FullyBoundHandle;
-import org.xvm.proto.template.xFutureRef.FutureHandle;
+import org.xvm.proto.template.annotations.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xRef.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 
-import org.xvm.proto.template.xTuple;
+import org.xvm.proto.template.collections.xTuple;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;

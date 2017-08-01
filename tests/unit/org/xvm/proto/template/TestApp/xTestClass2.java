@@ -1,4 +1,4 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.TestApp;
 
 import org.xvm.asm.ClassStructure;
 

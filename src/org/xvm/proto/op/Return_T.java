@@ -5,7 +5,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 
-import org.xvm.proto.template.xTuple.TupleHandle;
+import org.xvm.proto.template.collections.xTuple.TupleHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;

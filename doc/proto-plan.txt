@@ -49,9 +49,9 @@
 
 + op-code serialization/deserialization
 
-- Const
++ introduce "native super" in ClassTemplate to allow Object -> MyClass -> MyService inheritance
 
-- introduce "native super" in ClassTemplate to allow Object -> MyClass -> MyService inheritance
++ Const
 
 - a new DVAR like op-code to provide additional parameters (e.g. injection name)
 

@@ -3,10 +3,12 @@ package org.xvm.proto.op;
 import org.xvm.asm.constants.CharStringConstant;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
+import org.xvm.proto.template.annotations.xInjectedRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
 import java.io.DataInput;
@@ -22,6 +24,10 @@ public class DNVar extends Op
     {
     final private int f_nClassConstId;
     final private int f_nNameConstId;
+
+    // cached InjectedRef
+    // NOTE: the injected ref must be named, so this caching is not needed at DVAR op
+    transient private RefHandle m_ref;
 
     public DNVar(int nClassConstId, int nNameConstId)
         {
@@ -54,11 +60,31 @@ public class DNVar extends Op
                 (CharStringConstant) context.f_pool.getConstant(f_nNameConstId);
         String sName = constName.getValue();
 
-        TypeComposition clz = context.f_types.ensureComposition(f_nClassConstId);
+        RefHandle hRef = m_ref;
+        if (hRef == null)
+            {
+            TypeComposition clz = frame.f_context.f_types.ensureComposition(f_nClassConstId);
 
-        RefHandle hRef = clz.f_template.createRefHandle(clz, sName);
+            hRef = clz.f_template.createRefHandle(clz, sName);
 
-        frame.introduceVar(clz, sName, Frame.VAR_DYNAMIC_REF, hRef);
+            if (hRef instanceof xInjectedRef.InjectedHandle)
+                {
+                // prime the injection (fail fast)
+                try
+                    {
+                    hRef.get();
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    frame.m_hException = e.getExceptionHandle();
+                    return R_EXCEPTION;
+                    }
+
+                m_ref = hRef;
+                }
+            }
+
+        frame.introduceVar(hRef.f_clazz, sName, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }

@@ -1,4 +1,4 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.types;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;

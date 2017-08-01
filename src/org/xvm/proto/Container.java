@@ -6,14 +6,13 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xModule.ModuleHandle;
-import org.xvm.proto.template.xRuntimeClock;
+import org.xvm.proto.template.Clock.xRuntimeClock;
 import org.xvm.proto.template.xService;
-import org.xvm.proto.template.xTerminalConsole;
+import org.xvm.proto.template.io.Console.xTerminalConsole;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -146,7 +145,7 @@ public class Container
             // xModule module = (xModule) f_types.getTemplate(sModule);
             ClassTemplate app = f_types.getTemplate(f_sAppName);
 
-            MethodStructure mtRun = app.getMethod("run", ClassTemplate.VOID, ClassTemplate.VOID);
+            MethodStructure mtRun = app.getDeclaredMethod("run", ClassTemplate.VOID, ClassTemplate.VOID);
             if (mtRun == null)
                 {
                 throw new IllegalArgumentException("Missing run() method for " + f_sAppName);

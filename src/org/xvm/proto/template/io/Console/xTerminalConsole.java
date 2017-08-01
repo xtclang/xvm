@@ -1,4 +1,4 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.io.Console;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -8,6 +8,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
+import org.xvm.proto.template.xString;
 
 import java.io.BufferedReader;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.collections;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -17,6 +17,8 @@ import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+import org.xvm.proto.template.IndexSupport;
+import org.xvm.proto.template.xException;
 
 import java.util.Arrays;
 import java.util.Collections;
