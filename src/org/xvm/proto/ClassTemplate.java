@@ -37,6 +37,7 @@ import org.xvm.proto.template.xString;
 import org.xvm.proto.template.xType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -55,11 +56,12 @@ public abstract class ClassTemplate
     public final TypeSet f_types;
     public final ClassStructure f_struct;
 
-    public final String f_sName; // globally known ClassTemplate name (e.g. x:Boolean or x:annotation.AtomicRef)
+    public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.AtomicRef)
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized class
 
-    public final ClassStructure f_structSuper;
+    public final ClassTemplate f_templateSuper;
+    public final ClassTemplate f_templateCategory; // a native category
 
     // ----- caches ------
 
@@ -68,7 +70,7 @@ public abstract class ClassTemplate
 
     // cache of relationships
     protected enum Relation {EXTENDS, IMPLEMENTS, INCOMPATIBLE}
-    protected Map<ClassStructure, Relation> m_mapRelations = new HashMap<>();
+    protected Map<ClassTemplate, Relation> m_mapRelations = new HashMap<>();
 
     // construct the template
     public ClassTemplate(TypeSet types, ClassStructure structClass)
@@ -77,8 +79,60 @@ public abstract class ClassTemplate
         f_struct = structClass;
         f_sName = structClass.getName();
 
+        // calculate the parents (inheritance and "native")
+        ClassStructure structSuper = null;
+        ClassTemplate templateSuper = null;
+        ClassTemplate templateCategory = null;
+
+        Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
+                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
+
+        if (opt.isPresent())
+            {
+            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassConstant();
+            try
+                {
+                structSuper = (ClassStructure) constClass.getComponent();
+                templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
+                }
+            catch (RuntimeException e)
+                {
+                // TODO: remove when getComponent() is fixed
+                String sName = constClass.getName();
+                System.out.println("getComponent() is broken for " + sName);
+                templateSuper = f_types.getTemplate(sName);
+                structSuper = templateSuper.f_struct;
+                }
+            }
+
+        if (structSuper == null)
+            {
+            if (!f_sName.equals("Object"))
+                {
+                templateSuper = xObject.INSTANCE;
+                }
+            }
+        else if (structClass.getFormat() != structSuper.getFormat())
+            {
+            switch (structClass.getFormat())
+                {
+                case SERVICE:
+                    templateCategory = xService.INSTANCE;
+                    break;
+
+                case CONST:
+                    templateCategory = xConst.INSTANCE;
+                    break;
+
+                case ENUM:
+                    templateCategory = xEnum.INSTANCE;
+                    break;
+                }
+            }
+
+        f_templateSuper = templateSuper;
+        f_templateCategory = templateCategory;
         f_clazzCanonical = createCanonicalClass();
-        f_structSuper = getSuperStructure();
         }
 
     protected TypeComposition createCanonicalClass()
@@ -103,55 +157,9 @@ public abstract class ClassTemplate
         return new TypeComposition(this, mapParamsActual);
         }
 
-    // find a super structure for this template
-    protected ClassStructure getSuperStructure()
-        {
-        ClassStructure structure = f_struct;
-        ClassStructure structureParent = null;
-
-        Optional<ClassStructure.Contribution> opt = structure.getContributionsAsList().stream().
-                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
-
-        if (opt.isPresent())
-            {
-            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassConstant();
-            try
-                {
-                structureParent = (ClassStructure) constClass.getComponent();
-                }
-            catch (RuntimeException e)
-                {
-                // TODO: remove when getComponent() is fixed
-                String sName = constClass.getName();
-                System.out.println("getComponent() is broken for " + sName);
-                ClassTemplate templateSuper = f_types.getTemplate(sName);
-                structureParent = templateSuper.f_struct;
-                }
-            }
-
-        switch (structure.getFormat())
-            {
-            case SERVICE:
-                return xService.INSTANCE.f_struct;
-
-            case CONST:
-                return xConst.INSTANCE.f_struct;
-
-            case ENUM:
-                // TODO: native parent
-                return xEnum.INSTANCE.f_struct;
-
-            case CLASS:
-                return structureParent;
-
-            default:
-                return structureParent == null ? xObject.INSTANCE.f_struct : structureParent;
-            }
-        }
-
     public boolean isRootObject()
         {
-        return f_structSuper == null;
+        return f_templateSuper == null;
         }
 
     /**
@@ -172,35 +180,32 @@ public abstract class ClassTemplate
             return true;
             }
 
-        ClassStructure structThat = that.f_struct;
-
-        Relation relation = m_mapRelations.get(structThat);
+        Relation relation = m_mapRelations.get(that);
         if (relation != null)
             {
             return relation == Relation.EXTENDS;
             }
 
-        ClassStructure structSuper = f_structSuper;
-        while (structSuper != null)
+        ClassTemplate templateSuper = f_templateSuper;
+        while (templateSuper != null)
             {
-            m_mapRelations.put(structSuper, Relation.EXTENDS);
+            m_mapRelations.put(templateSuper, Relation.EXTENDS);
 
             // there is just one template instance per name
-            if (structSuper == structThat)
+            if (templateSuper == that)
                 {
                 return true;
                 }
-            structSuper = getSuper().f_struct;
+            templateSuper = templateSuper.f_templateSuper;
             }
 
-        m_mapRelations.put(structThat, Relation.INCOMPATIBLE);
+        m_mapRelations.put(that, Relation.INCOMPATIBLE);
         return false;
         }
 
     public ClassTemplate getSuper()
         {
-        return f_structSuper == null ? null :
-                f_types.getTemplate(f_structSuper.getIdentityConstant());
+        return f_templateSuper;
         }
 
     public boolean isService()
@@ -218,17 +223,90 @@ public abstract class ClassTemplate
         return (PropertyStructure) f_struct.getChild(sName);
         }
 
-    public MethodStructure getMethod(String sName, String[] asArgType, String[] asRetType)
+    // get a method declared at this template level
+    public MethodStructure getDeclaredMethod(String sName, String[] asArgType, String[] asRetType)
         {
         MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(sName);
         if (mms != null)
             {
-            List<Component> list = mms.children();
-
-            // TODO: pick the correct one based on the signature
-            if (!list.isEmpty())
+            nextMethod:
+            for (MethodStructure method : ((List<MethodStructure>) (List) mms.children()))
                 {
-                return (MethodStructure) list.get(0);
+                // temporary shortcut
+                if (asArgType == null && asRetType == null)
+                    {
+                    return method;
+                    }
+                MethodConstant constMethod = method.getIdentityConstant();
+
+                TypeConstant[] atParam = constMethod.getRawParams();
+                TypeConstant[] atReturn = constMethod.getRawReturns();
+                int cParams = atParam.length;
+                int cReturns = atReturn.length;
+
+                if (cParams != asArgType.length)
+                    {
+                    continue;
+                    }
+
+                if (true) return method;
+
+                for (int i = 0, c = atParam.length; i < c; i++)
+                    {
+                    // TODO: replace "contains()" with "equals()"
+                    if (!atParam[i].getValueString().contains(asArgType[i]))
+                        {
+                        continue nextMethod;
+                        }
+                    }
+
+                if (cReturns != asRetType.length)
+                    {
+                    // return type of Void is an exception
+                    if (asRetType.length != 0 ||
+                            (cReturns == 1 && !atReturn[0].getValueString().contains("Void")))
+                        {
+                        continue;
+                        }
+                    }
+//                for (int i = 0, c = atReturn.length; i < c; i++)
+//                    {
+//                    if (!atReturn[i].getValueString().equals(asRetType[i]))
+//                        {
+//                        continue nextMethod;
+//                        }
+//                    }
+                return method;
+                }
+            }
+        return null;
+        }
+
+    // get a method declared at this template level
+    // TODO: replace MethodConstant with MethodIdConstant
+    public MethodStructure getDeclaredMethod(MethodConstant constMethod)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(constMethod.getName());
+
+        if (mms != null)
+            {
+            //        Optional<Component> opt = mms.children().stream().filter(
+            //                method -> method.getIdentityConstant().equals(constMethod)).findAny();
+            //
+            //        return opt.isPresent() ? (MethodStructure) opt.get() : null;
+
+            TypeConstant[] atParam = constMethod.getRawParams();
+            TypeConstant[] atReturn = constMethod.getRawReturns();
+
+            for (MethodStructure method : (List<MethodStructure>) (List) mms.children())
+                {
+                if (true) return method;
+
+                if (Arrays.equals(atParam, method.getIdentityConstant().getRawParams()) &&
+                        Arrays.equals(atReturn, method.getIdentityConstant().getRawReturns()))
+                    {
+                    return method;
+                    }
                 }
             }
         return null;
@@ -701,7 +779,7 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = getMethod("equals", new String[] {f_sName, f_sName}, BOOLEAN);
+        MethodStructure functionEquals = getDeclaredMethod("equals", new String[]{f_sName, f_sName}, BOOLEAN);
         if (functionEquals != null && functionEquals.isStatic())
             {
             return frame.call1(functionEquals, null,
@@ -719,8 +797,8 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = getMethod("compare",
-                new String[] {f_sName, f_sName}, new String[] {"Ordered"});
+        MethodStructure functionCompare = getDeclaredMethod("compare",
+                new String[]{f_sName, f_sName}, new String[]{"Ordered"});
         if (functionCompare != null && functionCompare.isStatic())
             {
             return frame.call1(functionCompare, null,
@@ -823,7 +901,7 @@ public abstract class ClassTemplate
 
     public MethodTemplate ensureMethodTemplate(String sName, String[] asParam, String[] asRetType)
         {
-        MethodStructure method = getMethod(sName, asParam, asRetType);
+        MethodStructure method = getDeclaredMethod(sName, asParam, asRetType);
 
         return m_mapMethods.computeIfAbsent(method.getIdentityConstant(), (id) -> new MethodTemplate(method));
         }

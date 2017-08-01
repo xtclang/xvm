@@ -93,12 +93,28 @@ public class Adapter
         try
             {
             ClassTemplate template = f_container.f_types.getTemplate(sClassName);
-            MethodStructure method = template.getMethod(sMethName, asArgType, asRetType);
-            while (method == null)
+            MethodStructure method;
+            while (true)
                 {
+                method = template.getDeclaredMethod(sMethName, asArgType, asRetType);
+                if (method != null)
+                    {
+                    break;
+                    }
+
+                ClassTemplate templateCategory = template.f_templateCategory;
+                if (templateCategory != null)
+                    {
+                    method = templateCategory.getDeclaredMethod(sMethName, asArgType, asRetType);
+                    if (method != null)
+                        {
+                        break;
+                        }
+                    }
+
                 template = template.getSuper();
-                method = template.getMethod(sMethName, asArgType, asRetType);
                 }
+
             return method.getIdentityConstant().getPosition();
             }
         catch (NullPointerException e)

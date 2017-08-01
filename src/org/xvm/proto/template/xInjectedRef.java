@@ -37,13 +37,6 @@ public class xInjectedRef
         }
 
     @Override
-    protected ClassStructure getSuperStructure()
-        {
-        // REVIEW: InjectedRef is a mixin, but xInjectedRef is native; is this right?
-        return xObject.INSTANCE.f_struct;
-        }
-
-    @Override
     public RefHandle createRefHandle(TypeComposition clazz, String sName)
         {
         if (sName == null)

@@ -38,7 +38,7 @@ public class xString
     public void initDeclared()
         {
         markNativeGetter("size");
-        markNativeMethod("indexOf", new String[]{"String", "Range<Int>|Nullable"},
+        markNativeMethod("indexOf", new String[]{"String", "Range<Int>?"},
                 new String[]{"collections.Tuple<Boolean,Int>"});
         markNativeMethod("to", VOID, STRING);
         }
