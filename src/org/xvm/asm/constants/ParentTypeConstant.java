@@ -15,9 +15,9 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a constant that specifies an explicitly immutable form of an underlying type.
+ * Represent a type constant for the parent class of a nested non-static ("instance") inner class.
  */
-public class ImmutableTypeConstant
+public class ParentTypeConstant
         extends TypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -31,21 +31,21 @@ public class ImmutableTypeConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public ImmutableTypeConstant(ConstantPool pool, Format format, DataInput in)
+    public ParentTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
 
-        m_iType = readMagnitude(in);
+        m_iChild = readMagnitude(in);
         }
 
     /**
-     * Construct a constant whose value is an immutable type.
+     * Construct a constant whose value is a parent type.
      *
      * @param pool       the ConstantPool that will contain this Constant
-     * @param constType  a TypeConstant that this constant modifies to be immutable
+     * @param constType  a TypeConstant that this constant represents the enclosing parent of
      */
-    public ImmutableTypeConstant(ConstantPool pool, TypeConstant constType)
+    public ParentTypeConstant(ConstantPool pool, TypeConstant constType)
         {
         super(pool);
 
@@ -53,52 +53,63 @@ public class ImmutableTypeConstant
             {
             throw new IllegalArgumentException("type required");
             }
+        if (!(constType instanceof ParentTypeConstant) && !(constType instanceof ClassTypeConstant
+                && ((ClassTypeConstant) constType).getClassConstant() instanceof SymbolicConstant))
+            {
+            throw new IllegalArgumentException("type must be \"this:type\" or a parent type thereof"
+                    + " (type=" + constType + ')');
+            }
 
-        m_constType = constType;
+        m_constChild = constType;
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * @return the underlying TypeConstant
+     * @return the TypeConstant that this type is the parent type of
      */
-    public TypeConstant getType()
+    public TypeConstant getChildType()
         {
-        return m_constType;
+        return m_constChild;
         }
 
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return true;
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     public Format getFormat()
         {
-        return Format.ImmutableType;
+        return Format.ParentType;
         }
 
     @Override
     protected Object getLocator()
         {
-        return m_constType;
+        return m_constChild;
         }
 
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        visitor.accept(m_constType);
+        visitor.accept(m_constChild);
         }
 
     @Override
     protected int compareDetails(Constant that)
         {
-        return this.m_constType.compareTo(((ImmutableTypeConstant) that).m_constType);
+        return this.m_constChild.compareTo(((ParentTypeConstant) that).m_constChild);
         }
 
     @Override
     public String getValueString()
         {
-        return "immutable " + m_constType.getValueString();
+        return m_constChild.getValueString() + ":parent";
         }
 
 
@@ -108,13 +119,13 @@ public class ImmutableTypeConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
+        m_constChild = (TypeConstant) getConstantPool().getConstant(m_iChild);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constType = (TypeConstant) pool.register(m_constType);
+        m_constChild = (TypeConstant) pool.register(m_constChild);
         }
 
     @Override
@@ -122,7 +133,7 @@ public class ImmutableTypeConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, indexOf(m_constType));
+        writePackedLong(out, indexOf(m_constChild));
         }
 
 
@@ -131,7 +142,7 @@ public class ImmutableTypeConstant
     @Override
     public int hashCode()
         {
-        return -m_constType.hashCode();
+        return m_constChild.hashCode();
         }
 
 
@@ -140,10 +151,10 @@ public class ImmutableTypeConstant
     /**
      * During disassembly, this holds the index of the type constant.
      */
-    private int m_iType;
+    private int m_iChild;
 
     /**
-     * The type referred to.
+     * The type that this is a parent type of.
      */
-    private TypeConstant m_constType;
+    private TypeConstant m_constChild;
     }

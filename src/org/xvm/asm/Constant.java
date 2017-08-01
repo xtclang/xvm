@@ -386,20 +386,19 @@ public abstract class Constant
         Module,
         Package,
         Class,
-        ThisClass,      // TODO
-        ParentClass,    // TODO
-        ChildClass,     // TODO
-        Register,       // TODO
+        Symbolic,
+        ParentClass,
+        ChildClass,
+        Register,
         Typedef,
         Property,
         MultiMethod,
         Method,
-        ClassType,
-        ThisType,       // TODO
-        ParentType,     // TODO
-        ChildType,      // TODO
-        RegisterType,   // TODO
-        ParameterType,  // TODO
+        ClassType,      // includes this:type auto-narrowing symbolic type
+        ParentType,
+        ChildType,
+        RegisterType,
+        ParameterType,
         ImmutableType,
         UnionType,
         IntersectionType,

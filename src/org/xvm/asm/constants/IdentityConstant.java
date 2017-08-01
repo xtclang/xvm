@@ -106,6 +106,14 @@ public abstract class IdentityConstant
         return getParentConstant().getComponent().getChild(this);
         }
 
+    /**
+     * @return true iff this IdentityConstant represents an auto-narrowing identity
+     */
+    public boolean isAutoNarrowing()
+        {
+        return false;
+        }
+
     // ----- constant methods ----------------------------------------------------------------------
 
     @Override

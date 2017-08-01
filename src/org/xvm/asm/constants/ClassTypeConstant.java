@@ -69,7 +69,19 @@ public class ClassTypeConstant
         {
         super(pool);
 
-        if (!(constId instanceof ModuleConstant
+        if (constId instanceof SymbolicConstant)
+            {
+            if (!constId.getName().equals(SymbolicConstant.THIS_TYPE))
+                {
+                throw new IllegalArgumentException("symbolic constant " + constId
+                        + " is not \"" + SymbolicConstant.THIS_TYPE + "\"");
+                }
+            if (constTypes != null && constTypes.length > 0)
+                {
+                throw new IllegalArgumentException("auto-narrowing this:type can not specify type params");
+                }
+            }
+        else if (!(constId instanceof ModuleConstant
                 || constId instanceof PackageConstant
                 || constId instanceof ClassConstant
                 || constId instanceof PropertyConstant
@@ -93,6 +105,12 @@ public class ClassTypeConstant
     public IdentityConstant getClassConstant()
         {
         return m_constId;
+        }
+
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return m_constId instanceof SymbolicConstant;
         }
 
     @Override

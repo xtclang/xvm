@@ -20,6 +20,8 @@ import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.ByteStringConstant;
 import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.ChildClassConstant;
+import org.xvm.asm.constants.ChildTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -34,9 +36,12 @@ import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
+import org.xvm.asm.constants.ParentClassConstant;
+import org.xvm.asm.constants.ParentTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.ResolvableConstant;
+import org.xvm.asm.constants.SymbolicConstant;
 import org.xvm.asm.constants.TupleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
@@ -541,6 +546,55 @@ public class ConstantPool
         }
 
     /**
+     * Obtain an auto-narrowing class constant that represents the parent of the specified
+     * auto-narrowing class constant, which itself must represent a non-static inner class.
+     *
+     * @param constChild  an auto-narrowing class constant
+     *
+     * @return an auto-narrowing class constant representing the parent of the specified class
+     *         constant
+     */
+    public ParentClassConstant ensureParentClassConstant(IdentityConstant constChild)
+        {
+        ParentClassConstant constant = (ParentClassConstant) ensureLocatorLookup(Format.ParentClass).get(constChild);
+        if (constant == null)
+            {
+            constant = (ParentClassConstant) register(new ParentClassConstant(this, constChild));
+            }
+        return constant;
+        }
+
+    /**
+     * Obtain an auto-narrowing class type that represents a non-static inner class child of the
+     * specified auto-narrowing type.
+     *
+     * @param constParent  an auto-narrowing class constant
+     * @param sChild       the name of the non-static inner class to obtain an auto-narrowing class
+     *                     constant for
+     *
+     * @return an auto-narrowing class constant representing the child of the specified class
+     *         constant
+     */
+    public ChildClassConstant ensureChildClassConstant(IdentityConstant constParent, String sChild)
+        {
+        if (!constParent.isAutoNarrowing())
+            {
+            throw new IllegalArgumentException("parent is not auto-narrowing class: " + constParent);
+            }
+
+        ChildClassConstant constant = null;
+        if (constParent instanceof SymbolicConstant && constParent.getName().equals(SymbolicConstant.THIS_CLASS))
+            {
+            constant = (ChildClassConstant) ensureLocatorLookup(Format.ChildClass).get(sChild);
+            }
+        if (constant == null)
+            {
+            constant = (ChildClassConstant) register(new ChildClassConstant(this, constParent, sChild));
+            }
+        return constant;
+        }
+
+    /**
      * Helper to get a ClassConstant for a class in the Ecstasy core module.
      *
      * @param sClass  the qualified class name, dot-delimited
@@ -868,29 +922,120 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified parameter name, obtain a TypeConstant that represents the type parameter.
+     * Obtain an auto-narrowing class type constant that represents the type of "this".
      *
-     * @param sName
+     * @param access  the access modifier, or null
      *
-     * @return
+     * @return an auto-narrowing class type constant that represents the type of "this"
      */
-    public ParameterTypeConstant ensureParameterTypeConstant(String sName)
+    public ClassTypeConstant ensureThisTypeConstant(Access access)
         {
-        // check the pre-existing constants first
-        ParameterTypeConstant constant = (ParameterTypeConstant) ensureLocatorLookup(Format.ParameterType).get(sName);
+        SymbolicConstant  constId  = ensureSymbolicConstant(SymbolicConstant.THIS_TYPE);
+        ClassTypeConstant constant = null;
+        if (access == null || access == Access.PUBLIC)
+            {
+            constant = (ClassTypeConstant) ensureLocatorLookup(Format.ClassType).get(constId);
+            }
         if (constant == null)
             {
-            constant = (ParameterTypeConstant) register(new ParameterTypeConstant(this, sName));
+            constant = (ClassTypeConstant) register(new ClassTypeConstant(this, constId, access));
             }
         return constant;
         }
 
     /**
-     * TODO
+     * Obtain an auto-narrowing class type constant that represents the parent of the specified
+     * auto-narrowing type constant, which itself must represent a non-static inner class.
      *
-     * @param constClass
-     * @param aconstParam
-     * @param constType
+     * @param constChild  an auto-narrowing type constant
+     *
+     * @return a type rrepresenting the parent of the specified child type constant
+     */
+    public ParentTypeConstant ensureParentTypeConstant(TypeConstant constChild)
+        {
+        ParentTypeConstant constant = (ParentTypeConstant) ensureLocatorLookup(Format.ParentType).get(constChild);
+        if (constant == null)
+            {
+            constant = (ParentTypeConstant) register(new ParentTypeConstant(this, constChild));
+            }
+        return constant;
+        }
+
+    /**
+     * Obtain an auto-narrowing class type that represents a non-static inner class child of the
+     * specified auto-narrowing type.
+     *
+     * @param constParent  an auto-narrowing type constant
+     * @param sChild       the name of the non-static inner class to obtain a type constant for
+     *
+     * @return
+     */
+    public ChildTypeConstant ensureChildTypeConstant(TypeConstant constParent, String sChild)
+        {
+        if (!constParent.isAutoNarrowing())
+            {
+            throw new IllegalArgumentException("parent is not auto-narrowing type: " + constParent);
+            }
+
+        ChildTypeConstant constant = null;
+        if (constParent instanceof ClassTypeConstant && ((ClassTypeConstant) constParent).getAccess() == Access.PUBLIC)
+            {
+            constant = (ChildTypeConstant) ensureLocatorLookup(Format.ChildType).get(sChild);
+            }
+        if (constant == null)
+            {
+            constant = (ChildTypeConstant) register(new ChildTypeConstant(this, constParent, sChild));
+            }
+        return constant;
+        }
+
+    /**
+     * Obtain a symbolic constant for the specified symbol name.
+     *
+     * @param sName  a predefined symbol name
+     *
+     * @return the symbolic constant corresponding to the specified symbol name
+     */
+    public SymbolicConstant ensureSymbolicConstant(String sName)
+        {
+        SymbolicConstant constant = (SymbolicConstant) ensureLocatorLookup(Format.Symbolic).get(sName);
+        if (constant == null)
+            {
+            constant = (SymbolicConstant) register(new SymbolicConstant(this, sName));
+            }
+        return constant;
+        }
+
+    /**
+     * Given the specified parameter name, obtain a TypeConstant that represents the type parameter.
+     *
+     * @param constParent  the type that contains the type parameter
+     * @param sName        the name of the type parameter
+     *
+     * @return the constant representing the type parameter
+     */
+    public ParameterTypeConstant ensureParameterTypeConstant(TypeConstant constParent, String sName)
+        {
+        ParameterTypeConstant constant = null;
+        if (constParent.isAutoNarrowing() && constParent instanceof ClassTypeConstant
+                    && ((ClassTypeConstant) constParent).getAccess() == Access.PUBLIC)
+            {
+            constant = (ParameterTypeConstant) ensureLocatorLookup(Format.ParameterType).get(sName);
+            }
+        if (constant == null)
+            {
+            constant = (ParameterTypeConstant) register(new ParameterTypeConstant(this, constParent, sName));
+            }
+        return constant;
+        }
+
+    /**
+     * Given the specified annotation class and parameters, obtain a type that represents the
+     * annotated form of the specified type.
+     *
+     * @param constClass   the annotation class
+     * @param aconstParam  the parameters for the annotation
+     * @param constType    the type being annotated
      *
      * @return
      */

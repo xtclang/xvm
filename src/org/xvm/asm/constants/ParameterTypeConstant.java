@@ -11,7 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
-import static org.xvm.util.Handy.readIndex;
+import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -39,26 +39,63 @@ public class ParameterTypeConstant
         {
         super(pool);
 
-        m_iName = readIndex(in);
+        m_iParent = readMagnitude(in);
+        m_iName   = readMagnitude(in);
         }
 
     /**
      * Construct a constant whose value is a name that represents a data type parameter (which is a
      * specific data type at runtime).
      *
-     * @param pool        the ConstantPool that will contain this Constant
-     * @param sParamName  the simple name of the type parameter
+     * @param pool         the ConstantPool that will contain this Constant
+     * @param constParent  the type that contains the type parameter
+     * @param sParamName   the simple name of the type parameter
      */
-    public ParameterTypeConstant(ConstantPool pool, String sParamName)
+    public ParameterTypeConstant(ConstantPool pool, TypeConstant constParent, String sParamName)
         {
         super(pool);
 
-        assert isValidIdentifier(sParamName);
-        m_constName = pool.ensureCharStringConstant(sParamName);
+        if (constParent == null)
+            {
+            throw new IllegalArgumentException("parent required");
+            }
+
+        switch (constParent.getFormat())
+            {
+            case ClassType:
+            case ParentType:
+            case ChildType:
+                break;
+
+            default:
+                throw new IllegalArgumentException("parent type (" + constParent.getFormat()
+                        + ") must be one of ClassType, ParentType, or ChildType");
+            }
+
+        if (sParamName == null)
+            {
+            throw new IllegalArgumentException("parameter name required");
+            }
+
+        if (!isValidIdentifier(sParamName))
+            {
+            throw new IllegalArgumentException("parameter name is invalid: " + sParamName);
+            }
+
+        m_constParent = constParent;
+        m_constName   = pool.ensureCharStringConstant(sParamName);
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
+
+    /**
+     * @return the TypeConstant for the type that contains this type parameter
+     */
+    public TypeConstant getParentType()
+        {
+        return m_constParent;
+        }
 
     /**
      * @return the name of the type parameter
@@ -86,8 +123,20 @@ public class ParameterTypeConstant
         }
 
     @Override
+    protected Object getLocator()
+        {
+        // the locator is the name of the parameter, but only if the parameter is a parameter of
+        // the public "this:type"
+        return m_constParent.isAutoNarrowing() && m_constParent instanceof ClassTypeConstant
+            && ((ClassTypeConstant) m_constParent).getAccess() == Access.PUBLIC
+                ? m_constName.getValue()
+                : null;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
+        visitor.accept(m_constParent);
         visitor.accept(m_constName);
         }
 
@@ -95,12 +144,18 @@ public class ParameterTypeConstant
     protected int compareDetails(Constant obj)
         {
         ParameterTypeConstant that = (ParameterTypeConstant) obj;
-        return this.m_constName.compareDetails(that.m_constName);
+        int n = this.m_constParent.compareTo(that.m_constParent);
+        if (n == 0)
+            {
+            n = this.m_constName.compareDetails(that.m_constName);
+            }
+        return n;
         }
 
     @Override
     public String getValueString()
         {
+        // TODO this isn't quite right
         return m_constName.getValue();
         }
 
@@ -111,13 +166,15 @@ public class ParameterTypeConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constName = (CharStringConstant) getConstantPool().getConstant(m_iName);
+        m_constParent = (TypeConstant      ) getConstantPool().getConstant(m_iParent);
+        m_constName   = (CharStringConstant) getConstantPool().getConstant(m_iName  );
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constName = (CharStringConstant) pool.register(m_constName);
+        m_constParent = (TypeConstant      ) pool.register(m_constParent);
+        m_constName   = (CharStringConstant) pool.register(m_constName  );
         }
 
     @Override
@@ -125,7 +182,8 @@ public class ParameterTypeConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constName.getPosition());
+        writePackedLong(out, m_constParent.getPosition());
+        writePackedLong(out, m_constName  .getPosition());
         }
 
 
@@ -134,16 +192,26 @@ public class ParameterTypeConstant
     @Override
     public int hashCode()
         {
-        return -m_constName.hashCode();
+        return m_constParent.hashCode() ^ m_constName.hashCode();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
+     * During disassembly, this holds the index of the parent type.
+     */
+    private int m_iParent;
+
+    /**
      * During disassembly, this holds the index of the parameter name constant.
      */
     private int m_iName;
+
+    /**
+     * The type that contains the type parameter.
+     */
+    private TypeConstant m_constParent;
 
     /**
      * The constant that holds the name of the type parameter.

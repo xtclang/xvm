@@ -48,6 +48,14 @@ public abstract class TypeConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
+     * @return true iff this TypeConstant represents an auto-narrowing type
+     */
+    public boolean isAutoNarrowing()
+        {
+        return false;
+        }
+
+    /**
      * Determine if this TypeConstant is the "Object" type.
      *
      * @return true iff this TypeConstant represents the type of the Ecstasy root Object class
