@@ -21,8 +21,10 @@ import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 
-import org.xvm.proto.template.xArray;
+import org.xvm.proto.template.collections.xArray;
 import org.xvm.proto.template.xBoolean;
+import org.xvm.proto.template.xConst;
+import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xEnum.EnumHandle;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
@@ -35,6 +37,7 @@ import org.xvm.proto.template.xString;
 import org.xvm.proto.template.xType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -53,11 +56,13 @@ public abstract class ClassTemplate
     public final TypeSet f_types;
     public final ClassStructure f_struct;
 
-    public final String f_sName; // globally known ClassTemplate name (e.g. x:Boolean or x:annotation.AtomicRef)
+    public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.AtomicRef)
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized class
+    public final List<String> f_listGenericParams; // param names
 
-    public final ClassStructure f_structSuper;
+    public final ClassTemplate f_templateSuper;
+    public final ClassTemplate f_templateCategory; // a native category
 
     // ----- caches ------
 
@@ -66,7 +71,7 @@ public abstract class ClassTemplate
 
     // cache of relationships
     protected enum Relation {EXTENDS, IMPLEMENTS, INCOMPATIBLE}
-    protected Map<ClassStructure, Relation> m_mapRelations = new HashMap<>();
+    protected Map<ClassTemplate, Relation> m_mapRelations = new HashMap<>();
 
     // construct the template
     public ClassTemplate(TypeSet types, ClassStructure structClass)
@@ -75,8 +80,80 @@ public abstract class ClassTemplate
         f_struct = structClass;
         f_sName = structClass.getName();
 
+        List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes =
+                structClass.getTypeParamsAsList();
+        int cParams = listFormalTypes.size();
+
+        List<String> listParams;
+        if (cParams == 0)
+            {
+            listParams = Collections.EMPTY_LIST;
+            }
+        else
+            {
+            listParams = new ArrayList<>(cParams);
+
+            for (int i = 0; i < cParams; i++)
+                {
+                listParams.add(listFormalTypes.get(i).getKey().getValue());
+                }
+            }
+        f_listGenericParams = listParams;
+
+        // calculate the parents (inheritance and "native")
+        ClassStructure structSuper = null;
+        ClassTemplate templateSuper = null;
+        ClassTemplate templateCategory = null;
+
+        Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
+                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
+
+        if (opt.isPresent())
+            {
+            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassConstant();
+            try
+                {
+                structSuper = (ClassStructure) constClass.getComponent();
+                templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
+                }
+            catch (RuntimeException e)
+                {
+                // TODO: remove when getComponent() is fixed
+                String sName = constClass.getName();
+                System.out.println("getComponent() is broken for " + sName);
+                templateSuper = f_types.getTemplate(sName);
+                structSuper = templateSuper.f_struct;
+                }
+            }
+
+        if (structSuper == null)
+            {
+            if (!f_sName.equals("Object"))
+                {
+                templateSuper = xObject.INSTANCE;
+                }
+            }
+        else if (structClass.getFormat() != structSuper.getFormat())
+            {
+            switch (structClass.getFormat())
+                {
+                case SERVICE:
+                    templateCategory = xService.INSTANCE;
+                    break;
+
+                case CONST:
+                    templateCategory = xConst.INSTANCE;
+                    break;
+
+                case ENUM:
+                    templateCategory = xEnum.INSTANCE;
+                    break;
+                }
+            }
+
+        f_templateSuper = templateSuper;
+        f_templateCategory = templateCategory;
         f_clazzCanonical = createCanonicalClass();
-        f_structSuper = getSuperStructure();
         }
 
     protected TypeComposition createCanonicalClass()
@@ -101,56 +178,9 @@ public abstract class ClassTemplate
         return new TypeComposition(this, mapParamsActual);
         }
 
-    // find a super structure for this template
-    protected ClassStructure getSuperStructure()
-        {
-        ClassStructure structure = f_struct;
-
-        Optional<ClassStructure.Contribution> opt = structure.getContributionsAsList().stream().
-                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
-        if (opt.isPresent())
-            {
-            ClassConstant constClass = opt.get().getClassConstant().getClassConstant();
-            try
-                {
-                return (ClassStructure) constClass.getComponent();
-                }
-            catch (RuntimeException e)
-                {
-                // TODO: remove when getComponent() is fixed
-                String sName = constClass.getName();
-                ClassTemplate templateSuper = f_types.getTemplate(sName);
-                return templateSuper.f_struct;
-                }
-            }
-        else
-            {
-            switch (structure.getFormat())
-                {
-                case ENUMVALUE:
-                    return (ClassStructure) structure.getParent();
-
-                case SERVICE:
-                    return xService.INSTANCE.f_struct;
-
-                case CLASS:
-                    if (structure.getName().equals("Object"))
-                        {
-                        return null;
-                        }
-                    // break through
-                case ENUM:
-                case INTERFACE:
-                case CONST:
-                    return xObject.INSTANCE.f_struct;
-                }
-            }
-        return null;
-        }
-
     public boolean isRootObject()
         {
-        return f_structSuper == null;
+        return f_templateSuper == null;
         }
 
     /**
@@ -171,35 +201,32 @@ public abstract class ClassTemplate
             return true;
             }
 
-        ClassStructure structThat = that.f_struct;
-
-        Relation relation = m_mapRelations.get(structThat);
+        Relation relation = m_mapRelations.get(that);
         if (relation != null)
             {
             return relation == Relation.EXTENDS;
             }
 
-        ClassStructure structSuper = f_structSuper;
-        while (structSuper != null)
+        ClassTemplate templateSuper = f_templateSuper;
+        while (templateSuper != null)
             {
-            m_mapRelations.put(structSuper, Relation.EXTENDS);
+            m_mapRelations.put(templateSuper, Relation.EXTENDS);
 
             // there is just one template instance per name
-            if (structSuper == structThat)
+            if (templateSuper == that)
                 {
                 return true;
                 }
-            structSuper = getSuper().f_struct;
+            templateSuper = templateSuper.f_templateSuper;
             }
 
-        m_mapRelations.put(structThat, Relation.INCOMPATIBLE);
+        m_mapRelations.put(that, Relation.INCOMPATIBLE);
         return false;
         }
 
     public ClassTemplate getSuper()
         {
-        return f_structSuper == null ? null :
-                f_types.getTemplate(f_structSuper.getIdentityConstant());
+        return f_templateSuper;
         }
 
     public boolean isService()
@@ -217,19 +244,109 @@ public abstract class ClassTemplate
         return (PropertyStructure) f_struct.getChild(sName);
         }
 
-    public MethodStructure getMethod(String sName, String[] asArgType, String[] asRetType)
+    // get a method declared at this template level
+    public MethodStructure getDeclaredMethod(String sName, String[] asArgType, String[] asRetType)
         {
         MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(sName);
         if (mms != null)
             {
-            List<Component> list = mms.children();
-
-            // TODO: pick the correct one based on the signature
-            if (!list.isEmpty())
+            nextMethod:
+            for (MethodStructure method : ((List<MethodStructure>) (List) mms.children()))
                 {
-                return (MethodStructure) list.get(0);
+                // TODO: temporary shortcut; remove
+                if (asArgType == null && asRetType == null)
+                    {
+                    return method;
+                    }
+                MethodConstant constMethod = method.getIdentityConstant();
+
+                TypeConstant[] atParam = constMethod.getRawParams();
+                TypeConstant[] atReturn = constMethod.getRawReturns();
+                int cParams = atParam.length;
+                int cReturns = atReturn.length;
+
+                if (cParams != asArgType.length)
+                    {
+                    continue;
+                    }
+
+                if (true) return method;  // TODO: remove
+
+                for (int i = 0, c = atParam.length; i < c; i++)
+                    {
+                    // TODO: replace "contains()" with "equals()"
+                    if (!atParam[i].getValueString().contains(asArgType[i]))
+                        {
+                        continue nextMethod;
+                        }
+                    }
+
+                if (cReturns != asRetType.length)
+                    {
+                    // return type of Void is an exception
+                    if (asRetType.length != 0 ||
+                            (cReturns == 1 && !atReturn[0].getValueString().contains("Void")))
+                        {
+                        continue;
+                        }
+                    }
+//                for (int i = 0, c = atReturn.length; i < c; i++)
+//                    {
+//                    if (!atReturn[i].getValueString().equals(asRetType[i]))
+//                        {
+//                        continue nextMethod;
+//                        }
+//                    }
+                return method;
                 }
             }
+        return null;
+        }
+
+    // get a method declared at this template level
+    // TODO: replace MethodConstant with MethodIdConstant
+    public MethodStructure getDeclaredMethod(MethodConstant constMethod)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(constMethod.getName());
+
+        if (mms != null)
+            {
+            //        Optional<Component> opt = mms.children().stream().filter(
+            //                method -> method.getIdentityConstant().equals(constMethod)).findAny();
+            //
+            //        return opt.isPresent() ? (MethodStructure) opt.get() : null;
+
+            TypeConstant[] atParam = constMethod.getRawParams();
+            TypeConstant[] atReturn = constMethod.getRawReturns();
+
+            for (MethodStructure method : (List<MethodStructure>) (List) mms.children())
+                {
+                if (true) return method;
+
+                if (Arrays.equals(atParam, method.getIdentityConstant().getRawParams()) &&
+                        Arrays.equals(atReturn, method.getIdentityConstant().getRawReturns()))
+                    {
+                    return method;
+                    }
+                }
+            }
+        return null;
+        }
+
+    // find a function  that matches the specified signature in the inheritance tree
+    public MethodStructure findFunction(String sName, String[] asArgType, String[] asRetType)
+        {
+        ClassTemplate template = this;
+        do
+            {
+            MethodStructure method = getDeclaredMethod("equals", asArgType, asRetType);
+            if  (method != null && method.isStatic())
+                {
+                return method;
+                }
+            template = template.f_templateSuper;
+            }
+        while (template != null);
         return null;
         }
 
@@ -246,20 +363,16 @@ public abstract class ClassTemplate
             return f_clazzCanonical;
             }
 
-        List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes =
-                f_struct.getTypeParamsAsList();
+        assert f_listGenericParams.size() == listParams.size();
 
-        assert listFormalTypes.size() == listParams.size();
-
-        Map<String, Type> mapParams = new HashMap<>();
-        for (int i = 0, c = listParams.size(); i < c; i++)
+        Map<String, Type> mapActualParams = new HashMap<>();
+        int ix = 0;
+        for (String sParamName : f_listGenericParams)
             {
-            Map.Entry<CharStringConstant, TypeConstant> entryFormal = listFormalTypes.get(i);
-
-            mapParams.put(entryFormal.getKey().getValue(),
-                    resolveParameterType(listParams.get(i), mapActual));
+            mapActualParams.put(sParamName,
+                    resolveParameterType(listParams.get(ix++), mapActual));
             }
-        return ensureClass(mapParams);
+        return ensureClass(mapActualParams);
         }
 
     // resolve a parameter type
@@ -314,8 +427,9 @@ public abstract class ClassTemplate
     // ---- OpCode support: construction and initialization -----
 
     // create a RefHandle for the specified class
+    // sName is an optional ref name
     // TODO: consider moving this method up to xRef
-    public RefHandle createRefHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
         {
         throw new IllegalStateException("Invalid op for " + f_sName);
         }
@@ -349,18 +463,17 @@ public abstract class ClassTemplate
         // regular constructors (RC), and finalizers (F);
         // the call sequence should be:
         //
-        //  ("new" op-code) => DC0 -> DC1 -> C1 => C0 -> F0 -> F1 -> "assign" (continuation)
+        //  ("new" op-code) => DC0 -> DC1 -> RC1 => RC0 -> F0 -> F1 -> "assign" (continuation)
         //
         // -> indicates a call via continuation
         // => indicates a call via Construct op-cod
         //
-        // we need to create the call chain in the revers order
-        // (note that the C0 and F0 are added by the Construct op-code)
-        //
+        // we need to create the call chain in the revers order;
         // the very last frame should also assign the resulting new object
 
         Supplier<Frame> contAssign = () ->
             {
+            // this:private -> this:public
             frame.assignValue(iReturn,
                     hStruct.f_clazz.ensureAccess(hStruct, Constants.Access.PUBLIC));
             return null;
@@ -376,15 +489,25 @@ public abstract class ClassTemplate
 
         frameRC.m_continuation = () ->
             {
+            if (isConstructImmutable())
+                {
+                hStruct.makeImmutable();
+                }
+
             // this:struct -> this:private
             FullyBoundHandle hF = frameRC.m_hfnFinally;
-            return hF == FullyBoundHandle.NO_OP ?
-                    contAssign == null ? null : contAssign.get() :
+            return hF == FullyBoundHandle.NO_OP ? contAssign.get() :
                     hF.callChain(frame, Constants.Access.PRIVATE, contAssign);
             };
 
         frame.m_frameNext = frameDC == null ? frameRC : frameDC;
         return Op.R_CALL;
+        }
+
+    // make a final change to the struct that has been fully assigned
+    protected boolean isConstructImmutable()
+        {
+        return this instanceof xConst;
         }
 
     public FullyBoundHandle makeFinalizer(MethodStructure constructor,
@@ -417,9 +540,10 @@ public abstract class ClassTemplate
             case 0:
                 if (method.getName().equals("to"))
                     {
-                    // TODO: introduce a "callToString" method to be overridden when appropriate
                     // how to differentiate; check the method's return type?
-                    return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
+                    StringBuilder sb = new StringBuilder();
+                    buildStringValue(hTarget, sb);
+                    return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
                     }
             }
 
@@ -560,9 +684,9 @@ public abstract class ClassTemplate
         GenericHandle hThis = (GenericHandle) hTarget;
         String sName = property.getName();
 
-        if (isGenericType(property))
+        if (isGenericType(sName))
             {
-            Type type = hThis.f_clazz.getFormalType(sName);
+            Type type = hThis.f_clazz.getActualType(sName);
 
             return frame.assignValue(iReturn, xType.makeHandle(type));
             }
@@ -574,7 +698,10 @@ public abstract class ClassTemplate
             String sErr;
             if (isInjectable(property))
                 {
-                hValue = frame.f_context.f_container.getInjectable(hThis.f_clazz, property);
+                ClassTypeConstant constType = frame.f_adapter.resolveType(property);
+                TypeComposition clz = f_types.resolve(constType);
+
+                hValue = frame.f_context.f_container.getInjectable(sName, clz);
                 if (hValue != null)
                     {
                     hThis.m_mapFields.put(sName, hValue);
@@ -588,7 +715,7 @@ public abstract class ClassTemplate
                         "Un-initialized property \"" : "Invalid property \"";
                 }
 
-            frame.m_hException = xException.makeHandle(sErr + property.getName() + '"');
+            frame.m_hException = xException.makeHandle(sErr + sName + '"');
             return Op.R_EXCEPTION;
             }
 
@@ -686,61 +813,16 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = getMethod("equals", new String[] {f_sName, f_sName}, BOOLEAN);
-        if (functionEquals != null && functionEquals.isStatic())
+        MethodStructure functionEquals = findFunction("equals", new String[]{f_sName, f_sName}, BOOLEAN);
+        if (functionEquals != null)
             {
             return frame.call1(functionEquals, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
             }
 
-        ClassStructure struct = f_struct;
-
-        if (struct.getFormat() != Component.Format.CONST)
-            {
-            // only const classes have an automatic implementation;
-            // for everyone else it's a ref equality
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
-            }
-
-        GenericHandle hV1 = (GenericHandle) hValue1;
-        GenericHandle hV2 = (GenericHandle) hValue2;
-
-        for (Component comp : struct.children())
-            {
-            if (comp instanceof PropertyStructure)
-                {
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
-                    {
-                    continue;
-                    }
-
-                String sProp = property.getName();
-                ObjectHandle h1 = hV1.getField(sProp);
-                ObjectHandle h2 = hV2.getField(sProp);
-
-                if (h1 == null || h2 == null)
-                    {
-                    frame.m_hException = xException.makeHandle("Unassigned property " + sProp);
-                    return Op.R_EXCEPTION;
-                    }
-
-                TypeComposition classProp = clazz.resolve(property.getType());
-
-                int iRet = classProp.callEquals(frame, h1, h2, Frame.RET_LOCAL);
-                if (iRet == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-
-                ObjectHandle hResult = frame.getFrameLocal();
-                if (hResult == xBoolean.FALSE)
-                    {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
-                    }
-                }
-            }
-        return frame.assignValue(iReturn, xBoolean.TRUE);
+        // only Const classes have an automatic implementation;
+        // for everyone else it's either a native method or a ref equality
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
         }
 
     // compare for order two object handles that both belong to the specified class
@@ -749,22 +831,17 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = getMethod("compare",
-                new String[] {f_sName, f_sName}, new String[] {"Ordered"});
-        if (functionCompare != null && functionCompare.isStatic())
+        MethodStructure functionCompare = findFunction("compare",
+                new String[]{f_sName, f_sName}, new String[]{"Ordered"});
+        if (functionCompare != null)
             {
             return frame.call1(functionCompare, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
             }
 
-        ClassStructure struct = f_struct;
-
         // only Const and Enum classes have automatic implementations
-        switch (struct.getFormat())
+        switch (f_struct.getFormat())
             {
-            default:
-                throw new IllegalStateException();
-
             case ENUMVALUE:
                 EnumHandle hV1 = (EnumHandle) hValue1;
                 EnumHandle hV2 = (EnumHandle) hValue2;
@@ -772,49 +849,17 @@ public abstract class ClassTemplate
                 return frame.assignValue(iReturn,
                         xOrdered.makeHandle(hV1.getValue() - hV2.getValue()));
 
-            case CONST:
-                break;
+            default:
+                throw new IllegalStateException(
+                        "No implementation for \"compare()\" function at " + f_sName);
             }
+        }
 
-        GenericHandle hV1 = (GenericHandle) hValue1;
-        GenericHandle hV2 = (GenericHandle) hValue2;
-
-        for (Component comp : struct.children())
-            {
-            if (comp instanceof PropertyStructure)
-                {
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
-                    {
-                    continue;
-                    }
-
-                String sProp = property.getName();
-                ObjectHandle h1 = hV1.getField(sProp);
-                ObjectHandle h2 = hV2.getField(sProp);
-
-                if (h1 == null || h2 == null)
-                    {
-                    frame.m_hException = xException.makeHandle("Unassigned property " + sProp);
-                    return Op.R_EXCEPTION;
-                    }
-
-                TypeComposition classProp = clazz.resolve(property.getType());
-
-                int iRet = classProp.callCompare(frame, h1, h2, Frame.RET_LOCAL);
-                if (iRet == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-
-                EnumHandle hResult = (EnumHandle) frame.getFrameLocal();
-                if (hResult != xOrdered.EQUAL)
-                    {
-                    return frame.assignValue(iReturn, hResult);
-                    }
-                }
-            }
-        return frame.assignValue(iReturn, xOrdered.EQUAL);
+    // get the String representation of the target handle
+    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        sb.append(hTarget.toString());
+        return null;
         }
 
     // ----- Op-code support: array operations -----
@@ -865,10 +910,9 @@ public abstract class ClassTemplate
         return template == null ? null : template.m_templateRef;
         }
 
-    protected boolean isGenericType(PropertyStructure property)
+    protected boolean isGenericType(String sProperty)
         {
-        // TODO:
-        return false;
+        return f_listGenericParams.contains(sProperty);
         }
 
     // =========== TEMPORARY ========
@@ -890,7 +934,7 @@ public abstract class ClassTemplate
 
     public MethodTemplate ensureMethodTemplate(String sName, String[] asParam, String[] asRetType)
         {
-        MethodStructure method = getMethod(sName, asParam, asRetType);
+        MethodStructure method = getDeclaredMethod(sName, asParam, asRetType);
 
         return m_mapMethods.computeIfAbsent(method.getIdentityConstant(), (id) -> new MethodTemplate(method));
         }
@@ -997,6 +1041,7 @@ public abstract class ClassTemplate
     private Map<String, PropertyTemplate> m_mapProperties = new HashMap<>();
 
     public static String[] VOID = new String[0];
+    public static String[] OBJECT = new String[]{"Object"};
     public static String[] INT = new String[]{"Int64"};
     public static String[] BOOLEAN = new String[]{"Boolean"};
     public static String[] STRING = new String[]{"String"};

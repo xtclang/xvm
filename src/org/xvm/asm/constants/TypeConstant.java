@@ -48,6 +48,14 @@ public abstract class TypeConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
+     * @return true iff this TypeConstant represents an auto-narrowing type
+     */
+    public boolean isAutoNarrowing()
+        {
+        return false;
+        }
+
+    /**
      * Determine if this TypeConstant is the "Object" type.
      *
      * @return true iff this TypeConstant represents the type of the Ecstasy root Object class
@@ -87,22 +95,6 @@ public abstract class TypeConstant
 
     @Override
     public abstract int hashCode();
-
-    @Override
-    public boolean equals(Object obj)
-        {
-        if (obj instanceof UnresolvedTypeConstant)
-            {
-            TypeConstant type = ((UnresolvedTypeConstant) obj).getResolvedConstant();
-            if (type != null)
-                {
-                return equals(type);
-                }
-            }
-
-        return super.equals(obj);
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

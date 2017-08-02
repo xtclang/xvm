@@ -175,12 +175,12 @@ interface IntNumber
         {
         return new Sequence<Boolean>()
             {
-            @override Int length.get()
+            @Override Int length.get()
                 {
                 return IntNumber.this.bitCount;
                 }
 
-            @override Boolean get(Int index)
+            @Override Boolean get(Int index)
                 {
                 return IntNumber.this.to<Bit[]>()[index].to<Boolean>();
                 }

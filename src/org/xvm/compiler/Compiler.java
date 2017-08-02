@@ -1,16 +1,17 @@
 package org.xvm.compiler;
 
 
-import org.xvm.asm.FileStructure;
-import org.xvm.asm.ModuleRepository;
-
-import org.xvm.asm.ModuleStructure;
-import org.xvm.compiler.ast.AstNode;
-import org.xvm.compiler.ast.TypeCompositionStatement;
-import org.xvm.util.Severity;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.xvm.asm.FileStructure;
+import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+
+import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -102,7 +103,7 @@ public class Compiler
      *
      * @return true iff all of the names have been resolved
      */
-    public boolean namesResolved()
+    public boolean resolveNames()
         {
         // idempotent: allow this to be called more than necessary without any errors/side-effects
         if (m_stage == Stage.Resolved)
@@ -158,7 +159,7 @@ public class Compiler
             {
             // second through n-th time through: resolve starting from whatever didn't get resolved
             // last time, and recurse down
-            for (AstNode node : (List<AstNode>) m_listUnresolved)
+            for (AstNode node : m_listUnresolved)
                 {
                 node.resolveNames(listDeferred, m_errs);
                 }
@@ -179,7 +180,7 @@ public class Compiler
         }
 
     /**
-     * After a certain number of attempts to resolve names by invoking {@link #namesResolved}, this
+     * After a certain number of attempts to resolve names by invoking {@link #resolveNames}, this
      * method will report any unresolved names as fatal errors.
      */
     public void reportUnresolvableNames()
@@ -205,7 +206,7 @@ public class Compiler
             throw new IllegalStateException("Stage=" + m_stage + " (expected: Resolved)");
             }
 
-        // TODO
+        m_module.validate(m_errs);
         }
 
 
@@ -332,10 +333,42 @@ public class Compiler
      */
     public static final String INFINITE_RESOLVE_LOOP              = "COMPILER-30";
     /**
-     * Name collision. For example, anything named "Ecstasy" nested under a module, or a property
+     * Name collision. For example, anything named "ecstasy" nested under a module, or a property
      * that has the same name as a type parameter or method, etc.
      */
     public static final String NAME_COLLISION                     = "COMPILER-31";
+    /**
+     * Not a class type.
+     */
+    public static final String NOT_CLASS_TYPE                     = "COMPILER-32";
+    /**
+     * Cannot nest a method.
+     */
+    public static final String METHOD_UNEXPECTED                  = "COMPILER-33";
+    /**
+     * Cannot nest a typedef.
+     */
+    public static final String TYPEDEF_UNEXPECTED                 = "COMPILER-34";
+    /**
+     * Cannot have an annotation here.
+     */
+    public static final String ANNOTATION_UNEXPECTED              = "COMPILER-35";
+    /**
+     * Cannot find name within context.
+     */
+    public static final String NAME_MISSING                       = "COMPILER-36";
+    /**
+     * Found name within context, but name is ambiguous.
+     */
+    public static final String NAME_AMBIGUOUS                     = "COMPILER-37";
+    /**
+     * Cannot find name.
+     */
+    public static final String NAME_UNRESOLVABLE                  = "COMPILER-38";
+    /**
+     * Cannot hide name.
+     */
+    public static final String NAME_UNHIDEABLE                    = "COMPILER-39";
 
 
     // ----- data members --------------------------------------------------------------------------

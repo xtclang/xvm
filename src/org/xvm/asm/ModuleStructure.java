@@ -243,6 +243,12 @@ public class ModuleStructure
         }
 
     @Override
+    public String getSimpleName()
+        {
+        return getModuleConstant().getUnqualifiedName();
+        }
+
+    @Override
     public boolean isGloballyVisible()
         {
         // modules are always public, and always "top level" visible
@@ -253,6 +259,14 @@ public class ModuleStructure
     public boolean isPackageContainer()
         {
         return true;
+        }
+
+    @Override
+    public Component resolveName(String sName)
+        {
+        return moduleActual == null
+                ? super.resolveName(sName)
+                : moduleActual.resolveName(sName);
         }
 
 

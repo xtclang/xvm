@@ -1,3 +1,5 @@
+import collections.ListMap;
+
 /**
  * A Type is an object that represents an Ecstasy data type. The Type class itself is abstract,
  * but it has a number of well-known concrete implementations.
@@ -34,7 +36,7 @@
  * references using {@code const} classes.)
  */
 class Type<DataType>
-        implements Const, ConstAble
+        implements Const, collections.ConstAble
     {
     // ----- primary state -------------------------------------------------------------------------
 
@@ -49,6 +51,8 @@ class Type<DataType>
      * type if the object is immutable.
      */
     Boolean explicitlyImmutable;
+
+    class MultiMethod {} // TODO
 
     // ----- calculated properties -----------------------------------------------------------------
 
@@ -275,7 +279,7 @@ class Type<DataType>
         TODO ==
         }
 
-    static Order compare(Type value1, Type value2)
+    static Ordered compare(Type value1, Type value2)
         {
         TODO <=>
         }

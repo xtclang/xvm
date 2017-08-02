@@ -61,7 +61,7 @@ public class InvocationExpression
 
             String       sModule = sb.toString();
             Version      version = ((VersionExpression) args.get(0)).getVersion();
-            ConstantPool pool    = getComponent().getConstantPool();
+            ConstantPool pool    = getConstantPool();
             return pool.ensureImportVersionCondition(
                     pool.ensureModuleConstant(sModule), pool.ensureVersionConstant(version));
             }

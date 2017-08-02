@@ -112,6 +112,14 @@ public class PackageStructure
         return !isModuleImport();
         }
 
+    @Override
+    public Component resolveName(String sName)
+        {
+        return m_constModule == null
+                ? super.resolveName(sName)
+                : m_constModule.getComponent().resolveName(sName);
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

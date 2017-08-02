@@ -8,6 +8,6 @@
  *   in behavior to a property declared as "{@code public/private}".
  */
 mixin ReadOnly
-        into Method | Property
+        into Property
     {
     }

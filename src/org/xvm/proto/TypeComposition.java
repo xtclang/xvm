@@ -13,9 +13,11 @@ import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnresolvedTypeConstant;
+import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
-import org.xvm.proto.template.xTuple;
+import org.xvm.proto.template.collections.xTuple;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,7 +38,7 @@ public class TypeComposition
     {
     public final ClassTemplate f_template;
 
-    public final Map<String, Type> f_mapGenericActual; // corresponding to the m_template's GenericTypeName
+    public final Map<String, Type> f_mapGenericActual; // corresponding to the template's GenericTypeName
 
     private Type m_typePublic;
     private Type m_typeProtected;
@@ -45,6 +47,9 @@ public class TypeComposition
 
     // cached call chain (the top-most method first)
     private Map<MethodConstant, List<MethodStructure>> m_mapMethods = new HashMap<>();
+
+    // cached map of fields (values are always nulls)
+    private Map<String, ObjectHandle> m_mapFields;
 
     public TypeComposition(ClassTemplate template, Map<String, Type> mapParamsActual)
         {
@@ -190,17 +195,24 @@ public class TypeComposition
         }
 
     // given a TypeConstant, return a corresponding TypeComposition within this class's context;
-    // null if the type cannot be resolved
+    // Object.class if the type cannot be resolved
     // for example, List<KeyType> in the context of Map<String, Int>
     // will resolve in List<String>
     public TypeComposition resolve(TypeConstant constType)
         {
+        if (constType instanceof UnresolvedTypeConstant)
+            {
+            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+            }
+
         if (constType instanceof ClassTypeConstant)
             {
-            assert f_template != null;
-            return f_template.resolve((ClassTypeConstant) constType, f_mapGenericActual);
+            ClassTypeConstant constClass = (ClassTypeConstant) constType;
+            ClassTemplate template = f_template.f_types.getTemplate(constClass.getClassConstant());
+            return template.resolve(constClass, f_mapGenericActual);
             }
-        else if (constType instanceof ParameterTypeConstant)
+
+        if (constType instanceof ParameterTypeConstant)
             {
             ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
             Type type = f_mapGenericActual.get(constParam.getName());
@@ -210,11 +222,11 @@ public class TypeComposition
                 }
             }
 
-        return null;
+        return xObject.CLASS;
         }
 
     // retrieve the actual type for the specified formal parameter name
-    public Type getFormalType(String sFormalName)
+    public Type getActualType(String sFormalName)
         {
         Type type = f_mapGenericActual.get(sFormalName);
         if (type == null)
@@ -232,7 +244,7 @@ public class TypeComposition
                                          Supplier<Frame> continuation)
         {
         ClassTemplate template = f_template;
-        MethodStructure methodDefault = template.getMethod("default", ClassTemplate.VOID, ClassTemplate.VOID);
+        MethodStructure methodDefault = template.getDeclaredMethod("default", ClassTemplate.VOID, ClassTemplate.VOID);
         ClassTemplate templateSuper = template.getSuper();
 
         Frame frameDefault;
@@ -278,10 +290,23 @@ public class TypeComposition
             MethodConstant constMethod, List<MethodStructure> list)
         {
         ClassTemplate template = f_template;
-        MethodStructure method = template.getMethod(constMethod.getName(), null, null);
+        MethodStructure method = template.getDeclaredMethod(constMethod);
         if (method != null)
             {
             list.add(method);
+            }
+
+        ClassTemplate templateCategory = template.f_templateCategory;
+        if (templateCategory != null)
+            {
+            method = templateCategory.getDeclaredMethod(constMethod);
+            if (method != null)
+                {
+                list.add(method);
+
+                // the native (category) methods don't "super" to anything
+                return list;
+                }
             }
 
         TypeComposition clzSuper = getSuper();
@@ -334,6 +359,24 @@ public class TypeComposition
                 }
             }
 
+        ClassTemplate templateCategory = f_template.f_templateCategory;
+        if (templateCategory != null)
+            {
+            property = templateCategory.getProperty(sPropName);
+            if (property != null)
+                {
+                MultiMethodStructure mms = (MultiMethodStructure) property.getChild(constMethod.getName());
+                if (mms != null)
+                    {
+                    // TODO: compare the signature
+                    list.add((MethodStructure) mms.children().get(0));
+
+                    // the native (category) methods don't super to anything
+                    return list;
+                    }
+                }
+            }
+
         TypeComposition clzSuper = getSuper();
         if (clzSuper != null)
             {
@@ -356,25 +399,38 @@ public class TypeComposition
     public PropertyStructure getProperty(String sPropName)
         {
         PropertyStructure property = f_template.getProperty(sPropName);
-
         if (property != null)
             {
             return property;
             }
 
+        ClassTemplate templateCategory = f_template.f_templateCategory;
+        if (templateCategory != null)
+            {
+            property = templateCategory.getProperty(sPropName);
+            if (property != null)
+                {
+                return property;
+                }
+            }
+
         // TODO: check the interfaces, traits and mix-ins
 
         TypeComposition clzSuper = getSuper();
-        if (clzSuper != null)
-            {
-            return clzSuper.getProperty(sPropName);
-            }
-
-        return null;
+        return clzSuper == null ? null : clzSuper.getProperty(sPropName);
         }
 
     protected void createFields(Map<String, ObjectHandle> mapFields)
         {
+        Map mapCached = m_mapFields;
+        if (mapCached != null)
+            {
+            mapFields.putAll(mapCached);
+            return;
+            }
+
+        m_mapFields = mapCached = new HashMap<>();
+
         ClassTemplate template = f_template;
 
         while (!template.isRootObject())
@@ -390,19 +446,29 @@ public class TypeComposition
                         {
                         xRef referent = (xRef) template.getRefTemplate(template.f_types, prop);
 
-                        hRef = referent.createRefHandle(referent.f_clazzCanonical);
+                        hRef = referent.createRefHandle(referent.f_clazzCanonical, null);
                         }
 
                     if (!template.isReadOnly(prop) || hRef != null)
                         {
-                        mapFields.put(prop.getName(), hRef);
+                        mapCached.put(prop.getName(), hRef);
                         }
                     }
                 }
+
+            ClassTemplate templateCategory = template.f_templateCategory;
+            if (templateCategory != null)
+                {
+                // the categories are not generic; no reason to resolve
+                templateCategory.f_clazzCanonical.createFields(mapCached);
+                }
+
             // TODO: process the mix-ins
 
             template = template.getSuper();
             }
+
+        mapFields.putAll(mapCached);
         }
 
     // ---- support for op-codes that require class specific information -----
@@ -422,9 +488,22 @@ public class TypeComposition
         }
 
     @Override
+    public int hashCode()
+        {
+        return f_template.f_sName.hashCode();
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        // type compositions are singletons
+        return this == obj;
+        }
+
+    @Override
     public String toString()
         {
-        return f_template.f_sName +
+        return f_template.f_struct.getIdentityConstant().getPathString() +
                 Utils.formatArray(f_mapGenericActual.values().toArray(), "<", ">", ", ");
         }
     }

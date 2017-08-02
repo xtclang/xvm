@@ -67,7 +67,8 @@ interface Number
      * Division and Modulo: Divide this number by another number, and return both the
      * quotient and the modulo.
      */
-    @op (@Desc("quotient") Number, @Desc("modulo") Number) divmod(Number n)
+//    @op (@Desc("quotient") Number, @Desc("modulo") Number) divmod(Number n)
+    @op (Number, Number) divmod(Number n)
         {
         return (this / n, this % n);
         }
@@ -128,12 +129,12 @@ interface Number
 
         return new Sequence<Nibble>()
             {
-            @override Int length.get()
+            @Override Int length.get()
                 {
                 return Number.this.bitCount / 4;
                 }
 
-            @override Nibble get(Int index)
+            @Override Nibble get(Int index)
                 {
                 assert:always index >= 0 && index < length;
 
@@ -156,12 +157,12 @@ interface Number
 
         return new Sequence<Byte>()
             {
-            @override Int length.get()
+            @Override Int length.get()
                 {
                 return Number.this.bitCount / 8;
                 }
 
-            @override Boolean get(Int index)
+            @Override Boolean get(Int index)
                 {
                 assert:always index >= 0 && index < length;
 

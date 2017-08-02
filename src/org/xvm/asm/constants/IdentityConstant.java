@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import java.io.DataOutput;
 import java.io.IOException;
+
 import java.util.List;
 
 import org.xvm.asm.Component;
@@ -79,11 +80,38 @@ public abstract class IdentityConstant
         }
 
     /**
+     * @return a dot-delimited string of IdentityConstant names that makes up the path to
+     *         this IdentityConstant
+     */
+    public String getPathString()
+        {
+        return buildPath().substring(1);
+        }
+
+    /**
+     * Support for {@link #getPathString()}; overridden at {@link ModuleConstant}.
+     */
+    protected StringBuilder buildPath()
+        {
+        return getParentConstant().buildPath()
+                .append('.')
+                .append(getName());
+        }
+
+    /**
      * @return the Component structure that is identified by this IdentityConstant
      */
     public Component getComponent()
         {
         return getParentConstant().getComponent().getChild(this);
+        }
+
+    /**
+     * @return true iff this IdentityConstant represents an auto-narrowing identity
+     */
+    public boolean isAutoNarrowing()
+        {
+        return false;
         }
 
     // ----- constant methods ----------------------------------------------------------------------

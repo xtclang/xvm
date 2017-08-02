@@ -7,8 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeDefConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
+import org.xvm.asm.constants.TypedefConstant;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -20,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
  *
  * @author cp 2016.06.27
  */
-public class TypeDefStructure
+public class TypedefStructure
         extends Component
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -30,10 +29,11 @@ public class TypeDefStructure
      *
      * @param xsParent   the XvmStructure that contains this structure
      * @param nFlags     the Component bit flags
-     * @param constId    the constant that specifies the identity of the TypeDef
+     * @param constId    the constant that specifies the identity of the Typedef
      * @param condition  the optional condition for this TypeDefStructure
      */
-    protected TypeDefStructure(XvmStructure xsParent, int nFlags, TypeDefConstant constId, ConditionalConstant condition)
+    protected TypedefStructure(XvmStructure xsParent, int nFlags, TypedefConstant constId,
+            ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
         }
@@ -42,9 +42,9 @@ public class TypeDefStructure
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public TypeDefConstant getIdentityConstant()
+    public TypedefConstant getIdentityConstant()
         {
-        return (TypeDefConstant) super.getIdentityConstant();
+        return (TypedefConstant) super.getIdentityConstant();
         }
 
     /**
@@ -66,22 +66,6 @@ public class TypeDefStructure
         m_type = type;
         }
 
-    /**
-     * For a PropertyStructure whose type is unresolved, provide the type that the property will
-     * be using. (If the PropertyStructure has a resolved type, this will fail.)
-     *
-     * @param type  the new type for the property to use
-     */
-    public void resolveType(TypeConstant type)
-        {
-        assert type != null;
-        assert m_type instanceof UnresolvedTypeConstant;
-        assert !((UnresolvedTypeConstant) m_type).isTypeResolved();
-
-        ((UnresolvedTypeConstant) m_type).resolve(type);
-        m_type = type;
-        }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -99,7 +83,7 @@ public class TypeDefStructure
         {
         super.registerConstants(pool);
 
-        ((Constant) m_type).registerConstants(pool);
+        m_type = (TypeConstant) pool.register(m_type);
         }
 
     @Override

@@ -63,7 +63,7 @@ public class ImmutableTypeConstant
     /**
      * @return the underlying TypeConstant
      */
-    public TypeConstant getResolvedType()
+    public TypeConstant getType()
         {
         return m_constType;
         }
@@ -75,6 +75,12 @@ public class ImmutableTypeConstant
     public Format getFormat()
         {
         return Format.ImmutableType;
+        }
+
+    @Override
+    protected Object getLocator()
+        {
+        return m_constType;
         }
 
     @Override
@@ -126,13 +132,6 @@ public class ImmutableTypeConstant
     public int hashCode()
         {
         return -m_constType.hashCode();
-        }
-
-    @Override
-    public boolean equals(Object obj)
-        {
-        return obj instanceof ImmutableTypeConstant
-                && m_constType.equals(((ImmutableTypeConstant) obj).m_constType);
         }
 
 

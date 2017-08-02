@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Component;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -19,6 +20,7 @@ import org.xvm.util.Severity;
  */
 public class ImportStatement
         extends Statement
+        implements NameResolver.NameResolving
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -28,6 +30,9 @@ public class ImportStatement
         this.keyword       = keyword;
         this.alias         = alias;
         this.qualifiedName = qualifiedName;
+
+        // the qualified name will have to be resolved
+        this.resolver = new NameResolver(this, qualifiedName.stream().map(token -> (String) token.getValue()).iterator());
         }
 
 
@@ -46,9 +51,7 @@ public class ImportStatement
      */
     public int getQualifiedNameLength()
         {
-        return importExpand == null
-                ? qualifiedName.size()
-                : importExpand.getQualifiedNameLength() + qualifiedName.size() - 1;
+        return qualifiedName.size();
         }
 
     /**
@@ -58,18 +61,6 @@ public class ImportStatement
      */
     public String getQualifiedNamePart(int i)
         {
-        if (importExpand != null)
-            {
-            int cExpand = importExpand.getQualifiedNameLength();
-            if (i < cExpand)
-                {
-                return importExpand.getQualifiedNamePart(i);
-                }
-
-            // consider imports of "a.b.c" and "c.d.e", so expand "c.d.e" to "a.b.c.d.e"
-            i = i - cExpand + 1;
-            }
-
         return (String) qualifiedName.get(i).getValue();
         }
 
@@ -85,19 +76,6 @@ public class ImportStatement
             asName[i] = getQualifiedNamePart(i);
             }
         return asName;
-        }
-
-    /**
-     * If this import statement begins with another import statement's alias, expand this import
-     * statement using that import statement.
-     *
-     * @param importExpand  the ImportStatement that this ImportStatement can use to expand itself
-     */
-    protected void expand(ImportStatement importExpand)
-        {
-        assert importExpand.getAliasName().equals(getQualifiedNamePart(0));
-        assert this.importExpand == null;
-        this.importExpand = importExpand;
         }
 
     @Override
@@ -119,6 +97,15 @@ public class ImportStatement
         }
 
 
+    // ----- NameResolving interface ---------------------------------------------------------------
+
+    @Override
+    public NameResolver getNameResolver()
+        {
+        return resolver;
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -134,6 +121,13 @@ public class ImportStatement
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
+        // check if the alieas name is an unhideable name
+        Component component = resolveParentBySimpleName(getAliasName());
+        if (component != null)
+            {
+            log(errs, Severity.ERROR, Compiler.NAME_UNHIDEABLE, getAliasName(), component.getIdentityConstant());
+            }
+
         // as global visibility is resolved, each import statement registers itself so that anything
         // following it can see the import, but anything preceding it does not
         AstNode parent = getParent();
@@ -203,7 +197,7 @@ public class ImportStatement
     protected Token       alias;
     protected List<Token> qualifiedName;
 
-    private ImportStatement importExpand;
+    private NameResolver  resolver;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");
     }

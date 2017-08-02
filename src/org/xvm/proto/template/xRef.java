@@ -88,15 +88,16 @@ public class xRef
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
         {
-        return new RefHandle(clazz);
+        return new RefHandle(clazz, sName);
         }
 
     // a simple reference handle
     public static class RefHandle
             extends ObjectHandle
         {
+        protected String m_sName;
         protected Frame m_frame;
         protected int m_iVar = REF_REFERENT;
 
@@ -108,10 +109,11 @@ public class xRef
         // indicates ath the the m_hDelegate field holds a Ref that this Ref is "chained" to
         private static final int REF_REF = -2;
 
-        public RefHandle(TypeComposition clazz)
+        public RefHandle(TypeComposition clazz, String sName)
             {
             super(clazz);
 
+            m_sName = sName;
             m_fMutable = true;
             }
 
@@ -218,7 +220,7 @@ public class xRef
 
         public IndexedRefHandle(TypeComposition clazz, ObjectHandle hTarget, long lIndex)
             {
-            super(clazz);
+            super(clazz, null);
 
             f_hTarget = hTarget;
             f_lIndex = lIndex;

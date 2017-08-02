@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.Constants;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -53,7 +54,7 @@ public class xException
     @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        return makeHandle(null, null);
+        return makeStructHandle(null, null);
         }
 
     // ---- ObjectHandle helpers -----
@@ -65,15 +66,16 @@ public class xException
 
     public static ExceptionHandle makeHandle(String sMessage)
         {
-        ExceptionHandle hException = makeHandle(null, null);
+        ExceptionHandle hException = makeStructHandle(null, null);
 
         INSTANCE.setFieldValue(hException,
                 INSTANCE.getProperty("text"), xString.makeHandle(sMessage));
 
-        return hException;
+        return (ExceptionHandle)
+                hException.f_clazz.ensureAccess(hException, Constants.Access.PUBLIC);
         }
 
-    public static ExceptionHandle makeHandle(ExceptionHandle hCause, Throwable eCause)
+    private static ExceptionHandle makeStructHandle(ExceptionHandle hCause, Throwable eCause)
         {
         ExceptionHandle hException = eCause == null ?
                 new ExceptionHandle(INSTANCE.f_clazzCanonical, true, null) :

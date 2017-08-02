@@ -35,14 +35,34 @@ public interface Constants
     public static final String ECSTASY_MODULE = "Ecstasy.xtclang.org";
 
     /**
-     * The name of the package within every module that iports the Ecstasy core module.
+     * The name of the package within every module that imports the Ecstasy core module.
      */
-    public static final String X_PKG_IMPORT = "Ecstasy";
+    public static final String X_PKG_IMPORT = "ecstasy";
 
     /**
      * The name of the root Ecstasy class.
      */
     public static final String X_CLASS_OBJECT = "Object";
+
+    /**
+     * The name of the Nullable enumeration.
+     */
+    public static final String X_CLASS_NULLABLE = "Nullable";
+
+    /**
+     * The name of the Array class.
+     */
+    public static final String X_CLASS_ARRAY = "collections.Array";
+
+    /**
+     * The name of the Sequence interface.
+     */
+    public static final String X_CLASS_SEQUENCE = "collections.Sequence";
+
+    /**
+     * The name of the null value (a singleton), which is a child of {@link #X_CLASS_NULLABLE}.
+     */
+    public static final String X_CLASS_NULL = "Nullable.Null";
 
     /**
      * The Access enumeration refers to the level of accessibility to a class that a reference will

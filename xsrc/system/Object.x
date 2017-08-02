@@ -22,7 +22,7 @@ class Object
      * By default, comparing any two objects will only result in equality if they are the
      * same object, or if they are two constant objects with identical values.
      */
-    static Boolean equals(Type<Object> ObjectType, ObjectType o1, ObjectType o2)
+    static Boolean equals(Object o1, Object o2)
         {
         return &o1 == &o2;
         }
@@ -43,7 +43,7 @@ class Object
      */
     Object[] to<Object[]>()
         {
-        return {this}.as(this:type[]);
+        return {this}.as(Object[]);
         }
 
     /**

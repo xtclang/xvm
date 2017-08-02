@@ -52,7 +52,7 @@ public class NameExpression
         {
         if (validateCondition(null))
             {
-            ConstantPool pool = getComponent().getConstantPool();
+            ConstantPool pool = getConstantPool();
             return pool.ensurePresentCondition(new UnresolvedNameConstant(pool, getUpToDotName()));
             }
 
@@ -136,7 +136,7 @@ public class NameExpression
     @Override
     public TypeExpression toTypeExpression()
         {
-        return new NamedTypeExpression(null, names, null, params, lEndPos);
+        return new NamedTypeExpression(null, names, null, null, params, lEndPos);
         }
 
     @Override

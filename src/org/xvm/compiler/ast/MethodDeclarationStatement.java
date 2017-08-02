@@ -14,7 +14,8 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.*;
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
@@ -103,22 +104,12 @@ public class MethodDeclarationStatement
                 }
             else
                 {
-                // TODO need a "method unexpected" error code
-                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.PROP_UNEXPECTED, sName, container);
+                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.METHOD_UNEXPECTED, sName, container);
                 throw new UnsupportedOperationException("not a method container: " + container);
                 }
             }
 
         super.registerStructures(errs);
-        }
-
-    @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        // TODO evaluate condition
-
-        // methods represent a barrier beyond which global visibility cannot see, so this method
-        // does not call super
         }
 
     protected List<TypeExpression> toTypeExpressions(List<Parameter> params)
@@ -148,7 +139,7 @@ public class MethodDeclarationStatement
         Component      container = getParent().getComponent();
         for (TypeExpression type : types)
             {
-            array[i++] = container.getConstantPool().createUnresolvedTypeConstant(type.toString());
+            array[i++] = type.ensureTypeConstant();
             }
         return array;
         }

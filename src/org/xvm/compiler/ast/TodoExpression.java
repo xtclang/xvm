@@ -1,20 +1,19 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
+
+import org.xvm.compiler.Token;
 
 
 /**
- * A to-do expression raises an exception indicating missing functionality,
- * with an optional message. It can be used as an expression, as a type expression, or as a
- * statement.
+ * A to-do expression raises an exception indicating missing functionality, with an optional
+ * message. It can be used as an expression, or as a statement.
  *
  * @author cp 2017.03.28
  */
 public class TodoExpression
-        extends TypeExpression
+        extends Expression
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -57,12 +56,13 @@ public class TodoExpression
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append("TODO(");
+        sb.append("TODO");
         if (message != null)
             {
-            sb.append(message);
+            sb.append('(')
+              .append(message)
+              .append(')');
             }
-        sb.append(')');
         return sb.toString();
         }
 

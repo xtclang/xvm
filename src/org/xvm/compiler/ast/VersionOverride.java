@@ -59,7 +59,7 @@ public class VersionOverride
      */
     public boolean isAllowed()
         {
-        return verb.getId() != Token.Id.AVOID;
+        return verb == null || verb.getId() != Token.Id.AVOID;
         }
 
     /**
@@ -67,7 +67,7 @@ public class VersionOverride
      */
     public boolean isPreferred()
         {
-        return verb.getId() == Token.Id.PREFER;
+        return verb != null && verb.getId() == Token.Id.PREFER;
         }
 
     @Override
@@ -126,5 +126,5 @@ public class VersionOverride
      */
     protected VersionExpression exprVer;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "version");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "exprVer");
     }

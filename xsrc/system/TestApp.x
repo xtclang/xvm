@@ -9,6 +9,7 @@ class TestApp
         testRef("hi");
         testArray();
         testTuple();
+        testConst();
         }
 
     static Int getIntValue()
@@ -18,8 +19,12 @@ class TestApp
 
     static Void test1()
         {
+        @inject io.Console console;
+
         String s = "Hello world!";
-        print(s);
+        console.print("\n*** ");
+        console.println(s);
+        console.println();
 
         Int i = getIntValue();
         print(i);
@@ -35,6 +40,7 @@ class TestApp
         {
         TestClass t = new TestClass("Hello World!");
 
+        print(t);
         print(t.prop1);
         print(t.method1());
 
@@ -48,6 +54,7 @@ class TestApp
             }
 
         TestClass t2 = new TestClass2(42, "Goodbye");
+        print(t2);
         print(t2.prop1);
         print(t2.method1());
 
@@ -79,6 +86,11 @@ class TestApp
             {
             throw new Exception(s);
             }
+
+        String to<String>()
+            {
+            return super() + ": prop1=" + prop1;
+            }
         }
 
     class TestClass2
@@ -101,6 +113,11 @@ class TestApp
         Int method1()
             {
             return super() + prop2;
+            }
+
+        String to<String>()
+            {
+            return super() + ": prop2=" + prop2;
             }
         }
 
@@ -178,7 +195,7 @@ class TestApp
             return svc.increment();
             }
 
-        int c = testBlockingReturn();
+        Int c = testBlockingReturn();
         print(c);
 
         @future Int fc = svc.increment();
@@ -321,7 +338,7 @@ class TestApp
         t2[1] = 2;
         print(t2);
 
-        int of = "the test".indexOf(t2); // same as "the test".indexOf("t", 2);
+        Int of = "the test".indexOf(t2); // same as "the test".indexOf("t", 2);
         assert(of == 4);
 
         if (String s : testConditional(1))
@@ -340,5 +357,22 @@ class TestApp
                 }
              return false;
              }
+        }
+
+    static const Point(Int x, Int y)
+        {
+        Int x; // TODO: remove
+        Int y; // TODO: remove
+        }
+
+    static Void testConst()
+        {
+        Point p1 = new Point(0, 1);
+        Point p2 = new Point(1, 0);
+
+        print(p1);
+        print(p2);
+        print(p1 == p2);
+        print(p2 > p1);
         }
     }

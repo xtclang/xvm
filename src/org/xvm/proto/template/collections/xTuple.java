@@ -1,14 +1,12 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.collections;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.TupleConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
@@ -19,6 +17,8 @@ import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+import org.xvm.proto.template.IndexSupport;
+import org.xvm.proto.template.xException;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -112,15 +112,11 @@ public class xTuple
         ObjectHandle hSequence = ahVar[0];
         IndexSupport support = (IndexSupport) hSequence.f_clazz.f_template;
 
-        int cValues = (int) support.size(hSequence);
-        ObjectHandle[] ahValue = new ObjectHandle[cValues];
+        ObjectHandle[] ahValue;
 
         try
             {
-            for (int i = 0; i < cValues; i++)
-                {
-                ahValue[i] = support.extractArrayValue(hSequence, i);
-                }
+            ahValue = support.toArray(hSequence);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -194,6 +190,30 @@ public class xTuple
         TupleHandle hTuple = (TupleHandle) hTarget;
 
         return hTuple.m_ahValue.length;
+        }
+
+    @Override
+    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        TupleHandle hTuple = (TupleHandle) hTarget;
+
+        sb.append(hTuple.f_clazz.toString())
+          .append('{');
+
+        ObjectHandle[] ahValue = hTuple.m_ahValue;
+        for (int i = 0, c = ahValue.length; i < c; i++)
+            {
+            ObjectHandle hValue = ahValue[i];
+
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+
+            hValue.f_clazz.f_template.buildStringValue(hValue, sb);
+            }
+        sb.append('}');
+        return null;
         }
 
     // ----- ObjectHandle helpers -----

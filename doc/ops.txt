@@ -187,7 +187,11 @@
  NEWC_0     CONST-CONSTRUCT, rvalue-parent, lvalue-return                           ; virtual "new" for child classes
  NEWC_1     CONST-CONSTRUCT, rvalue-parent, rvalue-param, lvalue-return
  NEWC_N     CONST-CONSTRUCT, rvalue-parent, #params:(rvalue), lvalue-return
- NEWC_T     CONST-CONSTRUCT, rvalue-parent, rvalue-params-tuple, lvalue-return
+ NEWC_T     CONST-CONSTRUCT, rvalue-parent, rvalue-type, rvalue-params-tuple, lvalue-return
+ NEWC_0G    CONST-CONSTRUCT, rvalue-parent, rvalue-type, lvalue-return              ; virtual generic "new" for child classes
+ NEWC_1G    CONST-CONSTRUCT, rvalue-parent, rvalue-type, rvalue-param, lvalue-return
+ NEWC_NG    CONST-CONSTRUCT, rvalue-parent, rvalue-type, #params:(rvalue), lvalue-return
+ NEWC_TG    CONST-CONSTRUCT, rvalue-parent, rvalue-params-tuple, lvalue-return
  CONSTR_0   CONST-CONSTRUCT                                                         ; "super" construct call
 +CONSTR_1   CONST-CONSTRUCT, rvalue-param
 +CONSTR_N   CONST-CONSTRUCT, #params:(rvalue)

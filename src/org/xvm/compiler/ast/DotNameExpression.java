@@ -47,8 +47,7 @@ public class DotNameExpression
     public ConditionalConstant toConditionalConstant()
         {
         return validateCondition(null)
-                ? getComponent().getConstantPool().ensureNamedCondition(
-                        (String) ((LiteralExpression) expr).literal.getValue())
+                ? getConstantPool().ensureNamedCondition((String) ((LiteralExpression) expr).literal.getValue())
                 : super.toConditionalConstant();
         }
 

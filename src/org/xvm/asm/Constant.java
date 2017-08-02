@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.ResolvableConstant;
 
 
 /**
@@ -46,7 +47,7 @@ import org.xvm.asm.constants.ConditionalConstant;
  */
 public abstract class Constant
         extends XvmStructure
-        implements Comparable<Constant>
+        implements Comparable<Constant>, Cloneable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -69,6 +70,28 @@ public abstract class Constant
      * @return the format for the Constant
      */
     public abstract Format getFormat();
+
+    /**
+     * Create a clone of this Constant so that it can be adopted by a different ConstantPool.
+     *
+     * @param pool  the pool that will hold the clone of this Constant
+     *
+     * @return the new Constant
+     */
+    Constant adoptedBy(ConstantPool pool)
+        {
+        Constant that;
+        try
+            {
+            that = (Constant) super.clone();
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new IllegalStateException(e);
+            }
+        that.setContaining(pool);
+        return that;
+        }
 
     /**
      * Visit every underlying constant (if any).
@@ -283,13 +306,19 @@ public abstract class Constant
     @Override
     public boolean equals(Object obj)
         {
-        if (obj instanceof Constant)
+        if (!(obj instanceof Constant))
             {
-            Constant that = (Constant) obj;
-            return this == that || (this.getFormat() == that.getFormat() && this.compareDetails(that) == 0);
+            return false;
             }
 
-        return false;
+        Constant constThis = this instanceof ResolvableConstant
+                ? ((ResolvableConstant) this).unwrap()
+                : this;
+        Constant constThat = obj instanceof ResolvableConstant
+                ? ((ResolvableConstant) obj).unwrap()
+                : (Constant) obj;
+        return constThis == constThat || (constThis.getFormat() == constThat.getFormat()
+                && constThis.compareDetails(constThat) == 0);
         }
 
     @Override
@@ -353,6 +382,27 @@ public abstract class Constant
         Char,
         CharString,
         Int,
+        Tuple,
+        Module,
+        Package,
+        Class,
+        Symbolic,
+        ParentClass,
+        ChildClass,
+        Register,
+        Typedef,
+        Property,
+        MultiMethod,
+        Method,
+        ClassType,      // includes this:type auto-narrowing symbolic type
+        ParentType,
+        ChildType,
+        RegisterType,
+        ParameterType,
+        ImmutableType,
+        UnionType,
+        IntersectionType,
+        AnnotatedType,
         Version,
         ConditionNot,
         ConditionAll,
@@ -361,20 +411,6 @@ public abstract class Constant
         ConditionPresent,
         ConditionVersionMatches,
         ConditionVersioned,
-        Module,
-        Package,
-        Class,
-        Property,
-        MultiMethod,
-        Method,
-        ClassType,
-        ImmutableType,
-        UnionType,
-        IntersectionType,
-        AnnotatedType,
-        TypeParamType,
-        TypeDef,
-        Tuple,
         Unresolved,
         ;
 

@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.CharStringConstant;
@@ -32,6 +33,7 @@ import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.util.Handy;
 import org.xvm.util.LinkedIterator;
@@ -338,6 +340,14 @@ public abstract class Component
     public String getName()
         {
         return ((NamedConstant) getIdentityConstant()).getName();
+        }
+
+    /**
+     * @return the unqualified form of the component name
+     */
+    public String getSimpleName()
+        {
+        return getName();
         }
 
     /**
@@ -804,9 +814,9 @@ public abstract class Component
      * Create and register a PropertyStructure with the specified name.
      *
      * @param fStatic    true if the property is marked as static
-     * @param access     the accessibility of the class to create
-     * @param constType  the category format of the class
-     * @param sName      the simple (unqualified) class name to create
+     * @param access     the accessibility of the property to create
+     * @param constType  the type of the property to create
+     * @param sName      the simple (unqualified) property name to create
      */
     public PropertyStructure createProperty(boolean fStatic, Access access, TypeConstant constType, String sName)
         {
@@ -832,6 +842,35 @@ public abstract class Component
         int               nFlags  = Format.PROPERTY.ordinal() | access.FLAGS;
         PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null);
+        struct.setType(constType);
+        addChild(struct);
+
+        return struct;
+        }
+
+    /**
+     * Create and register a TypedefStructure with the specified name.
+     *
+     * @param access     the accessibility of the typedef to create
+     * @param constType  the type of the typedef to create
+     * @param sName      the simple (unqualified) typedef name to create
+     *
+     * @return the new TypedefStructure
+     */
+    public TypedefStructure createTypedef(Access access, TypeConstant constType, String sName)
+        {
+        assert sName != null;
+        assert access != null;
+        assert constType != null;
+
+        if (!isClassContainer())
+            {
+            throw new IllegalStateException("this (" + this + ") cannot contain a typedef");
+            }
+
+        int              nFlags  = Format.TYPEDEF.ordinal() | access.FLAGS;
+        TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(), sName);
+        TypedefStructure struct  = new TypedefStructure(this, nFlags, constId, null);
         struct.setType(constType);
         addChild(struct);
 
@@ -1058,6 +1097,20 @@ public abstract class Component
             }
 
         return new CompositeComponent(this, matches);
+        }
+
+    /**
+     * TODO
+     *
+     * @param sName
+     *
+     * @return
+     */
+    public Component resolveName(String sName)
+        {
+        Component component = getChild(sName);
+        // TODO
+        return component;
         }
 
     /**
@@ -1707,9 +1760,9 @@ public abstract class Component
         SERVICE,
         PACKAGE,
         MODULE,
+        TYPEDEF,
         PROPERTY,
         METHOD,
-        RSVD_C,
         RSVD_D,
         MULTIMETHOD,
         FILE;
@@ -1767,6 +1820,9 @@ public abstract class Component
                 case SERVICE:
                     return new ClassStructure(xsParent, nFlags, (ClassConstant) constId, condition);
 
+                case TYPEDEF:
+                    return new TypedefStructure(xsParent, nFlags, (TypedefConstant) constId, condition);
+
                 case PROPERTY:
                     return new PropertyStructure(xsParent, nFlags, (PropertyConstant) constId, condition);
 
@@ -1800,6 +1856,7 @@ public abstract class Component
                 case PROPERTY:
                 case MULTIMETHOD:
                 case METHOD:
+                case TYPEDEF:
                     return false;
 
                 default:
@@ -2264,8 +2321,8 @@ public abstract class Component
          */
         protected void registerConstants(ConstantPool pool)
             {
-            m_constContrib = (IdentityConstant) pool.register(m_constContrib);
-            m_constProp = (PropertyConstant) pool.register(m_constProp);
+            m_constContrib =                    pool.register(m_constContrib);
+            m_constProp    = (PropertyConstant) pool.register(m_constProp);
 
             final Constant[] aconst = m_aconstArgs;
             if (aconst != null)

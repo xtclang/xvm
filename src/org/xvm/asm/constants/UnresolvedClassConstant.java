@@ -53,7 +53,7 @@ public class UnresolvedClassConstant
         {
         return isClassResolved()
                 ? m_constId.getName()
-                : m_oSrc.toString() + " (unresolved)";
+                : m_oSrc.toString();
         }
 
     /**
@@ -90,9 +90,9 @@ public class UnresolvedClassConstant
     @Override
     public void resolve(Constant constant)
         {
-        if (!(constant instanceof ClassConstant))
+        if (!(constant instanceof ModuleConstant || constant instanceof PackageConstant || constant instanceof ClassConstant))
             {
-            throw new IllegalArgumentException("constant must be ClassConstant (" + constant + ")");
+            throw new IllegalArgumentException("constant must be ModuleConstant, PackageConstant, or ClassConstant (" + constant + ")");
             }
 
         assert this.m_constId == null || this.m_constId == constant;
@@ -173,11 +173,7 @@ public class UnresolvedClassConstant
         {
         if (isClassResolved())
             {
-            m_constId.registerConstants(pool);
-            }
-        else
-            {
-            throw new IllegalStateException("unresolved: " + getName());
+            m_constId = (IdentityConstant) pool.register(m_constId);
             }
         }
 
@@ -204,19 +200,6 @@ public class UnresolvedClassConstant
         }
 
     // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    public boolean equals(Object obj)
-        {
-        if (obj instanceof UnresolvedClassConstant && ((UnresolvedClassConstant) obj).isClassResolved())
-            {
-            obj = ((UnresolvedClassConstant) obj).m_constId;
-            }
-
-        return isClassResolved()
-                ? m_constId.equals(obj)
-                : super.equals(obj);
-        }
 
     @Override
     public int hashCode()

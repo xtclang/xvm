@@ -99,7 +99,7 @@ public class ObjectHandle
 
         public ExceptionHandle(TypeComposition clazz, boolean fInitialize, Throwable eCause)
             {
-            super(clazz);
+            super(clazz, clazz.ensureStructType());
 
             if (fInitialize)
                 {

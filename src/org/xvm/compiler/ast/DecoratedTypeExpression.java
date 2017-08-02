@@ -1,9 +1,14 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
+
+import java.util.List;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Token;
 
 
 /**
@@ -26,6 +31,11 @@ public class DecoratedTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected boolean canResolveSimpleName()
+        {
+        return super.canResolveSimpleName() || type.canResolveSimpleName();
+        }
 
     @Override
     public long getStartPosition()
@@ -43,6 +53,36 @@ public class DecoratedTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+            {
+            // resolve the sub-type
+            type.resolveNames(listRevisit, errs);
+            TypeConstant constType = type.ensureTypeConstant();
+            switch (keyword.getId())
+                {
+                case IMMUTABLE:
+                    constType = getConstantPool().ensureImmutableTypeConstant(constType);
+                    break;
+
+                case CONDITIONAL:
+                    // TODO
+                    // throw new UnsupportedOperationException();
+                    break;
+
+                default:
+                    throw new IllegalStateException("keyword=" + keyword);
+                }
+
+            setTypeConstant(constType);
+            }
         }
 
 

@@ -14,9 +14,8 @@ import org.xvm.proto.template.xClass;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xModule;
-import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xString;
-import org.xvm.proto.template.xTuple;
+import org.xvm.proto.template.collections.xTuple;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,14 +36,6 @@ public class ObjectHeap
         {
         f_types = types;
         f_pool = pool;
-        }
-
-    // nClassConstId - ClassTypeConstant in the ConstantPool
-    public RefHandle createRefHandle(Frame frame, int nClassConstId)
-        {
-        TypeComposition typeComposition = f_types.ensureComposition(nClassConstId);
-
-        return typeComposition.f_template.createRefHandle(typeComposition);
         }
 
     // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool

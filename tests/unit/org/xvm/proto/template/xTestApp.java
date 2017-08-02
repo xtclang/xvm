@@ -3,6 +3,7 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.proto.Adapter;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.op.*;
@@ -30,6 +31,9 @@ public class xTestApp extends xModule
     @Override
     public void initDeclared()
         {
+        // TODO: remove
+        ensurePropertyTemplate("console").m_fInjectable = true;
+
         f_types.getTemplate("TestApp.TestClass");
         f_types.getTemplate("TestApp.TestClass2");
         f_types.getTemplate("TestApp.TestService");
@@ -46,43 +50,49 @@ public class xTestApp extends xModule
         MethodTemplate ftTest1 = ensureMethodTemplate("test1", VOID);
         ftTest1.m_aop = new Op[]
             {
+            new DNVar(adapter.getClassTypeConstId("annotations.InjectedRef<io.Console>"),
+                      adapter.ensureValueConstantId("console")), // #0 (console)
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test1() #")),
             new INVar(adapter.getClassTypeConstId("String"),
                       adapter.ensureValueConstantId("s"),
-                      -adapter.ensureValueConstantId("Hello world!")), // #0 (s)
-            new X_Print(0),
+                      -adapter.ensureValueConstantId("Hello world!")), // #1 (s)
+            new Invoke_10(0, adapter.getMethodConstId("io.Console", "print"),
+                    -adapter.ensureValueConstantId("\n***** ")),
+            new Invoke_10(0, adapter.getMethodConstId("io.Console", "println"), 1),
+            new Invoke_10(0, adapter.getMethodConstId("io.Console", "println"),
+                    -adapter.ensureValueConstantId("")),
 
             new NVar(adapter.getClassTypeConstId("Int64"),
-                     adapter.ensureValueConstantId("i")), // #1 (i)
-            new Call_01(-adapter.getMethodConstId("TestApp", "getIntValue"), 1),
-            new X_Print(1),
+                     adapter.ensureValueConstantId("i")), // #2 (i)
+            new Call_01(-adapter.getMethodConstId("TestApp", "getIntValue"), 2),
+            new X_Print(2),
 
             new Enter(),
-            new Var(adapter.getClassTypeConstId("Boolean")), // #2
+            new Var(adapter.getClassTypeConstId("Boolean")), // #3
             new NVar(adapter.getClassTypeConstId("Int64"),
-                     adapter.ensureValueConstantId("of")), // #3 (of)
-            new Invoke_NN(0, adapter.getMethodConstId("String", "indexOf"),
+                     adapter.ensureValueConstantId("of")), // #4 (of)
+            new Invoke_NN(1, adapter.getMethodConstId("String", "indexOf"),
                         new int[] {-adapter.ensureValueConstantId("world"),
                                    -adapter.ensureValueConstantId(null)},
-                        new int[] {2, 3}),
-            new JumpFalse(2, 10), // -> Exit
+                        new int[] {3, 4}),
+            new JumpFalse(3, 10), // -> Exit
 
-            new Var(adapter.getClassTypeConstId("Int64")), // #4
-            new PGet(0, adapter.getPropertyConstId("String", "size"), 4),
-            new Add(4, 3, 4),
-            new Var(adapter.getClassTypeConstId("Boolean")), // #5
-            new IsEq(4, -adapter.ensureValueConstantId(18), 5),
-            new Assert(5),
+            new Var(adapter.getClassTypeConstId("Int64")), // #5
+            new PGet(1, adapter.getPropertyConstId("String", "size"), 5),
+            new Add(5, 4, 5),
+            new Var(adapter.getClassTypeConstId("Boolean")), // #6
+            new IsEq(5, -adapter.ensureValueConstantId(18), 6),
+            new Assert(6),
 
-            new Var(adapter.getClassTypeConstId("String")), // #6
-            new Invoke_01(3, adapter.getMethodConstId("Int64", "to", VOID, STRING), 6),
-            new X_Print(6),
+            new Var(adapter.getClassTypeConstId("String")), // #7
+            new Invoke_01(4, adapter.getMethodConstId("Int64", "to", VOID, STRING), 7),
+            new X_Print(7),
             new Exit(),
 
             new Return_0(),
             };
         ftTest1.m_cScopes = 2;
-        ftTest1.m_cVars = 7;
+        ftTest1.m_cVars = 8;
 
         // --- test2()
 
@@ -93,6 +103,7 @@ public class xTestApp extends xModule
             new NVar(adapter.getClassTypeConstId("TestApp.TestClass"), adapter.ensureValueConstantId("t")),  // #0 (t)
             new New_1(adapter.getMethodConstId("TestApp.TestClass", "construct"),
                      -adapter.ensureValueConstantId("Hello World!"), 0),
+            new X_Print(0),
             new Var(adapter.getClassTypeConstId("String")),   // #1
             new PGet(0, adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
             new X_Print(1),
@@ -113,6 +124,7 @@ public class xTestApp extends xModule
             new New_N(adapter.getMethodConstId("TestApp.TestClass2", "construct"),
                      new int[]{-adapter.ensureValueConstantId(42),
                               -adapter.ensureValueConstantId("Goodbye")}, 3),
+            new X_Print(3),
             new Var(adapter.getClassTypeConstId("String")),   // #4
             new PGet(3, adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 4),
             new X_Print(4),
@@ -412,6 +424,8 @@ public class xTestApp extends xModule
             };
         ftTestArray.m_cVars = 5;
 
+        // ----- testTuple()
+
         MethodTemplate ftTestCond = ensureMethodTemplate("testConditional", INT);
         ftTestCond.m_aop = new Op[]
             { // #0 - i
@@ -488,6 +502,48 @@ public class xTestApp extends xModule
         ftTestTuple.m_cVars = 8;
         ftTestTuple.m_cScopes = 2;
 
+        // ----- testConst()
+
+        ClassTemplate ctPoint = f_types.getTemplate("TestApp.Point");
+        adapter.addMethod(ctPoint.f_struct, "construct", new String[] {"Int64", "Int64"}, VOID);
+        MethodTemplate mtConst = ctPoint.ensureMethodTemplate("construct", new String[]{"Int64", "Int64"});
+        mtConst.m_aop = new Op[]
+            { // #0 = x; #1 = y
+            new LSet(adapter.getPropertyConstId("TestApp.Point", "x"), 0),
+            new LSet(adapter.getPropertyConstId("TestApp.Point", "y"), 1),
+            new Return_0()
+            };
+        mtConst.m_cVars = 2;
+
+        MethodTemplate ftTestConst = ensureMethodTemplate("testConst", VOID);
+        ftTestConst.m_aop = new Op[]
+            {
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testConst() #")),
+            new NVar(adapter.getClassTypeConstId("TestApp.Point"),
+                    adapter.ensureValueConstantId("p1")), // #0 (p1)
+            new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+                    new int[]{-adapter.ensureValueConstantId(0), -adapter.ensureValueConstantId(1)},
+                    0),
+            new X_Print(0),
+
+            new NVar(adapter.getClassTypeConstId("TestApp.Point"),
+                    adapter.ensureValueConstantId("p1")), // #1 (p2)
+            new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+                    new int[]{-adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(0)},
+                    1),
+            new X_Print(1),
+
+            new Var(adapter.getClassTypeConstId("Boolean")), // #2
+            new IsEq(0, 1, 2),
+            new X_Print(2),
+
+            new IsGt(1, 0, 2),
+            new X_Print(2),
+
+            new Return_0()
+            };
+        ftTestConst.m_cVars = 3;
+
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);
         mtRun.m_aop = new Op[]
@@ -500,6 +556,7 @@ public class xTestApp extends xModule
                         -adapter.ensureValueConstantId("hi")),
             new Call_00(-adapter.getMethodConstId("TestApp", "testArray")),
             new Call_00(-adapter.getMethodConstId("TestApp", "testTuple")),
+            new Call_00(-adapter.getMethodConstId("TestApp", "testConst")),
             new Return_0()
             };
         mtRun.m_cVars = 2;

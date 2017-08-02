@@ -300,3 +300,203 @@ if (!C1 & !C2)
         extends B2
         implements I2
     }
+
+
+// import expansion
+
+import a.b.c; // c -> a.b.c
+import c.d.e; // e -> a.b.c.d.e
+
+// ----- type methods, "this type", and type parameters ------------------------
+
+// simple example
+class B
+    {
+    Void foo()
+    }
+class D extends B
+    {
+    Void foo()
+    Void bar()
+    }
+[17] TypeMethod{Void foo()}
+[18] TypeMethod{Void bar()}
+
+// return type auto-narrowing
+class B
+    {
+    B foo()         // 17
+    }
+class D1 extends B
+    {
+    // D1 foo()     // 17
+    }
+class D2 extends B
+    {
+    D2 foo()        // 17
+    }
+class D3 extends B
+    {
+    B foo()         // 18
+    }
+class D4 extends B
+    {
+    D4! foo()       // 19
+    }
+[17] TypeMethod{this:type foo()}
+[18] TypeMethod{B foo()}
+[19] TypeMethod{D4 foo()}
+
+// sub-class return type
+class B
+    {
+    D foo()     // compiles as if it were D! foo()
+    }
+class D extends B
+    {
+    // implicit D! foo()
+    }
+class D2 extends D
+    {
+    // implicit D! foo()
+    }
+
+// sub-class return type with auto-narrowing
+class B
+    {
+    D foo()     // compiles as if it were D! foo()
+    }
+class D extends B
+    {
+    D foo()     // compiles as if it were D foo() -- auto-narrowing
+    }
+class D2 extends D
+    {
+    // implicit D2 foo
+    }
+
+// explicitly non-narrowed sub-class return type
+class B
+    {
+    D! foo()    // redundant. possibly a compiler warning or error?
+    }
+class D extends B
+    {
+    // implicit D foo
+    }
+class D2 extends D
+    {
+    // implicit D foo()
+    }
+
+
+// parents and grandparents
+class B<T>
+    {
+    // 1. how do we refer to "B"? ClassTypeConstant(ThisClassConstant()) or ThisTypeConstant() (which also carries type param info)
+    // 2. how do we refer to "B!"? ClassTypeConstant(ClassConstant("B"))
+    // 3. how do we refer to "T"?
+    // 3.a - declaration:  ParameterTypeConstant(ThisTypeConstant(), "T")
+    // 3.b - between the curlies: ParameterTypeConstant(ThisTypeConstant(), "T")
+    // 3.c - between the curlies for a parameter named "that": ParameterTypeConstant(RegisterConstant("that"), "T")
+    // 4. how do we refer to "B<T>"? ClassTypeConstant(ThisClassConstant(), ParameterTypeConstant(RegisterConstant("this"), "T"))
+    // 5. how do we refer to "B!<T>"? ClassTypeConstant(ClassTypeConstant(ClassConstant("B")), ParameterTypeConstant(RegisterConstant("this"), "T"))
+    // 6. how do we refer to "Node"? TODO
+    // 7. how do we refer to "Node!"? TODO
+
+    B fubar();              // what does "B" compile as? see (1) above: ClassTypeConstant(ThisClassConstant())
+
+    Void foo(T t, B that, B<T> that2)   // type of "T" see (3) above: ParameterTypeConstant(ThisTypeConstant(), "T")
+                            // type of "B" is ClassTypeConstant(ThisClassConstant)
+                            // type of "B<T>" is ThisTypeConstant
+        {
+        B b0 = this;        // type of b0 is CTC("B") (not some auto-narrowing B)
+        B b1 = that;
+
+        // note: "T" is implicitly "this.T"
+        T t2 = t;           // type of "t2" (spec'd in NVAR op) is ParameterTypeConstant(ThisTypeConstant, "T")
+        that.T t3 = ...;    // type of "t3" (spec'd in NVAR op) is ParameterTypeConstant(RegisterConstant(1), "T")      // 1="that"
+        }
+
+    <Q> Q extract(Q[] array, Int i) // Q is RegisterTypeConstant(0)                                                     // 0="Q"
+    // compiles as if it were (illegal source code): Q extract(Type Q, Q[] array, Int i)
+        {
+        Q someQ = array[i]; // Q here is a type, so someQ is NVAR of RegisterTypeConstant(0)
+
+
+        Q q0 = q[0];
+        Q q1 = q[1];
+        if (q1 == q0) throw ISE();
+        return array[i];
+        }
+    // ways to invoke the above method
+    Animal[] animals = {new Dog(), new Cat(), new Pig()};
+    Animal a = extract(animals, 5);
+    Object o = extract(animals, 5);
+    Object o = extract<Object>(animals, 5);
+
+
+    Node bar();             // "this.type".Node
+
+    class Node
+        {
+        B<T> f();           // ParentTypeConstant(ThisTypeConstant())
+        B foo();            // ClassTypeConstant(ParentClassConstant(ThisClassConstant()))
+        B<String> x;        // ClassTypeConstant(ParentClassConstant(ThisClassConstant()), CTC(CC("String")))
+        T bar();            // ParameterTypeConstant(ParentTypeConstant(ThisTypeConstant()), "T")
+
+        Child<String> y;    // ChildTypeConstant(ParentTypeConstant(ThisTypeConstant()), "Child", CTC(CC("String")))
+
+        T biggerOf(B<T> that)   // what does "T" compile as? what does "B<T>" compile as?
+            {
+            // ...
+            }
+
+        Void doSomething(B    that1,   // "B" is a type constant of ... ???
+                         B<T> that2)   // "B<T>" is a type constant "ParentTypeConstant(ThisTypeConstant)"
+            {
+            }
+
+        Void doSomething(B that)
+            {
+            this.T t0 = this.bar();     // NVAR PTC("this:parent", "T"), "t0"
+            that.T t1 = that.bar();     // NVAR PTC(register1, "T"), "t1"
+            // ...
+            foo(t0);        // OK
+            foo(t1);        // error!!!!
+            that.foo(t0);   // error!!!!
+            that.foo(t1);   // OK
+
+            that.T t2 = t1;
+            that.foo(t2);
+
+            // but it gets more complicated ...
+            if (t2.instanceof(B<T>))
+                {
+                t2.T t3 = t2.bar().bar();
+                }
+
+            // "B.this" is of a compile-time type of "ParentTypeConstant(ThisTypeConstant)"
+            // "B.this" is of a compile-time type of "ParentTypeConstant(RegisterTypeConstant("this"))"
+            // "B.that" is of a compile-time type of "RegisterTypeConstant("that")"
+
+            // "relational" type constant from "parent" type constant from "this:type"
+            B.this.Child c1 = ...
+            // what is this one? it's not the same type ...
+            B.that.Child c2 = ...
+            }
+        }
+
+    class Child<Z>
+        {
+        }
+    }
+
+class D<T> extends B<T>
+    {
+    class Node
+        {
+        // B foo();         // "this:parent"."this:type"
+        // T bar();         // "this:parent"."T"
+        }
+    }

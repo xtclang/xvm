@@ -144,7 +144,17 @@ public class ModuleConstant
             {
             throw new IllegalStateException("could not find module: " + sName);
             }
-        return struct;
+
+        ModuleStructure structOrigin = struct.getFingerprintOrigin();
+        return structOrigin == null
+                ? struct
+                : structOrigin;
+        }
+
+    @Override
+    protected StringBuilder buildPath()
+        {
+        return new StringBuilder();
         }
 
 

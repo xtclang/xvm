@@ -10,6 +10,7 @@ import java.util.Set;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token.Id;
+
 import org.xvm.compiler.ast.*;
 
 import org.xvm.util.Handy;
@@ -365,7 +366,7 @@ public class Parser
                                               keyword  = current();
                         List<Token>           names    = parseQualifiedName();
                         NamedTypeExpression   module   = new NamedTypeExpression(null, names, null,
-                                null, names.get(names.size()-1).getEndPosition());
+                                null, null, names.get(names.size()-1).getEndPosition());
                         List<VersionOverride> versions = parseVersionRequirement(false);
                         compositions.add(new Composition.Import(exprCondition, keyword, module,
                                 versions, getLastMatch().getEndPosition()));
@@ -468,7 +469,7 @@ public class Parser
      *     TypeCompositionComponents TypeCompositionComponent
      *
      * TypeCompositionComponent
-     *     TypedefStatement
+     *     AccessModifier-opt TypeDefStatement
      *     ImportStatement
      *     TypeComposition
      *     PropertyDeclaration
@@ -491,7 +492,7 @@ public class Parser
                     break;
 
                 case TYPEDEF:
-                    stmt = parseTypeDefStatement(exprCondition);
+                    stmt = parseTypeDefStatement(exprCondition, null);
                     break;
 
                 case IF:
@@ -683,6 +684,42 @@ public class Parser
                 // it's definitely a type composition
                 return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
                         modifiers, annotations);
+
+            case TYPEDEF:
+                // evaluate annotations
+                if (annotations != null)
+                    {
+                    for (Annotation annotation : annotations)
+                        {
+                        annotation.log(m_errorListener, Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
+                        }
+                    }
+
+                // evaluate modifers looking for an access modifier
+                Token tokAccess = null;
+                if (modifiers != null)
+                    {
+                    for (Token modifier : modifiers)
+                        {
+                        switch (modifier.getId())
+                            {
+                            case PUBLIC:
+                            case PROTECTED:
+                            case PRIVATE:
+                                if (tokAccess == null)
+                                    {
+                                    tokAccess = modifier;
+                                    break;
+                                    }
+                                // fall through
+                            default:
+                                modifier.log(m_errorListener, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                                break;
+                            }
+                        }
+                    }
+
+                return parseTypeDefStatement(exprCondition, tokAccess);
 
             case L_PAREN:
                 {
@@ -1288,7 +1325,7 @@ public class Parser
                 return parseTryStatement();
 
             case TYPEDEF:
-                return parseTypeDefStatement(null);
+                return parseTypeDefStatement(null, null);
 
             case USING:
                 return parseUsingStatement();
@@ -1747,9 +1784,12 @@ public class Parser
      *     "typedef" Type Name ";"
      * </pre></code>
      *
+     * @param tokenAccess  if the typedef is a type composition component, it can be declared with
+     *                     an access modifier
+     *
      * @return a TypedefStatement
      */
-    TypedefStatement parseTypeDefStatement(Expression exprCond)
+    TypedefStatement parseTypeDefStatement(Expression exprCond, Token tokenAccess)
         {
         Token keyword = expect(Id.TYPEDEF);
 
@@ -1759,7 +1799,7 @@ public class Parser
 
         expect(Id.SEMICOLON);
 
-        return new TypedefStatement(exprCond, keyword, type, simpleName);
+        return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess, type, simpleName);
         }
 
     /**
@@ -2642,6 +2682,11 @@ s     *
                         }
                     }
 
+                // test for a non-auto-narrowing modifier ("!")
+                Token tokNarrow = !peek().hasLeadingWhitespace()
+                        ? match(Id.NOT)
+                        : null;
+
                 // test to see if there is a type parameter list (implying the expression is a type)
                 List<TypeExpression> params = null;
                 if (peek().getId() == Id.COMP_LT)
@@ -2678,7 +2723,20 @@ s     *
                                     }
                                 // fall through
                             case L_CURLY:
-                                return parseCustomLiteral(new NamedTypeExpression(null, names, access, params, lEndPos));
+                                return parseCustomLiteral(new NamedTypeExpression(
+                                        null, names, access, tokNarrow, params, lEndPos));
+
+                            case LIT_STRING:
+                                if (names.size() == 1)
+                                    {
+                                    String sName = (String) names.get(0).getValue();
+                                    if (sName.equals("v") || sName.equals("Version"))
+                                        {
+                                        return parseCustomLiteral(new NamedTypeExpression(
+                                                null, names, access, tokNarrow, params, lEndPos));
+                                        }
+                                    }
+                                break;
                             }
                         }
 
@@ -2687,7 +2745,7 @@ s     *
 
                 return access == null
                         ? new NameExpression(names, params, lEndPos)
-                        : new NamedTypeExpression(null, names, access, params, lEndPos);
+                        : new NamedTypeExpression(null, names, access, tokNarrow, params, lEndPos);
                 }
 
             case L_PAREN:
@@ -3116,7 +3174,6 @@ s     *
      *     NonBiTypeExpression "..."
      *     "conditional" NonBiTypeExpression
      *     "immutable" NonBiTypeExpression
-     *     "T0D0" TodoFinish-opt
      *
      * NamedTypeExpression
      *     QualifiedName TypeParameterTypeList-opt
@@ -3163,10 +3220,6 @@ s     *
             case CONDITIONAL:
             case IMMUTABLE:
                 type = new DecoratedTypeExpression(current(), parseNonBiTypeExpression());
-                break;
-
-            case TODO:
-                type = parseTodoExpression();
                 break;
 
             default:
@@ -3286,14 +3339,18 @@ s     *
     /**
      * Parse a type expression in the form:
      *
-     *   "immutable name.name.name<param, param>"
+     *   "immutable name.name.name!<param, param>"
      *
      * <p/><code><pre>
      * NamedTypeExpression
-     *     QualifiedName TypeAccessModifier-opt TypeParameterTypeList-opt
+     *     QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
      *
      * TypeAccessModifier
      *     NoWhitespace ":" NoWhitespace AccessModifier
+     *
+     * NoAutoNarrowModifier
+     *     NoWhitespace "!"
+     *
      * </pre></code>
      *
      * @return a NamedTypeExpression
@@ -3301,8 +3358,11 @@ s     *
     NamedTypeExpression parseNamedTypeExpression()
         {
         Token immutable = match(Id.IMMUTABLE);
+
+        // QualifiedName
         List<Token> names = parseQualifiedName();
 
+        // TypeAccessModifier
         Token tokAccess = null;
         Token tokNext   = peek();
         if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace() && !tokNext.hasTrailingWhitespace())
@@ -3323,8 +3383,15 @@ s     *
                 }
             }
 
+        // NoAutoNarrowModifier
+        Token tokNarrow = !peek().hasLeadingWhitespace()
+                ? match(Id.NOT)
+                : null;
+
+        // TypeParameterTypeList
         List<TypeExpression> params = parseTypeParameterTypeList(false);
-        return new NamedTypeExpression(immutable, names, tokAccess, params, getLastMatch().getEndPosition());
+
+        return new NamedTypeExpression(immutable, names, tokAccess, tokNarrow, params, getLastMatch().getEndPosition());
         }
 
     /**

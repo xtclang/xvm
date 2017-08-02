@@ -342,6 +342,8 @@ public abstract class MultiCondition
     @Override
     public boolean equals(Object obj)
         {
+        // TODO this should all be moved to the compareDetails() method, and the equals() method should be dropped (let Constant.equals() handle it by calling compareDetails())
+
         // must both be multi-conditions
         if (!(obj instanceof MultiCondition))
             {

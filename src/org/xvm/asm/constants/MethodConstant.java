@@ -337,7 +337,7 @@ public class MethodConstant
         int cThat = aconstThat.length;
         for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i)
             {
-            int n = aconstThis[i].compareDetails(aconstThat[i]);
+            int n = aconstThis[i].compareTo(aconstThat[i]);
             if (n != 0)
                 {
                 return n;

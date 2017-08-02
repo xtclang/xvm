@@ -1,7 +1,8 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.Clock;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;

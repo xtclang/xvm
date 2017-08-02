@@ -1,5 +1,8 @@
+import collections.ListMap;
+
 import types.MultiMethod;
 import types.MultiFunction;
+import types.TypeParameter;
 
 /**
  * A Class represents the following information about an Ecstasy type composition:
@@ -32,7 +35,7 @@ import types.MultiFunction;
  * references using {@code const} classes.)
  */
 class Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>
-        implements Const, Constable
+        implements Const, collections.ConstAble
     {
     // ----- data types ----------------------------------------------------------------------------
 

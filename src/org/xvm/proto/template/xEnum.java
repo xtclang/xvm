@@ -26,35 +26,45 @@ import java.util.List;
 public class xEnum
         extends ClassTemplate
     {
+    public static xEnum INSTANCE;
+
     protected List<String> m_listNames;
     protected List<EnumHandle> m_listHandles;
 
     public xEnum(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initDeclared()
         {
         ClassStructure struct = f_struct;
-        assert struct.getFormat() == Component.Format.ENUM;
-
-        List<Component> listAll = struct.children();
-        List<String> listNames = new ArrayList<>(listAll.size());
-        List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
-
-        int cValues = 0;
-        for (Component child : listAll)
+        if (this != INSTANCE)
             {
-            if (child.getFormat() == Component.Format.ENUMVALUE)
+            assert struct.getFormat() == Component.Format.ENUM;
+
+            List<Component> listAll = struct.children();
+            List<String> listNames = new ArrayList<>(listAll.size());
+            List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
+
+            int cValues = 0;
+            for (Component child : listAll)
                 {
-                listNames.add(child.getName());
-                listHandles.add(new EnumHandle(f_clazzCanonical, cValues++));
+                if (child.getFormat() == Component.Format.ENUMVALUE)
+                    {
+                    listNames.add(child.getName());
+                    listHandles.add(new EnumHandle(f_clazzCanonical, cValues++));
+                    }
                 }
+            m_listNames = listNames;
+            m_listHandles = listHandles;
             }
-        m_listNames = listNames;
-        m_listHandles = listHandles;
         }
 
     @Override
@@ -77,16 +87,17 @@ public class xEnum
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        EnumHandle hEnum = (EnumHandle) hTarget;
-
-        switch (method.getName())
-            {
-            case "to":
-                return frame.assignValue(iReturn, xString.makeHandle(
-                        m_listNames.get((int) hEnum.getValue())));
-            }
-
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    // ----- Object methods -----
+
+    @Override
+    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        EnumHandle hEnum = (EnumHandle) hTarget;
+        sb.append(m_listNames.get((int) hEnum.getValue()));
+        return null;
         }
 
     public static class EnumHandle

@@ -4,20 +4,9 @@ package org.xvm.compiler.ast;
 import java.util.List;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.CompositeComponent;
-import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IdentityConstant;
-
-import org.xvm.asm.constants.PresentCondition;
-import org.xvm.asm.constants.ResolvableConstant;
-import org.xvm.asm.constants.UnresolvedClassConstant;
-import org.xvm.asm.constants.UnresolvedNameConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 
@@ -58,18 +47,11 @@ public abstract class ComponentStatement
         }
 
     @Override
-    protected IdentityConstant resolveParentBySingleName(String sName)
+    protected ConstantPool getConstantPool()
         {
-        IdentityConstant constant = super.resolveParentBySingleName(sName);
-        if (constant == null && component != null)
-            {
-            if (component.getName().equals(sName) || (component instanceof ModuleStructure &&
-                    ((ModuleStructure) component).getModuleConstant().getUnqualifiedName().equals(sName)))
-                {
-                constant = component.getIdentityConstant();
-                }
-            }
-        return constant;
+        return component == null
+                ? super.getConstantPool()
+                : component.getConstantPool();
         }
 
     @Override
@@ -87,116 +69,24 @@ public abstract class ComponentStatement
 
     // ----- compile phases ------------------------------------------------------------------------
 
+
+    // ----- name resolution -----------------------------------------------------------------------
+
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    protected Component resolveParentBySimpleName(String sName)
         {
-        boolean   fResolved = true;
-        Component component = getComponent();
-        if (component instanceof CompositeComponent)
-            {
-            for (Component componentEach : ((CompositeComponent) component).components())
-                {
-                fResolved &= resolveConstants(componentEach, errs);
-                }
-            }
-        else
-            {
-            fResolved = resolveConstants(component, errs);
-            }
-
-        if (fResolved)
-            {
-            super.resolveNames(listRevisit, errs);
-            }
-        else
-            {
-            listRevisit.add(this);
-            }
+        Component componentParent = super.resolveParentBySimpleName(sName);
+        return componentParent == null && component != null && sName.equals(component.getSimpleName())
+                ? component
+                : componentParent;
         }
 
-    private boolean resolveConstants(Component component, ErrorListener errs)
+    @Override
+    protected Component resolveSimpleName(String sName)
         {
-        if (component == null)
-            {
-            return true;
-            }
-
-        boolean fResolved = true;
-
-        // component condition
-        ConditionalConstant cond = component.getCondition();
-        if (cond != null)
-            {
-            for (ConditionalConstant condTerm : cond.terminals())
-                {
-                if (condTerm instanceof PresentCondition)
-                    {
-                    fResolved &= resolveConstant(((PresentCondition) condTerm).getPresentConstant(), errs);
-                    }
-                }
-            }
-
-        // contributions
-        for (Component.Contribution contribution : component.getContributionsAsList())
-            {
-            fResolved &= resolveConstant(contribution.getRawConstant(), errs);
-            fResolved &= resolveConstant(contribution.getDelegatePropertyConstant(), errs);
-            }
-
-        return fResolved;
-        }
-
-    private boolean resolveConstant(Constant constantUnknown, ErrorListener errs)
-        {
-        if (constantUnknown == null)
-            {
-            return true;
-            }
-
-        // make sure sub-constants are resolved
-        boolean[] result = new boolean[1];
-        result[0] = true;
-        constantUnknown.forEachUnderlying(constant -> result[0] &= resolveConstant(constant, errs));
-        if (!result[0])
-            {
-            return false;
-            }
-
-        // make sure this constant is resolved
-        if (constantUnknown instanceof ResolvableConstant)
-            {
-            if (((ResolvableConstant) constantUnknown).getResolvedConstant() != null)
-                {
-                return true;
-                }
-
-            if (constantUnknown instanceof UnresolvedClassConstant)
-                {
-                UnresolvedClassConstant constant = (UnresolvedClassConstant) constantUnknown;
-                // TODO
-                return false;
-                }
-            else if (constantUnknown instanceof UnresolvedNameConstant)
-                {
-                UnresolvedNameConstant constant = (UnresolvedNameConstant) constantUnknown;
-                IdentityConstant       constId  = (IdentityConstant) resolveFirstName(constant.getName(0));
-                for (int i = 1, c = constant.getNameCount(); i < c; ++i)
-                    {
-                    // TODO resolve constant.getName(i) against constId to obtain the corresponding constId
-                    throw new UnsupportedOperationException();
-                    }
-                constant.resolve(constId);
-                return true;
-                }
-            else if (constantUnknown instanceof UnresolvedTypeConstant)
-                {
-                UnresolvedTypeConstant constant = (UnresolvedTypeConstant) constantUnknown;
-                // TODO
-                return false;
-                }
-            }
-
-        return true;
+        return component == null
+                ? null
+                : component.resolveName(sName);
         }
 
 

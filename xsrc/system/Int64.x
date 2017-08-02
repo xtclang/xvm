@@ -12,7 +12,7 @@ const Int64
         }
 
     private Bit[] bits;
-    
+
     Int64 bitLength.get()
         {
         return 64;
@@ -34,7 +34,7 @@ const Int64
             {
             return Zero;
             }
-            
+
         return Positive;
         }
 
@@ -42,7 +42,7 @@ const Int64
      * The minimum value for an Int64.
      */
     static IntLiteral minvalue = -0x8000000000000000;
-    
+
     /**
      * The maximum value for an Int64.
      */
@@ -110,7 +110,7 @@ const Int64
         return new Int(bits);
         }
 
-    @op IntInt64 ushr(Int64 count)
+    @op Int64 ushr(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
         for (Int64 i = 0; i < 0x3F; ++i)

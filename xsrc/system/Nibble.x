@@ -1,12 +1,12 @@
 const Nibble
     {
-    construct Bit(Bit[] bits)
+    construct Nibble(Bit[] bits)
         {
         assert:always bits.length == 4;
         this.bits = bits;
         }
 
-    construct Bit(Int n)
+    construct Nibble(Int n)
         {
         assert:always n >= 0 && n <= 0xF;
         // TODO this. = ;

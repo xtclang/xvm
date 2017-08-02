@@ -12,7 +12,7 @@ const String
 
     Iterator<Char> iterator()
         {
-        return new TODO
+        return TODO new TODO
         }
 
     String reify()

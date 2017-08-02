@@ -3,6 +3,17 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.List;
+
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.Constants;
+import org.xvm.compiler.ErrorListener;
+
 
 /**
  * An annotated type expression is a type expression preceded with an annotation.
@@ -23,6 +34,11 @@ public class AnnotatedTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected boolean canResolveSimpleName()
+        {
+        return super.canResolveSimpleName() || type.canResolveSimpleName();
+        }
 
     @Override
     public long getStartPosition()
@@ -40,6 +56,50 @@ public class AnnotatedTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+            {
+            // resolve the annotation and sub-type
+            annotation.resolveNames(listRevisit, errs);
+            type.resolveNames(listRevisit, errs);
+
+            TypeConstant  constType   = type.ensureTypeConstant();
+            ClassConstant constClass  = (ClassConstant) annotation.getType().asClassTypeConstant(errs).getClassConstant();
+            Constant[]    aconstParam = null;
+
+            List<Expression> args = annotation.getArguments();
+            if (args != null)
+                {
+                int cArgs = args.size();
+                aconstParam = new Constant[cArgs];
+                for (int i = 0; i < cArgs; ++i)
+                    {
+                    Expression exprArg = args.get(i);
+                    if (exprArg.isConstant())
+                        {
+                        aconstParam[i] = exprArg.toConstant();
+                        }
+                    else
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("not a constant: " + exprArg);
+                        }
+                    }
+                }
+
+            // store off the annotated type
+            ConstantPool pool = getConstantPool();
+            setTypeConstant(pool.ensureAnnotatedTypeConstant(constClass, aconstParam, constType));
+
+            super.resolveNames(listRevisit, errs);
+            }
         }
 
 

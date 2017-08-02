@@ -38,7 +38,7 @@ public class xString
     public void initDeclared()
         {
         markNativeGetter("size");
-        markNativeMethod("indexOf", new String[]{"String", "Range<Int>|Nullable"},
+        markNativeMethod("indexOf", new String[]{"String", "Range<Int>?"},
                 new String[]{"collections.Tuple<Boolean,Int>"});
         markNativeMethod("to", VOID, STRING);
         }
@@ -66,9 +66,6 @@ public class xString
 
                         ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
                         return frame.assignValue(iReturn, hResult);
-
-                    case "to":
-                        return frame.assignValue(iReturn, hThis);
                     }
                 break;
 
@@ -117,7 +114,6 @@ public class xString
 
         switch (ahArg.length)
             {
-
             case 2:
                 switch (method.getName())
                     {
@@ -143,7 +139,6 @@ public class xString
                             }
                     }
                 break;
-
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -180,6 +175,15 @@ public class xString
 
         return frame.assignValue(iReturn,
                 xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
+        }
+
+    // ----- Object methods -----
+
+    @Override
+    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+        {
+        sb.append(((StringHandle) hTarget).getValue());
+        return null;
         }
 
     public static class StringHandle

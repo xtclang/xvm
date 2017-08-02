@@ -1,6 +1,5 @@
 package org.xvm.proto;
 
-import com.sun.istack.internal.Nullable;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -16,9 +15,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
-import org.xvm.proto.template.xFunction;
-
-import org.xvm.proto.template.xNullable;
 import org.xvm.util.Handy;
 
 import java.util.HashMap;
@@ -97,12 +93,28 @@ public class Adapter
         try
             {
             ClassTemplate template = f_container.f_types.getTemplate(sClassName);
-            MethodStructure method = template.getMethod(sMethName, asArgType, asRetType);
-            while (method == null)
+            MethodStructure method;
+            while (true)
                 {
+                method = template.getDeclaredMethod(sMethName, asArgType, asRetType);
+                if (method != null)
+                    {
+                    break;
+                    }
+
+                ClassTemplate templateCategory = template.f_templateCategory;
+                if (templateCategory != null)
+                    {
+                    method = templateCategory.getDeclaredMethod(sMethName, asArgType, asRetType);
+                    if (method != null)
+                        {
+                        break;
+                        }
+                    }
+
                 template = template.getSuper();
-                method = template.getMethod(sMethName, asArgType, asRetType);
                 }
+
             return method.getIdentityConstant().getPosition();
             }
         catch (NullPointerException e)
@@ -216,10 +228,9 @@ public class Adapter
     public int getVarCount(MethodStructure method)
         {
         ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
-        return tm == null ? 0 :
-                tm.m_fNative ? // this can only be a constructor
-                    method.getIdentityConstant().getRawParams().length:
-                    tm.m_cVars;
+        return tm == null || tm.m_fNative ? // this can only be a constructor
+                method.getIdentityConstant().getRawParams().length:
+                tm.m_cVars;
         }
 
     public Op[] getOps(MethodStructure method)
@@ -270,25 +281,18 @@ public class Adapter
 
     public ClassTypeConstant resolveType(PropertyStructure property)
         {
-        TypeConstant type = property.getType();
-        if (type instanceof ClassTypeConstant)
+        TypeConstant constType = property.getType();
+
+        if (constType instanceof UnresolvedTypeConstant)
             {
-            return (ClassTypeConstant) type;
+            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
             }
 
-        if (type instanceof UnresolvedTypeConstant)
+        if (constType instanceof ClassTypeConstant)
             {
-            String sValue = type.getValueString(); // m_sType + " (unresolved)";
-            String sType = sValue.substring(0, sValue.indexOf(' '));
-            // hand code aliases
-            if (sType.equals("Int"))
-                {
-                sType = "Int64";
-                }
-            ClassTemplate template = f_container.f_types.getTemplate(sType);
-            return ((ClassConstant) template.f_struct.getIdentityConstant()).asTypeConstant();
+            return (ClassTypeConstant) constType;
             }
 
-        throw new UnsupportedOperationException("Unsupported type: " + type + " for " + property);
+        throw new UnsupportedOperationException("Unsupported type: " + constType + " for " + property);
         }
     }

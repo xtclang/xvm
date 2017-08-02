@@ -1,12 +1,12 @@
 interface UIntNumber
         extends IntNumber
     {
-    UnsignedIntNumber abs()
+    UIntNumber abs()
         {
         return this;
         }
 
-    UnsignedIntNumber neg()
+    UIntNumber neg()
         {
         throw new UnsupportedOperationException();
         }

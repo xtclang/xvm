@@ -2,6 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -10,6 +11,10 @@ import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xService;
+
+import java.io.File;
+
+import java.net.URL;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,19 +32,66 @@ public class TypeSet
     public final Container f_container;
     final public Adapter f_adapter;
 
-    // cache - ClassTemplates by name
-    final private Map<String, ClassTemplate> m_mapTemplatesByName = new HashMap<>();
+    // native templates
+    final private Map<String, Class> f_mapTemplateClasses = new HashMap<>();
 
-    // cache - ClassTemplates by ClassConstant
-    final private Map<IdentityConstant, ClassTemplate> m_mapTemplatesByConst = new HashMap<>();
+    // cache - ClassTemplates by name
+    final private Map<String, ClassTemplate> f_mapTemplatesByName = new HashMap<>();
 
     // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
-    private Map<Integer, TypeComposition> m_mapConstCompositions = new TreeMap<>(Integer::compare);
+    final private Map<Integer, TypeComposition> f_mapConstCompositions = new TreeMap<>(Integer::compare);
 
     TypeSet(Container pool)
         {
         f_container = pool;
         f_adapter = pool.f_adapter;
+
+        loadNativeTemplates();
+        }
+
+    private void loadNativeTemplates()
+        {
+        Class clzObject = xObject.class;
+        URL url = clzObject.getProtectionDomain().getCodeSource().getLocation();
+        String sRoot = url.getFile();
+
+        File dirNative = new File(sRoot, "org/xvm/proto/template");
+        scanNativeDirectory(dirNative, "");
+        }
+
+    // sPackage is either empty or ends with a dot
+    private void scanNativeDirectory(File dirNative, String sPackage)
+        {
+        for (String sName : dirNative.list())
+            {
+            if (sName.endsWith(".class"))
+                {
+                if (sName.startsWith("x") && !sName.contains("$"))
+                    {
+                    String sSimpleName = sName.substring(1, sName.length() - 6);
+                    String sQualifiedName = sPackage + sSimpleName;
+                    String sClass = "org.xvm.proto.template." + sPackage + "x" + sSimpleName;
+
+                    try
+                        {
+                        f_mapTemplateClasses.put(sQualifiedName, Class.forName(sClass));
+                        }
+                    catch (ClassNotFoundException e)
+                        {
+                        throw new IllegalStateException("Cannot load " + sClass, e);
+                        }
+                    }
+                }
+            else
+                {
+                File dir = new File(dirNative, sName);
+                if (dir.isDirectory())
+                    {
+                    scanNativeDirectory(dir, sPackage.isEmpty() ? sName + '.' : sPackage + sName + '.');
+                    }
+                }
+            }
+
         }
 
     // ----- templates -----
@@ -47,19 +99,21 @@ public class TypeSet
     public ClassTemplate getTemplate(String sName)
         {
         // for core classes only
-        ClassTemplate template = m_mapTemplatesByName.get(sName);
+        ClassTemplate template = f_mapTemplatesByName.get(sName);
         if (template == null)
             {
+            // TODO: plug in module repositories
             ClassConstant constClass = f_container.f_pool.ensureEcstasyClassConstant(sName);
             template = getTemplate(constClass);
-            m_mapTemplatesByName.put(sName, template);
+            f_mapTemplatesByName.put(sName, template);
             }
         return template;
         }
 
     public ClassTemplate getTemplate(IdentityConstant constClass)
         {
-        ClassTemplate template = m_mapTemplatesByConst.get(constClass);
+        String sName = constClass.getPathString();
+        ClassTemplate template = f_mapTemplatesByName.get(sName);
         if (template == null)
             {
             ClassStructure structClass = (ClassStructure) constClass.getComponent();
@@ -68,31 +122,24 @@ public class TypeSet
                 throw new RuntimeException("Missing class structure: " + constClass);
                 }
 
-            String sName = structClass.getName();
-            try
-                {
-                template = loadCustomTemplate(sName, structClass);
-
-                m_mapTemplatesByConst.put(constClass, template);
-                template.initDeclared();
-                }
-            catch (ClassNotFoundException e)
+            template = getNativeTemplate(sName, structClass);
+            if (template == null)
                 {
                 System.out.println("Generating template for " + sName);
 
                 switch (structClass.getFormat())
                     {
                     case ENUMVALUE:
-                        try
-                            {
-                            String sEnumName = structClass.getParent().getName();
-                            template = loadCustomTemplate(sEnumName, structClass);
-                            template.initDeclared();
-                            break;
-                            }
-                        catch (ClassNotFoundException e2)
+                        String sEnumName = structClass.getParent().getName();
+
+                        template = getNativeTemplate(sEnumName, structClass);
+                        if (template == null)
                             {
                             template = new xEnum(this, structClass, false);
+                            }
+                        else
+                            {
+                            template.initDeclared();
                             }
                         break;
 
@@ -114,20 +161,25 @@ public class TypeSet
                     }
 
                 // we don't call initDeclared again
-                m_mapTemplatesByConst.put(constClass, template);
+                f_mapTemplatesByName.put(sName, template);
+                }
+            else
+                {
+                f_mapTemplatesByName.put(sName, template);
+                template.initDeclared();
                 }
             }
 
         return template;
         }
 
-    private ClassTemplate loadCustomTemplate(String sName, ClassStructure structClass)
-            throws ClassNotFoundException
+    private ClassTemplate getNativeTemplate(String sName, ClassStructure structClass)
         {
-        String sSuffix = sName.substring(sName.lastIndexOf('.') + 1);
-
-        String sClz= "org.xvm.proto.template.x" + sSuffix;
-        Class<ClassTemplate> clz = (Class<ClassTemplate>) Class.forName(sClz);
+        Class<ClassTemplate> clz = f_mapTemplateClasses.get(sName);
+        if (clz == null)
+            {
+            return null;
+            }
 
         try
             {
@@ -152,7 +204,7 @@ public class TypeSet
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
     public TypeComposition ensureComposition(int nClassConstId)
         {
-        TypeComposition typeComposition = m_mapConstCompositions.get(nClassConstId);
+        TypeComposition typeComposition = f_mapConstCompositions.get(nClassConstId);
         if (typeComposition == null)
             {
             // TODO: what if the constant is not a CTC, but TypeParameterTypeConstant,
@@ -162,7 +214,7 @@ public class TypeSet
 
             typeComposition = resolve(constTypeClass);
 
-            m_mapConstCompositions.put(nClassConstId, typeComposition);
+            f_mapConstCompositions.put(nClassConstId, typeComposition);
             }
         return typeComposition;
         }

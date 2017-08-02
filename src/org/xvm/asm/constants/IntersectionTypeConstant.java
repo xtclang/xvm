@@ -85,7 +85,7 @@ public class IntersectionTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.UnionType;
+        return Format.IntersectionType;
         }
 
     @Override
@@ -146,29 +146,6 @@ public class IntersectionTypeConstant
     public int hashCode()
         {
         return "+".hashCode() ^ m_constType1.hashCode() ^ m_constType2.hashCode();
-        }
-
-    @Override
-    public boolean equals(Object obj)
-        {
-        if (this == obj)
-            {
-            return true;
-            }
-
-        if (obj instanceof IntersectionTypeConstant)
-            {
-            IntersectionTypeConstant that = (IntersectionTypeConstant) obj;
-            // note: order is (unfortunately) important, because of the potential for using a type
-            // as the basis for determining a default value, e.g. "null" for a "Nullable | AnyType":
-            // return this.m_constType1.equals(that.m_constType1)
-            //         ? this.m_constType2.equals(that.m_constType2)
-            //         : this.m_constType1.equals(that.m_constType2) && this.m_constType2.equals(that.m_constType1);
-            return this.m_constType1.equals(that.m_constType1)
-                    && this.m_constType2.equals(that.m_constType2);
-            }
-
-        return false;
         }
 
 

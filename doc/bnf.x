@@ -94,15 +94,11 @@ TypeVariable
 #
 
 CompilationUnit
-	AliasStatements-opt TypeCompositionStatement
+	ImportStatements-opt TypeCompositionStatement
 
-AliasStatements
-	AliasStatement
-	AliasStatements AliasStatement
-
-AliasStatement
+ImportStatements
 	ImportStatement
-	TypeDefStatement
+	ImportStatements ImportStatement
 
 #
 # type compositions
@@ -235,7 +231,7 @@ ElseTypeCompositionComponent
     "else" "{" TypeCompositionComponents "}"
 
 TypeCompositionComponent
-    TypdefStatement
+    AccessModifier-opt TypeDefStatement
     ImportStatement
     TypeCompositionStatement
     PropertyDeclaration
@@ -330,7 +326,7 @@ Statement
     AssertStatement
     "break" Name-opt ";"
     "continue" Name-opt ";"
-    "do" StatementBlock "while" "(" ConditionalDeclaration-opt Expression ")" ";"
+    "do" StatementBlock "while" "(" WhileCondition ")" ";"
     ForStatement
     IfStatement
 	ImportStatement
@@ -340,7 +336,7 @@ Statement
     TryStatement
 	TypeDefStatement
     "using" ResourceDeclaration StatementBlock
-    "while" "(" ConditionalDeclaration-opt Expression ")" StatementBlock       // TODO multiple cond
+    "while" "(" WhileCondition ")" StatementBlock
 
 PropertyDeclarationStatement
     "static" TypeExpression Name PropertyDeclarationFinish-opt
@@ -420,6 +416,10 @@ ForStatement
 
 ForCondition
     VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
+    ConditionalDeclarationList
+
+WhileCondition
+    Expression
     ConditionalDeclarationList
 
 ConditionalDeclarationList
@@ -702,7 +702,7 @@ PrimaryExpression
     QualifiedName TypeParameterTypeList-opt
     LambdaExpression
     "_"
-    "TODO" TodoFinish-opt
+    "T0D0" TodoFinish-opt
     Literal
 
 LambdaExpression
@@ -740,7 +740,7 @@ LambdaBody
 
 TodoFinish
     InputCharacter-not-"(" InputCharacters LineTerminator
-    "(" Expression ")"
+    NoWhitespace "(" Expression ")"
 
 Literal
     IntLiteral
@@ -795,14 +795,13 @@ Entry
     Expression "=" Expression
 
 VersionLiteral
-    "v" ":{" Version "}"        // TODO
+    "v" ":{" Version "}"
     "Version" ":{" Version "}"
 
 CustomLiteral
     TypeExpression NoWhitespace ":{" Expression "}"
 
 
-# (deferred idea)
 #   ╔═════════════════════╗
 #   ║This could be any    ║
 #   ║freeform text that   ║
@@ -817,11 +816,11 @@ CustomLiteral
 #        U+2550
 #
 #
-#        U+2500
+#           U+2500
 # U+256D ╭─────╮ U+256E
-# U+2502 │     │ U+2502
+# U+2502 │          │ U+2502
 # U+2570 ╰─────╯ U+256F
-#        U+2500
+#           U+2500
 #
 FreeformLiteral
     FreeformTop FreeformLines FreeformBottom
@@ -946,23 +945,22 @@ NonBiTypeExpression
     NonBiTypeExpression "..."
     "conditional" NonBiTypeExpression
     "immutable" NonBiTypeExpression
-    "TODO" TodoFinish-opt
 
 AnnotatedTypeExpression
     Annotation TypeExpression
 
 NamedTypeExpression
-    QualifiedName TypeAccessModifier-opt TypeParameterTypeList-opt
+    QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
 
 TypeAccessModifier
     NoWhitespace ":" NoWhitespace AccessModifier
 
+NoAutoNarrowModifier
+    NoWhitespace "!"
+
+# Note: in the case that the name precedes the ParameterTypeList, the token
+#       stream is re-ordered such that the name is deposited into the stream
+#       after the ParameterTypeList, and is not consumed by this construction
 FunctionTypeExpression
-    "function" ReturnList FunctionTypeFinish
+    "function" ReturnList Name-opt "(" TypeExpressionList-opt ")"
 
-FunctionTypeFinish
-    Name ParameterTypeList
-    ParameterTypeList Name
-
-ParameterTypeList
-    "(" TypeExpressionList-opt ")"

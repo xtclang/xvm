@@ -1,5 +1,5 @@
 interface Const
-        extends Hashable
+        extends collections.Hashable
         extends Orderable
     {
     /**
@@ -38,7 +38,7 @@ interface Const
      */
     Byte[] to<Byte[]>()
         {
-        Field[] fields = meta.struct.to<Field[]>();
+        Property[] fields = meta.struct.to<Property[]>();
         // TODO use meta.struct
         }
 
@@ -47,7 +47,7 @@ interface Const
      */
     @lazy Int hash.get()
         {
-        Ref[] fields = meta.struct.to<Field[]>();
+        Ref[] fields = meta.struct.to<Property[]>();
         // TODO use meta.struct
         }
     }

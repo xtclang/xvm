@@ -1,4 +1,4 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.TestApp;
 
 import org.xvm.asm.ClassStructure;
 
@@ -66,5 +66,21 @@ public class xTestClass2 extends ClassTemplate
             new Return_1(0),
             };
         mtMethod1.m_cVars = 2;
+
+        MethodTemplate mtTo = ensureMethodTemplate("to", VOID, STRING);
+        mtTo.m_aop = new Op[]
+            {
+            new Var(adapter.getClassTypeConstId("String")), // #0
+            new Call_01(Op.A_SUPER, 0),
+            new Add(0, -adapter.ensureValueConstantId(", prop2="), 0),
+            new Var(adapter.getClassTypeConstId("Int64")), // #1
+            new LGet(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 1),
+            new Var(adapter.getClassTypeConstId("String")), // #2
+            new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
+            new Add(0, 2, 0),
+            new Return_1(0),
+            };
+        mtTo.m_cVars = 3;
+
         }
     }

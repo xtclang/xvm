@@ -1,14 +1,18 @@
-package org.xvm.proto.template;
+package org.xvm.proto.template.annotations;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.xNullable;
+import org.xvm.proto.template.xRef;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -46,16 +50,9 @@ public class xFutureRef
         // FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
         markNativeMethod("whenComplete", new String[]{"Function"});
 
-        // TODO: remove
+        // TODO: how to inherit this from Ref?
         markNativeMethod("get", VOID, new String[]{"RefType"});
         markNativeMethod("set", new String[]{"RefType"}, VOID);
-        }
-
-    @Override
-    protected ClassStructure getSuperStructure()
-        {
-        // REVIEW: FutureRef is a mixin, but xFutureRef is native; is this right?
-        return xObject.INSTANCE.f_struct;
         }
 
     @Override
@@ -86,9 +83,9 @@ public class xFutureRef
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz)
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
         {
-        return new FutureHandle(clazz, null);
+        return new FutureHandle(clazz, sName, null);
         }
 
     public static class FutureHandle
@@ -96,9 +93,9 @@ public class xFutureRef
         {
         public CompletableFuture<ObjectHandle> m_future;
 
-        protected FutureHandle(TypeComposition clazz, CompletableFuture<ObjectHandle> future)
+        protected FutureHandle(TypeComposition clazz, String sName, CompletableFuture<ObjectHandle> future)
             {
-            super(clazz);
+            super(clazz, sName);
 
             m_future = future;
             }
@@ -207,6 +204,6 @@ public class xFutureRef
 
     public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future)
         {
-        return new FutureHandle(INSTANCE.f_clazzCanonical, future);
+        return new FutureHandle(INSTANCE.f_clazzCanonical, null, future);
         }
     }

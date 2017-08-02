@@ -5,8 +5,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import java.net.IDN;
-import java.util.Iterator;
 
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
@@ -16,7 +16,12 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.*;
+import static org.xvm.util.Handy.hexitValue;
+import static org.xvm.util.Handy.isAsciiLetter;
+import static org.xvm.util.Handy.isDigit;
+import static org.xvm.util.Handy.isHexit;
+import static org.xvm.util.Handy.parseDelimitedString;
+import static org.xvm.util.Handy.quotedChar;
 
 
 /**

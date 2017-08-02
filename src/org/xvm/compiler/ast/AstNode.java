@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -195,6 +195,17 @@ public abstract class AstNode
         }
 
     /**
+     * @return the constant pool
+     */
+    protected ConstantPool getConstantPool()
+        {
+        AstNode nodeParent = getParent();
+        return nodeParent == null
+                ? null
+                : nodeParent.getConstantPool();
+        }
+
+    /**
      * For nested nodes, determine the default access if the nodes need to specify an accessibility.
      *
      * @return the accessibility that this node should assume if this node has to specify its own
@@ -206,6 +217,29 @@ public abstract class AstNode
         return parent == null
                 ? Access.PUBLIC
                 : parent.getDefaultAccess();
+        }
+
+    /**
+     * Helper to log an error related to this AstNode.
+     *
+     * @param errs        the ErrorListener to log to
+     * @param severity    the severity level of the error; one of
+     *                    {@link Severity#INFO}, {@link Severity#WARNING},
+     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
+     * @param sCode       the error code that identifies the error message
+     * @param aoParam     the parameters for the error message; may be null
+     *
+     * @return true to attempt to abort the process that reported the error, or
+     *         false to attempt continue the process
+     */
+    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam)
+        {
+        Source source = getSource();
+        return errs == null
+                ? severity.ordinal() >= Severity.ERROR.ordinal()
+                : errs.log(severity, sCode, aoParam, source,
+                        source == null ? 0L : getStartPosition(),
+                        source == null ? 0L : getEndPosition());
         }
 
 
@@ -269,25 +303,46 @@ public abstract class AstNode
      */
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
+        assert stage.ordinal() <= Stage.Resolved.ordinal();
+
+        // if this node is a NameResolver, then make sure it resolves itself first
+        boolean fResolved = true;
+        if (this instanceof NameResolver.NameResolving && stage.ordinal() < Stage.Resolved.ordinal())
+            {
+            NameResolver resolver = ((NameResolver.NameResolving) this).getNameResolver();
+            if (resolver != null)
+                {
+                boolean fFirstTime = resolver.isFirstTime();
+                if (resolver.resolve(listRevisit, errs) == NameResolver.Result.DEFERRED)
+                    {
+                    // the first time through the recursive descent of AST nodes, we need to visit
+                    // every node. subsequent visits are only to the nodes that registered
+                    // themselves for re-visits due to their inability to resolve themselves fully
+                    // in previous visits
+                    if (!fFirstTime)
+                        {
+                        return;
+                        }
+                    fResolved = false;
+                    }
+                }
+            }
+
         // before resolving any children, mark this node as resolved, so that it is able to help
         // resolve things on requests from children
-        stage = Stage.Resolved;
+        if (fResolved)
+            {
+            stage = Stage.Resolved;
+            }
 
         for (AstNode node : children())
             {
+            // don't visit children that have already successfully resolved
             if (node.stage.ordinal() < Stage.Resolved.ordinal())
                 {
                 node.resolveNames(listRevisit, errs);
                 }
             }
-        }
-
-    /**
-     * @return true iff this AstNode should be able to resolve names
-     */
-    protected boolean canResolveName()
-        {
-        return stage.ordinal() >= Stage.Resolved.ordinal();
         }
 
     /**
@@ -305,71 +360,8 @@ public abstract class AstNode
             }
         }
 
-    /**
-     * Resolve a simple name.
-     * <p/>
-     * When evaluating a name, without any knowledge about the name, determine what the name refers
-     * to. In the case of a multi-part name, this specifically is the resolution of just the first
-     * part, i.e. up to the first dot.
-     * TODO conditional support, and possibly a CompositeConstant a la the CompositeComponent
-     *
-     * @param sName  the name to resolve
-     *
-     * @return the Constant that the name refers to
-     */
-    public Constant resolveFirstName(String sName)
-        {
-        // first see if one of the parents answers to that name (this ensures that we can always
-        // get to any global name by starting from the root)
-        Constant constant = resolveParentBySingleName(sName);
 
-        // next, walk up the AST tree, looking for that simple name. this has three sub-steps:
-        // 1) if the AST node is a statement block, then it may know an import by that name
-        // 2) if the AST node is a component statement, then the component may have a child by that
-        //    name
-        // 3) if the AST node is a component statement, then the component may know the name via one
-        //    or more of its compositions. if only by one, then that result is used. if by more than
-        //    one, then the results must all refer to the same thing, or the result is ambiguous,
-        //    and the name is unresolvable.
-        if (constant == null)
-            {
-            AstNode node = this;
-            while (node != null)
-                {
-                if (node instanceof StatementBlock)
-                    {
-                    ImportStatement stmt = ((StatementBlock) node).getImport(sName);
-                    if (stmt != null)
-                        {
-                        if (!stmt.canResolveName())
-                            {
-                            // TODO queue this resolve & return failure - need errs & retry list & a way to say "failure"
-                            }
-
-                        // the result can be determined by resolving the sequence of names
-                        // represented by the import
-                        // TODO = resolveFirstName(stmt.getQualifiedNamePart(0));
-                        // TODO need errs & retry list & a way to say "failure"
-                        }
-                    }
-                else if (node instanceof ComponentStatement)
-                    {
-                    ComponentStatement stmt = (ComponentStatement) node;
-                    // TODO name could reference a child
-                    }
-
-                node = node.getParent();
-                }
-            }
-
-        if (constant == null)
-            {
-            // implicit names
-            constant = getComponent().getConstantPool().ensureImplicitlyImportedIdentityConstant(sName);
-            }
-
-        return constant;
-        }
+    // ----- name resolution -----------------------------------------------------------------------
 
     /**
      * From the root down, see if one of the parents answers to the specified name.
@@ -378,33 +370,59 @@ public abstract class AstNode
      *
      * @return the Constant of one of the parents that answers to the specified name, or null
      */
-    protected IdentityConstant resolveParentBySingleName(String sName)
+    protected Component resolveParentBySimpleName(String sName)
         {
         AstNode parent = getParent();
-        return parent == null ? null : parent.resolveParentBySingleName(sName);
+        return parent == null ? null : parent.resolveParentBySimpleName(sName);
         }
 
     /**
-     * Helper to log an error related to this AstNode.
+     * Determine if this particular node has an import registered on it of the specified name.
      *
-     * @param errs        the ErrorListener to log to
-     * @param severity    the severity level of the error; one of
-     *                    {@link Severity#INFO}, {@link Severity#WARNING},
-     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
-     * @param sCode       the error code that identifies the error message
-     * @param aoParam     the parameters for the error message; may be null
+     * @param sName  a simple name
      *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt continue the process
+     * @return an ImportStatement, or null
      */
-    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam)
+    protected ImportStatement resolveImportBySingleName(String sName)
         {
-        Source source = getSource();
-        return errs == null
-                ? severity.ordinal() >= Severity.ERROR.ordinal()
-                : errs.log(severity, sCode, aoParam, source,
-                        source == null ? 0L : getStartPosition(),
-                        source == null ? 0L : getEndPosition());
+        AstNode parent = getParent();
+        return parent == null ? null : parent.resolveImportBySingleName(sName);
+        }
+
+    /**
+     * @return true iff this AstNode should be able to resolve names
+     */
+    protected boolean canResolveSimpleName()
+        {
+        if (this instanceof NameResolver.NameResolving)
+            {
+            // the problem is this: that a NameResolver that hasn't been invoked as part of the
+            // natural pass of the resolveNames() recursion has not had a chance to figure out what
+            // the effect its imports may have on name resolution, and thus we can't ask it what a
+            // name means
+            return !((NameResolver.NameResolving) this).getNameResolver().isFirstTime();
+            }
+
+        // for all other components (that don't override this method because they know more about
+        // whether or not they can resolve names), we'll assume that if they haven't been resolved,
+        // then they don't know how to resolve names
+        return stage.ordinal() >= Stage.Resolved.ordinal();
+        }
+
+    /**
+     * Evaluates the simple name to determine if it refers to some part of the structure for the
+     * current node, and if so, returns the identity constant that identifies that part of the
+     * structure.
+     *
+     * @param sName  the simple name
+     *
+     * @return an IdentityConstant that specifies a structure, an AmbiguousIdentityConstant if more
+     *         than one structure is identified by the name, or null if no structure was identified
+     *         by the name
+     */
+    protected Component resolveSimpleName(String sName)
+        {
+        return null;
         }
 
 

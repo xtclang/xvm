@@ -12,7 +12,7 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
-import org.xvm.proto.template.xTuple.TupleHandle;
+import org.xvm.proto.template.collections.xTuple.TupleHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;

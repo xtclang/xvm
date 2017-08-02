@@ -26,7 +26,7 @@ interface Meta
      * This property represents the immutability of an object. This property can be set to true to
      * make a mutable object immutable; once the object is immutable, it cannot be made mutable.
      */
-    @override
+    @Override
     Boolean immutable_;
 
     /**
