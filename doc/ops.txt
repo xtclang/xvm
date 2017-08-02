@@ -19,18 +19,18 @@
 // jumps
 +GOTO       abs-addr                                ; unconditional absolute jump
 +JMP        rel-addr                                ; unconditional relative jump
- JMP_TRUE   rvalue-bool, rel-addr                   ; jump if value is true
++JMP_TRUE   rvalue-bool, rel-addr                   ; jump if value is true
 +JMP_FALSE  rvalue-bool, rel-addr                   ; jump if value is false
- JMP_ZERO   rvalue-int, rel-addr                    ; jump if value is zero
- JMP_NZERO  rvalue-int, rel-addr                    ; jump if value is NOT zero
- JMP_NULL   rvalue, rel-addr                        ; jump if value is null
- JMP_NNULL  rvalue, rel-addr                        ; jump if value is NOT null
- JMP_EQ     rvalue, rvalue, rel-addr                ; jump if value is equal
- JMP_NEQ    rvalue, rvalue, rel-addr                ; jump if value is NOT equal
- JMP_LT     rvalue, rvalue, rel-addr                ; jump if value is less than
- JMP_LTE    rvalue, rvalue, rel-addr                ; jump if value is less than or equal
- JMP_GT     rvalue, rvalue, rel-addr                ; jump if value is greater than
- JMP_GTE    rvalue, rvalue, rel-addr                ; jump if value is greater than or equal
++JMP_ZERO   rvalue-int, rel-addr                    ; jump if value is zero
++JMP_NZERO  rvalue-int, rel-addr                    ; jump if value is NOT zero
++JMP_NULL   rvalue, rel-addr                        ; jump if value is null
++JMP_NNULL  rvalue, rel-addr                        ; jump if value is NOT null
++JMP_EQ     rvalue, rvalue, rel-addr                ; jump if value is equal
++JMP_NEQ    rvalue, rvalue, rel-addr                ; jump if value is NOT equal
++JMP_LT     rvalue, rvalue, rel-addr                ; jump if value is less than
++JMP_LTE    rvalue, rvalue, rel-addr                ; jump if value is less than or equal
++JMP_GT     rvalue, rvalue, rel-addr                ; jump if value is greater than
++JMP_GTE    rvalue, rvalue, rel-addr                ; jump if value is greater than or equal
  JMP_TYPE   rvalue, rvalue-type, rel-addr           ; jump if type of the value is “instanceof" specified type
  JMP_NTYPE  rvalue, rvalue-type, rel-addr           ; jump if type of the value is NOT “instanceof" specified type
 
@@ -137,12 +137,12 @@
 // method calls
 +INVOKE_00  rvalue-target, CONST-METHOD
 +INVOKE_01  rvalue-target, CONST-METHOD, lvalue-return
- INVOKE_0N  rvalue-target, CONST-METHOD, #returns:(lvalue)
- INVOKE_0T  rvalue-target, CONST-METHOD, lvalue-return-tuple
++INVOKE_0N  rvalue-target, CONST-METHOD, #returns:(lvalue)
++INVOKE_0T  rvalue-target, CONST-METHOD, lvalue-return-tuple
 +INVOKE_10  rvalue-target, CONST-METHOD, rvalue-param
 +INVOKE_11  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return
 +INVOKE_1N  rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
- INVOKE_1T  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return-tuple
++INVOKE_1T  rvalue-target, CONST-METHOD, rvalue-param, lvalue-return-tuple
 +INVOKE_N0  rvalue-target, CONST-METHOD, #params:(rvalue)
 +INVOKE_N1  rvalue-target, CONST-METHOD, #params:(rvalue), lvalue-return
 +INVOKE_NN  rvalue-target, CONST-METHOD, #params:(rvalue), #returns:(lvalue)
@@ -215,16 +215,16 @@
 
 // Boolean checks
 +IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
- IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
++IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
 +IS_NULL    rvalue, lvalue-return                   ; T == null -> Boolean
 +IS_NNULL   rvalue, lvalue-return                   ; T != null -> Boolean
 +IS_EQ      rvalue, rvalue, lvalue-return           ; T == T -> Boolean
- IS_NEQ     rvalue, rvalue, lvalue-return           ; T != T -> Boolean
- IS_LT      rvalue, rvalue, lvalue-return           ; T < T -> Boolean
- IS_LTE     rvalue, rvalue, lvalue-return           ; T <= T -> Boolean
++IS_NEQ     rvalue, rvalue, lvalue-return           ; T != T -> Boolean
++IS_LT      rvalue, rvalue, lvalue-return           ; T < T -> Boolean
++IS_LTE     rvalue, rvalue, lvalue-return           ; T <= T -> Boolean
 +IS_GT      rvalue, rvalue, lvalue-return           ; T > T -> Boolean
- IS_GTE     rvalue, rvalue, lvalue-return           ; T >= T -> Boolean
- IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
++IS_GTE     rvalue, rvalue, lvalue-return           ; T >= T -> Boolean
++IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
  IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
  IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
  IS_SVC     rvalue                                  ; (T is a service) -> Boolean

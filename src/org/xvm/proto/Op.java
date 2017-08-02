@@ -123,8 +123,41 @@ public abstract class Op
             case OP_JMP:
                 list.add(new Jump(in));
                 break;
+            case OP_JMP_TRUE:
+                list.add(new JumpTrue(in));
+                break;
             case OP_JMP_FALSE:
                 list.add(new JumpFalse(in));
+                break;
+            case OP_JMP_ZERO:
+                list.add(new JumpZero(in));
+                break;
+            case OP_JMP_NZERO:
+                list.add(new JumpNotZero(in));
+                break;
+            case OP_JMP_NULL:
+                list.add(new JumpNull(in));
+                break;
+            case OP_JMP_NNULL:
+                list.add(new JumpNotNull(in));
+                break;
+            case OP_JMP_EQ:
+                list.add(new JumpEq(in));
+                break;
+            case OP_JMP_NEQ:
+                list.add(new JumpNotEq(in));
+                break;
+            case OP_JMP_LT:
+                list.add(new JumpLt(in));
+                break;
+            case OP_JMP_LTE:
+                list.add(new JumpLte(in));
+                break;
+            case OP_JMP_GT:
+                list.add(new JumpGt(in));
+                break;
+            case OP_JMP_GTE:
+                list.add(new JumpGte(in));
                 break;
             case OP_VAR:
                 list.add(new Var(in));
@@ -315,8 +348,23 @@ public abstract class Op
             case OP_IS_EQ:
                 list.add(new IsEq(in));
                 break;
+            case OP_IS_NEQ:
+                list.add(new IsNotEq(in));
+                break;
+            case OP_IS_LT:
+                list.add(new IsLt(in));
+                break;
+            case OP_IS_LTE:
+                list.add(new IsLte(in));
+                break;
             case OP_IS_GT:
                 list.add(new IsGt(in));
+                break;
+            case OP_IS_GTE:
+                list.add(new IsGte(in));
+                break;
+            case OP_IS_NOT:
+                list.add(new IsNot(in));
                 break;
             default:
                 throw new UnsupportedOperationException();

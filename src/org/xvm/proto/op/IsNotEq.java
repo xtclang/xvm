@@ -6,34 +6,32 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xEnum.EnumHandle;
-import org.xvm.proto.template.xOrdered;
+import org.xvm.proto.template.xBoolean.BooleanHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * IS_GT rvalue, rvalue, lvalue-return ; T > T -> Boolean
+ * IS_NEQ rvalue, rvalue, lvalue-return ; T != T -> Boolean
  *
  * @author gg 2017.03.08
  */
-public class IsGt extends Op
+public class IsNotEq extends Op
     {
     private final int f_nValue1;
     private final int f_nValue2;
     private final int f_nRetValue;
 
-    public IsGt(int nValue1, int nValue2, int nRet)
+    public IsNotEq(int nValue1, int nValue2, int nRet)
         {
         f_nValue1 = nValue1;
         f_nValue2 = nValue2;
         f_nRetValue = nRet;
         }
 
-    public IsGt(DataInput in)
+    public IsNotEq(DataInput in)
             throws IOException
         {
         f_nValue1 = in.readInt();
@@ -45,7 +43,7 @@ public class IsGt extends Op
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IS_GT);
+        out.write(OP_IS_NEQ);
         out.writeInt(f_nValue1);
         out.writeInt(f_nValue2);
         out.writeInt(f_nRetValue);
@@ -72,17 +70,15 @@ public class IsGt extends Op
                 throw new IllegalStateException();
                 }
 
-            int iResult = clz1.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL);
+            int iResult = clz1.callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL);
             if (iResult == R_EXCEPTION)
                 {
                 return R_EXCEPTION;
                 }
 
-            EnumHandle hResult = (EnumHandle) frame.getFrameLocal();
+            BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
 
-            frame.assignValue(f_nRetValue,
-                    xBoolean.makeHandle(hResult == xOrdered.GREATER));
-            return iPC + 1;
+            return frame.assignValue(f_nRetValue, xBoolean.makeHandle(!hValue.get()));
             }
         catch (ExceptionHandle.WrapperException e)
             {
