@@ -38,7 +38,8 @@ public class MethodDeclarationStatement
                                       Expression           condition,
                                       List<Token>          modifiers,
                                       List<Annotation>     annotations,
-                                      List<Token>          typeVars,
+                                      List<Parameter>      typeParams,
+                                      Token                conditional,
                                       List<TypeExpression> returns,
                                       Token                name,
                                       List<TypeExpression> redundant,
@@ -52,7 +53,8 @@ public class MethodDeclarationStatement
         this.condition    = condition;
         this.modifiers    = modifiers;
         this.annotations  = annotations;
-        this.typeVars     = typeVars;
+        this.conditional  = conditional;
+        this.typeParams   = typeParams;
         this.returns      = returns;
         this.name         = name;
         this.redundant    = redundant;
@@ -96,10 +98,51 @@ public class MethodDeclarationStatement
                 {
                 boolean         fFunction   = isStatic(modifiers);
                 Access          access      = getDefaultAccess();
-                TypeConstant[]  returnTypes = toTypeConstants(returns);
-                TypeConstant[]  paramTypes  = toTypeConstants(toTypeExpressions(params));
-                MethodStructure method      = container.createMethod(fFunction, access, returnTypes,
-                                                                     sName, paramTypes);
+                ConstantPool    pool        = container.getConstantPool();
+
+                // build array of return types
+                int ofReturn = 0;
+                int cReturns = returns.size();
+                if (conditional != null)
+                    {
+                    ++ofReturn;
+                    ++cReturns;
+                    }
+                org.xvm.asm.Parameter[] aReturns = new org.xvm.asm.Parameter[cReturns];
+                if (conditional != null)
+                    {
+                    aReturns[0] = new org.xvm.asm.Parameter(pool,
+                            pool.ensureEcstasyTypeConstant("Boolean"), null, null, true, 0, true);
+                    }
+                for (int i = ofReturn; i < cReturns; ++i)
+                    {
+                    aReturns[i] = new org.xvm.asm.Parameter(pool,
+                            returns.get(i-ofReturn).ensureTypeConstant(), null, null, true, i, false);
+                    }
+
+                // build array of parameters
+                int cTypes  = typeParams == null ? 0 : typeParams.size();
+                int cParams = cTypes + params.size();
+                org.xvm.asm.Parameter[] aParams = new org.xvm.asm.Parameter[cParams];
+                for (int i = 0; i < cTypes; ++i)
+                    {
+                    Parameter      param = typeParams.get(i);
+                    TypeExpression exprType  = param.getType();
+                    TypeConstant   constType = pool.ensureClassTypeConstant(
+                            pool.ensureEcstasyClassConstant("Type"), Access.PUBLIC,
+                            exprType == null
+                                    ? pool.ensureEcstasyTypeConstant("Object")
+                                    : exprType.ensureTypeConstant());
+                    aParams[i] = new org.xvm.asm.Parameter(pool, constType, param.getName(), null, false, i, true);
+                    }
+                for (int i = cTypes; i < cParams; ++i)
+                    {
+                    Parameter param = params.get(i-cTypes);
+                    aParams[i] = new org.xvm.asm.Parameter(pool, param.getType().ensureTypeConstant(),
+                            param.getName(), /* TODO how to do value? */ null, false, i, false);
+                    }
+
+                MethodStructure method = container.createMethod(fFunction, access, aReturns, sName, aParams);
                 setComponent(method);
                 }
             else
@@ -112,37 +155,56 @@ public class MethodDeclarationStatement
         super.registerStructures(errs);
         }
 
-    protected List<TypeExpression> toTypeExpressions(List<Parameter> params)
+/*
+    protected List<org.xvm.asm.Parameter> toXvmParameters(List<Parameter> params, ConstantPool pool)
         {
         if (params == null || params.isEmpty())
             {
             return Collections.EMPTY_LIST;
             }
 
-        List<TypeExpression> list = new ArrayList<>(params.size());
+        List<org.xvm.asm.Parameter> list = new ArrayList<>(params.size());
         for (Parameter param : params)
             {
-            list.add(param.getType());
+            // param.getType()
+            new org.xvm.asm.Parameter(pool, )
+            // list.add();
             }
         return list;
         }
 
-    protected TypeConstant[] toTypeConstants(List<TypeExpression> types)
+    protected TypeConstant[] toTypeConstants(List<TypeExpression> listTypeExpr)
         {
-        if (types == null || types.isEmpty())
+        if (listTypeExpr == null || listTypeExpr.isEmpty())
             {
             return ConstantPool.NO_TYPES;
             }
 
         int i = 0;
-        TypeConstant[] array     = new TypeConstant[types.size()];
-        Component      container = getParent().getComponent();
-        for (TypeExpression type : types)
+        TypeConstant[] aconstType = new TypeConstant[listTypeExpr.size()];
+        for (TypeExpression type : listTypeExpr)
             {
-            array[i++] = type.ensureTypeConstant();
+            aconstType[i++] = type.ensureTypeConstant();
             }
-        return array;
+        return aconstType;
         }
+
+    protected TypeConstant[] toTypeConstants2(List<Parameter> listTypeExpr)
+        {
+        if (listTypeExpr == null || listTypeExpr.isEmpty())
+            {
+            return ConstantPool.NO_TYPES;
+            }
+
+        int i = 0;
+        TypeConstant[] aconstType = new TypeConstant[listTypeExpr.size()];
+        for (TypeExpression type : listTypeExpr)
+            {
+            aconstType[i++] = type.ensureTypeConstant();
+            }
+        return aconstType;
+        }
+*/
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -169,11 +231,11 @@ public class MethodDeclarationStatement
                 }
             }
 
-        if (typeVars != null)
+        if (typeParams != null)
             {
             sb.append('<');
             boolean first = true;
-            for (Token var : typeVars)
+            for (Parameter param : typeParams)
                 {
                 if (first)
                     {
@@ -183,7 +245,7 @@ public class MethodDeclarationStatement
                     {
                     sb.append(", ");
                     }
-                sb.append(var.getValue());
+                sb.append(param.toTypeParamString());
                 }
             sb.append("> ");
             }
@@ -326,7 +388,8 @@ public class MethodDeclarationStatement
     protected Expression           condition;
     protected List<Token>          modifiers;
     protected List<Annotation>     annotations;
-    protected List<Token>          typeVars;
+    protected List<Parameter>      typeParams;
+    protected Token                conditional;
     protected List<TypeExpression> returns;
     protected Token                name;
     protected List<TypeExpression> redundant;
@@ -336,5 +399,5 @@ public class MethodDeclarationStatement
     protected Token                doc;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
-            "annotations", "returns", "redundant", "params", "body", "continuation");
+            "annotations", "typeParams", "returns", "redundant", "params", "body", "continuation");
     }

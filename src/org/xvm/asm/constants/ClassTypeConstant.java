@@ -114,10 +114,9 @@ public class ClassTypeConstant
         }
 
     @Override
-    public boolean isEcstasyObject()
+    public boolean isIdentity(IdentityConstant constId)
         {
-        return m_constId instanceof ClassConstant && ((ClassConstant) m_constId).isEcstasyObject()
-                && m_access == Access.PUBLIC;
+        return m_constId.equals(constId) && m_access == Access.PUBLIC;
         }
 
     /**

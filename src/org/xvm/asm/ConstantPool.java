@@ -595,6 +595,18 @@ public class ConstantPool
         }
 
     /**
+     * Helper to get a TypeConstant for a class in the Ecstasy core module.
+     *
+     * @param sClass  the qualified class name, dot-delimited
+     *
+     * @return the type for the specified class from the Ecstasy core module
+     */
+    public TypeConstant ensureEcstasyTypeConstant(String sClass)
+        {
+        return ensureClassTypeConstant(ensureEcstasyClassConstant(sClass), Access.PUBLIC);
+        }
+
+    /**
      * Helper to get a ClassConstant for a class in the Ecstasy core module.
      *
      * @param sClass  the qualified class name, dot-delimited
@@ -625,9 +637,10 @@ public class ConstantPool
      *
      * @param sName  the unqualified name to look up
      *
-     * @return an IdentityConstant for, or null
+     * @return the IdentityConstant for the specified name, or null if the name is not implicitly
+     *         imported
      */
-    public Component getImplicitlyImportedComponent(String sName)
+    public IdentityConstant getImplicitlyImportedIdentity(String sName)
         {
         String sPkg = null;
         String sClz = null;
@@ -760,6 +773,25 @@ public class ConstantPool
                 {
                 constId = ensureClassConstant(constId, sSub);
                 }
+            }
+        return constId;
+        }
+
+    /**
+     * This is the implementation of the "automatically imported" names that constitute the default
+     * set of known names in the language. This implementation should correspond to the source file
+     * "implicit.x".
+     *
+     * @param sName  the unqualified name to look up
+     *
+     * @return the Component for the specified name, or null if the name is not implicitly imported
+     */
+    public Component getImplicitlyImportedComponent(String sName)
+        {
+        IdentityConstant constId = getImplicitlyImportedIdentity(sName);
+        if (constId == null)
+            {
+            return null;
             }
 
         Component component = constId.getComponent();

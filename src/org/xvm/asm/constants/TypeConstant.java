@@ -56,11 +56,27 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if this TypeConstant is the "Object" type.
+     * Determine if this TypeConstant is the "Type" type.
      *
-     * @return true iff this TypeConstant represents the type of the Ecstasy root Object class
+     * @return true iff this TypeConstant represents the type of the Ecstasy Type class
      */
-    public boolean isEcstasyObject()
+    public boolean isEcstasyType()
+        {
+        return false;
+        }
+
+    public boolean isEcstasy(String sName)
+        {
+        IdentityConstant constId = getConstantPool().getImplicitlyImportedIdentity(sName);
+        if (constId == null)
+            {
+            throw new IllegalArgumentException("no such implicit name: " + sName);
+            }
+
+        return isIdentity(constId);
+        }
+
+    public boolean isIdentity(IdentityConstant constId)
         {
         return false;
         }

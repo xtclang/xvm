@@ -119,9 +119,9 @@ public class FileStructureTest
         PackageStructure structpackage = structmodule.createPackage(Constants.Access.PUBLIC, "classes", null);
         ClassStructure   structclass   = structpackage.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
         MethodStructure  structmethod  = structclass.createMethod(false, Constants.Access.PUBLIC,
-                new TypeConstant[]{},
+                new Parameter[]{},
                 "foo",
-                new TypeConstant[]{});
+                new Parameter[]{});
 
         testFileStructure(structfile);
         }

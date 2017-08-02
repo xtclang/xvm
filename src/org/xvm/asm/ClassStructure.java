@@ -175,7 +175,7 @@ public class ClassStructure
                 sb.append(entry.getKey().getValue());
 
                 TypeConstant constType = entry.getValue();
-                if (!constType.isEcstasyObject())
+                if (!constType.isEcstasy("Object"))
                     {
                     sb.append(" extends ")
                       .append(constType);

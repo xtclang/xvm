@@ -490,6 +490,14 @@ class B<T>
     class Child<Z>
         {
         }
+
+    static class SN
+        {
+        Void foo()
+            {
+            T.bar();   // I don't have a ref to a "B", so I can't get to its "T" ... error?
+            }
+        }
     }
 
 class D<T> extends B<T>

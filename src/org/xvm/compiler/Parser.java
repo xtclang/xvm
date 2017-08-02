@@ -890,7 +890,7 @@ public class Parser
                     if (returns != null)
                         {
                         return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                                modifiers, annotations, null, returns, null, expect(Id.IDENTIFIER));
+                                modifiers, annotations, null, null, returns, null, expect(Id.IDENTIFIER));
                         }
                     }
 
@@ -912,11 +912,12 @@ public class Parser
             case COMP_LT:
                 {
                 // it's definitely a method or a function
-                List<Token>          typeVars = parseTypeVariableList(true);
-                List<TypeExpression> returns  = parseReturnList();
-                Token                name     = expect(Id.IDENTIFIER);
+                List<Parameter>      typeVars    = parseTypeParameterList(true);
+                Token                conditional = match(Id.CONDITIONAL);
+                List<TypeExpression> returns     = parseReturnList();
+                Token                name        = expect(Id.IDENTIFIER);
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                        modifiers, annotations, typeVars, returns, null, name);
+                        modifiers, annotations, typeVars, conditional, returns, null, name);
                 }
 
             case CONSTRUCT:
@@ -932,13 +933,17 @@ public class Parser
                 Token keyword = expect(Id.CONSTRUCT);
                 Token name    = expect(Id.IDENTIFIER);
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                        modifiers, annotations, null, null, keyword, name);
+                        modifiers, annotations, null, null, null, keyword, name);
                 }
 
+            case CONDITIONAL:
             default:
                 {
+                // method may have a "conditional" return value
+                Token conditional = match(Id.CONDITIONAL);
+
                 TypeExpression type;
-                if (fInMethod && modifiers == null && annotations == null)
+                if (fInMethod && modifiers == null && annotations == null && conditional == null)
                     {
                     Expression expr = parseExpression();
 
@@ -957,12 +962,12 @@ public class Parser
 
                 // it's a constant, property, or method
                 Token name = expect(Id.IDENTIFIER);
-                if (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
+                if (conditional != null || peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
                     {
                     // '<' indicates redundant return type list
                     // '(' indicates parameters
-                    return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                            modifiers, annotations, null, Collections.singletonList(type), null, name);
+                    return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
+                            annotations, null, conditional, Collections.singletonList(type), null, name);
                     }
                 else if (!fInMethod && peek().getId() == Id.ASN && modifiers != null
                         && modifiers.size() == 1 && modifiers.get(0).getId() == Id.STATIC)
@@ -1072,7 +1077,7 @@ public class Parser
      */
     MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos,
             Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations,
-            List<Token> typeVars, List<TypeExpression> returns, Token keyword, Token name)
+            List<Parameter> typeVars, Token conditional, List<TypeExpression> returns, Token keyword, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
         List<Parameter>      params           = parseParameterList(true);
@@ -1094,8 +1099,8 @@ public class Parser
                 }
             }
 
-        return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers,
-                annotations, typeVars, returns, name, redundantReturns, params, body, stmtFinally, doc);
+        return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers, annotations,
+                typeVars, conditional, returns, name, redundantReturns, params, body, stmtFinally, doc);
         }
 
     /**
@@ -1132,7 +1137,7 @@ public class Parser
             StatementBlock             block      = parseStatementBlock();
             MethodDeclarationStatement method     = new MethodDeclarationStatement(
                     methodName.getStartPosition(), block.getEndPosition(),
-                    null, null, null, null, null, methodName, null, params, block, null, null);
+                    null, null, null, null, null, null, methodName, null, params, block, null, null);
             body    = new StatementBlock(Collections.singletonList(method),
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
@@ -3217,7 +3222,6 @@ s     *
                 type = parseFunctionTypeExpression();
                 break;
 
-            case CONDITIONAL:
             case IMMUTABLE:
                 type = new DecoratedTypeExpression(current(), parseNonBiTypeExpression());
                 break;
@@ -3627,50 +3631,6 @@ s     *
                 }
             }
         return typeParams;
-        }
-
-    /**
-     * If the next token is a &quot;&lt;&quot;, then parse a list of type variables. These aren't
-     * expressions; they are just variable names.
-     *
-     * <p/><code><pre>
-     * TypeVariableList
-     *     "<" TypeVariables ">"
-     *
-     * TypeVariables
-     *     TypeVariable
-     *     TypeVariables "," TypeVariable
-     *
-     * TypeVariable
-     *     Name
-     * </pre></code>
-     *
-     * @param required  true iff the angle brackets are required
-     *
-     * @return a list of zero or more type variables, or null if there were no angle brackets
-     */
-    List<Token> parseTypeVariableList(boolean required)
-        {
-        List<Token> names = null;
-        if (match(Id.COMP_LT, required) != null)
-            {
-            names = new ArrayList<>();
-            boolean first = true;
-            while (match(Id.COMP_GT) == null)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    expect(Id.COMMA);
-                    }
-
-                names.add(expect(Id.IDENTIFIER));
-                }
-            }
-        return names;
         }
 
     /**
