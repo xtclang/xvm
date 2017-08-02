@@ -1,47 +1,44 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
-import org.xvm.proto.Op;
-
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-
-import org.xvm.proto.template.xBoolean;
+import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.Op;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * IS_NZERO rvalue-int, lvalue-return ; T != 0 -> Boolean
+ * JMP_NZERO rvalue-int, rel-addr ; jump if value is NOT zero
  *
  * @author gg 2017.03.08
  */
-public class IsNotZero extends Op
+public class JumpNotZero extends Op
     {
     private final int f_nValue;
-    private final int f_nRetValue;
+    private final int f_nRelAddr;
 
-    public IsNotZero(int nValue, int nRet)
+    public JumpNotZero(int nValue, int nRelAddr)
         {
         f_nValue = nValue;
-        f_nRetValue = nRet;
+        f_nRelAddr = nRelAddr;
         }
 
-    public IsNotZero(DataInput in)
+    public JumpNotZero(DataInput in)
             throws IOException
         {
         f_nValue = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nRelAddr = in.readInt();
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IS_NZERO);
+        out.write(OP_JMP_NZERO);
         out.writeInt(f_nValue);
-        out.writeInt(f_nRetValue);
+        out.writeInt(f_nRelAddr);
         }
 
     @Override
@@ -49,15 +46,14 @@ public class IsNotZero extends Op
         {
         try
             {
-            JavaLong hValue = (JavaLong) frame.getArgument(f_nValue);
+            JavaLong hTest = (JavaLong) frame.getArgument(f_nValue);
 
-            if (hValue == null)
+            if (hTest == null)
                 {
                 return R_REPEAT;
                 }
 
-            frame.assignValue(f_nRetValue, xBoolean.makeHandle(hValue.getValue() != 0));
-            return iPC + 1;
+            return hTest.getValue() == 0 ? iPC + 1 : iPC + f_nRelAddr;
             }
         catch (ExceptionHandle.WrapperException e)
             {

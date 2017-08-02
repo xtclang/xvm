@@ -1,9 +1,10 @@
 package org.xvm.proto.op;
 
 import org.xvm.proto.Frame;
+import org.xvm.proto.Op;
+
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.Op;
 
 import org.xvm.proto.template.xBoolean;
 

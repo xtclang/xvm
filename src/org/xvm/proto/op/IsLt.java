@@ -16,24 +16,24 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * IS_GT rvalue, rvalue, lvalue-return ; T > T -> Boolean
+ * IS_LT rvalue, rvalue, lvalue-return ; T < T -> Boolean
  *
  * @author gg 2017.03.08
  */
-public class IsGt extends Op
+public class IsLt extends Op
     {
     private final int f_nValue1;
     private final int f_nValue2;
     private final int f_nRetValue;
 
-    public IsGt(int nValue1, int nValue2, int nRet)
+    public IsLt(int nValue1, int nValue2, int nRet)
         {
         f_nValue1 = nValue1;
         f_nValue2 = nValue2;
         f_nRetValue = nRet;
         }
 
-    public IsGt(DataInput in)
+    public IsLt(DataInput in)
             throws IOException
         {
         f_nValue1 = in.readInt();
@@ -45,7 +45,7 @@ public class IsGt extends Op
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IS_GT);
+        out.write(OP_IS_LT);
         out.writeInt(f_nValue1);
         out.writeInt(f_nValue2);
         out.writeInt(f_nRetValue);
@@ -81,7 +81,7 @@ public class IsGt extends Op
             EnumHandle hResult = (EnumHandle) frame.getFrameLocal();
 
             frame.assignValue(f_nRetValue,
-                    xBoolean.makeHandle(hResult == xOrdered.GREATER));
+                    xBoolean.makeHandle(hResult == xOrdered.LESSER));
             return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)
