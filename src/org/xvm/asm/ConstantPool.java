@@ -51,6 +51,7 @@ import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
 
+import org.xvm.compiler.*;
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
@@ -981,7 +982,7 @@ public class ConstantPool
      *
      * @param constChild  an auto-narrowing type constant
      *
-     * @return a type rrepresenting the parent of the specified child type constant
+     * @return a type representing the parent of the specified child type constant
      */
     public ParentTypeConstant ensureParentTypeConstant(TypeConstant constChild)
         {
@@ -1075,6 +1076,23 @@ public class ConstantPool
             Constant[] aconstParam, TypeConstant constType)
         {
         return (AnnotatedTypeConstant) register(new AnnotatedTypeConstant(this, constClass, aconstParam, constType));
+        }
+
+    /**
+     * Given a type, obtain a TypeConstant that represents the intersection of that type with the
+     * Nullable type.
+     * This corresponds to the "?" operator when applied to types.
+     *
+     * @param constType  the type being made Nullable
+     *
+     * @return the intersection of the specified type and Nullable
+     */
+    public IntersectionTypeConstant ensureNullableTypeConstant(TypeConstant constType)
+        {
+        TypeConstant constNullable = ensureClassTypeConstant(
+                ensureEcstasyClassConstant(org.xvm.compiler.Constants.X_CLASS_NULLABLE),
+                Access.PUBLIC);
+        return ensureIntersectionTypeConstant(constNullable, constType);
         }
 
     /**

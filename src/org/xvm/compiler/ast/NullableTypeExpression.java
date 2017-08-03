@@ -79,14 +79,8 @@ public class NullableTypeExpression
             type.resolveNames(listRevisit, errs);
             TypeConstant constSub = type.ensureTypeConstant();
 
-            // obtain the Nullable type
-            ConstantPool pool = getConstantPool();
-            TypeConstant constNullable = pool.ensureClassTypeConstant(
-                    pool.ensureEcstasyClassConstant(Constants.X_CLASS_NULLABLE),
-                    Constants.Access.PUBLIC);
-
-            // store off the Nullable form of the sub-type
-            setTypeConstant(pool.ensureIntersectionTypeConstant(constNullable, constSub));
+            // obtain and store off the Nullable form of the sub-type
+            setTypeConstant(getConstantPool().ensureNullableTypeConstant(constSub));
 
             super.resolveNames(listRevisit, errs);
             }
