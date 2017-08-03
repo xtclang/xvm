@@ -5,13 +5,10 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.ErrorListener;
 
 import org.xvm.util.Severity;

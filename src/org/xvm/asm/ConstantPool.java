@@ -51,7 +51,6 @@ import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
 
-import org.xvm.compiler.*;
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
@@ -1416,10 +1415,7 @@ public class ConstantPool
         assert !m_fRecurseReg;
         m_fRecurseReg = true;
 
-        for (Constant constant : m_listConst)
-            {
-            constant.resetRefs();
-            }
+        m_listConst.forEach(Constant::resetRefs);
         }
 
     /**
