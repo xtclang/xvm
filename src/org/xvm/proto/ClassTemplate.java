@@ -78,7 +78,7 @@ public abstract class ClassTemplate
         {
         f_types = types;
         f_struct = structClass;
-        f_sName = structClass.getName();
+        f_sName = structClass.getIdentityConstant().getPathString();
 
         List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes =
                 structClass.getTypeParamsAsList();
@@ -244,8 +244,13 @@ public abstract class ClassTemplate
         return (PropertyStructure) f_struct.getChild(sName);
         }
 
+    public ClassTypeConstant getTypeConstant()
+        {
+        return ((ClassConstant) f_struct.getIdentityConstant()).asTypeConstant();
+        }
+
     // get a method declared at this template level
-    public MethodStructure getDeclaredMethod(String sName, String[] asArgType, String[] asRetType)
+    public MethodStructure getDeclaredMethod(String sName, TypeConstant[] atParam, TypeConstant[] atReturn)
         {
         MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(sName);
         if (mms != null)
@@ -253,53 +258,58 @@ public abstract class ClassTemplate
             nextMethod:
             for (MethodStructure method : ((List<MethodStructure>) (List) mms.children()))
                 {
-                // TODO: temporary shortcut; remove
-                if (asArgType == null && asRetType == null)
-                    {
-                    return method;
-                    }
                 MethodConstant constMethod = method.getIdentityConstant();
 
-                TypeConstant[] atParam = constMethod.getRawParams();
-                TypeConstant[] atReturn = constMethod.getRawReturns();
-                int cParams = atParam.length;
-                int cReturns = atReturn.length;
+                TypeConstant[] atParamTest = constMethod.getRawParams();
+                TypeConstant[] atReturnTest = constMethod.getRawReturns();
 
-                if (cParams != asArgType.length)
+                if (atParam != null) // temporary work around; TODO: remove
                     {
-                    continue;
-                    }
-
-                if (true) return method;  // TODO: remove
-
-                for (int i = 0, c = atParam.length; i < c; i++)
-                    {
-                    // TODO: replace "contains()" with "equals()"
-                    if (!atParam[i].getValueString().contains(asArgType[i]))
-                        {
-                        continue nextMethod;
-                        }
-                    }
-
-                if (cReturns != asRetType.length)
-                    {
-                    // return type of Void is an exception
-                    if (asRetType.length != 0 ||
-                            (cReturns == 1 && !atReturn[0].getValueString().contains("Void")))
+                    int cParams = atParamTest.length;
+                    if (cParams != atParam.length)
                         {
                         continue;
                         }
+
+                    for (int i = 0, c = atParamTest.length; i < c; i++)
+                        {
+                        // compensate for "function"
+                        if (atParamTest[i].getValueString().contains("function"))
+                            {
+                            continue;
+                            }
+                        if (!atParamTest[i].equals(atParam[i]))
+                            {
+                            continue nextMethod;
+                            }
+                        }
                     }
-//                for (int i = 0, c = atReturn.length; i < c; i++)
-//                    {
-//                    if (!atReturn[i].getValueString().equals(asRetType[i]))
-//                        {
-//                        continue nextMethod;
-//                        }
-//                    }
+
+                if (atReturn != null) // temporary work around; TODO: remove
+                    {
+                    int cReturns = atReturnTest.length;
+                    if (cReturns != atReturn.length)
+                        {
+                        // compensate for the return type of Void
+                        if (atReturn.length == 0 && atReturnTest[0].getValueString().contains("Void"))
+                            {
+                            return method;
+                            }
+                        continue;
+                        }
+
+                    for (int i = 0, c = atReturnTest.length; i < c; i++)
+                        {
+                        if (!atReturnTest[i].equals(atReturn[i]))
+                            {
+                            continue nextMethod;
+                            }
+                        }
+                    }
                 return method;
                 }
             }
+
         return null;
         }
 
@@ -321,11 +331,20 @@ public abstract class ClassTemplate
 
             for (MethodStructure method : (List<MethodStructure>) (List) mms.children())
                 {
-                if (true) return method;
+                MethodConstant constTest = method.getIdentityConstant();
+                TypeConstant[] atParamTest = constTest.getRawParams();
+                TypeConstant[] atReturnTest = constTest.getRawReturns();
 
-                if (Arrays.equals(atParam, method.getIdentityConstant().getRawParams()) &&
-                        Arrays.equals(atReturn, method.getIdentityConstant().getRawReturns()))
+                if (Arrays.equals(atParam, atParamTest) && Arrays.equals(atReturn, atReturnTest))
                     {
+                    return method;
+                    }
+
+                // TODO: remove
+                if (mms.children().size() == 1)
+                    {
+                    System.out.println("\n\t\t****** Signature mismatch for " +
+                            constMethod + " at " + f_sName + "\n");
                     return method;
                     }
                 }
@@ -333,13 +352,15 @@ public abstract class ClassTemplate
         return null;
         }
 
-    // find a function  that matches the specified signature in the inheritance tree
-    public MethodStructure findFunction(String sName, String[] asArgType, String[] asRetType)
+    // find one of the "equals" or "compare"  methods
+    public MethodStructure findCompareFunction(String sName, TypeConstant[] atRet)
         {
         ClassTemplate template = this;
+        TypeConstant typeThis = getTypeConstant();
+        TypeConstant[] atArg = new TypeConstant[] {typeThis, typeThis};
         do
             {
-            MethodStructure method = getDeclaredMethod("equals", asArgType, asRetType);
+            MethodStructure method = getDeclaredMethod(sName, atArg, atRet);
             if  (method != null && method.isStatic())
                 {
                 return method;
@@ -353,7 +374,7 @@ public abstract class ClassTemplate
     // produce a TypeComposition for this template by resolving the generic types
     public TypeComposition resolve(ClassTypeConstant constClassType, Map<String, Type> mapActual)
         {
-        assert constClassType.getClassConstant().getName().equals(f_sName);
+        assert constClassType.getClassConstant().getPathString().equals(f_sName);
 
         List<TypeConstant> listParams = constClassType.getTypeConstants();
 
@@ -813,7 +834,7 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = findFunction("equals", new String[]{f_sName, f_sName}, BOOLEAN);
+        MethodStructure functionEquals = findCompareFunction("equals", xBoolean.TYPES);
         if (functionEquals != null)
             {
             return frame.call1(functionEquals, null,
@@ -831,8 +852,7 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = findFunction("compare",
-                new String[]{f_sName, f_sName}, new String[]{"Ordered"});
+        MethodStructure functionCompare = findCompareFunction("compare", xOrdered.TYPES);
         if (functionCompare != null)
             {
             return frame.call1(functionCompare, null,
@@ -932,9 +952,9 @@ public abstract class ClassTemplate
         return ensureMethodTemplate(sName, asParam, VOID);
         }
 
-    public MethodTemplate ensureMethodTemplate(String sName, String[] asParam, String[] asRetType)
+    public MethodTemplate ensureMethodTemplate(String sName, String[] asParam, String[] asRet)
         {
-        MethodStructure method = getDeclaredMethod(sName, asParam, asRetType);
+        MethodStructure method = f_types.f_adapter.getMethod(f_sName, sName, asParam, asRet);
 
         return m_mapMethods.computeIfAbsent(method.getIdentityConstant(), (id) -> new MethodTemplate(method));
         }

@@ -79,16 +79,6 @@ TypeExpressionList
     TypeExpression
     TypeExpressionList "," TypeExpression
 
-TypeVariableList
-    "<" TypeVariables ">"
-
-TypeVariables
-    TypeVariable
-    TypeVariables "," TypeVariable
-
-TypeVariable
-    Name
-
 #
 # compilation unit
 #
@@ -268,7 +258,7 @@ PropertyDeclarationFinish
 #
 
 MethodDeclarationStatement
-    MethodModifiers-opt TypeVariableList-opt NamePrecursor Name RedundantReturnSpecifier ParameterList MethodDeclarationFinish
+    MethodModifiers-opt TypeParameterList-opt NamePrecursor Name RedundantReturnSpecifier ParameterList MethodDeclarationFinish
 
 MethodModifiers
     MethodModifier
@@ -280,7 +270,7 @@ MethodModifier
 
 NamePrecursor
     "construct"
-    ReturnList
+    "conditional"-opt ReturnList
 
 ReturnList
     SingleReturnList

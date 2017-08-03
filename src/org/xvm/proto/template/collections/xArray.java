@@ -53,8 +53,9 @@ public class xArray
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"Int64", "Function"}, VOID);
 
         markNativeMethod("construct", new String[]{"Int64", "Function"});
-        markNativeMethod("elementAt", INT);
-        markNativeMethod("reify", VOID);
+        markNativeMethod("elementAt", INT, null /*new String[] {"Ref<ElementType>"}*/);
+        // Array!<ElementType> reify();
+        markNativeMethod("reify", VOID, null);
         }
 
     @Override

@@ -41,7 +41,7 @@ public class xException
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
         markNativeMethod("to", VOID, STRING);
 
-        MethodTemplate ct = ensureMethodTemplate("construct", new String[]{"String|Nullable", "Exception|Nullable"});
+        MethodTemplate ct = ensureMethodTemplate("construct", new String[]{"String", "Exception"});
         ct.m_aop = new Op[] // #0 - text, #1 - cause
             {
             new LSet(getProperty("text").getIdentityConstant().getPosition(), 0),

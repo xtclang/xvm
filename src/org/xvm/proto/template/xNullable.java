@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.Component;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -25,10 +26,13 @@ public class xNullable
     @Override
     public void initDeclared()
         {
-        NULL = new NullHandle(f_clazzCanonical);
+        if (f_struct.getFormat() == Component.Format.ENUM)
+            {
+            NULL = new NullHandle(f_clazzCanonical);
 
-        m_listNames = Collections.singletonList("Null");
-        m_listHandles = Collections.singletonList(NULL);
+            m_listNames = Collections.singletonList("Null");
+            m_listHandles = Collections.singletonList(NULL);
+            }
         }
 
     private static class NullHandle

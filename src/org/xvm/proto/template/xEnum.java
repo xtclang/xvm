@@ -5,7 +5,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ClassConstant;
 
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
@@ -45,10 +45,8 @@ public class xEnum
     public void initDeclared()
         {
         ClassStructure struct = f_struct;
-        if (this != INSTANCE)
+        if (this != INSTANCE && struct.getFormat() == Component.Format.ENUM)
             {
-            assert struct.getFormat() == Component.Format.ENUM;
-
             List<Component> listAll = struct.children();
             List<String> listNames = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
@@ -70,10 +68,16 @@ public class xEnum
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        if (constant instanceof ClassTypeConstant)
+        if (f_struct.getFormat() == Component.Format.ENUMVALUE)
             {
-            ClassTypeConstant constClass = (ClassTypeConstant) constant;
-            String sName = constClass.getClassConstant().getName();
+            xEnum templateEnum = (xEnum) getSuper();
+            return templateEnum.createConstHandle(constant, heap);
+            }
+
+        if (constant instanceof ClassConstant)
+            {
+            ClassConstant constClass = (ClassConstant) constant;
+            String sName = constClass.getName();
             int ix = m_listNames.indexOf(sName);
             if (ix >= 0)
                 {

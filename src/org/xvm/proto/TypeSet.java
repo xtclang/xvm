@@ -3,10 +3,12 @@ package org.xvm.proto;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.Constants;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xObject;
@@ -41,10 +43,19 @@ public class TypeSet
     // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
     final private Map<Integer, TypeComposition> f_mapConstCompositions = new TreeMap<>(Integer::compare);
 
-    TypeSet(Container pool)
+    public final TypeConstant THIS;
+    public final TypeConstant[] THIS_1;
+    public final TypeConstant[] THIS_2;
+    public final static TypeConstant[] VOID = new TypeConstant[0];
+
+    TypeSet(Container container)
         {
-        f_container = pool;
-        f_adapter = pool.f_adapter;
+        f_container = container;
+        f_adapter = container.f_adapter;
+
+        THIS = container.f_pool.ensureThisTypeConstant(Constants.Access.PUBLIC);
+        THIS_1 = new TypeConstant[] {THIS};
+        THIS_2 = new TypeConstant[] {THIS, THIS};
 
         loadNativeTemplates();
         }
@@ -131,20 +142,22 @@ public class TypeSet
                     {
                     case ENUMVALUE:
                         String sEnumName = structClass.getParent().getName();
-
                         template = getNativeTemplate(sEnumName, structClass);
                         if (template == null)
                             {
                             template = new xEnum(this, structClass, false);
                             }
-                        else
-                            {
-                            template.initDeclared();
-                            }
+                        // no need to call initDeclared() for the values
+                        break;
+
+                    case ENUM:
+                        template = new xEnum(this, structClass, false);
+                        template.initDeclared();
                         break;
 
                     case CLASS:
                     case INTERFACE:
+                    case MIXIN:
                         template = new xObject(this, structClass, false);
                         break;
 

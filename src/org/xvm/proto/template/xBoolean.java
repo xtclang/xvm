@@ -1,9 +1,11 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHeap;
@@ -20,10 +22,16 @@ public class xBoolean
     {
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
+    public static TypeConstant[] TYPES;
 
     public xBoolean(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure, false);
+
+        if (fInstance)
+            {
+            TYPES = new TypeConstant[] {getTypeConstant()};
+            }
         }
 
     @Override
@@ -31,24 +39,32 @@ public class xBoolean
         {
         markNativeMethod("to", VOID, STRING);
 
-        FALSE = new BooleanHandle(f_clazzCanonical, false);
-        TRUE = new BooleanHandle(f_clazzCanonical, true);
+        if (f_struct.getFormat() == Component.Format.ENUM)
+            {
+            FALSE = new BooleanHandle(f_clazzCanonical, false);
+            TRUE = new BooleanHandle(f_clazzCanonical, true);
+            }
         }
 
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        if (constant instanceof ClassTypeConstant)
+        if (f_struct.getFormat() == Component.Format.ENUMVALUE)
             {
-            ClassTypeConstant constClass = (ClassTypeConstant) constant;
-            String sName = constClass.getClassConstant().getName();
-            if (sName.equals("False"))
+            xEnum template = (xEnum) getSuper();
+            return template.createConstHandle(constant, heap);
+            }
+
+        if (constant instanceof ClassConstant)
+            {
+            ClassConstant constClass = (ClassConstant) constant;
+            switch (constClass.getName())
                 {
-                return FALSE;
-                }
-            if (sName.equals("True"))
-                {
-                return TRUE;
+                case "False":
+                    return FALSE;
+
+                case "True":
+                    return TRUE;
                 }
             }
         return null;

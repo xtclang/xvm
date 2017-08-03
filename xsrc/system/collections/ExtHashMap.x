@@ -227,7 +227,7 @@ class ExtHashMap<KeyType, ValueType>
                 HashEntry?   nextEntry   = null;
                 Int          addSnapshot = ExtHashMap.this.addCount;
 
-                conditional KeyType next()
+                conditional KeyType next()  // TODO is the return type "EntryType" or "KeyType"???
                     {
                     if (addSnapshot != ExtHashMap.this.addCount)
                         {

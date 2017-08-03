@@ -71,6 +71,18 @@ public class ClassConstant
         }
 
     /**
+     * Determine if this ClassConstant is the "Type" class.
+     *
+     * @return true iff this ClassConstant represents the Ecstasy Type class
+     */
+    public boolean isEcstasyType()
+        {
+        return getName().equals(X_CLASS_TYPE)
+                && getNamespace().getFormat() == Format.Module
+                && ((ModuleConstant) getNamespace()).isEcstasyModule();
+        }
+
+    /**
      * @return the ClassTypeConstant for the public interface of this class
      */
     public ClassTypeConstant asTypeConstant()

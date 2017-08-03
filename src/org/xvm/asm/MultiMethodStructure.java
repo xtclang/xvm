@@ -41,19 +41,60 @@ public class MultiMethodStructure
     /**
      * Create the method with the specified attributes.
      *
-     * @param fFunction    true if the structure being created is a function; false means a method
-     * @param access       an access specifier
-     * @param returnTypes  the types of the return values (zero or more)
-     * @param paramTypes   the types of the parameters (zero or more)
+     * @param fFunction  true if the structure being created is a function; false means a method
+     * @param access     an access specifier
+     * @param aReturns   the return values (zero or more)
+     * @param aParams    the parameters (zero or more)
      *
      * @return a method structure
      */
-    public MethodStructure createMethod(boolean fFunction, Access access, TypeConstant[] returnTypes, TypeConstant[] paramTypes)
+    public MethodStructure createMethod(boolean fFunction, Access access, Parameter[] aReturns, Parameter[] aParams)
         {
-        int nFlags = Format.METHOD.ordinal() | access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
+        int nFlags   = Format.METHOD.ordinal() | access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
+        int cReturns = aReturns.length;
+        int cParams  = aParams.length;
+
+        TypeConstant[] aconstReturns = new TypeConstant[cReturns];
+        TypeConstant[] aconstParams  = new TypeConstant[cParams ];
+
+        for (int i = 0; i < cReturns; ++i)
+            {
+            Parameter param = aReturns[i];
+            if (param.isConditionalReturn())
+                {
+                if (i > 0 || !param.getType().isEcstasy("Boolean"))
+                    {
+                    throw new IllegalArgumentException("only the first return value can be conditional, and it must be a boolean");
+                    }
+                }
+            aconstReturns[i] = param.getType();
+            }
+
+        boolean fPastTypeParams = false;
+        for (int i = 0; i < cParams; ++i)
+            {
+            Parameter param = aParams[i];
+            if (param.isTypeParameter())
+                {
+                if (fPastTypeParams)
+                    {
+                    throw new IllegalArgumentException("type params must come first (" + i + ")");
+                    }
+                if (!param.getType().isEcstasy("Type"))
+                    {
+                    throw new IllegalArgumentException("type params must be of type \"Type\" (" + param.getType() + ")");
+                    }
+                }
+            else
+                {
+                fPastTypeParams = true;
+                }
+            aconstParams[i] = param.getType();
+            }
+
         MethodConstant constId = getConstantPool().ensureMethodConstant(
-                getIdentityConstant(), getName(), access, returnTypes, paramTypes);
-        MethodStructure struct = new MethodStructure(this, nFlags, constId, null);
+                getIdentityConstant(), getName(), access, aconstReturns, aconstParams);
+        MethodStructure struct = new MethodStructure(this, nFlags, constId, null, aReturns, aParams);
         addChild(struct);
         return struct;
         }

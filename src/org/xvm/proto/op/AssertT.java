@@ -63,7 +63,7 @@ public class AssertT extends OpCallable
                 }
 
             CharStringConstant constText = (CharStringConstant)
-                    frame.f_context.f_heapGlobal.f_pool.getConstant(-f_nTextConstId);
+                    frame.f_context.f_pool.getConstant(-f_nTextConstId);
 
             hException = xException.makeHandle("Assertion failed: " + constText.getValueString());
             }

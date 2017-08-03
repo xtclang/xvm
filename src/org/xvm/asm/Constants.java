@@ -45,6 +45,11 @@ public interface Constants
     public static final String X_CLASS_OBJECT = "Object";
 
     /**
+     * The name of the root Ecstasy class.
+     */
+    public static final String X_CLASS_TYPE = "Type";
+
+    /**
      * The name of the Nullable enumeration.
      */
     public static final String X_CLASS_NULLABLE = "Nullable";

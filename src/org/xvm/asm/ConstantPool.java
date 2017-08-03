@@ -595,6 +595,18 @@ public class ConstantPool
         }
 
     /**
+     * Helper to get a TypeConstant for a class in the Ecstasy core module.
+     *
+     * @param sClass  the qualified class name, dot-delimited
+     *
+     * @return the type for the specified class from the Ecstasy core module
+     */
+    public TypeConstant ensureEcstasyTypeConstant(String sClass)
+        {
+        return ensureClassTypeConstant(ensureEcstasyClassConstant(sClass), Access.PUBLIC);
+        }
+
+    /**
      * Helper to get a ClassConstant for a class in the Ecstasy core module.
      *
      * @param sClass  the qualified class name, dot-delimited
@@ -625,9 +637,10 @@ public class ConstantPool
      *
      * @param sName  the unqualified name to look up
      *
-     * @return an IdentityConstant for, or null
+     * @return the IdentityConstant for the specified name, or null if the name is not implicitly
+     *         imported
      */
-    public Component getImplicitlyImportedComponent(String sName)
+    public IdentityConstant getImplicitlyImportedIdentity(String sName)
         {
         String sPkg = null;
         String sClz = null;
@@ -760,6 +773,25 @@ public class ConstantPool
                 {
                 constId = ensureClassConstant(constId, sSub);
                 }
+            }
+        return constId;
+        }
+
+    /**
+     * This is the implementation of the "automatically imported" names that constitute the default
+     * set of known names in the language. This implementation should correspond to the source file
+     * "implicit.x".
+     *
+     * @param sName  the unqualified name to look up
+     *
+     * @return the Component for the specified name, or null if the name is not implicitly imported
+     */
+    public Component getImplicitlyImportedComponent(String sName)
+        {
+        IdentityConstant constId = getImplicitlyImportedIdentity(sName);
+        if (constId == null)
+            {
+            return null;
             }
 
         Component component = constId.getComponent();
@@ -949,7 +981,7 @@ public class ConstantPool
      *
      * @param constChild  an auto-narrowing type constant
      *
-     * @return a type rrepresenting the parent of the specified child type constant
+     * @return a type representing the parent of the specified child type constant
      */
     public ParentTypeConstant ensureParentTypeConstant(TypeConstant constChild)
         {
@@ -1043,6 +1075,23 @@ public class ConstantPool
             Constant[] aconstParam, TypeConstant constType)
         {
         return (AnnotatedTypeConstant) register(new AnnotatedTypeConstant(this, constClass, aconstParam, constType));
+        }
+
+    /**
+     * Given a type, obtain a TypeConstant that represents the intersection of that type with the
+     * Nullable type.
+     * This corresponds to the "?" operator when applied to types.
+     *
+     * @param constType  the type being made Nullable
+     *
+     * @return the intersection of the specified type and Nullable
+     */
+    public IntersectionTypeConstant ensureNullableTypeConstant(TypeConstant constType)
+        {
+        TypeConstant constNullable = ensureClassTypeConstant(
+                ensureEcstasyClassConstant(org.xvm.compiler.Constants.X_CLASS_NULLABLE),
+                Access.PUBLIC);
+        return ensureIntersectionTypeConstant(constNullable, constType);
         }
 
     /**
@@ -1366,10 +1415,7 @@ public class ConstantPool
         assert !m_fRecurseReg;
         m_fRecurseReg = true;
 
-        for (Constant constant : m_listConst)
-            {
-            constant.resetRefs();
-            }
+        m_listConst.forEach(Constant::resetRefs);
         }
 
     /**

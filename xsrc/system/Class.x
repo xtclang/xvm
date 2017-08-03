@@ -209,7 +209,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Determine if the class is a singleton, and obtain the singleton instance.
      */
-    @lazy conditional PublicType singleton;
+    @lazy /* TODO prop cannot be conditional */ PublicType singleton;
 
     // ----- calculated properties -----------------------------------------------------------------
 

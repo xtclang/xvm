@@ -199,9 +199,9 @@
 
  RTYPE_1    CLASS_TYPE_CONST, rvalue-type, lvalue-return                    ; resolve generic type; lvalue-return - a Type object
  RTYPE_N    CLASS_TYPE_CONST, #type-params:(rvalue-type), lvalue-return
- MATCH_2    rvalue, CONST_*, rel-addr, CONST_*, rel-addr                    ; if the value equals one of the two constants, jump accordingly
- MATCH_3    rvalue, CONST_*, rel-addr, CONST_*, rel-addr, CONST_*, rel-addr ; if the value equals one of the three constants, jump accordingly
- MATCH_N    rvalue, #opts:(CONST_*, rel-addr)                               ; if the value equals one of the N constants, jump accordingly
+ MATCH_1    rvalue, CONST_*, rel-addr, rel-addr-default                     ; if the value equals the constant, jump accordingly
+ MATCH_2    rvalue, CONST_*, rel-addr, CONST_*, rel-addr, rel-addr-default  ; if the value equals one of the two constants, jump accordingly
+ MATCH_N    rvalue, #opts:(CONST_*, rel-addr), rel-addr-default             ; if the value equals one of the N constants, jump accordingly
 +ASSERT     rvalue                                  ; assert
 +ASSERT_T   rvalue, CONST_STRING                    ; assert with assertion text (e.g. assertion expression)
 +ASSERT_V   rvalue, CONST_STRING, #vals(rvalue)     ; assert with assertion text and variables to print

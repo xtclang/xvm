@@ -322,6 +322,30 @@ public abstract class Component
         }
 
     /**
+     * @return true iff the component is marked as synthetic
+     */
+    protected boolean isConditionalReturn()
+        {
+        return (m_nFlags & COND_RET_BIT) != 0;
+        }
+
+    /**
+     * Specify whether or not the method has a conditional return value.
+     *
+     * @param fConditional  true to specify the method has a conditional return; false otherwise
+     */
+    protected void setConditionalReturn(boolean fConditional)
+        {
+        int nFlagsOld = m_nFlags;
+        int nFlagsNew = (nFlagsOld & ~COND_RET_BIT) | (fConditional ? COND_RET_BIT : 0);
+        if (nFlagsNew != nFlagsOld)
+            {
+            m_nFlags = (short) nFlagsNew;
+            markModified();
+            }
+        }
+
+    /**
      * Obtain the name of the component. All components have a name, although the purpose of the
      * name varies slightly for several components:
      * <ul>
@@ -891,14 +915,14 @@ public abstract class Component
      *
      * @param fFunction    true if the method is actually a function (not a method)
      * @param access       the access flag for the method
-     * @param returnTypes  the return types of the method
+     * @param returnTypes  the return values of the method
      * @param sName        the method name, or null if the name is unknown
-     * @param paramTypes   the parameter types for the method
+     * @param paramTypes   the parameters for the method
      *
      * @return a new MethodStructure
      */
     public MethodStructure createMethod(boolean fFunction, Access access,
-            TypeConstant[] returnTypes, String sName, TypeConstant[] paramTypes)
+            Parameter[] returnTypes, String sName, Parameter[] paramTypes)
         {
         assert sName != null;
         assert access != null;
@@ -1102,7 +1126,7 @@ public abstract class Component
     /**
      * TODO
      *
-     * @param sName
+     * @param sName  the name to resolve
      *
      * @return
      */
@@ -2476,6 +2500,7 @@ public abstract class Component
     public static final int ABSTRACT_BIT     = 0x0400, ABSTRACT_SHIFT   = 10;
     public static final int STATIC_BIT       = 0x0800, STATIC_SHIFT     = 11;
     public static final int SYNTHETIC_BIT    = 0x1000, SYNTHETIC_SHIFT  = 12;
+    public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT   = 13;
 
 
     // ----- fields --------------------------------------------------------------------------------

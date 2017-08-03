@@ -43,9 +43,7 @@
 === compilation issues
     - constructor, finalizer, default constructor
     - properties not defined by the class declarations (e.g. class TestClass(String prop1))
-    - "extend" contribution is not resolved
-    = module inside "x" - NPE in MethodDeclarationStatement.registerStruct (container is null)
-    - giving a wrong name to "construct" of a const class throws an assert
+    - giving a wrong name to the "construct" method is ignored
 
 + op-code serialization/deserialization
 
@@ -53,11 +51,14 @@
 
 + Const
 
-- a new DVAR like op-code to provide additional parameters (e.g. injection name)
+- hashCode implementation
 
 - Property and Method
 
 - Class, Type
+
+- a new DVAR like op-code to provide additional parameters (e.g. injection name)
+
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
