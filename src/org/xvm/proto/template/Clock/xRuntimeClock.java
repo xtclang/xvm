@@ -41,7 +41,8 @@ public class xRuntimeClock
     @Override
     public void initDeclared()
         {
-        markNativeMethod("scheduleAlarm", new String[] {"Function", "DateTime"});
+        // Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp);
+        markNativeMethod("scheduleAlarm", null, null);
         }
 
     @Override

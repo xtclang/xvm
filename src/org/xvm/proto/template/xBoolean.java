@@ -5,8 +5,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.ClassConstant;
-
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
@@ -22,7 +22,6 @@ public class xBoolean
     {
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
-    public static TypeConstant TYPE;
     public static TypeConstant[] TYPES;
 
     public xBoolean(TypeSet types, ClassStructure structure, boolean fInstance)
@@ -31,8 +30,7 @@ public class xBoolean
 
         if (fInstance)
             {
-            TYPE = ((ClassConstant) f_struct.getIdentityConstant()).asTypeConstant();
-            TYPES = new TypeConstant[] {TYPE};
+            TYPES = new TypeConstant[] {getTypeConstant()};
             }
         }
 

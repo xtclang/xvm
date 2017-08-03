@@ -82,7 +82,7 @@ class TestApp
             return of + s.length();
             }
 
-        Int exceptional(String? s)
+        Int exceptional(String s)
             {
             throw new Exception(s);
             }

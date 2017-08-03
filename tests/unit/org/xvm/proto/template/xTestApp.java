@@ -39,7 +39,7 @@ public class xTestApp extends xModule
         f_types.getTemplate("TestApp.TestService");
 
         // --- getIntValue
-        MethodTemplate ftGetInt = ensureMethodTemplate("getIntValue", VOID);
+        MethodTemplate ftGetInt = ensureMethodTemplate("getIntValue", VOID, INT);
         ftGetInt.m_aop = new Op[]
             {
             new Return_1(-adapter.ensureValueConstantId(42)),
@@ -47,7 +47,7 @@ public class xTestApp extends xModule
         ftGetInt.m_cVars = 1;
 
         // --- test1()
-        MethodTemplate ftTest1 = ensureMethodTemplate("test1", VOID);
+        MethodTemplate ftTest1 = ensureMethodTemplate("test1", VOID, VOID);
         ftTest1.m_aop = new Op[]
             {
             new DNVar(adapter.getClassTypeConstId("annotations.InjectedRef<io.Console>"),
@@ -243,7 +243,7 @@ public class xTestApp extends xModule
         // --- testService2 ---
 
         MethodTemplate ftTestReturn = ensureMethodTemplate("testBlockingReturn",
-                new String[]{"TestApp.TestService"});
+                new String[]{"Service"}, INT);
         ftTestReturn.m_aop = new Op[]
             { // #0 = svc
             new Var(adapter.getClassTypeConstId("Int64")), // #1
@@ -367,7 +367,7 @@ public class xTestApp extends xModule
 
         // --- testArray()
 
-        MethodTemplate ftLambda$2 = ensureMethodTemplate("lambda_2", INT, STRING);
+        MethodTemplate ftLambda$2 = ensureMethodTemplate("lambda_2", null /*"REf<Int>*/, STRING);
         ftLambda$2.m_aop = new Op[]
             { // #0 = i
             new IVar(adapter.getClassTypeConstId("String"),
@@ -426,7 +426,7 @@ public class xTestApp extends xModule
 
         // ----- testTuple()
 
-        MethodTemplate ftTestCond = ensureMethodTemplate("testConditional", INT);
+        MethodTemplate ftTestCond = ensureMethodTemplate("testConditional", INT, null);
         ftTestCond.m_aop = new Op[]
             { // #0 - i
             new Var(adapter.getClassTypeConstId("Boolean")), // #1

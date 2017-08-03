@@ -250,7 +250,7 @@ public abstract class ClassTemplate
         }
 
     // get a method declared at this template level
-    public MethodStructure getDeclaredMethod(String sName, TypeConstant[] atArg, TypeConstant[] atRet)
+    public MethodStructure getDeclaredMethod(String sName, TypeConstant[] atParam, TypeConstant[] atReturn)
         {
         MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(sName);
         if (mms != null)
@@ -258,51 +258,52 @@ public abstract class ClassTemplate
             nextMethod:
             for (MethodStructure method : ((List<MethodStructure>) (List) mms.children()))
                 {
-                // TODO: temporary shortcut; remove
-                if (atArg == null && atRet == null)
-                    {
-                    return method;
-                    }
                 MethodConstant constMethod = method.getIdentityConstant();
 
-                TypeConstant[] atParam = constMethod.getRawParams();
-                TypeConstant[] atReturn = constMethod.getRawReturns();
-                int cParams = atParam.length;
-                int cReturns = atReturn.length;
+                TypeConstant[] atParamTest = constMethod.getRawParams();
+                TypeConstant[] atReturnTest = constMethod.getRawReturns();
 
-                if (cParams != atArg.length)
+                if (atParam != null) // temporary work around; TODO: remove
                     {
-                    continue;
-                    }
-
-                for (int i = 0, c = atParam.length; i < c; i++)
-                    {
-                    // compensate for "function"
-                    if (atParam[i].getValueString().contains("function"))
+                    int cParams = atParamTest.length;
+                    if (cParams != atParam.length)
                         {
                         continue;
                         }
-                    if (!atParam[i].equals(atArg[i]))
+
+                    for (int i = 0, c = atParamTest.length; i < c; i++)
                         {
-                        continue nextMethod;
+                        // compensate for "function"
+                        if (atParamTest[i].getValueString().contains("function"))
+                            {
+                            continue;
+                            }
+                        if (!atParamTest[i].equals(atParam[i]))
+                            {
+                            continue nextMethod;
+                            }
                         }
                     }
 
-                if (cReturns != atRet.length)
+                if (atReturn != null) // temporary work around; TODO: remove
                     {
-                    // compensate for the return type of Void
-                    if (atRet.length == 0 && atReturn[0].getValueString().contains("Void"))
+                    int cReturns = atReturnTest.length;
+                    if (cReturns != atReturn.length)
                         {
-                        return method;
+                        // compensate for the return type of Void
+                        if (atReturn.length == 0 && atReturnTest[0].getValueString().contains("Void"))
+                            {
+                            return method;
+                            }
+                        continue;
                         }
-                    continue;
-                    }
 
-                for (int i = 0, c = atReturn.length; i < c; i++)
-                    {
-                    if (!atReturn[i].equals(atRet[i]))
+                    for (int i = 0, c = atReturnTest.length; i < c; i++)
                         {
-                        continue nextMethod;
+                        if (!atReturnTest[i].equals(atReturn[i]))
+                            {
+                            continue nextMethod;
+                            }
                         }
                     }
                 return method;
@@ -330,8 +331,11 @@ public abstract class ClassTemplate
 
             for (MethodStructure method : (List<MethodStructure>) (List) mms.children())
                 {
-                if (Arrays.equals(atParam, method.getIdentityConstant().getRawParams()) &&
-                        Arrays.equals(atReturn, method.getIdentityConstant().getRawReturns()))
+                MethodConstant constTest = method.getIdentityConstant();
+                TypeConstant[] atParamTest = constTest.getRawParams();
+                TypeConstant[] atReturnTest = constTest.getRawReturns();
+
+                if (Arrays.equals(atParam, atParamTest) && Arrays.equals(atReturn, atReturnTest))
                     {
                     return method;
                     }
@@ -339,7 +343,8 @@ public abstract class ClassTemplate
                 // TODO: remove
                 if (mms.children().size() == 1)
                     {
-                    System.out.println("\n\t\t****** Signature mismatch for " + constMethod + "\n");
+                    System.out.println("\n\t\t****** Signature mismatch for " +
+                            constMethod + " at " + f_sName + "\n");
                     return method;
                     }
                 }

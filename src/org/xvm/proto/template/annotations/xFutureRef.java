@@ -48,7 +48,7 @@ public class xFutureRef
         //    private NotifyDependent? notify = null;
 
         // FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
-        markNativeMethod("whenComplete", new String[]{"Function"});
+        markNativeMethod("whenComplete", null, null);
 
         // TODO: how to inherit this from Ref?
         markNativeMethod("get", VOID, new String[]{"RefType"});

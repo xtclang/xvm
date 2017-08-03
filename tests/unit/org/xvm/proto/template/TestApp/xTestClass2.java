@@ -54,7 +54,7 @@ public class xTestClass2 extends ClassTemplate
             };
         ftFinally.m_cVars = 2;
 
-        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID);
+        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),

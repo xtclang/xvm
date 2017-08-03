@@ -175,7 +175,11 @@ public class Adapter
             String sType = asType[i].trim();
             if (template.isGenericType(sType))
                 {
-                aType[i] = template.f_struct.getTypeParams().get(pool.ensureCharStringConstant(sType));
+                ClassTypeConstant constClass = template.getTypeConstant();
+                PropertyStructure prop = template.getProperty(sType);
+//                aType[i] = pool.ensureParameterTypeConstant(constClass, sType);
+// TODO: review
+                aType[i] = pool.ensureClassTypeConstant(prop.getIdentityConstant(), Constants.Access.PUBLIC);
                 }
             else
                 {

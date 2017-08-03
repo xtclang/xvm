@@ -2,8 +2,8 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
+
 import org.xvm.proto.TypeSet;
 
 /**
@@ -18,7 +18,6 @@ public class xOrdered
     public static EnumHandle EQUAL;
     public static EnumHandle GREATER;
 
-    public static ClassTypeConstant TYPE;
     public static ClassTypeConstant[] TYPES;
 
     public xOrdered(TypeSet types, ClassStructure structure, boolean fInstance)
@@ -27,8 +26,7 @@ public class xOrdered
 
         if (fInstance)
             {
-            TYPE = ((ClassConstant) f_struct.getIdentityConstant()).asTypeConstant();
-            TYPES = new ClassTypeConstant[] {TYPE};
+            TYPES = new ClassTypeConstant[] {getTypeConstant()};
             }
         }
 

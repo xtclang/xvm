@@ -51,7 +51,7 @@ public class xTestClass extends ClassTemplate
         ftFinally.m_cVars = 1;
 
         // --- method1()
-        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID);
+        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
@@ -70,8 +70,8 @@ public class xTestClass extends ClassTemplate
             };
         mtMethod1.m_cVars = 4;
 
-        // --- exceptional()
-        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", STRING);
+        // ----- exceptional()
+        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", STRING, INT);
         mtExceptional.m_aop = new Op[]
             { // #0 = s
             new Var(adapter.getClassTypeConstId("Exception")), // #1
