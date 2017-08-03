@@ -7,6 +7,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -154,6 +155,20 @@ public class Adapter
         return aType;
         }
 
+    private Parameter[] getTypeParams(String[] asType, boolean fReturn)
+        {
+        ConstantPool pool = f_container.f_pool;
+        int cTypes = asType.length;
+        Parameter[] aType = new Parameter[cTypes];
+        for (int i = 0; i < cTypes; i++)
+            {
+            String sType = asType[i].trim();
+            aType[i] = new Parameter(pool, (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType)),
+                    (fReturn?"r":"p")+i, null, fReturn, i, false);
+            }
+        return aType;
+        }
+
     private ClassTypeConstant getClassTypeConstant(String sClassName)
         {
         ClassConstant constClass = (ClassConstant)
@@ -210,7 +225,7 @@ public class Adapter
         {
         MultiMethodStructure mms = structure.ensureMultiMethodStructure(sName);
         return mms.createMethod(false, Constants.Access.PUBLIC,
-                getTypeConstants(asRetType), getTypeConstants(asArgType));
+                getTypeParams(asRetType, true), getTypeParams(asArgType, false));
         }
 
     public int getScopeCount(MethodStructure method)
