@@ -45,7 +45,7 @@ public class xConst
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = findFunction("equals", new String[]{f_sName, f_sName}, BOOLEAN);
+        MethodStructure functionEquals = findCompareFunction("equals", xBoolean.TYPES);
         if (functionEquals != null)
             {
             return frame.call1(functionEquals, null,
@@ -100,8 +100,7 @@ public class xConst
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = findFunction("compare",
-                new String[]{f_sName, f_sName}, new String[]{"Ordered"});
+        MethodStructure functionCompare = findCompareFunction("compare", xOrdered.TYPES);
         if (functionCompare != null)
             {
             return frame.call1(functionCompare, null,

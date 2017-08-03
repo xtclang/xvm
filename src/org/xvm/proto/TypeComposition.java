@@ -244,7 +244,7 @@ public class TypeComposition
                                          Supplier<Frame> continuation)
         {
         ClassTemplate template = f_template;
-        MethodStructure methodDefault = template.getDeclaredMethod("default", ClassTemplate.VOID, ClassTemplate.VOID);
+        MethodStructure methodDefault = template.getDeclaredMethod("default", TypeSet.VOID, TypeSet.VOID);
         ClassTemplate templateSuper = template.getSuper();
 
         Frame frameDefault;

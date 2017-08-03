@@ -18,6 +18,7 @@ import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.util.Handy;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,13 +54,13 @@ public class Adapter
             String sParam = sName.substring(ofTypeParam + 1, sName.length() - 1);
             String sSimpleName = sName.substring(0, ofTypeParam);
 
-            ClassTypeConstant constType = getClassTypeConstant(sSimpleName);
-            if (constType != null)
+            ClassConstant constClass = getClassConstant(sSimpleName);
+            if (constClass != null)
                 {
                 String[] asType = Handy.parseDelimitedString(sParam, ',');
-
-                int nTypeId = f_container.f_pool.ensureClassTypeConstant(
-                        constType.getClassConstant(), null, getTypeConstants(asType)).getPosition();
+                ClassTemplate template = f_container.f_types.getTemplate(constClass);
+                int nTypeId = f_container.f_pool.ensureClassTypeConstant(constClass, null,
+                        getTypeConstants(template, asType)).getPosition();
 
                 m_mapClasses.put(sName, nTypeId);
 
@@ -68,11 +69,11 @@ public class Adapter
             }
         else
             {
-            ClassTypeConstant constType = getClassTypeConstant(sName);
-            if (constType != null)
+            ClassConstant constClass = getClassConstant(sName);
+            if (constClass != null)
                 {
-                int nTypeId = f_container.f_pool.ensureClassTypeConstant(
-                        constType.getClassConstant(), null).getPosition();
+                int nTypeId = f_container.f_pool.
+                        ensureClassTypeConstant(constClass, null).getPosition();
 
                 m_mapClasses.put(sName, nTypeId);
 
@@ -88,40 +89,57 @@ public class Adapter
         return getMethodConstId(sClassName, sMethName, null, null);
         }
 
-    // TODO: this will change when MethodIdConst is introduced
     public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
         {
-        try
+        return getMethod(sClassName, sMethName, asArgType, asRetType)
+                .getIdentityConstant().getPosition();
+        }
+
+    public MethodStructure getMethod(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
+        {
+        ClassTemplate template = f_container.f_types.getTemplate(sClassName);
+        TypeConstant[] atArg = getTypeConstants(template, asArgType);
+        TypeConstant[] atRet = getTypeConstants(template, asRetType);
+
+        MethodStructure method;
+        do
             {
-            ClassTemplate template = f_container.f_types.getTemplate(sClassName);
-            MethodStructure method;
-            while (true)
+            method = template.getDeclaredMethod(sMethName, atArg, atRet);
+            if (method != null)
                 {
-                method = template.getDeclaredMethod(sMethName, asArgType, asRetType);
-                if (method != null)
-                    {
-                    break;
-                    }
-
-                ClassTemplate templateCategory = template.f_templateCategory;
-                if (templateCategory != null)
-                    {
-                    method = templateCategory.getDeclaredMethod(sMethName, asArgType, asRetType);
-                    if (method != null)
-                        {
-                        break;
-                        }
-                    }
-
-                template = template.getSuper();
+                return method;
                 }
 
-            return method.getIdentityConstant().getPosition();
+            ClassTemplate templateCategory = template.f_templateCategory;
+            if (templateCategory != null)
+                {
+                method = templateCategory.getDeclaredMethod(sMethName, atArg, atRet);
+                if (method != null)
+                    {
+                    return method;
+                    }
+                }
+
+            template = template.getSuper();
             }
-        catch (NullPointerException e)
+        while (template != null);
+
+        if (method == null && asArgType != null)
             {
-            throw new IllegalArgumentException("Method is not defined: " + sClassName + '#' + sMethName);
+            method = getMethod(sClassName, sMethName, null, null);
+
+            System.out.println("\n******** parameter mismatch at " + sClassName + "#" + sMethName);
+            System.out.println("         arguments " + Arrays.toString(atArg));
+            System.out.println("         return " + Arrays.toString(atRet));
+            System.out.println("         found " + method.getIdentityConstant() + "\n");
+
+            if (method != null)
+                {
+                return method;
+                }
             }
+
+        throw new IllegalArgumentException("Method is not defined: " + sClassName + '#' + sMethName);
         }
 
     public int getPropertyConstId(String sClassName, String sPropName)
@@ -142,20 +160,32 @@ public class Adapter
         return ensureValueConstant(oValue).getPosition();
         }
 
-    private TypeConstant[] getTypeConstants(String[] asType)
+    public TypeConstant[] getTypeConstants(ClassTemplate template, String[] asType)
         {
+        if (asType == null)
+            {
+            return null;
+            }
+
         ConstantPool pool = f_container.f_pool;
         int cTypes = asType.length;
         TypeConstant[] aType = new TypeConstant[cTypes];
         for (int i = 0; i < cTypes; i++)
             {
             String sType = asType[i].trim();
-            aType[i] = (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType));
+            if (template.isGenericType(sType))
+                {
+                aType[i] = template.f_struct.getTypeParams().get(pool.ensureCharStringConstant(sType));
+                }
+            else
+                {
+                aType[i] = (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType));
+                }
             }
         return aType;
         }
 
-    private Parameter[] getTypeParams(String[] asType, boolean fReturn)
+    private Parameter[] getTypeParameters(String[] asType, boolean fReturn)
         {
         ConstantPool pool = f_container.f_pool;
         int cTypes = asType.length;
@@ -164,16 +194,15 @@ public class Adapter
             {
             String sType = asType[i].trim();
             aType[i] = new Parameter(pool, (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType)),
-                    (fReturn?"r":"p")+i, null, fReturn, i, false);
+                    (fReturn ?"r":"p")+i, null, fReturn, i, false);
             }
         return aType;
         }
 
-    private ClassTypeConstant getClassTypeConstant(String sClassName)
+    private ClassConstant getClassConstant(String sClassName)
         {
-        ClassConstant constClass = (ClassConstant)
+        return (ClassConstant)
                 f_container.f_types.getTemplate(sClassName).f_struct.getIdentityConstant();
-        return constClass.asTypeConstant();
         }
 
     protected Constant ensureValueConstant(Object oValue)
@@ -195,9 +224,10 @@ public class Adapter
 
         if (oValue instanceof Boolean)
             {
-            return getClassTypeConstant(
-                    ((Boolean) oValue).booleanValue() ?
-                            "Boolean.True" : "Boolean.False");
+            ClassConstant constBoolean = getClassConstant("Boolean");
+
+            return f_container.f_pool.ensureClassConstant(constBoolean,
+                    ((Boolean) oValue).booleanValue() ? "True" : "False");
             }
 
         if (oValue instanceof Object[])
@@ -214,7 +244,8 @@ public class Adapter
 
         if (oValue == null)
             {
-            return getClassTypeConstant("Nullable.Null");
+            return f_container.f_pool.ensureClassConstant(
+                    getClassConstant("Nullable"), "Null");
             }
 
         throw new IllegalArgumentException();
@@ -225,7 +256,7 @@ public class Adapter
         {
         MultiMethodStructure mms = structure.ensureMultiMethodStructure(sName);
         return mms.createMethod(false, Constants.Access.PUBLIC,
-                getTypeParams(asRetType, true), getTypeParams(asArgType, false));
+                getTypeParameters(asRetType, true), getTypeParameters(asArgType, false));
         }
 
     public int getScopeCount(MethodStructure method)

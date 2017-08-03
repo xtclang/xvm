@@ -577,8 +577,7 @@ public class Frame
             }
         else
             {
-            IntConstant constant = (IntConstant)
-                    f_context.f_heapGlobal.f_pool.getConstant(-iArg);
+            IntConstant constant = (IntConstant) f_context.f_pool.getConstant(-iArg);
             lIndex = constant.getValue().getLong();
             }
 

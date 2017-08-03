@@ -67,7 +67,7 @@ public class AssertV extends OpCallable
                 }
 
             CharStringConstant constText = (CharStringConstant)
-                    frame.f_context.f_heapGlobal.f_pool.getConstant(f_nTextConstId);
+                    frame.f_context.f_pool.getConstant(f_nTextConstId);
 
             StringBuilder sb = new StringBuilder("Assertion failed: ");
             sb.append(constText.getValueString())

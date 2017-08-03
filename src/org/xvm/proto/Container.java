@@ -117,6 +117,7 @@ public class Container
 
         // every native class that has an INSTANCE static variable needs to be here
         f_types.getTemplate("Object");
+        f_types.getTemplate("Boolean");
         f_types.getTemplate("Const");
         f_types.getTemplate("String");
         f_types.getTemplate("Enum");
@@ -145,7 +146,7 @@ public class Container
             // xModule module = (xModule) f_types.getTemplate(sModule);
             ClassTemplate app = f_types.getTemplate(f_sAppName);
 
-            MethodStructure mtRun = app.getDeclaredMethod("run", ClassTemplate.VOID, ClassTemplate.VOID);
+            MethodStructure mtRun = app.getDeclaredMethod("run", TypeSet.VOID, TypeSet.VOID);
             if (mtRun == null)
                 {
                 throw new IllegalArgumentException("Missing run() method for " + f_sAppName);

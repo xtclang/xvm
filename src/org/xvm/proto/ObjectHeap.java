@@ -3,7 +3,9 @@ package org.xvm.proto;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -41,15 +43,14 @@ public class ObjectHeap
     // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
     public ObjectHandle ensureConstHandle(int nValueConstId)
         {
-        ObjectHandle handle = getConstHandle(nValueConstId);
-
+        ObjectHandle handle = m_mapConstants.get(nValueConstId);
         if (handle == null)
             {
             Constant constValue = f_pool.getConstant(nValueConstId); // must exist
 
             handle = getConstTemplate(constValue).createConstHandle(constValue, this);
 
-            registerConstHandle(nValueConstId, handle);
+            m_mapConstants.put(nValueConstId, handle);
             }
 
         return handle;
@@ -73,6 +74,14 @@ public class ObjectHeap
             return xInt64.INSTANCE;
             }
 
+        if (constValue instanceof ClassConstant)
+            {
+            // an enum or enum value
+            ClassTemplate template = f_types.getTemplate((ClassConstant) constValue);
+            assert (template.isSingleton());
+            return template;
+            }
+
         if (constValue instanceof ClassTypeConstant)
             {
             return xClass.INSTANCE;
@@ -94,15 +103,5 @@ public class ObjectHeap
             }
 
         throw new UnsupportedOperationException("Unknown constant " + constValue);
-        }
-
-    public ObjectHandle getConstHandle(int nValueConstId)
-        {
-        return m_mapConstants.get(nValueConstId);
-        }
-
-    protected void registerConstHandle(int nValueConstId, ObjectHandle handle)
-        {
-        m_mapConstants.put(nValueConstId, handle);
         }
     }
