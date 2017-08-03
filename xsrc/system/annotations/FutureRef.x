@@ -183,10 +183,11 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> FutureRef!<NewType> transform(function NewType (RefType) convert)
-        {
-        return chain(new TransformStep<NewType, RefType>(convert));
-        }
+// TODO: CP
+//    <NewType> FutureRef!<NewType> transform(function NewType (RefType) convert)
+//        {
+//        return chain(new TransformStep<NewType, RefType>(convert));
+//        }
 
     /**
      * Create and return a new future that will handle an exceptional completion from this future.
@@ -225,10 +226,11 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> FutureRef!<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
-        {
-        return chain(new Transform2Step<NewType, RefType>(convert));
-        }
+// TODO: CP
+//    <NewType> FutureRef!<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
+//        {
+//        return chain(new Transform2Step<NewType, RefType>(convert));
+//        }
 
     /**
      * Create and return a new future that will complete when either *one* of _this_ future or the
@@ -287,11 +289,12 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> FutureRef!<NewType> and(FutureRef! other,
-            function FutureRef!<NewType> (RefType, other.RefType) combine = (v1, v2) -> (v1, v2))
-        {
-        return chain(new AndStep<NewType, RefType, other.RefType>(other, combine));
-        }
+// TODO: CP
+//    <NewType> FutureRef!<NewType> and(FutureRef! other,
+//            function FutureRef!<NewType> (RefType, other.RefType) combine = (v1, v2) -> (v1, v2))
+//        {
+//        return chain(new AndStep<NewType, RefType, other.RefType>(other, combine));
+//        }
 
     /**
      * Create and return a new future that will execute the specified function on completion.
@@ -327,10 +330,11 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    <NewType> FutureRef!<NewType> createContinuation(function NewType (RefType) async)
-        {
-        return chain(new ContinuationStep<NewType, RefType>(async));
-        }
+// TODO: CP
+//    <NewType> FutureRef!<NewType> createContinuation(function NewType (RefType) async)
+//        {
+//        return chain(new ContinuationStep<NewType, RefType>(async));
+//        }
 
     // ----- completion handling -------------------------------------------------------------------
 
@@ -420,11 +424,12 @@ mixin FutureRef<RefType>
      * a {@link NotifyDependent} function, allowing one or more FutureRef instances to notify it of
      * their completion. The FutureRef can chain to any number of DependentFuture instances.
      */
-    FutureRef!<nextFuture.RefType> chain(DependentFuture nextFuture)
-        {
-        chain(nextFuture.parentCompleted);
-        return nextFuture;
-        }
+// TODO: CP
+//    FutureRef!<nextFuture.RefType> chain(DependentFuture nextFuture)
+//        {
+//        chain(nextFuture.parentCompleted);
+//        return nextFuture;
+//        }
 
     /**
      * Add a NotifyDependent function to the list of things that this future must notify when it
@@ -488,8 +493,8 @@ mixin FutureRef<RefType>
                     }
                 }
             }
-
-        private @Unassigned RefType result;
+// TODO: CP
+//        private @Unassigned RefType result;
         private Ref<RefType> resultRef.get()
             {
             return &result;
@@ -551,7 +556,7 @@ mixin FutureRef<RefType>
             extends DependentFuture<RefType, RefType>
         {
         @Override
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        Void parentCompleted(Completion completion, RefType? input, Exception? e)
             {
             if (!assigned && completion == Result)
                 {
@@ -582,7 +587,7 @@ mixin FutureRef<RefType>
             extends DependentFuture<RefType, RefType>
         {
         @Override
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        Void parentCompleted(Completion completion, RefType? input, Exception? e)
             {
             if (!assigned && completion == Result)
                 {
@@ -617,7 +622,7 @@ mixin FutureRef<RefType>
             extends DependentFuture<RefType, RefType>
         {
         @Override
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        Void parentCompleted(Completion completion, RefType? input, Exception? e)
             {
             if (!assigned && completion == Error)
                 {
@@ -652,7 +657,7 @@ mixin FutureRef<RefType>
             extends DependentFuture<RefType, RefType>
         {
         @Override
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        Void parentCompleted(Completion completion, RefType? input, Exception? e)
             {
             if (!assigned && completion != Pending)
                 {
@@ -711,7 +716,8 @@ mixin FutureRef<RefType>
             other.whenComplete((result, e) -> parent2Completed(e == null ? Result : Error, result, e));
             }
 
-        public/private function FutureRef!<NewType> (RefType, other.RefType) combine;
+// TODO: CP
+//        public/private function FutureRef!<NewType> (RefType, other.RefType) combine;
 
         private /* TODO property cannot be conditional */ InputType  input1 = false;      // REVIEW
         private /* TODO property cannot be conditional */ Input2Type input2 = false;
