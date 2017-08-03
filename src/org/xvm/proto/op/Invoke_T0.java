@@ -2,11 +2,15 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.proto.Adapter;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
+
+import org.xvm.proto.template.collections.xTuple.TupleHandle;
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
 
@@ -15,43 +19,41 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * INVOKE_1N rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
+ * INVOKE_T0  rvalue-target, CONST-METHOD, rvalue-params-tuple
  *
  * @author gg 2017.03.08
  */
-public class Invoke_1N extends OpInvocable
+public class Invoke_T0 extends OpInvocable
     {
     private final int f_nTargetValue;
     private final int f_nMethodId;
-    private final int f_nArgValue;
-    private final int[] f_anRetValue;
+    private final int f_nArgTupleValue;
 
-    public Invoke_1N(int nTarget, int nMethodId, int nArg, int[] anRet)
+
+    public Invoke_T0(int nTarget, int nMethodId, int nArg)
         {
         f_nTargetValue = nTarget;
         f_nMethodId = nMethodId;
-        f_nArgValue = nArg;
-        f_anRetValue = anRet;
+        f_nArgTupleValue = nArg;
+
         }
 
-    public Invoke_1N(DataInput in)
+    public Invoke_T0(DataInput in)
             throws IOException
         {
         f_nTargetValue = in.readInt();
         f_nMethodId = in.readInt();
-        f_nArgValue = in.readInt();
-        f_anRetValue = readIntArray(in);
+        f_nArgTupleValue = in.readInt();
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_INVOKE_1N);
+        out.write(OP_INVOKE_T0);
         out.writeInt(f_nTargetValue);
         out.writeInt(f_nMethodId);
-        out.writeInt(f_nArgValue);
-        writeIntArray(out, f_anRetValue);
+        out.writeInt(f_nArgTupleValue);
         }
 
     @Override
@@ -60,30 +62,38 @@ public class Invoke_1N extends OpInvocable
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            TupleHandle hArgTuple = (TupleHandle) frame.getArgument(f_nArgTupleValue);
 
-            if (hTarget == null || hArg == null)
+            if (hTarget == null || hArgTuple == null)
                 {
                 return R_REPEAT;
                 }
 
             TypeComposition clz = hTarget.f_clazz;
+            ObjectHandle[] ahArg = hArgTuple.m_ahValue;
+
             MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             if (frame.f_adapter.isNative(method))
                 {
-                return clz.f_template.invokeNativeNN(frame, method, hTarget, new ObjectHandle[]{hArg}, f_anRetValue);
+                return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_UNUSED);
+                }
+
+            if (ahArg.length != Adapter.getArgCount(method))
+                {
+                frame.m_hException = xException.makeHandle("Invalid tuple argument");
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-            ahVar[0] = hArg;
+
+            System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
 
             if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
-                return xFunction.makeAsyncHandle(method).callN(frame, hTarget, ahVar, f_anRetValue);
+                return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, Frame.RET_UNUSED);
                 }
 
-            return frame.callN(method, hTarget, ahVar, f_anRetValue);
+            return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {
