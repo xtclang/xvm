@@ -1,7 +1,6 @@
 package org.xvm.asm;
 
 
-import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;

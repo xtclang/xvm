@@ -713,8 +713,8 @@ mixin FutureRef<RefType>
 
         public/private function FutureRef!<NewType> (RefType, other.RefType) combine;
 
-        private conditional InputType  input1 = false;      // REVIEW
-        private conditional Input2Type input2 = false;
+        private /* TODO property cannot be conditional */ InputType  input1 = false;      // REVIEW
+        private /* TODO property cannot be conditional */ Input2Type input2 = false;
 
         /**
          * Handle the completion of the first parent.

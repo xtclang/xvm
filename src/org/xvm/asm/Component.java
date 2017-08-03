@@ -1126,7 +1126,7 @@ public abstract class Component
     /**
      * TODO
      *
-     * @param sName
+     * @param sName  the name to resolve
      *
      * @return
      */

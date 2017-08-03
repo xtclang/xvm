@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Component;
@@ -91,6 +89,9 @@ public class MethodDeclarationStatement
         // create the structure for this method
         if (getComponent() == null)
             {
+            // TODO validate that the "redundant" types match the return types
+            // TODO validate that the names (params, type params) are unique
+
             // create a structure for this type
             Component container = getParent().getComponent();
             String    sName     = (String) name.getValue();
@@ -102,7 +103,7 @@ public class MethodDeclarationStatement
 
                 // build array of return types
                 int ofReturn = 0;
-                int cReturns = returns.size();
+                int cReturns = returns == null ? 0 : returns.size();
                 if (conditional != null)
                     {
                     ++ofReturn;
@@ -154,57 +155,6 @@ public class MethodDeclarationStatement
 
         super.registerStructures(errs);
         }
-
-/*
-    protected List<org.xvm.asm.Parameter> toXvmParameters(List<Parameter> params, ConstantPool pool)
-        {
-        if (params == null || params.isEmpty())
-            {
-            return Collections.EMPTY_LIST;
-            }
-
-        List<org.xvm.asm.Parameter> list = new ArrayList<>(params.size());
-        for (Parameter param : params)
-            {
-            // param.getType()
-            new org.xvm.asm.Parameter(pool, )
-            // list.add();
-            }
-        return list;
-        }
-
-    protected TypeConstant[] toTypeConstants(List<TypeExpression> listTypeExpr)
-        {
-        if (listTypeExpr == null || listTypeExpr.isEmpty())
-            {
-            return ConstantPool.NO_TYPES;
-            }
-
-        int i = 0;
-        TypeConstant[] aconstType = new TypeConstant[listTypeExpr.size()];
-        for (TypeExpression type : listTypeExpr)
-            {
-            aconstType[i++] = type.ensureTypeConstant();
-            }
-        return aconstType;
-        }
-
-    protected TypeConstant[] toTypeConstants2(List<Parameter> listTypeExpr)
-        {
-        if (listTypeExpr == null || listTypeExpr.isEmpty())
-            {
-            return ConstantPool.NO_TYPES;
-            }
-
-        int i = 0;
-        TypeConstant[] aconstType = new TypeConstant[listTypeExpr.size()];
-        for (TypeExpression type : listTypeExpr)
-            {
-            aconstType[i++] = type.ensureTypeConstant();
-            }
-        return aconstType;
-        }
-*/
 
 
     // ----- debugging assistance ------------------------------------------------------------------
