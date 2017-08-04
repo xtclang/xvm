@@ -15,7 +15,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * rvalue-target, CONST-METHOD, rvalue-param, #returns:(lvalue)
+ *INVOKE_NN rvalue-target, CONST-METHOD, #params:(rvalue), #returns:(lvalue)
  *
  * @author gg 2017.03.08
  */

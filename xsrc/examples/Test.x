@@ -12,13 +12,19 @@ module Test
             }
 
 // problem #2 ".Type" resolution ... kind of like problem #2 ... hmmm ...
-//      Fubar! fn(String s)
-//          {
-//          return this;
-//          }
+        Fubar! fn(String s)
+            {
+            return this;
+            }
         }
 
-//  Void foo(Int i) {}
+    Void foo(Int i) {}
+
+// problem #3 - functions as types
+    (function (Int, Int) (String, String)) fn; /* TODO ((Int, Int) f(String, String))
+        {
+        return f;
+        }*/
 
 //  class List<ElementType extends Int>
 //      {
