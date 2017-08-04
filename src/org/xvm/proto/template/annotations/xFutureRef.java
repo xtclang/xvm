@@ -47,10 +47,9 @@ public class xFutureRef
         //    typedef function Void (Completion, RefType?, Exception?) NotifyDependent;
         //    private NotifyDependent? notify = null;
 
-        // FutureRef.Type<RefType> whenComplete(function Void (RefType?, Exception?) notify)
-        markNativeMethod("whenComplete", null, null);
+        // FutureRef!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
+        markNativeMethod("whenComplete", null, new String[] {"annotations.FutureRef<RefType>"});
 
-        // TODO: how to inherit this from Ref?
         markNativeMethod("get", VOID, new String[]{"RefType"});
         markNativeMethod("set", new String[]{"RefType"}, VOID);
         }

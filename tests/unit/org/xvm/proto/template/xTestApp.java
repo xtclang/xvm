@@ -367,7 +367,8 @@ public class xTestApp extends xModule
 
         // --- testArray()
 
-        MethodTemplate ftLambda$2 = ensureMethodTemplate("lambda_2", null /*"REf<Int>*/, STRING);
+        MethodTemplate ftLambda$2 = ensureMethodTemplate("lambda_2",
+                new String[]{"Ref<Int64>"}, STRING);
         ftLambda$2.m_aop = new Op[]
             { // #0 = i
             new IVar(adapter.getClassTypeConstId("String"),

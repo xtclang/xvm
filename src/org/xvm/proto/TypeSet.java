@@ -1,9 +1,11 @@
 package org.xvm.proto;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.Constants;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -107,15 +109,27 @@ public class TypeSet
 
     // ----- templates -----
 
+    public ClassConstant getClassConstant(String sName)
+        {
+        // TODO: plug in module repositories
+        ModuleStructure module = f_container.f_module;
+
+        Component component = module.getChildByPath(sName);
+        if (component instanceof ClassStructure)
+            {
+            return (ClassConstant) component.getIdentityConstant();
+            }
+
+        throw new IllegalArgumentException("Non-existing component: " + sName);
+        }
+
     public ClassTemplate getTemplate(String sName)
         {
         // for core classes only
         ClassTemplate template = f_mapTemplatesByName.get(sName);
         if (template == null)
             {
-            // TODO: plug in module repositories
-            ClassConstant constClass = f_container.f_pool.ensureEcstasyClassConstant(sName);
-            template = getTemplate(constClass);
+            template = getTemplate(getClassConstant(sName));
             f_mapTemplatesByName.put(sName, template);
             }
         return template;
@@ -127,7 +141,8 @@ public class TypeSet
         ClassTemplate template = f_mapTemplatesByName.get(sName);
         if (template == null)
             {
-            ClassStructure structClass = (ClassStructure) constClass.getComponent();
+            Component struct = constClass.getComponent();
+            ClassStructure structClass = (ClassStructure) struct;
             if (structClass == null)
                 {
                 throw new RuntimeException("Missing class structure: " + constClass);

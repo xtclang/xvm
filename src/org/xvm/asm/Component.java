@@ -77,7 +77,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <p/>
  * Normally, an XVM structure has a single parent structure and any number of child structures, but
  * a Component can differ dramatically from this model, in that it can have any number of parent
- * Conponents (only one of which at most is valid for a given condition), and it can have any number
+ * Components (only one of which at most is valid for a given condition), and it can have any number
  * of child Components, of which only some are (perhaps none is) appropriate for a given condition.
  * <p/>
  * The persistent form of a Component is relatively complicated, in order to handle the potentially
@@ -172,7 +172,7 @@ public abstract class Component
      */
     public Component getParent()
         {
-        Component    parent     = null;
+        Component    parent;
         XvmStructure containing = getContaining();
         while (true)
             {
@@ -1044,8 +1044,8 @@ public abstract class Component
                 equalChildMaps(this.getMethodByConstantMap(), that.getMethodByConstantMap());
         }
 
-    private boolean equalChildMaps(Map<? extends Object, ? extends Component> mapThis,
-                                   Map<? extends Object, ? extends Component> mapThat)
+    private boolean equalChildMaps(Map<?, ? extends Component> mapThis,
+                                   Map<?, ? extends Component> mapThat)
         {
         if (mapThis.size() != mapThat.size())
             {
@@ -1135,6 +1135,34 @@ public abstract class Component
         Component component = getChild(sName);
         // TODO
         return component;
+        }
+
+    /**
+     * For all but the multi-method, this obtains a child by the specified dot-delimited path.
+     *
+     * @param sPath  dot-delimited child name path
+     *
+     * @return the child component or null if cannot be found
+     */
+    public Component getChildByPath(String sPath)
+        {
+        int       ofStart = 0;
+        int       ofEnd   = sPath.indexOf('.');
+        Component parent  = this;
+
+        while (ofEnd >= 0)
+            {
+            String sName = sPath.substring(ofStart, ofEnd);
+
+            parent = parent.getChild(sName);
+            if (parent == null)
+                {
+                return null;
+                }
+            ofStart = ofEnd + 1;
+            ofEnd   = sPath.indexOf('.', ofStart);
+            }
+        return parent.getChild(sPath.substring(ofStart));
         }
 
     /**
@@ -1721,7 +1749,7 @@ public abstract class Component
             {
             Component that = (Component) super.clone();
             // TODO this needs to clone data structures on this component as well
-            // TODO this needs to be overriden by all sub-classes of Component
+            // TODO this needs to be overridden by all sub-classes of Component
             return that;
             }
         catch (CloneNotSupportedException e)
