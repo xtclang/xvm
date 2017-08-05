@@ -41,9 +41,9 @@ public class NullableTypeExpression
         }
 
     @Override
-    protected boolean canResolveSimpleName()
+    protected boolean canResolveNames()
         {
-        return super.canResolveSimpleName() || type.canResolveSimpleName();
+        return super.canResolveNames() || type.canResolveNames();
         }
 
     @Override

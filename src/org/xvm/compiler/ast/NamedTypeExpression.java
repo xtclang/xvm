@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
@@ -188,66 +189,91 @@ public class NamedTypeExpression
                 }
             assert resolver.getResult() == Result.RESOLVED;
 
-            // determine the type's class
-            IdentityConstant constId = resolver.getIdentityConstant();
-            assert constId != null;
-            setIdentityConstant(constId);
-
-            // determine the type accessibility
-            Access accessType = Access.PUBLIC;
-            if (access != null)
+            Constant constant = resolver.getConstant();
+            if (constant instanceof TypeConstant)
                 {
-                switch (access.getId())
+                // access needs to be null
+                if (access != null)
                     {
-                    case PUBLIC:
-                        accessType = Access.PUBLIC;
-                        break;
-
-                    case PROTECTED:
-                        accessType = Access.PROTECTED;
-                        break;
-
-                    case PRIVATE:
-                        accessType = Access.PRIVATE;
-                        break;
-
-                    default:
-                        throw new IllegalStateException("access=" + access);
+                    throw new IllegalStateException("log error: access override unexpected");
                     }
-                }
 
-            // determine the type parameters
-            TypeConstant[] aconstParams = null;
-            if (paramTypes != null)
-                {
-                int cParams = paramTypes.size();
-                aconstParams = new TypeConstant[cParams];
-                for (int i = 0; i < cParams; ++i)
+                // must be no type params
+                if (paramTypes != null && !paramTypes.isEmpty())
                     {
-                    TypeExpression paramType = paramTypes.get(i);
-                    TypeConstant   constType = paramType.getTypeConstant();
-                    if (constType == null)
+                    throw new IllegalStateException("log error: type params unexpected");
+                    }
+
+                setTypeConstant((TypeConstant) constant);
+                }
+            else if (constant instanceof IdentityConstant)
+                {
+                // determine the type's class
+                IdentityConstant constId = (IdentityConstant) constant;
+                setIdentityConstant(constId);
+
+                // determine the type accessibility
+                Access accessType = Access.PUBLIC;
+                if (access != null)
+                    {
+                    switch (access.getId())
                         {
-                        assert !(paramType instanceof NameResolving) || ((NameResolving) paramType)
-                                .getNameResolver().getResult() == Result.ERROR;
-                        return;
+                        case PUBLIC:
+                            accessType = Access.PUBLIC;
+                            break;
+
+                        case PROTECTED:
+                            accessType = Access.PROTECTED;
+                            break;
+
+                        case PRIVATE:
+                            accessType = Access.PRIVATE;
+                            break;
+
+                        default:
+                            throw new IllegalStateException("access=" + access);
                         }
-                    aconstParams[i] = constType;
                     }
+
+                // determine the type parameters
+                TypeConstant[] aconstParams = null;
+                if (paramTypes != null)
+                    {
+                    int cParams = paramTypes.size();
+                    aconstParams = new TypeConstant[cParams];
+                    for (int i = 0; i < cParams; ++i)
+                        {
+                        TypeExpression paramType = paramTypes.get(i);
+                        TypeConstant constType = paramType.getTypeConstant();
+                        if (constType == null)
+                            {
+                            assert !(paramType instanceof NameResolving) ||
+                                    ((NameResolving) paramType)
+                                            .getNameResolver().getResult() == Result.ERROR;
+                            return;
+                            }
+                        aconstParams[i] = constType;
+                        }
+                    }
+
+                // create the ClassTypeConstant that represents the type expression
+                ConstantPool pool = getConstantPool();
+                TypeConstant constType =
+                        pool.ensureClassTypeConstant(constId, accessType, aconstParams);
+
+                // if it is immutable, then it must be an ImmutableTypeConstant (which is _NOT_ a
+                // ClassTypeConstant)
+                if (immutable != null)
+                    {
+                    constType = pool.ensureImmutableTypeConstant(constType);
+                    }
+
+                setTypeConstant(constType);
                 }
-
-            // create the ClassTypeConstant that represents the type expression
-            ConstantPool pool      = getConstantPool();
-            TypeConstant constType = pool.ensureClassTypeConstant(constId, accessType, aconstParams);
-
-            // if it is immutable, then it must be an ImmutableTypeConstant (which is _NOT_ a
-            // ClassTypeConstant)
-            if (immutable != null)
+            else
                 {
-                constType = pool.ensureImmutableTypeConstant(constType);
+                throw new UnsupportedOperationException("constant=" + constant);
                 }
-
-            setTypeConstant(constType);
             }
         }
 

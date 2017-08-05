@@ -864,7 +864,8 @@ public abstract class Component
         //     }
 
         int               nFlags  = Format.PROPERTY.ordinal() | access.FLAGS;
-        PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
+        PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(),
+                sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null);
         struct.setType(constType);
         addChild(struct);
@@ -893,7 +894,8 @@ public abstract class Component
             }
 
         int              nFlags  = Format.TYPEDEF.ordinal() | access.FLAGS;
-        TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(), sName);
+        TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(),
+                sName);
         TypedefStructure struct  = new TypedefStructure(this, nFlags, constId, null);
         struct.setType(constType);
         addChild(struct);
@@ -1124,20 +1126,6 @@ public abstract class Component
         }
 
     /**
-     * TODO
-     *
-     * @param sName  the name to resolve
-     *
-     * @return
-     */
-    public Component resolveName(String sName)
-        {
-        Component component = getChild(sName);
-        // TODO
-        return component;
-        }
-
-    /**
      * For all but the multi-method, this obtains a child by the specified dot-delimited path.
      *
      * @param sPath  dot-delimited child name path
@@ -1262,6 +1250,26 @@ public abstract class Component
             }
 
         return matches == null ? Collections.EMPTY_LIST : matches;
+        }
+
+    /**
+     * Request that the component determine what the specified name is referring to.
+     *
+     * @param sName        the name to resolve
+     * @param collector    the collector to which the potential name matches will be reported
+     *
+     * @return true iff any matches for the name were collected
+     */
+    public boolean resolveName(String sName, ResolutionCollector collector)
+        {
+        Component component = getChild(sName);
+        if (component != null)
+            {
+            collector.resolvedComponent(component);
+            return true;
+            }
+
+        return false;
         }
 
     /**
@@ -2504,6 +2512,29 @@ public abstract class Component
          * The optional arguments, if this Composition represents an annotation.
          */
         private Constant[] m_aconstArgs;
+        }
+
+
+    // ----- interface: ResolutionCollector --------------------------------------------------------
+
+    /**
+     * A callback interface used by the name resolution functionality of the Component.
+     */
+    public interface ResolutionCollector
+        {
+        /**
+         * Invoked when a name resolves to type parameter.
+         *
+         * @param constParam  the type parameter
+         */
+        void resolvedParameter(TypeConstant constParam);
+
+        /**
+         * Invoked when a name resolves to a child component.
+         *
+         * @param component  the child component (which may be a composite)
+         */
+        void resolvedComponent(Component component);
         }
 
 

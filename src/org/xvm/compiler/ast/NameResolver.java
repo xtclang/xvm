@@ -5,10 +5,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.CompositeComponent;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
@@ -22,6 +25,7 @@ import org.xvm.util.Severity;
  * @author cp 2017.07.20
  */
 public class NameResolver
+        implements ResolutionCollector
     {
     public NameResolver(AstNode node, Iterator<String> iterNames)
         {
@@ -84,13 +88,11 @@ public class NameResolver
                 // the first name is, then check if it is an implicitly imported identity.
 
                 // check if the name is an unhideable name
-                Component component = m_node.resolveParentBySimpleName(m_sName);
-
-                // if there is no obvious (unhideable) component that the name refers to, then we
-                // need to start with the current node, and one by one walk up to the root, asking
-                // at each level for the node to resolve the name
-                if (component == null)
+                Component componentParent = m_node.resolveParentBySimpleName(m_sName);
+                if (componentParent == null)
                     {
+                    // start with the current node, and one by one walk up to the root, asking at
+                    // each level for the node to resolve the name
                     AstNode node = m_node;
                     WalkUpToTheRoot: while (node != null)
                         {
@@ -102,7 +104,8 @@ public class NameResolver
                             switch (resolver.resolve(listRevisit, errs))
                                 {
                                 case RESOLVED:
-                                    component = resolver.getComponent();
+                                    m_constant  = resolver.getConstant();
+                                    m_component = resolver.getComponent();
                                     break WalkUpToTheRoot;
 
                                 case DEFERRED:
@@ -118,70 +121,90 @@ public class NameResolver
                                 }
                             }
 
-                        // otherwise, ask the node to resolve the name, and if it can't, we'll come
-                        // back later
-                        if (node == m_node || node.canResolveSimpleName())
+                        // otherwise, if the node has a component associated with it that is
+                        // prepared to resolve names, then ask it to resolve the name, and if it
+                        // isn't ready, we'll come back later
+                        if (node instanceof ComponentStatement)
                             {
-                            component = node.resolveSimpleName(m_sName);
-                            if (isAmbiguous(component))
+                            Component componentResolver = getResolvingComponent((ComponentStatement) node);
+                            if (componentResolver == null)
                                 {
-                                m_node.log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName, node);
-                                m_status = Status.ERROR;
-                                return Result.ERROR;
+                                // the component that can do the resolve isn't yet available; come
+                                // back later
+                                listRevisit.add(m_node);
+                                return Result.DEFERRED;
                                 }
-
-                            if (component != null)
+                            else if (componentResolver.resolveName(m_sName, this))
                                 {
+                                if (isAmbiguous())
+                                    {
+                                    m_node.log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS,
+                                            m_sName, node);
+                                    m_status = Status.ERROR;
+                                    return Result.ERROR;
+                                    }
+
                                 break WalkUpToTheRoot;
                                 }
                             }
-                        else
-                            {
-                            listRevisit.add(m_node);
-                            return Result.DEFERRED;
-                            }
 
+                        // walk up towards the root
                         node = node.getParent();
                         }
-                    }
 
-                // last chance: check the implicitly imported names
-                if (component == null)
-                    {
-                    component = getPool().getImplicitlyImportedComponent(m_sName);
+                    // last chance: check the implicitly imported names
+                    if (m_constant == null)
+                        {
+                        Component component = getPool().getImplicitlyImportedComponent(m_sName);
+                        if (component == null)
+                            {
+                            m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                            m_status = Status.ERROR;
+                            return Result.ERROR;
+                            }
+                        else
+                            {
+                            resolvedComponent(component);
+                            }
+                        }
                     }
-
-                if (component == null)
+                else
                     {
-                    m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
-                    m_status = Status.ERROR;
-                    return Result.ERROR;
+                    resolvedComponent(componentParent);
                     }
 
                 // first name has been resolved
-                m_component = component;
-                m_sName     = m_iter.hasNext() ? m_iter.next() : null;
-                m_status    = Status.RESOLVED_PARTIAL;
+                m_status = Status.RESOLVED_PARTIAL;
+                m_sName  = m_iter.hasNext() ? m_iter.next() : null;
                 // fall through
 
             case RESOLVED_PARTIAL:
-                // at this point, we have a component to work from, so the next name has to be
-                // relative to that component
+                // at this point, we have a component (or other identity) to work from, so the next
+                // name has to be relative to that component
                 while (m_sName != null)
                     {
-                    Component componentNext = m_component.resolveName(m_sName);
-                    boolean   fAmbiguous    = componentNext != null && isAmbiguous(componentNext);
-                    if (componentNext == null || fAmbiguous)
+                    Component componentResolver = m_component;
+                    if (componentResolver == null)
+                        {
+                        // must be a type parameter, and that type parameter must have a constraint,
+                        // which we'll use as the component
+                        assert m_constant != null;
+                        // TODO "<T extends String>" would mean use String as the componentResolver
+                        throw new UnsupportedOperationException();
+                        }
+
+                    if (componentResolver.resolveName(m_sName, this) && !isAmbiguous())
+                        {
+                        m_sName = m_iter.hasNext() ? m_iter.next() : null;
+                        }
+                    else
                         {
                         m_node.log(errs, Severity.ERROR,
-                                fAmbiguous ? Compiler.NAME_AMBIGUOUS : Compiler.NAME_MISSING,
+                                isAmbiguous() ? Compiler.NAME_AMBIGUOUS : Compiler.NAME_MISSING,
                                 m_sName, m_component.getIdentityConstant());
                         m_status = Status.ERROR;
                         return Result.ERROR;
                         }
-
-                    m_component = componentNext;
-                    m_sName     = m_iter.hasNext() ? m_iter.next() : null;
                     }
 
                 // no names left to resolve
@@ -200,15 +223,27 @@ public class NameResolver
         }
 
     /**
-     * Determine if the specified component refers to a single identity.
-     *
-     * @param component  the component to test
+     * Determine if the thus-far resolved component refers to more than a single identity.
      *
      * @return true if the specified component refers to more than one identity
      */
-    private static boolean isAmbiguous(Component component)
+    public boolean isAmbiguous()
         {
-        return component instanceof CompositeComponent && ((CompositeComponent) component).isAmbiguous();
+        return m_component instanceof CompositeComponent && ((CompositeComponent) m_component).isAmbiguous();
+        }
+
+    /**
+     * Obtain the component for the specified node, but only if the node is ready to resolve names.
+     *
+     * @param node  a ComponentStatement
+     *
+     * @return the corresponding Component, iff the ComponentStatement is ready to resolve names
+     */
+    private static Component getResolvingComponent(ComponentStatement node)
+        {
+        return node.canResolveNames()
+                ? node.getComponent()
+                : null;
         }
 
     /**
@@ -237,20 +272,22 @@ public class NameResolver
         }
 
     /**
-     * @return the Component that the NameResolver has resolved to thus far; this value can only be
-     *         used when the NameResolver result is RESOLVED
+     * @return the Constant that the NameResolver has resolved to thus far; this value can only be
+     *         depended on after the NameResolver result is RESOLVED
+     */
+    public Constant getConstant()
+        {
+        return m_constant;
+        }
+
+    /**
+     * @return the Component that the NameResolver has resolved to thus far, which may be null if
+     *         the name resolves to something that is not representable as a Component; this value
+     *         can only be depended on after the NameResolver result is RESOLVED
      */
     public Component getComponent()
         {
         return m_component;
-        }
-
-    /**
-     * @return the IdentityConstant that the NameResolver has resolved to, or null
-     */
-    public IdentityConstant getIdentityConstant()
-        {
-        return m_component == null ? null : m_component.getIdentityConstant();
         }
 
     /**
@@ -260,6 +297,24 @@ public class NameResolver
         {
         return m_node.getConstantPool();
         }
+
+
+    // ----- ResolutionCollector -------------------------------------------------------------------
+
+    @Override
+    public void resolvedParameter(TypeConstant constParam)
+        {
+        m_constant  = constParam;
+        m_component = null;
+        }
+
+    @Override
+    public void resolvedComponent(Component component)
+        {
+        m_component = component;
+        m_constant  = component.getIdentityConstant();
+        }
+
 
     // ----- inner classes -------------------------------------------------------------------------
 
@@ -313,6 +368,11 @@ public class NameResolver
      * The node that the import was registered with, if any possible import match was found.
      */
     private StatementBlock   m_blockImport;
+
+    /**
+     * The constant representing what the node has thus far resolved to.
+     */
+    private Constant         m_constant;
 
     /**
      * The component representing what the node has thus far resolved to.
