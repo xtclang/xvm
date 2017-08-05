@@ -35,7 +35,7 @@ interface Referent
      * a different module, this method cannot produce an original reference, and will result in the
      * conditional false.
      */
-    <AsType> conditional AsType revealAs(Type AsType);
+    <AsType> conditional AsType revealAs(Type<AsType> asType);
 
     /**
      * Determine if the referent is an instance of the specified type.

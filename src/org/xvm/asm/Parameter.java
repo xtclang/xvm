@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 
 import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.RegisterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.Handy;
@@ -136,6 +137,15 @@ public class Parameter
         assert ((ClassTypeConstant) m_constType).getTypeConstants().size() > 0;
 
         return ((ClassTypeConstant) m_constType).getTypeConstants().get(0);
+        }
+
+    /**
+     * @return the RegisterTypeConstant that corresponds to this register being used as a type param
+     */
+    public RegisterTypeConstant asTypeParameterType()
+        {
+        assert isTypeParameter();
+        return getConstantPool().ensureRegisterTypeConstant(m_iParam);
         }
 
     /**

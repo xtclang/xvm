@@ -392,7 +392,7 @@ public abstract class AstNode
     /**
      * @return true iff this AstNode should be able to resolve names
      */
-    protected boolean canResolveSimpleName()
+    protected boolean canResolveNames()
         {
         if (this instanceof NameResolver.NameResolving)
             {
@@ -407,22 +407,6 @@ public abstract class AstNode
         // whether or not they can resolve names), we'll assume that if they haven't been resolved,
         // then they don't know how to resolve names
         return stage.ordinal() >= Stage.Resolved.ordinal();
-        }
-
-    /**
-     * Evaluates the simple name to determine if it refers to some part of the structure for the
-     * current node, and if so, returns the identity constant that identifies that part of the
-     * structure.
-     *
-     * @param sName  the simple name
-     *
-     * @return an IdentityConstant that specifies a structure, an AmbiguousIdentityConstant if more
-     *         than one structure is identified by the name, or null if no structure was identified
-     *         by the name
-     */
-    protected Component resolveSimpleName(String sName)
-        {
-        return null;
         }
 
 

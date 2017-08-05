@@ -262,11 +262,11 @@ public class ModuleStructure
         }
 
     @Override
-    public Component resolveName(String sName)
+    public boolean resolveName(String sName, ResolutionCollector collector)
         {
         return moduleActual == null
-                ? super.resolveName(sName)
-                : moduleActual.resolveName(sName);
+                ? super.resolveName(sName, collector)
+                : moduleActual.resolveName(sName, collector);
         }
 
 

@@ -40,6 +40,7 @@ import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.ParentTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterTypeConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.SymbolicConstant;
 import org.xvm.asm.constants.TupleConstant;
@@ -1057,6 +1058,24 @@ public class ConstantPool
         if (constant == null)
             {
             constant = (ParameterTypeConstant) register(new ParameterTypeConstant(this, constParent, sName));
+            }
+        return constant;
+        }
+
+    /**
+     * Given the specified register index, obtain a TypeConstant that represents the type parameter.
+     *
+     * @param iReg  the register number
+     *
+     * @return the RegisterTypeConstant for the specified register number
+     */
+    public RegisterTypeConstant ensureRegisterTypeConstant(int iReg)
+        {
+        assert iReg >= 0;
+        RegisterTypeConstant constant = (RegisterTypeConstant) ensureLocatorLookup(Format.RegisterType).get(iReg);
+        if (constant == null)
+            {
+            constant = (RegisterTypeConstant) register(new RegisterTypeConstant(this, iReg));
             }
         return constant;
         }

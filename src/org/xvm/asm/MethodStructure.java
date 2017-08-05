@@ -211,8 +211,29 @@ public class MethodStructure
         return true;
         }
 
+    @Override
+    public boolean resolveName(String sName, ResolutionCollector collector)
+        {
+        boolean fFound = false;
 
-    // ----- XvmStructure methods ------------------------------------------------------------------
+        for (int i = 0, c = m_cTypeParams; i < c; ++i)
+            {
+            Parameter param = m_aParams[i];
+            assert param.isTypeParameter();
+
+            if (param.getName().equals(sName))
+                {
+                collector.resolvedParameter(param.asTypeParameterType());
+                return true;
+                }
+            }
+
+        // method short-circuits the search
+        return false;
+        }
+
+
+// ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     public MethodConstant getIdentityConstant()

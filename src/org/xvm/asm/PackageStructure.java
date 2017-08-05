@@ -113,11 +113,11 @@ public class PackageStructure
         }
 
     @Override
-    public Component resolveName(String sName)
+    public boolean resolveName(String sName, ResolutionCollector collector)
         {
         return m_constModule == null
-                ? super.resolveName(sName)
-                : m_constModule.getComponent().resolveName(sName);
+                ? super.resolveName(sName, collector)
+                : m_constModule.getComponent().resolveName(sName, collector);
         }
 
 
