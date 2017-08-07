@@ -214,8 +214,6 @@ public class MethodStructure
     @Override
     public boolean resolveName(String sName, ResolutionCollector collector)
         {
-        boolean fFound = false;
-
         for (int i = 0, c = m_cTypeParams; i < c; ++i)
             {
             Parameter param = m_aParams[i];
@@ -251,7 +249,7 @@ public class MethodStructure
         MethodConstant constMethod       = getIdentityConstant();
         TypeConstant[] aconstReturnTypes = constMethod.getRawReturns();
         TypeConstant[] aconstParamTypes  = constMethod.getRawParams();
-        
+
         int         cReturns = aconstReturnTypes.length;
         Parameter[] aReturns = new Parameter[cReturns];
         boolean     fCond    = isConditionalReturn();
@@ -264,7 +262,7 @@ public class MethodStructure
                 }
             aReturns[i] = param;
             }
-        
+
         int         cParams     = aconstParamTypes.length;
         Parameter[] aParams     = new Parameter[cParams];
         int         cTypeParams = readMagnitude(in);
@@ -277,7 +275,7 @@ public class MethodStructure
                 }
             aParams[i] = param;
             }
-        
+
         m_aReturns    = aReturns;
         m_cTypeParams = cTypeParams;
         m_aParams     = aParams;

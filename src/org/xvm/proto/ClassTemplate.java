@@ -111,19 +111,8 @@ public abstract class ClassTemplate
         if (opt.isPresent())
             {
             ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassConstant();
-            try
-                {
-                structSuper = (ClassStructure) constClass.getComponent();
-                templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
-                }
-            catch (RuntimeException e)
-                {
-                // TODO: remove when getComponent() is fixed
-                String sName = constClass.getName();
-                System.out.println("getComponent() is broken for " + sName);
-                templateSuper = f_types.getTemplate(sName);
-                structSuper = templateSuper.f_struct;
-                }
+            structSuper = (ClassStructure) constClass.getComponent();
+            templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
             }
 
         if (structSuper == null)
@@ -186,7 +175,7 @@ public abstract class ClassTemplate
     /**
      * Initialize properties, methods and functions declared at the "top" layer.
      *
-     * TODO: remove
+     * TODO: remove; should be called from constructors
      */
     public void initDeclared()
         {
@@ -719,7 +708,7 @@ public abstract class ClassTemplate
             String sErr;
             if (isInjectable(property))
                 {
-                ClassTypeConstant constType = frame.f_adapter.resolveType(property);
+                TypeConstant constType = frame.f_adapter.resolveType(property);
                 TypeComposition clz = f_types.resolve(constType);
 
                 hValue = frame.f_context.f_container.getInjectable(sName, clz);
@@ -1040,8 +1029,9 @@ public abstract class ClassTemplate
             {
             m_fAtomic = true;
 
-            ClassTypeConstant constType = f_templateClass.f_types.f_adapter.resolveType(f_property);
-            if (constType.getClassConstant().getName().equals("Int64"))
+            TypeConstant constType = f_templateClass.f_types.f_adapter.resolveType(f_property);
+            if (constType instanceof ClassTypeConstant &&
+                    ((ClassTypeConstant) constType).getClassConstant().getName().equals("Int64"))
                 {
                 markAsRef("annotations.AtomicIntNumber");
                 }

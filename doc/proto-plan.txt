@@ -51,7 +51,7 @@
 
 + Const
 
-- hashCode implementation
++ hashCode implementation
 
 - Property and Method
 

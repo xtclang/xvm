@@ -30,6 +30,6 @@ public abstract class OpProperty extends Op
 
         m_nPropId = nPropertyId;
         m_clazz = clazz;
-        return m_property = clazz.getProperty(constProperty);
+        return m_property = clazz.getProperty(constProperty.getName());
         }
     }

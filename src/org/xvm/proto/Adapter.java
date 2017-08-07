@@ -359,7 +359,7 @@ public class Adapter
         return mms == null ? null : (MethodStructure) mms.children().get(0);
         }
 
-    public ClassTypeConstant resolveType(PropertyStructure property)
+    public TypeConstant resolveType(PropertyStructure property)
         {
         TypeConstant constType = property.getType();
 
@@ -370,7 +370,7 @@ public class Adapter
 
         if (constType instanceof ClassTypeConstant)
             {
-            return (ClassTypeConstant) constType;
+            return constType;
             }
 
         throw new UnsupportedOperationException("Unsupported type: " + constType + " for " + property);

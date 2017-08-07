@@ -354,7 +354,7 @@ public class TypeComposition
             MultiMethodStructure mms = (MultiMethodStructure) property.getChild(constMethod.getName());
             if (mms != null)
                 {
-                // TODO: compare the signature
+                // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
                 list.add((MethodStructure) mms.children().get(0));
                 }
             }
@@ -385,13 +385,6 @@ public class TypeComposition
 
         // TODO: walk default methods on interfaces
         return list;
-        }
-
-    // retrieve the property structure for the specified property
-    // TODO: replace PropertyConstant with PropertyIdConstant (or String)
-    public PropertyStructure getProperty(PropertyConstant constProperty)
-        {
-        return getProperty(constProperty.getName());
         }
 
     // retrieve the property structure for the specified property

@@ -365,6 +365,12 @@ class TestApp
         Int y; // TODO: remove
         }
 
+    static const Rectangle(Point topLeft, Int bottomRight)
+        {
+        Point tl; // TODO: remove
+        Point br; // TODO: remove
+        }
+
     static Void testConst()
         {
         Point p1 = new Point(0, 1);
@@ -374,5 +380,9 @@ class TestApp
         print(p2);
         print(p1 == p2);
         print(p2 > p1);
+
+        Rectangle r = new Rectangle(p2, p1);
+        print(r);
+        print(r.hash);
         }
     }

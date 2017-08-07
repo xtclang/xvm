@@ -9,6 +9,7 @@ import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
+import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
@@ -37,7 +38,34 @@ public class xConst
     public void initDeclared()
         {
         ensurePropertyTemplate("hash").m_fReadOnly = true;
+        ensureGetter("hash").m_fNative = true;
         markNativeMethod("to", VOID, STRING);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (ahArg.length)
+            {
+            case 0:
+                if (method.getName().equals("get")) // hash.get()
+                    {
+                    GenericHandle hConst = (GenericHandle) hTarget;
+
+                    assert method.getParent().getParent().getName().equals("hash");
+
+                    JavaLong hHash = (JavaLong) hConst.getField("@hash");
+                    if (hHash == null)
+                        {
+                        hHash = xInt64.makeHandle(buildHashCode(hTarget));
+                        hConst.m_mapFields.put("@hash", hHash);
+                        }
+                    return frame.assignValue(iReturn, hHash);
+                    }
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
@@ -198,5 +226,35 @@ public class xConst
         sb.append('}');
 
         return null;
+        }
+
+    protected long buildHashCode(ObjectHandle hTarget)
+        {
+        ClassStructure struct = f_struct;
+
+        GenericHandle hConst = (GenericHandle) hTarget;
+
+        long lHash = 0;
+        for (Component comp : struct.children())
+            {
+            if (comp instanceof PropertyStructure)
+                {
+                PropertyStructure property = (PropertyStructure) comp;
+                if (isReadOnly(property))
+                    {
+                    continue;
+                    }
+
+                String sProp = property.getName();
+                ObjectHandle hProp = hConst.getField(sProp);
+
+                assert (hProp != null);
+
+                xConst template = (xConst) hProp.f_clazz.f_template;
+                lHash = 37 * lHash + template.buildHashCode(hProp);
+                }
+            }
+
+        return lHash;
         }
     }
