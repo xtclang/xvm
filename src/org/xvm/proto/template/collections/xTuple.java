@@ -19,6 +19,7 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
+import org.xvm.proto.template.xString;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -193,27 +194,27 @@ public class xTuple
         }
 
     @Override
-    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
 
-        sb.append(hTuple.f_clazz.toString())
-          .append('{');
-
-        ObjectHandle[] ahValue = hTuple.m_ahValue;
-        for (int i = 0, c = ahValue.length; i < c; i++)
-            {
-            ObjectHandle hValue = ahValue[i];
-
-            if (i > 0)
-                {
-                sb.append(", ");
-                }
-
-            hValue.f_clazz.f_template.buildStringValue(hValue, sb);
-            }
-        sb.append('}');
-        return null;
+//        iReturn.append(hTuple.f_clazz.toString())
+//          .append('{');
+//
+//        ObjectHandle[] ahValue = hTuple.m_ahValue;
+//        for (int i = 0, c = ahValue.length; i < c; i++)
+//            {
+//            ObjectHandle hValue = ahValue[i];
+//
+//            if (i > 0)
+//                {
+//                iReturn.append(", ");
+//                }
+//
+//            hValue.f_clazz.f_template.buildStringValue(frame, hValue, iReturn);
+//            }
+//        iReturn.append('}');
+        return frame.assignValue(iReturn, xString.makeHandle("TODO: " + hTuple.toString()));
         }
 
     // ----- ObjectHandle helpers -----

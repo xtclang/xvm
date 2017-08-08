@@ -151,7 +151,7 @@ public class TypeSet
             template = getNativeTemplate(sName, structClass);
             if (template == null)
                 {
-                System.out.println("***** Generating template for " + sName);
+                // System.out.println("***** Generating template for " + sName);
 
                 switch (structClass.getFormat())
                     {

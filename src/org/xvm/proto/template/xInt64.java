@@ -158,11 +158,10 @@ public class xInt64
     // ----- Object methods -----
 
     @Override
-    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
-        sb.append(hThis.getValue());
-        return null;
+        return frame.assignValue(iReturn, xString.makeHandle(String.valueOf(hThis.getValue())));
         }
 
     public static JavaLong makeHandle(long lValue)

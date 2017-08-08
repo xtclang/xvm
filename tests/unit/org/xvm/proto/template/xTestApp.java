@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.proto.Adapter;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Op;
@@ -516,6 +517,24 @@ public class xTestApp extends xModule
             };
         mtConst.m_cVars = 2;
 
+        MethodTemplate mtTo = ctPoint.ensureMethodTemplate("to", VOID, STRING);
+        mtTo.m_aop = new Op[]
+            {
+            new IVar(adapter.getClassTypeConstId("String"), -adapter.ensureValueConstantId("(")), // #0
+            new Var(adapter.getClassTypeConstId("Int64")), // #1
+            new Var(adapter.getClassTypeConstId("String")), // #2
+            new LGet(adapter.getPropertyConstId("TestApp.Point", "x"), 1),
+            new Invoke_01(1, adapter.getMethodConstId("Object", "to", STRING, VOID), 2),
+            new Add(0, 2, 0),
+            new Add(0, -adapter.ensureValueConstantId(", "), 0),
+            new LGet(adapter.getPropertyConstId("TestApp.Point", "y"), 1),
+            new Invoke_01(1, adapter.getMethodConstId("Object", "to", STRING, VOID), 2),
+            new Add(0, 2, 0),
+            new Add(0, -adapter.ensureValueConstantId(")"), 0),
+            new Return_1(0),
+            };
+        mtTo.m_cVars = 3;
+
         ClassTemplate ctRectangle = f_types.getTemplate("TestApp.Rectangle");
         adapter.addMethod(ctRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point"}, VOID);
         MethodTemplate mtRectangle = ctRectangle.ensureMethodTemplate("construct", new String[]{"TestApp.Point", "TestApp.Point"});
@@ -539,7 +558,7 @@ public class xTestApp extends xModule
             new X_Print(0),
 
             new NVar(adapter.getClassTypeConstId("TestApp.Point"),
-                    adapter.ensureValueConstantId("p1")), // #1 (p2)
+                    adapter.ensureValueConstantId("p2")), // #1 (p2)
             new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
                     new int[]{-adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(0)},
                     1),
@@ -559,7 +578,6 @@ public class xTestApp extends xModule
             new X_Print(3),
 
             new Var(adapter.getClassTypeConstId("Int64")), // #4
-new Nop(),
             new PGet(3, adapter.getPropertyConstId("Const", "hash"), 4),
             new X_Print(4),
 

@@ -93,7 +93,7 @@ public class xArray
                 hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
                 Frame frame0 = frame.m_frameNext;
 
-                frame0.m_continuation = new Supplier<Frame>()
+                frame0.setContinuation(new Supplier<Frame>()
                     {
                     public Frame get()
                         {
@@ -112,14 +112,14 @@ public class xArray
                             // TODO: ditto
                             hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
                             Frame frameNext = frame.m_frameNext;
-                            frameNext.m_continuation = this;
+                            frameNext.setContinuation(this);
                             return frameNext;
                             }
 
                         frame.assignValue(iReturn, hArray);
                         return null;
                         }
-                    };
+                    });
 
                 return Op.R_CALL;
                 }

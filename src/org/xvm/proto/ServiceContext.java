@@ -602,11 +602,11 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, 1,
                     new Op[]{opConstruct, Return_0.INSTANCE});
 
-            frame0.m_continuation = () ->
+            frame0.setContinuation(() ->
                 {
                 sendResponse1(f_fiberCaller, frame0, f_future);
                 return null;
-                };
+                });
 
             return frame0;
             }
@@ -649,7 +649,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.m_continuation = () ->
+            frame0.setContinuation(() ->
                 {
                 if (f_cReturns == 0)
                     {
@@ -663,7 +663,7 @@ public class ServiceContext
                     sendResponse1(f_fiberCaller, frame0, f_future);
                     }
                 return null;
-                };
+                });
 
             return frame0;
             }
@@ -713,11 +713,11 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                 new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.m_continuation = () ->
+            frame0.setContinuation(() ->
                 {
                 sendResponseN(f_fiberCaller, frame0, f_future);
                 return null;
-                };
+                });
 
             return frame0;
             }
@@ -769,7 +769,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, cReturns,
                     new Op[]{opCall, Return_0.INSTANCE});
 
-            frame0.m_continuation = () ->
+            frame0.setContinuation(() ->
                 {
                 if (cReturns == 0)
                     {
@@ -783,7 +783,7 @@ public class ServiceContext
                     sendResponse1(f_fiberCaller, frame0, f_future);
                     }
                 return null;
-                };
+                });
 
             return frame0;
             }

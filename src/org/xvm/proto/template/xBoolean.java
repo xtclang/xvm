@@ -7,6 +7,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
@@ -71,10 +72,10 @@ public class xBoolean
         }
 
     @Override
-    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        sb.append(hTarget == FALSE ? "False" : "True");
-        return null;
+        return frame.assignValue(iReturn,
+                xString.makeHandle(hTarget == FALSE ? "False" : "True"));
         }
 
     public static BooleanHandle makeHandle(boolean f)

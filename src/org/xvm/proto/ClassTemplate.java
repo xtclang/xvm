@@ -497,7 +497,7 @@ public abstract class ClassTemplate
         FullyBoundHandle hF1 = makeFinalizer(constructor, hStruct, ahVar);
         frameRC.m_hfnFinally = hF1 == null ? FullyBoundHandle.NO_OP : hF1;
 
-        frameRC.m_continuation = () ->
+        frameRC.setContinuation(() ->
             {
             if (isConstructImmutable())
                 {
@@ -508,7 +508,7 @@ public abstract class ClassTemplate
             FullyBoundHandle hF = frameRC.m_hfnFinally;
             return hF == FullyBoundHandle.NO_OP ? contAssign.get() :
                     hF.callChain(frame, Constants.Access.PRIVATE, contAssign);
-            };
+            });
 
         frame.m_frameNext = frameDC == null ? frameRC : frameDC;
         return Op.R_CALL;
@@ -551,9 +551,7 @@ public abstract class ClassTemplate
                 if (method.getName().equals("to"))
                     {
                     // how to differentiate; check the method's return type?
-                    StringBuilder sb = new StringBuilder();
-                    buildStringValue(hTarget, sb);
-                    return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+                    return buildStringValue(frame, hTarget, iReturn);
                     }
             }
 
@@ -864,11 +862,10 @@ public abstract class ClassTemplate
             }
         }
 
-    // get the String representation of the target handle
-    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    // build the String representation of the target handle
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        sb.append(hTarget.toString());
-        return null;
+        return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
         }
 
     // ----- Op-code support: array operations -----

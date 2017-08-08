@@ -10,10 +10,9 @@ import org.xvm.asm.constants.CharStringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.UnresolvedTypeConstant;
+
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
@@ -256,7 +255,7 @@ public class TypeComposition
             {
             frameDefault = frame.f_context.createFrame1(frame, methodDefault,
                     hStruct, ahVar, Frame.RET_UNUSED);
-            frameDefault.m_continuation = continuation;
+            frameDefault.setContinuation(continuation);
             continuation = null;
             }
 
@@ -272,7 +271,7 @@ public class TypeComposition
             return frameDefault;
             }
 
-        frameSuper.m_continuation = () -> frameDefault;
+        frameSuper.setContinuation(() -> frameDefault);
         return frameSuper;
         }
 

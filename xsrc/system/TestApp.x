@@ -363,6 +363,11 @@ class TestApp
         {
         Int x; // TODO: remove
         Int y; // TODO: remove
+
+        String to<String>()
+            {
+            return "(" + x + ", " + y + ")";
+            }
         }
 
     static const Rectangle(Point topLeft, Int bottomRight)

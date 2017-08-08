@@ -186,10 +186,9 @@ public class xString
     // ----- Object methods -----
 
     @Override
-    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        sb.append(((StringHandle) hTarget).getValue());
-        return null;
+        return frame.assignValue(iReturn, hTarget);
         }
 
     @Override
