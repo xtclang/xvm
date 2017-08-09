@@ -8,8 +8,9 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
-import org.xvm.proto.op.IRef;
+
 import org.xvm.proto.template.xString;
+import org.xvm.proto.template.xString.StringHandle;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -58,13 +59,13 @@ public class xTerminalConsole
                 switch (iResult)
                     {
                     case Op.R_NEXT:
-                        CONSOLE_OUT.print(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                        CONSOLE_OUT.print(((StringHandle) frame.getFrameLocal()).getValue());
                         return Op.R_NEXT;
 
                     case Op.R_CALL:
                         frame.m_frameNext.setContinuation(() ->
                             {
-                            CONSOLE_OUT.print(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                            CONSOLE_OUT.print(((StringHandle) frame.getFrameLocal()).getValue());
                             return null;
                             });
 
@@ -80,13 +81,13 @@ public class xTerminalConsole
                 switch (iResult)
                     {
                     case Op.R_NEXT:
-                        CONSOLE_OUT.println(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                        CONSOLE_OUT.println(((StringHandle) frame.getFrameLocal()).getValue());
                         return Op.R_NEXT;
 
                     case Op.R_CALL:
                         frame.m_frameNext.setContinuation(() ->
                             {
-                            CONSOLE_OUT.println(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                            CONSOLE_OUT.println(((StringHandle) frame.getFrameLocal()).getValue());
                             return null;
                             });
 

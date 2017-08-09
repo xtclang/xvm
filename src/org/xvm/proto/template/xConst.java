@@ -30,6 +30,9 @@ public class xConst
     {
     public static xConst INSTANCE;
 
+    // name of the synthetic property for cached hash value
+    public static final String PROP_HASH = "@hash";
+
     public xConst(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
@@ -61,11 +64,11 @@ public class xConst
 
                     assert method.getParent().getParent().getName().equals("hash");
 
-                    JavaLong hHash = (JavaLong) hConst.getField("@hash");
+                    JavaLong hHash = (JavaLong) hConst.getField(PROP_HASH);
                     if (hHash == null)
                         {
                         hHash = xInt64.makeHandle(buildHashCode(hTarget));
-                        hConst.m_mapFields.put("@hash", hHash);
+                        hConst.m_mapFields.put(PROP_HASH, hHash);
                         }
                     return frame.assignValue(iReturn, hHash);
                     }
