@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -51,9 +51,9 @@ public class ClassStructure
      *
      * @return a read-only map of type parameter name to type
      */
-    public Map<CharStringConstant, TypeConstant> getTypeParams()
+    public Map<StringConstant, TypeConstant> getTypeParams()
         {
-        Map<CharStringConstant, TypeConstant> map = m_mapParams;
+        Map<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null)
             {
             return Collections.EMPTY_MAP;
@@ -67,15 +67,15 @@ public class ClassStructure
      *
      * @return a read-only list of map entries from type parameter name to type
      */
-    public List<Map.Entry<CharStringConstant, TypeConstant>> getTypeParamsAsList()
+    public List<Map.Entry<StringConstant, TypeConstant>> getTypeParamsAsList()
         {
-        final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
+        final ListMap<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null || map.isEmpty())
             {
             return Collections.EMPTY_LIST;
             }
 
-        List<Map.Entry<CharStringConstant, TypeConstant>> list = map.asList();
+        List<Map.Entry<StringConstant, TypeConstant>> list = map.asList();
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
         }
@@ -88,7 +88,7 @@ public class ClassStructure
      */
     public void addTypeParam(String sName, TypeConstant clz)
         {
-        ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
+        ListMap<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null)
             {
             m_mapParams = map = new ListMap<>();
@@ -152,7 +152,7 @@ public class ClassStructure
         sb.append(super.getDescription())
           .append(", type-params=");
 
-        final ListMap<CharStringConstant, TypeConstant> map = m_mapParams;
+        final ListMap<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null || map.size() == 0)
             {
             sb.append("none");
@@ -161,7 +161,7 @@ public class ClassStructure
             {
             sb.append('<');
             boolean fFirst = true;
-            for (Map.Entry<CharStringConstant, TypeConstant> entry : map.entrySet())
+            for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
                 {
                 if (fFirst)
                     {
@@ -225,5 +225,5 @@ public class ClassStructure
      * The name-to-type information for type parameters. The type constant is used to specify a
      * type constraint for the parameter.
      */
-    private ListMap<CharStringConstant, TypeConstant> m_mapParams;
+    private ListMap<StringConstant, TypeConstant> m_mapParams;
     }

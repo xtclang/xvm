@@ -52,14 +52,14 @@ public class VersionConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
-     * Determine the dot-delimited version number string.
-     *
+     * {@inheritDoc}
      * @return the fully qualified version number
      */
-    public Version getVersion()
+    @Override
+    public Version getValue()
         {
         return m_ver;
         }
@@ -99,7 +99,7 @@ public class VersionConstant
             throws IOException
         {
         final ConstantPool pool = getConstantPool();
-        m_ver = new Version(((CharStringConstant) pool.getConstant(m_iVer)).getValue());
+        m_ver = new Version(((StringConstant) pool.getConstant(m_iVer)).getValue());
         }
 
     @Override

@@ -4,7 +4,7 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.Int64Constant;
@@ -64,7 +64,7 @@ public class ObjectHeap
 
     public ClassTemplate getConstTemplate(Constant constValue)
         {
-        if (constValue instanceof CharStringConstant)
+        if (constValue instanceof StringConstant)
             {
             return xString.INSTANCE;
             }

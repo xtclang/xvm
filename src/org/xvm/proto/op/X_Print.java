@@ -2,7 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -97,9 +97,9 @@ public class X_Print extends OpInvocable
             {
             Constant constValue = frame.f_context.f_pool.getConstant(-nValue);
 
-            if (constValue instanceof CharStringConstant)
+            if (constValue instanceof StringConstant)
                 {
-                sb.append(((CharStringConstant) constValue).getValue());
+                sb.append(((StringConstant) constValue).getValue());
                 }
             else
                 {

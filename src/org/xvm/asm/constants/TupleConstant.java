@@ -89,12 +89,12 @@ public class TupleConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
      * @return a list of the constants represented by this TupleConstant
      */
-    public List<Constant> constants()
+    public List<Constant> getValue()
         {
         return Arrays.asList(m_aconst);
         }

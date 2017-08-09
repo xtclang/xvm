@@ -288,14 +288,14 @@ public class ModuleStructure
             for (int i = 0, c = readMagnitude(in); i < c; ++i)
                 {
                 VersionConstant constVer = (VersionConstant) pool.getConstant(readMagnitude(in));
-                vtreeAllow.put(constVer.getVersion(), in.readBoolean());
+                vtreeAllow.put(constVer.getValue(), in.readBoolean());
                 }
 
             List<Version> listPrefer = new ArrayList<>();
             for (int i = 0, c = readMagnitude(in); i < c; ++i)
                 {
                 VersionConstant constVer = (VersionConstant) pool.getConstant(readMagnitude(in));
-                Version         ver      = constVer.getVersion();
+                Version         ver      = constVer.getValue();
                 if (!listPrefer.contains(ver))
                     {
                     listPrefer.add(ver);

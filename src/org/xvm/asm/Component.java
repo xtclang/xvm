@@ -21,7 +21,7 @@ import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -1956,7 +1956,7 @@ public abstract class Component
      * @throws IOException  if an I/O exception occurs during disassembly from the provided
      *                      DataInput stream, or if there is invalid data in the stream
      */
-    protected ListMap<CharStringConstant, TypeConstant> disassembleTypeParams(DataInput in)
+    protected ListMap<StringConstant, TypeConstant> disassembleTypeParams(DataInput in)
             throws IOException
         {
         int c = readMagnitude(in);
@@ -1966,11 +1966,11 @@ public abstract class Component
             return null;
             }
 
-        final ListMap<CharStringConstant, TypeConstant> map = new ListMap<>();
+        final ListMap<StringConstant, TypeConstant> map = new ListMap<>();
         final ConstantPool pool = getConstantPool();
         for (int i = 0; i < c; ++i)
             {
-            CharStringConstant constName = (CharStringConstant) pool.getConstant(readIndex(in));
+            StringConstant constName = (StringConstant) pool.getConstant(readIndex(in));
             TypeConstant       constType = (TypeConstant)       pool.getConstant(readIndex(in));
             assert !map.containsKey(constName);
             map.put(constName, constType);
@@ -1985,7 +1985,7 @@ public abstract class Component
      *
      * @return the map of registered type parameters (might be different from the map passed in)
      */
-    protected ListMap<CharStringConstant, TypeConstant> registerTypeParams(ListMap<CharStringConstant, TypeConstant> mapOld)
+    protected ListMap<StringConstant, TypeConstant> registerTypeParams(ListMap<StringConstant, TypeConstant> mapOld)
         {
         if (mapOld == null || mapOld.isEmpty())
             {
@@ -1993,11 +1993,11 @@ public abstract class Component
             }
 
         final ConstantPool pool = getConstantPool();
-        ListMap<CharStringConstant, TypeConstant> mapNew = mapOld;
-        for (Map.Entry<CharStringConstant, TypeConstant> entry : mapOld.entrySet())
+        ListMap<StringConstant, TypeConstant> mapNew = mapOld;
+        for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet())
             {
-            CharStringConstant constOldKey = entry.getKey();
-            CharStringConstant constNewKey = (CharStringConstant) pool.register(constOldKey);
+            StringConstant constOldKey = entry.getKey();
+            StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
 
             TypeConstant       constOldVal = entry.getValue();
             TypeConstant       constNewVal = (TypeConstant) pool.register(constOldVal);
@@ -2010,7 +2010,7 @@ public abstract class Component
                     // key (which map does not support), so create a new map, and copy the old map
                     // to the new map, but only up to (but not including!) the current entry
                     mapNew = new ListMap<>();
-                    for (Map.Entry<CharStringConstant, TypeConstant> entryCopy : mapOld.entrySet())
+                    for (Map.Entry<StringConstant, TypeConstant> entryCopy : mapOld.entrySet())
                         {
                         if (entryCopy.getKey() == constOldKey)
                             {
@@ -2040,7 +2040,7 @@ public abstract class Component
      * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
      *                      stream
      */
-    protected void assembleTypeParams(ListMap<CharStringConstant, TypeConstant> map, DataOutput out)
+    protected void assembleTypeParams(ListMap<StringConstant, TypeConstant> map, DataOutput out)
             throws IOException
         {
         int c = map == null ? 0 : map.size();
@@ -2051,7 +2051,7 @@ public abstract class Component
             return;
             }
 
-        for (Map.Entry<CharStringConstant, TypeConstant> entry : map.entrySet())
+        for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
             {
             writePackedLong(out, entry.getKey().getPosition());
             writePackedLong(out, entry.getValue().getPosition());

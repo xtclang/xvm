@@ -17,9 +17,9 @@ import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.AnyCondition;
 import org.xvm.asm.constants.UInt8Constant;
-import org.xvm.asm.constants.ByteStringConstant;
+import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.CharConstant;
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ChildTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -217,10 +217,10 @@ public class ConstantPool
      *
      * @return a ByteStringConstant for the passed byte array value
      */
-    public ByteStringConstant ensureByteStringConstant(byte[] ab)
+    public UInt8ArrayConstant ensureByteStringConstant(byte[] ab)
         {
-        ByteStringConstant constant = new ByteStringConstant(this, ab.clone());
-        return (ByteStringConstant) register(constant);
+        UInt8ArrayConstant constant = new UInt8ArrayConstant(this, ab.clone());
+        return (UInt8ArrayConstant) register(constant);
         }
 
     /**
@@ -252,13 +252,13 @@ public class ConstantPool
      *
      * @return a CharStringConstant for the passed String value
      */
-    public CharStringConstant ensureCharStringConstant(String s)
+    public StringConstant ensureCharStringConstant(String s)
         {
         // check the pre-existing constants first
-        CharStringConstant constant = (CharStringConstant) ensureLocatorLookup(Format.String).get(s);
+        StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
         if (constant == null)
             {
-            constant = (CharStringConstant) register(new CharStringConstant(this, s));
+            constant = (StringConstant) register(new StringConstant(this, s));
             }
         return constant;
         }
@@ -1240,8 +1240,8 @@ public class ConstantPool
                     constant = new UInt8Constant(this, format, in);
                     break;
 
-                case ByteArray:
-                    constant = new ByteStringConstant(this, format, in);
+                case UInt8Array:
+                    constant = new UInt8ArrayConstant(this, format, in);
                     break;
 
                 case Char:
@@ -1249,7 +1249,7 @@ public class ConstantPool
                     break;
 
                 case String:
-                    constant = new CharStringConstant(this, format, in);
+                    constant = new StringConstant(this, format, in);
                     break;
 
                 case Int64:

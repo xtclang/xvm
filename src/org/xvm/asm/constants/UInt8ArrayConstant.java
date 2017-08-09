@@ -16,7 +16,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Represent an octet string (string of unsigned 8-bit bytes) constant.
  */
-public class ByteStringConstant
+public class UInt8ArrayConstant
         extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -30,7 +30,7 @@ public class ByteStringConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public ByteStringConstant(ConstantPool pool, Format format, DataInput in)
+    public UInt8ArrayConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -48,7 +48,7 @@ public class ByteStringConstant
      * @param pool   the ConstantPool that will contain this Constant
      * @param abVal  the octet string value
      */
-    public ByteStringConstant(ConstantPool pool, byte[] abVal)
+    public UInt8ArrayConstant(ConstantPool pool, byte[] abVal)
         {
         super(pool);
 
@@ -84,14 +84,14 @@ public class ByteStringConstant
     @Override
     public Format getFormat()
         {
-        return Format.ByteArray;
+        return Format.UInt8Array;
         }
 
     @Override
     protected int compareDetails(Constant that)
         {
         byte[] abThis = this.m_abVal;
-        byte[] abThat = ((ByteStringConstant) that).m_abVal;
+        byte[] abThat = ((UInt8ArrayConstant) that).m_abVal;
 
         int cbThis  = abThis.length;
         int cbThat  = abThat.length;

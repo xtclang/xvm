@@ -390,6 +390,7 @@ public abstract class Constant
      */
     public enum Format
         {
+        IntLiteral,     // TODO char-string integer literal
         Int8,           // TODO 1 byte
         Int16,          // TODO
         Int32,          // TODO
@@ -401,20 +402,20 @@ public abstract class Constant
         UInt32,         // TODO
         UInt64,         // TODO
         UInt128,        // TODO
-        VarUInt,          // TODO
+        VarUInt,        // TODO
         FPLiteral,      // TODO char-string floating point literal
         Float16,        // TODO 2 bytes
         Float32,        // TODO 4 bytes
         Float64,        // TODO 8 bytes
         Float128,       // TODO 16 bytes
-        VarFloat,         // TODO 1-byte n (n >= 1), byte[2^n]
-        Dec32,        // TODO 4 bytes
-        Dec64,        // TODO 8 bytes
-        Dec128,       // TODO 16 bytes
+        VarFloat,       // TODO 1-byte n (n >= 1), byte[2^n]
+        Dec32,          // TODO 4 bytes
+        Dec64,          // TODO 8 bytes
+        Dec128,         // TODO 16 bytes
         VarDec,         // TODO 1-byte n (n >= 2), byte[2^n]
+        UInt8Array,     // byte[]
         Char,
         String,
-        ByteArray,
         Date,           // TODO char-string in ISO8601 format
         Time,           // TODO char-string in ISO8601 format
         DateTime,       // TODO char-string in ISO8601 format

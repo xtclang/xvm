@@ -16,7 +16,7 @@ import static org.xvm.util.Handy.writeUtf8String;
 /**
  * Represent an XVM char string (string of unicode characters) constant.
  */
-public class CharStringConstant
+public class StringConstant
         extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -30,7 +30,7 @@ public class CharStringConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public CharStringConstant(ConstantPool pool, Format format, DataInput in)
+    public StringConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -43,7 +43,7 @@ public class CharStringConstant
      * @param pool  the ConstantPool that will contain this Constant
      * @param sVal  the char string value
      */
-    public CharStringConstant(ConstantPool pool, String sVal)
+    public StringConstant(ConstantPool pool, String sVal)
         {
         super(pool);
 
@@ -72,7 +72,7 @@ public class CharStringConstant
      */
     protected void resolve(String value)
         {
-        if (m_sVal == UNRESOLVED && this.getClass() != CharStringConstant.class)
+        if (m_sVal == UNRESOLVED && this.getClass() != StringConstant.class)
             {
             m_sVal = value;
             }
@@ -99,7 +99,7 @@ public class CharStringConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        return this.m_sVal.compareTo(((CharStringConstant) that).m_sVal);
+        return this.m_sVal.compareTo(((StringConstant) that).m_sVal);
         }
 
     @Override

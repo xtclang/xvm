@@ -88,7 +88,7 @@ public class xTuple
         {
         TupleConstant constTuple = (TupleConstant) constant;
 
-        List<Constant> list = constTuple.constants();
+        List<Constant> list = constTuple.getValue();
         int c = list.size();
         ObjectHandle[] ahValue = new ObjectHandle[c];
         Type[] aType = new Type[c];

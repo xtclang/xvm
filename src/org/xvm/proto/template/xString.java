@@ -4,7 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -46,8 +46,8 @@ public class xString
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        return constant instanceof CharStringConstant ? new StringHandle(f_clazzCanonical,
-                ((CharStringConstant) constant).getValue()) : null;
+        return constant instanceof StringConstant ? new StringHandle(f_clazzCanonical,
+                ((StringConstant) constant).getValue()) : null;
         }
 
     @Override
