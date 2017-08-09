@@ -4,10 +4,10 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.Int64Constant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TupleConstant;
@@ -40,7 +40,7 @@ public class ObjectHeap
         f_pool = pool;
         }
 
-    // nValueConstId -- "literal" (Int/CharString/etc.) Constant known by the ConstantPool
+    // nValueConstId -- "literal" (Int/String/etc.) Constant known by the ConstantPool
     public ObjectHandle ensureConstHandle(int nValueConstId)
         {
         ObjectHandle handle = m_mapConstants.get(nValueConstId);
@@ -64,12 +64,12 @@ public class ObjectHeap
 
     public ClassTemplate getConstTemplate(Constant constValue)
         {
-        if (constValue instanceof CharStringConstant)
+        if (constValue instanceof StringConstant)
             {
             return xString.INSTANCE;
             }
 
-        if (constValue instanceof IntConstant)
+        if (constValue instanceof Int64Constant)
             {
             return xInt64.INSTANCE;
             }

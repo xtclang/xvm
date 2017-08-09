@@ -132,14 +132,14 @@ public class ChildTypeConstant
             throws IOException
         {
         m_constParent = (TypeConstant      ) getConstantPool().getConstant(m_iParent);
-        m_constChild  = (CharStringConstant) getConstantPool().getConstant(m_iChild );
+        m_constChild  = (StringConstant) getConstantPool().getConstant(m_iChild );
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
         m_constParent = (TypeConstant      ) pool.register(m_constParent);
-        m_constChild  = (CharStringConstant) pool.register(m_constChild );
+        m_constChild  = (StringConstant) pool.register(m_constChild );
         }
 
     @Override
@@ -181,5 +181,5 @@ public class ChildTypeConstant
     /**
      * The name of the child.
      */
-    private CharStringConstant m_constChild;
+    private StringConstant m_constChild;
     }

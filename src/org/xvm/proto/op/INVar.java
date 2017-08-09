@@ -1,6 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -55,7 +55,7 @@ public class INVar extends Op
         ServiceContext context = frame.f_context;
 
         TypeComposition clazz = context.f_types.ensureComposition(f_nClassConstId);
-        CharStringConstant constName = (CharStringConstant)
+        StringConstant constName = (StringConstant)
                 context.f_pool.getConstant(f_nNameConstId);
 
         try

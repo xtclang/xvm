@@ -182,13 +182,13 @@ public class ModuleConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constName = (CharStringConstant) getConstantPool().getConstant(m_iName);
+        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constName = (CharStringConstant) pool.register(m_constName);
+        m_constName = (StringConstant) pool.register(m_constName);
         }
 
     @Override
@@ -240,5 +240,5 @@ public class ModuleConstant
     /**
      * The constant that holds the qualified name of the module.
      */
-    private CharStringConstant m_constName;
+    private StringConstant m_constName;
     }

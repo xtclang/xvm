@@ -6,7 +6,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
@@ -64,7 +64,7 @@ public class TypeComposition
         ClassTemplate templateSuper = f_template.getSuper();
         if (templateSuper != null)
             {
-            Map<CharStringConstant, TypeConstant> mapFormalTypes =
+            Map<StringConstant, TypeConstant> mapFormalTypes =
                     templateSuper.f_struct.getTypeParams();
 
             if (mapFormalTypes.isEmpty())
@@ -73,7 +73,7 @@ public class TypeComposition
                 }
 
             Map<String, Type> mapParams = new HashMap<>();
-            for (Map.Entry<CharStringConstant, TypeConstant> entryFormal : mapFormalTypes.entrySet())
+            for (Map.Entry<StringConstant, TypeConstant> entryFormal : mapFormalTypes.entrySet())
                 {
                 String sParamName = entryFormal.getKey().getValue();
                 mapParams.put(sParamName, f_mapGenericActual.get(sParamName));

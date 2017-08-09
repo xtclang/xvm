@@ -30,12 +30,12 @@ const IntLiteral(String text)
         switch (chars[of])
             {
             case '-':
-                explicitSign = Negative;
+                explicitSign = Signum.Negative;
                 ++of;
                 break;
 
             case '+':
-                explicitSign = Positive;
+                explicitSign = Signum.Positive;
                 ++of;
                 break;
             }
@@ -107,7 +107,7 @@ const IntLiteral(String text)
      * If the literal begins with an explicit "+" or "-" sign, this property indicates
      * that sign.
      */
-    Signum explicitSign = Zero;
+    Signum explicitSign = Signum.Zero;
 
     /**
      * This is the radix of the integer literal, one of 2, 8, 10, or 16.
@@ -132,7 +132,7 @@ const IntLiteral(String text)
             // it doesn't take much to store a zero
             count = 1;
             }
-        else if (explicitSign == Zero && radix != 10)
+        else if (explicitSign == Signum.Zero && radix != 10)
             {
             // combination of no explicit sign and a non-decimal radix implies that the
             // number of bits necessary is the number of bits to hold the magnitude
@@ -142,7 +142,7 @@ const IntLiteral(String text)
             //   0xFF -> 8 bits
             count = magnitude.leftmostBit.trailingZeroCount + 1;
             }
-        else if (explicitSign == Negative)
+        else if (explicitSign == Signum.Negative)
             {
             // examples:
             //   -0x7F -> 8 bits
@@ -170,7 +170,7 @@ const IntLiteral(String text)
     @ro Int minUIntBits.get()
         {
 // TODO review        
-        assert:always explicitSign != Negative;
+        assert:always explicitSign != Signum.Negative;
 
         if (magnitude == 0)
             {
@@ -206,7 +206,7 @@ const IntLiteral(String text)
             return 0;
             }
         
-        assert:always magnitude == 1 && explicitSign != Negative;
+        assert:always magnitude == 1 && explicitSign != Signum.Negative;
         return 1;
         }
 
@@ -379,5 +379,11 @@ const IntLiteral(String text)
     @auto Dec128 to<Dec128>()
         {
         return to<VarDec>().to<Dec128>();
+        }
+
+    @Override
+    String to<String>()
+        {
+        return text;
         }
     }

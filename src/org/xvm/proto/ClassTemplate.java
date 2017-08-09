@@ -9,7 +9,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
@@ -80,7 +80,7 @@ public abstract class ClassTemplate
         f_struct = structClass;
         f_sName = structClass.getIdentityConstant().getPathString();
 
-        List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes =
+        List<Map.Entry<StringConstant, TypeConstant>> listFormalTypes =
                 structClass.getTypeParamsAsList();
         int cParams = listFormalTypes.size();
 
@@ -147,7 +147,7 @@ public abstract class ClassTemplate
 
     protected TypeComposition createCanonicalClass()
         {
-        Map<CharStringConstant, TypeConstant> mapParams = f_struct.getTypeParams();
+        Map<StringConstant, TypeConstant> mapParams = f_struct.getTypeParams();
         Map<String, Type> mapParamsActual;
 
         if (mapParams.isEmpty())
@@ -158,7 +158,7 @@ public abstract class ClassTemplate
             {
             mapParamsActual = new HashMap<>(mapParams.size());
             Type typeObject = xObject.INSTANCE.f_clazzCanonical.ensurePublicType();
-            for (CharStringConstant constName : mapParams.keySet())
+            for (StringConstant constName : mapParams.keySet())
                 {
                 mapParamsActual.put(constName.getValue(), typeObject);
                 }

@@ -107,8 +107,8 @@ public class VersionMatchesCondition
             VersionMatchesCondition thaT = (VersionMatchesCondition) that;
             if (this.m_constStruct.equals(thaT.m_constStruct))
                 {
-                Version verThis = this.m_constVer.getVersion();
-                Version verThat = thaT.m_constVer.getVersion();
+                Version verThis = this.m_constVer.getValue();
+                Version verThat = thaT.m_constVer.getValue();
 
                 if (verThis.isSameAs(verThat))
                     {

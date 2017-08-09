@@ -118,7 +118,7 @@ public class SimulatedLinkerContext
                         modules = new HashMap<>();
                         }
                     VersionMatchesCondition condModuleVer = (VersionMatchesCondition) condEach;
-                    modules.put(condModuleVer.getModuleConstant(), condModuleVer.getVersionConstant().getVersion());
+                    modules.put(condModuleVer.getModuleConstant(), condModuleVer.getVersionConstant().getValue());
                     }
                 else if (condEach instanceof VersionedCondition)
                     {
@@ -191,13 +191,13 @@ public class SimulatedLinkerContext
             }
 
         Version ver = modules.get(constModule);
-        return ver != null && ver.equals(constVer.getVersion());
+        return ver != null && ver.equals(constVer.getValue());
         }
 
     @Override
     public boolean isVersion(VersionConstant constVer)
         {
-        return version != null && version.equals(constVer.getVersion());
+        return version != null && version.equals(constVer.getValue());
         }
 
 

@@ -16,8 +16,8 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Represent an octet string (string of unsigned 8-bit bytes) constant.
  */
-public class ByteStringConstant
-        extends Constant
+public class UInt8ArrayConstant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ public class ByteStringConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public ByteStringConstant(ConstantPool pool, Format format, DataInput in)
+    public UInt8ArrayConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -48,7 +48,7 @@ public class ByteStringConstant
      * @param pool   the ConstantPool that will contain this Constant
      * @param abVal  the octet string value
      */
-    public ByteStringConstant(ConstantPool pool, byte[] abVal)
+    public UInt8ArrayConstant(ConstantPool pool, byte[] abVal)
         {
         super(pool);
 
@@ -57,14 +57,22 @@ public class ByteStringConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- ValueConstant methods -----------------------------------------------------------------
+
+    @Override
+    public TypeConstant getType()
+        {
+        ConstantPool pool = getConstantPool();
+        return pool.ensureClassTypeConstant(pool.getImplicitlyImportedIdentity("Array"),
+                Access.PUBLIC, pool.ensureEcstasyTypeConstant("UInt8"));
+        }
 
     /**
-     * Get the value of the constant.
-     *
-     * @return  the constant's octet string value as a <tt>byte[]</tt>; the
-     *          caller must treat the value as immutable
+     * {@inheritDoc}
+     * @return  the constant's octet string value as a <tt>byte[]</tt>; the caller must treat the
+     *          returned value as immutable
      */
+    @Override
     public byte[] getValue()
         {
         return m_abVal;
@@ -76,14 +84,14 @@ public class ByteStringConstant
     @Override
     public Format getFormat()
         {
-        return Format.ByteString;
+        return Format.UInt8Array;
         }
 
     @Override
     protected int compareDetails(Constant that)
         {
         byte[] abThis = this.m_abVal;
-        byte[] abThat = ((ByteStringConstant) that).m_abVal;
+        byte[] abThat = ((UInt8ArrayConstant) that).m_abVal;
 
         int cbThis  = abThis.length;
         int cbThat  = abThat.length;
