@@ -654,8 +654,8 @@ public abstract class ClassTemplate
 
     // ----- OpCode support: property operations -----
 
-    // get a property value into the specified place in the array
-
+    // get a property value into the specified register
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int getPropertyValue(Frame frame, ObjectHandle hTarget,
                                 PropertyStructure property, int iReturn)
         {
@@ -863,6 +863,7 @@ public abstract class ClassTemplate
         }
 
     // build the String representation of the target handle
+    // returns R_NEXT, R_CALL or R_EXCEPTION
     public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));

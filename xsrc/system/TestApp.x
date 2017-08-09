@@ -364,6 +364,11 @@ class TestApp
         Int x; // TODO: remove
         Int y; // TODO: remove
 
+        Int hash.get()
+            {
+            return x + y;
+            }
+
         String to<String>()
             {
             return "(" + x + ", " + y + ")";

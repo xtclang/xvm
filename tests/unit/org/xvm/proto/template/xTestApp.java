@@ -2,7 +2,6 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.proto.Adapter;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Op;
@@ -517,6 +516,7 @@ public class xTestApp extends xModule
             };
         mtConst.m_cVars = 2;
 
+        // Point.to<String>()
         MethodTemplate mtTo = ctPoint.ensureMethodTemplate("to", VOID, STRING);
         mtTo.m_aop = new Op[]
             {
@@ -534,6 +534,20 @@ public class xTestApp extends xModule
             new Return_1(0),
             };
         mtTo.m_cVars = 3;
+
+        // Point.hash.get()
+        ctPoint.ensurePropertyTemplate("hash").m_fReadOnly = true;
+        MethodTemplate mtGetHash = ctPoint.ensureGetter("hash");
+        mtGetHash.m_aop = new Op[]
+            {
+            new Var(adapter.getClassTypeConstId("Int64")), // (#0)
+            new LGet(adapter.getPropertyConstId("TestApp.Point", "x"), 0),
+            new Var(adapter.getClassTypeConstId("Int64")), // (#1)
+            new LGet(adapter.getPropertyConstId("TestApp.Point", "y"), 1),
+            new Add(0, 1, 0),
+            new Return_1(0),
+            };
+        mtGetHash.m_cVars = 2;
 
         ClassTemplate ctRectangle = f_types.getTemplate("TestApp.Rectangle");
         adapter.addMethod(ctRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point"}, VOID);

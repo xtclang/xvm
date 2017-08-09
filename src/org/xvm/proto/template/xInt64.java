@@ -128,12 +128,12 @@ public class xInt64
         }
 
     @Override
-    protected long buildHashCode(ObjectHandle hTarget)
+    public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return ((JavaLong) hTarget).getValue();
+        return frame.assignValue(iReturn, hTarget);
         }
 
-// ----- comparison support -----
+    // ----- comparison support -----
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,

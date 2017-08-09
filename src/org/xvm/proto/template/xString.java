@@ -192,9 +192,10 @@ public class xString
         }
 
     @Override
-    protected long buildHashCode(ObjectHandle hTarget)
+    public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return ((StringHandle) hTarget).getValue().hashCode();
+        return frame.assignValue(iReturn,
+                xInt64.makeHandle(((StringHandle) hTarget).getValue().hashCode()));
         }
 
     public static class StringHandle

@@ -2,7 +2,9 @@ package org.xvm.proto;
 
 
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
 
+import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xString;
 
@@ -60,19 +62,39 @@ public abstract class Utils
                 + " " + ServiceContext.getCurrentContext() + ": " + sMsg);
         }
 
+    // ----- hash.get() support -----
+
+    // call "hash.get" method for the given const value, placing the result into the frame local
+    // return R_EXCEPTION, R_NEXT or R_CALL
+    public static int callHash(Frame frame, ObjectHandle hConst)
+        {
+        TypeComposition clzConst = hConst.f_clazz;
+        PropertyStructure property = clzConst.getProperty("hash");
+        MethodStructure method = Adapter.getGetter(property);
+
+        if (frame.f_adapter.isNative(method))
+            {
+            xConst template = (xConst) clzConst.f_template; // should we get it from method?
+            return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
+        return frame.call1(method, hConst, ahVar, Frame.RET_LOCAL);
+        }
+
     // ----- to<String> support -----
 
-    // call "to<String>" method for the given value
+    // call "to<String>" method for the given value, placing the result into the frame local
     // return R_EXCEPTION, R_NEXT or R_CALL
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
-        TypeComposition clzProp = hValue.f_clazz;
-        List<MethodStructure> callChain = clzProp.getMethodCallChain(xObject.TO_STRING);
+        TypeComposition clzValue = hValue.f_clazz;
+        List<MethodStructure> callChain = clzValue.getMethodCallChain(xObject.TO_STRING);
         MethodStructure method = callChain.isEmpty() ? null : callChain.get(0);
 
         if (method == null || frame.f_adapter.isNative(method))
             {
-            return clzProp.f_template.buildStringValue(frame, hValue, Frame.RET_LOCAL);
+            return clzValue.f_template.buildStringValue(frame, hValue, Frame.RET_LOCAL);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];

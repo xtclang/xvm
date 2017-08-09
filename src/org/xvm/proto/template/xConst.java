@@ -60,17 +60,9 @@ public class xConst
             case 0:
                 if (method.getName().equals("get")) // hash.get()
                     {
-                    GenericHandle hConst = (GenericHandle) hTarget;
-
                     assert method.getParent().getParent().getName().equals("hash");
 
-                    JavaLong hHash = (JavaLong) hConst.getField(PROP_HASH);
-                    if (hHash == null)
-                        {
-                        hHash = xInt64.makeHandle(buildHashCode(hTarget));
-                        hConst.m_mapFields.put(PROP_HASH, hHash);
-                        }
-                    return frame.assignValue(iReturn, hHash);
+                    return buildHashCode(frame, hTarget, iReturn);
                     }
             }
 
@@ -301,33 +293,124 @@ public class xConst
         return Utils.callToString(frame, hProp);
         }
 
-    protected long buildHashCode(ObjectHandle hTarget)
+    // build the hashValue and assign it to the specified register
+    // returns R_NEXT, R_CALL or R_EXCEPTION
+    public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        ClassStructure struct = f_struct;
-
         GenericHandle hConst = (GenericHandle) hTarget;
 
-        long lHash = 0;
-        for (Component comp : struct.children())
+        JavaLong hHash = (JavaLong) hConst.getField(PROP_HASH);
+        if (hHash != null)
             {
-            if (comp instanceof PropertyStructure)
+            return frame.assignValue(iReturn, hHash);
+            }
+
+        ClassStructure struct = f_struct;
+
+        long[] holder = new long[1];
+
+        for (Iterator<Component> iter = struct.children().iterator(); iter.hasNext();)
+            {
+            String sProp = getPropertyName(iter.next());
+            if (sProp == null)
                 {
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
-                    {
+                continue;
+                }
+
+            ObjectHandle hProp = hConst.getField(sProp);
+            if (hProp == null)
+                {
+                frame.m_hException = xException.makeHandle("Unassigned property: " + sProp);
+                return Op.R_EXCEPTION;
+                }
+
+            int iResult = Utils.callHash(frame, hProp);
+
+            switch (iResult)
+                {
+                case Op.R_NEXT:
+                    holder[0] = 37 * holder[0] + ((JavaLong) frame.getFrameLocal()).getValue();
                     continue;
-                    }
 
-                String sProp = property.getName();
-                ObjectHandle hProp = hConst.getField(sProp);
+                case Op.R_CALL:
+                    Frame frameNext = frame.m_frameNext;
+                    frameNext.setContinuation(new Supplier<Frame>()
+                        {
+                        public Frame get()
+                            {
+                            holder[0] = 37 * holder[0] + ((JavaLong) frame.getFrameLocal()).getValue();
 
-                assert (hProp != null);
+                            while (iter.hasNext())
+                                {
+                                String sProp = getPropertyName(iter.next());
+                                if (sProp == null)
+                                    {
+                                    continue;
+                                    }
 
-                xConst template = (xConst) hProp.f_clazz.f_template;
-                lHash = 37 * lHash + template.buildHashCode(hProp);
+                                ObjectHandle hProp = hConst.getField(sProp);
+                                if (hProp == null)
+                                    {
+                                    frame.m_hException = xException.makeHandle("Unassigned property: " + sProp);
+                                    return null;
+                                    }
+
+                                switch (Utils.callHash(frame, hProp))
+                                    {
+                                    case Op.R_NEXT:
+                                        holder[0] = 37 * holder[0] + ((JavaLong) frame.getFrameLocal()).getValue();
+                                        continue;
+
+                                    case Op.R_CALL:
+                                        Frame frameNext = frame.m_frameNext;
+                                        frameNext.setContinuation(this);
+                                        return frameNext;
+
+                                    case Op.R_EXCEPTION:
+                                        return null;
+
+                                    default:
+                                        throw new IllegalStateException();
+                                    }
+                                }
+
+                            JavaLong hHash = xInt64.makeHandle(holder[0]);
+                            hConst.m_mapFields.put(PROP_HASH, hHash);
+
+                            frame.assignValue(iReturn, hHash);
+                            return null;
+                            }
+                        });
+                return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
                 }
             }
 
-        return lHash;
+        hHash = xInt64.makeHandle(holder[0]);
+        hConst.m_mapFields.put(PROP_HASH, hHash);
+
+        return frame.assignValue(iReturn, hHash);
+        }
+
+    // trivial helper
+    protected String getPropertyName(Component comp)
+        {
+        if (!(comp instanceof PropertyStructure))
+            {
+            return null;
+            }
+
+        PropertyStructure property = (PropertyStructure) comp;
+        if (isReadOnly(property))
+            {
+            return null;
+            }
+
+        return property.getName();
         }
     }
