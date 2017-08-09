@@ -64,7 +64,6 @@ public class Invoke_01 extends OpInvocable
                 }
 
             TypeComposition clz = hTarget.f_clazz;
-
             MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             if (frame.f_adapter.isNative(method))
