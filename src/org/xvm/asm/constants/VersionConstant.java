@@ -17,7 +17,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a version number.
  */
 public class VersionConstant
-        extends Constant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -17,7 +17,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent an octet string (string of unsigned 8-bit bytes) constant.
  */
 public class ByteStringConstant
-        extends Constant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -57,14 +57,22 @@ public class ByteStringConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- ValueConstant methods -----------------------------------------------------------------
+
+    @Override
+    public TypeConstant getType()
+        {
+        ConstantPool pool = getConstantPool();
+        return pool.ensureClassTypeConstant(pool.getImplicitlyImportedIdentity("Array"),
+                Access.PUBLIC, pool.ensureEcstasyTypeConstant("UInt8"));
+        }
 
     /**
-     * Get the value of the constant.
-     *
-     * @return  the constant's octet string value as a <tt>byte[]</tt>; the
-     *          caller must treat the value as immutable
+     * {@inheritDoc}
+     * @return  the constant's octet string value as a <tt>byte[]</tt>; the caller must treat the
+     *          returned value as immutable
      */
+    @Override
     public byte[] getValue()
         {
         return m_abVal;

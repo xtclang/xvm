@@ -17,7 +17,7 @@ import static org.xvm.util.Handy.writeUtf8String;
  * Represent an XVM char string (string of unicode characters) constant.
  */
 public class CharStringConstant
-        extends Constant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 

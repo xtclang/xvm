@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represents a Tuple constant.
  */
 public class TupleConstant
-        extends Constant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
