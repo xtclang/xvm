@@ -2,12 +2,10 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
-
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -63,7 +61,7 @@ public class Call_N1 extends OpCallable
 
             if (f_nFunctionValue < 0)
                 {
-                MethodStructure function = getMethodStructure(frame, f_nFunctionValue);
+                MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
                 ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(function));
                 if (ahVar == null)
@@ -75,8 +73,13 @@ public class Call_N1 extends OpCallable
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            if (hFunction == null)
+                {
+                return R_REPEAT;
+                }
+
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount());
-            if (hFunction == null || ahVar == null)
+            if (ahVar == null)
                 {
                 return R_REPEAT;
                 }

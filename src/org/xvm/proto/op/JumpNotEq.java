@@ -5,6 +5,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
+
 import org.xvm.proto.template.xBoolean.BooleanHandle;
 
 import java.io.DataInput;

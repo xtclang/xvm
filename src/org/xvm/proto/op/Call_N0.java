@@ -70,8 +70,13 @@ public class Call_N0 extends OpCallable
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            if (hFunction == null)
+                {
+                return R_REPEAT;
+                }
+
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount());
-            if (hFunction == null || ahVar == null)
+            if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
