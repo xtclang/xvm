@@ -17,15 +17,20 @@ import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+
+import org.xvm.proto.Utils;
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xString;
+import org.xvm.proto.template.xString.StringHandle;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * TODO:
@@ -198,23 +203,87 @@ public class xTuple
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
 
-//        iReturn.append(hTuple.f_clazz.toString())
-//          .append('{');
-//
-//        ObjectHandle[] ahValue = hTuple.m_ahValue;
-//        for (int i = 0, c = ahValue.length; i < c; i++)
-//            {
-//            ObjectHandle hValue = ahValue[i];
-//
-//            if (i > 0)
-//                {
-//                iReturn.append(", ");
-//                }
-//
-//            hValue.f_clazz.f_template.buildStringValue(frame, hValue, iReturn);
-//            }
-//        iReturn.append('}');
-        return frame.assignValue(iReturn, xString.makeHandle("TODO: " + hTuple.toString()));
+        StringBuilder sb = new StringBuilder()
+          .append(hTuple.f_clazz.toString())
+          .append('(');
+
+
+        ObjectHandle[] ahValue = hTuple.m_ahValue;
+        Iterator<ObjectHandle> iterValues = new Iterator<ObjectHandle>()
+            {
+            private int i = 0;
+            public boolean hasNext()
+                {
+                return i < ahValue.length;
+                }
+
+            public ObjectHandle next()
+                {
+                return ahValue[i++];
+                }
+            };
+
+        while (iterValues.hasNext())
+            {
+            int iResult = Utils.callToString(frame, iterValues.next());
+            switch (iResult)
+                {
+                case Op.R_NEXT:
+                    sb.append(((StringHandle) frame.getFrameLocal()).getValue())
+                      .append(", ");
+                    continue;
+
+                case Op.R_CALL:
+                    Frame frameNext = frame.m_frameNext;
+                    frameNext.setContinuation(new Supplier<Frame>()
+                        {
+                        public Frame get()
+                            {
+                            sb.append(((StringHandle) frame.getFrameLocal()).getValue())
+                              .append(", ");
+
+                            while (iterValues.hasNext())
+                                {
+                                switch (Utils.callToString(frame, iterValues.next()))
+                                    {
+                                    case Op.R_NEXT:
+                                        sb.append(((StringHandle) frame.getFrameLocal()).getValue())
+                                          .append(", ");
+                                        continue;
+
+                                    case Op.R_CALL:
+                                        Frame frameNext = frame.m_frameNext;
+                                        frameNext.setContinuation(this);
+                                        return frameNext;
+
+                                    case Op.R_EXCEPTION:
+                                        return null;
+
+                                    default:
+                                        throw new IllegalStateException();
+                                    }
+                                }
+
+                            sb.setLength(sb.length() - 2); // remove the trailing ", "
+                            sb.append(')');
+
+                            frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+                            return null;
+                            }
+                        });
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        sb.setLength(sb.length() - 2); // remove the trailing ", "
+        sb.append(')');
+
+        return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
         }
 
     // ----- ObjectHandle helpers -----

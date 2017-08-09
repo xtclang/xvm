@@ -54,7 +54,7 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * A class contains other named child structures.
      */
-    typedef Class | MultiMethod | Property | MultiFunction | Literal NamedChild;
+    typedef Class | MultiMethod | Property | MultiFunction NamedChild;
 
     /**
      * A normal constructor is a function that operates on a read/write structure that will contain
@@ -152,11 +152,6 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * The child function literals of this class.
      */
     Function[] functions;
-
-    /**
-     * The child literals of this class (not including function literals).
-     */
-    Literal[] literals;
 
     /**
      * Determine if the class is abstract (meaning that it is not instantiable).
@@ -360,7 +355,6 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * * Properties
      * * Methods (grouped together by name as a {@link MultiMethod}
      * * Functions (grouped together by name as a {@link MultiFunction}
-     * * Literal values: named constant values
      */
     @lazy Map<String, NamedChild> childrenByName.calc()
         {
@@ -371,13 +365,11 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         map.putAll(propertiesByName);
         map.putAll(methodsByName);
         map.putAll(functionsByName);
-        map.putAll(literalsByName);
 
         assert map.size == classesByName.size
                          + propertiesByName.size
                          + methodsByName.size
-                         + functionsByName.size
-                         + literalsByName.size;
+                         + functionsByName.size;
 
         return map.makeConst();
         }
@@ -458,24 +450,6 @@ class Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
                 {
                 map.put(function_.name, new MultiFunction(function_.to<Function[]>()));
                 }
-            }
-
-        return map.makeConst();
-        }
-
-    /**
-     * The child literals, by name (not including function literals). This is a sub-set of the
-     * contents of {@link childrenByName}.
-     */
-    @lazy Map<String, Literal> literalsByName.calc()
-        {
-        assert meta.immutable_;
-
-        ListMap<String, Literal> map = new ListMap();
-        for (Literal literal : literals)
-            {
-            assert !map.contains(literal.name);
-            map.put(literal.name, literal);
             }
 
         return map.makeConst();

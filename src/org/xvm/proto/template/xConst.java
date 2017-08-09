@@ -5,7 +5,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -14,9 +13,11 @@ import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+import org.xvm.proto.Utils;
+
+import org.xvm.proto.template.xString.StringHandle;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -28,7 +29,6 @@ public class xConst
         extends ClassTemplate
     {
     public static xConst INSTANCE;
-    private static MethodConstant s_constTo; // TODO: should be MethodIdConst
 
     public xConst(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -37,8 +37,6 @@ public class xConst
         if (fInstance)
             {
             INSTANCE = this;
-            s_constTo = f_types.f_adapter.getMethod(
-                    "Object", "to", VOID, STRING).getIdentityConstant();
             }
         }
 
@@ -199,145 +197,105 @@ public class xConst
           .append(hConst.f_clazz.toString())
           .append('{');
 
-        boolean fFirst = true;
         for (Iterator<Component> iter = struct.children().iterator(); iter.hasNext();)
             {
-            Component comp = iter.next();
-
-            if (comp instanceof PropertyStructure)
+            switch (addToString(frame, hConst, iter.next(), sb))
                 {
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
-                    {
+                case 0:
                     continue;
-                    }
 
-                String sProp = property.getName();
-                ObjectHandle hProp = hConst.getField(sProp);
-
-                if (hProp == null)
-                    {
-                    // be tolerant here
+                case Op.R_NEXT:
+                    sb.append(((StringHandle) frame.getFrameLocal()).getValue())
+                      .append(", ");
                     continue;
-                    }
 
-                if (fFirst)
-                    {
-                    fFirst = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(sProp).append('=');
-
-                TypeComposition clzProp = hProp.f_clazz;
-                List<MethodStructure> callChain = clzProp.getMethodCallChain(s_constTo);
-                MethodStructure method = callChain.isEmpty() ? null : callChain.get(0);
-
-                int iResult;
-                if (method == null || f_types.f_adapter.isNative(method))
-                    {
-                    iResult = clzProp.f_template.buildStringValue(frame, hProp, Frame.RET_LOCAL);
-                    }
-                else
-                    {
-                    ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-                    iResult = frame.call1(method, hProp, ahVar, Frame.RET_LOCAL);
-                    }
-
-                switch (iResult)
-                    {
-                    case Op.R_NEXT:
-                        sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
-                        break;
-
-                    case Op.R_CALL:
-                        Frame frameNext = frame.m_frameNext;
-                        frameNext.setContinuation(new Supplier<Frame>()
+                case Op.R_CALL:
+                    Frame frameNext = frame.m_frameNext;
+                    frameNext.setContinuation(new Supplier<Frame>()
+                        {
+                        public Frame get()
                             {
-                            @Override
-                            public Frame get()
+                            sb.append(((StringHandle) frame.getFrameLocal()).getValue())
+                              .append(", ");
+
+                            while (iter.hasNext())
                                 {
-                                sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
-
-                                while (iter.hasNext())
+                                switch (addToString(frame, hConst, iter.next(), sb))
                                     {
-                                    Component comp = iter.next();
+                                    case 0:
+                                        continue;
 
-                                    if (comp instanceof PropertyStructure)
-                                        {
-                                        PropertyStructure property = (PropertyStructure) comp;
-                                        if (isReadOnly(property))
-                                            {
-                                            continue;
-                                            }
+                                    case Op.R_NEXT:
+                                        sb.append(((StringHandle) frame.getFrameLocal()).getValue())
+                                          .append(", ");
+                                        continue;
 
-                                        String sProp = property.getName();
-                                        ObjectHandle hProp = hConst.getField(sProp);
+                                    case Op.R_CALL:
+                                        Frame frameNext = frame.m_frameNext;
+                                        frameNext.setContinuation(this);
+                                        return frameNext;
 
-                                        if (hProp == null)
-                                            {
-                                            // be tolerant here
-                                            continue;
-                                            }
+                                    case Op.R_EXCEPTION:
+                                        return null;
 
-                                        sb.append(", ");
-                                        sb.append(sProp).append('=');
-
-                                        TypeComposition clzProp = hProp.f_clazz;
-                                        List<MethodStructure> callChain = clzProp.getMethodCallChain(s_constTo);
-                                        MethodStructure method = callChain.isEmpty() ? null : callChain.get(0);
-
-                                        int iResult;
-                                        if (method == null || f_types.f_adapter.isNative(method))
-                                            {
-                                            iResult = clzProp.f_template.buildStringValue(frame, hProp, Frame.RET_LOCAL);
-                                            }
-                                        else
-                                            {
-                                            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-                                            iResult = frame.call1(method, hProp, ahVar, Frame.RET_LOCAL);
-                                            }
-
-                                        switch (iResult)
-                                            {
-                                            case Op.R_NEXT:
-                                                sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
-                                                break;
-
-                                            case Op.R_CALL:
-                                                Frame frameNext = frame.m_frameNext;
-                                                frameNext.setContinuation(this);
-                                                return frameNext;
-
-                                            case Op.R_EXCEPTION:
-                                                return null;
-
-                                            default:
-                                                throw new IllegalStateException();
-                                            }
-                                        }
-
+                                    default:
+                                        throw new IllegalStateException();
                                     }
-
-                                sb.append(')');
-                                frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
-                                return null;
                                 }
-                            });
-                        // fall through
-                    case Op.R_EXCEPTION:
-                        return iResult;
 
-                    default:
-                        throw new IllegalStateException();
-                    }
+                            sb.setLength(sb.length() - 2); // remove the trailing ", "
+                            sb.append('}');
+
+                            frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+                            return null;
+                            }
+                        });
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
                 }
             }
+
+        sb.setLength(sb.length() - 2); // remove the trailing ", "
         sb.append('}');
 
         return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+        }
+
+    // append a string value for the next child component of the constant to the StringBuilder
+    // return zero if the child is not to be reflected in the string;
+    // R_NEXT if the value has been added; R_CALL if a call has to be made to provide
+    // the string value
+    protected int addToString(Frame frame, GenericHandle hConst, Component comp, StringBuilder sb)
+        {
+        if (!(comp instanceof PropertyStructure))
+            {
+            return 0;
+            }
+
+        PropertyStructure property = (PropertyStructure) comp;
+        if (isReadOnly(property))
+            {
+            return 0;
+            }
+
+        String sProp = property.getName();
+        ObjectHandle hProp = hConst.getField(sProp);
+
+        sb.append(sProp).append('=');
+
+        if (hProp == null)
+            {
+            // be tolerant here
+            sb.append("<unassigned>, ");
+            return 0;
+            }
+
+        return Utils.callToString(frame, hProp);
         }
 
     protected long buildHashCode(ObjectHandle hTarget)

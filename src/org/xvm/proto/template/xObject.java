@@ -3,6 +3,7 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Type;
@@ -23,6 +24,8 @@ public class xObject
     {
     public static xObject INSTANCE;
     public static TypeComposition CLASS;
+    public static MethodConstant TO_STRING; // TODO: should be MethodIdConst
+
     private final static Map<Integer, Type[]> s_mapCanonical = new HashMap<>(4);
 
     public xObject(TypeSet types, ClassStructure structure, boolean fInstance)
@@ -39,6 +42,7 @@ public class xObject
     @Override
     public void initDeclared()
         {
+        TO_STRING = f_types.f_adapter.getMethod("Object", "to", VOID, STRING).getIdentityConstant();
         markNativeMethod("to", VOID, STRING);
         }
 
