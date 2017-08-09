@@ -17,35 +17,39 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * CALL_T0 rvalue-function, rvalue-params-tuple
+ * CALL_T1 rvalue-function, rvalue-params-tuple, lvalue-tuple-return
  *
  * @author gg 2017.03.08
  */
-public class Call_T0 extends OpCallable
+public class Call_TT extends OpCallable
     {
     private final int f_nFunctionValue;
     private final int f_nArgTupleValue;
+    private final int f_nRetTupleValue;
 
-    public Call_T0(int nFunction, int nTupleArg)
+    public Call_TT(int nFunction, int nTupleArg, int nRetTupleValue)
         {
         f_nFunctionValue = nFunction;
         f_nArgTupleValue = nTupleArg;
+        f_nRetTupleValue = nRetTupleValue;
         }
 
-    public Call_T0(DataInput in)
+    public Call_TT(DataInput in)
             throws IOException
         {
         f_nFunctionValue = in.readInt();
         f_nArgTupleValue = in.readInt();
+        f_nRetTupleValue = in.readInt();
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_CALL_T0);
+        out.write(OP_CALL_TT);
         out.writeInt(f_nFunctionValue);
         out.writeInt(f_nArgTupleValue);
+        out.writeInt(f_nRetTupleValue);
         }
 
     @Override
@@ -55,7 +59,7 @@ public class Call_T0 extends OpCallable
             {
             if (f_nFunctionValue == A_SUPER)
                 {
-                return callSuper10(frame, f_nArgTupleValue);
+                return callSuperN1(frame, new int[]{f_nArgTupleValue}, -f_nRetTupleValue - 1);
                 }
 
             TupleHandle hArgTuple = (TupleHandle) frame.getArgument(f_nArgTupleValue);
@@ -78,7 +82,7 @@ public class Call_T0 extends OpCallable
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(function)];
                 System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
 
-                return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+                return frame.call1(function, null, ahVar, -f_nRetTupleValue - 1);
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
@@ -97,7 +101,7 @@ public class Call_T0 extends OpCallable
 
             System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
 
-            return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
+            return hFunction.call1(frame, null, ahVar, -f_nRetTupleValue -  1);
             }
         catch (ExceptionHandle.WrapperException e)
             {
