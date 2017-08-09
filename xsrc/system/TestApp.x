@@ -82,7 +82,7 @@ class TestApp
             return of + s.length();
             }
 
-        Int exceptional(String s)
+        Int exceptional(String? s)
             {
             throw new Exception(s);
             }
@@ -363,6 +363,17 @@ class TestApp
         {
         Int x; // TODO: remove
         Int y; // TODO: remove
+
+        String to<String>()
+            {
+            return "(" + x + ", " + y + ")";
+            }
+        }
+
+    static const Rectangle(Point topLeft, Int bottomRight)
+        {
+        Point tl; // TODO: remove
+        Point br; // TODO: remove
         }
 
     static Void testConst()
@@ -374,5 +385,9 @@ class TestApp
         print(p2);
         print(p1 == p2);
         print(p2 > p1);
+
+        Rectangle r = new Rectangle(p2, p1);
+        print(r);
+        print(r.hash);
         }
     }

@@ -9,11 +9,14 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.util.Handy;
@@ -43,10 +46,40 @@ public class Adapter
 
     public int getClassTypeConstId(String sName)
         {
+        return getClassTypeConstId(sName, null);
+        }
+
+    // get a type id for the specified name in the context of the
+    // specified template
+    public int getClassTypeConstId(String sName, ClassTemplate template)
+        {
         if (m_mapClasses.containsKey(sName))
             {
             return m_mapClasses.get(sName);
             }
+
+        TypeConstant constType = getClassType(sName, template);
+
+        int nTypeId = constType.getPosition();
+
+        m_mapClasses.put(sName, nTypeId);
+
+        return nTypeId;
+        }
+
+    // get a class type for the specified name in the context of the
+    // specified template
+    public TypeConstant getClassType(String sName, ClassTemplate template)
+        {
+        ConstantPool pool = f_container.f_pool;
+
+        boolean fNullable = sName.endsWith("?");
+        if (fNullable)
+            {
+            sName = sName.substring(0, sName.length() - 1);
+            }
+
+        TypeConstant constType = null;
 
         int ofTypeParam = sName.indexOf('<');
         if (ofTypeParam >= 0)
@@ -54,34 +87,38 @@ public class Adapter
             String sParam = sName.substring(ofTypeParam + 1, sName.length() - 1);
             String sSimpleName = sName.substring(0, ofTypeParam);
 
-            ClassConstant constClass = getClassConstant(sSimpleName);
+            ClassConstant constClass = f_container.f_types.getClassConstant(sSimpleName);
             if (constClass != null)
                 {
                 String[] asType = Handy.parseDelimitedString(sParam, ',');
-                ClassTemplate template = f_container.f_types.getTemplate(constClass);
-                int nTypeId = f_container.f_pool.ensureClassTypeConstant(constClass, null,
-                        getTypeConstants(template, asType)).getPosition();
+                TypeConstant[] acType = getTypeConstants(template, asType);
 
-                m_mapClasses.put(sName, nTypeId);
-
-                return nTypeId;
+                constType = pool.ensureClassTypeConstant(constClass, null, acType);
                 }
             }
         else
             {
-            ClassConstant constClass = getClassConstant(sName);
-            if (constClass != null)
+            Component component = f_container.f_module.getChildByPath(sName);
+            if (component != null)
                 {
-                int nTypeId = f_container.f_pool.
-                        ensureClassTypeConstant(constClass, null).getPosition();
-
-                m_mapClasses.put(sName, nTypeId);
-
-                return nTypeId;
+                IdentityConstant constId = component.getIdentityConstant();
+                if (constId instanceof ClassConstant)
+                    {
+                    constType = ((ClassConstant) constId).asTypeConstant();
+                    }
+                else if (constId instanceof TypedefConstant)
+                    {
+                    constType = ((TypedefStructure) component).getType();
+                    }
                 }
             }
 
-        throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
+        if (constType == null)
+            {
+            throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
+            }
+
+        return fNullable ? pool.ensureNullableTypeConstant(constType) : constType;
         }
 
     public int getMethodConstId(String sClassName, String sMethName)
@@ -146,8 +183,10 @@ public class Adapter
         {
         try
             {
-            return f_container.f_types.getTemplate(sClassName).getProperty(sPropName).
-                    getIdentityConstant().getPosition();
+            ClassConstant constClass = f_container.f_types.getClassConstant(sClassName);
+            ClassStructure struct = (ClassStructure) constClass.getComponent();
+            PropertyStructure prop = (PropertyStructure) struct.getChild(sPropName);
+            return prop.getIdentityConstant().getPosition();
             }
         catch (NullPointerException e)
             {
@@ -173,7 +212,7 @@ public class Adapter
         for (int i = 0; i < cTypes; i++)
             {
             String sType = asType[i].trim();
-            if (template.isGenericType(sType))
+            if (template != null && template.isGenericType(sType))
                 {
                 ClassTypeConstant constClass = template.getTypeConstant();
                 PropertyStructure prop = template.getProperty(sType);
@@ -183,7 +222,7 @@ public class Adapter
                 }
             else
                 {
-                aType[i] = (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType));
+                aType[i] = getClassType(sType, template);
                 }
             }
         return aType;
@@ -201,12 +240,6 @@ public class Adapter
                     (fReturn ?"r":"p")+i, null, fReturn, i, false);
             }
         return aType;
-        }
-
-    private ClassConstant getClassConstant(String sClassName)
-        {
-        return (ClassConstant)
-                f_container.f_types.getTemplate(sClassName).f_struct.getIdentityConstant();
         }
 
     protected Constant ensureValueConstant(Object oValue)
@@ -228,10 +261,8 @@ public class Adapter
 
         if (oValue instanceof Boolean)
             {
-            ClassConstant constBoolean = getClassConstant("Boolean");
-
-            return f_container.f_pool.ensureClassConstant(constBoolean,
-                    ((Boolean) oValue).booleanValue() ? "True" : "False");
+            return f_container.f_types.getClassConstant(
+                    ((Boolean) oValue).booleanValue() ? "Boolean.True" : "Boolean.False");
             }
 
         if (oValue instanceof Object[])
@@ -248,8 +279,7 @@ public class Adapter
 
         if (oValue == null)
             {
-            return f_container.f_pool.ensureClassConstant(
-                    getClassConstant("Nullable"), "Null");
+            return f_container.f_types.getClassConstant("Nullable.Null");
             }
 
         throw new IllegalArgumentException();
@@ -329,7 +359,7 @@ public class Adapter
         return mms == null ? null : (MethodStructure) mms.children().get(0);
         }
 
-    public ClassTypeConstant resolveType(PropertyStructure property)
+    public TypeConstant resolveType(PropertyStructure property)
         {
         TypeConstant constType = property.getType();
 
@@ -340,7 +370,7 @@ public class Adapter
 
         if (constType instanceof ClassTypeConstant)
             {
-            return (ClassTypeConstant) constType;
+            return constType;
             }
 
         throw new UnsupportedOperationException("Unsupported type: " + constType + " for " + property);

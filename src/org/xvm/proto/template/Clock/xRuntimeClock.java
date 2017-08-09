@@ -42,7 +42,7 @@ public class xRuntimeClock
     public void initDeclared()
         {
         // Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp);
-        markNativeMethod("scheduleAlarm", null, null);
+        markNativeMethod("scheduleAlarm", new String[] {"Clock.Alarm", "DateTime"}, null);
         }
 
     @Override

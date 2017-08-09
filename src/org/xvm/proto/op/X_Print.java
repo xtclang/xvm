@@ -2,7 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -68,22 +68,31 @@ public class X_Print extends OpInvocable
                 MethodStructure methodTo = getMethodStructure(frame, clz,
                         frame.f_adapter.getMethodConstId("Object", "to"));
 
+                int iResult;
                 if (frame.f_adapter.isNative(methodTo))
                     {
-                    clz.f_template.invokeNativeN(frame, methodTo, hValue, Utils.OBJECTS_NONE, Frame.RET_LOCAL);
-                    sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                    iResult = clz.f_template.invokeNativeN(frame, methodTo, hValue,
+                            Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+                    if (iResult == R_NEXT)
+                        {
+                        sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                        }
                     }
                 else
                     {
                     ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodTo)];
 
-                    frame.call1(methodTo, hValue, ahVar, Frame.RET_LOCAL);
-                    frame.m_frameNext.m_continuation = () ->
+                    iResult = frame.call1(methodTo, hValue, ahVar, Frame.RET_LOCAL);
+                    }
+
+                if (iResult == R_CALL)
+                    {
+                    frame.m_frameNext.setContinuation(() ->
                         {
                         sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
                         Utils.log(sb.toString());
                         return null;
-                        };
+                        });
                     return R_CALL;
                     }
                 }
@@ -97,9 +106,9 @@ public class X_Print extends OpInvocable
             {
             Constant constValue = frame.f_context.f_pool.getConstant(-nValue);
 
-            if (constValue instanceof CharStringConstant)
+            if (constValue instanceof StringConstant)
                 {
-                sb.append(((CharStringConstant) constValue).getValue());
+                sb.append(((StringConstant) constValue).getValue());
                 }
             else
                 {

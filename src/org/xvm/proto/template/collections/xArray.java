@@ -53,9 +53,8 @@ public class xArray
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"Int64", "Function"}, VOID);
 
         markNativeMethod("construct", new String[]{"Int64", "Function"});
-        markNativeMethod("elementAt", INT, null /*new String[] {"Ref<ElementType>"}*/);
-        // Array!<ElementType> reify();
-        markNativeMethod("reify", VOID, null);
+        markNativeMethod("elementAt", INT, new String[] {"Ref<ElementType>"});
+        markNativeMethod("reify", VOID, new String[] {"collections.Array<ElementType>"});
         }
 
     @Override
@@ -86,19 +85,19 @@ public class xArray
                 FunctionHandle hSupplier = (FunctionHandle) ahVar[1];
                 xArray array = (xArray) hArray.f_clazz.f_template;
 
-                int[] ai = new int[]{0}; // index holder
-                ObjectHandle[] ahArg = new ObjectHandle[1];
-                ahArg[0] = xInt64.makeHandle(ai[0]);
+                int[] holder = new int[]{0}; // index holder; starts with zero
+                ObjectHandle[] ahArg = new ObjectHandle[hSupplier.getVarCount()];
+                ahArg[0] = xInt64.makeHandle(0);
 
                 // TODO: what if the supplier produces a "future" result
                 hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
                 Frame frame0 = frame.m_frameNext;
 
-                frame0.m_continuation = new Supplier<Frame>()
+                frame0.setContinuation(new Supplier<Frame>()
                     {
                     public Frame get()
                         {
-                        int i = ai[0]++;
+                        int i = holder[0]++;
                         ExceptionHandle hException =
                                 array.assignArrayValue(hArray, i, frame.getFrameLocal());
                         if (hException != null)
@@ -113,14 +112,14 @@ public class xArray
                             // TODO: ditto
                             hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
                             Frame frameNext = frame.m_frameNext;
-                            frameNext.m_continuation = this;
+                            frameNext.setContinuation(this);
                             return frameNext;
                             }
 
                         frame.assignValue(iReturn, hArray);
                         return null;
                         }
-                    };
+                    });
 
                 return Op.R_CALL;
                 }

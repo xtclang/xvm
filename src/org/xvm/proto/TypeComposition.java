@@ -6,14 +6,13 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.UnresolvedTypeConstant;
+
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
@@ -65,7 +64,7 @@ public class TypeComposition
         ClassTemplate templateSuper = f_template.getSuper();
         if (templateSuper != null)
             {
-            Map<CharStringConstant, TypeConstant> mapFormalTypes =
+            Map<StringConstant, TypeConstant> mapFormalTypes =
                     templateSuper.f_struct.getTypeParams();
 
             if (mapFormalTypes.isEmpty())
@@ -74,7 +73,7 @@ public class TypeComposition
                 }
 
             Map<String, Type> mapParams = new HashMap<>();
-            for (Map.Entry<CharStringConstant, TypeConstant> entryFormal : mapFormalTypes.entrySet())
+            for (Map.Entry<StringConstant, TypeConstant> entryFormal : mapFormalTypes.entrySet())
                 {
                 String sParamName = entryFormal.getKey().getValue();
                 mapParams.put(sParamName, f_mapGenericActual.get(sParamName));
@@ -256,7 +255,7 @@ public class TypeComposition
             {
             frameDefault = frame.f_context.createFrame1(frame, methodDefault,
                     hStruct, ahVar, Frame.RET_UNUSED);
-            frameDefault.m_continuation = continuation;
+            frameDefault.setContinuation(continuation);
             continuation = null;
             }
 
@@ -272,7 +271,7 @@ public class TypeComposition
             return frameDefault;
             }
 
-        frameSuper.m_continuation = () -> frameDefault;
+        frameSuper.setContinuation(() -> frameDefault);
         return frameSuper;
         }
 
@@ -354,7 +353,7 @@ public class TypeComposition
             MultiMethodStructure mms = (MultiMethodStructure) property.getChild(constMethod.getName());
             if (mms != null)
                 {
-                // TODO: compare the signature
+                // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
                 list.add((MethodStructure) mms.children().get(0));
                 }
             }
@@ -385,13 +384,6 @@ public class TypeComposition
 
         // TODO: walk default methods on interfaces
         return list;
-        }
-
-    // retrieve the property structure for the specified property
-    // TODO: replace PropertyConstant with PropertyIdConstant (or String)
-    public PropertyStructure getProperty(PropertyConstant constProperty)
-        {
-        return getProperty(constProperty.getName());
         }
 
     // retrieve the property structure for the specified property

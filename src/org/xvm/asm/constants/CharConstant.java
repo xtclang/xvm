@@ -18,7 +18,7 @@ import static org.xvm.util.Handy.writeUtf8Char;
  * Represent a unicode character constant.
  */
 public class CharConstant
-        extends Constant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -54,13 +54,13 @@ public class CharConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * Get the value of the constant.
-     *
-     * @return  the constant's unicode character value as an <tt>int</tt>
+     * {@inheritDoc}
+     * @return  the constant's unicode character value as a Java Integer
      */
-    public int getValue()
+    @Override
+    public Integer getValue()
         {
-        return m_chVal;
+        return Integer.valueOf(m_chVal);
         }
 
 
@@ -75,7 +75,7 @@ public class CharConstant
     @Override
     public Object getLocator()
         {
-        // character only guarantees that the ASCII characters are cached
+        // Integer only guarantees that up to 0x7F is cached
         return m_chVal <= 0x7F ? Character.valueOf((char) m_chVal) : null;
         }
 
@@ -109,7 +109,7 @@ public class CharConstant
     @Override
     public String getDescription()
         {
-        return "char=" + getValueString();
+        return "char=" + getValueString() + ", index=" + m_chVal;
         }
 
 

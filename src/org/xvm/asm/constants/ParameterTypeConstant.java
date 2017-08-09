@@ -108,7 +108,7 @@ public class ParameterTypeConstant
     /**
      * @return the name of the type parameter, as a CharStringConstant
      */
-    public CharStringConstant getNameConstant()
+    public StringConstant getNameConstant()
         {
         return m_constName;
         }
@@ -167,14 +167,14 @@ public class ParameterTypeConstant
             throws IOException
         {
         m_constParent = (TypeConstant      ) getConstantPool().getConstant(m_iParent);
-        m_constName   = (CharStringConstant) getConstantPool().getConstant(m_iName  );
+        m_constName   = (StringConstant) getConstantPool().getConstant(m_iName  );
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
         m_constParent = (TypeConstant      ) pool.register(m_constParent);
-        m_constName   = (CharStringConstant) pool.register(m_constName  );
+        m_constName   = (StringConstant) pool.register(m_constName  );
         }
 
     @Override
@@ -216,5 +216,5 @@ public class ParameterTypeConstant
     /**
      * The constant that holds the name of the type parameter.
      */
-    private CharStringConstant m_constName;
+    private StringConstant m_constName;
     }

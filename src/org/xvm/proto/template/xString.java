@@ -3,7 +3,8 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.constants.CharStringConstant;
+
+import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -11,7 +12,6 @@ import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
-import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
 /**
@@ -20,13 +20,13 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xString
-        extends ClassTemplate
+        extends xConst
     {
     public static xString INSTANCE;
 
     public xString(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(types, structure, false);
 
         if (fInstance)
             {
@@ -38,7 +38,7 @@ public class xString
     public void initDeclared()
         {
         markNativeGetter("size");
-        markNativeMethod("indexOf", null /*new String[]{"String", "Range<Int64>?"}*/,
+        markNativeMethod("indexOf", new String[]{"String", "Range<Int64>?"},
                 new String[]{"Boolean", "Int64"});
         markNativeMethod("to", VOID, STRING);
         }
@@ -46,8 +46,41 @@ public class xString
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        return constant instanceof CharStringConstant ? new StringHandle(f_clazzCanonical,
-                ((CharStringConstant) constant).getValue()) : null;
+        return constant instanceof StringConstant ? new StringHandle(f_clazzCanonical,
+                ((StringConstant) constant).getValue()) : null;
+        }
+
+    @Override
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        StringHandle hThis = (StringHandle) hTarget;
+        StringHandle hThat = (StringHandle) hArg;
+
+        return frame.assignValue(iReturn, makeHandle(hThis.m_sValue + hThat.m_sValue));
+        }
+
+    // ----- comparison support -----
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        StringHandle h1 = (StringHandle) hValue1;
+        StringHandle h2 = (StringHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+                xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        StringHandle h1 = (StringHandle) hValue1;
+        StringHandle h2 = (StringHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+                xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
         }
 
     @Override
@@ -61,11 +94,17 @@ public class xString
             case 0:
                 switch (method.getName())
                     {
-                    case "get": // size.get()
-                        assert method.getParent().getParent().getName().equals("size");
+                    case "get":
+                        switch (method.getParent().getParent().getName())
+                            {
+                            case "hash":
+                                return frame.assignValue(iReturn,
+                                        xInt64.makeHandle(hThis.m_sValue.hashCode()));
 
-                        ObjectHandle hResult = xInt64.makeHandle(hThis.m_sValue.length());
-                        return frame.assignValue(iReturn, hResult);
+                            case "size":
+                                return frame.assignValue(iReturn,
+                                        xInt64.makeHandle(hThis.m_sValue.length()));
+                            }
                     }
                 break;
 
@@ -144,46 +183,18 @@ public class xString
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-    @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        StringHandle hThis = (StringHandle) hTarget;
-        StringHandle hThat = (StringHandle) hArg;
-
-        return frame.assignValue(iReturn, makeHandle(hThis.m_sValue + hThat.m_sValue));
-        }
-
-    // ----- comparison support -----
-
-    @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        StringHandle h1 = (StringHandle) hValue1;
-        StringHandle h2 = (StringHandle) hValue2;
-
-        return frame.assignValue(iReturn,
-                xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
-        }
-
-    @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        StringHandle h1 = (StringHandle) hValue1;
-        StringHandle h2 = (StringHandle) hValue2;
-
-        return frame.assignValue(iReturn,
-                xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
-        }
-
     // ----- Object methods -----
 
     @Override
-    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        sb.append(((StringHandle) hTarget).getValue());
-        return null;
+        return frame.assignValue(iReturn, hTarget);
+        }
+
+    @Override
+    protected long buildHashCode(ObjectHandle hTarget)
+        {
+        return ((StringHandle) hTarget).getValue().hashCode();
         }
 
     public static class StringHandle

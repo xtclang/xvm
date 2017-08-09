@@ -1,6 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -66,7 +66,7 @@ public class AssertV extends OpCallable
                 return iPC + 1;
                 }
 
-            CharStringConstant constText = (CharStringConstant)
+            StringConstant constText = (StringConstant)
                     frame.f_context.f_pool.getConstant(f_nTextConstId);
 
             StringBuilder sb = new StringBuilder("Assertion failed: ");

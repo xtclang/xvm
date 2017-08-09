@@ -16,10 +16,10 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.AnyCondition;
-import org.xvm.asm.constants.ByteConstant;
-import org.xvm.asm.constants.ByteStringConstant;
+import org.xvm.asm.constants.UInt8Constant;
+import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.CharConstant;
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ChildTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -27,7 +27,7 @@ import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
-import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.Int64Constant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -40,6 +40,7 @@ import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.ParentTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterTypeConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.SymbolicConstant;
 import org.xvm.asm.constants.TupleConstant;
@@ -198,13 +199,13 @@ public class ConstantPool
      *
      * @return a ByteConstant for the passed byte value
      */
-    public ByteConstant ensureByteConstant(int b)
+    public UInt8Constant ensureByteConstant(int b)
         {
         // check the pre-existing constants first
-        ByteConstant constant = (ByteConstant) ensureLocatorLookup(Format.Byte).get(Byte.valueOf((byte) b));
+        UInt8Constant constant = (UInt8Constant) ensureLocatorLookup(Format.UInt8).get(Byte.valueOf((byte) b));
         if (constant == null)
             {
-            constant = (ByteConstant) register(new ByteConstant(this, b));
+            constant = (UInt8Constant) register(new UInt8Constant(this, b));
             }
         return constant;
         }
@@ -216,10 +217,10 @@ public class ConstantPool
      *
      * @return a ByteStringConstant for the passed byte array value
      */
-    public ByteStringConstant ensureByteStringConstant(byte[] ab)
+    public UInt8ArrayConstant ensureByteStringConstant(byte[] ab)
         {
-        ByteStringConstant constant = new ByteStringConstant(this, ab.clone());
-        return (ByteStringConstant) register(constant);
+        UInt8ArrayConstant constant = new UInt8ArrayConstant(this, ab.clone());
+        return (UInt8ArrayConstant) register(constant);
         }
 
     /**
@@ -251,13 +252,13 @@ public class ConstantPool
      *
      * @return a CharStringConstant for the passed String value
      */
-    public CharStringConstant ensureCharStringConstant(String s)
+    public StringConstant ensureCharStringConstant(String s)
         {
         // check the pre-existing constants first
-        CharStringConstant constant = (CharStringConstant) ensureLocatorLookup(Format.CharString).get(s);
+        StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
         if (constant == null)
             {
-            constant = (CharStringConstant) register(new CharStringConstant(this, s));
+            constant = (StringConstant) register(new StringConstant(this, s));
             }
         return constant;
         }
@@ -269,7 +270,7 @@ public class ConstantPool
      *
      * @return an IntConstant for the passed {@code long} value
      */
-    public IntConstant ensureIntConstant(long n)
+    public Int64Constant ensureIntConstant(long n)
         {
         return ensureIntConstant(PackedInteger.valueOf(n));
         }
@@ -281,13 +282,13 @@ public class ConstantPool
      *
      * @return an IntConstant for the passed PackedInteger value
      */
-    public IntConstant ensureIntConstant(PackedInteger pint)
+    public Int64Constant ensureIntConstant(PackedInteger pint)
         {
         // check the pre-existing constants first
-        IntConstant constant = (IntConstant) ensureLocatorLookup(Format.Int).get(pint);
+        Int64Constant constant = (Int64Constant) ensureLocatorLookup(Format.Int64).get(pint);
         if (constant == null)
             {
-            constant = (IntConstant) register(new IntConstant(this, pint));
+            constant = (Int64Constant) register(new Int64Constant(this, pint));
             }
         return constant;
         }
@@ -1062,6 +1063,24 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified register index, obtain a TypeConstant that represents the type parameter.
+     *
+     * @param iReg  the register number
+     *
+     * @return the RegisterTypeConstant for the specified register number
+     */
+    public RegisterTypeConstant ensureRegisterTypeConstant(int iReg)
+        {
+        assert iReg >= 0;
+        RegisterTypeConstant constant = (RegisterTypeConstant) ensureLocatorLookup(Format.RegisterType).get(iReg);
+        if (constant == null)
+            {
+            constant = (RegisterTypeConstant) register(new RegisterTypeConstant(this, iReg));
+            }
+        return constant;
+        }
+
+    /**
      * Given the specified annotation class and parameters, obtain a type that represents the
      * annotated form of the specified type.
      *
@@ -1217,24 +1236,24 @@ public class ConstantPool
             Format   format = Constant.Format.valueOf(nFmt);
             switch (format)
                 {
-                case Byte:
-                    constant = new ByteConstant(this, format, in);
+                case UInt8:
+                    constant = new UInt8Constant(this, format, in);
                     break;
 
-                case ByteString:
-                    constant = new ByteStringConstant(this, format, in);
+                case UInt8Array:
+                    constant = new UInt8ArrayConstant(this, format, in);
                     break;
 
                 case Char:
                     constant = new CharConstant(this, format, in);
                     break;
 
-                case CharString:
-                    constant = new CharStringConstant(this, format, in);
+                case String:
+                    constant = new StringConstant(this, format, in);
                     break;
 
-                case Int:
-                    constant = new IntConstant(this, format, in);
+                case Int64:
+                    constant = new Int64Constant(this, format, in);
                     break;
 
                 case Tuple:

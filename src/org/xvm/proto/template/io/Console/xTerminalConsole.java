@@ -8,6 +8,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
+import org.xvm.proto.op.IRef;
 import org.xvm.proto.template.xString;
 
 import java.io.BufferedReader;
@@ -49,21 +50,50 @@ public class xTerminalConsole
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        StringBuilder sb = new StringBuilder();
         switch (method.getName())
             {
             case "print": // Object o
                 {
-                hArg.f_clazz.f_template.buildStringValue(hArg, sb);
-                CONSOLE_OUT.print(sb.toString());
-                return Op.R_NEXT;
+                int iResult = hArg.f_clazz.f_template.buildStringValue(frame, hArg, Frame.RET_LOCAL);
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        CONSOLE_OUT.print(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                        return Op.R_NEXT;
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.setContinuation(() ->
+                            {
+                            CONSOLE_OUT.print(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                            return null;
+                            });
+
+                        // fall through
+                    case Op.R_EXCEPTION:
+                        return iResult;
+                    }
                 }
 
             case "println": // Object o
                 {
-                hArg.f_clazz.f_template.buildStringValue(hArg, sb);
-                CONSOLE_OUT.println(sb.toString());
-                return Op.R_NEXT;
+                int iResult = hArg.f_clazz.f_template.buildStringValue(frame, hArg, Frame.RET_LOCAL);
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        CONSOLE_OUT.println(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                        return Op.R_NEXT;
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.setContinuation(() ->
+                            {
+                            CONSOLE_OUT.println(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                            return null;
+                            });
+
+                        // fall through
+                    case Op.R_EXCEPTION:
+                        return iResult;
+                    }
                 }
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);

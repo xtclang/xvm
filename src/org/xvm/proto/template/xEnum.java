@@ -97,11 +97,12 @@ public class xEnum
     // ----- Object methods -----
 
     @Override
-    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         EnumHandle hEnum = (EnumHandle) hTarget;
-        sb.append(m_listNames.get((int) hEnum.getValue()));
-        return null;
+
+        return frame.assignValue(iReturn,
+                xString.makeHandle(m_listNames.get((int) hEnum.getValue())));
         }
 
     public static class EnumHandle

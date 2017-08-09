@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.proto.Adapter;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Op;
@@ -367,7 +368,8 @@ public class xTestApp extends xModule
 
         // --- testArray()
 
-        MethodTemplate ftLambda$2 = ensureMethodTemplate("lambda_2", null /*"REf<Int>*/, STRING);
+        MethodTemplate ftLambda$2 = ensureMethodTemplate("lambda_2",
+                new String[]{"Ref<Int64>"}, STRING);
         ftLambda$2.m_aop = new Op[]
             { // #0 = i
             new IVar(adapter.getClassTypeConstId("String"),
@@ -515,6 +517,35 @@ public class xTestApp extends xModule
             };
         mtConst.m_cVars = 2;
 
+        MethodTemplate mtTo = ctPoint.ensureMethodTemplate("to", VOID, STRING);
+        mtTo.m_aop = new Op[]
+            {
+            new IVar(adapter.getClassTypeConstId("String"), -adapter.ensureValueConstantId("(")), // #0
+            new Var(adapter.getClassTypeConstId("Int64")), // #1
+            new Var(adapter.getClassTypeConstId("String")), // #2
+            new LGet(adapter.getPropertyConstId("TestApp.Point", "x"), 1),
+            new Invoke_01(1, adapter.getMethodConstId("Object", "to", STRING, VOID), 2),
+            new Add(0, 2, 0),
+            new Add(0, -adapter.ensureValueConstantId(", "), 0),
+            new LGet(adapter.getPropertyConstId("TestApp.Point", "y"), 1),
+            new Invoke_01(1, adapter.getMethodConstId("Object", "to", STRING, VOID), 2),
+            new Add(0, 2, 0),
+            new Add(0, -adapter.ensureValueConstantId(")"), 0),
+            new Return_1(0),
+            };
+        mtTo.m_cVars = 3;
+
+        ClassTemplate ctRectangle = f_types.getTemplate("TestApp.Rectangle");
+        adapter.addMethod(ctRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point"}, VOID);
+        MethodTemplate mtRectangle = ctRectangle.ensureMethodTemplate("construct", new String[]{"TestApp.Point", "TestApp.Point"});
+        mtRectangle.m_aop = new Op[]
+            { // #0 = tl; #1 = br
+            new LSet(adapter.getPropertyConstId("TestApp.Rectangle", "tl"), 0),
+            new LSet(adapter.getPropertyConstId("TestApp.Rectangle", "br"), 1),
+            new Return_0()
+            };
+        mtRectangle.m_cVars = 2;
+
         MethodTemplate ftTestConst = ensureMethodTemplate("testConst", VOID);
         ftTestConst.m_aop = new Op[]
             {
@@ -527,7 +558,7 @@ public class xTestApp extends xModule
             new X_Print(0),
 
             new NVar(adapter.getClassTypeConstId("TestApp.Point"),
-                    adapter.ensureValueConstantId("p1")), // #1 (p2)
+                    adapter.ensureValueConstantId("p2")), // #1 (p2)
             new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
                     new int[]{-adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(0)},
                     1),
@@ -540,9 +571,19 @@ public class xTestApp extends xModule
             new IsGt(1, 0, 2),
             new X_Print(2),
 
+            new NVar(adapter.getClassTypeConstId("TestApp.Rectangle"),
+                    adapter.ensureValueConstantId("r")), // #3 (r)
+            new New_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
+                    new int[]{1, 0}, 3),
+            new X_Print(3),
+
+            new Var(adapter.getClassTypeConstId("Int64")), // #4
+            new PGet(3, adapter.getPropertyConstId("Const", "hash"), 4),
+            new X_Print(4),
+
             new Return_0()
             };
-        ftTestConst.m_cVars = 3;
+        ftTestConst.m_cVars = 5;
 
         // --- run()
         MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);

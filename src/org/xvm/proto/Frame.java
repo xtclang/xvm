@@ -4,8 +4,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.constants.CharStringConstant;
-import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.Int64Constant;
 
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
@@ -18,6 +18,7 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 
 import org.xvm.proto.template.collections.xTuple;
+import org.xvm.proto.template.xString;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -577,7 +578,7 @@ public class Frame
             }
         else
             {
-            IntConstant constant = (IntConstant) f_context.f_pool.getConstant(-iArg);
+            Int64Constant constant = (Int64Constant) f_context.f_pool.getConstant(-iArg);
             lIndex = constant.getValue().getLong();
             }
 
@@ -630,6 +631,46 @@ public class Frame
                 frameTop = frameTop.f_framePrev;
                 }
             frameTop.m_hfnFinally = hFinalizer.chain(frameTop.m_hfnFinally);
+            }
+        }
+
+    public void setContinuation(Supplier<Frame> continuation)
+        {
+        if (m_continuation == null)
+            {
+            m_continuation = continuation;
+            }
+        else
+            {
+            Supplier<Frame>[] holder = new Supplier[] {m_continuation};
+
+            // inject the new continuation before the existing one;
+            // if the previous continuation returns a frame with another continuation
+            // make sure we repeat the injection, calling the provided continuation
+            // only when the exiting one returns null
+            m_continuation = new Supplier<Frame>()
+                {
+                public Frame get()
+                    {
+                    Frame frameNext = holder[0].get();
+                    if (frameNext == null)
+                        {
+                        return continuation.get();
+                        }
+
+                    Supplier<Frame> contNext = frameNext.m_continuation;
+                    if (contNext == null)
+                        {
+                        frameNext.m_continuation = continuation;
+                        }
+                    else
+                        {
+                        holder[0] = contNext;
+                        frameNext.m_continuation = this;
+                        }
+                    return frameNext;
+                    };
+                };
             }
         }
 
@@ -806,7 +847,7 @@ public class Frame
                         ensureComposition(f_anClassConstId[iCatch]);
                 if (clzException.extends_(clzCatch))
                     {
-                    CharStringConstant constVarName = (CharStringConstant)
+                    StringConstant constVarName = (StringConstant)
                             context.f_pool.getConstant(f_anNameConstId[iCatch]);
 
                     introduceException(frame, iGuard, hException, constVarName.getValue());

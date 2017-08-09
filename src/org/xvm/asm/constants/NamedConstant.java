@@ -153,14 +153,14 @@ public abstract class NamedConstant
         {
         final ConstantPool pool = getConstantPool();
         m_constParent = pool.getConstant(m_iParent);
-        m_constName   = (CharStringConstant) pool.getConstant(m_iName);
+        m_constName   = (StringConstant) pool.getConstant(m_iName);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
         m_constParent = pool.register(m_constParent);
-        m_constName   = (CharStringConstant) pool.register(m_constName);
+        m_constName   = (StringConstant) pool.register(m_constName);
         }
 
     @Override
@@ -209,5 +209,5 @@ public abstract class NamedConstant
     /**
      * The constant that holds the name of the structure identified by this constant.
      */
-    private CharStringConstant m_constName;
+    private StringConstant m_constName;
     }

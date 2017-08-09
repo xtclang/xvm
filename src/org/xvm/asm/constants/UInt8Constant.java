@@ -14,8 +14,8 @@ import static org.xvm.util.Handy.byteToHexString;
 /**
  * Represent an octet (unsigned 8-bit byte) constant.
  */
-public class ByteConstant
-        extends Constant
+public class UInt8Constant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ public class ByteConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public ByteConstant(ConstantPool pool, Format format, DataInput in)
+    public UInt8Constant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -41,24 +41,23 @@ public class ByteConstant
      * @param pool  the ConstantPool that will contain this Constant
      * @param bVal  the octet value
      */
-    public ByteConstant(ConstantPool pool, int bVal)
+    public UInt8Constant(ConstantPool pool, int bVal)
         {
         super(pool);
         m_nVal = bVal & 0xFF;
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
-     * Get the value of the constant.
-     *
-     * @return  the constant's octet value as an <tt>int</tt> in the
-     *          range 0 to 255
+     * {@inheritDoc}
+     * @return  the constant's unsigned byte value as a Java Integer in the range 0-255
      */
-    public int getValue()
+    @Override
+    public Integer getValue()
         {
-        return m_nVal;
+        return Integer.valueOf(m_nVal);
         }
 
 
@@ -67,20 +66,20 @@ public class ByteConstant
     @Override
     public Format getFormat()
         {
-        return Format.Byte;
+        return Format.UInt8;
         }
 
     @Override
     protected Object getLocator()
         {
-        // Byte caches all possible values
-        return Byte.valueOf((byte) m_nVal);
+        // Integer caches all possible values
+        return getValue();
         }
 
     @Override
     protected int compareDetails(Constant that)
         {
-        return this.m_nVal - ((ByteConstant) that).m_nVal;
+        return this.m_nVal - ((UInt8Constant) that).m_nVal;
         }
 
     @Override
@@ -119,7 +118,7 @@ public class ByteConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The constant octet value stored as an integer.
+     * The constant octet value stored here as an integer in the range 0-255.
      */
     private final int m_nVal;
     }

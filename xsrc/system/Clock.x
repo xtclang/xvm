@@ -1,6 +1,3 @@
-typedef function Void () Alarm;
-typedef function Void () Cancellable;
-
 /**
  * some possible examples:
  * wall clock
@@ -12,6 +9,9 @@ typedef function Void () Cancellable;
  */
 interface Clock
     {
+    typedef function Void () Alarm;
+    typedef function Void () Cancellable;
+
     @ro DateTime epoch;
 //    @ro TimeZone timezone;
     @ro Interval precision;

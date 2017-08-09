@@ -11,7 +11,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.ErrorListener;
 
 
@@ -35,9 +34,9 @@ public class AnnotatedTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    protected boolean canResolveSimpleName()
+    protected boolean canResolveNames()
         {
-        return super.canResolveSimpleName() || type.canResolveSimpleName();
+        return super.canResolveNames() || type.canResolveNames();
         }
 
     @Override

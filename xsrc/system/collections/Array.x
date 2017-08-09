@@ -50,13 +50,13 @@ class Array<ElementType>
     public/private Int size     = 0;
 
     @Override
-    @op ElementType get(Int index)
+    @op ElementType getElement(Int index)
         {
         return elementAt(index).get();
         }
 
     @Override
-    @op Void set(Int index, ElementType value)
+    @op Void setElement(Int index, ElementType value)
         {
         elementAt(index).set();
         }

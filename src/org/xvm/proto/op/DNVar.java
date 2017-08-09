@@ -1,6 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -56,8 +56,8 @@ public class DNVar extends Op
         {
         ServiceContext context = frame.f_context;
 
-        CharStringConstant constName =
-                (CharStringConstant) context.f_pool.getConstant(f_nNameConstId);
+        StringConstant constName =
+                (StringConstant) context.f_pool.getConstant(f_nNameConstId);
         String sName = constName.getValue();
 
         RefHandle hRef = m_ref;

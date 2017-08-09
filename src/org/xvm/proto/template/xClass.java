@@ -40,7 +40,7 @@ public class xClass
         if (constant instanceof ClassTypeConstant)
             {
             ClassTypeConstant constClass = (ClassTypeConstant) constant;
-            TypeComposition clzTarget = f_types.resolve(constClass);
+            TypeComposition clzTarget = f_types.ensureComposition(constClass.getPosition());
 
             Map<String, Type> mapParams = new HashMap<>();
             mapParams.put("PublicType", clzTarget.ensurePublicType());

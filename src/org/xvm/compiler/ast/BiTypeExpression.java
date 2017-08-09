@@ -46,10 +46,10 @@ public class BiTypeExpression
         }
 
     @Override
-    protected boolean canResolveSimpleName()
+    protected boolean canResolveNames()
         {
-        return super.canResolveSimpleName() ||
-                (type1.canResolveSimpleName() && type2.canResolveSimpleName());
+        return super.canResolveNames() ||
+                (type1.canResolveNames() && type2.canResolveNames());
         }
 
     @Override

@@ -2,13 +2,13 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.IntConstant;
+
+import org.xvm.asm.constants.Int64Constant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
-import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -19,11 +19,11 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xBit
-        extends ClassTemplate
+        extends xConst
     {
     public xBit(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(types, structure, false);
         }
 
     @Override
@@ -34,8 +34,8 @@ public class xBit
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
-                ((IntConstant) constant).getValue().getLong()) : null;
+        return constant instanceof Int64Constant ? new JavaLong(f_clazzCanonical,
+                ((Int64Constant) constant).getValue().getLong()) : null;
         }
 
     @Override

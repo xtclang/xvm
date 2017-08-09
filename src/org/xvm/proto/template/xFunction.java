@@ -348,12 +348,12 @@ public class xFunction
 
             if (m_next == null)
                 {
-                frameThis.m_continuation = continuation;
+                frameThis.setContinuation(continuation);
                 return frameThis;
                 }
 
             Frame frameNext = m_next.callChain(frame, access, continuation);
-            frameThis.m_continuation = () -> frameNext;
+            frameThis.setContinuation(() -> frameNext);
             return frameThis;
             }
 

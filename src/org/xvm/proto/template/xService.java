@@ -208,11 +208,10 @@ public class xService
         }
 
     @Override
-    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
-        sb.append(hService.m_context);
-        return null;
+        return frame.assignValue(iReturn, xString.makeHandle(hService.m_context.toString()));
         }
 
 

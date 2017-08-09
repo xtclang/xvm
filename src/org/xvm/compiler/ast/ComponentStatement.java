@@ -81,14 +81,6 @@ public abstract class ComponentStatement
                 : componentParent;
         }
 
-    @Override
-    protected Component resolveSimpleName(String sName)
-        {
-        return component == null
-                ? null
-                : component.resolveName(sName);
-        }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

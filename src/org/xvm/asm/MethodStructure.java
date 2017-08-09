@@ -211,8 +211,27 @@ public class MethodStructure
         return true;
         }
 
+    @Override
+    public boolean resolveName(String sName, ResolutionCollector collector)
+        {
+        for (int i = 0, c = m_cTypeParams; i < c; ++i)
+            {
+            Parameter param = m_aParams[i];
+            assert param.isTypeParameter();
 
-    // ----- XvmStructure methods ------------------------------------------------------------------
+            if (param.getName().equals(sName))
+                {
+                collector.resolvedParameter(param.asTypeParameterType());
+                return true;
+                }
+            }
+
+        // method short-circuits the search
+        return false;
+        }
+
+
+// ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     public MethodConstant getIdentityConstant()
@@ -230,7 +249,7 @@ public class MethodStructure
         MethodConstant constMethod       = getIdentityConstant();
         TypeConstant[] aconstReturnTypes = constMethod.getRawReturns();
         TypeConstant[] aconstParamTypes  = constMethod.getRawParams();
-        
+
         int         cReturns = aconstReturnTypes.length;
         Parameter[] aReturns = new Parameter[cReturns];
         boolean     fCond    = isConditionalReturn();
@@ -243,7 +262,7 @@ public class MethodStructure
                 }
             aReturns[i] = param;
             }
-        
+
         int         cParams     = aconstParamTypes.length;
         Parameter[] aParams     = new Parameter[cParams];
         int         cTypeParams = readMagnitude(in);
@@ -256,7 +275,7 @@ public class MethodStructure
                 }
             aParams[i] = param;
             }
-        
+
         m_aReturns    = aReturns;
         m_cTypeParams = cTypeParams;
         m_aParams     = aParams;

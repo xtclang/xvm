@@ -51,7 +51,9 @@
 
 + Const
 
-- hashCode implementation
++ hash implementation
+
+- revisit enum methods, hash and to<String> implementation
 
 - Property and Method
 

@@ -21,7 +21,7 @@ import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -77,7 +77,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <p/>
  * Normally, an XVM structure has a single parent structure and any number of child structures, but
  * a Component can differ dramatically from this model, in that it can have any number of parent
- * Conponents (only one of which at most is valid for a given condition), and it can have any number
+ * Components (only one of which at most is valid for a given condition), and it can have any number
  * of child Components, of which only some are (perhaps none is) appropriate for a given condition.
  * <p/>
  * The persistent form of a Component is relatively complicated, in order to handle the potentially
@@ -172,7 +172,7 @@ public abstract class Component
      */
     public Component getParent()
         {
-        Component    parent     = null;
+        Component    parent;
         XvmStructure containing = getContaining();
         while (true)
             {
@@ -864,7 +864,8 @@ public abstract class Component
         //     }
 
         int               nFlags  = Format.PROPERTY.ordinal() | access.FLAGS;
-        PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
+        PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(),
+                sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null);
         struct.setType(constType);
         addChild(struct);
@@ -893,7 +894,8 @@ public abstract class Component
             }
 
         int              nFlags  = Format.TYPEDEF.ordinal() | access.FLAGS;
-        TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(), sName);
+        TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(),
+                sName);
         TypedefStructure struct  = new TypedefStructure(this, nFlags, constId, null);
         struct.setType(constType);
         addChild(struct);
@@ -1044,8 +1046,8 @@ public abstract class Component
                 equalChildMaps(this.getMethodByConstantMap(), that.getMethodByConstantMap());
         }
 
-    private boolean equalChildMaps(Map<? extends Object, ? extends Component> mapThis,
-                                   Map<? extends Object, ? extends Component> mapThat)
+    private boolean equalChildMaps(Map<?, ? extends Component> mapThis,
+                                   Map<?, ? extends Component> mapThat)
         {
         if (mapThis.size() != mapThat.size())
             {
@@ -1124,17 +1126,31 @@ public abstract class Component
         }
 
     /**
-     * TODO
+     * For all but the multi-method, this obtains a child by the specified dot-delimited path.
      *
-     * @param sName  the name to resolve
+     * @param sPath  dot-delimited child name path
      *
-     * @return
+     * @return the child component or null if cannot be found
      */
-    public Component resolveName(String sName)
+    public Component getChildByPath(String sPath)
         {
-        Component component = getChild(sName);
-        // TODO
-        return component;
+        int       ofStart = 0;
+        int       ofEnd   = sPath.indexOf('.');
+        Component parent  = this;
+
+        while (ofEnd >= 0)
+            {
+            String sName = sPath.substring(ofStart, ofEnd);
+
+            parent = parent.getChild(sName);
+            if (parent == null)
+                {
+                return null;
+                }
+            ofStart = ofEnd + 1;
+            ofEnd   = sPath.indexOf('.', ofStart);
+            }
+        return parent.getChild(sPath.substring(ofStart));
         }
 
     /**
@@ -1234,6 +1250,26 @@ public abstract class Component
             }
 
         return matches == null ? Collections.EMPTY_LIST : matches;
+        }
+
+    /**
+     * Request that the component determine what the specified name is referring to.
+     *
+     * @param sName        the name to resolve
+     * @param collector    the collector to which the potential name matches will be reported
+     *
+     * @return true iff any matches for the name were collected
+     */
+    public boolean resolveName(String sName, ResolutionCollector collector)
+        {
+        Component component = getChild(sName);
+        if (component != null)
+            {
+            collector.resolvedComponent(component);
+            return true;
+            }
+
+        return false;
         }
 
     /**
@@ -1721,7 +1757,7 @@ public abstract class Component
             {
             Component that = (Component) super.clone();
             // TODO this needs to clone data structures on this component as well
-            // TODO this needs to be overriden by all sub-classes of Component
+            // TODO this needs to be overridden by all sub-classes of Component
             return that;
             }
         catch (CloneNotSupportedException e)
@@ -1920,7 +1956,7 @@ public abstract class Component
      * @throws IOException  if an I/O exception occurs during disassembly from the provided
      *                      DataInput stream, or if there is invalid data in the stream
      */
-    protected ListMap<CharStringConstant, TypeConstant> disassembleTypeParams(DataInput in)
+    protected ListMap<StringConstant, TypeConstant> disassembleTypeParams(DataInput in)
             throws IOException
         {
         int c = readMagnitude(in);
@@ -1930,11 +1966,11 @@ public abstract class Component
             return null;
             }
 
-        final ListMap<CharStringConstant, TypeConstant> map = new ListMap<>();
+        final ListMap<StringConstant, TypeConstant> map = new ListMap<>();
         final ConstantPool pool = getConstantPool();
         for (int i = 0; i < c; ++i)
             {
-            CharStringConstant constName = (CharStringConstant) pool.getConstant(readIndex(in));
+            StringConstant constName = (StringConstant) pool.getConstant(readIndex(in));
             TypeConstant       constType = (TypeConstant)       pool.getConstant(readIndex(in));
             assert !map.containsKey(constName);
             map.put(constName, constType);
@@ -1949,7 +1985,7 @@ public abstract class Component
      *
      * @return the map of registered type parameters (might be different from the map passed in)
      */
-    protected ListMap<CharStringConstant, TypeConstant> registerTypeParams(ListMap<CharStringConstant, TypeConstant> mapOld)
+    protected ListMap<StringConstant, TypeConstant> registerTypeParams(ListMap<StringConstant, TypeConstant> mapOld)
         {
         if (mapOld == null || mapOld.isEmpty())
             {
@@ -1957,11 +1993,11 @@ public abstract class Component
             }
 
         final ConstantPool pool = getConstantPool();
-        ListMap<CharStringConstant, TypeConstant> mapNew = mapOld;
-        for (Map.Entry<CharStringConstant, TypeConstant> entry : mapOld.entrySet())
+        ListMap<StringConstant, TypeConstant> mapNew = mapOld;
+        for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet())
             {
-            CharStringConstant constOldKey = entry.getKey();
-            CharStringConstant constNewKey = (CharStringConstant) pool.register(constOldKey);
+            StringConstant constOldKey = entry.getKey();
+            StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
 
             TypeConstant       constOldVal = entry.getValue();
             TypeConstant       constNewVal = (TypeConstant) pool.register(constOldVal);
@@ -1974,7 +2010,7 @@ public abstract class Component
                     // key (which map does not support), so create a new map, and copy the old map
                     // to the new map, but only up to (but not including!) the current entry
                     mapNew = new ListMap<>();
-                    for (Map.Entry<CharStringConstant, TypeConstant> entryCopy : mapOld.entrySet())
+                    for (Map.Entry<StringConstant, TypeConstant> entryCopy : mapOld.entrySet())
                         {
                         if (entryCopy.getKey() == constOldKey)
                             {
@@ -2004,7 +2040,7 @@ public abstract class Component
      * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
      *                      stream
      */
-    protected void assembleTypeParams(ListMap<CharStringConstant, TypeConstant> map, DataOutput out)
+    protected void assembleTypeParams(ListMap<StringConstant, TypeConstant> map, DataOutput out)
             throws IOException
         {
         int c = map == null ? 0 : map.size();
@@ -2015,7 +2051,7 @@ public abstract class Component
             return;
             }
 
-        for (Map.Entry<CharStringConstant, TypeConstant> entry : map.entrySet())
+        for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
             {
             writePackedLong(out, entry.getKey().getPosition());
             writePackedLong(out, entry.getValue().getPosition());
@@ -2476,6 +2512,29 @@ public abstract class Component
          * The optional arguments, if this Composition represents an annotation.
          */
         private Constant[] m_aconstArgs;
+        }
+
+
+    // ----- interface: ResolutionCollector --------------------------------------------------------
+
+    /**
+     * A callback interface used by the name resolution functionality of the Component.
+     */
+    public interface ResolutionCollector
+        {
+        /**
+         * Invoked when a name resolves to type parameter.
+         *
+         * @param constParam  the type parameter
+         */
+        void resolvedParameter(TypeConstant constParam);
+
+        /**
+         * Invoked when a name resolves to a child component.
+         *
+         * @param component  the child component (which may be a composite)
+         */
+        void resolvedComponent(Component component);
         }
 
 

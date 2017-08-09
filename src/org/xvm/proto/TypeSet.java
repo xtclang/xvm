@@ -1,14 +1,16 @@
 package org.xvm.proto;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
-
 import org.xvm.asm.Constants;
+import org.xvm.asm.ModuleStructure;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
-
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xObject;
@@ -107,15 +109,27 @@ public class TypeSet
 
     // ----- templates -----
 
+    public ClassConstant getClassConstant(String sName)
+        {
+        // TODO: plug in module repositories
+        ModuleStructure module = f_container.f_module;
+
+        Component component = module.getChildByPath(sName);
+        if (component instanceof ClassStructure)
+            {
+            return (ClassConstant) component.getIdentityConstant();
+            }
+
+        throw new IllegalArgumentException("Non-existing component: " + sName);
+        }
+
     public ClassTemplate getTemplate(String sName)
         {
         // for core classes only
         ClassTemplate template = f_mapTemplatesByName.get(sName);
         if (template == null)
             {
-            // TODO: plug in module repositories
-            ClassConstant constClass = f_container.f_pool.ensureEcstasyClassConstant(sName);
-            template = getTemplate(constClass);
+            template = getTemplate(getClassConstant(sName));
             f_mapTemplatesByName.put(sName, template);
             }
         return template;
@@ -127,7 +141,8 @@ public class TypeSet
         ClassTemplate template = f_mapTemplatesByName.get(sName);
         if (template == null)
             {
-            ClassStructure structClass = (ClassStructure) constClass.getComponent();
+            Component struct = constClass.getComponent();
+            ClassStructure structClass = (ClassStructure) struct;
             if (structClass == null)
                 {
                 throw new RuntimeException("Missing class structure: " + constClass);
@@ -136,7 +151,7 @@ public class TypeSet
             template = getNativeTemplate(sName, structClass);
             if (template == null)
                 {
-                System.out.println("Generating template for " + sName);
+                // System.out.println("***** Generating template for " + sName);
 
                 switch (structClass.getFormat())
                     {
@@ -207,29 +222,34 @@ public class TypeSet
 
     // ----- TypeCompositions -----
 
-    // produce a TypeComposition based on the specified ClassTypeConstant
-    public TypeComposition resolve(ClassTypeConstant constClassType)
-        {
-        ClassTemplate template = getTemplate(constClassType.getClassConstant());
-        return template.resolve(constClassType, Collections.EMPTY_MAP);
-        }
-
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
     public TypeComposition ensureComposition(int nClassConstId)
         {
         TypeComposition typeComposition = f_mapConstCompositions.get(nClassConstId);
         if (typeComposition == null)
             {
-            // TODO: what if the constant is not a CTC, but TypeParameterTypeConstant,
-            // does it need to be resolved by using frame.getThis().f_clazz?
-            ClassTypeConstant constTypeClass = (ClassTypeConstant)
+            TypeConstant constTyp = (TypeConstant)
                     f_container.f_pool.getConstant(nClassConstId); // must exist
 
-            typeComposition = resolve(constTypeClass);
+            typeComposition = resolve(constTyp);
 
             f_mapConstCompositions.put(nClassConstId, typeComposition);
             }
         return typeComposition;
+        }
+
+    // produce a TypeComposition based on the specified ClassTypeConstant
+    protected TypeComposition resolve(TypeConstant constType)
+        {
+        if (constType instanceof ClassTypeConstant)
+            {
+            ClassTypeConstant constClassType = (ClassTypeConstant) constType;
+            ClassTemplate template = getTemplate(constClassType.getClassConstant());
+            return template.resolve(constClassType, Collections.EMPTY_MAP);
+            }
+
+        // TODO: create TypeComposition for Union and Intersection types
+        throw new UnsupportedOperationException();
         }
 
     // ----- Types -----

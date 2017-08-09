@@ -9,7 +9,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
@@ -80,7 +80,7 @@ public abstract class ClassTemplate
         f_struct = structClass;
         f_sName = structClass.getIdentityConstant().getPathString();
 
-        List<Map.Entry<CharStringConstant, TypeConstant>> listFormalTypes =
+        List<Map.Entry<StringConstant, TypeConstant>> listFormalTypes =
                 structClass.getTypeParamsAsList();
         int cParams = listFormalTypes.size();
 
@@ -111,19 +111,8 @@ public abstract class ClassTemplate
         if (opt.isPresent())
             {
             ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassConstant();
-            try
-                {
-                structSuper = (ClassStructure) constClass.getComponent();
-                templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
-                }
-            catch (RuntimeException e)
-                {
-                // TODO: remove when getComponent() is fixed
-                String sName = constClass.getName();
-                System.out.println("getComponent() is broken for " + sName);
-                templateSuper = f_types.getTemplate(sName);
-                structSuper = templateSuper.f_struct;
-                }
+            structSuper = (ClassStructure) constClass.getComponent();
+            templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
             }
 
         if (structSuper == null)
@@ -158,7 +147,7 @@ public abstract class ClassTemplate
 
     protected TypeComposition createCanonicalClass()
         {
-        Map<CharStringConstant, TypeConstant> mapParams = f_struct.getTypeParams();
+        Map<StringConstant, TypeConstant> mapParams = f_struct.getTypeParams();
         Map<String, Type> mapParamsActual;
 
         if (mapParams.isEmpty())
@@ -169,7 +158,7 @@ public abstract class ClassTemplate
             {
             mapParamsActual = new HashMap<>(mapParams.size());
             Type typeObject = xObject.INSTANCE.f_clazzCanonical.ensurePublicType();
-            for (CharStringConstant constName : mapParams.keySet())
+            for (StringConstant constName : mapParams.keySet())
                 {
                 mapParamsActual.put(constName.getValue(), typeObject);
                 }
@@ -186,7 +175,7 @@ public abstract class ClassTemplate
     /**
      * Initialize properties, methods and functions declared at the "top" layer.
      *
-     * TODO: remove
+     * TODO: remove; should be called from constructors
      */
     public void initDeclared()
         {
@@ -508,7 +497,7 @@ public abstract class ClassTemplate
         FullyBoundHandle hF1 = makeFinalizer(constructor, hStruct, ahVar);
         frameRC.m_hfnFinally = hF1 == null ? FullyBoundHandle.NO_OP : hF1;
 
-        frameRC.m_continuation = () ->
+        frameRC.setContinuation(() ->
             {
             if (isConstructImmutable())
                 {
@@ -519,7 +508,7 @@ public abstract class ClassTemplate
             FullyBoundHandle hF = frameRC.m_hfnFinally;
             return hF == FullyBoundHandle.NO_OP ? contAssign.get() :
                     hF.callChain(frame, Constants.Access.PRIVATE, contAssign);
-            };
+            });
 
         frame.m_frameNext = frameDC == null ? frameRC : frameDC;
         return Op.R_CALL;
@@ -562,9 +551,7 @@ public abstract class ClassTemplate
                 if (method.getName().equals("to"))
                     {
                     // how to differentiate; check the method's return type?
-                    StringBuilder sb = new StringBuilder();
-                    buildStringValue(hTarget, sb);
-                    return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+                    return buildStringValue(frame, hTarget, iReturn);
                     }
             }
 
@@ -719,7 +706,7 @@ public abstract class ClassTemplate
             String sErr;
             if (isInjectable(property))
                 {
-                ClassTypeConstant constType = frame.f_adapter.resolveType(property);
+                TypeConstant constType = frame.f_adapter.resolveType(property);
                 TypeComposition clz = f_types.resolve(constType);
 
                 hValue = frame.f_context.f_container.getInjectable(sName, clz);
@@ -875,11 +862,10 @@ public abstract class ClassTemplate
             }
         }
 
-    // get the String representation of the target handle
-    public ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    // build the String representation of the target handle
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        sb.append(hTarget.toString());
-        return null;
+        return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
         }
 
     // ----- Op-code support: array operations -----
@@ -1040,8 +1026,9 @@ public abstract class ClassTemplate
             {
             m_fAtomic = true;
 
-            ClassTypeConstant constType = f_templateClass.f_types.f_adapter.resolveType(f_property);
-            if (constType.getClassConstant().getName().equals("Int64"))
+            TypeConstant constType = f_templateClass.f_types.f_adapter.resolveType(f_property);
+            if (constType instanceof ClassTypeConstant &&
+                    ((ClassTypeConstant) constType).getClassConstant().getName().equals("Int64"))
                 {
                 markAsRef("annotations.AtomicIntNumber");
                 }

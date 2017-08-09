@@ -22,7 +22,7 @@ public class DaemonPool
 
     private volatile State m_state = State.Initial;
 
-    public volatile boolean m_fWaiting = false;
+    public volatile boolean m_fWaiting = true;
 
     enum State {Initial, Starting, Running, Stopping, Stopped;};
 

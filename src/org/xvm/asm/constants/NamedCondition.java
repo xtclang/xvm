@@ -48,7 +48,7 @@ public class NamedCondition
      * @param constName  specifies the named condition; it is simply a name that is either defined
      *                   or undefined
      */
-    public NamedCondition(ConstantPool pool, CharStringConstant constName)
+    public NamedCondition(ConstantPool pool, StringConstant constName)
         {
         super(pool);
         assert constName != null;
@@ -137,13 +137,13 @@ public class NamedCondition
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constName = (CharStringConstant) getConstantPool().getConstant(m_iName);
+        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constName = (CharStringConstant) pool.register(m_constName);
+        m_constName = (StringConstant) pool.register(m_constName);
         }
 
     @Override
@@ -174,5 +174,5 @@ public class NamedCondition
     /**
      * The constant representing the name of this named condition.
      */
-    private CharStringConstant m_constName;
+    private StringConstant m_constName;
     }

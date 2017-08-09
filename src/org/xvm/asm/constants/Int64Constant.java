@@ -14,8 +14,8 @@ import org.xvm.util.PackedInteger;
 /**
  * Represent a 64-bit signed integer constant.
  */
-public class IntConstant
-        extends Constant
+public class Int64Constant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ public class IntConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public IntConstant(ConstantPool pool, Format format, DataInput in)
+    public Int64Constant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -41,7 +41,7 @@ public class IntConstant
      * @param pool  the ConstantPool that will contain this Constant
      * @param pint  the PackedInteger value
      */
-    public IntConstant(ConstantPool pool, PackedInteger pint)
+    public Int64Constant(ConstantPool pool, PackedInteger pint)
         {
         super(pool);
         pint.verifyInitialized();
@@ -52,10 +52,10 @@ public class IntConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * Get the value of the constant.
-     *
-     * @return  the constant's PackedInteger value
+     * {@inheritDoc}
+     * @return  the constant's value as a PackedInteger
      */
+    @Override
     public PackedInteger getValue()
         {
         return m_pint;
@@ -67,7 +67,7 @@ public class IntConstant
     @Override
     public Format getFormat()
         {
-        return Format.Int;
+        return Format.Int64;
         }
 
     @Override
@@ -79,7 +79,7 @@ public class IntConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        return this.m_pint.compareTo(((IntConstant) that).m_pint);
+        return this.m_pint.compareTo(((Int64Constant) that).m_pint);
         }
 
     @Override

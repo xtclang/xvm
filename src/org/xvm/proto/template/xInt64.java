@@ -4,9 +4,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.Int64Constant;
 
-import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -14,6 +13,7 @@ import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+
 import org.xvm.proto.template.collections.xIntArray;
 
 /**
@@ -22,13 +22,13 @@ import org.xvm.proto.template.collections.xIntArray;
  * @author gg 2017.02.27
  */
 public class xInt64
-        extends ClassTemplate
+        extends xConst
     {
     public static xInt64 INSTANCE;
 
     public xInt64(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(types, structure, false);
 
         if (fInstance)
             {
@@ -47,8 +47,8 @@ public class xInt64
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
-                (((IntConstant) constant).getValue().getLong())) : null;
+        return constant instanceof Int64Constant ? new JavaLong(f_clazzCanonical,
+                (((Int64Constant) constant).getValue().getLong())) : null;
         }
 
     @Override
@@ -111,10 +111,29 @@ public class xInt64
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
+        JavaLong hThis = (JavaLong) hTarget;
+
+        switch (ahArg.length)
+            {
+            case 0:
+                if (method.getName().equals("get")) // hash.get()
+                    {
+                    assert method.getParent().getParent().getName().equals("hash");
+
+                    return frame.assignValue(iReturn, hThis);
+                    }
+            }
+
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    // ----- comparison support -----
+    @Override
+    protected long buildHashCode(ObjectHandle hTarget)
+        {
+        return ((JavaLong) hTarget).getValue();
+        }
+
+// ----- comparison support -----
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
@@ -139,11 +158,10 @@ public class xInt64
     // ----- Object methods -----
 
     @Override
-    public ObjectHandle.ExceptionHandle buildStringValue(ObjectHandle hTarget, StringBuilder sb)
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
-        sb.append(hThis.getValue());
-        return null;
+        return frame.assignValue(iReturn, xString.makeHandle(String.valueOf(hThis.getValue())));
         }
 
     public static JavaLong makeHandle(long lValue)

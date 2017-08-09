@@ -117,22 +117,12 @@ public class Container
 
         // every native class that has an INSTANCE static variable needs to be here
         f_types.getTemplate("Object");
-        f_types.getTemplate("Boolean");
         f_types.getTemplate("Const");
+        f_types.getTemplate("Boolean");
         f_types.getTemplate("String");
-        f_types.getTemplate("Enum");
-        f_types.getTemplate("Ordered");
         f_types.getTemplate("Service");
         f_types.getTemplate("Function");
-        f_types.getTemplate("Exception");
-        f_types.getTemplate("Ref");
-        f_types.getTemplate("Class");
         f_types.getTemplate("Module");
-        f_types.getTemplate("annotations.FutureRef");
-        f_types.getTemplate("annotations.InjectedRef");
-        f_types.getTemplate("collections.Array");
-        f_types.getTemplate("collections.Tuple");
-        f_types.getTemplate("types.Method");
 
         m_contextMain = createServiceContext("main");
         xService.makeHandle(m_contextMain,

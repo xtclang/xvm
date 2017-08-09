@@ -71,7 +71,8 @@ public class xTestClass extends ClassTemplate
         mtMethod1.m_cVars = 4;
 
         // ----- exceptional()
-        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional", STRING, INT);
+        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional",
+                new String[] {"String?"}, INT);
         mtExceptional.m_aop = new Op[]
             { // #0 = s
             new Var(adapter.getClassTypeConstId("Exception")), // #1

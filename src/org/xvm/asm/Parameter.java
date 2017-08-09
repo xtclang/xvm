@@ -6,8 +6,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import org.xvm.asm.constants.CharStringConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.RegisterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.Handy;
@@ -139,6 +140,15 @@ public class Parameter
         }
 
     /**
+     * @return the RegisterTypeConstant that corresponds to this register being used as a type param
+     */
+    public RegisterTypeConstant asTypeParameterType()
+        {
+        assert isTypeParameter();
+        return getConstantPool().ensureRegisterTypeConstant(m_iParam);
+        }
+
+    /**
      * @return true iff the method has a conditional return and this represents a return value that
      *         is only available if the condition is true
      */
@@ -195,7 +205,7 @@ public class Parameter
         {
         final ConstantPool pool = getConstantPool();
         m_constType    = (TypeConstant)       pool.getConstant(m_iType   );
-        m_constName    = (CharStringConstant) pool.getConstant(m_iName   );
+        m_constName    = (StringConstant) pool.getConstant(m_iName   );
         m_constDefault =                      pool.getConstant(m_iDefault);
         }
 
@@ -203,7 +213,7 @@ public class Parameter
     protected void registerConstants(ConstantPool pool)
         {
         m_constType    = (TypeConstant)       pool.register(m_constType   );
-        m_constName    = (CharStringConstant) pool.register(m_constName   );
+        m_constName    = (StringConstant) pool.register(m_constName   );
         m_constDefault =                      pool.register(m_constDefault);
         }
 
@@ -317,7 +327,7 @@ public class Parameter
     /**
      * The constant that holds the name of the parameter.
      */
-    private CharStringConstant m_constName;
+    private StringConstant m_constName;
 
     /**
      * The default value.
