@@ -1,6 +1,5 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.Frame;

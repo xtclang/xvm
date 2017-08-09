@@ -35,7 +35,6 @@ public class Invoke_T0 extends OpInvocable
         f_nTargetValue = nTarget;
         f_nMethodId = nMethodId;
         f_nArgTupleValue = nArg;
-
         }
 
     public Invoke_T0(DataInput in)
@@ -82,6 +81,7 @@ public class Invoke_T0 extends OpInvocable
             if (ahArg.length != Adapter.getArgCount(method))
                 {
                 frame.m_hException = xException.makeHandle("Invalid tuple argument");
+                return R_EXCEPTION;
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];

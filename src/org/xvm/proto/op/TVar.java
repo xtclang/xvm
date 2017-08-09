@@ -65,10 +65,9 @@ public class TVar extends Op
         ServiceContext context = frame.f_context;
 
         int[] anClassId = f_anClassConstId;
-        int[] anArg = f_anArgValue;
 
         int cArgs = anClassId.length;
-        assert cArgs == anArg.length;
+        assert cArgs == f_anArgValue.length;
 
         try
             {

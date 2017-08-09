@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
-import org.xvm.proto.template.xBoolean.BooleanHandle;
+
 import org.xvm.proto.template.xNullable;
 
 import java.io.DataInput;

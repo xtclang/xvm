@@ -84,6 +84,7 @@ public class Invoke_TN extends OpInvocable
             if (ahArg.length != Adapter.getArgCount(method))
                 {
                 frame.m_hException = xException.makeHandle("Invalid tuple argument");
+                return R_EXCEPTION;
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];

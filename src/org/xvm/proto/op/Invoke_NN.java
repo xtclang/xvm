@@ -7,6 +7,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
+
 import org.xvm.proto.template.xFunction;
 import org.xvm.proto.template.xService.ServiceHandle;
 
@@ -61,6 +62,11 @@ public class Invoke_NN extends OpInvocable
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
 
+            if (hTarget == null)
+                {
+                return R_REPEAT;
+                }
+
             TypeComposition clz = hTarget.f_clazz;
             MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
@@ -69,7 +75,7 @@ public class Invoke_NN extends OpInvocable
 
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, cArgs);
 
-            if (hTarget == null || ahVar == null)
+            if (ahVar == null)
                 {
                 return R_REPEAT;
                 }

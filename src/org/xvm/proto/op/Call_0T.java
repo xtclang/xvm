@@ -4,8 +4,9 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.OpCallable;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
+import org.xvm.proto.OpCallable;
+import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.xFunction.FunctionHandle;
 
@@ -14,35 +15,35 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * CALL_10 rvalue-function, rvalue-param
+ * CALL_0T rvalue-function, lvalue-return-tuple
  *
  * @author gg 2017.03.08
  */
-public class Call_10 extends OpCallable
+public class Call_0T extends OpCallable
     {
     private final int f_nFunctionValue;
-    private final int f_nArgValue;
+    private final int f_nTupleRetValue;
 
-    public Call_10(int nFunction, int nArg)
+    public Call_0T(int nFunction, int nRet)
         {
         f_nFunctionValue = nFunction;
-        f_nArgValue = nArg;
+        f_nTupleRetValue = nRet;
         }
 
-    public Call_10(DataInput in)
+    public Call_0T(DataInput in)
             throws IOException
         {
         f_nFunctionValue = in.readInt();
-        f_nArgValue = in.readInt();
+        f_nTupleRetValue = in.readInt();
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_CALL_10);
+        out.write(OP_CALL_0T);
         out.writeInt(f_nFunctionValue);
-        out.writeInt(f_nArgValue);
+        out.writeInt(f_nTupleRetValue);
         }
 
     @Override
@@ -50,37 +51,27 @@ public class Call_10 extends OpCallable
         {
         if (f_nFunctionValue == A_SUPER)
             {
-            return callSuper10(frame, f_nArgValue);
+            return callSuper01(frame, -f_nTupleRetValue - 1);
+            }
+
+        if (f_nFunctionValue < 0)
+            {
+            MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
+
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(function)];
+
+            return frame.call1(function, null, ahVar, -f_nTupleRetValue - 1);
             }
 
         try
             {
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
-
-            if (f_nFunctionValue < 0)
-                {
-                MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
-
-                ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(function)];
-                ahVar[0] = hArg;
-
-                return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
-                }
-
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
             if (hFunction == null)
                 {
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
-            ahVar[0] = hArg;
-
-            return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
+            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, -f_nTupleRetValue - 1);
             }
         catch (ExceptionHandle.WrapperException e)
             {
