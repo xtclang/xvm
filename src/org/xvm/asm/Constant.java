@@ -11,7 +11,11 @@ import java.util.Comparator;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.ValueConstant;
 
 
 /**
@@ -23,17 +27,16 @@ import org.xvm.asm.constants.ResolvableConstant;
  * refer to one location within the assembled binary FileStructure, saving space. Furthermore, it
  * allows a reference to a particular constant to be made from anywhere within the FileStructure
  * using an integer, which identifies the ordinal position (known as the <i>index</i>) of the
- * constant within the sequence of all constants (whose particular order should be considered to
- * be arbitrary).
+ * constant within the sequence of all constants (whose order does not follow any partiscular rule.)
  * <p/>
  * In addition to the simple examples of constant values above, constants also serve to identify
- * structures within the FileStructure, and to identify structures that must be found in other
- * FileStructures. Specifically:
+ * structures within the FileStructure, and to identify dependencies on other modules located in
+ * other FileStructures. Specifically:
  * <p/>
  * <ul>
  * <li>Each identifiable sub-structure within the FileStructure specifies the index of the constant
- *     that is the identity of that sub-structure, such as a Package or a Class or a Method or a
- *     Property;</li>
+ *     that is the identity of that sub-structure, such as a Module, Package Class, Property,
+ *     Method, or TypeDef;</li>
  * <li>Each reference to a sub-structure that exists within the FileStructure is made by specifying
  *     the index of the constant that identifies that particular sub-structure, such as a Method
  *     that is being invoked or a Property that is being accessed;</li>
@@ -42,6 +45,16 @@ import org.xvm.asm.constants.ResolvableConstant;
  *     (fully qualifies) the particular sub-structure in the other FileStructure, such as a Class
  *     being referenced or a Method being invoked in a different Module.</li>
  * </ul>
+ * There are several different categories of constants:
+ * <ul>
+ * <li><b>{@link ValueConstant}</b> - Representing "typed values", such as strings and ints, but
+ *     also including composite structures such as arrays, tuples, and maps;</li>
+ * <li><b>{@link IdentityConstant}</b> - </li>
+ * <li><b>{@link PseudoConstant}</b> - </li>
+ * <li><b>{@link TypeConstant}</b> - </li>
+ * <li><b>{@link ConditionalConstant}</b> - </li>
+ * </ul>
+ *
  *
  * @author cp  2015.12.08
  */
@@ -171,7 +184,7 @@ public abstract class Constant
      * (2) to be able to determine which Constants can be discarded altogether (i.e. the ones that
      * have zero references to them.)
      */
-    protected void resetRefs()
+    void resetRefs()
         {
         m_cRefs = 0;
         }
@@ -179,7 +192,7 @@ public abstract class Constant
     /**
      * This marks that the Constant is referred to by another XvmStructure.
      */
-    protected void addRef()
+    void addRef()
         {
         ++m_cRefs;
         }
@@ -190,7 +203,7 @@ public abstract class Constant
      *
      * @return true iff there are any known references to this Constant
      */
-    protected boolean hasRefs()
+    boolean hasRefs()
         {
         return m_cRefs > 0;
         }
@@ -377,12 +390,42 @@ public abstract class Constant
      */
     public enum Format
         {
-        Byte,
-        ByteString,
+        Int8,           // TODO 1 byte
+        Int16,          // TODO
+        Int32,          // TODO
+        Int64,
+        Int128,         // TODO
+        VarInt,         // TODO
+        UInt8,
+        UInt16,         // TODO
+        UInt32,         // TODO
+        UInt64,         // TODO
+        UInt128,        // TODO
+        VarUInt,          // TODO
+        FPLiteral,      // TODO char-string floating point literal
+        Float16,        // TODO 2 bytes
+        Float32,        // TODO 4 bytes
+        Float64,        // TODO 8 bytes
+        Float128,       // TODO 16 bytes
+        VarFloat,         // TODO 1-byte n (n >= 1), byte[2^n]
+        Dec32,        // TODO 4 bytes
+        Dec64,        // TODO 8 bytes
+        Dec128,       // TODO 16 bytes
+        VarDec,         // TODO 1-byte n (n >= 2), byte[2^n]
         Char,
-        CharString,
-        Int,
-        Tuple,
+        String,
+        ByteArray,
+        Date,           // TODO char-string in ISO8601 format
+        Time,           // TODO char-string in ISO8601 format
+        DateTime,       // TODO char-string in ISO8601 format
+        Duration,       // TODO char-string in ISO8601 format
+        TimeInterval,   // TODO char-string in ISO8601 format
+        Enum,           // TODO enum value class
+        Tuple,          // TODO type, # elements, foreach:{E}
+        Array,          // TODO type, # elements, foreach:{E}
+        Set,            // TODO type, # elements, foreach:{E}
+        MapEntry,       // TODO typeK, typeV, K, V
+        Map,            // TODO typeK, typeV, # entries, foreach:{K, V}
         Module,
         Package,
         Class,
@@ -427,7 +470,6 @@ public abstract class Constant
                 case Package:
                 case Class:
                 case Method:
-                case Property:
                     return true;
 
                 default:

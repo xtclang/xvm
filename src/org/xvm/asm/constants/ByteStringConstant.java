@@ -76,7 +76,7 @@ public class ByteStringConstant
     @Override
     public Format getFormat()
         {
-        return Format.ByteString;
+        return Format.ByteArray;
         }
 
     @Override

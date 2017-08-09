@@ -5,7 +5,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.CharStringConstant;
-import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.Int64Constant;
 
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
@@ -577,7 +577,7 @@ public class Frame
             }
         else
             {
-            IntConstant constant = (IntConstant) f_context.f_pool.getConstant(-iArg);
+            Int64Constant constant = (Int64Constant) f_context.f_pool.getConstant(-iArg);
             lIndex = constant.getValue().getLong();
             }
 

@@ -87,7 +87,7 @@ public class CharStringConstant
     @Override
     public Format getFormat()
         {
-        return Format.CharString;
+        return Format.String;
         }
 
     @Override
