@@ -110,8 +110,7 @@ public class xArray
                             ahArg[0] = xInt64.makeHandle(i);
                             // TODO: ditto
                             hSupplier.call1(frameCaller, null, ahArg, Frame.RET_LOCAL);
-                            Frame frameNext = frameCaller.m_frameNext;
-                            frameNext.setContinuation(this);
+                            frameCaller.m_frameNext.setContinuation(this);
                             return Op.R_CALL;
                             }
 

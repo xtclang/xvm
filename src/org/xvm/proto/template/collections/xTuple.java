@@ -265,8 +265,7 @@ public class xTuple
                         continue;
 
                     case Op.R_CALL:
-                        Frame frameNext = frameCaller.m_frameNext;
-                        frameNext.setContinuation(this);
+                        frameCaller.m_frameNext.setContinuation(this);
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:

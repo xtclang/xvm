@@ -491,8 +491,7 @@ public abstract class ClassTemplate
                 frameCaller -> frameCaller.call(frameRC1));
 
         // we need a non-null anchor (see Frame#chainFinalizer)
-        FullyBoundHandle hF1 = makeFinalizer(constructor, hStruct, ahVar);
-        frameRC1.m_hfnFinally = hF1 == null ? FullyBoundHandle.NO_OP : hF1;
+        frameRC1.m_hfnFinally = makeFinalizer(constructor, hStruct, ahVar); // hF1
 
         frameRC1.setContinuation(frameCaller ->
             {
@@ -501,26 +500,13 @@ public abstract class ClassTemplate
                 hStruct.makeImmutable();
                 }
 
-            // this:struct -> this:private
             FullyBoundHandle hF = frameRC1.m_hfnFinally;
-            if (hF == FullyBoundHandle.NO_OP)
-                {
-                return contAssign.proceed(frameCaller);
-                }
 
-            Frame frameNext = hF.callChain(frameCaller, Constants.Access.PRIVATE, contAssign);
-            frameCaller.call(frameNext);
-            return Op.R_CALL;
+            // this:struct -> this:private
+            return hF.callChain(frameCaller, Constants.Access.PRIVATE, contAssign);
             });
 
-        frame.m_frameNext = frameDC0 == null ? frameRC1 : frameDC0;
-        return Op.R_CALL;
-        }
-
-    // make a final change to the struct that has been fully assigned
-    protected boolean isConstructImmutable()
-        {
-        return this instanceof xConst;
+        return frame.call(frameDC0 == null ? frameRC1 : frameDC0);
         }
 
     public FullyBoundHandle makeFinalizer(MethodStructure constructor,
@@ -528,8 +514,13 @@ public abstract class ClassTemplate
         {
         MethodStructure methodFinally = f_types.f_adapter.getFinalizer(constructor);
 
-        return methodFinally == null ? null :
+        return methodFinally == null ? FullyBoundHandle.NO_OP :
                 xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
+        }
+
+    protected boolean isConstructImmutable()
+        {
+        return this instanceof xConst;
         }
 
     // ----- OpCode support ------
