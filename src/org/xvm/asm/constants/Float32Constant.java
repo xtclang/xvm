@@ -2,18 +2,18 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Version;
 
 
 /**
- * Represent a version number.
+ * Represent a 32-bit binary floating point constant.
  */
-public class VersionConstant
-        extends LiteralConstant
+public class Float32Constant
+        extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -26,72 +26,90 @@ public class VersionConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public VersionConstant(ConstantPool pool, Format format, DataInput in)
+    public Float32Constant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
-        super(pool, format, in);
+        super(pool);
+        m_flVal = in.readFloat();
         }
 
     /**
-     * Construct a constant whose value is a PackedInteger.
+     * Construct a constant whose value is a 32-bit binary floating point.
      *
-     * @param pool  the ConstantPool that will contain this Constant
-     * @param ver   the version
+     * @param pool   the ConstantPool that will contain this Constant
+     * @param flVal  the floating point value
      */
-    public VersionConstant(ConstantPool pool, Version ver)
+    public Float32Constant(ConstantPool pool, float flVal)
         {
-        super(pool, Format.Version, ver.toString());
-        m_ver = ver;
+        super(pool);
+        m_flVal = flVal;
         }
 
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
-     * @return the fully qualified version number
+     * {@inheritDoc}
+     * @return  the constant's value as a Java Float
      */
-    public Version getVersion()
+    @Override
+    public Float getValue()
         {
-        return m_ver;
+        return Float.valueOf(m_flVal);
         }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    public Format getFormat()
+        {
+        return Format.Float32;
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
-        return this.m_ver.compareTo(((VersionConstant) that).m_ver);
+        return Float.compare(this.m_flVal, ((Float32Constant) that).m_flVal);
         }
 
     @Override
     public String getValueString()
         {
-        return "v:\"" + getValue() + '\"';
+        return Float.toString(m_flVal);
         }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void disassemble(DataInput in)
+    protected void assemble(DataOutput out)
             throws IOException
         {
-        super.disassemble(in);
-        m_ver = new Version(getValue());
+        out.writeByte(getFormat().ordinal());
+        out.writeFloat(m_flVal);
         }
 
     @Override
     public String getDescription()
         {
-        return "version=" + getValue();
+        return "value=" + getValueString();
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public int hashCode()
+        {
+        return Float.floatToIntBits(m_flVal);
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The version indicator for this version.
+     * The constant value.
      */
-    private Version m_ver;
+    private final float m_flVal;
     }
