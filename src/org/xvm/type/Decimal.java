@@ -63,14 +63,40 @@ public abstract class Decimal
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * @return true iff the decimal is zero, including both positive and negative zero
+     * @return the size of the IEEE-754-2008 formatted decimal, in bits, generally expected to be 32
+     *         or a multiple thereof
      */
-    public abstract boolean isZero();
+    public int getBitLength()
+        {
+        return getByteLength() * 8;
+        }
+
+    /**
+     * @return the size of the IEEE-754-2008 formatted decimal, in bytes.
+     */
+    public abstract int getByteLength();
+
+    /**
+     * Obtain a byte of the IEEE-754-2008 formatted decimal.
+     *
+     * @param i  the index of the byte, where 0 is the most significant byte, and
+     *           <tt>({@link #getBitLength()}-1)</tt> is the least significant byte
+     * @return
+     */
+    public abstract int getByte(int i);
 
     /**
      * @return an int whose 7 LSBs are (left to right): S, G0, G1, G2, G3, G4, G5
      */
-    protected abstract int leftmost7Bits();
+    protected int leftmost7Bits()
+        {
+        return getByte(0) >>> 1;
+        }
+
+    /**
+     * @return true iff the decimal is zero, including both positive and negative zero
+     */
+    public abstract boolean isZero();
 
     /**
      * @return -1, 0, or 1, depending on if the value is less than zero, zero (regardless of sign),
@@ -168,6 +194,31 @@ public abstract class Decimal
      * @return a byte array containing an IEEE-754-2008 32-bit decimal
      */
     public abstract byte[] toByteArray();
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public abstract int hashCode();
+
+    @Override
+    public abstract boolean equals(Object obj);
+
+    @Override
+    public String toString()
+        {
+        if (isFinite())
+            {
+            return isZero() && isSigned() ? "-0" : toBigDecimal().toString();
+            }
+
+        if (isInfinite())
+            {
+            return (isSigned() ? '-' : '+') + "Infinity";
+            }
+
+        return isSignalingNaN() ? "sNaN" : "NaN";
+        }
 
 
     // ----- helpers -------------------------------------------------------------------------------

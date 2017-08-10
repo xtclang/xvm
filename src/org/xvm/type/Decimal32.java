@@ -14,6 +14,36 @@ import java.math.BigInteger;
 public class Decimal32
         extends Decimal
     {
+    // TODO remove command line test
+    // public static void main(String[] args)
+    //     {
+    //     if (args == null || args.length < 1 || args[0] == null || args[0].length() < 1)
+    //         {
+    //         System.out.println("POS_ZERO     = " + POS_ZERO    );
+    //         System.out.println("NEG_ZERO     = " + NEG_ZERO    );
+    //         System.out.println("POS_ONE      = " + POS_ONE     );
+    //         System.out.println("NEG_ONE      = " + NEG_ONE     );
+    //         System.out.println("NaN          = " + NaN         );
+    //         System.out.println("SNaN         = " + SNaN        );
+    //         System.out.println("POS_INFINITY = " + POS_INFINITY);
+    //         System.out.println("NEG_INFINITY = " + NEG_INFINITY);
+    //         }
+    //     else
+    //         {
+    //         BigDecimal bd = new BigDecimal(args[0]);
+    //         System.out.println("BigDecimal=" + bd);
+    //         Decimal32 dec = new Decimal32(bd);
+    //         System.out.println("Decimal=" + dec);
+    //         Decimal32 dec2 = new Decimal32(dec.toLongBits());
+    //         System.out.println("Copy=" + dec2 + " (bits=" + intToHexString(dec2.toLongBits()) + ")");
+    //         BigDecimal bd2 = dec2.toBigDecimal();
+    //         System.out.println("BigDecimal=" + bd2);
+    //         }
+    //     }
+
+
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Constructor used for deserialization.
      *
@@ -45,6 +75,16 @@ public class Decimal32
      */
     public Decimal32(byte[] abValue)
         {
+        if (abValue == null)
+            {
+            throw new IllegalArgumentException("value required");
+            }
+
+        if (abValue.length != 4)
+            {
+            throw new IllegalArgumentException("byte count != 4 (actual=" + abValue.length + ")");
+            }
+
         m_nBits = (abValue[0] & 0xFF) << 24
                 | (abValue[1] & 0xFF) << 16
                 | (abValue[2] & 0xFF) <<  8
@@ -52,18 +92,35 @@ public class Decimal32
         }
 
     /**
-     * Construct a decimal value from a 64-bit signed integer.
+     * Construct a 32-bit IEEE-754-2008 decimal value from a BigDecimal.
      *
      * @param dec  a BigDecimal value
      */
     public Decimal32(BigDecimal dec)
         {
         m_nBits = toIntBits(dec);
-        m_dec   = dec;
+        m_dec   = dec;                  // this isn't perfect, but we'll trust the cached value
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public int getByteLength()
+        {
+        return 4;
+        }
+
+    @Override
+    public int getByte(int i)
+        {
+        if ((i & ~0x3) != 0)
+            {
+            throw new IllegalArgumentException("index out of range: " + i);
+            }
+
+        return (m_nBits >>> (i*8)) & 0xFF;
+        }
 
     @Override
     protected int leftmost7Bits()
@@ -78,49 +135,40 @@ public class Decimal32
         return (leftmost7Bits() & 0b0110000) != 0b0110000 && (m_nBits & 0b00011100000011111111111111111111) == 0;
         }
 
+    /**
+     * @return the significand of the decimal as an int
+     */
     public int getSignificand()
         {
-        final int nBits = ensureFiniteBits(m_nBits);
-        int nToG4 = nBits >>> 26;
+        int nBits = ensureFiniteBits(m_nBits);
+        int nToG4 = nBits >>> G4_SHIFT;
         int nSig  = (nToG4 & 0b011000) == 0b011000
                 ? (nToG4 & 0b000001) + 8
                 : (nToG4 & 0b000111);
 
-        // unpack the digits from most significant declet to least significan declet
+        // unpack the digits from most significant declet to least significant declet
         nSig = nSig * 1000 + decletToInt(nBits >>> 10);
         return nSig * 1000 + decletToInt(nBits);
         }
 
+    /**
+     * @return the exponent of the decimal as an int
+     */
     public int getExponent()
         {
         // combination field is 11 bits (from bit 20 to bit 30), including 6 "pure" exponent bits
-        final int nCombo = ensureFiniteBits(m_nBits) >>> 20;
+        int nCombo = ensureFiniteBits(m_nBits) >>> 20;
         int nExp   = (nCombo & 0b011000000000) == 0b011000000000
                 ? (nCombo & 0b000110000000) >>> 1
                 : (nCombo & 0b011000000000) >>> 3;
 
         // pull the rest of the exponent bits out of "pure" exponent section of the combo bits
         // section, and unbias the exponent
-        return (nExp | (nCombo & 0b111111)) - 101;
+        return (nExp | nCombo & 0b111111) - 101;
         }
 
 
     // ----- conversions ---------------------------------------------------------------------------
-
-    /**
-     * Obtain the decimal value as a Java BigDecimal, iff the decimal is finite.
-     *
-     * @return a BigDecimal, or null if the decimal is not finite
-     */
-    public BigDecimal toBigDecimal()
-        {
-        BigDecimal dec = m_dec;
-        if (dec == null && isFinite())
-            {
-            m_dec = dec = toBigDecimal(m_nBits);
-            }
-        return dec;
-        }
 
     /**
      * Obtain the decimal value as a Java <tt>int</tt> whose format is that of an IEEE-754-2008
@@ -133,25 +181,58 @@ public class Decimal32
         return m_nBits;
         }
 
-    /**
-     * Obtain the decimal value as a byte array.
-     *
-     * @return a byte array containing an IEEE-754-2008 32-bit decimal
-     */
+    @Override
+    public BigDecimal toBigDecimal()
+        {
+        BigDecimal dec = m_dec;
+        if (dec == null && isFinite())
+            {
+            m_dec = dec = toBigDecimal(m_nBits);
+            }
+        return dec;
+        }
+
+    @Override
     public byte[] toByteArray()
         {
         int    n  = m_nBits;
         byte[] ab = new byte[4];
+
         ab[0] = (byte) (n >>> 24);
         ab[1] = (byte) (n >>> 16);
         ab[2] = (byte) (n >>>  8);
         ab[3] = (byte) (n       );
+
         return ab;
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public int hashCode()
+        {
+        return m_nBits;
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        return obj instanceof Decimal32 && m_nBits == ((Decimal32) obj).m_nBits;
         }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
+    /**
+     * Test the passed bits to ensure that they are finite; if they are not, throw an exception.
+     *
+     * @param nBits  the 32-bit IEEE-754-2008 decimal value
+     *
+     * @return a finite 32-bit IEEE-754-2008 decimal value
+     *
+     * @throws NumberFormatException if the decimal is either a NaN or an Infinity value
+     */
     public static int ensureFiniteBits(int nBits)
         {
         if ((nBits & G0_G3_MASK) == G0_G3_MASK)
@@ -298,6 +379,7 @@ public class Decimal32
      * The amount to shift the G5 bit of a 32-bit IEEE 754 decimal.
      */
     private static final int G5_SHIFT  = 25;
+
     /**
      * The value of the G5 bit that indicates that a 32-bit IEEE 754 decimal is a signaling NaN, if
      * the decimal is a NaN.
@@ -307,22 +389,22 @@ public class Decimal32
     /**
      * The decimal value for zero.
      */
-    public static final Decimal32 POS_ZERO     = new Decimal32(0);
+    public static final Decimal32 POS_ZERO     = new Decimal32(0x22500000);
 
     /**
      * The decimal value for negative zero.
      */
-    public static final Decimal32 NEG_ZERO     = new Decimal32(SIGN_BIT);
+    public static final Decimal32 NEG_ZERO     = new Decimal32(0xA2500000);
 
     /**
      * The decimal value for positive one (1).
      */
-    public static final Decimal32 POS_ONE      = null; // TODO new Decimal32();
+    public static final Decimal32 POS_ONE      = new Decimal32(0x22500001);
 
     /**
      * The decimal value for negative one (-1).
      */
-    public static final Decimal32 NEG_ONE      = null; // TODO new Decimal32(SIGN_BIT | );
+    public static final Decimal32 NEG_ONE      = new Decimal32(0xA2500001);
 
     /**
      * The decimal value for a "quiet" Not-A-Number (NaN).
