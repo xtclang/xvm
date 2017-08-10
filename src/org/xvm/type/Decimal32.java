@@ -5,12 +5,14 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 
 
 /**
  * A representation of an IEEE-754-2008 32-bit decimal.
  */
 public class Decimal32
+        extends Decimal
     {
     /**
      * Constructor used for deserialization.
@@ -63,80 +65,43 @@ public class Decimal32
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    /**
-     * @return -1, 0, or 1, depending on if the value is less than zero, zero (regardless of sign),
-     *         or greater than zero
-     */
-    public int getSignum()
+    @Override
+    protected int leftmost7Bits()
         {
-        if (isZero())
-            {
-            return 0;
-            }
-
-        return isSigned() ? -1 : 1;
+        return m_nBits >>> 25;
         }
 
-    /**
-     * @return true iff the sign bit is set
-     */
-    public boolean isSigned()
-        {
-        return (m_nBits & SIGN_BIT) != 0;
-        }
-
-    /**
-     * @return true iff the decimal is zero, including both positive and negative zero
-     */
+    @Override
     public boolean isZero()
         {
-        // TODO probably a more efficient way to do this
-        return isFinite() && getDigits() == 0;
+        // G0 and G1 must not both be 1, and G2-G4 must be 0, and T (rightmost 20 bits) must be 0
+        return (leftmost7Bits() & 0b0110000) != 0b0110000 && (m_nBits & 0b00011100000011111111111111111111) == 0;
         }
 
-    /**
-     * @return true iff the value is neither an infinity nor a NaN
-     */
-    public boolean isFinite()
+    public int getSignificand()
         {
-        // the entire G0..G3 bits are 1 for either infinity or NaN
-        return (m_nBits & G0_G3_MASK) != G0_G3_MASK;
-        }
+        final int nBits = ensureFiniteBits(m_nBits);
+        int nToG4 = nBits >>> 26;
+        int nSig  = (nToG4 & 0b011000) == 0b011000
+                ? (nToG4 & 0b000001) + 8
+                : (nToG4 & 0b000111);
 
-    /**
-     * @return true iff the value is an infinity value, regardless of sign
-     */
-    public boolean isInfinite()
-        {
-        return (m_nBits & G0_G4_MASK) == G0_G4_INF;
-        }
-
-    /**
-     * @return true iff the value is a NaN value, regardless of sign
-     */
-    public boolean isNaN()
-        {
-        return (m_nBits & G0_G4_MASK) == G0_G4_NAN;
-        }
-
-    /**
-     * @return true iff the value is a signaling NaN value
-     */
-    public boolean isSignalingNaN()
-        {
-        return isNaN() && (m_nBits & G5_SIGNAL) != 0;
-        }
-
-    public int getDigits()
-        {
-        // TODO
-        return 0;
+        // unpack the digits from most significant declet to least significan declet
+        nSig = nSig * 1000 + decletToInt(nBits >>> 10);
+        return nSig * 1000 + decletToInt(nBits);
         }
 
     public int getExponent()
         {
-        // TODO
-        return 0;
+        // combination field is 11 bits (from bit 20 to bit 30), including 6 "pure" exponent bits
+        final int nCombo = ensureFiniteBits(m_nBits) >>> 20;
+        int nExp   = (nCombo & 0b011000000000) == 0b011000000000
+                ? (nCombo & 0b000110000000) >>> 1
+                : (nCombo & 0b011000000000) >>> 3;
+
+        // pull the rest of the exponent bits out of "pure" exponent section of the combo bits
+        // section, and unbias the exponent
+        return (nExp | (nCombo & 0b111111)) - 101;
         }
 
 
@@ -187,17 +152,62 @@ public class Decimal32
 
     // ----- helpers -------------------------------------------------------------------------------
 
+    public static int ensureFiniteBits(int nBits)
+        {
+        if ((nBits & G0_G3_MASK) == G0_G3_MASK)
+            {
+            throw new NumberFormatException("Not a finite value");
+            }
+        return nBits;
+        }
+
     /**
      * Convert a Java BigDecimal to an IEEE 754 32-bit decimal.
      *
      * @param dec  a Java BigDecimal value
      *
      * @return a Java <tt>int</tt> that contains a 32-bit IEEE 754 decimal value
+     *
+     * @throws ArithmeticException if the value is out of range
      */
     public static int toIntBits(BigDecimal dec)
         {
-        // TODO
-        return 0;
+        // obtain the significand
+        int nSig = dec.unscaledValue().intValueExact();
+        if (nSig < -9999999 || nSig > 9999999)
+            {
+            throw new ArithmeticException("significand is >7 digits: " + nSig);
+            }
+
+        int nBits = 0;
+        if (nSig < 0)
+            {
+            nBits = SIGN_BIT;
+            nSig  = -nSig;
+            }
+
+        // bias the exponent (the scale is basically a negative exponent)
+        int nExp = 101 - dec.scale();
+        if (nExp < 0 || nExp >= 192)
+            {
+            throw new ArithmeticException("biased exponent is out of range [0,192): " + nExp);
+            }
+
+        // store the least significant 6 bits of the exponent into the combo field starting at G5
+        // store the least signficant 6 decimal digits of the significand in two 10-bit declets in T
+        nBits |=  ((nExp & 0b111111              ) << 20)
+                | (intToDeclet(nSig        % 1000)      )
+                | (intToDeclet(nSig / 1000 % 1000) << 10);
+
+        // remaining significand of 8 or 9 is stored in G4 as 0 or 1, with remaining exponent stored
+        // in G2-G3, and G0-G1 both set to 1; otherwise, remaining significand (3 bits) is stored in
+        // G2-G4 with remaining exponent stored in G0-G1
+        nSig  /= 1000000;
+        nBits |= nSig >= 8
+                ? (0b11000 | (nSig & 0b00001) | ((nExp & 0b11000000) >>> 5)) << 26
+                : (          (nSig & 0b00111) | ((nExp & 0b11000000) >>> 3)) << 26;
+
+        return nBits;
         }
 
     /**
@@ -209,258 +219,133 @@ public class Decimal32
      */
     public static BigDecimal toBigDecimal(int nBits)
         {
-        // TODO
-        return null;
-        }
+        ensureFiniteBits(nBits);
 
-    // TODO probably want to move the following helpers to a common base, or Handy
+        // combination field is 11 bits (from bit 20 to bit 30), including 6 "pure" exponent bits
+        int nCombo = nBits >>> 20;
+        int nExp   = nCombo & 0b111111;
+        int nSig;
 
-    /**
-     * Convert the three least significant decimal digits of the passed integer value to a declet.
-     * <p/>
-     * Details are in IEEE 754-2008 section 3.5.2, table 3.4.
-     *
-     * @param nDigits  the int value containing the digits
-     *
-     * @return a declet
-     */
-    public static int intToDeclet(int nDigits)
-        {
-        return digitsToDeclet((nDigits / 100) % 10, (nDigits / 10) % 10, nDigits % 10);
-        }
-
-    /**
-     * Convert three decimal digits to a declet.
-     * <p/>
-     * Details are in IEEE 754-2008 section 3.5.2, table 3.4.
-     *
-     * @param d1  4-bit value "d1" from table 3.4 (most significant digit)
-     * @param d2  4-bit value "d2" from table 3.4
-     * @param d3  4-bit value "d3" from table 3.4 (least significant digit)
-     *
-     * @return a declet
-     */
-    public static int digitsToDeclet(int d1, int d2, int d3)
-        {
-        switch ((d1 & 0b1000) >>> 1 | (d2 & 0b1000) >>> 2 | (d3 & 0b1000) >>> 3)
+        // test g0 and g1
+        if ((nCombo & 0b011000000000) == 0b011000000000)
             {
-            // table 3.4        (const 1's)
-            // d1.0 d2.0 d3.0   b0123456789   b0 b1 b2                         b3 b4 b5                         b7 b8 b9
-            // --------------  ------------   ------------------------------   ------------------------------   ----------
-            case 0b000: return 0b0000000000 | (d1 & 0b111)              << 7 | (d2 & 0b111)              << 4 | d3 & 0b111;
-            case 0b001: return 0b0000001000 | (d1 & 0b111)              << 7 | (d2 & 0b111)              << 4 | d3 & 0b001;
-            case 0b010: return 0b0000001010 | (d1 & 0b111)              << 7 | (d3 & 0b110 | d2 & 0b001) << 4 | d3 & 0b001;
-            case 0b011: return 0b0001001110 | (d1 & 0b111)              << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
-            case 0b100: return 0b0000001100 | (d3 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b111)              << 4 | d3 & 0b001;
-            case 0b101: return 0b0000101110 | (d2 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
-            case 0b110: return 0b0000001110 | (d3 & 0b110 | d1 & 0b001) << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
-            case 0b111: return 0b0001101110 | (d1 & 0b001)              << 7 | (d2 & 0b001)              << 4 | d3 & 0b001;
-
-            default:
-                throw new IllegalArgumentException("d1=" + d1 + ", d2=" + d2 + ", d3=" + d3);
+            // when the most significant five bits of G are 110xx or 1110x, the leading significand
+            // digit d0 is 8+G4, a value 8 or 9, and the leading biased exponent bits are 2*G2 + G3,
+            // a value of 0, 1, or 2
+            nExp |= ((nCombo & 0b000110000000) >>> 1);    // shift right 7, but then shift left 6
+            nSig  = ((nCombo & 0b000001000000) >>> 6) + 8;
             }
-        }
-
-    /**
-     * Convert the passed declet to three decimal digits, and format them as a Java <tt>int</tt> in
-     * the range 0-999.
-     * <p/>
-     * Details are in IEEE 754-2008 section 3.5.2, table 3.3.
-     *
-     * @param nBits  a declet
-     *
-     * @return three decimal digits in a Java <tt>int</tt> (000-999)
-     */
-    public static int decletToInt(int nBits)
-        {
-        //               b6 b7 b8                b3 b4
-        switch ((nBits & 0b1110) << 1 | (nBits & 0b1100000) >>> 5)
+        else
             {
-            //     0xxxx                     b0123456789
-            default:
-                return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (    ((nBits & 0b0000000111)      ));    // d3 = b7 b8 b9
-            //     100xx
-            case 0b10000:
-            case 0b10001:
-            case 0b10010:
-            case 0b10011:
-                return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     101xx
-            case 0b10100:
-            case 0b10101:
-            case 0b10110:
-            case 0b10111:
-                return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (    ((nBits & 0b0001100000) >>> 4)      // d3 = b3 b4
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     110xx
-            case 0b11000:
-            case 0b11001:
-            case 0b11010:
-            case 0b11011:
-                return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        10 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     11100
-            case 0b11100:
-                return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     11101
-            case 0b11101:
-                return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        10 * (    ((nBits & 0b1100000000) >>> 7)      // d2 = b0 b1
-                                + ((nBits & 0b0000010000) >>> 4)) +   //    + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     11110
-            case 0b11110:
-                return 100 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     11111
-            case 0b11111:
-                return 100 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        10 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
+            // when the most significant five bits of G are 0xxxx or 10xxx, the leading significand
+            // digit d0 is 4*G2 + 2*G3 + G4, a value in the range 0 through 7, and the leading
+            // biased exponent bits are 2*G0 + G1, a value 0, 1, or 2; consequently if T is 0 and
+            // the most significant five bits of G are 00000, 01000, or 10000, then the value is 0:
+            //      v = (−1) S * (+0)
+            nExp |= (nCombo & 0b011000000000) >>> 3;    // shift right 9, but then shift left 6
+            nSig  = (nCombo & 0b000111000000) >>> 6;
             }
-        }
 
-    /**
-     * Convert the passed declet to three decimal digits, and return each of them in the three least
-     * significant bytes of a Java <tt>int</tt>.
-     * <p/>
-     * Details are in IEEE 754-2008 section 3.5.2, table 3.3.
-     *
-     * @param nBits  a declet
-     *
-     * @return three decimal digits in a Java <tt>int</tt>, such that bits 0-7 contain the least
-     *         significant digit, bits 8-15 the second, and bits 16-23 the most significant digit
-     */
-    public static int decletToDigits(int nBits)
-        {
-        //               b6 b7 b8                b3 b4
-        switch ((nBits & 0b1110) << 1 | (nBits & 0b1100000) >>> 5)
-            {
-            //     0xxxx                     b0123456789
-            default:
-                return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (    ((nBits & 0b0000000111)      ));    // d3 = b7 b8 b9
-            //     100xx
-            case 0b10000:
-            case 0b10001:
-            case 0b10010:
-            case 0b10011:
-                return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     101xx
-            case 0b10100:
-            case 0b10101:
-            case 0b10110:
-            case 0b10111:
-                return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (    ((nBits & 0b0001100000) >>> 4)      // d3 = b3 b4
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     110xx
-            case 0b11000:
-            case 0b11001:
-            case 0b11010:
-            case 0b11011:
-                return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        16 * (    ((nBits & 0b0001110000) >>> 4)) +   // d2 = b3 b4 b5
-                             (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     11100
-            case 0b11100:
-                return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (    ((nBits & 0b1100000000) >>> 7)      // d3 = b0 b1
-                                + ((nBits & 0b0000000001)      ));    //    + b9
-            //     11101
-            case 0b11101:
-                return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        16 * (    ((nBits & 0b1100000000) >>> 7)      // d2 = b0 b1
-                                + ((nBits & 0b0000010000) >>> 4)) +   //    + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     11110
-            case 0b11110:
-                return 256 * (    ((nBits & 0b1110000000) >>> 7)) +   // d1 = b0 b1 b2
-                        16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            //     11111
-            case 0b11111:
-                return 256 * (8 + ((nBits & 0b0010000000) >>> 7)) +   // d1 = 8 + b2
-                        16 * (8 + ((nBits & 0b0000010000) >>> 4)) +   // d2 = 8 + b5
-                             (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
-            }
+        // unbias the exponent
+        nExp -= 101;
+
+        // unpack the digits from most significant declet to least significan declet
+        nSig = nSig * 1000 + decletToInt(nBits >>> 10);
+        nSig = nSig * 1000 + decletToInt(nBits);
+
+        // apply the sign: drag sign bit, and the result of the "or" is either 1 or -1
+        nSig *= ((nBits & SIGN_BIT) >> 31) | 1;
+
+        return new BigDecimal(BigInteger.valueOf(nSig), -nExp);
         }
 
 
-    // ----- fields --------------------------------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * The sign bit for a 32-bit IEEE 754 decimal.
      */
-    public static final int SIGN_BIT   = 0x80000000;
+    private static final int SIGN_BIT = 0x80000000;
 
     /**
      * The amount to shift the G3 bit of a 32-bit IEEE 754 decimal.
      */
-    public static final int G3_SHIFT   = 27;
+    private static final int G3_SHIFT = 27;
+
     /**
      * The bit mask for the G0-G3 bits of a 32-bit IEEE 754 decimal.
      */
-    public static final int G0_G3_MASK = 0b1111 << G3_SHIFT;
+    private static final int G0_G3_MASK = 0b1111 << G3_SHIFT;
 
     /**
      * The amount to shift the G4 bit of a 32-bit IEEE 754 decimal.
      */
-    public static final int G4_SHIFT   = 26;
-    /**
-     * The bit mask for the G0-G4 bits of a 32-bit IEEE 754 decimal.
-     */
-    public static final int G0_G4_MASK = 0b11111 << G4_SHIFT;
+    private static final int G4_SHIFT = 26;
+
     /**
      * The value for the G0-G4 bits of a 32-bit IEEE 754 decimal that indicate that the decimal
      * value is "Not a Number" (NaN).
      */
-    public static final int G0_G4_NAN  = 0b11111 << G4_SHIFT;
+    private static final int G0_G4_NAN = 0b11111 << G4_SHIFT;
+
     /**
      * The value for the G0-G4 bits of a 32-bit IEEE 754 decimal that indicate that the decimal
      * value is infinite.
      */
-    public static final int G0_G4_INF  = 0b11110 << G4_SHIFT;
+    private static final int G0_G4_INF = 0b11110 << G4_SHIFT;
 
     /**
      * The amount to shift the G5 bit of a 32-bit IEEE 754 decimal.
      */
-    public static final int G5_SHIFT   = 25;
+    private static final int G5_SHIFT  = 25;
     /**
      * The value of the G5 bit that indicates that a 32-bit IEEE 754 decimal is a signaling NaN, if
      * the decimal is a NaN.
      */
-    public static final int G5_SIGNAL  = 1 << G5_SHIFT;
+    private static final int G5_SIGNAL = 1 << G5_SHIFT;
 
+    /**
+     * The decimal value for zero.
+     */
+    public static final Decimal32 POS_ZERO     = new Decimal32(0);
 
-    // TODO well known bit patterns
+    /**
+     * The decimal value for negative zero.
+     */
+    public static final Decimal32 NEG_ZERO     = new Decimal32(SIGN_BIT);
 
-    public static final Decimal32 POS_ZERO     = new Decimal32();
-    public static final Decimal32 NEG_ZERO     = new Decimal32(SIGN_BIT | );
-    public static final Decimal32 POS_ONE      = new Decimal32();
-    public static final Decimal32 NEG_ONE      = new Decimal32(SIGN_BIT | );
-    public static final Decimal32 POS_NaN      = new Decimal32(G0_G4_NAN);
-    public static final Decimal32 NEG_NaN      = new Decimal32(SIGN_BIT | G0_G4_NAN);
+    /**
+     * The decimal value for positive one (1).
+     */
+    public static final Decimal32 POS_ONE      = null; // TODO new Decimal32();
+
+    /**
+     * The decimal value for negative one (-1).
+     */
+    public static final Decimal32 NEG_ONE      = null; // TODO new Decimal32(SIGN_BIT | );
+
+    /**
+     * The decimal value for a "quiet" Not-A-Number (NaN).
+     */
+    public static final Decimal32 NaN          = new Decimal32(G0_G4_NAN);
+
+    /**
+     * The decimal value for a signaling Not-A-Number (NaN).
+     */
+    public static final Decimal32 SNaN         = new Decimal32(G0_G4_NAN | G5_SIGNAL);
+
+    /**
+     * The decimal value for positive infinity.
+     */
     public static final Decimal32 POS_INFINITY = new Decimal32(G0_G4_INF);
+
+    /**
+     * The decimal value for negative infinity.
+     */
     public static final Decimal32 NEG_INFINITY = new Decimal32(SIGN_BIT | G0_G4_INF);
+
+
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
      * The bits of the decimal value.
@@ -470,7 +355,7 @@ public class Decimal32
     /**
      * A cached BigDecimal value.
      */
-    private BigDecimal m_dec;
+    private transient BigDecimal m_dec;
     }
 
 
