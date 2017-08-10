@@ -44,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 
 /**
  * ClassTemplate represents a run-time class.
@@ -481,23 +480,21 @@ public abstract class ClassTemplate
         // we need to create the call chain in the revers order;
         // the very last frame should also assign the resulting new object
 
-        Supplier<Frame> contAssign = () ->
-            {
-            // this:private -> this:public
-            frame.assignValue(iReturn,
+        // this:private -> this:public
+        Frame.Continuation contAssign =
+                frameCaller -> frameCaller.assignValue(iReturn,
                     hStruct.f_clazz.ensureAccess(hStruct, Constants.Access.PUBLIC));
-            return null;
-            };
 
-        Frame frameRC = frame.f_context.createFrame1(frame, constructor, hStruct, ahVar, Frame.RET_UNUSED);
+        Frame frameRC1 = frame.f_context.createFrame1(frame, constructor, hStruct, ahVar, Frame.RET_UNUSED);
 
-        Frame frameDC = clazz.callDefaultConstructors(frame, hStruct, ahVar, () -> frameRC);
+        Frame frameDC0 = clazz.callDefaultConstructors(frame, hStruct, ahVar,
+                frameCaller -> frameCaller.call(frameRC1));
 
         // we need a non-null anchor (see Frame#chainFinalizer)
         FullyBoundHandle hF1 = makeFinalizer(constructor, hStruct, ahVar);
-        frameRC.m_hfnFinally = hF1 == null ? FullyBoundHandle.NO_OP : hF1;
+        frameRC1.m_hfnFinally = hF1 == null ? FullyBoundHandle.NO_OP : hF1;
 
-        frameRC.setContinuation(() ->
+        frameRC1.setContinuation(frameCaller ->
             {
             if (isConstructImmutable())
                 {
@@ -505,12 +502,18 @@ public abstract class ClassTemplate
                 }
 
             // this:struct -> this:private
-            FullyBoundHandle hF = frameRC.m_hfnFinally;
-            return hF == FullyBoundHandle.NO_OP ? contAssign.get() :
-                    hF.callChain(frame, Constants.Access.PRIVATE, contAssign);
+            FullyBoundHandle hF = frameRC1.m_hfnFinally;
+            if (hF == FullyBoundHandle.NO_OP)
+                {
+                return contAssign.proceed(frameCaller);
+                }
+
+            Frame frameNext = hF.callChain(frameCaller, Constants.Access.PRIVATE, contAssign);
+            frameCaller.call(frameNext);
+            return Op.R_CALL;
             });
 
-        frame.m_frameNext = frameDC == null ? frameRC : frameDC;
+        frame.m_frameNext = frameDC0 == null ? frameRC1 : frameDC0;
         return Op.R_CALL;
         }
 

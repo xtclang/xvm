@@ -25,8 +25,6 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import java.util.function.Supplier;
-
 /**
  * The service context.
  *
@@ -253,6 +251,8 @@ public class ServiceContext
         Op[] abOp = frame.f_aOp;
 
         int nOps = 0;
+
+    nextOp:
         while (true)
             {
             while (iPC >= 0) // main loop
@@ -289,30 +289,38 @@ public class ServiceContext
                     // fall through
 
                 case Op.R_RETURN:
-                    Supplier<Frame> continuation = frame.m_continuation;
+                    {
+                    Frame frameCaller = frame.f_framePrev;
+                    Frame.Continuation continuation = frame.m_continuation;
                     if (continuation != null)
                         {
-                        Frame frameNext = continuation.get();
-                        if (frameNext == null)
+                        switch (continuation.proceed(frameCaller))
                             {
-                            // continuation is allowed to "throw"
-                            if (frame.m_hException != null)
-                                {
-                                // throw the exception
-                                iPC = Op.R_EXCEPTION;
+                            case Op.R_NEXT:
                                 break;
-                                }
-                            }
-                        else
-                            {
-                            frame = m_frameCurrent = frameNext;
-                            abOp = frame.f_aOp;
-                            iPC = frame.m_iPC;
-                            break;
+
+                            case Op.R_EXCEPTION:
+                                // continuation is allowed to "throw"
+                                assert frameCaller.m_hException != null;
+
+                                iPC = Op.R_EXCEPTION;
+                                continue nextOp;
+
+                            case Op.R_CALL:
+                                assert frameCaller.m_frameNext != null;
+
+                                frame = m_frameCurrent = frameCaller.m_frameNext;
+                                frameCaller.m_frameNext = null;
+                                abOp = frame.f_aOp;
+                                iPC = 0;
+                                continue nextOp;
+
+                            default:
+                                throw new IllegalStateException();
                             }
                         }
 
-                    frame = m_frameCurrent = frame.f_framePrev;
+                    frame = m_frameCurrent = frameCaller;
                     if (frame == null)
                         {
                         // all done
@@ -327,12 +335,14 @@ public class ServiceContext
                     abOp = frame.f_aOp;
                     iPC = frame.m_iPC;
                     break;
+                    }
 
                 case Op.R_RETURN_EXCEPTION:
                     frame = frame.f_framePrev;
                     // fall-through
 
                 case Op.R_EXCEPTION:
+                    {
                     ExceptionHandle hException = frame.m_hException;
                     assert hException != null;
 
@@ -348,35 +358,43 @@ public class ServiceContext
                             }
 
                         // not handled by this frame
-                        Frame framePrev = frame.f_framePrev;
-                        if (framePrev == null)
+                        Frame frameCaller = frame.f_framePrev;
+                        if (frameCaller != null)
                             {
-                            // the frame is a synthetic "proto" frame;
-                            // it should process the exception
-                            if (frame.m_continuation == null)
-                                {
-                                // TODO: this should never happen
-                                Utils.log("\nProto-frame is missing the continuation: " + hException);
-                                }
-                            else
-                                {
-                                frame.m_hException = hException;
-                                Frame frameNext = frame.m_continuation.get();
-                                if (frameNext != null)
-                                    {
-                                    frame = m_frameCurrent = frameNext;
-                                    abOp = frame.f_aOp;
-                                    iPC = frame.m_iPC;
-                                    break;
-                                    }
-                                }
-
-                            fiber.setStatus(FiberStatus.Terminated);
-                            return m_frameCurrent = null;
+                            frame = frameCaller;
+                            continue;
                             }
-                        frame = framePrev;
+
+                        // no one handled the exception and we have reached the "proto-frame";
+                        // it will process the exception
+                        if (frame.m_continuation == null)
+                            {
+                            throw new IllegalStateException("Proto-frame is missing the continuation: " + hException);
+                            }
+
+                        frame.m_hException = hException;
+                        switch (frame.m_continuation.proceed(null))
+                            {
+                            case Op.R_NEXT:
+                                // this fiber is done
+                                break;
+
+                            case Op.R_CALL:
+                                assert frame.m_frameNext != null;
+
+                                iPC = Op.R_CALL;
+                                continue nextOp;
+
+                            default:
+                                // the proto-frame never throws
+                                throw new IllegalStateException();
+                            }
+
+                        fiber.setStatus(FiberStatus.Terminated);
+                        return m_frameCurrent = null;
                         }
                     break;
+                    }
 
                 case Op.R_REPEAT:
                     frame.m_iPC = iPCLast;
@@ -500,11 +518,11 @@ public class ServiceContext
         return Op.R_NEXT;
         }
 
-    public Frame callUnhandledExceptionHandler(Frame frame)
+    public int callUnhandledExceptionHandler(Frame frame)
         {
         // TODO: call the handler (via invokeLater)
         Utils.log("Unhandled exception: " + frame.m_hException + " " + frame.m_hException.m_mapFields);
-        return null;
+        return Op.R_NEXT;
         }
 
     // ----- helpers ------
@@ -602,10 +620,10 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, 1,
                     new Op[]{opConstruct, Return_0.INSTANCE});
 
-            frame0.setContinuation(() ->
+            frame0.setContinuation((_null) ->
                 {
                 sendResponse1(f_fiberCaller, frame0, f_future);
-                return null;
+                return Op.R_NEXT;
                 });
 
             return frame0;
@@ -649,7 +667,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation(() ->
+            frame0.setContinuation((_null) ->
                 {
                 if (f_cReturns == 0)
                     {
@@ -662,7 +680,7 @@ public class ServiceContext
                     {
                     sendResponse1(f_fiberCaller, frame0, f_future);
                     }
-                return null;
+                return Op.R_NEXT;
                 });
 
             return frame0;
@@ -713,10 +731,10 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                 new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation(() ->
+            frame0.setContinuation((_null) ->
                 {
                 sendResponseN(f_fiberCaller, frame0, f_future);
-                return null;
+                return Op.R_NEXT;
                 });
 
             return frame0;
@@ -769,7 +787,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, cReturns,
                     new Op[]{opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation(() ->
+            frame0.setContinuation((_null) ->
                 {
                 if (cReturns == 0)
                     {
@@ -782,7 +800,7 @@ public class ServiceContext
                     {
                     sendResponse1(f_fiberCaller, frame0, f_future);
                     }
-                return null;
+                return Op.R_NEXT;
                 });
 
             return frame0;

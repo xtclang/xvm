@@ -59,16 +59,10 @@ public class xTerminalConsole
                 switch (iResult)
                     {
                     case Op.R_NEXT:
-                        CONSOLE_OUT.print(((StringHandle) frame.getFrameLocal()).getValue());
-                        return Op.R_NEXT;
+                        return PRINT.proceed(frame);
 
                     case Op.R_CALL:
-                        frame.m_frameNext.setContinuation(() ->
-                            {
-                            CONSOLE_OUT.print(((StringHandle) frame.getFrameLocal()).getValue());
-                            return null;
-                            });
-
+                        frame.m_frameNext.setContinuation(PRINT);
                         // fall through
                     case Op.R_EXCEPTION:
                         return iResult;
@@ -81,16 +75,10 @@ public class xTerminalConsole
                 switch (iResult)
                     {
                     case Op.R_NEXT:
-                        CONSOLE_OUT.println(((StringHandle) frame.getFrameLocal()).getValue());
-                        return Op.R_NEXT;
+                        return PRINTLN.proceed(frame);
 
                     case Op.R_CALL:
-                        frame.m_frameNext.setContinuation(() ->
-                            {
-                            CONSOLE_OUT.println(((StringHandle) frame.getFrameLocal()).getValue());
-                            return null;
-                            });
-
+                        frame.m_frameNext.setContinuation(PRINTLN);
                         // fall through
                     case Op.R_EXCEPTION:
                         return iResult;
@@ -120,4 +108,16 @@ public class xTerminalConsole
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
+
+    private static Frame.Continuation PRINT = frameCaller ->
+        {
+        CONSOLE_OUT.println(((StringHandle) frameCaller.getFrameLocal()).getValue());
+        return Op.R_NEXT;
+        };
+
+    private static Frame.Continuation PRINTLN = frameCaller ->
+        {
+        CONSOLE_OUT.println(((StringHandle) frameCaller.getFrameLocal()).getValue());
+        return Op.R_NEXT;
+        };
     }

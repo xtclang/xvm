@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 /**
  * TODO:
@@ -207,7 +206,6 @@ public class xTuple
           .append(hTuple.f_clazz.toString())
           .append('(');
 
-
         ObjectHandle[] ahValue = hTuple.m_ahValue;
         Iterator<ObjectHandle> iterValues = new Iterator<ObjectHandle>()
             {
@@ -216,74 +214,74 @@ public class xTuple
                 {
                 return i < ahValue.length;
                 }
-
             public ObjectHandle next()
                 {
                 return ahValue[i++];
                 }
             };
 
-        while (iterValues.hasNext())
+        return new ToString(sb, iterValues, iReturn).doNext(frame);
+        }
+
+    /**
+     * Helper class for buildStringValue() implementation.
+     */
+    protected static class ToString
+            implements Frame.Continuation
+        {
+        final private StringBuilder sb;
+        final private Iterator<ObjectHandle> iterValues;
+        final private int iReturn;
+
+        public ToString(StringBuilder sb, Iterator iterValues, int iReturn)
             {
-            int iResult = Utils.callToString(frame, iterValues.next());
-            switch (iResult)
-                {
-                case Op.R_NEXT:
-                    sb.append(((StringHandle) frame.getFrameLocal()).getValue())
-                      .append(", ");
-                    continue;
-
-                case Op.R_CALL:
-                    Frame frameNext = frame.m_frameNext;
-                    frameNext.setContinuation(new Supplier<Frame>()
-                        {
-                        public Frame get()
-                            {
-                            sb.append(((StringHandle) frame.getFrameLocal()).getValue())
-                              .append(", ");
-
-                            while (iterValues.hasNext())
-                                {
-                                switch (Utils.callToString(frame, iterValues.next()))
-                                    {
-                                    case Op.R_NEXT:
-                                        sb.append(((StringHandle) frame.getFrameLocal()).getValue())
-                                          .append(", ");
-                                        continue;
-
-                                    case Op.R_CALL:
-                                        Frame frameNext = frame.m_frameNext;
-                                        frameNext.setContinuation(this);
-                                        return frameNext;
-
-                                    case Op.R_EXCEPTION:
-                                        return null;
-
-                                    default:
-                                        throw new IllegalStateException();
-                                    }
-                                }
-
-                            sb.setLength(sb.length() - 2); // remove the trailing ", "
-                            sb.append(')');
-
-                            frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
-                            return null;
-                            }
-                        });
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
+            this.sb = sb;
+            this.iterValues = iterValues;
+            this.iReturn = iReturn;
             }
-        sb.setLength(sb.length() - 2); // remove the trailing ", "
-        sb.append(')');
 
-        return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            sb.append(((StringHandle) frameCaller.getFrameLocal()).getValue())
+              .append(", ");
+            }
+
+        protected int doNext(Frame frameCaller)
+            {
+            while (iterValues.hasNext())
+                {
+                switch (Utils.callToString(frameCaller, iterValues.next()))
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        continue;
+
+                    case Op.R_CALL:
+                        Frame frameNext = frameCaller.m_frameNext;
+                        frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            sb.setLength(sb.length() - 2); // remove the trailing ", "
+            sb.append(')');
+
+            return frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
+            }
         }
 
     // ----- ObjectHandle helpers -----

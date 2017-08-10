@@ -240,7 +240,7 @@ public class TypeComposition
 
     // create a sequence of frames to be called in the inverse order (the base super first)
     public Frame callDefaultConstructors(Frame frame, ObjectHandle hStruct, ObjectHandle[] ahVar,
-                                         Supplier<Frame> continuation)
+                                         Frame.Continuation continuation)
         {
         ClassTemplate template = f_template;
         MethodStructure methodDefault = template.getDeclaredMethod("default", TypeSet.VOID, TypeSet.VOID);
@@ -271,7 +271,10 @@ public class TypeComposition
             return frameDefault;
             }
 
-        frameSuper.setContinuation(() -> frameDefault);
+        if (frameDefault != null)
+            {
+            frameSuper.setContinuation(frameCaller -> frameCaller.call(frameDefault));
+            }
         return frameSuper;
         }
 
@@ -324,12 +327,12 @@ public class TypeComposition
         MethodConstant constMethod = method.getIdentityConstant();
 
         List<MethodStructure> listMethods = m_mapMethods.computeIfAbsent(constMethod, cm ->
-            {
-            Component container = method.getParent().getParent();
-            return container instanceof PropertyStructure ?
-                    collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
-                    collectMethodCallChain(cm, new LinkedList<>());
-            });
+        {
+        Component container = method.getParent().getParent();
+        return container instanceof PropertyStructure ?
+                collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
+                collectMethodCallChain(cm, new LinkedList<>());
+        });
 
         for (int i = 0, c = listMethods.size(); i < c - 1; i++)
             {

@@ -121,6 +121,7 @@ public class xTestApp extends xModule
             new HandlerEnd(1),
 
             new NVar(adapter.getClassTypeConstId("TestApp.TestClass"), adapter.ensureValueConstantId("t2")), // #3 (t2)
+new Nop(),
             new New_N(adapter.getMethodConstId("TestApp.TestClass2", "construct"),
                      new int[]{-adapter.ensureValueConstantId(42),
                               -adapter.ensureValueConstantId("Goodbye")}, 3),
@@ -524,11 +525,11 @@ public class xTestApp extends xModule
             new Var(adapter.getClassTypeConstId("Int64")), // #1
             new Var(adapter.getClassTypeConstId("String")), // #2
             new LGet(adapter.getPropertyConstId("TestApp.Point", "x"), 1),
-            new Invoke_01(1, adapter.getMethodConstId("Object", "to", STRING, VOID), 2),
+            new Invoke_01(1, adapter.getMethodConstId("Object", "to", VOID, STRING), 2),
             new Add(0, 2, 0),
             new Add(0, -adapter.ensureValueConstantId(", "), 0),
             new LGet(adapter.getPropertyConstId("TestApp.Point", "y"), 1),
-            new Invoke_01(1, adapter.getMethodConstId("Object", "to", STRING, VOID), 2),
+            new Invoke_01(1, adapter.getMethodConstId("Object", "to", VOID, STRING), 2),
             new Add(0, 2, 0),
             new Add(0, -adapter.ensureValueConstantId(")"), 0),
             new Return_1(0),

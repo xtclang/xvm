@@ -18,7 +18,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 
 import org.xvm.proto.template.collections.xTuple;
-import org.xvm.proto.template.xString;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -54,7 +53,7 @@ public class Frame
     public ExceptionHandle      m_hException;   // an exception
     public FullyBoundHandle     m_hfnFinally;   // a "finally" method for the constructors
     public Frame                m_frameNext;    // the next frame to call
-    public Supplier<Frame>      m_continuation; // a frame supplier to call after this frame returns
+    public Continuation         m_continuation; // a function to call after this frame returns
     private ObjectHandle        m_hFrameLocal;  // a "frame local" holding area
 
     // positive return values indicate a caller's frame register
@@ -117,6 +116,13 @@ public class Frame
 
         f_iReturn = iReturn;
         f_aiReturn = aiReturn;
+        }
+
+    // a convenience method
+    public int call(Frame frameNext)
+        {
+        m_frameNext = frameNext;
+        return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
@@ -634,7 +640,7 @@ public class Frame
             }
         }
 
-    public void setContinuation(Supplier<Frame> continuation)
+    public void setContinuation(Continuation continuation)
         {
         if (m_continuation == null)
             {
@@ -642,34 +648,44 @@ public class Frame
             }
         else
             {
-            Supplier<Frame>[] holder = new Supplier[] {m_continuation};
+            Continuation[] holder = new Continuation[] {m_continuation};
 
             // inject the new continuation before the existing one;
-            // if the previous continuation returns a frame with another continuation
-            // make sure we repeat the injection, calling the provided continuation
-            // only when the exiting one returns null
-            m_continuation = new Supplier<Frame>()
+            // if the previous continuation causes another call (R_CALL) and the callee has another
+            // another continuation then we need to make sure to repeat the injection, proceeding
+            // to the provided continuation only when the previous one returns normally (R_NEXT)
+            m_continuation = new Continuation()
                 {
-                public Frame get()
+                public int proceed(Frame frameCaller)
                     {
-                    Frame frameNext = holder[0].get();
-                    if (frameNext == null)
+                    switch (holder[0].proceed(frameCaller))
                         {
-                        return continuation.get();
-                        }
+                        case Op.R_NEXT:
+                            return continuation.proceed(frameCaller);
 
-                    Supplier<Frame> contNext = frameNext.m_continuation;
-                    if (contNext == null)
-                        {
-                        frameNext.m_continuation = continuation;
+                        case Op.R_CALL:
+                            Frame frameNext = frameCaller.m_frameNext;
+                            Continuation contNext = frameNext.m_continuation;
+
+                            if (contNext == null)
+                                {
+                                frameNext.m_continuation = continuation;
+                                }
+                            else
+                                {
+                                holder[0] = contNext;
+                                frameNext.m_continuation = this;
+                                }
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            assert frameCaller.m_hException != null;
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
                         }
-                    else
-                        {
-                        holder[0] = contNext;
-                        frameNext.m_continuation = this;
-                        }
-                    return frameNext;
-                    };
+                    }
                 };
             }
         }
@@ -882,5 +898,12 @@ public class Frame
                 m_ref.dereference();
                 }
             }
+        }
+
+    public interface Continuation
+        {
+        // @param frame  the frame which has just "returned"
+        // return either R_NEXT, R_CALL or R_EXCEPTION
+        int proceed(Frame frame);
         }
     }
