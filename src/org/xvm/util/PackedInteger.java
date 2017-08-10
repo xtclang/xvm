@@ -98,13 +98,37 @@ public class PackedInteger
      *
      * @return 1, 2, 4, 8, 16, or 32
      */
-    public int getByteSize()
+    public int getSignedByteSize()
         {
         verifyInitialized();
 
         int nBytes = m_fBig
-                ? calculateByteCount(m_bigint)
+                ? calculateSignedByteCount(m_bigint)
                 : Math.max(1, (((64 - Long.numberOfLeadingZeros(Math.max(m_lValue, ~m_lValue))) & 0x3F) + 7) / 8);
+
+        assert nBytes >= 1 && nBytes <= 32;
+
+        // turn the raw number of bytes {1,2,3,4,5,6,7,8,9,...}
+        //                         into {1,2,4,4,8,8,8,8,16,...}
+        return Integer.highestOneBit(nBytes * 2 - 1);
+        }
+
+    /**
+     * The size of the unsigned integer that would be necessary to hold the value.
+     *
+     * @return 1, 2, 4, 8, 16, or 32
+     */
+    public int getUnsignedByteSize()
+        {
+        verifyInitialized();
+        if (m_fBig ? this.compareTo(ZERO) < 0 : m_lValue < 0)
+            {
+            throw new IllegalStateException("value is signed");
+            }
+
+        int nBytes = m_fBig
+                ? calculateSignedByteCount(m_bigint)
+                : Math.max(1, (((64 - Long.numberOfLeadingZeros(m_lValue)) + 7) / 8));
 
         assert nBytes >= 1 && nBytes <= 32;
 
@@ -212,7 +236,7 @@ public class PackedInteger
 
         // determine if the number of bytes allows the BigInteger value to be
         // stored in a long value
-        if (!(m_fBig = (calculateByteCount(bigint) > 8)))
+        if (!(m_fBig = (calculateSignedByteCount(bigint) > 8)))
             {
             m_lValue = bigint.longValue();
             }
@@ -302,7 +326,7 @@ public class PackedInteger
 
             // the size to write needs to be at least as big as the minimum size
             // of the byte array necessary to hold the significant bits
-            int    cbWrite = getByteSize();
+            int    cbWrite = getSignedByteSize();
             assert cbWrite == 16 || cbWrite == 32;
             assert cbWrite >= cbBits;
 
@@ -405,8 +429,22 @@ public class PackedInteger
      *
      * @throws IllegalArgumentException if the BigInteger is out of range
      */
-    private static int calculateByteCount(BigInteger bigint)
+    private static int calculateSignedByteCount(BigInteger bigint)
         {
+        return (bigint.bitLength() + 7) / 8;
+        }
+
+    /**
+     * Determine how many bytes is necessary to hold the specified BigInteger.
+     *
+     * @return the minimum number of bytes to hold the integer value in
+     *         2s-complement form
+     *
+     * @throws IllegalArgumentException if the BigInteger is out of range
+     */
+    private static int calculateUnignedByteCount(BigInteger bigint)
+        {
+        // TODO this is from the signed version
         return (bigint.bitLength() + 7) / 8;
         }
 

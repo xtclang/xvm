@@ -74,7 +74,7 @@ public class VersionedCondition
      */
     public Version getVersion()
         {
-        return m_constVer.getValue();
+        return m_constVer.getVersion();
         }
 
     /**
@@ -105,7 +105,7 @@ public class VersionedCondition
     @Override
     public Set<Version> versions()
         {
-        return Collections.singleton(m_constVer.getValue());
+        return Collections.singleton(m_constVer.getVersion());
         }
 
     @Override
@@ -133,8 +133,8 @@ public class VersionedCondition
         {
         if (that instanceof VersionedCondition)
             {
-            Version verThis = this.m_constVer.getValue();
-            Version verThat = ((VersionedCondition) that).m_constVer.getValue();
+            Version verThis = this.m_constVer.getVersion();
+            Version verThat = ((VersionedCondition) that).m_constVer.getVersion();
 
             return verThis.isSameAs(verThat)
                     ? Relation.EQUIV

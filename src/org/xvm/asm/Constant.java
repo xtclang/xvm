@@ -390,40 +390,40 @@ public abstract class Constant
      */
     public enum Format
         {
-        IntLiteral,     // TODO char-string integer literal
-        Int8,           // TODO 1 byte
-        Int16,          // TODO
-        Int32,          // TODO
+        IntLiteral,
+        Int8,
+        Int16,
+        Int32,
         Int64,
-        Int128,         // TODO
-        VarInt,         // TODO
+        Int128,
+        VarInt,
         UInt8,
-        UInt16,         // TODO
-        UInt32,         // TODO
-        UInt64,         // TODO
-        UInt128,        // TODO
-        VarUInt,        // TODO
-        FPLiteral,      // TODO char-string floating point literal
-        Float16,        // TODO 2 bytes
-        Float32,        // TODO 4 bytes
-        Float64,        // TODO 8 bytes
-        Float128,       // TODO 16 bytes
-        VarFloat,       // TODO 1-byte n (n >= 1), byte[2^n]
+        UInt16,
+        UInt32,
+        UInt64,
+        UInt128,
+        VarUInt,
+        FPLiteral,
+        Float16,
+        Float32,
+        Float64,
+        Float128,
+        VarFloat,
         Dec32,          // TODO 4 bytes
         Dec64,          // TODO 8 bytes
         Dec128,         // TODO 16 bytes
-        VarDec,         // TODO 1-byte n (n >= 2), byte[2^n]
-        UInt8Array,     // byte[]
+        VarDec,
         Char,
         String,
-        Date,           // TODO char-string in ISO8601 format
-        Time,           // TODO char-string in ISO8601 format
-        DateTime,       // TODO char-string in ISO8601 format
-        Duration,       // TODO char-string in ISO8601 format
-        TimeInterval,   // TODO char-string in ISO8601 format
+        Date,           // ISO8601 YYYY-MM-DD date format
+        Time,           // ISO8601 HH:MM[:SS[.sssssssss]]['Z' | ('+'|'-')hh[:mm]] format
+        DateTime,       // ISO8601 date ['T' time] format
+        Duration,       // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
+        TimeInterval,   // ISO8601 datetime '/' datetime format
         Enum,           // TODO enum value class
         Tuple,          // TODO type, # elements, foreach:{E}
         Array,          // TODO type, # elements, foreach:{E}
+        UInt8Array,     // byte[]
         Set,            // TODO type, # elements, foreach:{E}
         MapEntry,       // TODO typeK, typeV, K, V
         Map,            // TODO typeK, typeV, # entries, foreach:{K, V}
