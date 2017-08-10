@@ -21,7 +21,6 @@ import org.xvm.proto.template.annotations.xFutureRef;
 import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 /**
  * TODO:
@@ -329,7 +328,7 @@ public class xFunction
 
         // @param access - if specified, apply to "this"
         // @return the very first frame to be called
-        public Frame callChain(Frame frame, Constants.Access access, Supplier<Frame> continuation)
+        public Frame callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
             {
             ObjectHandle hTarget = f_hTarget;
             if (access != null)
@@ -353,7 +352,7 @@ public class xFunction
                 }
 
             Frame frameNext = m_next.callChain(frame, access, continuation);
-            frameThis.setContinuation(() -> frameNext);
+            frameThis.setContinuation(frameCaller -> frameCaller.call(frameNext));
             return frameThis;
             }
 
@@ -361,7 +360,7 @@ public class xFunction
                 INSTANCE.f_clazzCanonical, null, null, null)
             {
             @Override
-            public Frame callChain(Frame frame, Constants.Access access, Supplier<Frame> continuation)
+            public Frame callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
                 {
                 return null;
                 }

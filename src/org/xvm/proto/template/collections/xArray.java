@@ -91,33 +91,31 @@ public class xArray
 
                 // TODO: what if the supplier produces a "future" result
                 hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
-                Frame frame0 = frame.m_frameNext;
 
-                frame0.setContinuation(new Supplier<Frame>()
+                frame.m_frameNext.setContinuation(new Frame.Continuation()
                     {
-                    public Frame get()
+                    public int proceed(Frame frameCaller)
                         {
                         int i = holder[0]++;
                         ExceptionHandle hException =
-                                array.assignArrayValue(hArray, i, frame.getFrameLocal());
+                                array.assignArrayValue(hArray, i, frameCaller.getFrameLocal());
                         if (hException != null)
                             {
-                            frame.m_hException = hException;
-                            return null;
+                            frameCaller.m_hException = hException;
+                            return Op.R_CALL;
                             }
 
                         if (++i < cCapacity)
                             {
                             ahArg[0] = xInt64.makeHandle(i);
                             // TODO: ditto
-                            hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
-                            Frame frameNext = frame.m_frameNext;
+                            hSupplier.call1(frameCaller, null, ahArg, Frame.RET_LOCAL);
+                            Frame frameNext = frameCaller.m_frameNext;
                             frameNext.setContinuation(this);
-                            return frameNext;
+                            return Op.R_CALL;
                             }
 
-                        frame.assignValue(iReturn, hArray);
-                        return null;
+                        return frameCaller.assignValue(iReturn, hArray);
                         }
                     });
 

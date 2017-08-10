@@ -18,7 +18,6 @@ import org.xvm.proto.Utils;
 import org.xvm.proto.template.xString.StringHandle;
 
 import java.util.Iterator;
-import java.util.function.Supplier;
 
 /**
  * TODO:
@@ -184,113 +183,13 @@ public class xConst
     @Override
     public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        ClassStructure struct = f_struct;
-
         GenericHandle hConst = (GenericHandle) hTarget;
 
         StringBuilder sb = new StringBuilder()
           .append(hConst.f_clazz.toString())
           .append('{');
 
-        for (Iterator<Component> iter = struct.children().iterator(); iter.hasNext();)
-            {
-            switch (addToString(frame, hConst, iter.next(), sb))
-                {
-                case 0:
-                    continue;
-
-                case Op.R_NEXT:
-                    sb.append(((StringHandle) frame.getFrameLocal()).getValue())
-                      .append(", ");
-                    continue;
-
-                case Op.R_CALL:
-                    Frame frameNext = frame.m_frameNext;
-                    frameNext.setContinuation(new Supplier<Frame>()
-                        {
-                        public Frame get()
-                            {
-                            sb.append(((StringHandle) frame.getFrameLocal()).getValue())
-                              .append(", ");
-
-                            while (iter.hasNext())
-                                {
-                                switch (addToString(frame, hConst, iter.next(), sb))
-                                    {
-                                    case 0:
-                                        continue;
-
-                                    case Op.R_NEXT:
-                                        sb.append(((StringHandle) frame.getFrameLocal()).getValue())
-                                          .append(", ");
-                                        continue;
-
-                                    case Op.R_CALL:
-                                        Frame frameNext = frame.m_frameNext;
-                                        frameNext.setContinuation(this);
-                                        return frameNext;
-
-                                    case Op.R_EXCEPTION:
-                                        return null;
-
-                                    default:
-                                        throw new IllegalStateException();
-                                    }
-                                }
-
-                            sb.setLength(sb.length() - 2); // remove the trailing ", "
-                            sb.append('}');
-
-                            frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
-                            return null;
-                            }
-                        });
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        sb.setLength(sb.length() - 2); // remove the trailing ", "
-        sb.append('}');
-
-        return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
-        }
-
-    // append a string value for the next child component of the constant to the StringBuilder
-    // return zero if the child is not to be reflected in the string;
-    // R_NEXT if the value has been added; R_CALL if a call has to be made to provide
-    // the string value
-    protected int addToString(Frame frame, GenericHandle hConst, Component comp, StringBuilder sb)
-        {
-        if (!(comp instanceof PropertyStructure))
-            {
-            return 0;
-            }
-
-        PropertyStructure property = (PropertyStructure) comp;
-        if (isReadOnly(property))
-            {
-            return 0;
-            }
-
-        String sProp = property.getName();
-        ObjectHandle hProp = hConst.getField(sProp);
-
-        sb.append(sProp).append('=');
-
-        if (hProp == null)
-            {
-            // be tolerant here
-            sb.append("<unassigned>, ");
-            return 0;
-            }
-
-        return Utils.callToString(frame, hProp);
+        return new ToString(hConst, sb, f_struct.children().iterator(), iReturn).doNext(frame);
         }
 
     // build the hashValue and assign it to the specified register
@@ -305,112 +204,180 @@ public class xConst
             return frame.assignValue(iReturn, hHash);
             }
 
-        ClassStructure struct = f_struct;
-
-        long[] holder = new long[1];
-
-        for (Iterator<Component> iter = struct.children().iterator(); iter.hasNext();)
-            {
-            String sProp = getPropertyName(iter.next());
-            if (sProp == null)
-                {
-                continue;
-                }
-
-            ObjectHandle hProp = hConst.getField(sProp);
-            if (hProp == null)
-                {
-                frame.m_hException = xException.makeHandle("Unassigned property: " + sProp);
-                return Op.R_EXCEPTION;
-                }
-
-            int iResult = Utils.callHash(frame, hProp);
-
-            switch (iResult)
-                {
-                case Op.R_NEXT:
-                    holder[0] = 37 * holder[0] + ((JavaLong) frame.getFrameLocal()).getValue();
-                    continue;
-
-                case Op.R_CALL:
-                    Frame frameNext = frame.m_frameNext;
-                    frameNext.setContinuation(new Supplier<Frame>()
-                        {
-                        public Frame get()
-                            {
-                            holder[0] = 37 * holder[0] + ((JavaLong) frame.getFrameLocal()).getValue();
-
-                            while (iter.hasNext())
-                                {
-                                String sProp = getPropertyName(iter.next());
-                                if (sProp == null)
-                                    {
-                                    continue;
-                                    }
-
-                                ObjectHandle hProp = hConst.getField(sProp);
-                                if (hProp == null)
-                                    {
-                                    frame.m_hException = xException.makeHandle("Unassigned property: " + sProp);
-                                    return null;
-                                    }
-
-                                switch (Utils.callHash(frame, hProp))
-                                    {
-                                    case Op.R_NEXT:
-                                        holder[0] = 37 * holder[0] + ((JavaLong) frame.getFrameLocal()).getValue();
-                                        continue;
-
-                                    case Op.R_CALL:
-                                        Frame frameNext = frame.m_frameNext;
-                                        frameNext.setContinuation(this);
-                                        return frameNext;
-
-                                    case Op.R_EXCEPTION:
-                                        return null;
-
-                                    default:
-                                        throw new IllegalStateException();
-                                    }
-                                }
-
-                            JavaLong hHash = xInt64.makeHandle(holder[0]);
-                            hConst.m_mapFields.put(PROP_HASH, hHash);
-
-                            frame.assignValue(iReturn, hHash);
-                            return null;
-                            }
-                        });
-                return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        hHash = xInt64.makeHandle(holder[0]);
-        hConst.m_mapFields.put(PROP_HASH, hHash);
-
-        return frame.assignValue(iReturn, hHash);
+        return new HashGet(hConst, new long[1], f_struct.children().iterator(), iReturn).doNext(frame);
         }
 
-    // trivial helper
-    protected String getPropertyName(Component comp)
+    // ----- helper classes -----
+
+    /**
+     * Helper class for buildStringValue() implementation.
+     */
+    protected class ToString
+            implements Frame.Continuation
         {
-        if (!(comp instanceof PropertyStructure))
+        final private GenericHandle hConst;
+        final private StringBuilder sb;
+        final private Iterator<Component> iter;
+        final private int iReturn;
+
+        public ToString(GenericHandle hConst, StringBuilder sb, Iterator<Component> iter, int iReturn)
             {
-            return null;
+            this.hConst = hConst;
+            this.sb = sb;
+            this.iter = iter;
+            this.iReturn = iReturn;
             }
 
-        PropertyStructure property = (PropertyStructure) comp;
-        if (isReadOnly(property))
+        @Override
+        public int proceed(Frame frameCaller)
             {
-            return null;
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
             }
 
-        return property.getName();
+        protected void updateResult(Frame frameCaller)
+            {
+            sb.append(((StringHandle) frameCaller.getFrameLocal()).getValue())
+              .append(", ");
+            }
+
+        protected int doNext(Frame frameCaller)
+            {
+            while (iter.hasNext())
+                {
+                Component comp = iter.next();
+
+                if (!(comp instanceof PropertyStructure))
+                    {
+                    continue;
+                    }
+
+                PropertyStructure property = (PropertyStructure) comp;
+                if (isReadOnly(property))
+                    {
+                    continue;
+                    }
+
+                String sProp = property.getName();
+                ObjectHandle hProp = hConst.getField(sProp);
+
+                sb.append(sProp).append('=');
+
+                if (hProp == null)
+                    {
+                    // be tolerant here
+                    sb.append("<unassigned>, ");
+                    continue;
+                    }
+
+                switch (Utils.callToString(frameCaller, hProp))
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        continue;
+
+                    case Op.R_CALL:
+                        Frame frameNext = frameCaller.m_frameNext;
+                        frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            sb.setLength(sb.length() - 2); // remove the trailing ", "
+            sb.append('}');
+
+            return frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
+            }
+        }
+
+    /**
+     * Helper class for buildHashCode() implementation.
+     */
+    protected class HashGet
+            implements Frame.Continuation
+        {
+        final private GenericHandle hConst;
+        final private long[] holder;
+        final private Iterator<Component> iter;
+        final private int iReturn;
+
+        public HashGet(GenericHandle hConst, long[] holder, Iterator<Component> iter, int iReturn)
+            {
+            this.hConst = hConst;
+            this.iter = iter;
+            this.holder = holder;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            holder[0] = 37 * holder[0] + ((JavaLong) frameCaller.getFrameLocal()).getValue();
+            }
+
+        protected int doNext(Frame frameCaller)
+            {
+            while (iter.hasNext())
+                {
+                Component comp = iter.next();
+
+                if (!(comp instanceof PropertyStructure))
+                    {
+                    continue;
+                    }
+
+                PropertyStructure property = (PropertyStructure) comp;
+                if (isReadOnly(property))
+                    {
+                    continue;
+                    }
+
+                String sProp = property.getName();
+                ObjectHandle hProp = hConst.getField(sProp);
+
+                if (hProp == null)
+                    {
+                    frameCaller.m_hException = xException.makeHandle("Unassigned property: " + sProp);
+                    return Op.R_NEXT;
+                    }
+
+                switch (Utils.callHash(frameCaller, hProp))
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        continue;
+
+                    case Op.R_CALL:
+                        Frame frameNext = frameCaller.m_frameNext;
+                        frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            JavaLong hHash = xInt64.makeHandle(holder[0]);
+            hConst.m_mapFields.put(PROP_HASH, hHash);
+
+            return frameCaller.assignValue(iReturn, hHash);
+            }
         }
     }

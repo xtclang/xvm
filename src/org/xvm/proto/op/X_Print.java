@@ -6,6 +6,7 @@ import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.Op;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.Utils;
@@ -87,11 +88,11 @@ public class X_Print extends OpInvocable
 
                 if (iResult == R_CALL)
                     {
-                    frame.m_frameNext.setContinuation(() ->
+                    frame.m_frameNext.setContinuation(frameCaller->
                         {
-                        sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                        sb.append(((xString.StringHandle) frameCaller.getFrameLocal()).getValue());
                         Utils.log(sb.toString());
-                        return null;
+                        return Op.R_NEXT;
                         });
                     return R_CALL;
                     }
