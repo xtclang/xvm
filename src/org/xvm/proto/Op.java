@@ -225,6 +225,12 @@ public abstract class Op
             case OP_CALL_01:
                 list.add(new Call_01(in));
                 break;
+            case OP_CALL_0N:
+                list.add(new Call_0N(in));
+                break;
+            case OP_CALL_0T:
+                list.add(new Call_0T(in));
+                break;
             case OP_CALL_10:
                 list.add(new Call_10(in));
                 break;
@@ -242,6 +248,24 @@ public abstract class Op
                 break;
             case OP_CALL_N1:
                 list.add(new Call_N1(in));
+                break;
+            case OP_CALL_NN:
+                list.add(new Call_NN(in));
+                break;
+            case OP_CALL_NT:
+                list.add(new Call_NT(in));
+                break;
+            case OP_CALL_T0:
+                list.add(new Call_T0(in));
+                break;
+            case OP_CALL_T1:
+                list.add(new Call_T1(in));
+                break;
+            case OP_CALL_TN:
+                list.add(new Call_TN(in));
+                break;
+            case OP_CALL_TT:
+                list.add(new Call_TT(in));
                 break;
             case OP_INVOKE_00:
                 list.add(new Invoke_00(in));
