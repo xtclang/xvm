@@ -327,8 +327,17 @@ public class xFunction
             }
 
         // @param access - if specified, apply to "this"
+        // @return R_CALL or R_NEXT (see NO_OP override)
+        public int callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
+            {
+            Frame frameNext = chainFrames(frame, access, continuation);
+
+            return frame.call(frameNext);
+            }
+
+        // @param access - if specified, apply to "this"
         // @return the very first frame to be called
-        public Frame callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
+        protected Frame chainFrames(Frame frame, Constants.Access access, Frame.Continuation continuation)
             {
             ObjectHandle hTarget = f_hTarget;
             if (access != null)
@@ -351,7 +360,7 @@ public class xFunction
                 return frameThis;
                 }
 
-            Frame frameNext = m_next.callChain(frame, access, continuation);
+            Frame frameNext = m_next.chainFrames(frame, access, continuation);
             frameThis.setContinuation(frameCaller -> frameCaller.call(frameNext));
             return frameThis;
             }
@@ -360,9 +369,15 @@ public class xFunction
                 INSTANCE.f_clazzCanonical, null, null, null)
             {
             @Override
-            public Frame callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
+            public int callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
                 {
-                return null;
+                return continuation.proceed(frame);
+                }
+
+            @Override
+            public FullyBoundHandle chain(FullyBoundHandle handle)
+                {
+                return handle;
                 }
             };
         }
