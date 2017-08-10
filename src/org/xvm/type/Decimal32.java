@@ -69,26 +69,20 @@ public class Decimal32
      */
     public int getSignum()
         {
-        // TODO
-        return 0;
-        }
+        if (isZero())
+            {
+            return 0;
+            }
 
-    /**
-     * @return true iff the sign bit is clear
-     */
-    public boolean isPositive()
-        {
-        // TODO
-        return true;
+        return isSigned() ? -1 : 1;
         }
 
     /**
      * @return true iff the sign bit is set
      */
-    public boolean isNegative()
+    public boolean isSigned()
         {
-        // TODO
-        return true;
+        return (m_nBits & SIGN_BIT) != 0;
         }
 
     /**
@@ -96,8 +90,8 @@ public class Decimal32
      */
     public boolean isZero()
         {
-        // TODO
-        return true;
+        // TODO probably a more efficient way to do this
+        return isFinite() && getDigits() == 0;
         }
 
     /**
@@ -105,8 +99,8 @@ public class Decimal32
      */
     public boolean isFinite()
         {
-        // TODO
-        return true;
+        // the entire G0..G3 bits are 1 for either infinity or NaN
+        return (m_nBits & G0_G3_MASK) != G0_G3_MASK;
         }
 
     /**
@@ -114,26 +108,23 @@ public class Decimal32
      */
     public boolean isInfinite()
         {
-        // TODO
-        return true;
+        return (m_nBits & G0_G4_MASK) == G0_G4_INF;
         }
 
     /**
      * @return true iff the value is a NaN value, regardless of sign
      */
-    public boolean isNan()
+    public boolean isNaN()
         {
-        // TODO
-        return true;
+        return (m_nBits & G0_G4_MASK) == G0_G4_NAN;
         }
 
     /**
-     * @return 1 iff the sign bit is set; otherwise 0
+     * @return true iff the value is a signaling NaN value
      */
-    public int getSign()
+    public boolean isSignalingNaN()
         {
-        // TODO
-        return 0;
+        return isNaN() && (m_nBits & G5_SIGNAL) != 0;
         }
 
     public int getDigits()
@@ -197,6 +188,19 @@ public class Decimal32
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
+     * Convert a Java BigDecimal to an IEEE 754 32-bit decimal.
+     *
+     * @param dec  a Java BigDecimal value
+     *
+     * @return a Java <tt>int</tt> that contains a 32-bit IEEE 754 decimal value
+     */
+    public static int toIntBits(BigDecimal dec)
+        {
+        // TODO
+        return 0;
+        }
+
+    /**
      * Convert the bits of an IEEE 754 decimal to a Java BigDecimal.
      *
      * @param nBits  a 32-bit value containing an IEEE 754 decimal
@@ -209,7 +213,7 @@ public class Decimal32
         return null;
         }
 
-    // TODO probably want to move this to a common base, or Handy
+    // TODO probably want to move the following helpers to a common base, or Handy
 
     /**
      * Convert the three least significant decimal digits of the passed integer value to a declet.
@@ -403,16 +407,60 @@ public class Decimal32
 
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * The sign bit for a 32-bit IEEE 754 decimal.
+     */
+    public static final int SIGN_BIT   = 0x80000000;
+
+    /**
+     * The amount to shift the G3 bit of a 32-bit IEEE 754 decimal.
+     */
+    public static final int G3_SHIFT   = 27;
+    /**
+     * The bit mask for the G0-G3 bits of a 32-bit IEEE 754 decimal.
+     */
+    public static final int G0_G3_MASK = 0b1111 << G3_SHIFT;
+
+    /**
+     * The amount to shift the G4 bit of a 32-bit IEEE 754 decimal.
+     */
+    public static final int G4_SHIFT   = 26;
+    /**
+     * The bit mask for the G0-G4 bits of a 32-bit IEEE 754 decimal.
+     */
+    public static final int G0_G4_MASK = 0b11111 << G4_SHIFT;
+    /**
+     * The value for the G0-G4 bits of a 32-bit IEEE 754 decimal that indicate that the decimal
+     * value is "Not a Number" (NaN).
+     */
+    public static final int G0_G4_NAN  = 0b11111 << G4_SHIFT;
+    /**
+     * The value for the G0-G4 bits of a 32-bit IEEE 754 decimal that indicate that the decimal
+     * value is infinite.
+     */
+    public static final int G0_G4_INF  = 0b11110 << G4_SHIFT;
+
+    /**
+     * The amount to shift the G5 bit of a 32-bit IEEE 754 decimal.
+     */
+    public static final int G5_SHIFT   = 25;
+    /**
+     * The value of the G5 bit that indicates that a 32-bit IEEE 754 decimal is a signaling NaN, if
+     * the decimal is a NaN.
+     */
+    public static final int G5_SIGNAL  = 1 << G5_SHIFT;
+
+
     // TODO well known bit patterns
 
     public static final Decimal32 POS_ZERO     = new Decimal32();
-    public static final Decimal32 NEG_ZERO     = new Decimal32();
+    public static final Decimal32 NEG_ZERO     = new Decimal32(SIGN_BIT | );
     public static final Decimal32 POS_ONE      = new Decimal32();
-    public static final Decimal32 NEG_ONE      = new Decimal32();
-    public static final Decimal32 POS_NaN      = new Decimal32();
-    public static final Decimal32 NEG_NaN      = new Decimal32();
-    public static final Decimal32 POS_INFINITY = new Decimal32();
-    public static final Decimal32 NEG_INFINITY = new Decimal32();
+    public static final Decimal32 NEG_ONE      = new Decimal32(SIGN_BIT | );
+    public static final Decimal32 POS_NaN      = new Decimal32(G0_G4_NAN);
+    public static final Decimal32 NEG_NaN      = new Decimal32(SIGN_BIT | G0_G4_NAN);
+    public static final Decimal32 POS_INFINITY = new Decimal32(G0_G4_INF);
+    public static final Decimal32 NEG_INFINITY = new Decimal32(SIGN_BIT | G0_G4_INF);
 
     /**
      * The bits of the decimal value.
