@@ -14,34 +14,6 @@ import java.math.BigInteger;
 public class Decimal32
         extends Decimal
     {
-    // TODO remove command line test
-    // public static void main(String[] args)
-    //     {
-    //     if (args == null || args.length < 1 || args[0] == null || args[0].length() < 1)
-    //         {
-    //         System.out.println("POS_ZERO     = " + POS_ZERO    );
-    //         System.out.println("NEG_ZERO     = " + NEG_ZERO    );
-    //         System.out.println("POS_ONE      = " + POS_ONE     );
-    //         System.out.println("NEG_ONE      = " + NEG_ONE     );
-    //         System.out.println("NaN          = " + NaN         );
-    //         System.out.println("SNaN         = " + SNaN        );
-    //         System.out.println("POS_INFINITY = " + POS_INFINITY);
-    //         System.out.println("NEG_INFINITY = " + NEG_INFINITY);
-    //         }
-    //     else
-    //         {
-    //         BigDecimal bd = new BigDecimal(args[0]);
-    //         System.out.println("BigDecimal=" + bd);
-    //         Decimal32 dec = new Decimal32(bd);
-    //         System.out.println("Decimal=" + dec);
-    //         Decimal32 dec2 = new Decimal32(dec.toLongBits());
-    //         System.out.println("Copy=" + dec2 + " (bits=" + intToHexString(dec2.toLongBits()) + ")");
-    //         BigDecimal bd2 = dec2.toBigDecimal();
-    //         System.out.println("BigDecimal=" + bd2);
-    //         }
-    //     }
-
-
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -277,8 +249,8 @@ public class Decimal32
         // store the least significant 6 bits of the exponent into the combo field starting at G5
         // store the least signficant 6 decimal digits of the significand in two 10-bit declets in T
         nBits |=  ((nExp & 0b111111              ) << 20)
-                | (intToDeclet(nSig        % 1000)      )
-                | (intToDeclet(nSig / 1000 % 1000) << 10);
+                | (intToDeclet(nSig / 1000 % 1000) << 10)
+                | (intToDeclet(nSig        % 1000)      );
 
         // remaining significand of 8 or 9 is stored in G4 as 0 or 1, with remaining exponent stored
         // in G2-G3, and G0-G1 both set to 1; otherwise, remaining significand (3 bits) is stored in
@@ -307,7 +279,7 @@ public class Decimal32
         int nExp   = nCombo & 0b111111;
         int nSig;
 
-        // test g0 and g1
+        // test G0 and G1
         if ((nCombo & 0b011000000000) == 0b011000000000)
             {
             // when the most significant five bits of G are 110xx or 1110x, the leading significand
@@ -331,11 +303,9 @@ public class Decimal32
         nExp -= 101;
 
         // unpack the digits from most significant declet to least significan declet
-        nSig = nSig * 1000 + decletToInt(nBits >>> 10);
-        nSig = nSig * 1000 + decletToInt(nBits);
-
-        // apply the sign: drag sign bit, and the result of the "or" is either 1 or -1
-        nSig *= ((nBits & SIGN_BIT) >> 31) | 1;
+        nSig = ((nSig * 1000 + decletToInt(nBits >>> 10))
+                      * 1000 + decletToInt(nBits       ))
+                      * (((nBits & SIGN_BIT) >> 31) | 1);       // apply sign
 
         return new BigDecimal(BigInteger.valueOf(nSig), -nExp);
         }
@@ -346,45 +316,45 @@ public class Decimal32
     /**
      * The sign bit for a 32-bit IEEE 754 decimal.
      */
-    private static final int SIGN_BIT = 0x80000000;
+    private static final int      SIGN_BIT     = 0x80000000;
 
     /**
      * The amount to shift the G3 bit of a 32-bit IEEE 754 decimal.
      */
-    private static final int G3_SHIFT = 27;
+    private static final int      G3_SHIFT     = 27;
 
     /**
      * The bit mask for the G0-G3 bits of a 32-bit IEEE 754 decimal.
      */
-    private static final int G0_G3_MASK = 0b1111 << G3_SHIFT;
+    private static final int      G0_G3_MASK   = 0b1111 << G3_SHIFT;
 
     /**
      * The amount to shift the G4 bit of a 32-bit IEEE 754 decimal.
      */
-    private static final int G4_SHIFT = 26;
+    private static final int      G4_SHIFT     = 26;
 
     /**
      * The value for the G0-G4 bits of a 32-bit IEEE 754 decimal that indicate that the decimal
      * value is "Not a Number" (NaN).
      */
-    private static final int G0_G4_NAN = 0b11111 << G4_SHIFT;
+    private static final int      G0_G4_NAN    = 0b11111 << G4_SHIFT;
 
     /**
      * The value for the G0-G4 bits of a 32-bit IEEE 754 decimal that indicate that the decimal
      * value is infinite.
      */
-    private static final int G0_G4_INF = 0b11110 << G4_SHIFT;
+    private static final int      G0_G4_INF    = 0b11110 << G4_SHIFT;
 
     /**
      * The amount to shift the G5 bit of a 32-bit IEEE 754 decimal.
      */
-    private static final int G5_SHIFT  = 25;
+    private static final int      G5_SHIFT     = 25;
 
     /**
      * The value of the G5 bit that indicates that a 32-bit IEEE 754 decimal is a signaling NaN, if
      * the decimal is a NaN.
      */
-    private static final int G5_SIGNAL = 1 << G5_SHIFT;
+    private static final int      G5_SIGNAL    = 1 << G5_SHIFT;
 
     /**
      * The decimal value for zero.
@@ -439,6 +409,3 @@ public class Decimal32
      */
     private transient BigDecimal m_dec;
     }
-
-
-
