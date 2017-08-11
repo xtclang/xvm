@@ -70,6 +70,11 @@ public class Decimal32
      */
     public Decimal32(BigDecimal dec)
         {
+        if (dec == null)
+            {
+            throw new IllegalArgumentException("value required");
+            }
+
         m_nBits = toIntBits(dec);
         m_dec   = dec;                  // this isn't perfect, but we'll trust the cached value
         }

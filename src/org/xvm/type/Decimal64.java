@@ -47,6 +47,17 @@ public class Decimal64
      */
     public Decimal64(byte[] abValue)
         {
+        if (abValue == null)
+            {
+            throw new IllegalArgumentException("value required");
+            }
+
+        if (abValue.length != 8)
+            {
+            throw new IllegalArgumentException("byte count != 8 (actual=" + abValue.length + ")");
+            }
+
+
         int MSB = (abValue[0] & 0xFF) << 24
                 | (abValue[1] & 0xFF) << 16
                 | (abValue[2] & 0xFF) <<  8
@@ -65,6 +76,11 @@ public class Decimal64
      */
     public Decimal64(BigDecimal dec)
         {
+        if (dec == null)
+            {
+            throw new IllegalArgumentException("value required");
+            }
+
         m_nBits = toLongBits(dec);
         m_dec   = dec;                  // this isn't perfect, but we'll trust the cached value
         }
@@ -263,7 +279,7 @@ public class Decimal64
         // in G2-G3, and G0-G1 both set to 1; otherwise, remaining significand (3 bits) is stored in
         // G2-G4 with remaining exponent stored in G0-G1
         int nSigRem = (int) (nSig / 1_000_000_000_000_000L);
-        int nGBits = nSigRem >= 8                                  // G01234
+        int nGBits = nSigRem >= 8                               // G01234
                 ? (0b11000 | (nSigRem & 0b00001) | ((nExp & 0b11000_00000) >>> 7))
                 : (          (nSigRem & 0b00111) | ((nExp & 0b11000_00000) >>> 5));
 
