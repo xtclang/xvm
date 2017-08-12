@@ -150,19 +150,34 @@ public class Decimal128
         // keep only the T portion of the high bits (the low bits are all part of the T portion)
         nHBits &= LS46BITS;
 
-        if (nLBits != 0 | nHBits != 0 | nD0 != 0)
+        // process the remainder of the T portion in the high bits (except for the last 6 bits that
+        // overflowed from the low bits)
+        long nHSig = nD0;
+        if (nHSig != 0 || nHBits != 0)
             {
-            // have to process low bits
-            if (nHBits != 0 | nD0 != 0)
+            for (int of = 36; of >= 0; of -= 10)
+                {
+                nHSig = nHSig * 1000 + decletToInt((int) (nHBits >>> of));
+                }
             }
-        if (nD0 != 0)
+        
+        // process the T portion in the low bits (including the 6 LSBs of the high bits)
+        long nLSig = 0;
+        if (nHSig != 0 || nLBits != 0)
+            {
+            // grab the 6 bits from the 7th declet that overflowed to the "high bits" long, and
+            // combine those with the highest 4 bits from the "low bits" long
+            nHSig = nHSig * 1000 + decletToInt((int) ((nHBits << 4) | (nLBits >>> 60)));
 
-        // unpack the digits from most significant declet to least significant declet
-        for (int cShift = 40; cShift >= 0; cShift -= 10)
-            {
-            nSig = nSig * 1000 + decletToInt((int) (nBits >>> cShift));
+            for (int of = 50; of >= 0; of -= 10)
+                {
+                nLSig = nLSig * 1000 + decletToInt((int) (nLBits >>> of));
+                }
             }
-        return nSig;
+        
+        // put the digits from the low and high bits together to form the full significand
+        BigInteger bintL = nLSig == 0 ? BIGINT_ZERO : BigInteger.valueOf(nLSig);
+        return nHSig == 0 ? bintL : BigInteger.valueOf(nHSig).multiply(BIGINT_10_TO_18TH).add(bintL);
         }
 
     /**
@@ -210,7 +225,8 @@ public class Decimal128
         BigDecimal dec = m_dec;
         if (dec == null && isFinite())
             {
-            m_dec = dec = new BigDecimal(getSignificand(), -getExponent());
+            dec = new BigDecimal(getSignificand(), -getExponent());
+            m_dec = dec = isSigned() ? dec.negate() : dec;
             }
         return dec;
         }
@@ -348,7 +364,7 @@ public class Decimal128
         long nLBits = 0;
         for (int i = 0; i < 11 && bint.signum() > 0; ++i)
             {
-            BigInteger[] abintDivMod = bint.divideAndRemainder(THOUSAND);
+            BigInteger[] abintDivMod = bint.divideAndRemainder(BIGINT_THOUSAND);
             BigInteger   bintTriad   = abintDivMod[1];
 
             int nDeclet = intToDeclet(bintTriad.intValue());
@@ -403,97 +419,107 @@ public class Decimal128
     // ----- constants -----------------------------------------------------------------------------
 
     /**
+     * Zero, in a BigInteger format.
+     */
+    private static final BigInteger BIGINT_ZERO         = BigInteger.ZERO;
+
+    /**
      * One thousand, in a BigInteger format.
      */
-    private static final BigInteger THOUSAND    = BigInteger.valueOf(1000);
+    private static final BigInteger BIGINT_THOUSAND     = BigInteger.valueOf(1000);
+
+    /**
+     * One million million (10^18), in a BigInteger format.
+     */
+    private static final BigInteger BIGINT_10_TO_18TH   = new BigInteger("1000000000000000000");
 
     /**
      * The least significant 46 bits.
      */
-    private static final long       LS46BITS    = 0x3FFFFFFFFFFFL;
+    private static final long       LS46BITS            = 0x3FFFFFFFFFFFL;
 
     /**
      * The sign bit for the high 64 bits of a 128-bit IEEE 754 decimal.
      */
-    private static final long SIGN_BIT = 1L << 63;
+    private static final long       SIGN_BIT            = 1L << 63;
 
     /**
      * The amount to shift the G3 bit in the high 64 bits of a 128-bit IEEE 754 decimal.
      */
-    private static final int G3_SHIFT = 59;
+    private static final int        G3_SHIFT            = 59;
 
     /**
      * The bit mask for the G0-G3 bits of the high 64 bits of a 128-bit IEEE 754 decimal.
      */
-    private static final long G0_G3_MASK = 0b1111L << G3_SHIFT;
+    private static final long       G0_G3_MASK          = 0b1111L << G3_SHIFT;
 
     /**
      * The amount to shift the G4 bit in the high 64 bits of a 128-bit IEEE 754 decimal
      */
-    private static final int G4_SHIFT = 58;
+    private static final int        G4_SHIFT            = 58;
 
     /**
      * The value for the G0-G4 bits of the high 64 bits of a 128-bit IEEE 754 decimal that indicate
      * that the decimal value is "Not a Number" (NaN).
      */
-    private static final long G0_G4_NAN = 0b11111L << G4_SHIFT;
+    private static final long       G0_G4_NAN           = 0b11111L << G4_SHIFT;
 
     /**
      * The value for the G0-G4 bits in the high 64 bits of a 128-bit IEEE 754 decimal that indicate
      * that the decimal value is infinite.
      */
-    private static final long G0_G4_INF = 0b11110L << G4_SHIFT;
+    private static final long       G0_G4_INF           = 0b11110L << G4_SHIFT;
 
     /**
      * The amount to shift the G5 bit in the high 64 bits of a 128-bit IEEE 754 decimal.
      */
-    private static final int G5_SHIFT = 57;
+    private static final int        G5_SHIFT            = 57;
 
     /**
      * The value of the G5 bit in the high 64 bits of a 128-bit IEEE 754 decimal that indicates that
      * the decimal is a signaling NaN, if the decimal is a NaN.
      */
-    private static final long G5_SIGNAL = 1L << G5_SHIFT;
+    private static final long       G5_SIGNAL           = 1L << G5_SHIFT;
 
     /**
      * The decimal value for zero.
      */
-    public static final Decimal128 POS_ZERO = new Decimal128(0L, 0L);   // TODO
+    public static final Decimal128  POS_ZERO            = new Decimal128(0x2208000000000000L, 0);
 
     /**
      * The decimal value for negative zero.
      */
-    public static final Decimal128 NEG_ZERO = new Decimal128(0L, 0L);   // TODO
+    public static final Decimal128  NEG_ZERO            = new Decimal128(0xA208000000000000L, 0);
 
     /**
      * The decimal value for positive one (1).
      */
-    public static final Decimal128 POS_ONE = new Decimal128(0L, 0L);   // TODO
+    public static final Decimal128  POS_ONE             = new Decimal128(0x2208000000000000L, 1);
 
     /**
      * The decimal value for negative one (-1).
      */
-    public static final Decimal128 NEG_ONE = new Decimal128(0L, 0L);   // TODO
+    public static final Decimal128  NEG_ONE             = new Decimal128(0xA208000000000000L, 1);
 
     /**
      * The decimal value for a "quiet" Not-A-Number (NaN).
      */
-    public static final Decimal128 NaN = new Decimal128(G0_G4_NAN, 0L);
+    public static final Decimal128  NaN                 = new Decimal128(G0_G4_NAN, 0L);
 
     /**
      * The decimal value for a signaling Not-A-Number (NaN).
      */
-    public static final Decimal128 SNaN = new Decimal128(G0_G4_NAN | G5_SIGNAL, 0L);
+    public static final Decimal128  SNaN                = new Decimal128(G0_G4_NAN | G5_SIGNAL, 0L);
 
     /**
      * The decimal value for positive infinity.
      */
-    public static final Decimal128 POS_INFINITY = new Decimal128(G0_G4_INF, 0L);
+    public static final Decimal128  POS_INFINITY        = new Decimal128(G0_G4_INF, 0L);
 
     /**
      * The decimal value for negative infinity.
      */
-    public static final Decimal128 NEG_INFINITY = new Decimal128(SIGN_BIT | G0_G4_INF, 0L);
+    public static final Decimal128  NEG_INFINITY        = new Decimal128(SIGN_BIT | G0_G4_INF, 0L);
 
 
     // ----- fields --------------------------------------------------------------------------------
