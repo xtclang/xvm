@@ -904,6 +904,6 @@ public class Frame
         {
         // @param frame  the frame which has just "returned"
         // return either R_NEXT, R_CALL or R_EXCEPTION
-        int proceed(Frame frame);
+        int proceed(Frame frameCaller);
         }
     }

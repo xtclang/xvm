@@ -2,8 +2,8 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
+
 import org.xvm.asm.constants.Int64Constant;
 
 import org.xvm.proto.Frame;
@@ -108,23 +108,17 @@ public class xInt64
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
-        switch (ahArg.length)
+        switch (property.getName())
             {
-            case 0:
-                if (method.getName().equals("get")) // hash.get()
-                    {
-                    assert method.getParent().getParent().getName().equals("hash");
-
-                    return frame.assignValue(iReturn, hThis);
-                    }
+            case "hash":
+                return frame.assignValue(iReturn, hThis);
             }
 
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        return super.invokeNativeGet(frame, hTarget, property, iReturn);
         }
 
     @Override

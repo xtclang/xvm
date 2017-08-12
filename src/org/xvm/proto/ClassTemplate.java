@@ -525,6 +525,18 @@ public abstract class ClassTemplate
 
     // ----- OpCode support ------
 
+    // invokeNative property "get" operation
+    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+        {
+        throw new IllegalStateException("Unknown property getter: (" + f_sName + ")." + property.getName());
+        }
+
+    // invokeNative property "set" operation
+    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, PropertyStructure property, ObjectHandle hValue)
+        {
+        throw new IllegalStateException("Unknown property setter: (" + f_sName + ")." + property.getName());
+        }
+
     // invokeNative with exactly one argument and zero or one return value
     // place the result into the specified frame register
     // return one of the Op.R_ values
@@ -667,7 +679,7 @@ public abstract class ClassTemplate
 
         if (frame.f_adapter.isNative(method))
             {
-            return invokeNativeN(frame, method, hTarget, Utils.OBJECTS_NONE, iReturn);
+            return invokeNativeGet(frame, hTarget, property, iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
@@ -768,7 +780,7 @@ public abstract class ClassTemplate
                 {
                 if (f_types.f_adapter.isNative(method))
                     {
-                    return invokeNative1(frame, method, hTarget, hValue, Frame.RET_UNUSED);
+                    return invokeNativeSet(frame, hTarget, property, hValue);
                     }
 
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];

@@ -51,21 +51,15 @@ public class xConst
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
-        switch (ahArg.length)
+        switch (property.getName())
             {
-            case 0:
-                if (method.getName().equals("get")) // hash.get()
-                    {
-                    assert method.getParent().getParent().getName().equals("hash");
-
-                    return buildHashCode(frame, hTarget, iReturn);
-                    }
+            case "hash":
+                return buildHashCode(frame, hTarget, iReturn);
             }
 
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        return super.invokeNativeGet(frame, hTarget, property, iReturn);
         }
 
     @Override

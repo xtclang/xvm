@@ -4,6 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.Frame;
@@ -84,6 +85,20 @@ public class xString
         }
 
     @Override
+    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+        {
+        StringHandle hThis = (StringHandle) hTarget;
+
+        switch (property.getName())
+            {
+            case "size":
+                return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_sValue.length()));
+            }
+
+        return super.invokeNativeGet(frame, hTarget, property, iReturn);
+        }
+
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
@@ -91,23 +106,6 @@ public class xString
 
         switch (ahArg.length)
             {
-            case 0:
-                switch (method.getName())
-                    {
-                    case "get":
-                        switch (method.getParent().getParent().getName())
-                            {
-                            case "hash":
-                                return frame.assignValue(iReturn,
-                                        xInt64.makeHandle(hThis.m_sValue.hashCode()));
-
-                            case "size":
-                                return frame.assignValue(iReturn,
-                                        xInt64.makeHandle(hThis.m_sValue.length()));
-                            }
-                    }
-                break;
-
             case 2:
                 switch (method.getName())
                     {
@@ -183,19 +181,18 @@ public class xString
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-    // ----- Object methods -----
-
-    @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        return frame.assignValue(iReturn, hTarget);
-        }
 
     @Override
     public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn,
                 xInt64.makeHandle(((StringHandle) hTarget).getValue().hashCode()));
+        }
+
+    @Override
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn, hTarget);
         }
 
     public static class StringHandle

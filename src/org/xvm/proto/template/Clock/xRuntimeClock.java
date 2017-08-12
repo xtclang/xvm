@@ -46,12 +46,6 @@ public class xRuntimeClock
         }
 
     @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
-
-    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
         switch (method.getName())

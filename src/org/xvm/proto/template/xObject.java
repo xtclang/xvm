@@ -2,10 +2,8 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.ClassTemplate;
@@ -44,12 +42,5 @@ public class xObject
         {
         TO_STRING = f_types.f_adapter.getMethod("Object", "to", VOID, STRING).getIdentityConstant();
         markNativeMethod("to", VOID, STRING);
-        }
-
-    @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
     }
