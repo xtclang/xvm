@@ -390,6 +390,9 @@ public abstract class Constant
      */
     public enum Format
         {
+        /*
+         * Values.
+         */
         IntLiteral,
         Int8,
         Int16,
@@ -420,6 +423,7 @@ public abstract class Constant
         DateTime,       // ISO8601 date ['T' time] format
         Duration,       // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
         TimeInterval,   // ISO8601 datetime '/' datetime format
+        Version,
         Enum,
         Tuple,
         Array,
@@ -427,18 +431,36 @@ public abstract class Constant
         Set,
         MapEntry,
         Map,
+
+        /*
+         * Structural identifiers.
+         */
         Module,
         Package,
         Class,
-        Symbolic,
-        ParentClass,
-        ChildClass,
-        Register,
         Typedef,
         Property,
         MultiMethod,
         Method,
-        ClassType,      // includes this:type auto-narrowing symbolic type
+
+        /*
+         * Pseudo identifiers.
+         */
+        ThisClass,      // TODO
+        ParentClass,
+        ChildClass,
+        TypeProperty,   // TODO
+        TypeRegister,   // TODO
+        Signature,      // TODO
+        Unresolved,
+        UnresolvedClass,// TODO
+        UnresolvedType, // TODO
+
+        /*
+         * Types.
+         */
+        ClassType,
+        ThisType,
         ParentType,
         ChildType,
         RegisterType,
@@ -447,7 +469,10 @@ public abstract class Constant
         UnionType,
         IntersectionType,
         AnnotatedType,
-        Version,
+
+        /*
+         * Conditions.
+         */
         ConditionNot,
         ConditionAll,
         ConditionAny,
@@ -455,7 +480,6 @@ public abstract class Constant
         ConditionPresent,
         ConditionVersionMatches,
         ConditionVersioned,
-        Unresolved,
         ;
 
         /**
@@ -504,24 +528,24 @@ public abstract class Constant
      * of the ConstantPool.
      */
     public static final Comparator<Constant> MFU_ORDER = new Comparator<Constant>()
+    {
+    @Override
+    public int compare(Constant o1, Constant o2)
         {
-        @Override
-        public int compare(Constant o1, Constant o2)
+        if (o1 == o2)
             {
-            if (o1 == o2)
-                {
-                return 0;
-                }
-
-            assert o1.getConstantPool() == o2.getConstantPool();
-
-            // how much more is the first constant used than the second constant?
-            int cDif = o1.m_cRefs - o2.m_cRefs;
-
-            // most used comes first (i.e. _reverse_ sort on most used)
-            return -cDif;
+            return 0;
             }
-        };
+
+        assert o1.getConstantPool() == o2.getConstantPool();
+
+        // how much more is the first constant used than the second constant?
+        int cDif = o1.m_cRefs - o2.m_cRefs;
+
+        // most used comes first (i.e. _reverse_ sort on most used)
+        return -cDif;
+        }
+    };
 
 
     // ----- fields --------------------------------------------------------------------------------

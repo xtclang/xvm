@@ -1031,7 +1031,7 @@ public class ConstantPool
      */
     public SymbolicConstant ensureSymbolicConstant(String sName)
         {
-        SymbolicConstant constant = (SymbolicConstant) ensureLocatorLookup(Format.Symbolic).get(sName);
+        SymbolicConstant constant = (SymbolicConstant) ensureLocatorLookup(Format.ThisClass).get(sName);
         if (constant == null)
             {
             constant = (SymbolicConstant) register(new SymbolicConstant(this, sName));

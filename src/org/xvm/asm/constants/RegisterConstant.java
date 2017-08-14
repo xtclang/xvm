@@ -96,7 +96,7 @@ public class RegisterConstant
     @Override
     public Format getFormat()
         {
-        return Format.Register;
+        return Format.TypeRegister;
         }
 
     @Override

@@ -133,7 +133,7 @@ public class SymbolicConstant
     @Override
     public Format getFormat()
         {
-        return Format.Symbolic;
+        return Format.ThisClass;
         }
 
     @Override
