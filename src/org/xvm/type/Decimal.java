@@ -1,6 +1,8 @@
 package org.xvm.type;
 
 
+import java.io.DataOutput;
+import java.io.IOException;
 import java.math.BigDecimal;
 
 
@@ -176,6 +178,59 @@ public abstract class Decimal
         // G0..G4 must all be 1 for NaN
         // G5 must be 0 for quiet
         return (leftmost7Bits() & 0b0111111) == 0b0111110;
+        }
+
+    /**
+     * Write the bytes of the decimal to the specified output stream.
+     *
+     * @param out  a DataOutput stream
+     *
+     * @throws IOException if an error occurs writing the decimal to the stream
+     */
+    public void writeBytes(DataOutput out)
+            throws IOException
+        {
+        for (int i = 0, c = getByteLength(); i < c; ++i)
+            {
+            out.writeByte(getByte(i));
+            }
+        }
+
+    /**
+     * Compare this decimal to another decimal for purposes of ordering. Note that this does not
+     * strictly order by the numeric value of the decimal itself, since two decimals may have the
+     * same numeric value, but differ in small ways, such as defined by section "3.5.1 Cohorts".
+     *
+     * @param that  another decimal
+     *
+     * @return a value that is negative, zero, or positive to indicate less than, equal, or greater
+     */
+    public int compareForObjectOrder(Decimal that)
+        {
+        if (this == that)
+            {
+            return 0;
+            }
+
+        BigDecimal bdecThis = this.toBigDecimal();
+        BigDecimal bdecThat = that.toBigDecimal();
+        if (bdecThis == null || bdecThat == null)
+            {
+            // sort NaN, -Infinity, finite, +Infinity
+            int nThis = this.isNaN() ? -2 : this.isFinite() ? 0 : this.isSigned() ? -1 : 1;
+            int nThat = that.isNaN() ? -2 : that.isFinite() ? 0 : that.isSigned() ? -1 : 1;
+            return nThis - nThat;
+            }
+
+        int nResult = bdecThis.compareTo(bdecThat);
+        if (nResult == 0)
+            {
+            // even though the numeric values may be equal, they might not have the same number of
+            // digits
+            nResult = bdecThis.toString().compareTo(bdecThat.toString());
+            }
+
+        return nResult;
         }
 
 

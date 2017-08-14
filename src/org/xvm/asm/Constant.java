@@ -409,9 +409,9 @@ public abstract class Constant
         Float64,
         Float128,
         VarFloat,
-        Dec32,          // TODO 4 bytes
-        Dec64,          // TODO 8 bytes
-        Dec128,         // TODO 16 bytes
+        Dec32,
+        Dec64,
+        Dec128,
         VarDec,
         Char,
         String,

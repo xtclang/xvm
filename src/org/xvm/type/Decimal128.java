@@ -2,6 +2,7 @@ package org.xvm.type;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import java.math.BigDecimal;
@@ -131,6 +132,13 @@ public class Decimal128
         {
         // G0 and G1 must not both be 1, and G2-G4 must be 0, and T (rightmost 110 bits) must be 0
         return (leftmost7Bits() & 0b0110000) != 0b0110000 && (m_nHBits & LS46BITS) == 0 && m_nLBits == 0;
+        }
+
+    @Override
+    public void writeBytes(DataOutput out) throws IOException
+        {
+        out.writeLong(m_nHBits);
+        out.writeLong(m_nLBits);
         }
 
     /**
