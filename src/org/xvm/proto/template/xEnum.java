@@ -5,9 +5,9 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
 
-import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -24,7 +24,7 @@ import java.util.List;
  * @author gg 2017.02.27
  */
 public class xEnum
-        extends ClassTemplate
+        extends xConst
     {
     public static xEnum INSTANCE;
 
@@ -33,7 +33,7 @@ public class xEnum
 
     public xEnum(TypeSet types, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(types, structure, false);
 
         if (fInstance)
             {
@@ -44,10 +44,14 @@ public class xEnum
     @Override
     public void initDeclared()
         {
-        ClassStructure struct = f_struct;
-        if (this != INSTANCE && struct.getFormat() == Component.Format.ENUM)
+        if (this == INSTANCE)
             {
-            List<Component> listAll = struct.children();
+            markNativeGetter("ordinal");
+            markNativeGetter("name");
+            }
+        else if (f_struct.getFormat() == Component.Format.ENUM)
+            {
+            List<Component> listAll = f_struct.children();
             List<String> listNames = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 
@@ -68,33 +72,48 @@ public class xEnum
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        if (f_struct.getFormat() == Component.Format.ENUMVALUE)
-            {
-            xEnum templateEnum = (xEnum) getSuper();
-            return templateEnum.createConstHandle(constant, heap);
-            }
-
         if (constant instanceof ClassConstant)
             {
             ClassConstant constClass = (ClassConstant) constant;
             String sName = constClass.getName();
-            int ix = m_listNames.indexOf(sName);
+
+            xEnum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
+                (xEnum) getSuper() : this;
+
+            int ix = template.m_listNames.indexOf(sName);
             if (ix >= 0)
                 {
-                return m_listHandles.get(ix);
+                return template.m_listHandles.get(ix);
                 }
             }
         return null;
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        EnumHandle hEnum = (EnumHandle) hTarget;
+
+        switch (property.getName())
+            {
+            case "name":
+                return frame.assignValue(iReturn,
+                        xString.makeHandle(m_listNames.get((int) hEnum.getValue())));
+
+            case "ordinal":
+                return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getValue()));
+            }
+
+        return super.invokeNativeGet(frame, hTarget, property, iReturn);
         }
 
-    // ----- Object methods -----
+    @Override
+    public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        EnumHandle hEnum = (EnumHandle) hTarget;
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getValue()));
+        }
 
     @Override
     public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)

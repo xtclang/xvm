@@ -17,6 +17,7 @@ class TestApp
         return 42;
         }
 
+
     static Void test1()
         {
         @inject io.Console console;
@@ -381,6 +382,8 @@ class TestApp
         Point br; // TODO: remove
         }
 
+    enum Color {Red, Green, Blue}
+
     static Void testConst()
         {
         Point p1 = new Point(0, 1);
@@ -394,5 +397,10 @@ class TestApp
         Rectangle r = new Rectangle(p2, p1);
         print(r);
         print(r.hash);
+        Int i = 42; print(i.hash); // print(42.hash);
+
+        Color c = Blue;
+        print(c);
+        print(c.ordinal);
         }
     }

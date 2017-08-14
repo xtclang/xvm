@@ -30,9 +30,9 @@ public class xTestClass2 extends ClassTemplate
         adapter.addMethod(f_struct, "construct", new String[]{"Int64", "String"}, VOID);
         adapter.addMethod(f_struct, "finally", new String[]{"Int64", "String"}, VOID);
 
-        MethodTemplate construct = ensureMethodTemplate("construct",
+        MethodInfo construct = ensureMethodInfo("construct",
                 new String[]{"Int64", "String"});
-        MethodTemplate ftFinally = ensureMethodTemplate("finally",
+        MethodInfo ftFinally = ensureMethodInfo("finally",
                 new String[]{"Int64", "String"});
 
         construct.m_aop = new Op[]
@@ -54,7 +54,7 @@ public class xTestClass2 extends ClassTemplate
             };
         ftFinally.m_cVars = 2;
 
-        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
+        MethodInfo mtMethod1 = ensureMethodInfo("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
@@ -67,7 +67,7 @@ public class xTestClass2 extends ClassTemplate
             };
         mtMethod1.m_cVars = 2;
 
-        MethodTemplate mtTo = ensureMethodTemplate("to", VOID, STRING);
+        MethodInfo mtTo = ensureMethodInfo("to", VOID, STRING);
         mtTo.m_aop = new Op[]
             {
             new Var(adapter.getClassTypeConstId("String")), // #0

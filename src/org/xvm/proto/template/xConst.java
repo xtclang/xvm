@@ -45,8 +45,8 @@ public class xConst
     @Override
     public void initDeclared()
         {
-        ensurePropertyTemplate("hash").m_fReadOnly = true;
-        ensureGetter("hash").m_fNative = true;
+        markCalculated("hash");
+        markNativeGetter("hash");
         markNativeMethod("to", VOID, STRING);
         }
 
@@ -84,7 +84,7 @@ public class xConst
             if (comp instanceof PropertyStructure)
                 {
                 PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
+                if (isCalculated(property))
                     {
                     continue;
                     }
@@ -95,7 +95,7 @@ public class xConst
 
                 if (h1 == null || h2 == null)
                     {
-                    frame.m_hException = xException.makeHandle("Unassigned property " + sProp);
+                    frame.m_hException = xException.makeHandle("Unassigned property \"" + sProp +'"');
                     return Op.R_EXCEPTION;
                     }
 
@@ -141,7 +141,7 @@ public class xConst
             if (comp instanceof PropertyStructure)
                 {
                 PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
+                if (isCalculated(property))
                     {
                     continue;
                     }
@@ -152,7 +152,7 @@ public class xConst
 
                 if (h1 == null || h2 == null)
                     {
-                    frame.m_hException = xException.makeHandle("Unassigned property " + sProp);
+                    frame.m_hException = xException.makeHandle("Unassigned property \"" + sProp + '"');
                     return Op.R_EXCEPTION;
                     }
 
@@ -248,7 +248,7 @@ public class xConst
                     }
 
                 PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
+                if (isCalculated(property))
                     {
                     continue;
                     }
@@ -334,7 +334,7 @@ public class xConst
                     }
 
                 PropertyStructure property = (PropertyStructure) comp;
-                if (isReadOnly(property))
+                if (isCalculated(property))
                     {
                     continue;
                     }
@@ -344,7 +344,7 @@ public class xConst
 
                 if (hProp == null)
                     {
-                    frameCaller.m_hException = xException.makeHandle("Unassigned property: " + sProp);
+                    frameCaller.m_hException = xException.makeHandle("Unassigned property: \"" + sProp + '"');
                     return Op.R_NEXT;
                     }
 

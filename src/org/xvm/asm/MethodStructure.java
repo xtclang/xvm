@@ -7,6 +7,7 @@ import java.util.List;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.proto.ClassTemplate;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -143,6 +144,26 @@ public class MethodStructure
     public List<Parameter> getParams()
         {
         return Arrays.asList(m_aParams);
+        }
+
+    /**
+     * @return the transient method info
+     */
+    public ClassTemplate.MethodInfo getInfo()
+        {
+        return m_info;
+        }
+
+    /**
+     * Store the transient method info.
+     */
+    public void setInfo(ClassTemplate.MethodInfo info)
+        {
+        if (m_info != null)
+            {
+            throw new IllegalStateException("Info is not resettable");
+            }
+        m_info = info;
         }
 
 
@@ -345,4 +366,11 @@ public class MethodStructure
      * The parameter types.
      */
     private Parameter[] m_aParams;
+
+    // ----- TEMPORARY ------
+
+    /**
+     * The transient run-time method data.
+     */
+    private transient ClassTemplate.MethodInfo m_info;
     }

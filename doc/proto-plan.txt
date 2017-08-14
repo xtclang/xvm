@@ -55,9 +55,9 @@
 
 + revisit hash and to<String> implementation
 
-- implement missing enum methods
++ change the continuation API
 
-- consider changing the continuation API
++ implement missing enum methods
 
 - Property and Method
 

@@ -31,15 +31,12 @@ public class xTestApp extends xModule
     @Override
     public void initDeclared()
         {
-        // TODO: remove
-        ensurePropertyTemplate("console").m_fInjectable = true;
-
         f_types.getTemplate("TestApp.TestClass");
         f_types.getTemplate("TestApp.TestClass2");
         f_types.getTemplate("TestApp.TestService");
 
         // --- getIntValue
-        MethodTemplate ftGetInt = ensureMethodTemplate("getIntValue", VOID, INT);
+        MethodInfo ftGetInt = ensureMethodInfo("getIntValue", VOID, INT);
         ftGetInt.m_aop = new Op[]
             {
             new Return_1(-adapter.ensureValueConstantId(42)),
@@ -47,7 +44,7 @@ public class xTestApp extends xModule
         ftGetInt.m_cVars = 1;
 
         // --- test1()
-        MethodTemplate ftTest1 = ensureMethodTemplate("test1", VOID, VOID);
+        MethodInfo ftTest1 = ensureMethodInfo("test1", VOID, VOID);
         ftTest1.m_aop = new Op[]
             {
             new DNVar(adapter.getClassTypeConstId("annotations.InjectedRef<io.Console>"),
@@ -96,7 +93,7 @@ public class xTestApp extends xModule
 
         // --- test2()
 
-        MethodTemplate ftTest2 = ensureMethodTemplate("test2", VOID);
+        MethodInfo ftTest2 = ensureMethodInfo("test2", VOID);
         ftTest2.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.test2() #")),
@@ -121,7 +118,6 @@ public class xTestApp extends xModule
             new HandlerEnd(1),
 
             new NVar(adapter.getClassTypeConstId("TestApp.TestClass"), adapter.ensureValueConstantId("t2")), // #3 (t2)
-new Nop(),
             new New_N(adapter.getMethodConstId("TestApp.TestClass2", "construct"),
                      new int[]{-adapter.ensureValueConstantId(42),
                               -adapter.ensureValueConstantId("Goodbye")}, 3),
@@ -146,7 +142,7 @@ new Nop(),
 
         // --- testService()
 
-        MethodTemplate ftLambda$1 = ensureMethodTemplate("lambda_1",
+        MethodInfo ftLambda$1 = ensureMethodInfo("lambda_1",
                 new String[]{"Int64", "Int64", "Exception"});
         ftLambda$1.m_aop = new Op[]
             { // #0 = c; #1 = r, #2 = x
@@ -158,7 +154,7 @@ new Nop(),
             };
         ftLambda$1.m_cVars = 3;
 
-        MethodTemplate ftTestService = ensureMethodTemplate("testService", VOID);
+        MethodInfo ftTestService = ensureMethodInfo("testService", VOID);
         ftTestService.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testService() #")),
@@ -243,7 +239,7 @@ new Nop(),
 
         // --- testService2 ---
 
-        MethodTemplate ftTestReturn = ensureMethodTemplate("testBlockingReturn",
+        MethodInfo ftTestReturn = ensureMethodInfo("testBlockingReturn",
                 new String[]{"Service"}, INT);
         ftTestReturn.m_aop = new Op[]
             { // #0 = svc
@@ -253,7 +249,7 @@ new Nop(),
             };
         ftTestReturn.m_cVars = 2;
 
-        MethodTemplate ftTestService2 = ensureMethodTemplate("testService2", VOID);
+        MethodInfo ftTestService2 = ensureMethodInfo("testService2", VOID);
         ftTestService2.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testService2() #")),
@@ -318,7 +314,7 @@ new Nop(),
 
         // --- testRef()
 
-        MethodTemplate ftTestRef = ensureMethodTemplate("testRef", STRING);
+        MethodInfo ftTestRef = ensureMethodInfo("testRef", STRING);
         ftTestRef.m_aop = new Op[]
             { // #0 = arg
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testRef() #")),
@@ -368,7 +364,7 @@ new Nop(),
 
         // --- testArray()
 
-        MethodTemplate ftLambda$2 = ensureMethodTemplate("lambda_2",
+        MethodInfo ftLambda$2 = ensureMethodInfo("lambda_2",
                 new String[]{"Ref<Int64>"}, STRING);
         ftLambda$2.m_aop = new Op[]
             { // #0 = i
@@ -381,7 +377,7 @@ new Nop(),
             };
         ftLambda$2.m_cVars = 3;
 
-        MethodTemplate ftTestArray = ensureMethodTemplate("testArray", VOID);
+        MethodInfo ftTestArray = ensureMethodInfo("testArray", VOID);
         ftTestArray.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testArray() #")),
@@ -428,7 +424,7 @@ new Nop(),
 
         // ----- testTuple()
 
-        MethodTemplate ftTestCond = ensureMethodTemplate("testConditional", INT, null);
+        MethodInfo ftTestCond = ensureMethodInfo("testConditional", INT, null);
         ftTestCond.m_aop = new Op[]
             { // #0 - i
             new Var(adapter.getClassTypeConstId("Boolean")), // #1
@@ -441,7 +437,7 @@ new Nop(),
             };
         ftTestCond.m_cVars = 2;
 
-        MethodTemplate ftTestTuple = ensureMethodTemplate("testTuple", VOID);
+        MethodInfo ftTestTuple = ensureMethodInfo("testTuple", VOID);
         ftTestTuple.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")),
@@ -508,7 +504,7 @@ new Nop(),
 
         ClassTemplate ctPoint = f_types.getTemplate("TestApp.Point");
         adapter.addMethod(ctPoint.f_struct, "construct", new String[] {"Int64", "Int64"}, VOID);
-        MethodTemplate mtConst = ctPoint.ensureMethodTemplate("construct", new String[]{"Int64", "Int64"});
+        MethodInfo mtConst = ctPoint.ensureMethodInfo("construct", new String[]{"Int64", "Int64"});
         mtConst.m_aop = new Op[]
             { // #0 = x; #1 = y
             new LSet(adapter.getPropertyConstId("TestApp.Point", "x"), 0),
@@ -518,7 +514,7 @@ new Nop(),
         mtConst.m_cVars = 2;
 
         // Point.to<String>()
-        MethodTemplate mtTo = ctPoint.ensureMethodTemplate("to", VOID, STRING);
+        MethodInfo mtTo = ctPoint.ensureMethodInfo("to", VOID, STRING);
         mtTo.m_aop = new Op[]
             {
             new IVar(adapter.getClassTypeConstId("String"), -adapter.ensureValueConstantId("(")), // #0
@@ -537,8 +533,8 @@ new Nop(),
         mtTo.m_cVars = 3;
 
         // Point.hash.get()
-        ctPoint.ensurePropertyTemplate("hash").m_fReadOnly = true;
-        MethodTemplate mtGetHash = ctPoint.ensureGetter("hash");
+        ctPoint.markCalculated("hash");
+        MethodInfo mtGetHash = ctPoint.ensureGetter("hash");
         mtGetHash.m_aop = new Op[]
             {
             new Var(adapter.getClassTypeConstId("Int64")), // (#0)
@@ -552,7 +548,7 @@ new Nop(),
 
         ClassTemplate ctRectangle = f_types.getTemplate("TestApp.Rectangle");
         adapter.addMethod(ctRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point"}, VOID);
-        MethodTemplate mtRectangle = ctRectangle.ensureMethodTemplate("construct", new String[]{"TestApp.Point", "TestApp.Point"});
+        MethodInfo mtRectangle = ctRectangle.ensureMethodInfo("construct", new String[]{"TestApp.Point", "TestApp.Point"});
         mtRectangle.m_aop = new Op[]
             { // #0 = tl; #1 = br
             new LSet(adapter.getPropertyConstId("TestApp.Rectangle", "tl"), 0),
@@ -561,7 +557,7 @@ new Nop(),
             };
         mtRectangle.m_cVars = 2;
 
-        MethodTemplate ftTestConst = ensureMethodTemplate("testConst", VOID);
+        MethodInfo ftTestConst = ensureMethodInfo("testConst", VOID);
         ftTestConst.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testConst() #")),
@@ -596,12 +592,25 @@ new Nop(),
             new PGet(3, adapter.getPropertyConstId("Const", "hash"), 4),
             new X_Print(4),
 
+            new IVar(adapter.getClassTypeConstId("Int64"),
+                    -adapter.ensureValueConstantId(42)), // #5
+            new PGet(5, adapter.getPropertyConstId("Const", "hash"), 5),
+            new X_Print(5),
+
+            new INVar(adapter.getClassTypeConstId("TestApp.Color"),
+                    adapter.ensureValueConstantId("c"),
+                    -adapter.ensureEnumConstId("TestApp.Color.Blue")), // #6
+            new X_Print(6),
+
+            new PGet(6, adapter.getPropertyConstId("Enum", "ordinal"), 4),
+            new X_Print(4),
+
             new Return_0()
             };
-        ftTestConst.m_cVars = 5;
+        ftTestConst.m_cVars = 9;
 
         // --- run()
-        MethodTemplate mtRun = ensureMethodTemplate("run", VOID, VOID);
+        MethodInfo mtRun = ensureMethodInfo("run", VOID, VOID);
         mtRun.m_aop = new Op[]
             {
             new Call_00(-adapter.getMethodConstId("TestApp", "test1")),

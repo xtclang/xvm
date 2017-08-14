@@ -30,8 +30,8 @@ public class xTestClass extends ClassTemplate
         adapter.addMethod(f_struct, "construct",STRING, VOID);
         adapter.addMethod(f_struct, "finally", STRING, VOID);
 
-        MethodTemplate construct = ensureMethodTemplate("construct", STRING);
-        MethodTemplate ftFinally = ensureMethodTemplate("finally", STRING);
+        MethodInfo construct = ensureMethodInfo("construct", STRING);
+        MethodInfo ftFinally = ensureMethodInfo("finally", STRING);
 
         construct.m_aop = new Op[]
             { // #0 = s
@@ -51,7 +51,7 @@ public class xTestClass extends ClassTemplate
         ftFinally.m_cVars = 1;
 
         // --- method1()
-        MethodTemplate mtMethod1 = ensureMethodTemplate("method1", VOID, INT);
+        MethodInfo mtMethod1 = ensureMethodInfo("method1", VOID, INT);
         mtMethod1.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
@@ -71,8 +71,8 @@ public class xTestClass extends ClassTemplate
         mtMethod1.m_cVars = 4;
 
         // ----- exceptional()
-        MethodTemplate mtExceptional = ensureMethodTemplate("exceptional",
-                new String[] {"String?"}, INT);
+        MethodInfo mtExceptional = ensureMethodInfo("exceptional",
+                new String[]{"String?"}, INT);
         mtExceptional.m_aop = new Op[]
             { // #0 = s
             new Var(adapter.getClassTypeConstId("Exception")), // #1
@@ -83,7 +83,7 @@ public class xTestClass extends ClassTemplate
         mtExceptional.m_cVars = 2;
 
         // ----- to<String>()
-        MethodTemplate mtTo = ensureMethodTemplate("to", VOID, STRING);
+        MethodInfo mtTo = ensureMethodInfo("to", VOID, STRING);
         mtTo.m_aop = new Op[]
             {
             new Var(adapter.getClassTypeConstId("String")), // #0

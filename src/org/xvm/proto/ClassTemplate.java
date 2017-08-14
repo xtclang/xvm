@@ -3,7 +3,6 @@ package org.xvm.proto;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
@@ -617,7 +616,7 @@ public abstract class ClassTemplate
 
         if (isRef(property))
             {
-            return getRefTemplate(f_types, property).invokePreInc(frame, hProp, null, iReturn);
+            return getRefTemplate(property).invokePreInc(frame, hProp, null, iReturn);
             }
 
         int nResult = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.RET_LOCAL);
@@ -643,7 +642,7 @@ public abstract class ClassTemplate
 
         if (isRef(property))
             {
-            return getRefTemplate(f_types, property).invokePostInc(frame, hProp, null, iReturn);
+            return getRefTemplate(property).invokePostInc(frame, hProp, null, iReturn);
             }
 
         int nResult = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.RET_LOCAL);
@@ -670,16 +669,15 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        MethodStructure method = hTarget.isStruct() ? null : Adapter.getGetter(property);
+        if (isNativeGetter(property))
+            {
+            return invokeNativeGet(frame, hTarget, property, iReturn);
+            }
 
+        MethodStructure method = hTarget.isStruct() ? null : Adapter.getGetter(property);
         if (method == null)
             {
             return getFieldValue(frame, hTarget, property, iReturn);
-            }
-
-        if (frame.f_adapter.isNative(method))
-            {
-            return invokeNativeGet(frame, hTarget, property, iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
@@ -763,26 +761,25 @@ public abstract class ClassTemplate
             {
             hException = xException.makeHandle("Immutable object: " + hTarget);
             }
-        else if (isReadOnly(property))
+        else if (isCalculated(property))
             {
             hException = xException.makeHandle("Read-only property: " + property.getName());
             }
 
         if (hException == null)
             {
-            MethodStructure method = hTarget.isStruct() ? null : Adapter.getSetter(property);
+            if (isNativeSetter(property))
+                {
+                return invokeNativeSet(frame, hTarget, property, hValue);
+                }
 
+            MethodStructure method = hTarget.isStruct() ? null : Adapter.getSetter(property);
             if (method == null)
                 {
                 hException = setFieldValue(hTarget, property, hValue);
                 }
             else
                 {
-                if (f_types.f_adapter.isNative(method))
-                    {
-                    return invokeNativeSet(frame, hTarget, property, hValue);
-                    }
-
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
                 ahVar[1] = hValue;
 
@@ -895,32 +892,44 @@ public abstract class ClassTemplate
 
     protected boolean isInjectable(PropertyStructure property)
         {
-        PropertyTemplate template = m_mapProperties.get(property.getName());
-        return template != null && template.m_fInjectable;
+        PropertyInfo info = property.getInfo();
+        return info != null && info.m_fInjectable;
         }
 
     protected boolean isAtomic(PropertyStructure property)
         {
-        PropertyTemplate template = m_mapProperties.get(property.getName());
-        return template != null && template.m_fAtomic;
+        PropertyInfo info = property.getInfo();
+        return info != null && info.m_fAtomic;
         }
 
-    protected boolean isReadOnly(PropertyStructure property)
+    protected boolean isCalculated(PropertyStructure property)
         {
-        PropertyTemplate template = m_mapProperties.get(property.getName());
-        return template != null && template.m_fReadOnly;
+        PropertyInfo info = property.getInfo();
+        return info != null && info.m_fCalculated;
+        }
+
+    protected boolean isNativeGetter(PropertyStructure property)
+        {
+        PropertyInfo info = property.getInfo();
+        return info != null && info.m_fNativeGetter;
+        }
+
+    protected boolean isNativeSetter(PropertyStructure property)
+        {
+        PropertyInfo info = property.getInfo();
+        return info != null && info.m_fNativeSetter;
         }
 
     protected boolean isRef(PropertyStructure property)
         {
-        PropertyTemplate template = m_mapProperties.get(property.getName());
-        return template != null && template.m_templateRef != null;
+        PropertyInfo info = property.getInfo();
+        return info != null && info.m_templateRef != null;
         }
 
-    protected ClassTemplate getRefTemplate(TypeSet types, PropertyStructure property)
+    protected ClassTemplate getRefTemplate(PropertyStructure property)
         {
-        PropertyTemplate template = m_mapProperties.get(property.getName());
-        return template == null ? null : template.m_templateRef;
+        PropertyInfo info = property.getInfo();
+        return info == null ? null : info.m_templateRef;
         }
 
     protected boolean isGenericType(String sProperty)
@@ -937,103 +946,119 @@ public abstract class ClassTemplate
 
     public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
-        ensureMethodTemplate(sName, asParamType, asRetType).m_fNative = true;
+        ensureMethodInfo(sName, asParamType, asRetType).m_fNative = true;
         }
 
-    public MethodTemplate ensureMethodTemplate(String sName, String[] asParam)
+    public MethodInfo ensureMethodInfo(String sName, String[] asParam)
         {
-        return ensureMethodTemplate(sName, asParam, VOID);
+        return ensureMethodInfo(sName, asParam, VOID);
         }
 
-    public MethodTemplate ensureMethodTemplate(String sName, String[] asParam, String[] asRet)
+    public MethodInfo ensureMethodInfo(String sName, String[] asParam, String[] asRet)
         {
         MethodStructure method = f_types.f_adapter.getMethod(f_sName, sName, asParam, asRet);
 
-        return m_mapMethods.computeIfAbsent(method.getIdentityConstant(), (id) -> new MethodTemplate(method));
+        return ensureMethodInfo(method);
         }
 
-    public MethodTemplate getMethodTemplate(MethodConstant constMethod)
+    public MethodInfo ensureMethodInfo(MethodStructure method)
         {
-        return m_mapMethods.get(constMethod);
+        MethodInfo info = method.getInfo();
+        if (info == null)
+            {
+            method.setInfo(info = new MethodInfo(method));
+            }
+        return info;
+        }
+
+    public void markInjectable(String sPropName)
+        {
+        ensurePropertyInfo(sPropName).m_fInjectable = true;
+        }
+
+    public void markCalculated(String sPropName)
+        {
+        ensurePropertyInfo(sPropName).m_fCalculated = true;
+        }
+
+    public void markAtomicRef(String sPropName)
+        {
+        ensurePropertyInfo(sPropName).markAtomic();
         }
 
     public void markNativeGetter(String sPropName)
         {
-        ensureGetter(sPropName).m_fNative = true;
+        ensurePropertyInfo(sPropName).m_fNativeGetter = true;
         }
 
     public void markNativeSetter(String sPropName)
         {
-        ensureSetter(sPropName).m_fNative = true;
+        ensurePropertyInfo(sPropName).m_fNativeSetter = true;
         }
 
-    public MethodTemplate ensureGetter(String sPropName)
+    public MethodInfo ensureGetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
-        MethodStructure getter = Adapter.getGetter(prop);
-        MethodConstant constId = getter == null ?
-                prop.getConstantPool().ensureMethodConstant(prop.getIdentityConstant(),
-                        "get", Constants.Access.PUBLIC,
-                        ConstantPool.NO_TYPES, ConstantPool.NO_TYPES) :
-                getter.getIdentityConstant();
 
-        return m_mapMethods.computeIfAbsent(constId, (id) -> new MethodTemplate(getter));
+        return ensureMethodInfo(Adapter.getGetter(prop));
         }
 
-    public MethodTemplate ensureSetter(String sPropName)
+    public MethodInfo ensureSetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
-        MethodStructure setter = Adapter.getSetter(prop);
-        MethodConstant constId = setter == null ?
-                prop.getConstantPool().ensureMethodConstant(prop.getIdentityConstant(),
-                        "set", Constants.Access.PUBLIC,
-                        ConstantPool.NO_TYPES, ConstantPool.NO_TYPES) :
-                setter.getIdentityConstant();
 
-        return m_mapMethods.computeIfAbsent(constId, (id) -> new MethodTemplate(setter));
+        return ensureMethodInfo(Adapter.getSetter(prop));
         }
 
-    public static class MethodTemplate
+    public static class MethodInfo
         {
         public final MethodStructure f_struct;
         public boolean m_fNative;
         public Op[] m_aop;
         public int m_cVars;
         public int m_cScopes = 1;
-        public MethodTemplate m_mtFinally;
+        public MethodInfo m_mtFinally;
 
-        public MethodTemplate(MethodStructure struct)
+        public MethodInfo(MethodStructure struct)
             {
             f_struct = struct;
             }
         }
 
-    public PropertyTemplate ensurePropertyTemplate(String sPropName)
+    public PropertyInfo ensurePropertyInfo(String sPropName)
         {
-        return m_mapProperties.computeIfAbsent(sPropName,
-                (sName) -> new PropertyTemplate(this, getProperty(sName)));
+        PropertyStructure property = getProperty(sPropName);
+
+        PropertyInfo info = property.getInfo();
+        if (info == null)
+            {
+            property.setInfo(info = new PropertyInfo(f_types, property));
+            }
+        return info;
         }
 
-    public static class PropertyTemplate
+    public static class PropertyInfo
         {
-        public final ClassTemplate f_templateClass;
-        public final PropertyStructure f_property;
-        public boolean m_fAtomic;
-        public boolean m_fInjectable;
-        public boolean m_fReadOnly;
-        public ClassTemplate m_templateRef;
+        protected final TypeSet f_types;
+        protected final PropertyStructure f_property;
+        protected boolean m_fAtomic;
+        protected boolean m_fInjectable;
+        protected boolean m_fCalculated;
+        protected boolean m_fNativeGetter;
+        protected boolean m_fNativeSetter;
+        protected ClassTemplate m_templateRef;
 
-        public PropertyTemplate(ClassTemplate template, PropertyStructure property)
+        public PropertyInfo(TypeSet types, PropertyStructure property)
             {
-            f_templateClass = template;
+            f_types = types;
             f_property = property;
             }
 
-        public void markAsAtomicRef()
+        protected void markAtomic()
             {
             m_fAtomic = true;
 
-            TypeConstant constType = f_templateClass.f_types.f_adapter.resolveType(f_property);
+            TypeConstant constType = f_types.f_adapter.resolveType(f_property);
             if (constType instanceof ClassTypeConstant &&
                     ((ClassTypeConstant) constType).getClassConstant().getName().equals("Int64"))
                 {
@@ -1047,12 +1072,9 @@ public abstract class ClassTemplate
 
         public void markAsRef(String sRefClassName)
             {
-            m_templateRef = f_templateClass.f_types.getTemplate(sRefClassName);
+            m_templateRef = f_types.getTemplate(sRefClassName);
             }
         }
-
-    private Map<MethodConstant, MethodTemplate> m_mapMethods = new HashMap<>();
-    private Map<String, PropertyTemplate> m_mapProperties = new HashMap<>();
 
     public static String[] VOID = new String[0];
     public static String[] OBJECT = new String[]{"Object"};

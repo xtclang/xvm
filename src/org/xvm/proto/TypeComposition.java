@@ -438,12 +438,12 @@ public class TypeComposition
                     RefHandle hRef = null;
                     if (template.isRef(prop))
                         {
-                        xRef referent = (xRef) template.getRefTemplate(template.f_types, prop);
+                        xRef referent = (xRef) template.getRefTemplate(prop);
 
                         hRef = referent.createRefHandle(referent.f_clazzCanonical, null);
                         }
 
-                    if (!template.isReadOnly(prop) || hRef != null)
+                    if (!template.isCalculated(prop) || hRef != null)
                         {
                         mapCached.put(prop.getName(), hRef);
                         }

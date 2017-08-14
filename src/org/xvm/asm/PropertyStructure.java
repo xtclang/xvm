@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.proto.ClassTemplate;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -64,6 +65,25 @@ public class PropertyStructure
         m_type = type;
         }
 
+    /**
+     * @return the transient property info
+     */
+    public ClassTemplate.PropertyInfo getInfo()
+        {
+        return m_info;
+        }
+
+    /**
+     * Store the transient property info.
+     */
+    public void setInfo(ClassTemplate.PropertyInfo info)
+        {
+        if (m_info != null)
+            {
+            throw new IllegalStateException("Info is not resettable");
+            }
+        m_info = info;
+        }
 
     // ----- component methods ---------------------------------------------------------------------
 
@@ -117,4 +137,11 @@ public class PropertyStructure
     // ----- fields --------------------------------------------------------------------------------
 
     private TypeConstant m_type;
+
+    // ----- TEMPORARY ------
+
+    /**
+     * The transient run-time method data.
+     */
+    private transient ClassTemplate.PropertyInfo m_info;
     }

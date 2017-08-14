@@ -121,6 +121,11 @@ public class Adapter
         return fNullable ? pool.ensureNullableTypeConstant(constType) : constType;
         }
 
+    public int ensureEnumConstId(String sEnum)
+        {
+        return f_container.f_types.getClassConstant(sEnum).getPosition();
+        }
+
     public int getMethodConstId(String sClassName, String sMethName)
         {
         return getMethodConstId(sClassName, sMethName, null, null);
@@ -214,10 +219,10 @@ public class Adapter
             String sType = asType[i].trim();
             if (template != null && template.isGenericType(sType))
                 {
-                ClassTypeConstant constClass = template.getTypeConstant();
-                PropertyStructure prop = template.getProperty(sType);
+//                ClassTypeConstant constClass = template.getTypeConstant();
 //                aType[i] = pool.ensureParameterTypeConstant(constClass, sType);
 // TODO: review
+                PropertyStructure prop = template.getProperty(sType);
                 aType[i] = pool.ensureClassTypeConstant(prop.getIdentityConstant(), Constants.Access.PUBLIC);
                 }
             else
@@ -295,7 +300,7 @@ public class Adapter
 
     public int getScopeCount(MethodStructure method)
         {
-        ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
+        ClassTemplate.MethodInfo tm = method.getInfo();
         return tm == null ? 1 : tm.m_cScopes;
         }
 
@@ -307,7 +312,7 @@ public class Adapter
 
     public int getVarCount(MethodStructure method)
         {
-        ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
+        ClassTemplate.MethodInfo tm = method.getInfo();
         return tm == null || tm.m_fNative ? // this can only be a constructor
                 method.getIdentityConstant().getRawParams().length:
                 tm.m_cVars;
@@ -315,32 +320,21 @@ public class Adapter
 
     public Op[] getOps(MethodStructure method)
         {
-        ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
+        ClassTemplate.MethodInfo tm = method.getInfo();
         return tm == null ? null : tm.m_aop;
         }
 
     public MethodStructure getFinalizer(MethodStructure constructor)
         {
-        ClassTemplate.MethodTemplate tmConstruct = getMethodTemplate(constructor);
-        ClassTemplate.MethodTemplate tmFinally = tmConstruct == null ? null : tmConstruct.m_mtFinally;
+        ClassTemplate.MethodInfo tmConstruct = constructor.getInfo();
+        ClassTemplate.MethodInfo tmFinally = tmConstruct == null ? null : tmConstruct.m_mtFinally;
         return tmFinally == null ? null : tmFinally.f_struct;
         }
 
     public boolean isNative(MethodStructure method)
         {
-        ClassTemplate.MethodTemplate tm = getMethodTemplate(method);
+        ClassTemplate.MethodInfo tm = method.getInfo();
         return tm != null && tm.m_fNative;
-        }
-
-    private ClassTemplate.MethodTemplate getMethodTemplate(MethodStructure method)
-        {
-        MultiMethodStructure mms = (MultiMethodStructure) method.getParent();
-        Component container = mms.getParent();
-
-        // the container is either a class or a property
-        ClassStructure clazz = (ClassStructure) (container instanceof ClassStructure ? container : container.getParent());
-        ClassTemplate template = f_container.f_types.getTemplate(clazz.getIdentityConstant());
-        return template.getMethodTemplate(method.getIdentityConstant());
         }
 
     public static MethodStructure getGetter(PropertyStructure property)
