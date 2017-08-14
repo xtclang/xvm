@@ -60,6 +60,16 @@ public interface Constants
     public static final String X_CLASS_ARRAY = "collections.Array";
 
     /**
+     * The name of the Tuple class.
+     */
+    public static final String X_CLASS_TUPLE = "collections.Tuple";
+
+    /**
+     * The name of the Set class.
+     */
+    public static final String X_CLASS_SET = "collections.Set";
+
+    /**
      * The name of the Sequence interface.
      */
     public static final String X_CLASS_SEQUENCE = "collections.Sequence";

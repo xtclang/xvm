@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import static org.xvm.util.Handy.readIndex;
+import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -47,7 +47,7 @@ public class LiteralConstant
             throws IOException
         {
         this(pool, format);
-        m_iStr = readIndex(in);
+        m_iStr = readMagnitude(in);
         }
 
     /**
