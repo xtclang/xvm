@@ -83,6 +83,50 @@ public class ClassConstant
         }
 
     /**
+     * Determine if this ClassConstant is from the Ecstasy module and matches the specified class
+     * name.
+     *
+     * @param sName  the qualified class name
+     *
+     * @return true iff this ClassConstant is part of the Ecstasy module and has the specified name
+     */
+    public boolean isEcstasyClass(String sName)
+        {
+        if (sName == null || sName.length() == 0)
+            {
+            throw new IllegalArgumentException("name required");
+            }
+
+        IdentityConstant constName = this;
+        do
+            {
+            int    ofDot = sName.indexOf('.');
+            String sSimple;
+            if (ofDot >= 0)
+                {
+                sSimple = sName.substring(ofDot + 1);
+                sName   = sName.substring(0, ofDot);
+                }
+            else
+                {
+                sSimple = sName;
+                sName   = "";
+                }
+
+            if (!constName.getName().equals(sName))
+                {
+                return false;
+                }
+
+            constName = constName.getParentConstant();
+            }
+        while (sName.length() > 0 && constName != null);
+
+        return sName.length() == 0 && constName instanceof ModuleConstant
+                && ((ModuleConstant) constName).isEcstasyModule();
+        }
+
+    /**
      * @return the ClassTypeConstant for the public interface of this class
      */
     public ClassTypeConstant asTypeConstant()

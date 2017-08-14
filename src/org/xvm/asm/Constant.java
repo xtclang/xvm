@@ -420,13 +420,13 @@ public abstract class Constant
         DateTime,       // ISO8601 date ['T' time] format
         Duration,       // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
         TimeInterval,   // ISO8601 datetime '/' datetime format
-        Enum,           // TODO enum value class
-        Tuple,          // TODO type, # elements, foreach:{E}
-        Array,          // TODO type, # elements, foreach:{E}
+        Enum,
+        Tuple,
+        Array,
         UInt8Array,     // byte[]
-        Set,            // TODO type, # elements, foreach:{E}
-        MapEntry,       // TODO typeK, typeV, K, V
-        Map,            // TODO typeK, typeV, # entries, foreach:{K, V}
+        Set,
+        MapEntry,
+        Map,
         Module,
         Package,
         Class,
