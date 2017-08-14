@@ -2,6 +2,7 @@ package org.xvm.type;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import java.math.BigDecimal;
@@ -110,6 +111,12 @@ public class Decimal32
         {
         // G0 and G1 must not both be 1, and G2-G4 must be 0, and T (rightmost 20 bits) must be 0
         return (leftmost7Bits() & 0b0110000) != 0b0110000 && (m_nBits & 0b00011100000011111111111111111111) == 0;
+        }
+
+    @Override
+    public void writeBytes(DataOutput out) throws IOException
+        {
+        out.writeInt(m_nBits);
         }
 
     /**
