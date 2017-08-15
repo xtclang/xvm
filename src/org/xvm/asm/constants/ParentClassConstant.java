@@ -46,7 +46,7 @@ public class ParentClassConstant
      * @param pool        the ConstantPool that will contain this Constant
      * @param constChild  a TypeConstant that this constant represents the enclosing parent of
      */
-    public ParentClassConstant(ConstantPool pool, IdentityConstant constChild)
+    public ParentClassConstant(ConstantPool pool, PseudoConstant constChild)
         {
         super(pool);
 
@@ -179,5 +179,5 @@ public class ParentClassConstant
     /**
      * The child class that this is a parent class of.
      */
-    private IdentityConstant m_constChild;
+    private PseudoConstant m_constChild;
     }

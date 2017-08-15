@@ -85,6 +85,59 @@ public abstract class Constant
     public abstract Format getFormat();
 
     /**
+     * @return true iff this constant represents a type at runtime, whether or not the exact
+     *         type is known at compile time
+     */
+    public boolean isType()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff this constant represents a value at runtime, whether or not the exact
+     *         value is known at compile time
+     */
+    public boolean isValue()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff this constant represents a class at runtime, whether or not the exact
+     *         identity of the class is known at compile time
+     */
+    public boolean isClass()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff this constant represents an auto-narrowing identity
+     */
+    public boolean isAutoNarrowing()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff this constant represents a property at runtime, whether or not the exact
+     *         identity of the property is known at compile time
+     */
+    public boolean isProperty()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff this constant represents a method at runtime, whether or not the exact
+     *         identity of the method is known at compile time
+     */
+    public boolean isMethod()
+        {
+        return false;
+        }
+
+    /**
      * Create a clone of this Constant so that it can be adopted by a different ConstantPool.
      *
      * @param pool  the pool that will hold the clone of this Constant

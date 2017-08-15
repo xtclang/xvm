@@ -4,7 +4,10 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import static org.xvm.util.Handy.readMagnitude;
 
 
 /**
@@ -27,7 +30,9 @@ public class ChildClassConstant
     public ChildClassConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
-        super(pool, format, in);
+        super(pool);
+        m_iParent = readMagnitude(in);
+        m_iName   = readMagnitude(in);
         }
 
     /**
@@ -38,14 +43,32 @@ public class ChildClassConstant
      * @param constParent  the parent class, which must be an auto-narrowing identity constant
      * @param sName        the child name
      */
-    public ChildClassConstant(ConstantPool pool, IdentityConstant constParent, String sName)
+    public ChildClassConstant(ConstantPool pool, PseudoConstant constParent, String sName)
         {
-        super(pool, constParent, sName);
+        super(pool);
+
+        if (constParent == null)
+            {
+            throw new IllegalArgumentException("parent required");
+            }
+
+        if (!constParent.isClass())
+            {
+            throw new IllegalArgumentException("parent does not represent a class: " + constParent);
+            }
 
         if (!constParent.isAutoNarrowing())
             {
             throw new IllegalArgumentException("parent is not auto-narrowing: " + constParent);
             }
+
+        if (sName == null)
+            {
+            throw new IllegalArgumentException("name required");
+            }
+
+        m_constParent = constParent;
+        m_constName   = pool.ensureCharStringConstant(sName);
         }
 
 
@@ -59,22 +82,12 @@ public class ChildClassConstant
         return getConstantPool().ensureThisTypeConstant(Access.PUBLIC);
         }
 
-
-    // ----- NamedConstant methods -----------------------------------------------------------------
-
-    @Override
-    public String getDescription()
+    /**
+     * @return TODO
+     */
+    public String getName()
         {
-        // TODO need more info, but must first figure out what we want to show and how to show it
-        return "child=" + getName();
-        }
-
-    // ----- IdentityConstant methods --------------------------------------------------------------
-
-    @Override
-    public boolean isAutoNarrowing()
-        {
-        return true;
+        return m_constName.getValue();
         }
 
 
@@ -87,10 +100,60 @@ public class ChildClassConstant
         }
 
     @Override
+    public boolean isAutoNarrowing()
+        {
+        return true;
+        }
+
+    @Override
     public Object getLocator()
         {
-        return getParentConstant() instanceof ThisClassConstant      // indicates "this:class"
+        return m_constParent instanceof ThisClassConstant      // indicates "this:class"
                 ? getName()
                 : null;
         }
+
+    @Override
+    protected int compareDetails(Constant that)
+        {
+        int nResult = m_constParent.compareTo(((ChildClassConstant) that).m_constParent);
+        if (nResult == 0)
+            {
+            nResult = m_constName.compareTo(((ChildClassConstant) that).m_constName);
+            }
+        return nResult;
+        }
+
+    @Override
+    public String getDescription()
+        {
+        // TODO need more info, but must first figure out what we want to show and how to show it
+        return "child=" + getName();
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * During disassembly, this holds the index of the constant that specifies the parent of the
+     * auto-narrowing child. (The parent must itself be auto-narrowing.)
+     */
+    private int m_iParent;
+
+    /**
+     * During disassembly, this holds the index of the constant that specifies the name of the
+     * child.
+     */
+    private int m_iName;
+
+    /**
+     * The constant that identifies the auto-narrowing parent of the child represented by this
+     * constant.
+     */
+    private PseudoConstant m_constParent;
+
+    /**
+     * The constant that holds the name of the child identified by this constant.
+     */
+    private StringConstant m_constName;
     }

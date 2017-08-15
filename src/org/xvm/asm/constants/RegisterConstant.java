@@ -5,9 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.List;
-
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -49,45 +46,12 @@ public class RegisterConstant
         {
         super(pool);
 
-        if (iReg < 0 || iReg > 0xFF)
+        if (iReg < 0 || iReg > 0xFF)    // arbitrary limit; basically just a sanity assertion
             {
             throw new IllegalArgumentException("register (" + iReg + ") out of range");
             }
 
         m_iReg = iReg;
-        }
-
-
-    // ----- IdentityConstant methods --------------------------------------------------------------
-
-    @Override
-    public IdentityConstant getParentConstant()
-        {
-        return null;
-        }
-
-    @Override
-    public String getName()
-        {
-        return "#" + m_iReg;
-        }
-
-    @Override
-    public List<IdentityConstant> getIdentityConstantPath()
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    public Component getComponent()
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    protected StringBuilder buildPath()
-        {
-        throw new UnsupportedOperationException();
         }
 
 
@@ -106,11 +70,6 @@ public class RegisterConstant
         }
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        }
-
-    @Override
     protected int compareDetails(Constant that)
         {
         return this.m_iReg - ((RegisterConstant) that).m_iReg;
@@ -119,7 +78,8 @@ public class RegisterConstant
     @Override
     public String getValueString()
         {
-        return getName();
+        // unfortunately, there's no syntax for "register number", so use this pseudo-syntax
+        return "#" + m_iReg;
         }
 
 

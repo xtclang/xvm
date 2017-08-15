@@ -5,15 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.List;
-import java.util.function.Consumer;
-
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
-import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -37,35 +30,16 @@ public class ThisClassConstant
             throws IOException
         {
         super(pool);
-        m_iName = readMagnitude(in);
         }
 
     /**
-     * Construct a constant whose value is a symbolic identifier.
+     * Construct a constant whose value is the auto-narrowing identifier "this:class".
      *
-     * @param pool     the ConstantPool that will contain this Constant
-     * @param sName    the symbolic name
+     * @param pool  the ConstantPool that will contain this Constant
      */
-    public ThisClassConstant(ConstantPool pool, String sName)
+    public ThisClassConstant(ConstantPool pool)
         {
         super(pool);
-
-        if (sName == null)
-            {
-            throw new IllegalArgumentException("name required");
-            }
-
-        switch (sName)
-            {
-            case THIS_TYPE:
-            case THIS_CLASS:
-                break;
-
-            default:
-                throw new IllegalArgumentException("illegal name=" + sName);
-            }
-
-        m_constName = pool.ensureCharStringConstant(sName);
         }
 
 
@@ -80,45 +54,6 @@ public class ThisClassConstant
         }
 
 
-    // ----- IdentityConstant methods --------------------------------------------------------------
-
-    @Override
-    public IdentityConstant getParentConstant()
-        {
-        return null;
-        }
-
-    @Override
-    public String getName()
-        {
-        return m_constName.getValue();
-        }
-
-    @Override
-    public List<IdentityConstant> getIdentityConstantPath()
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    public Component getComponent()
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    protected StringBuilder buildPath()
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    public boolean isAutoNarrowing()
-        {
-        return true;
-        }
-
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -128,40 +63,21 @@ public class ThisClassConstant
         }
 
     @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
-        visitor.accept(m_constName);
-        }
-
-    @Override
     public Object getLocator()
         {
-        return m_constName.getLocator();
-        }
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
-        }
-
-    @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        m_constName = (StringConstant) pool.register(m_constName);
+        return THIS_CLASS;
         }
 
     @Override
     protected int compareDetails(Constant that)
         {
-        return this.m_constName.compareTo(((ThisClassConstant) that).m_constName);
+        return 0;
         }
 
     @Override
     public String getValueString()
         {
-        return m_constName.getValue();
+        return THIS_CLASS;
         }
 
 
@@ -172,13 +88,12 @@ public class ThisClassConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constName.getPosition());
         }
 
     @Override
     public String getDescription()
         {
-        return "name=" + getName();
+        return "name=" + THIS_CLASS;
         }
 
 
@@ -187,13 +102,15 @@ public class ThisClassConstant
     @Override
     public int hashCode()
         {
-        return m_constName.hashCode();
+        return -99;
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    public static final String THIS_TYPE  = "this:type";
+    /**
+     * The source code identifier of the auto-narrowing "this class".
+     */
     public static final String THIS_CLASS = "this:class";
 
     /**
