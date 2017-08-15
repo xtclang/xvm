@@ -9,8 +9,12 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xObject;
@@ -231,25 +235,66 @@ public class TypeSet
             TypeConstant constTyp = (TypeConstant)
                     f_container.f_pool.getConstant(nClassConstId); // must exist
 
-            typeComposition = resolve(constTyp);
+            typeComposition = resolveComposition(constTyp);
 
             f_mapConstCompositions.put(nClassConstId, typeComposition);
             }
         return typeComposition;
         }
 
-    // produce a TypeComposition based on the specified ClassTypeConstant
-    protected TypeComposition resolve(TypeConstant constType)
+    // produce a TypeComposition based on the specified TypeConstant
+    protected TypeComposition resolveComposition(TypeConstant constType)
         {
         if (constType instanceof ClassTypeConstant)
             {
             ClassTypeConstant constClassType = (ClassTypeConstant) constType;
             ClassTemplate template = getTemplate(constClassType.getClassConstant());
-            return template.resolve(constClassType, Collections.EMPTY_MAP);
+            return template.resolveClass(constClassType, Collections.EMPTY_MAP);
             }
 
-        // TODO: create TypeComposition for Union and Intersection types
-        throw new UnsupportedOperationException();
+        if (constType instanceof IntersectionTypeConstant ||
+                constType instanceof UnionTypeConstant)
+            {
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        throw new IllegalArgumentException("Unresolved type constant: " + constType);
+        }
+
+    // resolve a parameter type given a map of actual parameter types
+    public Type resolveParameterType(TypeConstant constType, Map<String, Type> mapActual)
+        {
+        if (constType instanceof UnresolvedTypeConstant)
+            {
+            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+            }
+
+        if (constType instanceof ClassTypeConstant)
+            {
+            ClassTypeConstant constClass = (ClassTypeConstant) constType;
+            ClassTemplate template = getTemplate(constClass.getClassConstant());
+            return template.resolveClass(constClass, mapActual).ensurePublicType();
+            }
+
+        if (constType instanceof ParameterTypeConstant)
+            {
+            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
+            Type type = mapActual.get(constParam.getName());
+
+            if (type == null)
+                {
+                throw new IllegalArgumentException("Unresolved type constant: " + constParam);
+                }
+            return type;
+            }
+
+        if (constType instanceof IntersectionTypeConstant ||
+                constType instanceof UnionTypeConstant)
+            {
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        throw new IllegalArgumentException("Unresolved type constant: " + constType);
         }
 
     // ----- Types -----

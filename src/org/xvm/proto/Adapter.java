@@ -17,7 +17,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.util.Handy;
 
@@ -133,16 +132,18 @@ public class Adapter
 
     public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
         {
-        return getMethod(sClassName, sMethName, asArgType, asRetType)
+        ClassTemplate template = f_container.f_types.getTemplate(sClassName);
+
+        return getMethod(template, sMethName, asArgType, asRetType)
                 .getIdentityConstant().getPosition();
         }
 
-    public MethodStructure getMethod(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
+    public MethodStructure getMethod(ClassTemplate template, String sMethName, String[] asArgType, String[] asRetType)
         {
-        ClassTemplate template = f_container.f_types.getTemplate(sClassName);
         TypeConstant[] atArg = getTypeConstants(template, asArgType);
         TypeConstant[] atRet = getTypeConstants(template, asRetType);
 
+        ClassTemplate templateTop = template;
         MethodStructure method;
         do
             {
@@ -168,9 +169,9 @@ public class Adapter
 
         if (method == null && asArgType != null)
             {
-            method = getMethod(sClassName, sMethName, null, null);
+            method = getMethod(templateTop, sMethName, null, null);
 
-            System.out.println("\n******** parameter mismatch at " + sClassName + "#" + sMethName);
+            System.out.println("\n******** parameter mismatch at " + templateTop.f_sName + "#" + sMethName);
             System.out.println("         arguments " + Arrays.toString(atArg));
             System.out.println("         return " + Arrays.toString(atRet));
             System.out.println("         found " + method.getIdentityConstant() + "\n");
@@ -181,7 +182,7 @@ public class Adapter
                 }
             }
 
-        throw new IllegalArgumentException("Method is not defined: " + sClassName + '#' + sMethName);
+        throw new IllegalArgumentException("Method is not defined: " + templateTop + '#' + sMethName);
         }
 
     public int getPropertyConstId(String sClassName, String sPropName)
@@ -351,22 +352,5 @@ public class Adapter
 
         // TODO: use the type
         return mms == null ? null : (MethodStructure) mms.children().get(0);
-        }
-
-    public TypeConstant resolveType(PropertyStructure property)
-        {
-        TypeConstant constType = property.getType();
-
-        if (constType instanceof UnresolvedTypeConstant)
-            {
-            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
-            }
-
-        if (constType instanceof ClassTypeConstant)
-            {
-            return constType;
-            }
-
-        throw new UnsupportedOperationException("Unsupported type: " + constType + " for " + property);
         }
     }

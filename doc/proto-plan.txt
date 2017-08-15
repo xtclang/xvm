@@ -59,6 +59,8 @@
 
 + implement missing enum methods
 
+- mixin processing
+
 - Property and Method
 
 - Class, Type

@@ -65,11 +65,11 @@ public class xTuple
     protected TypeComposition createCanonicalClass()
         {
         // this is Void.class
-        return new TypeComposition(this, Collections.EMPTY_MAP);
+        return new TypeComposition(this, Collections.EMPTY_MAP, true);
         }
 
     @Override
-    public TypeComposition resolve(ClassTypeConstant constClassType, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(ClassTypeConstant constClassType, Map<String, Type> mapActual)
         {
         List<TypeConstant> listParams = constClassType.getTypeConstants();
 
@@ -83,7 +83,7 @@ public class xTuple
         for (int i = 0, c = listParams.size(); i < c; i++)
             {
             mapParams.put("ElementTypes[" + i + ']',
-                    resolveParameterType(listParams.get(i), mapActual));
+                    f_types.resolveParameterType(listParams.get(i), mapActual));
             }
         return ensureClass(mapParams);
         }

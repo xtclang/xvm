@@ -11,16 +11,15 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 
 import org.xvm.proto.template.collections.xArray;
+import org.xvm.proto.template.collections.xTuple;
 import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xEnum;
@@ -155,14 +154,15 @@ public abstract class ClassTemplate
         else
             {
             mapParamsActual = new HashMap<>(mapParams.size());
-            Type typeObject = xObject.INSTANCE.f_clazzCanonical.ensurePublicType();
             for (StringConstant constName : mapParams.keySet())
                 {
+                TypeConstant constType = mapParams.get(constName);
+                Type typeObject = f_types.resolveParameterType(constType, Collections.EMPTY_MAP);
                 mapParamsActual.put(constName.getValue(), typeObject);
                 }
             }
 
-        return new TypeComposition(this, mapParamsActual);
+        return new TypeComposition(this, mapParamsActual, true);
         }
 
     public boolean isRootObject()
@@ -359,7 +359,7 @@ public abstract class ClassTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
-    public TypeComposition resolve(ClassTypeConstant constClassType, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(ClassTypeConstant constClassType, Map<String, Type> mapActual)
         {
         assert constClassType.getClassConstant().getPathString().equals(f_sName);
 
@@ -378,52 +378,28 @@ public abstract class ClassTemplate
         for (String sParamName : f_listGenericParams)
             {
             mapActualParams.put(sParamName,
-                    resolveParameterType(listParams.get(ix++), mapActual));
+                    f_types.resolveParameterType(listParams.get(ix++), mapActual));
             }
         return ensureClass(mapActualParams);
-        }
-
-    // resolve a parameter type
-    protected Type resolveParameterType(TypeConstant constParamType, Map<String, Type> mapActual)
-        {
-        if (constParamType instanceof ClassTypeConstant)
-            {
-            ClassTypeConstant constClass = (ClassTypeConstant) constParamType;
-            ClassTemplate template = f_types.getTemplate(constClass.getClassConstant());
-            return template.resolve(constClass, mapActual).ensurePublicType();
-            }
-
-        if (constParamType instanceof ParameterTypeConstant)
-            {
-            ParameterTypeConstant constParam = (ParameterTypeConstant) constParamType;
-            Type type = mapActual.get(constParam.getName());
-
-            if (type == null)
-                {
-                throw new IllegalArgumentException("Unresolved type parameter: " + constParam);
-                }
-            return type;
-            }
-
-        if (constParamType instanceof IntersectionTypeConstant ||
-                constParamType instanceof UnionTypeConstant)
-            {
-            throw new UnsupportedOperationException("TODO");
-            }
-
-        throw new IllegalArgumentException("Unresolved type constant: " + constParamType);
         }
 
     // produce a TypeComposition for this template using the actual types for formal parameters
     public TypeComposition ensureClass(Map<String, Type> mapParams)
         {
+        assert mapParams.size() == f_listGenericParams.size() || this instanceof xTuple;
+
+        if (mapParams.isEmpty())
+            {
+            return f_clazzCanonical;
+            }
+
         // sort the parameters by name and use the list of sorted (by formal name) types as a key
         Map<String, Type> mapSorted = mapParams.size() > 1 ?
                 new TreeMap<>(mapParams) : mapParams;
         List<Type> key = new ArrayList<>(mapSorted.values());
 
         return m_mapCompositions.computeIfAbsent(key,
-                (x) -> new TypeComposition(this, mapParams));
+                (x) -> new TypeComposition(this, mapParams, false));
         }
 
     @Override
@@ -710,8 +686,7 @@ public abstract class ClassTemplate
             String sErr;
             if (isInjectable(property))
                 {
-                TypeConstant constType = frame.f_adapter.resolveType(property);
-                TypeComposition clz = f_types.resolve(constType);
+                TypeComposition clz = hThis.f_clazz.resolveClass(property.getType());
 
                 hValue = frame.f_context.f_container.getInjectable(sName, clz);
                 if (hValue != null)
@@ -956,7 +931,7 @@ public abstract class ClassTemplate
 
     public MethodInfo ensureMethodInfo(String sName, String[] asParam, String[] asRet)
         {
-        MethodStructure method = f_types.f_adapter.getMethod(f_sName, sName, asParam, asRet);
+        MethodStructure method = f_types.f_adapter.getMethod(this, sName, asParam, asRet);
 
         return ensureMethodInfo(method);
         }
@@ -1058,7 +1033,11 @@ public abstract class ClassTemplate
             {
             m_fAtomic = true;
 
-            TypeConstant constType = f_types.f_adapter.resolveType(f_property);
+            TypeConstant constType = f_property.getType();
+            if (constType instanceof UnresolvedTypeConstant)
+                {
+                constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+                }
             if (constType instanceof ClassTypeConstant &&
                     ((ClassTypeConstant) constType).getClassConstant().getName().equals("Int64"))
                 {

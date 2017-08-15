@@ -40,7 +40,7 @@ public class xObject
     @Override
     public void initDeclared()
         {
-        TO_STRING = f_types.f_adapter.getMethod("Object", "to", VOID, STRING).getIdentityConstant();
+        TO_STRING = f_types.f_adapter.getMethod(this, "to", VOID, STRING).getIdentityConstant();
         markNativeMethod("to", VOID, STRING);
         }
     }

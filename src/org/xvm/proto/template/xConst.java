@@ -99,7 +99,7 @@ public class xConst
                     return Op.R_EXCEPTION;
                     }
 
-                TypeComposition classProp = clazz.resolve(property.getType());
+                TypeComposition classProp = clazz.resolveClass(property.getType());
 
                 int iRet = classProp.callEquals(frame, h1, h2, Frame.RET_LOCAL);
                 if (iRet == Op.R_EXCEPTION)
@@ -156,7 +156,7 @@ public class xConst
                     return Op.R_EXCEPTION;
                     }
 
-                TypeComposition classProp = clazz.resolve(property.getType());
+                TypeComposition classProp = clazz.resolveClass(property.getType());
 
                 int iRet = classProp.callCompare(frame, h1, h2, Frame.RET_LOCAL);
                 if (iRet == Op.R_EXCEPTION)

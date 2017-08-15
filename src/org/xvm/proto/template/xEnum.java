@@ -3,7 +3,6 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;

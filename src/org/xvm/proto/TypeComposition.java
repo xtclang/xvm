@@ -16,9 +16,7 @@ import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
-import org.xvm.proto.template.collections.xTuple;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -37,7 +35,10 @@ public class TypeComposition
     public final ClassTemplate f_template;
 
     public final Map<String, Type> f_mapGenericActual; // corresponding to the template's GenericTypeName
+    private final boolean f_fCanonical;
 
+
+    private TypeComposition m_clzSuper;
     private Type m_typePublic;
     private Type m_typeProtected;
     private Type m_typePrivate;
@@ -49,17 +50,20 @@ public class TypeComposition
     // cached map of fields (values are always nulls)
     private Map<String, ObjectHandle> m_mapFields;
 
-    public TypeComposition(ClassTemplate template, Map<String, Type> mapParamsActual)
+    public TypeComposition(ClassTemplate template, Map<String, Type> mapParamsActual, boolean fCanonical)
         {
-        assert(mapParamsActual.size() == template.f_struct.getTypeParams().size() ||
-              template instanceof xTuple);
-
         f_template = template;
         f_mapGenericActual = mapParamsActual;
+        f_fCanonical = fCanonical;
         }
 
     public TypeComposition getSuper()
         {
+        if (m_clzSuper != null)
+            {
+            return m_clzSuper;
+            }
+
         ClassTemplate templateSuper = f_template.getSuper();
         if (templateSuper != null)
             {
@@ -68,17 +72,20 @@ public class TypeComposition
 
             if (mapFormalTypes.isEmpty())
                 {
-                return templateSuper.ensureClass(Collections.EMPTY_MAP);
+                return templateSuper.f_clazzCanonical;
                 }
 
             Map<String, Type> mapParams = new HashMap<>();
             for (Map.Entry<StringConstant, TypeConstant> entryFormal : mapFormalTypes.entrySet())
                 {
                 String sParamName = entryFormal.getKey().getValue();
-                mapParams.put(sParamName, f_mapGenericActual.get(sParamName));
+                if (templateSuper.f_listGenericParams.contains(sParamName))
+                    {
+                    mapParams.put(sParamName, f_mapGenericActual.get(sParamName));
+                    }
                 }
 
-            return templateSuper.ensureClass(mapParams);
+            return m_clzSuper = templateSuper.ensureClass(mapParams);
             }
 
         return null;
@@ -192,11 +199,14 @@ public class TypeComposition
         return false;
         }
 
-    // given a TypeConstant, return a corresponding TypeComposition within this class's context;
-    // Object.class if the type cannot be resolved
-    // for example, List<KeyType> in the context of Map<String, Int>
-    // will resolve in List<String>
-    public TypeComposition resolve(TypeConstant constType)
+    // given a TypeConstant, return a corresponding TypeComposition within this class's context
+    // or Object.class if the type cannot be resolved;
+    //
+    // for example, List<KeyType> in the context of Map<String, Int> will resolve in List<String>
+    //
+    // Note: this impl is almost identical to TypeSet.resolveParameterType()
+    //       but returns TypeComposition rather than Type and is more tolerant
+    public TypeComposition resolveClass(TypeConstant constType)
         {
         if (constType instanceof UnresolvedTypeConstant)
             {
@@ -207,7 +217,7 @@ public class TypeComposition
             {
             ClassTypeConstant constClass = (ClassTypeConstant) constType;
             ClassTemplate template = f_template.f_types.getTemplate(constClass.getClassConstant());
-            return template.resolve(constClass, f_mapGenericActual);
+            return template.resolveClass(constClass, f_mapGenericActual);
             }
 
         if (constType instanceof ParameterTypeConstant)
@@ -243,7 +253,6 @@ public class TypeComposition
         {
         ClassTemplate template = f_template;
         MethodStructure methodDefault = template.getDeclaredMethod("default", TypeSet.VOID, TypeSet.VOID);
-        ClassTemplate templateSuper = template.getSuper();
 
         Frame frameDefault;
         if (methodDefault == null)
@@ -258,12 +267,9 @@ public class TypeComposition
             continuation = null;
             }
 
-        Frame frameSuper = null;
-        if (templateSuper != null)
-            {
-            TypeComposition clazzSuper = templateSuper.ensureClass(f_mapGenericActual);
-            frameSuper = clazzSuper.callDefaultConstructors(frame, hStruct, ahVar, continuation);
-            }
+        TypeComposition clzSuper = getSuper();
+        Frame frameSuper = clzSuper == null ? null :
+             clzSuper.callDefaultConstructors(frame, hStruct, ahVar, continuation);
 
         if (frameSuper == null)
             {
@@ -414,6 +420,7 @@ public class TypeComposition
         return clzSuper == null ? null : clzSuper.getProperty(sPropName);
         }
 
+    // create unassigned (with a null value) entries for all fields
     protected void createFields(Map<String, ObjectHandle> mapFields)
         {
         Map mapCached = m_mapFields;
