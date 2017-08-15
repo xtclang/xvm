@@ -15,7 +15,7 @@ import org.xvm.asm.ConstantPool;
  * Represent a constant that will eventually be replaced with a real class constant.
  */
 public class UnresolvedClassConstant
-        extends ClassConstant
+        extends PseudoConstant
         implements ResolvableConstant
     {
     // ----- constructors --------------------------------------------------------------------------

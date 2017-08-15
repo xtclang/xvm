@@ -11,7 +11,7 @@ import org.xvm.asm.ConstantPool;
  * Represent an auto-narrowing non-static child class constant.
  */
 public class ChildClassConstant
-        extends NamedConstant
+        extends PseudoConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -89,7 +89,7 @@ public class ChildClassConstant
     @Override
     public Object getLocator()
         {
-        return getParentConstant() instanceof SymbolicConstant      // indicates "this:class"
+        return getParentConstant() instanceof ThisClassConstant      // indicates "this:class"
                 ? getName()
                 : null;
         }

@@ -15,7 +15,7 @@ import org.xvm.asm.ConstantPool;
  * Represent a constant that will eventually be replaced with a real identity constant.
  */
 public class UnresolvedNameConstant
-        extends IdentityConstant
+        extends PseudoConstant
         implements ResolvableConstant
     {
     // ----- constructors --------------------------------------------------------------------------

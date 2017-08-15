@@ -54,7 +54,7 @@ public class ParentTypeConstant
             throw new IllegalArgumentException("type required");
             }
         if (!(constType instanceof ParentTypeConstant) && !(constType instanceof ClassTypeConstant
-                && ((ClassTypeConstant) constType).getClassConstant() instanceof SymbolicConstant))
+                && ((ClassTypeConstant) constType).getClassConstant() instanceof ThisClassConstant))
             {
             throw new IllegalArgumentException("type must be \"this:type\" or a parent type thereof"
                     + " (type=" + constType + ')');

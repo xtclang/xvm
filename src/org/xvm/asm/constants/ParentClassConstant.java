@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * ("instance") inner class.
  */
 public class ParentClassConstant
-        extends IdentityConstant
+        extends PseudoConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ public class ParentClassConstant
             throw new IllegalArgumentException("child class required");
             }
 
-        if (!(constChild instanceof ParentClassConstant || constChild instanceof SymbolicConstant))
+        if (!(constChild instanceof ParentClassConstant || constChild instanceof ThisClassConstant))
             {
             throw new IllegalArgumentException("child must be an auto-narrowable class identity," +
                     " either \"this:class\" or a parent class thereof" + " (child=" + constChild + ')');

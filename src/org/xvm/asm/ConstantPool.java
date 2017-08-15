@@ -42,7 +42,7 @@ import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterTypeConstant;
 import org.xvm.asm.constants.ResolvableConstant;
-import org.xvm.asm.constants.SymbolicConstant;
+import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TupleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
@@ -584,7 +584,8 @@ public class ConstantPool
             }
 
         ChildClassConstant constant = null;
-        if (constParent instanceof SymbolicConstant && constParent.getName().equals(SymbolicConstant.THIS_CLASS))
+        if (constParent instanceof ThisClassConstant && constParent.getName().equals(
+                ThisClassConstant.THIS_CLASS))
             {
             constant = (ChildClassConstant) ensureLocatorLookup(Format.ChildClass).get(sChild);
             }
@@ -963,7 +964,7 @@ public class ConstantPool
      */
     public ClassTypeConstant ensureThisTypeConstant(Access access)
         {
-        SymbolicConstant  constId  = ensureSymbolicConstant(SymbolicConstant.THIS_TYPE);
+        ThisClassConstant constId  = ensureSymbolicConstant(ThisClassConstant.THIS_TYPE);
         ClassTypeConstant constant = null;
         if (access == null || access == Access.PUBLIC)
             {
@@ -1029,12 +1030,12 @@ public class ConstantPool
      *
      * @return the symbolic constant corresponding to the specified symbol name
      */
-    public SymbolicConstant ensureSymbolicConstant(String sName)
+    public ThisClassConstant ensureSymbolicConstant(String sName)
         {
-        SymbolicConstant constant = (SymbolicConstant) ensureLocatorLookup(Format.ThisClass).get(sName);
+        ThisClassConstant constant = (ThisClassConstant) ensureLocatorLookup(Format.ThisClass).get(sName);
         if (constant == null)
             {
-            constant = (SymbolicConstant) register(new SymbolicConstant(this, sName));
+            constant = (ThisClassConstant) register(new ThisClassConstant(this, sName));
             }
         return constant;
         }

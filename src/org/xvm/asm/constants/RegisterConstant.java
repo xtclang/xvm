@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Represent a register constant, which specifies a particular virtual machine register.
  */
 public class RegisterConstant
-        extends IdentityConstant
+        extends PseudoConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 

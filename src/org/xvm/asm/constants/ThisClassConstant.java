@@ -17,19 +17,10 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a symbolic constant, which is a named symbol which represents a notion of a constant
- * that can be resolved to a specific identity at runtime. The set of symbolic constants is both
- * fixed and well known:
- * <ul>
- * <li><tt>this:type</tt> - represents the auto-narrowing type of <i>this</i></li>
- * <li><tt>this:class</tt> - represents the auto-narrowing class of <i>this</i></li>
- * </ul>
- * <p/>
- * The SymbolicConstant is conceptually similar to the RegisterConstant, except that the register
- * constant refers to register numbers, while the symbolic constant refers to symbol names.
+ * Represent the auto-narrowing class of <i>this</i></li>.
  */
-public class SymbolicConstant
-        extends IdentityConstant
+public class ThisClassConstant
+        extends PseudoConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -42,7 +33,7 @@ public class SymbolicConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public SymbolicConstant(ConstantPool pool, Format format, DataInput in)
+    public ThisClassConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -55,7 +46,7 @@ public class SymbolicConstant
      * @param pool     the ConstantPool that will contain this Constant
      * @param sName    the symbolic name
      */
-    public SymbolicConstant(ConstantPool pool, String sName)
+    public ThisClassConstant(ConstantPool pool, String sName)
         {
         super(pool);
 
@@ -164,7 +155,7 @@ public class SymbolicConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        return this.m_constName.compareTo(((SymbolicConstant) that).m_constName);
+        return this.m_constName.compareTo(((ThisClassConstant) that).m_constName);
         }
 
     @Override

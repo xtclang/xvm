@@ -69,12 +69,12 @@ public class ClassTypeConstant
         {
         super(pool);
 
-        if (constId instanceof SymbolicConstant)
+        if (constId instanceof ThisClassConstant)
             {
-            if (!constId.getName().equals(SymbolicConstant.THIS_TYPE))
+            if (!constId.getName().equals(ThisClassConstant.THIS_TYPE))
                 {
                 throw new IllegalArgumentException("symbolic constant " + constId
-                        + " is not \"" + SymbolicConstant.THIS_TYPE + "\"");
+                        + " is not \"" + ThisClassConstant.THIS_TYPE + "\"");
                 }
             if (constTypes != null && constTypes.length > 0)
                 {
@@ -110,7 +110,7 @@ public class ClassTypeConstant
     @Override
     public boolean isAutoNarrowing()
         {
-        return m_constId instanceof SymbolicConstant;
+        return m_constId instanceof ThisClassConstant;
         }
 
     @Override
