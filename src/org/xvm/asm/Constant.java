@@ -499,29 +499,23 @@ public abstract class Constant
         /*
          * Pseudo identifiers.
          */
-        ThisClass,      // TODO
+        UnresolvedName,
+        ThisClass,
         ParentClass,
         ChildClass,
-        TypeProperty,   // TODO
-        TypeRegister,   // TODO
-        Signature,      // TODO
-        Unresolved,
-        UnresolvedClass,// TODO
-        UnresolvedType, // TODO
+        Register,
+        Signature,
 
         /*
          * Types.
          */
-        ClassType,
-        ThisType,
-        ParentType,
-        ChildType,
-        RegisterType,
-        ParameterType,
+        TerminalType,
         ImmutableType,
+        AccessType,
+        AnnotatedType,
+        ParameterizedType,
         UnionType,
         IntersectionType,
-        AnnotatedType,
 
         /*
          * Conditions.
@@ -581,24 +575,24 @@ public abstract class Constant
      * of the ConstantPool.
      */
     public static final Comparator<Constant> MFU_ORDER = new Comparator<Constant>()
-    {
-    @Override
-    public int compare(Constant o1, Constant o2)
         {
-        if (o1 == o2)
+        @Override
+        public int compare(Constant o1, Constant o2)
             {
-            return 0;
+            if (o1 == o2)
+                {
+                return 0;
+                }
+
+            assert o1.getConstantPool() == o2.getConstantPool();
+
+            // how much more is the first constant used than the second constant?
+            int cDif = o1.m_cRefs - o2.m_cRefs;
+
+            // most used comes first (i.e. _reverse_ sort on most used)
+            return -cDif;
             }
-
-        assert o1.getConstantPool() == o2.getConstantPool();
-
-        // how much more is the first constant used than the second constant?
-        int cDif = o1.m_cRefs - o2.m_cRefs;
-
-        // most used comes first (i.e. _reverse_ sort on most used)
-        return -cDif;
-        }
-    };
+        };
 
 
     // ----- fields --------------------------------------------------------------------------------

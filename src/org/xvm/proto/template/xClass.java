@@ -2,7 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 
 import org.xvm.proto.*;
 
@@ -37,9 +37,9 @@ public class xClass
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        if (constant instanceof ClassTypeConstant)
+        if (constant instanceof ParameterizedTypeConstant)
             {
-            ClassTypeConstant constClass = (ClassTypeConstant) constant;
+            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constant;
             TypeComposition clzTarget = f_types.ensureComposition(constClass.getPosition());
 
             Map<String, Type> mapParams = new HashMap<>();

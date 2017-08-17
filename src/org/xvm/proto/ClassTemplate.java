@@ -10,7 +10,7 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
@@ -231,7 +231,7 @@ public abstract class ClassTemplate
         return (PropertyStructure) f_struct.getChild(sName);
         }
 
-    public ClassTypeConstant getTypeConstant()
+    public ParameterizedTypeConstant getTypeConstant()
         {
         return ((ClassConstant) f_struct.getIdentityConstant()).asTypeConstant();
         }
@@ -359,7 +359,7 @@ public abstract class ClassTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
-    public TypeComposition resolve(ClassTypeConstant constClassType, Map<String, Type> mapActual)
+    public TypeComposition resolve(ParameterizedTypeConstant constClassType, Map<String, Type> mapActual)
         {
         assert constClassType.getClassConstant().getPathString().equals(f_sName);
 
@@ -386,9 +386,9 @@ public abstract class ClassTemplate
     // resolve a parameter type
     protected Type resolveParameterType(TypeConstant constParamType, Map<String, Type> mapActual)
         {
-        if (constParamType instanceof ClassTypeConstant)
+        if (constParamType instanceof ParameterizedTypeConstant)
             {
-            ClassTypeConstant constClass = (ClassTypeConstant) constParamType;
+            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constParamType;
             ClassTemplate template = f_types.getTemplate(constClass.getClassConstant());
             return template.resolve(constClass, mapActual).ensurePublicType();
             }
@@ -1059,8 +1059,8 @@ public abstract class ClassTemplate
             m_fAtomic = true;
 
             TypeConstant constType = f_types.f_adapter.resolveType(f_property);
-            if (constType instanceof ClassTypeConstant &&
-                    ((ClassTypeConstant) constType).getClassConstant().getName().equals("Int64"))
+            if (constType instanceof ParameterizedTypeConstant &&
+                    ((ParameterizedTypeConstant) constType).getClassConstant().getName().equals("Int64"))
                 {
                 markAsRef("annotations.AtomicIntNumber");
                 }

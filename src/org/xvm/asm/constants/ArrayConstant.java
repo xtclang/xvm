@@ -103,12 +103,12 @@ public class ArrayConstant
             {
             constType = ((ImmutableTypeConstant) constType).getType();
             }
-        if (!(constType instanceof ClassTypeConstant)
-                || !(((ClassTypeConstant) constType).getClassConstant() instanceof ClassConstant))
+        if (!(constType instanceof ParameterizedTypeConstant)
+                || !(((ParameterizedTypeConstant) constType).getClassConstant() instanceof ClassConstant))
             {
             throw new IllegalArgumentException("type must be a class type");
             }
-        ClassConstant constClass = (ClassConstant) ((ClassTypeConstant) constType).getClassConstant();
+        ClassConstant constClass = (ClassConstant) ((ParameterizedTypeConstant) constType).getClassConstant();
         if (!(constClass.isEcstasyClass(sClassName)))
             {
             throw new IllegalArgumentException("type for " + fmt + " must be " + sClassName

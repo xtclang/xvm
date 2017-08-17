@@ -21,7 +21,7 @@ import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -1042,7 +1042,7 @@ public class TypeCompositionStatement
 
                 case DELEGATES:
                     // these are all OK; other checks will be done after the types are resolvable
-                    ClassTypeConstant constClass = composition.getType().asClassTypeConstant(errs);
+                    ParameterizedTypeConstant constClass = composition.getType().asClassTypeConstant(errs);
                     PropertyConstant  constProp  = pool.ensurePropertyConstant(component.getIdentityConstant(),
                             ((Composition.Delegates) composition).getPropertyName()); // TODO change back from prop -> expr
                     for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)

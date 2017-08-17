@@ -3,7 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.Constants.Access;
 
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -84,12 +84,12 @@ public abstract class TypeExpression
      *
      * @return a ClassTypeConstant
      */
-    public ClassTypeConstant asClassTypeConstant(ErrorListener errs)
+    public ParameterizedTypeConstant asClassTypeConstant(ErrorListener errs)
         {
         TypeConstant constType = getTypeConstant();
-        if (constType instanceof ClassTypeConstant)
+        if (constType instanceof ParameterizedTypeConstant)
             {
-            return (ClassTypeConstant) constType;
+            return (ParameterizedTypeConstant) constType;
             }
 
         return getConstantPool().ensureClassTypeConstant(ensureIdentityConstant(), Access.PUBLIC);

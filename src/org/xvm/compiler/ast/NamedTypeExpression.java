@@ -9,7 +9,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -56,16 +56,16 @@ public class NamedTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public ClassTypeConstant asClassTypeConstant(ErrorListener errs)
+    public ParameterizedTypeConstant asClassTypeConstant(ErrorListener errs)
         {
         TypeConstant constType = getTypeConstant();
-        if (constType instanceof ClassTypeConstant)
+        if (constType instanceof ParameterizedTypeConstant)
             {
-            return (ClassTypeConstant) constType;
+            return (ParameterizedTypeConstant) constType;
             }
 
-        // if there's already a type, and it's not a ClassType, then it's an error
-        // if there's an immutable keyword, then it _can't_ be a ClassType
+        // if there's already a type, and it's not a TerminalType, then it's an error
+        // if there's an immutable keyword, then it _can't_ be a TerminalType
         if (constType != null && !(constType instanceof ResolvableConstant) || immutable != null)
             {
             log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);

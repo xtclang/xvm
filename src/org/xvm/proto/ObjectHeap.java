@@ -6,7 +6,7 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.Int64Constant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -82,7 +82,7 @@ public class ObjectHeap
             return template;
             }
 
-        if (constValue instanceof ClassTypeConstant)
+        if (constValue instanceof ParameterizedTypeConstant)
             {
             return xClass.INSTANCE;
             }

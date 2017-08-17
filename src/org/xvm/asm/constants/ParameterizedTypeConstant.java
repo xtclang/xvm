@@ -25,7 +25,7 @@ import static org.xvm.util.Handy.writePackedLong;
  *
  * @author cp 2017.04.25
  */
-public class ClassTypeConstant
+public class ParameterizedTypeConstant
         extends TypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -39,13 +39,12 @@ public class ClassTypeConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public ClassTypeConstant(ConstantPool pool, Format format, DataInput in)
+    public ParameterizedTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
 
-        m_iClass = readIndex(in);
-        m_access = Access.valueOf(readIndex(in));
+        m_iType = readIndex(in);
 
         int cTypes  = readMagnitude(in);
         if (cTypes > 0)
@@ -65,7 +64,8 @@ public class ClassTypeConstant
      * @param pool     the ConstantPool that will contain this Constant
      * @param constId  a ModuleConstant, PackageConstant, or ClassConstant
      */
-    public ClassTypeConstant(ConstantPool pool, IdentityConstant constId, Access access, TypeConstant... constTypes)
+    public ParameterizedTypeConstant(ConstantPool pool, IdentityConstant constId,
+            TypeConstant... constTypes)
         {
         super(pool);
 
@@ -113,12 +113,6 @@ public class ClassTypeConstant
         return m_constId instanceof ThisClassConstant;
         }
 
-    @Override
-    public boolean isIdentity(IdentityConstant constId)
-        {
-        return m_constId.equals(constId) && m_access == Access.PUBLIC;
-        }
-
     /**
      * @return the access modifier for the class (public, private, etc.)
      */
@@ -143,7 +137,7 @@ public class ClassTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.ClassType;
+        return Format.TerminalType;
         }
 
     @Override
@@ -167,7 +161,7 @@ public class ClassTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        ClassTypeConstant that = (ClassTypeConstant) obj;
+        ParameterizedTypeConstant that = (ParameterizedTypeConstant) obj;
         int n = this.m_constId.compareTo(that.m_constId);
         if (n == 0)
             {
@@ -235,7 +229,7 @@ public class ClassTypeConstant
         {
         ConstantPool pool = getConstantPool();
 
-        m_constId = (IdentityConstant) pool.getConstant(m_iClass);
+        m_constId = (IdentityConstant) pool.getConstant(m_iDef);
 
         if (m_aiType == null)
             {
@@ -297,9 +291,9 @@ public class ClassTypeConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * During disassembly, this holds the index of the module, package, or class constant.
+     * During disassembly, this holds the index of the underlying TypeConstant.
      */
-    private transient int m_iClass;
+    private transient int m_iType;
 
     /**
      * During disassembly, this holds the index of the the type parameters.
@@ -307,14 +301,9 @@ public class ClassTypeConstant
     private transient int[] m_aiType;
 
     /**
-     * The class referred to. May be a ModuleConstant, PackageConstant, or ClassConstant.
+     * The underlying TypeConstant.
      */
-    private IdentityConstant m_constId;
-
-    /**
-     * The public/private/etc. modifier for the class referred to.
-     */
-    private Access m_access;
+    private TypeConstant m_constType;
 
     /**
      * The type parameters.

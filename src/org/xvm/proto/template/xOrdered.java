@@ -2,7 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 
 import org.xvm.proto.TypeSet;
 
@@ -18,7 +18,7 @@ public class xOrdered
     public static EnumHandle EQUAL;
     public static EnumHandle GREATER;
 
-    public static ClassTypeConstant[] TYPES;
+    public static ParameterizedTypeConstant[] TYPES;
 
     public xOrdered(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -26,7 +26,7 @@ public class xOrdered
 
         if (fInstance)
             {
-            TYPES = new ClassTypeConstant[] {getTypeConstant()};
+            TYPES = new ParameterizedTypeConstant[] {getTypeConstant()};
             }
         }
 

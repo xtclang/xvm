@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -414,7 +414,7 @@ public abstract class Component
      * @param composition  the contribution category
      * @param constType    the contribution class type
      */
-    public void addContribution(Composition composition, ClassTypeConstant constType)
+    public void addContribution(Composition composition, ParameterizedTypeConstant constType)
         {
         addContribution(new Contribution(composition, constType));
         }
@@ -436,7 +436,7 @@ public abstract class Component
      * @param constType    the annotation class type
      * @param aconstParam  the annotation parameters (optional)
      */
-    public void addAnnotation(ClassTypeConstant constType, Constant[] aconstParam)
+    public void addAnnotation(ParameterizedTypeConstant constType, Constant[] aconstParam)
         {
         addContribution(new Contribution(constType, aconstParam));
         }
@@ -447,7 +447,7 @@ public abstract class Component
      * @param constClass  the class type to delegate
      * @param constProp   the property specifying the reference to delegate to
      */
-    public void addDelegation(ClassTypeConstant constClass, PropertyConstant constProp)
+    public void addDelegation(ParameterizedTypeConstant constClass, PropertyConstant constProp)
         {
         addContribution(new Contribution(constClass, constProp));
         }
@@ -2200,7 +2200,7 @@ public abstract class Component
          *                     Implements, Into, Incorporates, or Enumerates
          * @param constType    specifies the class type being contributed
          */
-        protected Contribution(Composition composition, ClassTypeConstant constType)
+        protected Contribution(Composition composition, ParameterizedTypeConstant constType)
             {
             assert composition != null && constType != null;
 
@@ -2285,7 +2285,7 @@ public abstract class Component
          * @param delegate     for a Delegates composition, this is the property that provides the
          *                     delegate reference
          */
-        protected Contribution(ClassTypeConstant constant, PropertyConstant delegate)
+        protected Contribution(ParameterizedTypeConstant constant, PropertyConstant delegate)
             {
             assert constant != null && delegate != null;
 
@@ -2300,7 +2300,7 @@ public abstract class Component
          * @param constType    specifies the class type of the annotation
          * @param aconstParam  an array of annotation parameters; may be null
          */
-        protected Contribution(ClassTypeConstant constType, Constant[] aconstParam)
+        protected Contribution(ParameterizedTypeConstant constType, Constant[] aconstParam)
             {
             assert constType != null;
 
@@ -2342,10 +2342,10 @@ public abstract class Component
          *
          * @return the ClassTypeConstant for this contribution
          */
-        public ClassTypeConstant getClassConstant()
+        public ParameterizedTypeConstant getClassConstant()
             {
-            return m_constContrib instanceof ClassTypeConstant
-                    ? (ClassTypeConstant) m_constContrib
+            return m_constContrib instanceof ParameterizedTypeConstant
+                    ? (ParameterizedTypeConstant) m_constContrib
                     : null;
             }
 

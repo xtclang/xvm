@@ -4,7 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TupleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -69,7 +69,7 @@ public class xTuple
         }
 
     @Override
-    public TypeComposition resolve(ClassTypeConstant constClassType, Map<String, Type> mapActual)
+    public TypeComposition resolve(ParameterizedTypeConstant constClassType, Map<String, Type> mapActual)
         {
         List<TypeConstant> listParams = constClassType.getTypeConstants();
 

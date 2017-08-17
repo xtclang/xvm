@@ -47,6 +47,38 @@ public abstract class TypeConstant
 
     // ----- type-specific functionality -----------------------------------------------------------
 
+    public boolean isImmutabilitySpecified()
+        {
+        return false;
+        }
+
+    public boolean isAccessSpecified()
+        {
+        return false;
+        }
+
+    public Access getAccess()
+        {
+        return Access.PUBLIC;
+        }
+
+    public boolean isParamsSpecified()
+        {
+        return false;
+        }
+
+    public boolean isSingleDefiningConstant()
+        {
+        return true;
+        }
+
+    public abstract Constant getDefiningConstant();
+
+    public boolean isAnnotated()
+        {
+        return false;
+        }
+
     /**
      * @return true iff this TypeConstant represents an auto-narrowing type
      */
@@ -56,15 +88,13 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if this TypeConstant is the "Type" type.
+     * Determine if this TypeConstant represents a core, implicitly-imported Ecstasy type denoted
+     * by the specified name.
      *
-     * @return true iff this TypeConstant represents the type of the Ecstasy Type class
+     * @param sName  the name or alias by which the Ecstasy core type is imported
+     *
+     * @return true iff this TypeConstant is the Ecstasy core type identified by the passed name
      */
-    public boolean isEcstasyType()
-        {
-        return false;
-        }
-
     public boolean isEcstasy(String sName)
         {
         IdentityConstant constId = getConstantPool().getImplicitlyImportedIdentity(sName);
@@ -73,12 +103,7 @@ public abstract class TypeConstant
             throw new IllegalArgumentException("no such implicit name: " + sName);
             }
 
-        return isIdentity(constId);
-        }
-
-    public boolean isIdentity(IdentityConstant constId)
-        {
-        return false;
+        return isSingleDefiningConstant() && getDefiningConstant().equals(constId);
         }
 
 

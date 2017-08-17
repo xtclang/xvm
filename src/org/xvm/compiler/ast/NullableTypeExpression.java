@@ -5,7 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -34,7 +34,7 @@ public class NullableTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public ClassTypeConstant asClassTypeConstant(ErrorListener errs)
+    public ParameterizedTypeConstant asClassTypeConstant(ErrorListener errs)
         {
         log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
         return super.asClassTypeConstant(errs);

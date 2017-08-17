@@ -12,7 +12,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -241,7 +241,7 @@ public class Adapter
         for (int i = 0; i < cTypes; i++)
             {
             String sType = asType[i].trim();
-            aType[i] = new Parameter(pool, (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType)),
+            aType[i] = new Parameter(pool, (ParameterizedTypeConstant) pool.getConstant(getClassTypeConstId(sType)),
                     (fReturn ?"r":"p")+i, null, fReturn, i, false);
             }
         return aType;
@@ -362,7 +362,7 @@ public class Adapter
             constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
             }
 
-        if (constType instanceof ClassTypeConstant)
+        if (constType instanceof ParameterizedTypeConstant)
             {
             return constType;
             }

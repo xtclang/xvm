@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.RegisterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -133,10 +133,10 @@ public class Parameter
     public TypeConstant getTypeParameterType()
         {
         assert isTypeParameter();
-        assert m_constType instanceof ClassTypeConstant && m_constType.isEcstasyType();
-        assert ((ClassTypeConstant) m_constType).getTypeConstants().size() > 0;
+        assert m_constType instanceof ParameterizedTypeConstant && m_constType.isEcstasyType();
+        assert ((ParameterizedTypeConstant) m_constType).getTypeConstants().size() > 0;
 
-        return ((ClassTypeConstant) m_constType).getTypeConstants().get(0);
+        return ((ParameterizedTypeConstant) m_constType).getTypeConstants().get(0);
         }
 
     /**

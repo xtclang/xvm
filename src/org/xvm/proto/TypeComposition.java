@@ -7,7 +7,7 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -203,9 +203,9 @@ public class TypeComposition
             constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
             }
 
-        if (constType instanceof ClassTypeConstant)
+        if (constType instanceof ParameterizedTypeConstant)
             {
-            ClassTypeConstant constClass = (ClassTypeConstant) constType;
+            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constType;
             ClassTemplate template = f_template.f_types.getTemplate(constClass.getClassConstant());
             return template.resolve(constClass, f_mapGenericActual);
             }

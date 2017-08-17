@@ -7,7 +7,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -241,9 +241,9 @@ public class TypeSet
     // produce a TypeComposition based on the specified ClassTypeConstant
     protected TypeComposition resolve(TypeConstant constType)
         {
-        if (constType instanceof ClassTypeConstant)
+        if (constType instanceof ParameterizedTypeConstant)
             {
-            ClassTypeConstant constClassType = (ClassTypeConstant) constType;
+            ParameterizedTypeConstant constClassType = (ParameterizedTypeConstant) constType;
             ClassTemplate template = getTemplate(constClassType.getClassConstant());
             return template.resolve(constClassType, Collections.EMPTY_MAP);
             }
