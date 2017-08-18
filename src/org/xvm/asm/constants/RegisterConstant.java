@@ -64,7 +64,7 @@ public class RegisterConstant
         }
 
     @Override
-    public Object getLocator()
+    protected Object getLocator()
         {
         return Integer.valueOf(m_iReg);
         }

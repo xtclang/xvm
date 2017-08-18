@@ -2,16 +2,20 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
+
+import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent an auto-narrowing non-static child class constant.
+ * Represent an auto-narrowing named child class.
  */
 public class ChildClassConstant
         extends PseudoConstant
@@ -75,15 +79,7 @@ public class ChildClassConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * @return the ClassTypeConstant for the public interface of this class
-     */
-    public ParameterizedTypeConstant asTypeConstant()
-        {
-        return getConstantPool().ensureThisTypeConstant(Access.PUBLIC);
-        }
-
-    /**
-     * @return TODO
+     * @return the name of the child class
      */
     public String getName()
         {
@@ -100,17 +96,30 @@ public class ChildClassConstant
         }
 
     @Override
+    public boolean isClass()
+        {
+        return true;
+        }
+
+    @Override
     public boolean isAutoNarrowing()
         {
         return true;
         }
 
     @Override
-    public Object getLocator()
+    protected Object getLocator()
         {
         return m_constParent instanceof ThisClassConstant      // indicates "this:class"
                 ? getName()
                 : null;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constParent);
+        visitor.accept(m_constName);
         }
 
     @Override
@@ -125,10 +134,42 @@ public class ChildClassConstant
         }
 
     @Override
+    public String getValueString()
+        {
+        return m_constParent.getValueString() + '.' + getName();
+        }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void disassemble(DataInput in)
+            throws IOException
+        {
+        m_constParent = (PseudoConstant) getConstantPool().getConstant(m_iParent);
+        m_constName   = (StringConstant) getConstantPool().getConstant(m_iName);
+        }
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        m_constParent = (PseudoConstant) pool.register(m_constParent);
+        m_constName   = (StringConstant) pool.register(m_constName);
+        }
+
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(getFormat().ordinal());
+        writePackedLong(out, m_constParent.getPosition());
+        writePackedLong(out, m_constName.getPosition());
+        }
+
+    @Override
     public String getDescription()
         {
-        // TODO need more info, but must first figure out what we want to show and how to show it
-        return "child=" + getName();
+        return "parent=" + m_constParent + ", child=" + getName();
         }
 
 

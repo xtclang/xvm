@@ -58,7 +58,7 @@ public class ParentClassConstant
         if (!(constChild instanceof ParentClassConstant || constChild instanceof ThisClassConstant))
             {
             throw new IllegalArgumentException("child must be an auto-narrowable class identity," +
-                    " either \"this:class\" or a parent class thereof" + " (child=" + constChild + ')');
+                    " either \"this:class\" or a parent class thereof (child=" + constChild + ')');
             }
 
         m_constChild = constChild;
@@ -68,32 +68,11 @@ public class ParentClassConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * @return the IdentityConstant that this represents the parent class of
+     * @return the PseudoConstant that this constant represents the parent class of
      */
-    public IdentityConstant getChildClass()
+    public PseudoConstant getChildClass()
         {
         return m_constChild;
-        }
-
-    @Override
-    public boolean isAutoNarrowing()
-        {
-        return true;
-        }
-
-
-    // ----- IdentityConstant methods --------------------------------------------------------------
-
-    @Override
-    public IdentityConstant getParentConstant()
-        {
-        return null;
-        }
-
-    @Override
-    public String getName()
-        {
-        return m_constChild.getName() + ":parent";
         }
 
 
@@ -103,6 +82,18 @@ public class ParentClassConstant
     public Format getFormat()
         {
         return Format.ParentClass;
+        }
+
+    @Override
+    public boolean isClass()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return true;
         }
 
     @Override
@@ -126,6 +117,7 @@ public class ParentClassConstant
     @Override
     public String getValueString()
         {
+        // this isn't real syntax, but it at least conveys the information
         return m_constChild.getValueString() + ":parent";
         }
 
@@ -136,13 +128,13 @@ public class ParentClassConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constChild = (IdentityConstant) getConstantPool().getConstant(m_iChild);
+        m_constChild = (PseudoConstant) getConstantPool().getConstant(m_iChild);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constChild = (IdentityConstant) pool.register(m_constChild);
+        m_constChild = (PseudoConstant) pool.register(m_constChild);
         }
 
     @Override
@@ -150,7 +142,7 @@ public class ParentClassConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, indexOf(m_constChild));
+        writePackedLong(out, m_constChild.getPosition());
         }
 
     @Override
@@ -165,7 +157,7 @@ public class ParentClassConstant
     @Override
     public int hashCode()
         {
-        return m_constChild.hashCode();
+        return m_constChild.hashCode() - 1;
         }
 
 

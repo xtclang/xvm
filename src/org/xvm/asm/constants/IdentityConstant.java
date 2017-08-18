@@ -117,20 +117,33 @@ public abstract class IdentityConstant
     // ----- constant methods ----------------------------------------------------------------------
 
     @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        super.registerConstants(pool);
-        }
-
-    @Override
-    protected abstract void assemble(DataOutput out) throws IOException;
-
-    @Override
     protected Object getLocator()
         {
+        // this protected method must be present here to make it accessible to other classes in this
+        // package
         return super.getLocator();
         }
 
     @Override
     protected abstract int compareDetails(Constant that);
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        // this protected method must be present here to make it accessible to other classes in this
+        // package
+        super.registerConstants(pool);
+        }
+
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        // this protected method must be present here to make it accessible to other classes in this
+        // package
+        super.assemble(out);
+        }
     }

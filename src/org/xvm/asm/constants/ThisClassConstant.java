@@ -2,7 +2,6 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
@@ -43,17 +42,6 @@ public class ThisClassConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
-
-    /**
-     * @return the ClassTypeConstant for the public interface of this class
-     */
-    public ParameterizedTypeConstant asTypeConstant()
-        {
-        return getConstantPool().ensureThisTypeConstant(Access.PUBLIC);
-        }
-
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -63,7 +51,19 @@ public class ThisClassConstant
         }
 
     @Override
-    public Object getLocator()
+    public boolean isClass()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return true;
+        }
+
+    @Override
+    protected Object getLocator()
         {
         return THIS_CLASS;
         }
@@ -71,6 +71,7 @@ public class ThisClassConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        assert that instanceof ThisClassConstant;
         return 0;
         }
 
@@ -82,13 +83,6 @@ public class ThisClassConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void assemble(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(getFormat().ordinal());
-        }
 
     @Override
     public String getDescription()
@@ -112,14 +106,4 @@ public class ThisClassConstant
      * The source code identifier of the auto-narrowing "this class".
      */
     public static final String THIS_CLASS = "this:class";
-
-    /**
-     * During disassembly, this holds the index of the constant that specifies the name.
-     */
-    private int m_iName;
-
-    /**
-     * The constant that holds the symbolic name.
-     */
-    private StringConstant m_constName;
     }

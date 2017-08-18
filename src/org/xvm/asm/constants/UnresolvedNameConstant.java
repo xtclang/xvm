@@ -34,23 +34,14 @@ public class UnresolvedNameConstant
 
     // ----- type-specific functionality -----------------------------------------------------------
 
-    @Override
-    public IdentityConstant getParentConstant()
-        {
-        if (isNameResolved())
-            {
-            return m_constId.getParentConstant();
-            }
-
-        throw new IllegalStateException("unresolved: " + getName());
-        }
-
-    @Override
+    /**
+     * @return the name of the constant
+     */
     public String getName()
         {
-        if (isNameResolved())
+        if (m_constId instanceof IdentityConstant)
             {
-            return m_constId.getName();
+            return ((IdentityConstant) m_constId).getName();
             }
 
         String[]      names  = this.m_asName;
@@ -66,23 +57,36 @@ public class UnresolvedNameConstant
         return sb.toString();
         }
 
+    /**
+     * @return the number of simple names in the unresolved name
+     */
     public int getNameCount()
         {
         return m_asName.length;
         }
 
+    /**
+     * @param i  the name index, <tt>0 <= i < getNameCount()</tt>
+     * @return the i-th simple name in the unresolved name
+     */
     public String getName(int i)
         {
         return m_asName[i];
         }
 
+    /**
+     * @return true if the UnresolvedNameConstant has been resolved
+     */
     public boolean isNameResolved()
         {
         return m_constId != null;
         }
 
+
+    // ----- ResolvableConstant methods ------------------------------------------------------------
+
     @Override
-    public IdentityConstant getResolvedConstant()
+    public Constant getResolvedConstant()
         {
         return m_constId;
         }
@@ -90,9 +94,8 @@ public class UnresolvedNameConstant
     @Override
     public void resolve(Constant constant)
         {
-        assert constant instanceof IdentityConstant;
-        assert this.m_constId == null || this.m_constId == constant;
-        this.m_constId = (IdentityConstant) constant;
+        assert this.m_constId == null || this.m_constId == constant || this.m_constId.equals(constant);
+        this.m_constId = constant;
         }
 
 
@@ -101,19 +104,36 @@ public class UnresolvedNameConstant
     @Override
     public Format getFormat()
         {
-        return isNameResolved() ? m_constId.getFormat() : Format.Unresolved;
+        return isNameResolved()
+                ? m_constId.getFormat()
+                : Format.UnresolvedName;
         }
 
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        visitor.accept(m_constId);
+        if (m_constId != null)
+            {
+            visitor.accept(m_constId);
+            }
         }
 
     @Override
-    public Object getLocator()
+    protected Object getLocator()
         {
-        return isNameResolved() ? m_constId.getLocator() : null;
+        if (isNameResolved())
+            {
+            Constant constId = unwrap();
+            if (constId instanceof IdentityConstant)
+                {
+                return ((IdentityConstant) m_constId).getLocator();
+                }
+            else if (constId instanceof PseudoConstant)
+                {
+                return ((PseudoConstant) m_constId).getLocator();
+                }
+            }
+        return null;
         }
 
     @Override
@@ -127,15 +147,17 @@ public class UnresolvedNameConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        if (that instanceof ResolvableConstant)
+            {
+            that = ((ResolvableConstant) that).unwrap();
+            }
+
         if (isNameResolved())
             {
-            if (that instanceof UnresolvedNameConstant && ((UnresolvedNameConstant) that).isNameResolved())
-                {
-                that = ((UnresolvedNameConstant) that).m_constId;
-                }
-            return m_constId.compareDetails(that);
+            return unwrap().compareTo(that);
             }
-        else if (that instanceof UnresolvedNameConstant)
+
+        if (that instanceof UnresolvedNameConstant)
             {
             String[] asThis = this.m_asName;
             String[] asThat = ((UnresolvedNameConstant) that).m_asName;
@@ -151,12 +173,10 @@ public class UnresolvedNameConstant
                 }
             return cThis - cThat;
             }
-        else
-            {
-            // need to return a value that allows for stable sorts, but unless this==that, the
-            // details can never be equal
-            return this == that ? 0 : -1;
-            }
+
+        // need to return a value that allows for stable sorts, but unless this==that, the
+        // details can never be equal
+        return this == that ? 0 : -1;
         }
 
 
@@ -174,7 +194,7 @@ public class UnresolvedNameConstant
         {
         if (isNameResolved())
             {
-            m_constId = (IdentityConstant) pool.register(m_constId);
+            m_constId = pool.register(unwrap());
             }
         else
             {
@@ -186,9 +206,14 @@ public class UnresolvedNameConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
-        if (isNameResolved())
+        Constant constId = unwrap();
+        if (constId instanceof IdentityConstant)
             {
-            m_constId.assemble(out);
+            ((IdentityConstant) m_constId).assemble(out);
+            }
+        else if (constId instanceof PseudoConstant)
+            {
+            ((PseudoConstant) m_constId).assemble(out);
             }
         else
             {
@@ -200,7 +225,7 @@ public class UnresolvedNameConstant
     public String getDescription()
         {
         return isNameResolved()
-                ? m_constId.getDescription()
+                ? "(resolved) " + m_constId.getDescription()
                 : "name=" + getName();
         }
 
@@ -215,12 +240,11 @@ public class UnresolvedNameConstant
             }
         else
             {
+            int      nHash  = 0;
             String[] names  = this.m_asName;
-            int      cNames = names.length;
-            int      nHash  = cNames ^ names[0].hashCode();
-            if (cNames > 1)
+            for (int i = 0, c = names.length; i < c; ++i)
                 {
-                nHash ^= names[cNames-1].hashCode();
+                nHash ^= names[i].hashCode();
                 }
             return nHash;
             }
@@ -229,6 +253,13 @@ public class UnresolvedNameConstant
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private String[]         m_asName;
-    private IdentityConstant m_constId;
+    /**
+     * The unresolved name, as an array of simple names.
+     */
+    private String[] m_asName;
+
+    /**
+     * The resolved constant, or null if the name has not yet been resolved to a constant.
+     */
+    private Constant m_constId;
     }

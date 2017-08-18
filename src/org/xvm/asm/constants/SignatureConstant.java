@@ -54,7 +54,7 @@ public class SignatureConstant
      * @param returns      the return types
      * @param params       the param types
      */
-    public SignatureConstant(ConstantPool pool, MultiMethodConstant constParent, Access access,
+    public SignatureConstant(ConstantPool pool, String  constParent, Access access,
             TypeConstant[] returns, TypeConstant[] params)
         {
         super(pool);

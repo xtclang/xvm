@@ -340,8 +340,12 @@ public abstract class Constant
         {
         }
 
-    protected abstract void assemble(DataOutput out)
-            throws IOException;
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(getFormat().ordinal());
+        }
 
 
     // ----- debugging support ---------------------------------------------------------------------
