@@ -3,13 +3,13 @@
  *
  * @see Object.meta
  */
-interface Meta
+interface Meta<PublicType, ProtectedType, PrivateType, StructType>
         extends Referent
     {
     /**
      * The class represents the type composition of the object.
      */
-    @ro Class class_;
+    @ro Class<PublicType, ProtectedType, PrivateType, StructType> class_;
 
     /**
      * The containing module.
@@ -20,7 +20,7 @@ interface Meta
      * The read-only struct for this object. Each property that has space allocated for
      * storage of the property's value will occur within this structure.
      */
-    @ro Struct struct;
+    @ro StructType struct;
 
     /**
      * This property represents the immutability of an object. This property can be set to true to

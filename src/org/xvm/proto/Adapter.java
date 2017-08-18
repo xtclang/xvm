@@ -170,19 +170,15 @@ public class Adapter
         if (method == null && asArgType != null)
             {
             method = getMethod(templateTop, sMethName, null, null);
-
-            System.out.println("\n******** parameter mismatch at " + templateTop.f_sName + "#" + sMethName);
-            System.out.println("         arguments " + Arrays.toString(atArg));
-            System.out.println("         return " + Arrays.toString(atRet));
-            System.out.println("         found " + method.getIdentityConstant() + "\n");
-
             if (method != null)
                 {
-                return method;
+                System.out.println("\n******** parameter mismatch at " + templateTop.f_sName + "#" + sMethName);
+                System.out.println("         arguments " + Arrays.toString(atArg));
+                System.out.println("         return " + Arrays.toString(atRet));
+                System.out.println("         found " + method.getIdentityConstant() + "\n");
                 }
             }
-
-        throw new IllegalArgumentException("Method is not defined: " + templateTop + '#' + sMethName);
+        return method;
         }
 
     public int getPropertyConstId(String sClassName, String sPropName)

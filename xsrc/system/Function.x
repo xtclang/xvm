@@ -1,7 +1,8 @@
 /**
  * TODO
  */
-interface Function<ReturnTypes extends Tuple<ReturnTypes...>, ParamTypes extends Tuple<ParamTypes...>>
+interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
+// interface Function<(ParamTypes), (ReturnTypes)>
     {
     @ro Parameter[] params;
     @ro Map<String, Parameter> paramsByName;

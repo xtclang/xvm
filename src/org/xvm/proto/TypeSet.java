@@ -12,9 +12,9 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
+
 import org.xvm.proto.template.xConst;
 import org.xvm.proto.template.xEnum;
 import org.xvm.proto.template.xObject;

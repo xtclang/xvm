@@ -332,7 +332,7 @@ class TestApp
         print(t[1]);
 
         Int i = 0;
-        Tuple<String, Int> t2 = new Tuple("", i); // fixed-size (rigid)
+        Tuple<String, Int> t2 = ("", i); // fixed-size (rigid)
         print(t2);
 
         t2[0] = "t";

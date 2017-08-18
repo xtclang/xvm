@@ -22,7 +22,7 @@ interface Referent
      * This method will result in a reference that only contains the members in the specified type,
      * stripping the runtime reference of any members that are not present in the specified type.
      */
-    <AsType> AsType maskAs(Type AsType);
+    <AsType> AsType maskAs<AsType>();
 
     /**
      * Obtain a new reference to the referent such that the reference contains the methods and
@@ -35,7 +35,7 @@ interface Referent
      * a different module, this method cannot produce an original reference, and will result in the
      * conditional false.
      */
-    <AsType> conditional AsType revealAs(Type<AsType> asType);
+    <AsType> conditional AsType revealAs<AsType>();
 
     /**
      * Determine if the referent is an instance of the specified type.

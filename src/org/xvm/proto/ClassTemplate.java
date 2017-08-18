@@ -932,7 +932,10 @@ public abstract class ClassTemplate
     public MethodInfo ensureMethodInfo(String sName, String[] asParam, String[] asRet)
         {
         MethodStructure method = f_types.f_adapter.getMethod(this, sName, asParam, asRet);
-
+        if (method == null)
+            {
+            throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);
+            }
         return ensureMethodInfo(method);
         }
 

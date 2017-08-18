@@ -10,14 +10,9 @@ interface Enum
     /**
      * The Enumeration that contains this Enum value.
      */
-    @ro Enumeration enumeration.get()
+    @ro Enumeration<Enum> enumeration.get()
         {
-        Class+Enumeration clz = meta.class_.as(Class+Enumeration);
-        if (clz.parent.instanceof(Class+Enumeration) && clz.extends_(clz.parent))
-            {
-            clz = clz.parent;
-            }
-        return &clz.narrowTo(Enumeration);
+        return meta.class_.parent.as(Enumeration<Enum>);
         }
 
     /**

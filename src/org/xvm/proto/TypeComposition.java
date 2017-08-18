@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -17,6 +18,8 @@ import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef;
 import org.xvm.proto.template.xRef.RefHandle;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -89,6 +92,56 @@ public class TypeComposition
             }
 
         return null;
+        }
+
+    // There are two parts on the call chain:
+    //  1. The "declared" chain that consists of:
+    //   1.1 declared methods on the encapsulating mixins and traits (recursively)
+    //   1.2 methods implemented by the class
+    //   1.3 declared methods on the incorporated mixins, traits and delegates (recursively)
+    //   1.4 followed by the "declared" chain on the super class
+    //
+    // 2. The "default" chain that consists of:
+    //   2.1 default methods on the interfaces that are declared by encapsulating
+    //          mixins and traits (recursively)
+    //   2.2 default methods on the interfaces declared by the class (recursively)
+    //   2.3 default methods on the interfaces that are declared by mixins, traits and delegates (recursively)
+    //   2.4 followed by the "default" chain on the super class
+
+    protected List<TypeComposition> collectDeclaredCallChain()
+        {
+        TypeComposition clzSuper = getSuper();
+        if (clzSuper == null)
+            {
+            // this is "Object"; it has no contribution
+            return Collections.singletonList(this);
+            }
+
+        ClassStructure struct = f_template.f_struct;
+        List<TypeComposition> list = new LinkedList<>();
+
+        // TODO: 1.1
+
+        // 1.2
+        list.add(this);
+
+        // 1.3
+        for (Component.Contribution contribution : struct.getContributionsAsList())
+            {
+            switch (contribution.getComposition())
+                {
+                case Incorporates:
+                    // TODO: how to detect a conditional incorporation?
+                case Delegates:
+                    ClassTypeConstant constType = contribution.getClassConstant();
+                    TypeComposition clzContribution = resolveClass(constType);
+                    list.addAll(clzContribution.collectDeclaredCallChain());
+                    break;
+                }
+            }
+        // 1.4
+        list.addAll(clzSuper.collectDeclaredCallChain());
+        return list;
         }
 
     public ObjectHandle ensureAccess(ObjectHandle handle, Constants.Access access)
@@ -252,35 +305,55 @@ public class TypeComposition
                                          Frame.Continuation continuation)
         {
         ClassTemplate template = f_template;
-        MethodStructure methodDefault = template.getDeclaredMethod("default", TypeSet.VOID, TypeSet.VOID);
 
-        Frame frameDefault;
-        if (methodDefault == null)
+        // TODO: there must be a better way to create a MethodIdConst
+        MethodStructure method = template.f_types.f_adapter.getMethod(template, "default",
+                ClassTemplate.VOID, ClassTemplate.VOID);
+        if (method == null)
             {
-            frameDefault = null;
+            return null;
+            }
+
+        MethodConstant constDefault = method.getIdentityConstant();
+        List<MethodStructure> listMethods =
+                collectMethodCallChain(constDefault, new ArrayList<>());
+
+        int cMethods = listMethods.size();
+        if (cMethods == 0)
+            {
+            return null;
+            }
+
+        Frame frameBase = frame.f_context.createFrame1(frame, listMethods.get(cMethods-1),
+                hStruct, ahVar, Frame.RET_UNUSED);
+
+        if (cMethods > 1)
+            {
+            int[] holder = new int[]{cMethods - 1};
+            Frame.Continuation cont = new Frame.Continuation()
+                {
+                public int proceed(Frame frameCaller)
+                    {
+                    int i = --holder[0];
+                    if(i > 0)
+                        {
+                        frameCaller.call1(listMethods.get(i), hStruct, ahVar, Frame.RET_UNUSED);
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+                        }
+                    else
+                        {
+                        return continuation.proceed(frameCaller);
+                        }
+                    }
+                };
+            frameBase.setContinuation(cont);
             }
         else
             {
-            frameDefault = frame.f_context.createFrame1(frame, methodDefault,
-                    hStruct, ahVar, Frame.RET_UNUSED);
-            frameDefault.setContinuation(continuation);
-            continuation = null;
+            frameBase.setContinuation(continuation);
             }
-
-        TypeComposition clzSuper = getSuper();
-        Frame frameSuper = clzSuper == null ? null :
-             clzSuper.callDefaultConstructors(frame, hStruct, ahVar, continuation);
-
-        if (frameSuper == null)
-            {
-            return frameDefault;
-            }
-
-        if (frameDefault != null)
-            {
-            frameSuper.setContinuation(frameCaller -> frameCaller.call(frameDefault));
-            }
-        return frameSuper;
+        return frameBase;
         }
 
     // retrieve the call chain for the specified method
