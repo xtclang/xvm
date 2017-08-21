@@ -9,7 +9,7 @@ import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.annotations.xInjectedRef;
-import org.xvm.proto.template.xRef.RefHandle;
+import org.xvm.proto.template.Ref.RefHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;

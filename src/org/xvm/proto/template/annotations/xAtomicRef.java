@@ -10,7 +10,7 @@ import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.Ref;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author gg 2017.02.27
  */
 public class xAtomicRef
-        extends xRef
+        extends Ref
     {
     public xAtomicRef(TypeSet types, ClassStructure structure, boolean fInstance)
         {

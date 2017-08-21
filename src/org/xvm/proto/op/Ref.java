@@ -4,8 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.xRef;
-import org.xvm.proto.template.xRef.RefHandle;
+import org.xvm.proto.template.Ref.RefHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -56,7 +55,7 @@ public class Ref extends OpInvocable
             }
         else
             {
-            TypeComposition clzRef = xRef.INSTANCE.ensureClass(
+            TypeComposition clzRef = org.xvm.proto.template.Ref.INSTANCE.ensureClass(
                     Collections.singletonMap("RefType", infoSrc.f_clazz.ensurePublicType()));
 
             RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);

@@ -25,12 +25,12 @@ import org.xvm.proto.template.Enum;
 import org.xvm.proto.template.Enum.EnumHandle;
 import org.xvm.proto.template.Function;
 import org.xvm.proto.template.Function.FullyBoundHandle;
+import org.xvm.proto.template.Ref.RefHandle;
 import org.xvm.proto.template.Service;
 import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xOrdered;
-import org.xvm.proto.template.xRef.RefHandle;
 import org.xvm.proto.template.xString;
 import org.xvm.proto.template.xType;
 

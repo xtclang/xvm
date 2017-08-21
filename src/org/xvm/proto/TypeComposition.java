@@ -15,8 +15,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xRef;
-import org.xvm.proto.template.xRef.RefHandle;
+import org.xvm.proto.template.Ref;
+import org.xvm.proto.template.Ref.RefHandle;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -518,7 +518,7 @@ public class TypeComposition
                     RefHandle hRef = null;
                     if (template.isRef(prop))
                         {
-                        xRef referent = (xRef) template.getRefTemplate(prop);
+                        Ref referent = (Ref) template.getRefTemplate(prop);
 
                         hRef = referent.createRefHandle(referent.f_clazzCanonical, null);
                         }

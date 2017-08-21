@@ -16,12 +16,12 @@ import org.xvm.proto.TypeSet;
  *
  * @author gg 2017.02.27
  */
-public class xRef
+public class Ref
         extends ClassTemplate
     {
-    public static xRef INSTANCE;
+    public static Ref INSTANCE;
 
-    public xRef(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Ref(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
 

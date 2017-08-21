@@ -12,7 +12,7 @@ import org.xvm.proto.template.xException;
 import org.xvm.proto.template.Function;
 import org.xvm.proto.template.Function.FullyBoundHandle;
 import org.xvm.proto.template.annotations.xFutureRef.FutureHandle;
-import org.xvm.proto.template.xRef.RefHandle;
+import org.xvm.proto.template.Ref.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;

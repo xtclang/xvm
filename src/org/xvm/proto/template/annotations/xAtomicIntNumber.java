@@ -10,7 +10,7 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xInt64;
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.Ref;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author gg 2017.02.27
  */
 public class xAtomicIntNumber
-        extends xRef
+        extends Ref
     {
     public static xAtomicIntNumber INSTANCE;
 

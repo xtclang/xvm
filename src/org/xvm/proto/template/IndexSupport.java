@@ -7,7 +7,7 @@ import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.xRef.IndexedRefHandle;
+import org.xvm.proto.template.Ref.IndexedRefHandle;
 
 import java.util.Collections;
 import java.util.function.Consumer;
@@ -40,7 +40,7 @@ public interface IndexSupport
             {
             Type typeReferent = getElementType(hTarget, lIndex);
 
-            TypeComposition clzRef = xRef.INSTANCE.ensureClass(
+            TypeComposition clzRef = Ref.INSTANCE.ensureClass(
                     Collections.singletonMap("RefType", typeReferent));
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);

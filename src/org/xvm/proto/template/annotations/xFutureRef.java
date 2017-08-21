@@ -12,7 +12,7 @@ import org.xvm.proto.TypeSet;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.Function.FunctionHandle;
 import org.xvm.proto.template.xNullable;
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.Ref;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutionException;
  * @author gg 2017.02.27
  */
 public class xFutureRef
-        extends xRef
+        extends Ref
     {
     public static xFutureRef INSTANCE;
 

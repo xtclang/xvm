@@ -18,8 +18,9 @@ import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.proto.template.Const;
 import org.xvm.proto.template.Enum;
 import org.xvm.proto.template.Function;
-import org.xvm.proto.template.xObject;
+import org.xvm.proto.template.Ref;
 import org.xvm.proto.template.Service;
+import org.xvm.proto.template.xObject;
 
 import java.io.File;
 
@@ -118,6 +119,7 @@ public class TypeSet
         new Const(this, (ClassStructure) getClassConstant("Const").getComponent(), true).initDeclared();
         new Function(this, (ClassStructure) getClassConstant("Function").getComponent(), true).initDeclared();
         new Service(this, (ClassStructure) getClassConstant("Service").getComponent(), true).initDeclared();
+        new Ref(this, (ClassStructure) getClassConstant("Ref").getComponent(), true).initDeclared();
         }
 
     // ----- templates -----
