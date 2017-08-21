@@ -24,15 +24,15 @@ import java.util.Iterator;
  *
  * @author gg 2017.02.27
  */
-public class xConst
+public class Const
         extends ClassTemplate
     {
-    public static xConst INSTANCE;
+    public static Const INSTANCE;
 
     // name of the synthetic property for cached hash value
     public static final String PROP_HASH = "@hash";
 
-    public xConst(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Const(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
 
@@ -164,7 +164,7 @@ public class xConst
                     return Op.R_EXCEPTION;
                     }
 
-                xEnum.EnumHandle hResult = (xEnum.EnumHandle) frame.getFrameLocal();
+                Enum.EnumHandle hResult = (Enum.EnumHandle) frame.getFrameLocal();
                 if (hResult != xOrdered.EQUAL)
                     {
                     return frame.assignValue(iReturn, hResult);

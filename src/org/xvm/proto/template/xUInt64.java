@@ -11,7 +11,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xUInt64
-        extends xConst
+        extends Const
     {
     public xUInt64(TypeSet types, ClassStructure structure, boolean fInstance)
         {

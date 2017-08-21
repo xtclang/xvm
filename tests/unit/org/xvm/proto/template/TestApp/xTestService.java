@@ -7,14 +7,14 @@ import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.op.*;
-import org.xvm.proto.template.xService;
+import org.xvm.proto.template.Service;
 
 /**
  * A test service.
  *
  * @author gg 2017.03.15
  */
-public class xTestService extends xService
+public class xTestService extends Service
     {
     private final Adapter adapter;
 

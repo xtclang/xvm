@@ -10,15 +10,15 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.op.Return_0;
 
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xService;
-import org.xvm.proto.template.xService.PropertyOperation;
-import org.xvm.proto.template.xService.PropertyOperation10;
-import org.xvm.proto.template.xService.PropertyOperation01;
-import org.xvm.proto.template.xService.PropertyOperation11;
-import org.xvm.proto.template.xService.ServiceHandle;
+import org.xvm.proto.template.Service;
+import org.xvm.proto.template.Service.PropertyOperation;
+import org.xvm.proto.template.Service.PropertyOperation10;
+import org.xvm.proto.template.Service.PropertyOperation01;
+import org.xvm.proto.template.Service.PropertyOperation11;
+import org.xvm.proto.template.Service.ServiceHandle;
 
 import java.util.Queue;
 
@@ -611,7 +611,7 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     IdentityConstant constClass = f_constructor.getParent().getParent().getIdentityConstant();
-                    xService service = (xService) frame.f_context.f_types.getTemplate(constClass);
+                    Service service = (Service) frame.f_context.f_types.getTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
                     }

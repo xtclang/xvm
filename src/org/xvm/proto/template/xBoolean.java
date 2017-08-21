@@ -19,7 +19,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xBoolean
-        extends xEnum
+        extends Enum
     {
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
@@ -52,7 +52,7 @@ public class xBoolean
         {
         if (f_struct.getFormat() == Component.Format.ENUMVALUE)
             {
-            xEnum template = (xEnum) getSuper();
+            Enum template = (Enum) getSuper();
             return template.createConstHandle(constant, heap);
             }
 

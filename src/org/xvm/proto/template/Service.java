@@ -18,7 +18,7 @@ import org.xvm.proto.TypeSet;
 import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.annotations.xFutureRef;
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -27,12 +27,12 @@ import java.util.concurrent.CompletableFuture;
  *
  * @author gg 2017.02.27
  */
-public class xService
+public class Service
         extends ClassTemplate
     {
-    public static xService INSTANCE;
+    public static Service INSTANCE;
 
-    public xService(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Service(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
 

@@ -9,7 +9,7 @@ import org.xvm.proto.OpCallable;
 
 import org.xvm.proto.template.collections.xTuple.TupleHandle;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;

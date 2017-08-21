@@ -20,17 +20,17 @@ import org.xvm.proto.ObjectHandle.GenericHandle;
 
 import org.xvm.proto.template.collections.xArray;
 import org.xvm.proto.template.collections.xTuple;
+import org.xvm.proto.template.Const;
+import org.xvm.proto.template.Enum;
+import org.xvm.proto.template.Enum.EnumHandle;
+import org.xvm.proto.template.Function;
+import org.xvm.proto.template.Function.FullyBoundHandle;
+import org.xvm.proto.template.Service;
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xConst;
-import org.xvm.proto.template.xEnum;
-import org.xvm.proto.template.xEnum.EnumHandle;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xOrdered;
 import org.xvm.proto.template.xRef.RefHandle;
-import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xString;
 import org.xvm.proto.template.xType;
 
@@ -119,20 +119,21 @@ public abstract class ClassTemplate
                 templateSuper = xObject.INSTANCE;
                 }
             }
-        else if (structClass.getFormat() != structSuper.getFormat())
+
+        if (structSuper == null || structClass.getFormat() != structSuper.getFormat())
             {
             switch (structClass.getFormat())
                 {
                 case SERVICE:
-                    templateCategory = xService.INSTANCE;
+                    templateCategory = Service.INSTANCE;
                     break;
 
                 case CONST:
-                    templateCategory = xConst.INSTANCE;
+                    templateCategory = Const.INSTANCE;
                     break;
 
                 case ENUM:
-                    templateCategory = xEnum.INSTANCE;
+                    templateCategory = Enum.INSTANCE;
                     break;
                 }
             }
@@ -167,7 +168,7 @@ public abstract class ClassTemplate
 
     public boolean isRootObject()
         {
-        return f_templateSuper == null;
+        return f_templateSuper == null && f_struct.getFormat() == Component.Format.CLASS;
         }
 
     /**
@@ -490,12 +491,12 @@ public abstract class ClassTemplate
         MethodStructure methodFinally = f_types.f_adapter.getFinalizer(constructor);
 
         return methodFinally == null ? FullyBoundHandle.NO_OP :
-                xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
+                Function.makeHandle(methodFinally).bindAll(hStruct, ahArg);
         }
 
     protected boolean isConstructImmutable()
         {
-        return this instanceof xConst;
+        return this instanceof Const;
         }
 
     // ----- OpCode support ------

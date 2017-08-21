@@ -18,19 +18,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TODO:
+ * A template for the base of all Enum classes
  *
  * @author gg 2017.02.27
  */
-public class xEnum
-        extends xConst
+public class Enum
+        extends Const
     {
-    public static xEnum INSTANCE;
+    public static Enum INSTANCE;
 
     protected List<String> m_listNames;
     protected List<EnumHandle> m_listHandles;
 
-    public xEnum(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Enum(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure, false);
 
@@ -76,8 +76,8 @@ public class xEnum
             ClassConstant constClass = (ClassConstant) constant;
             String sName = constClass.getName();
 
-            xEnum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
-                (xEnum) getSuper() : this;
+            Enum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
+                (Enum) getSuper() : this;
 
             int ix = template.m_listNames.indexOf(sName);
             if (ix >= 0)

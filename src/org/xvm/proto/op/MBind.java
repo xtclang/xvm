@@ -8,7 +8,7 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.Function;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -65,8 +65,8 @@ public class MBind extends OpInvocable
             MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             return frame.assignValue(f_nResultValue, clz.f_template.isService() ?
-                    xFunction.makeAsyncHandle(method).bindTarget(hTarget) :
-                    xFunction.makeHandle(method).bindTarget(hTarget));
+                    Function.makeAsyncHandle(method).bindTarget(hTarget) :
+                    Function.makeHandle(method).bindTarget(hTarget));
             }
         catch (ExceptionHandle.WrapperException e)
             {

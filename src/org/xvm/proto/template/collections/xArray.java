@@ -16,12 +16,11 @@ import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xObject;
 
 import java.util.Collections;
-import java.util.function.Supplier;
 
 /**
  * TODO:

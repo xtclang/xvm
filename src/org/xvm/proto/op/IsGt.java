@@ -8,7 +8,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xEnum.EnumHandle;
+import org.xvm.proto.template.Enum.EnumHandle;
 import org.xvm.proto.template.xOrdered;
 
 import java.io.DataInput;

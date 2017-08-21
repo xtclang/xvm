@@ -8,11 +8,11 @@ import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
 
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xModule.ModuleHandle;
 import org.xvm.proto.template.Clock.xRuntimeClock;
-import org.xvm.proto.template.xService;
+import org.xvm.proto.template.Service;
 import org.xvm.proto.template.io.Console.xTerminalConsole;
+import org.xvm.proto.template.Function;
+import org.xvm.proto.template.xModule.ModuleHandle;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -80,7 +80,7 @@ public class Container
             Supplier<ObjectHandle> supplierClock = () ->
                 {
                 ServiceContext ctxClock = createServiceContext("RuntimeClock");
-                return xService.makeHandle(ctxClock,
+                return Service.makeHandle(ctxClock,
                         xRuntimeClock.INSTANCE.f_clazzCanonical,
                         templateClock.f_clazzCanonical.ensurePublicType());
                 };
@@ -98,7 +98,7 @@ public class Container
             Supplier<ObjectHandle> supplierConsole = () ->
                 {
                 ServiceContext ctxConsole = createServiceContext("Console");
-                return xService.makeHandle(ctxConsole,
+                return Service.makeHandle(ctxConsole,
                         xTerminalConsole.INSTANCE.f_clazzCanonical,
                         templateConsole.f_clazzCanonical.ensurePublicType());
                 };
@@ -115,20 +115,18 @@ public class Container
             throw new IllegalStateException("Already started");
             }
 
-        // every native class that has an INSTANCE static variable needs to be here
+        // every native class that has an INSTANCE static variable may need to be here
         f_types.getTemplate("Object");
-        f_types.getTemplate("Const");
-        f_types.getTemplate("Enum");
-        f_types.getTemplate("Boolean");
         f_types.getTemplate("String");
-        f_types.getTemplate("Service");
-        f_types.getTemplate("Function");
         f_types.getTemplate("Module");
 
+        // the native interfaces are pseudo-classes (also with INSTANCE static variable)
+        f_types.initNativeInterfaces();
+
         m_contextMain = createServiceContext("main");
-        xService.makeHandle(m_contextMain,
-                xService.INSTANCE.f_clazzCanonical,
-                xService.INSTANCE.f_clazzCanonical.ensurePublicType());
+        Service.makeHandle(m_contextMain,
+                Service.INSTANCE.f_clazzCanonical,
+                Service.INSTANCE.f_clazzCanonical.ensurePublicType());
 
         initResources();
 
@@ -146,7 +144,7 @@ public class Container
             // m_hModule = (ModuleHandle) app.createConstHandle(f_constModule, f_heapGlobal);
             m_hApp = app.createConstHandle(app.f_struct.getIdentityConstant(), f_heapGlobal);
 
-            m_contextMain.callLater(xFunction.makeHandle(mtRun), new ObjectHandle[]{m_hApp});
+            m_contextMain.callLater(Function.makeHandle(mtRun), new ObjectHandle[]{m_hApp});
             }
         catch (Exception e)
             {

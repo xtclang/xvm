@@ -4,14 +4,11 @@ package org.xvm.proto;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.proto.template.xConst;
+import org.xvm.proto.template.Const;
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xString;
 
 import java.sql.Timestamp;
-import java.util.Iterator;
 import java.util.List;
-import java.util.function.Supplier;
 
 
 /**
@@ -74,7 +71,7 @@ public abstract class Utils
 
         if (frame.f_adapter.isNative(method))
             {
-            xConst template = (xConst) clzConst.f_template; // should we get it from method?
+            Const template = (Const) clzConst.f_template; // should we get it from method?
             return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
             }
 

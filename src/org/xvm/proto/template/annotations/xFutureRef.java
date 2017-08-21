@@ -10,7 +10,7 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 import org.xvm.proto.template.xNullable;
 import org.xvm.proto.template.xRef;
 

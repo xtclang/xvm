@@ -14,7 +14,7 @@ import java.util.Collections;
  * @author gg 2017.02.27
  */
 public class xNullable
-        extends xEnum
+        extends Enum
     {
     public static NullHandle NULL;
 

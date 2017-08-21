@@ -9,8 +9,8 @@ import org.xvm.asm.constants.Int64Constant;
 
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xFunction.FullyBoundHandle;
+import org.xvm.proto.template.Function;
+import org.xvm.proto.template.Function.FullyBoundHandle;
 import org.xvm.proto.template.annotations.xFutureRef.FutureHandle;
 import org.xvm.proto.template.xRef.RefHandle;
 
@@ -20,7 +20,6 @@ import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.template.collections.xTuple;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 /**
  * A call stack frame.
@@ -193,7 +192,7 @@ public class Frame
                     }
 
                 MethodStructure method = hThis.f_clazz.resolveSuper(f_function);
-                return xFunction.makeHandle(method).bind(0, f_hTarget);
+                return Function.makeHandle(method).bind(0, f_hTarget);
 
             case Op.A_TARGET: // same as this:private; never used
                 if (f_hTarget == null)

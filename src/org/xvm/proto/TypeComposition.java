@@ -507,7 +507,7 @@ public class TypeComposition
 
         ClassTemplate template = f_template;
 
-        while (!template.isRootObject())
+        while (template != null)
             {
             for (Component child : template.f_struct.children())
                 {

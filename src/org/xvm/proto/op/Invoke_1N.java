@@ -7,8 +7,8 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xService.ServiceHandle;
+import org.xvm.proto.template.Function;
+import org.xvm.proto.template.Service.ServiceHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -80,7 +80,7 @@ public class Invoke_1N extends OpInvocable
 
             if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
-                return xFunction.makeAsyncHandle(method).callN(frame, hTarget, ahVar, f_anRetValue);
+                return Function.makeAsyncHandle(method).callN(frame, hTarget, ahVar, f_anRetValue);
                 }
 
             return frame.callN(method, hTarget, ahVar, f_anRetValue);

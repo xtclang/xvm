@@ -15,10 +15,11 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
-import org.xvm.proto.template.xConst;
-import org.xvm.proto.template.xEnum;
+import org.xvm.proto.template.Const;
+import org.xvm.proto.template.Enum;
+import org.xvm.proto.template.Function;
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xService;
+import org.xvm.proto.template.Service;
 
 import java.io.File;
 
@@ -108,7 +109,15 @@ public class TypeSet
                     }
                 }
             }
+        }
 
+    protected void initNativeInterfaces()
+        {
+        // initialize necessary INSTANCE references
+        new Enum(this, (ClassStructure) getClassConstant("Enum").getComponent(), true).initDeclared();
+        new Const(this, (ClassStructure) getClassConstant("Const").getComponent(), true).initDeclared();
+        new Function(this, (ClassStructure) getClassConstant("Function").getComponent(), true).initDeclared();
+        new Service(this, (ClassStructure) getClassConstant("Service").getComponent(), true).initDeclared();
         }
 
     // ----- templates -----
@@ -164,13 +173,13 @@ public class TypeSet
                         template = getNativeTemplate(sEnumName, structClass);
                         if (template == null)
                             {
-                            template = new xEnum(this, structClass, false);
+                            template = new Enum(this, structClass, false);
                             }
                         // no need to call initDeclared() for the values
                         break;
 
                     case ENUM:
-                        template = new xEnum(this, structClass, false);
+                        template = new Enum(this, structClass, false);
                         template.initDeclared();
                         break;
 
@@ -181,11 +190,11 @@ public class TypeSet
                         break;
 
                     case SERVICE:
-                        template = new xService(this, structClass, false);
+                        template = new Service(this, structClass, false);
                         break;
 
                     case CONST:
-                        template = new xConst(this, structClass, false);
+                        template = new Const(this, structClass, false);
                         break;
 
                     default:

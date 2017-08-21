@@ -22,7 +22,7 @@ import org.xvm.proto.template.collections.xIntArray;
  * @author gg 2017.02.27
  */
 public class xInt64
-        extends xConst
+        extends Const
     {
     public static xInt64 INSTANCE;
 

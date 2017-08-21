@@ -11,8 +11,8 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.collections.xTuple.TupleHandle;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xService.ServiceHandle;
+import org.xvm.proto.template.Function;
+import org.xvm.proto.template.Service.ServiceHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -93,7 +93,7 @@ public class Invoke_TT extends OpInvocable
 
             if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
                 {
-                return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, -f_nTupleRetValue - 1);
+                return Function.makeAsyncHandle(method).call1(frame, hTarget, ahVar, -f_nTupleRetValue - 1);
                 }
 
             return frame.call1(method, hTarget, ahVar, -f_nTupleRetValue - 1);

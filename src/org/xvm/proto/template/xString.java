@@ -21,7 +21,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xString
-        extends xConst
+        extends Const
     {
     public static xString INSTANCE;
 

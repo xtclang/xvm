@@ -8,7 +8,7 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.Utils;
 
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;

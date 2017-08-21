@@ -19,7 +19,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xBit
-        extends xConst
+        extends Const
     {
     public xBit(TypeSet types, ClassStructure structure, boolean fInstance)
         {
