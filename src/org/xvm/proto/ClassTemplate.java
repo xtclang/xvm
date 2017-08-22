@@ -404,6 +404,19 @@ public abstract class ClassTemplate
         }
 
     @Override
+    public int hashCode()
+        {
+        return f_sName.hashCode();
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        // type compositions are singletons
+        return this == obj;
+        }
+
+    @Override
     public String toString()
         {
         return f_struct.toString();
@@ -670,16 +683,16 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        GenericHandle hThis = (GenericHandle) hTarget;
         String sName = property.getName();
 
         if (isGenericType(sName))
             {
-            Type type = hThis.f_clazz.getActualType(sName);
+            Type type = hTarget.f_clazz.getActualType(sName);
 
             return frame.assignValue(iReturn, xType.makeHandle(type));
             }
 
+        GenericHandle hThis = (GenericHandle) hTarget;
         ObjectHandle hValue = hThis.m_mapFields.get(sName);
 
         if (hValue == null)

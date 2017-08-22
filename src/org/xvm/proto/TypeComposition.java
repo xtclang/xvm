@@ -21,9 +21,11 @@ import org.xvm.proto.template.Ref.RefHandle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String>).
@@ -40,14 +42,22 @@ public class TypeComposition
     public final Map<String, Type> f_mapGenericActual; // corresponding to the template's GenericTypeName
     private final boolean f_fCanonical;
 
-
     private TypeComposition m_clzSuper;
     private Type m_typePublic;
     private Type m_typeProtected;
     private Type m_typePrivate;
     private Type m_typeStruct;
 
-    // cached call chain (the top-most method first)
+    // cached "declared" call chain
+    private List<ClassTemplate> m_listDeclaredChain;
+
+    // cached "default" call chain
+    private List<ClassTemplate> m_listDefaultChain;
+
+    // cached "full" call chain
+    private List<ClassTemplate> m_listCallChain;
+
+    // cached method call chain (the top-most method first)
     private Map<MethodConstant, List<MethodStructure>> m_mapMethods = new HashMap<>();
 
     // cached map of fields (values are always nulls)
@@ -94,36 +104,63 @@ public class TypeComposition
         return null;
         }
 
+    public List<ClassTemplate> getCallChain()
+        {
+        if (m_listCallChain != null)
+            {
+            return m_listCallChain;
+            }
+
+        TypeComposition clzSuper = getSuper();
+        if (clzSuper == null)
+            {
+            // this is "Object"; it has no contribution
+            return m_listCallChain = collectDeclaredCallChain();
+            }
+
+        List<ClassTemplate> list = m_listCallChain = new LinkedList<>(collectDeclaredCallChain());
+
+        addNoDupes(collectDefaultCallChain(), list, new HashSet<>(list));
+        return list;
+        }
+
     // There are two parts on the call chain:
     //  1. The "declared" chain that consists of:
     //   1.1 declared methods on the encapsulating mixins and traits (recursively)
     //   1.2 methods implemented by the class
     //   1.3 declared methods on the incorporated mixins, traits and delegates (recursively)
-    //   1.4 followed by the "declared" chain on the super class
+    //   1.4 if the class belongs to a "built-in category" (e.g. Enum, Service, Const)
+    //       declared methods for the category itself
+    //   1.5 followed by the "declared" chain on the super class
     //
     // 2. The "default" chain that consists of:
     //   2.1 default methods on the interfaces that are declared by encapsulating
     //          mixins and traits (recursively)
-    //   2.2 default methods on the interfaces declared by the class (recursively)
+    //   2.2 default methods on the interfaces implemented by the class (recursively)
     //   2.3 default methods on the interfaces that are declared by mixins, traits and delegates (recursively)
     //   2.4 followed by the "default" chain on the super class
-
-    protected List<TypeComposition> collectDeclaredCallChain()
+    protected List<ClassTemplate> collectDeclaredCallChain()
         {
+        if (m_listDeclaredChain != null)
+            {
+            return m_listDeclaredChain;
+            }
+
         TypeComposition clzSuper = getSuper();
         if (clzSuper == null)
             {
             // this is "Object"; it has no contribution
-            return Collections.singletonList(this);
+            return m_listDeclaredChain = Collections.singletonList(f_template);
             }
 
         ClassStructure struct = f_template.f_struct;
-        List<TypeComposition> list = new LinkedList<>();
+        List<ClassTemplate> list = m_listDeclaredChain = new LinkedList<>();
+        Set<ClassTemplate> set = new HashSet<>(); // to avoid duplicates
 
         // TODO: 1.1
 
         // 1.2
-        list.add(this);
+        list.add(f_template);
 
         // 1.3
         for (Component.Contribution contribution : struct.getContributionsAsList())
@@ -133,15 +170,92 @@ public class TypeComposition
                 case Incorporates:
                     // TODO: how to detect a conditional incorporation?
                 case Delegates:
-                    ClassTypeConstant constType = contribution.getClassConstant();
-                    TypeComposition clzContribution = resolveClass(constType);
-                    list.addAll(clzContribution.collectDeclaredCallChain());
+                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    addNoDupes(clzContribution.collectDeclaredCallChain(), list, set);
                     break;
                 }
             }
+
         // 1.4
-        list.addAll(clzSuper.collectDeclaredCallChain());
+        ClassTemplate templateCategory = f_template.f_templateCategory;
+        if (templateCategory != null)
+            {
+            // all categories are non-generic
+            list.add(templateCategory);
+            }
+
+        // 1.5
+        addNoDupes(clzSuper.collectDeclaredCallChain(), list, set);
         return list;
+        }
+
+    protected List<ClassTemplate> collectDefaultCallChain()
+        {
+        if (m_listDefaultChain != null)
+            {
+            return m_listDefaultChain;
+            }
+
+        TypeComposition clzSuper = getSuper();
+        if (clzSuper == null)
+            {
+            // this is "Object"; it has no contribution
+            return Collections.emptyList();
+            }
+
+        ClassStructure struct = f_template.f_struct;
+        List<ClassTemplate> list = m_listDefaultChain = new LinkedList<>();
+        Set<ClassTemplate> set = new HashSet<>(); // to avoid duplicates
+
+        // TODO: 2.1
+
+        // 2.2
+        if (f_template.f_struct.getFormat() == Component.Format.INTERFACE)
+            {
+            list.add(f_template);
+            set.add(f_template);
+            }
+
+        for (Component.Contribution contribution : struct.getContributionsAsList())
+            {
+            switch (contribution.getComposition())
+                {
+                case Incorporates:
+                    // TODO: how to detect a conditional incorporation?
+                case Delegates:
+                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
+                    break;
+                }
+            }
+
+        // 2.3
+        for (Component.Contribution contribution : struct.getContributionsAsList())
+            {
+            switch (contribution.getComposition())
+                {
+                case Implements:
+                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
+                    break;
+                }
+            }
+
+        // 2.4
+        addNoDupes(clzSuper.collectDefaultCallChain(), list, set);
+        return list;
+        }
+
+    private void addNoDupes(List<ClassTemplate> listFrom, List<ClassTemplate> listTo,
+                            Set<ClassTemplate> setDupes)
+        {
+        for (ClassTemplate template : listFrom)
+            {
+            if (setDupes.add(template))
+                {
+                listTo.add(template);
+                }
+            }
         }
 
     public ObjectHandle ensureAccess(ObjectHandle handle, Constants.Access access)
@@ -324,7 +438,7 @@ public class TypeComposition
             return null;
             }
 
-        Frame frameBase = frame.f_context.createFrame1(frame, listMethods.get(cMethods-1),
+        Frame frameBase = frame.f_context.createFrame1(frame, listMethods.get(cMethods - 1),
                 hStruct, ahVar, Frame.RET_UNUSED);
 
         if (cMethods > 1)
@@ -364,53 +478,18 @@ public class TypeComposition
                 cm -> collectMethodCallChain(cm, new LinkedList<>()));
         }
 
-    // find a matching method and add to the list
-    // TODO: replace MethodConstant with MethodIdConstant
-    protected List<MethodStructure> collectMethodCallChain(
-            MethodConstant constMethod, List<MethodStructure> list)
-        {
-        ClassTemplate template = f_template;
-        MethodStructure method = template.getDeclaredMethod(constMethod);
-        if (method != null)
-            {
-            list.add(method);
-            }
-
-        ClassTemplate templateCategory = template.f_templateCategory;
-        if (templateCategory != null)
-            {
-            method = templateCategory.getDeclaredMethod(constMethod);
-            if (method != null)
-                {
-                list.add(method);
-
-                // the native (category) methods don't "super" to anything
-                return list;
-                }
-            }
-
-        TypeComposition clzSuper = getSuper();
-        if (clzSuper != null)
-            {
-            clzSuper.collectMethodCallChain(constMethod, list);
-            }
-
-        // TODO: walk default methods on interfaces
-        return list;
-        }
-
     // resolve the super call chain for the specified method
     public MethodStructure resolveSuper(MethodStructure method)
         {
         MethodConstant constMethod = method.getIdentityConstant();
 
         List<MethodStructure> listMethods = m_mapMethods.computeIfAbsent(constMethod, cm ->
-        {
-        Component container = method.getParent().getParent();
-        return container instanceof PropertyStructure ?
-                collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
-                collectMethodCallChain(cm, new LinkedList<>());
-        });
+            {
+            Component parent = method.getParent().getParent();
+            return parent instanceof PropertyStructure ?
+                    collectAccessorCallChain(parent.getName(), cm, new LinkedList<>()) :
+                    collectMethodCallChain(cm, new LinkedList<>());
+            });
 
         for (int i = 0, c = listMethods.size(); i < c - 1; i++)
             {
@@ -422,48 +501,41 @@ public class TypeComposition
         return null;
         }
 
+    // find a matching method and add to the list
+    // TODO: replace MethodConstant with MethodIdConstant
+    protected List<MethodStructure> collectMethodCallChain(
+            MethodConstant constMethod, List<MethodStructure> list)
+        {
+        for (ClassTemplate template : getCallChain())
+            {
+            MethodStructure method = template.getDeclaredMethod(constMethod);
+            if (method != null)
+                {
+                list.add(method);
+                }
+            }
+        return list;
+        }
+
     // find a matching property accessor and add to the list
     // TODO: replace MethodConstant with MethodIdConstant
     protected List<MethodStructure> collectAccessorCallChain(
             String sPropName, MethodConstant constMethod, List<MethodStructure> list)
         {
-        PropertyStructure property = f_template.getProperty(sPropName);
-
-        if (property != null)
+        for (ClassTemplate template : getCallChain())
             {
-            MultiMethodStructure mms = (MultiMethodStructure) property.getChild(constMethod.getName());
-            if (mms != null)
-                {
-                // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
-                list.add((MethodStructure) mms.children().get(0));
-                }
-            }
-
-        ClassTemplate templateCategory = f_template.f_templateCategory;
-        if (templateCategory != null)
-            {
-            property = templateCategory.getProperty(sPropName);
+            PropertyStructure property = template.getProperty(sPropName);
             if (property != null)
                 {
                 MultiMethodStructure mms = (MultiMethodStructure) property.getChild(constMethod.getName());
                 if (mms != null)
                     {
-                    // TODO: compare the signature
+                    // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
                     list.add((MethodStructure) mms.children().get(0));
-
-                    // the native (category) methods don't super to anything
-                    return list;
                     }
                 }
             }
 
-        TypeComposition clzSuper = getSuper();
-        if (clzSuper != null)
-            {
-            clzSuper.collectAccessorCallChain(sPropName, constMethod, list);
-            }
-
-        // TODO: walk default methods on interfaces
         return list;
         }
 

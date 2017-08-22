@@ -178,6 +178,7 @@ class TestApp
         print(++svc.counter2);
         print(svc.counter++);
         print(svc.increment());
+        print(rfc.RefType);
 
         this:service.yield();
 

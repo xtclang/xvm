@@ -223,10 +223,15 @@ public class xTestApp extends xModule
             new Var(adapter.getClassTypeConstId("Int64")), // #8
             new PPreInc(0, adapter.getPropertyConstId("TestApp.TestService", "counter2"), 8),
             new X_Print(8),
+
             new PPostInc(0, adapter.getPropertyConstId("TestApp.TestService", "counter"), 8),
             new X_Print(8),
             new Invoke_01(0, adapter.getMethodConstId("TestApp.TestService", "increment"), 8),
             new X_Print(8),
+
+            new Var(adapter.getClassTypeConstId("Type")), // #9
+            new PGet(4, adapter.getPropertyConstId("Ref", "RefType"), 9),
+            new X_Print(9),
 
             new Invoke_00(Op.A_SERVICE, adapter.getMethodConstId("TestApp.TestService", "yield")),
 
@@ -234,7 +239,7 @@ public class xTestApp extends xModule
                             -adapter.ensureValueConstantId(0)),
             new Return_0(),
             };
-        ftTestService.m_cVars = 9;
+        ftTestService.m_cVars = 10;
         ftTestService.m_cScopes = 2;
 
         // --- testService2 ---
