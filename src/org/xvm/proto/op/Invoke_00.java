@@ -9,9 +9,6 @@ import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.Utils;
 
-import org.xvm.proto.template.Function;
-import org.xvm.proto.template.Service.ServiceHandle;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -59,26 +56,19 @@ public class Invoke_00 extends OpInvocable
                 return R_REPEAT;
                 }
 
-            TypeComposition clazz = hTarget.f_clazz;
+            TypeComposition clz = hTarget.f_clazz;
 
-            MethodStructure method = getMethodStructure(frame, clazz, f_nMethodId);
+            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
 
             if (frame.f_adapter.isNative(method))
                 {
-                return clazz.f_template.invokeNativeN(frame, method, hTarget,
+                return clz.f_template.invokeNativeN(frame, method, hTarget,
                         Utils.OBJECTS_NONE, Frame.RET_UNUSED);
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
 
-            if (clazz.f_template.isService() &&
-                    frame.f_context != ((ServiceHandle) hTarget).m_context)
-                {
-                return Function.makeAsyncHandle(method).
-                        call1(frame, hTarget, ahVar, Frame.RET_UNUSED);
-                }
-
-            return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);
+            return clz.f_template.invoke1(frame, hTarget, method, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -11,8 +11,6 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.collections.xTuple.TupleHandle;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.Function;
-import org.xvm.proto.template.Service.ServiceHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -87,16 +85,27 @@ public class Invoke_TT extends OpInvocable
                 return R_EXCEPTION;
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
+            int cArgs = ahArg.length;
+            int cVars = frame.f_adapter.getVarCount(method);
 
-            System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
-
-            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+            if (cArgs != Adapter.getArgCount(method))
                 {
-                return Function.makeAsyncHandle(method).call1(frame, hTarget, ahVar, -f_nTupleRetValue - 1);
+                frame.m_hException = xException.makeHandle("Invalid tuple argument");
+                return R_EXCEPTION;
                 }
 
-            return frame.call1(method, hTarget, ahVar, -f_nTupleRetValue - 1);
+            ObjectHandle[] ahVar;
+            if (cVars > cArgs)
+                {
+                ahVar = new ObjectHandle[cVars];
+                System.arraycopy(ahArg, 0, ahVar, 0, cArgs);
+                }
+            else
+                {
+                ahVar = ahArg;
+                }
+
+            return clz.f_template.invoke1(frame, hTarget, method, ahVar, -f_nTupleRetValue - 1);
             }
         catch (ExceptionHandle.WrapperException e)
             {

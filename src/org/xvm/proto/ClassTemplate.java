@@ -514,6 +514,18 @@ public abstract class ClassTemplate
 
     // ----- OpCode support ------
 
+    // invoke with a zero or one return value
+    public int invoke1(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle[] ahVar, int iReturn)
+        {
+        return frame.call1(method, hTarget, ahVar, iReturn);
+        }
+
+    // invoke with more than one return value
+    public int invokeN(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        return frame.callN(method, hTarget, ahVar, aiReturn);
+        }
+
     // invokeNative property "get" operation
     public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
         {
@@ -924,6 +936,53 @@ public abstract class ClassTemplate
     protected boolean isGenericType(String sProperty)
         {
         return f_listGenericParams.contains(sProperty);
+        }
+
+    // represents a chain of invocation
+    public static class CallChain
+        {
+        // an optimization for a single method chain
+        private MethodStructure m_method;
+
+        // a list of methods (only if m_method == null)
+        private List<MethodStructure> m_listMethods;
+
+        // a property representing the field access
+        private PropertyStructure m_property;
+
+        // get vs. set
+        private boolean m_fGet;
+
+        // a constructor for a method chain
+        public CallChain(List<MethodStructure> listMethods)
+            {
+            if (listMethods.size() == 1)
+                {
+                m_method = listMethods.get(0);
+                }
+            else
+                {
+                m_listMethods = listMethods;
+                }
+            }
+
+        // a constructor for a property access chain
+        public CallChain(List<MethodStructure> listMethods, PropertyStructure property, boolean fGet)
+            {
+            this(listMethods);
+
+            m_property = property;
+            m_fGet = fGet;
+            }
+
+        public MethodStructure getTop()
+            {
+            if (m_method == null)
+                {
+                return m_listMethods.get(0);
+                }
+            return null;
+            }
         }
 
     // =========== TEMPORARY ========

@@ -11,8 +11,6 @@ import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.collections.xTuple.TupleHandle;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.Function;
-import org.xvm.proto.template.Service.ServiceHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -81,22 +79,27 @@ public class Invoke_TN extends OpInvocable
                 return clz.f_template.invokeNativeNN(frame, method, hTarget, ahArg, f_anRetValue);
                 }
 
-            if (ahArg.length != Adapter.getArgCount(method))
+            int cArgs = ahArg.length;
+            int cVars = frame.f_adapter.getVarCount(method);
+
+            if (cArgs != Adapter.getArgCount(method))
                 {
                 frame.m_hException = xException.makeHandle("Invalid tuple argument");
                 return R_EXCEPTION;
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-
-            System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
-
-            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+            ObjectHandle[] ahVar;
+            if (cVars > cArgs)
                 {
-                return Function.makeAsyncHandle(method).callN(frame, hTarget, ahVar, f_anRetValue);
+                ahVar = new ObjectHandle[cVars];
+                System.arraycopy(ahArg, 0, ahVar, 0, cArgs);
+                }
+            else
+                {
+                ahVar = ahArg;
                 }
 
-            return frame.callN(method, hTarget, ahVar, f_anRetValue);
+            return clz.f_template.invokeN(frame, hTarget, method, ahVar, f_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

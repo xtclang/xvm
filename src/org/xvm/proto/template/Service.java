@@ -63,6 +63,22 @@ public class Service
         }
 
     @Override
+    public int invoke1(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle[] ahVar, int iReturn)
+        {
+        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+            super.invoke1(frame, hTarget, method, ahVar, iReturn) :
+            Function.makeAsyncHandle(method).call1(frame, hTarget, ahVar, iReturn);
+        }
+
+    @Override
+    public int invokeN(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+            super.invokeN(frame, hTarget, method, ahVar, aiReturn) :
+            Function.makeAsyncHandle(method).callN(frame, hTarget, ahVar, aiReturn);
+        }
+
+    @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {

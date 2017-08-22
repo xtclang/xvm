@@ -125,16 +125,16 @@ public class Frame
         }
 
     // a convenience method; ahVar - prepared variables
-    public int call1(MethodStructure template, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+    public int call1(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = f_context.createFrame1(this, template, hTarget, ahVar, iReturn);
+        m_frameNext = f_context.createFrame1(this, method, hTarget, ahVar, iReturn);
         return Op.R_CALL;
         }
 
     // a convenience method
-    public int callN(MethodStructure template, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+    public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        m_frameNext = f_context.createFrameN(this, template, hTarget, ahVar, aiReturn);
+        m_frameNext = f_context.createFrameN(this, method, hTarget, ahVar, aiReturn);
         return Op.R_CALL;
         }
 

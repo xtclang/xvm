@@ -9,9 +9,6 @@ import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.Utils;
 
-import org.xvm.proto.template.Function;
-import org.xvm.proto.template.Service.ServiceHandle;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -74,13 +71,7 @@ public class Invoke_01 extends OpInvocable
 
             ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
 
-            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
-                {
-                return Function.makeAsyncHandle(method).
-                        call1(frame, hTarget, ahVar, f_nRetValue);
-                }
-
-            return frame.call1(method, hTarget, ahVar, f_nRetValue);
+            return clz.f_template.invoke1(frame, hTarget, method, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

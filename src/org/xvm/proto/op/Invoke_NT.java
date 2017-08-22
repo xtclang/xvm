@@ -8,9 +8,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.Function;
-import org.xvm.proto.template.Service.ServiceHandle;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -60,37 +57,32 @@ public class Invoke_NT extends OpInvocable
         {
         try
             {
-                ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-                if (hTarget == null)
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            if (hTarget == null)
+                {
+                return R_REPEAT;
+                }
+
+            TypeComposition clz = hTarget.f_clazz;
+            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
+
+            if (frame.f_adapter.isNative(method))
+                {
+                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
+                if (ahArg == null)
                     {
                     return R_REPEAT;
                     }
+                return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, -f_nTupleRetValue - 1);
+                }
 
-                TypeComposition clz = hTarget.f_clazz;
-                MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method));
+            if (ahVar == null)
+                {
+                return R_REPEAT;
+                }
 
-                if (frame.f_adapter.isNative(method))
-                    {
-                    ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
-                    if (ahArg == null)
-                        {
-                        return R_REPEAT;
-                        }
-                    return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, -f_nTupleRetValue - 1);
-                    }
-
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method));
-                if (ahVar == null)
-                    {
-                    return R_REPEAT;
-                    }
-
-                if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
-                    {
-                    return Function.makeAsyncHandle(method).call1(frame, hTarget, ahVar, -f_nTupleRetValue - 1);
-                    }
-
-                return frame.call1(method, hTarget, ahVar, -f_nTupleRetValue - 1);
+            return clz.f_template.invoke1(frame, hTarget, method, ahVar, -f_nTupleRetValue - 1);
             }
         catch (ExceptionHandle.WrapperException e)
             {

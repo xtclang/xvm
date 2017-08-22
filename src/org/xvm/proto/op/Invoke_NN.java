@@ -8,9 +8,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.Function;
-import org.xvm.proto.template.Service.ServiceHandle;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -85,12 +82,7 @@ public class Invoke_NN extends OpInvocable
                 return clz.f_template.invokeNativeNN(frame, method, hTarget, ahVar, f_anRetValue);
                 }
 
-            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
-                {
-                return Function.makeAsyncHandle(method).callN(frame, hTarget, ahVar, f_anRetValue);
-                }
-
-            return frame.callN(method, hTarget, ahVar, f_anRetValue);
+            return clz.f_template.invokeN(frame, hTarget, method, ahVar, f_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
