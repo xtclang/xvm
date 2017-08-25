@@ -1,6 +1,5 @@
 package org.xvm.proto;
 
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.PropertyConstant;
 
 
@@ -11,18 +10,18 @@ import org.xvm.asm.constants.PropertyConstant;
  */
 public abstract class OpProperty extends Op
     {
-    private TypeComposition m_clazz;      // cached class
-    private int m_nPropId;                // cached property id
-    private PropertyStructure m_property; // cached property
+    private TypeComposition m_clazz;             // cached class
+    private int m_nPropId;                       // cached property id
+    private CallChain.PropertyCallChain m_chain; // cached call chain
 
-    protected PropertyStructure getPropertyStructure(Frame frame,
-                                                     TypeComposition clazz, int nPropertyId)
+    protected CallChain.PropertyCallChain getPropertyCallChain(Frame frame, TypeComposition clazz,
+                                                               int nPropertyId, boolean fGet)
         {
         assert (nPropertyId >= 0);
 
-        if (m_property != null && nPropertyId == m_nPropId && m_clazz == clazz)
+        if (m_chain != null && nPropertyId == m_nPropId && m_clazz == clazz)
             {
-            return m_property;
+            return m_chain;
             }
 
         PropertyConstant constProperty = (PropertyConstant)
@@ -30,6 +29,8 @@ public abstract class OpProperty extends Op
 
         m_nPropId = nPropertyId;
         m_clazz = clazz;
-        return m_property = clazz.getProperty(constProperty.getName());
+        return m_chain = fGet ?
+                clazz.getPropertyGetterChain(constProperty.getName()) :
+                clazz.getPropertySetterChain(constProperty.getName());
         }
     }

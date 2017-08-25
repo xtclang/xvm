@@ -53,6 +53,8 @@ public class Frame
     public FullyBoundHandle     m_hfnFinally;   // a "finally" method for the constructors
     public Frame                m_frameNext;    // the next frame to call
     public Continuation         m_continuation; // a function to call after this frame returns
+    public CallChain            m_chain;        // an invocation call chain
+    public int                  m_nDepth;       // this frame's depth in the call chain
     private ObjectHandle        m_hFrameLocal;  // a "frame local" holding area
 
     // positive return values indicate a caller's frame register
@@ -94,7 +96,7 @@ public class Frame
         f_aiReturn = aiReturn;
         }
 
-    // construct a initial (native) frame
+    // construct an initial (native) frame
     protected Frame(Fiber fiber, int iCallerPC, Op[] aopNative,
                     ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
@@ -135,6 +137,26 @@ public class Frame
     public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         m_frameNext = f_context.createFrameN(this, method, hTarget, ahVar, aiReturn);
+        return Op.R_CALL;
+        }
+
+    // a convenience method; ahVar - prepared variables
+    public int invoke1(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        Frame frameNext = m_frameNext = f_context.createFrame1(this,
+                chain.getMethod(nDepth), hTarget, ahVar, iReturn);
+        frameNext.m_chain = chain;
+        frameNext.m_nDepth = nDepth;
+        return Op.R_CALL;
+        }
+
+    // a convenience method
+    public int invokeN(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        Frame frameNext = m_frameNext = f_context.createFrameN(this,
+                chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
+        frameNext.m_chain = chain;
+        frameNext.m_nDepth = nDepth;
         return Op.R_CALL;
         }
 
@@ -190,9 +212,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-
-                MethodStructure method = hThis.f_clazz.resolveSuper(f_function);
-                return Function.makeHandle(method).bind(0, f_hTarget);
+                return Function.makeHandle(m_chain, m_nDepth).bind(0, f_hTarget);
 
             case Op.A_TARGET: // same as this:private; never used
                 if (f_hTarget == null)

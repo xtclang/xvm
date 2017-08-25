@@ -1,7 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.MethodStructure;
-
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -64,25 +63,21 @@ public class Invoke_NT extends OpInvocable
                 }
 
             TypeComposition clz = hTarget.f_clazz;
-            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
+            CallChain chain = getCallChain(frame, clz, f_nMethodId);
 
-            if (frame.f_adapter.isNative(method))
-                {
-                ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
-                if (ahArg == null)
-                    {
-                    return R_REPEAT;
-                    }
-                return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, -f_nTupleRetValue - 1);
-                }
-
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(method));
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue,
+                    frame.f_adapter.getVarCount(chain.getTop()));
             if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
 
-            return clz.f_template.invoke1(frame, hTarget, method, ahVar, -f_nTupleRetValue - 1);
+            if (chain.isNative())
+                {
+                return clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget, ahVar, -f_nTupleRetValue - 1);
+                }
+
+            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, -f_nTupleRetValue - 1);
             }
         catch (ExceptionHandle.WrapperException e)
             {

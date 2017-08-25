@@ -496,20 +496,20 @@ public class ServiceContext
 
     // send and asynchronous property operation message
     public CompletableFuture<ObjectHandle> sendProperty01Request(Frame frameCaller,
-            PropertyStructure property, PropertyOperation01 op)
+            CallChain.PropertyCallChain chain, PropertyOperation01 op)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new PropertyOpRequest(frameCaller, property, null, 1, future, op));
+        addRequest(new PropertyOpRequest(frameCaller, chain, null, 1, future, op));
 
         return future;
         }
 
     // send and asynchronous property operation message
     public void sendProperty10Request(Frame frameCaller,
-            PropertyStructure property, ObjectHandle hValue, PropertyOperation10 op)
+            CallChain.PropertyCallChain chain, ObjectHandle hValue, PropertyOperation10 op)
         {
-        addRequest(new PropertyOpRequest(frameCaller, property, hValue, 0, null, op));
+        addRequest(new PropertyOpRequest(frameCaller, chain, hValue, 0, null, op));
         }
 
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
@@ -748,19 +748,19 @@ public class ServiceContext
     public static class PropertyOpRequest
             extends Message
         {
-        private final PropertyStructure f_property;
+        private final CallChain.PropertyCallChain f_chain;
         private final ObjectHandle f_hValue;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
         private final PropertyOperation f_op;
 
-        public PropertyOpRequest(Frame frameCaller, PropertyStructure property,
+        public PropertyOpRequest(Frame frameCaller, CallChain.PropertyCallChain chain,
                                  ObjectHandle hValue, int cReturns,
                                  CompletableFuture<ObjectHandle> future, PropertyOperation op)
             {
             super(frameCaller);
 
-            f_property = property;
+            f_chain = chain;
             f_hValue = hValue;
             f_cReturns = cReturns;
             f_future = future;
@@ -777,10 +777,10 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     return cReturns == 0
-                            ? ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_property, f_hValue)
+                            ? ((PropertyOperation10) f_op).invoke(frame, f_chain, context.m_hService, f_hValue)
                        : f_hValue == null
-                            ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_property, 0)
-                            : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_property, f_hValue, 0);
+                            ? ((PropertyOperation01) f_op).invoke(frame, f_chain, context.m_hService, 0)
+                            : ((PropertyOperation11) f_op).invoke(frame, f_chain, context.m_hService, f_hValue, 0);
                     }
                 };
 

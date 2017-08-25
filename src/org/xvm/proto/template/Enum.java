@@ -89,7 +89,7 @@ public class Enum
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         EnumHandle hEnum = (EnumHandle) hTarget;
 
@@ -103,7 +103,7 @@ public class Enum
                 return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getValue()));
             }
 
-        return super.invokeNativeGet(frame, hTarget, property, iReturn);
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override

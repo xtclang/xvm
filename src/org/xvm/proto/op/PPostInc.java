@@ -1,7 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.PropertyStructure;
-
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -61,9 +60,9 @@ public class PPostInc extends OpProperty
 
             TypeComposition clazz = hTarget.f_clazz;
 
-            PropertyStructure property = getPropertyStructure(frame, clazz, f_nPropConstId);
+            CallChain.PropertyCallChain chain = getPropertyCallChain(frame, clazz, f_nPropConstId, true);
 
-            return clazz.f_template.invokePostInc(frame, hTarget, property, f_nRetValue);
+            return clazz.f_template.invokePostInc(frame, chain, hTarget, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

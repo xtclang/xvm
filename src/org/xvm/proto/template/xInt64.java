@@ -6,6 +6,7 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.Int64Constant;
 
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -87,10 +88,10 @@ public class xInt64
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget,
-                            PropertyStructure property, int iReturn)
+    public int invokePreInc(Frame frame, CallChain.PropertyCallChain chain,
+                            ObjectHandle hTarget, int iReturn)
         {
-        assert property == null;
+        assert chain == null;
 
         JavaLong hThis = (JavaLong) hTarget;
 
@@ -101,14 +102,14 @@ public class xInt64
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget,
-                             PropertyStructure property, int iReturn)
+    public int invokePostInc(Frame frame, CallChain.PropertyCallChain chain, ObjectHandle hTarget,
+                             int iReturn)
         {
-        return invokePreInc(frame, hTarget, property, iReturn);
+        return invokePreInc(frame, chain, hTarget, iReturn);
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
@@ -118,7 +119,7 @@ public class xInt64
                 return frame.assignValue(iReturn, hThis);
             }
 
-        return super.invokeNativeGet(frame, hTarget, property, iReturn);
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override

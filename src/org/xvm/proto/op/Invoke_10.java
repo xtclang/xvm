@@ -1,13 +1,11 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.MethodStructure;
-
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
-
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -63,17 +61,18 @@ public class Invoke_10 extends OpInvocable
                 }
 
             TypeComposition clz = hTarget.f_clazz;
-            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
+            CallChain chain = getCallChain(frame, clz, f_nMethodId);
 
-            if (frame.f_adapter.isNative(method))
+            if (chain.isNative())
                 {
-                return clz.f_template.invokeNative1(frame, method, hTarget, hArg, Frame.RET_UNUSED);
+                return clz.f_template.invokeNative1(frame, chain.getTop(), hTarget,
+                        hArg, Frame.RET_UNUSED);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
             ahVar[0] = hArg;
 
-            return clz.f_template.invoke1(frame, hTarget, method, ahVar, Frame.RET_UNUSED);
+            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {

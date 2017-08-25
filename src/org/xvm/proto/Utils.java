@@ -1,14 +1,9 @@
 package org.xvm.proto;
 
-
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
-
 import org.xvm.proto.template.Const;
 import org.xvm.proto.template.xObject;
 
 import java.sql.Timestamp;
-import java.util.List;
 
 
 /**
@@ -66,17 +61,16 @@ public abstract class Utils
     public static int callHash(Frame frame, ObjectHandle hConst)
         {
         TypeComposition clzConst = hConst.f_clazz;
-        PropertyStructure property = clzConst.getProperty("hash");
-        MethodStructure method = Adapter.getGetter(property);
+        CallChain chain = clzConst.getPropertyGetterChain("hash");
 
-        if (frame.f_adapter.isNative(method))
+        if (chain.isNative())
             {
             Const template = (Const) clzConst.f_template; // should we get it from method?
             return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-        return frame.call1(method, hConst, ahVar, Frame.RET_LOCAL);
+        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
+        return clzConst.f_template.invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
         }
 
     // ----- to<String> support -----
@@ -86,15 +80,14 @@ public abstract class Utils
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
         TypeComposition clzValue = hValue.f_clazz;
-        List<MethodStructure> callChain = clzValue.getMethodCallChain(xObject.TO_STRING);
-        MethodStructure method = callChain.isEmpty() ? null : callChain.get(0);
+        CallChain chain = clzValue.getMethodCallChain(xObject.TO_STRING);
 
-        if (method == null || frame.f_adapter.isNative(method))
+        if (chain.isNative())
             {
             return clzValue.f_template.buildStringValue(frame, hValue, Frame.RET_LOCAL);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-        return frame.call1(method, hValue, ahVar, Frame.RET_LOCAL);
+        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
+        return clzValue.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
     }

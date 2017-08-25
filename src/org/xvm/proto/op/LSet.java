@@ -1,7 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.PropertyStructure;
-
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -58,9 +57,9 @@ public class LSet extends OpProperty
 
             TypeComposition clazz = hTarget.f_clazz;
 
-            PropertyStructure property = getPropertyStructure(frame, clazz, f_nPropConstId);
+            CallChain.PropertyCallChain chain = getPropertyCallChain(frame, clazz, f_nPropConstId, false);
 
-            return clazz.f_template.setPropertyValue(frame, hTarget, property, hValue);
+            return clazz.f_template.setPropertyValue(frame, chain, hTarget, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

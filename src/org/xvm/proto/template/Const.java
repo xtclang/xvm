@@ -51,7 +51,14 @@ public class Const
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public boolean isStateful()
+        {
+        return true;
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, PropertyStructure property,
+                               ObjectHandle hTarget, int iReturn)
         {
         switch (property.getName())
             {
@@ -59,7 +66,7 @@ public class Const
                 return buildHashCode(frame, hTarget, iReturn);
             }
 
-        return super.invokeNativeGet(frame, hTarget, property, iReturn);
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override

@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -49,13 +50,19 @@ public class Call_N0 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        try
+        if (f_nFunctionValue == A_SUPER)
             {
-            if (f_nFunctionValue == A_SUPER)
+            CallChain chain = frame.m_chain;
+            if (chain == null)
                 {
-                return callSuperN1(frame, f_anArgValue, Frame.RET_UNUSED);
+                throw new IllegalStateException();
                 }
 
+            return chain.callSuperN1(frame, f_anArgValue, Frame.RET_UNUSED);
+            }
+
+        try
+            {
             if (f_nFunctionValue < 0)
                 {
                 MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);

@@ -102,22 +102,19 @@ public abstract class ClassTemplate
         ClassTemplate templateSuper = null;
         ClassTemplate templateCategory = null;
 
-        Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
-                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
-
-        if (opt.isPresent())
-            {
-            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassConstant();
-            structSuper = (ClassStructure) constClass.getComponent();
-            templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
-            }
-
-        if (structSuper == null)
+        ClassTypeConstant constSuper = Adapter.getContribution(structClass, ClassStructure.Composition.Extends);
+        if (constSuper == null)
             {
             if (!f_sName.equals("Object"))
                 {
+                // TODO: do we need this?
                 templateSuper = xObject.INSTANCE;
                 }
+            }
+        else
+            {
+            structSuper = (ClassStructure) constSuper.getClassConstant().getComponent();
+            templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
             }
 
         if (structSuper == null || structClass.getFormat() != structSuper.getFormat())
@@ -220,6 +217,22 @@ public abstract class ClassTemplate
     public boolean isService()
         {
         return f_struct.getFormat() == Component.Format.SERVICE;
+        }
+
+    // should we generate fields for this class
+    public boolean isStateful()
+        {
+        switch (f_struct.getFormat())
+            {
+            case CLASS:
+            case CONST:
+            case MIXIN:
+            case SERVICE:
+                return true;
+
+            default:
+                    return false;
+            }
         }
 
     public boolean isSingleton()
@@ -329,11 +342,16 @@ public abstract class ClassTemplate
                     }
 
                 // TODO: remove
-                if (mms.children().size() == 1)
+                if (mms.children().size() == 1
+                        && atParam.length == atParamTest.length
+                        && atReturn.length == atReturnTest.length
+                        )
                     {
                     System.out.println("\n\t\t****** Signature mismatch for " +
-                            constMethod + " at " + f_sName + "\n");
-                    return method;
+                            constMethod + " at " + f_sName + " (" +
+                            Arrays.toString(atReturnTest) + ") " +
+                            Arrays.toString(atParamTest) + "\n");
+                    return null;
                     }
                 }
             }
@@ -515,19 +533,19 @@ public abstract class ClassTemplate
     // ----- OpCode support ------
 
     // invoke with a zero or one return value
-    public int invoke1(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle[] ahVar, int iReturn)
+    public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return frame.call1(method, hTarget, ahVar, iReturn);
+        return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
     // invoke with more than one return value
-    public int invokeN(Frame frame, ObjectHandle hTarget, MethodStructure method, ObjectHandle[] ahVar, int[] aiReturn)
+    public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return frame.callN(method, hTarget, ahVar, aiReturn);
+        return frame.invokeN(chain, 0, hTarget, ahVar, aiReturn);
         }
 
     // invokeNative property "get" operation
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         throw new IllegalStateException("Unknown property getter: (" + f_sName + ")." + property.getName());
         }
@@ -609,19 +627,20 @@ public abstract class ClassTemplate
 
     // increment the property value and place the result into the specified frame register
     // return either R_NEXT or R_EXCEPTION
-    public int invokePreInc(Frame frame, ObjectHandle hTarget,
-                            PropertyStructure property, int iReturn)
+    public int invokePreInc(Frame frame, CallChain.PropertyCallChain chain,
+                            ObjectHandle hTarget, int iReturn)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
+        PropertyStructure property = chain.getProperty();
 
         ObjectHandle hProp = extractPropertyValue(hThis, property);
 
         if (isRef(property))
             {
-            return getRefTemplate(property).invokePreInc(frame, hProp, null, iReturn);
+            return getRefTemplate(property).invokePreInc(frame, null, hProp, iReturn);
             }
 
-        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.RET_LOCAL);
+        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, null, hProp, Frame.RET_LOCAL);
         if (nResult == Op.R_EXCEPTION)
             {
             return nResult;
@@ -635,19 +654,20 @@ public abstract class ClassTemplate
 
     // place the property value into the specified frame register and increment it
     // return either R_NEXT or R_EXCEPTION
-    public int invokePostInc(Frame frame, ObjectHandle hTarget,
-                             PropertyStructure property, int iReturn)
+    public int invokePostInc(Frame frame, CallChain.PropertyCallChain chain,
+                             ObjectHandle hTarget, int iReturn)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
+        PropertyStructure property = chain.getProperty();
 
         ObjectHandle hProp = extractPropertyValue(hThis, property);
 
         if (isRef(property))
             {
-            return getRefTemplate(property).invokePostInc(frame, hProp, null, iReturn);
+            return getRefTemplate(property).invokePostInc(frame, chain, hProp, iReturn);
             }
 
-        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.RET_LOCAL);
+        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, null, hProp, Frame.RET_LOCAL);
         if (nResult == Op.R_EXCEPTION)
             {
             return nResult;
@@ -663,28 +683,28 @@ public abstract class ClassTemplate
 
     // get a property value into the specified register
     // return R_NEXT, R_CALL or R_EXCEPTION
-    public int getPropertyValue(Frame frame, ObjectHandle hTarget,
-                                PropertyStructure property, int iReturn)
+    public int getPropertyValue(Frame frame, CallChain.PropertyCallChain chain,
+                                ObjectHandle hTarget, int iReturn)
         {
-        if (property == null)
+        if (chain == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
-        if (isNativeGetter(property))
+        if (chain.isNative())
             {
-            return invokeNativeGet(frame, hTarget, property, iReturn);
+            return invokeNativeGet(frame, chain.getProperty(), hTarget, iReturn);
             }
 
-        MethodStructure method = hTarget.isStruct() ? null : Adapter.getGetter(property);
+        MethodStructure method = hTarget.isStruct() ? null : chain.getTop();
         if (method == null)
             {
-            return getFieldValue(frame, hTarget, property, iReturn);
+            return getFieldValue(frame, hTarget, chain.getProperty(), iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
 
-        return frame.call1(method, hTarget, ahVar, iReturn);
+        return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
     public int getFieldValue(Frame frame, ObjectHandle hTarget,
@@ -749,13 +769,15 @@ public abstract class ClassTemplate
         }
 
     // set a property value
-    public int setPropertyValue(Frame frame, ObjectHandle hTarget,
-                                PropertyStructure property, ObjectHandle hValue)
+    public int setPropertyValue(Frame frame, CallChain.PropertyCallChain chain,
+                                ObjectHandle hTarget, ObjectHandle hValue)
         {
-        if (property == null)
+        if (chain == null)
             {
             throw new IllegalStateException(f_sName);
             }
+
+        PropertyStructure property = chain.getProperty();
 
         ExceptionHandle hException = null;
         if (!hTarget.isMutable())
@@ -938,53 +960,6 @@ public abstract class ClassTemplate
         return f_listGenericParams.contains(sProperty);
         }
 
-    // represents a chain of invocation
-    public static class CallChain
-        {
-        // an optimization for a single method chain
-        private MethodStructure m_method;
-
-        // a list of methods (only if m_method == null)
-        private List<MethodStructure> m_listMethods;
-
-        // a property representing the field access
-        private PropertyStructure m_property;
-
-        // get vs. set
-        private boolean m_fGet;
-
-        // a constructor for a method chain
-        public CallChain(List<MethodStructure> listMethods)
-            {
-            if (listMethods.size() == 1)
-                {
-                m_method = listMethods.get(0);
-                }
-            else
-                {
-                m_listMethods = listMethods;
-                }
-            }
-
-        // a constructor for a property access chain
-        public CallChain(List<MethodStructure> listMethods, PropertyStructure property, boolean fGet)
-            {
-            this(listMethods);
-
-            m_property = property;
-            m_fGet = fGet;
-            }
-
-        public MethodStructure getTop()
-            {
-            if (m_method == null)
-                {
-                return m_listMethods.get(0);
-                }
-            return null;
-            }
-        }
-
     // =========== TEMPORARY ========
 
     public void markNativeMethod(String sName, String[] asParamType)
@@ -1039,12 +1014,28 @@ public abstract class ClassTemplate
 
     public void markNativeGetter(String sPropName)
         {
-        ensurePropertyInfo(sPropName).m_fNativeGetter = true;
+        MethodStructure methodGet = Adapter.getGetter(getProperty(sPropName));
+        if (methodGet == null)
+            {
+            ensurePropertyInfo(sPropName).m_fNativeGetter = true;
+            }
+        else
+            {
+            ensureMethodInfo(methodGet).m_fNative = true;
+            }
         }
 
     public void markNativeSetter(String sPropName)
         {
-        ensurePropertyInfo(sPropName).m_fNativeSetter = true;
+        MethodStructure methodSet = Adapter.getSetter(getProperty(sPropName));
+        if (methodSet == null)
+            {
+            ensurePropertyInfo(sPropName).m_fNativeSetter = true;
+            }
+        else
+            {
+            ensureMethodInfo(methodSet).m_fNative = true;
+            }
         }
 
     public MethodInfo ensureGetter(String sPropName)
@@ -1134,6 +1125,5 @@ public abstract class ClassTemplate
     public static String[] VOID = new String[0];
     public static String[] OBJECT = new String[]{"Object"};
     public static String[] INT = new String[]{"Int64"};
-    public static String[] BOOLEAN = new String[]{"Boolean"};
     public static String[] STRING = new String[]{"String"};
     }

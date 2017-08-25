@@ -3,6 +3,7 @@ package org.xvm.proto.op;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.proto.Adapter;
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -17,7 +18,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * INVOKE_TN  rvalue-target, CONST-METHOD, rvalue-params-tuple, #returns:(lvalue)
+ * INVOKE_TN rvalue-target, CONST-METHOD, rvalue-params-tuple, #returns:(lvalue)
  *
  * @author gg 2017.03.08
  */
@@ -72,9 +73,10 @@ public class Invoke_TN extends OpInvocable
             TypeComposition clz = hTarget.f_clazz;
             ObjectHandle[] ahArg = hArgTuple.m_ahValue;
 
-            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
+            CallChain chain = getCallChain(frame, clz, f_nMethodId);
+            MethodStructure method = chain.getTop();
 
-            if (frame.f_adapter.isNative(method))
+            if (chain.isNative())
                 {
                 return clz.f_template.invokeNativeNN(frame, method, hTarget, ahArg, f_anRetValue);
                 }
@@ -99,7 +101,7 @@ public class Invoke_TN extends OpInvocable
                 ahVar = ahArg;
                 }
 
-            return clz.f_template.invokeN(frame, hTarget, method, ahVar, f_anRetValue);
+            return clz.f_template.invokeN(frame, chain, hTarget, ahVar, f_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

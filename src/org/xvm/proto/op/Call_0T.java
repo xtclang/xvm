@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -51,7 +52,13 @@ public class Call_0T extends OpCallable
         {
         if (f_nFunctionValue == A_SUPER)
             {
-            return callSuper01(frame, -f_nTupleRetValue - 1);
+            CallChain chain = frame.m_chain;
+            if (chain == null)
+                {
+                throw new IllegalStateException();
+                }
+
+            return chain.callSuper01(frame, -f_nTupleRetValue - 1);
             }
 
         if (f_nFunctionValue < 0)

@@ -23,6 +23,7 @@ import org.xvm.util.Handy;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 
 /**
@@ -310,9 +311,7 @@ public class Adapter
     public int getVarCount(MethodStructure method)
         {
         ClassTemplate.MethodInfo tm = method.getInfo();
-        return tm == null || tm.m_fNative ? // this can only be a constructor
-                method.getIdentityConstant().getRawParams().length:
-                tm.m_cVars;
+        return tm == null || tm.m_fNative ? getArgCount(method) : tm.m_cVars;
         }
 
     public Op[] getOps(MethodStructure method)
@@ -328,7 +327,7 @@ public class Adapter
         return tmFinally == null ? null : tmFinally.f_struct;
         }
 
-    public boolean isNative(MethodStructure method)
+    public static boolean isNative(MethodStructure method)
         {
         ClassTemplate.MethodInfo tm = method.getInfo();
         return tm != null && tm.m_fNative;
@@ -348,5 +347,14 @@ public class Adapter
 
         // TODO: use the type
         return mms == null ? null : (MethodStructure) mms.children().get(0);
+        }
+
+    // TODO: move this to ClassStructure
+    public static ClassTypeConstant getContribution(ClassStructure structClass, Component.Composition composition)
+        {
+        Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
+                filter(contribution -> contribution.getComposition().equals(composition)).findFirst();
+
+        return opt.isPresent() ? opt.get().getClassConstant() : null;
         }
     }

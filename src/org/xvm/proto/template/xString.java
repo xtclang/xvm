@@ -85,7 +85,7 @@ public class xString
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -95,7 +95,7 @@ public class xString
                 return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_sValue.length()));
             }
 
-        return super.invokeNativeGet(frame, hTarget, property, iReturn);
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override

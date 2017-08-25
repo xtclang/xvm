@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Adapter;
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -54,13 +55,19 @@ public class Call_T1 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        try
+        if (f_nFunctionValue == A_SUPER)
             {
-            if (f_nFunctionValue == A_SUPER)
+            CallChain chain = frame.m_chain;
+            if (chain == null)
                 {
-                return callSuperN1(frame, new int[]{f_nArgTupleValue}, f_nRetValue);
+                throw new IllegalStateException();
                 }
 
+            return chain.callSuperN1(frame, new int[]{f_nArgTupleValue}, f_nRetValue);
+            }
+
+        try
+            {
             TupleHandle hArgTuple = (TupleHandle) frame.getArgument(f_nArgTupleValue);
             if (hArgTuple == null)
                 {

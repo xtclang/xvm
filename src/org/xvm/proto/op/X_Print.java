@@ -4,6 +4,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.StringConstant;
 
+import org.xvm.proto.Adapter;
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
@@ -66,13 +68,13 @@ public class X_Print extends OpInvocable
 
                 // call the "to<String>()" method for the object to get the value
                 TypeComposition clz = hValue.f_clazz;
-                MethodStructure methodTo = getMethodStructure(frame, clz,
+                CallChain chain = getCallChain(frame, clz,
                         frame.f_adapter.getMethodConstId("Object", "to"));
 
                 int iResult;
-                if (frame.f_adapter.isNative(methodTo))
+                if (chain.isNative())
                     {
-                    iResult = clz.f_template.invokeNativeN(frame, methodTo, hValue,
+                    iResult = clz.f_template.invokeNativeN(frame, chain.getTop(), hValue,
                             Utils.OBJECTS_NONE, Frame.RET_LOCAL);
                     if (iResult == R_NEXT)
                         {
@@ -81,9 +83,9 @@ public class X_Print extends OpInvocable
                     }
                 else
                     {
-                    ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(methodTo)];
+                    ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
 
-                    iResult = frame.call1(methodTo, hValue, ahVar, Frame.RET_LOCAL);
+                    iResult = clz.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
                     }
 
                 if (iResult == R_CALL)

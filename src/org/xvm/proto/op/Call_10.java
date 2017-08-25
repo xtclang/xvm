@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.OpCallable;
@@ -50,7 +51,13 @@ public class Call_10 extends OpCallable
         {
         if (f_nFunctionValue == A_SUPER)
             {
-            return callSuper10(frame, f_nArgValue);
+            CallChain chain = frame.m_chain;
+            if (chain == null)
+                {
+                throw new IllegalStateException();
+                }
+
+            return chain.callSuper10(frame, f_nArgValue);
             }
 
         try

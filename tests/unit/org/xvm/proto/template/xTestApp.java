@@ -335,13 +335,13 @@ public class xTestApp extends xModule
                              -adapter.ensureValueConstantId("bye")),
             new X_Print(0),
 
-            new NVar(adapter.getClassTypeConstId("Ref"),
+            new NVar(adapter.getClassTypeConstId("Ref<Int64>"),
                      adapter.ensureValueConstantId("ri")), // #3 (ri)
             new Enter(),
             new INVar(adapter.getClassTypeConstId("Int64"),
                       adapter.ensureValueConstantId("i"),
                       -adapter.ensureValueConstantId(1)), // #4 (i)
-            new NVar(adapter.getClassTypeConstId("Ref"),
+            new NVar(adapter.getClassTypeConstId("Ref<Int64>"),
                      adapter.ensureValueConstantId("ri2")), // #5 (ri2)
             new MoveRef(4, 5),
             new MoveRef(4, 3),

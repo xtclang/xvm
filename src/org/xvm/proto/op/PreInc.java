@@ -1,7 +1,6 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.PropertyStructure;
-
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -59,7 +58,7 @@ public class PreInc extends OpProperty
                     }
 
                 return hTarget.f_clazz.f_template.
-                        invokePreInc(frame, hTarget, null, f_nRetValue);
+                        invokePreInc(frame, null, hTarget, f_nRetValue);
                 }
             else
                 {
@@ -67,10 +66,10 @@ public class PreInc extends OpProperty
                 ObjectHandle hTarget = frame.getThis();
                 TypeComposition clazz = hTarget.f_clazz;
 
-                PropertyStructure property = getPropertyStructure(frame, clazz, -f_nArgValue);
+                CallChain.PropertyCallChain chain = getPropertyCallChain(frame, clazz, -f_nArgValue, true);
 
                 return hTarget.f_clazz.f_template.
-                        invokePreInc(frame, hTarget, property, f_nRetValue);
+                        invokePreInc(frame, chain, hTarget, f_nRetValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

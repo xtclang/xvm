@@ -3,6 +3,7 @@ package org.xvm.proto.template.annotations;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
@@ -58,7 +59,8 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokePreInc(Frame frame, CallChain.PropertyCallChain chain,
+                            ObjectHandle hTarget, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 
@@ -72,7 +74,7 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokePostInc(Frame frame, CallChain.PropertyCallChain chain, ObjectHandle hTarget, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 
