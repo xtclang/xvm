@@ -557,7 +557,11 @@ public class TypeComposition
                     }
                 }
             }
-        assert propertyBase != null;
+
+        if (propertyBase == null)
+            {
+            throw new IllegalStateException("Class " + this + " missing property " + sPropName);
+            }
 
         return new CallChain.PropertyCallChain(list, propertyBase, fGetter);
         }

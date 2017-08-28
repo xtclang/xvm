@@ -6,7 +6,6 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.Int64Constant;
 
-import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -88,10 +87,9 @@ public class xInt64
         }
 
     @Override
-    public int invokePreInc(Frame frame, CallChain.PropertyCallChain chain,
-                            ObjectHandle hTarget, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        assert chain == null;
+        assert sPropName == null;
 
         JavaLong hThis = (JavaLong) hTarget;
 
@@ -102,10 +100,9 @@ public class xInt64
         }
 
     @Override
-    public int invokePostInc(Frame frame, CallChain.PropertyCallChain chain, ObjectHandle hTarget,
-                             int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        return invokePreInc(frame, chain, hTarget, iReturn);
+        return invokePreInc(frame, hTarget, sPropName, iReturn);
         }
 
     @Override

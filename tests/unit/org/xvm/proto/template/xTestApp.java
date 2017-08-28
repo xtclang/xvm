@@ -446,7 +446,7 @@ public class xTestApp extends xModule
         ftTestTuple.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")),
-            new INVar(adapter.getClassTypeConstId("collections.Tuple"),
+            new INVar(adapter.getClassTypeConstId("collections.Tuple<String,Int64>"),
                       adapter.ensureValueConstantId("t"),
                       -adapter.ensureValueConstantId(new Object[] {"zero", Integer.valueOf(0)})), // #0 (t)
 

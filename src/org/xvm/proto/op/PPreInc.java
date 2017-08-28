@@ -1,11 +1,11 @@
 package org.xvm.proto.op;
 
-import org.xvm.proto.CallChain;
+import org.xvm.asm.constants.PropertyConstant;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpProperty;
-import org.xvm.proto.TypeComposition;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -58,11 +58,11 @@ public class PPreInc extends OpProperty
                 return R_REPEAT;
                 }
 
-            TypeComposition clazz = hTarget.f_clazz;
+            PropertyConstant constProperty = (PropertyConstant)
+                    frame.f_context.f_pool.getConstant(f_nPropConstId);
 
-            CallChain.PropertyCallChain chain = getPropertyCallChain(frame, clazz, f_nPropConstId, true);
-
-            return clazz.f_template.invokePreInc(frame, chain, hTarget, f_nRetValue);
+            return hTarget.f_clazz.f_template.invokePreInc(
+                    frame, hTarget, constProperty.getName(), f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

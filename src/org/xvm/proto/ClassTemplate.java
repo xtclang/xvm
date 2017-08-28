@@ -40,7 +40,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -607,90 +606,126 @@ public abstract class ClassTemplate
 
     // ---- OpCode support: register or property operations -----
 
-    // helper method
-    private ObjectHandle extractPropertyValue(GenericHandle hTarget, PropertyStructure property)
-        {
-        if (property == null)
-            {
-            throw new IllegalStateException("Invalid op for " + f_sName);
-            }
-
-        ObjectHandle hProp = hTarget.m_mapFields.get(property.getName());
-
-        if (hProp == null)
-            {
-            throw new IllegalStateException((hTarget.m_mapFields.containsKey(property.getName()) ?
-                    "Un-initialized property \"" : "Invalid property \"") + property + '"');
-            }
-        return hProp;
-        }
 
     // increment the property value and place the result into the specified frame register
     // return either R_NEXT or R_EXCEPTION
-    public int invokePreInc(Frame frame, CallChain.PropertyCallChain chain,
-                            ObjectHandle hTarget, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        GenericHandle hThis = (GenericHandle) hTarget;
-        PropertyStructure property = chain.getProperty();
+        TypeComposition clazz = hTarget.f_clazz;
 
-        ObjectHandle hProp = extractPropertyValue(hThis, property);
-
-        if (isRef(property))
+        int iResult = getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL);
+        switch (iResult)
             {
-            return getRefTemplate(property).invokePreInc(frame, null, hProp, iReturn);
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            case Op.R_NEXT:
+                {
+                ObjectHandle hValue = frame.getFrameLocal();
+                int iRes = hValue.f_clazz.f_template.invokePreInc(frame, hValue, null, Frame.RET_LOCAL);
+                if (iRes == Op.R_EXCEPTION)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+                ObjectHandle hValueNew = frame.getFrameLocal();
+                iRes = frame.assignValue(iReturn, hValueNew);
+                if (iRes == Op.R_EXCEPTION)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+                return clazz.f_template.setPropertyValue(frame, hTarget, sPropName, hValueNew);
+                }
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    {
+                    ObjectHandle hValue = frameCaller.getFrameLocal();
+                    int iRes = hValue.f_clazz.f_template.invokePreInc(frame, hValue, null, Frame.RET_LOCAL);
+                    if (iRes == Op.R_EXCEPTION)
+                        {
+                        return Op.R_EXCEPTION;
+                        }
+                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    iRes = frame.assignValue(iReturn, hValueNew);
+                    if (iRes == Op.R_EXCEPTION)
+                        {
+                        return Op.R_EXCEPTION;
+                        }
+                    return clazz.f_template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+                    });
+                return Op.R_CALL;
+
+            default:
+                throw new IllegalStateException();
             }
-
-        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, null, hProp, Frame.RET_LOCAL);
-        if (nResult == Op.R_EXCEPTION)
-            {
-            return nResult;
-            }
-
-        ObjectHandle hPropNew = frame.getFrameLocal();
-        hThis.m_mapFields.put(property.getName(), hPropNew);
-
-        return frame.assignValue(iReturn, hPropNew);
         }
 
     // place the property value into the specified frame register and increment it
     // return either R_NEXT or R_EXCEPTION
-    public int invokePostInc(Frame frame, CallChain.PropertyCallChain chain,
-                             ObjectHandle hTarget, int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        GenericHandle hThis = (GenericHandle) hTarget;
-        PropertyStructure property = chain.getProperty();
+        TypeComposition clazz = hTarget.f_clazz;
 
-        ObjectHandle hProp = extractPropertyValue(hThis, property);
-
-        if (isRef(property))
+        int iResult = getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL);
+        switch (iResult)
             {
-            return getRefTemplate(property).invokePostInc(frame, chain, hProp, iReturn);
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            case Op.R_NEXT:
+                {
+                ObjectHandle hValue = frame.getFrameLocal();
+
+                int iRes = frame.assignValue(iReturn, hValue);
+                if (iRes == Op.R_EXCEPTION)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+                iRes = hValue.f_clazz.f_template.invokePostInc(frame, hValue, null, Frame.RET_LOCAL);
+                if (iRes == Op.R_EXCEPTION)
+                    {
+                    return Op.R_EXCEPTION;
+                    }
+                ObjectHandle hValueNew = frame.getFrameLocal();
+                return clazz.f_template.setPropertyValue(frame, hTarget, sPropName, hValueNew);
+                }
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    {
+                    ObjectHandle hValue = frameCaller.getFrameLocal();
+                    int iRes = frame.assignValue(iReturn, hValue);
+                    if (iRes == Op.R_EXCEPTION)
+                        {
+                        return Op.R_EXCEPTION;
+                        }
+                    iRes = hValue.f_clazz.f_template.invokePostInc(frameCaller, hValue, null, Frame.RET_LOCAL);
+                    if (iRes == Op.R_EXCEPTION)
+                        {
+                        return Op.R_EXCEPTION;
+                        }
+                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    return clazz.f_template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+                    });
+                return Op.R_CALL;
+
+            default:
+                throw new IllegalStateException();
             }
-
-        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, null, hProp, Frame.RET_LOCAL);
-        if (nResult == Op.R_EXCEPTION)
-            {
-            return nResult;
-            }
-
-        ObjectHandle hPropNew = frame.getFrameLocal();
-        hThis.m_mapFields.put(property.getName(), hPropNew);
-
-        return frame.assignValue(iReturn, hProp);
         }
 
     // ----- OpCode support: property operations -----
 
     // get a property value into the specified register
     // return R_NEXT, R_CALL or R_EXCEPTION
-    public int getPropertyValue(Frame frame, CallChain.PropertyCallChain chain,
-                                ObjectHandle hTarget, int iReturn)
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        if (chain == null)
+        if (sPropName == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
+        CallChain.PropertyCallChain chain = hTarget.f_clazz.getPropertyGetterChain(sPropName);
         if (chain.isNative())
             {
             return invokeNativeGet(frame, chain.getProperty(), hTarget, iReturn);
@@ -769,14 +804,14 @@ public abstract class ClassTemplate
         }
 
     // set a property value
-    public int setPropertyValue(Frame frame, CallChain.PropertyCallChain chain,
-                                ObjectHandle hTarget, ObjectHandle hValue)
+    public int setPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
-        if (chain == null)
+        if (sPropName == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
+        CallChain.PropertyCallChain chain = hTarget.f_clazz.getPropertySetterChain(sPropName);
         PropertyStructure property = chain.getProperty();
 
         ExceptionHandle hException = null;
