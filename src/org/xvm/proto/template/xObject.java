@@ -42,5 +42,6 @@ public class xObject
         {
         TO_STRING = f_types.f_adapter.getMethod(this, "to", VOID, STRING).getIdentityConstant();
         markNativeMethod("to", VOID, STRING);
+        markCalculated("meta");
         }
     }

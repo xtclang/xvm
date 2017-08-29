@@ -614,6 +614,54 @@ public class xTestApp extends xModule
             };
         ftTestConst.m_cVars = 9;
 
+        ClassTemplate ctFormatter = f_types.getTemplate("TestApp.Formatter");
+        adapter.addMethod(ctFormatter.f_struct, "construct", STRING, VOID);
+
+        MethodInfo mtFormatter = ctFormatter.ensureMethodInfo("construct", STRING);
+        mtFormatter.m_aop = new Op[]
+            { // #0 = prefix
+            new LSet(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0),
+            new Return_0()
+            };
+        mtFormatter.m_cVars = 1;
+
+        MethodInfo mtToString = ctFormatter.ensureMethodInfo("to", VOID, STRING);
+        mtToString.m_aop = new Op[]
+            {
+            new Var(adapter.getClassTypeConstId("String")), // #0
+            new LGet(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0),
+            new Var(adapter.getClassTypeConstId("String")), // #1
+            new Call_01(Op.A_SUPER, 1),
+            new Add(0, 1, 0),
+            new Return_1(0)
+            };
+        mtToString.m_cVars = 2;
+
+        ClassTemplate ctPoint2 = f_types.getTemplate("TestApp.PrettyPoint");
+        adapter.addMethod(ctPoint2.f_struct, "construct", new String[] {"Int64", "Int64", "String"}, VOID);
+        MethodInfo mtConst2 = ctPoint2.ensureMethodInfo("construct", new String[]{"Int64", "Int64", "String"});
+        mtConst2.m_aop = new Op[]
+            { // #0 = x; #1 = y; #2 = prefix
+            new Construct_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+                    new int[] {0, 1}),
+            new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"), 2),
+            new Return_0()
+            };
+        mtConst2.m_cVars = 3;
+
+        MethodInfo ftTestMixin = ensureMethodInfo("testMixin", VOID);
+        ftTestMixin.m_aop = new Op[]
+            {
+            new NVar(adapter.getClassTypeConstId("TestApp.PrettyPoint"),
+                    adapter.ensureValueConstantId("p2")), // #0 (p2)
+            new New_N(adapter.getMethodConstId("TestApp.PrettyPoint", "construct"),
+                    new int[]{-adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(2),
+                              -adapter.ensureValueConstantId("**** ")}, 0),
+            new X_Print(0),
+            new Return_0(),
+            };
+        ftTestMixin.m_cVars = 1;
+
         // --- run()
         MethodInfo mtRun = ensureMethodInfo("run", VOID, VOID);
         mtRun.m_aop = new Op[]
@@ -627,6 +675,7 @@ public class xTestApp extends xModule
             new Call_00(-adapter.getMethodConstId("TestApp", "testArray")),
             new Call_00(-adapter.getMethodConstId("TestApp", "testTuple")),
             new Call_00(-adapter.getMethodConstId("TestApp", "testConst")),
+            new Call_00(-adapter.getMethodConstId("TestApp", "testMixin")),
             new Return_0()
             };
         mtRun.m_cVars = 2;

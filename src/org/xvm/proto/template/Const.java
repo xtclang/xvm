@@ -86,39 +86,29 @@ public class Const
         GenericHandle hV1 = (GenericHandle) hValue1;
         GenericHandle hV2 = (GenericHandle) hValue2;
 
-        for (Component comp : f_struct.children())
+        for (String sProp : clazz.getFieldNames())
             {
-            if (comp instanceof PropertyStructure)
+            ObjectHandle h1 = hV1.getField(sProp);
+            ObjectHandle h2 = hV2.getField(sProp);
+
+            if (h1 == null || h2 == null)
                 {
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isCalculated(property))
-                    {
-                    continue;
-                    }
+                frame.m_hException = xException.makeHandle("Unassigned property \"" + sProp +'"');
+                return Op.R_EXCEPTION;
+                }
 
-                String sProp = property.getName();
-                ObjectHandle h1 = hV1.getField(sProp);
-                ObjectHandle h2 = hV2.getField(sProp);
+            TypeComposition classProp = clazz.resolveClass(getProperty(sProp).getType());
 
-                if (h1 == null || h2 == null)
-                    {
-                    frame.m_hException = xException.makeHandle("Unassigned property \"" + sProp +'"');
-                    return Op.R_EXCEPTION;
-                    }
+            int iRet = classProp.callEquals(frame, h1, h2, Frame.RET_LOCAL);
+            if (iRet == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
 
-                TypeComposition classProp = clazz.resolveClass(property.getType());
-
-                int iRet = classProp.callEquals(frame, h1, h2, Frame.RET_LOCAL);
-                if (iRet == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-
-                ObjectHandle hResult = frame.getFrameLocal();
-                if (hResult == xBoolean.FALSE)
-                    {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
-                    }
+            ObjectHandle hResult = frame.getFrameLocal();
+            if (hResult == xBoolean.FALSE)
+                {
+                return frame.assignValue(iReturn, xBoolean.FALSE);
                 }
             }
         return frame.assignValue(iReturn, xBoolean.TRUE);
@@ -190,7 +180,7 @@ public class Const
           .append(hConst.f_clazz.toString())
           .append('{');
 
-        return new ToString(hConst, sb, f_struct.children().iterator(), iReturn).doNext(frame);
+        return new ToString(hConst, sb, hConst.f_clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     // build the hashValue and assign it to the specified register
@@ -205,7 +195,7 @@ public class Const
             return frame.assignValue(iReturn, hHash);
             }
 
-        return new HashGet(hConst, new long[1], f_struct.children().iterator(), iReturn).doNext(frame);
+        return new HashGet(hConst, new long[1], hConst.f_clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     // ----- helper classes -----
@@ -218,14 +208,15 @@ public class Const
         {
         final private GenericHandle hConst;
         final private StringBuilder sb;
-        final private Iterator<Component> iter;
+        final private Iterator<String> iterFields;
         final private int iReturn;
+        private int cProps;
 
-        public ToString(GenericHandle hConst, StringBuilder sb, Iterator<Component> iter, int iReturn)
+        public ToString(GenericHandle hConst, StringBuilder sb, Iterator<String> iterFields, int iReturn)
             {
             this.hConst = hConst;
             this.sb = sb;
-            this.iter = iter;
+            this.iterFields = iterFields;
             this.iReturn = iReturn;
             }
 
@@ -245,25 +236,14 @@ public class Const
 
         protected int doNext(Frame frameCaller)
             {
-            while (iter.hasNext())
+            while (iterFields.hasNext())
                 {
-                Component comp = iter.next();
+                String sProp = iterFields.next();
 
-                if (!(comp instanceof PropertyStructure))
-                    {
-                    continue;
-                    }
-
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isCalculated(property))
-                    {
-                    continue;
-                    }
-
-                String sProp = property.getName();
                 ObjectHandle hProp = hConst.getField(sProp);
 
                 sb.append(sProp).append('=');
+                cProps++;
 
                 if (hProp == null)
                     {
@@ -290,7 +270,10 @@ public class Const
                     }
                 }
 
-            sb.setLength(sb.length() - 2); // remove the trailing ", "
+            if (cProps > 0)
+                {
+                sb.setLength(sb.length() - 2); // remove the trailing ", "
+                }
             sb.append('}');
 
             return frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
@@ -305,13 +288,13 @@ public class Const
         {
         final private GenericHandle hConst;
         final private long[] holder;
-        final private Iterator<Component> iter;
+        final private Iterator<String> iterFields;
         final private int iReturn;
 
-        public HashGet(GenericHandle hConst, long[] holder, Iterator<Component> iter, int iReturn)
+        public HashGet(GenericHandle hConst, long[] holder, Iterator<String> iterFields, int iReturn)
             {
             this.hConst = hConst;
-            this.iter = iter;
+            this.iterFields = iterFields;
             this.holder = holder;
             this.iReturn = iReturn;
             }
@@ -331,22 +314,10 @@ public class Const
 
         protected int doNext(Frame frameCaller)
             {
-            while (iter.hasNext())
+            while (iterFields.hasNext())
                 {
-                Component comp = iter.next();
+                String sProp = iterFields.next();
 
-                if (!(comp instanceof PropertyStructure))
-                    {
-                    continue;
-                    }
-
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isCalculated(property))
-                    {
-                    continue;
-                    }
-
-                String sProp = property.getName();
                 ObjectHandle hProp = hConst.getField(sProp);
 
                 if (hProp == null)

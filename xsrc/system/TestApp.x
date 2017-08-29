@@ -404,4 +404,31 @@ class TestApp
         print(c);
         print(c.ordinal);
         }
+
+    mixin Formatter(String prefix) into Object
+        {
+        String prefix; // TODO: remove
+
+        String to<String>()
+            {
+            return prefix + super();
+            }
+        }
+
+    static const PrettyPoint
+            extends Point
+            incorporates Formatter
+        {
+        construct PrettyPoint(Int x, Int y, String prefix)
+            {
+            construct Point(x, y);
+            construct Formatter(prefix);
+            }
+        }
+
+    static Void testMixin()
+        {
+        PrettyPoint p2 = new PrettyPoint(1, 2, "**** ");
+        print(p2);
+        }
     }

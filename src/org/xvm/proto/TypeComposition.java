@@ -7,7 +7,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -25,7 +24,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -592,6 +590,12 @@ public class TypeComposition
         return clzSuper == null ? null : clzSuper.getProperty(sPropName);
         }
 
+    // return the set of field names
+    public Set<String> getFieldNames()
+        {
+        return m_mapFields.keySet();
+        }
+
     // create unassigned (with a null value) entries for all fields
     protected void createFields(Map<String, ObjectHandle> mapFields)
         {
@@ -604,9 +608,7 @@ public class TypeComposition
 
         m_mapFields = mapCached = new HashMap<>();
 
-        ClassTemplate template = f_template;
-
-        while (template != null)
+        for (ClassTemplate template : collectDeclaredCallChain(true))
             {
             for (Component child : template.f_struct.children())
                 {
@@ -622,23 +624,17 @@ public class TypeComposition
                         hRef = referent.createRefHandle(referent.f_clazzCanonical, null);
                         }
 
-                    if (!template.isCalculated(prop) || hRef != null)
+                    if (template.isCalculated(prop))
+                        {
+                        // compensate for the lack of "isDeclaredAtThisLevel" API
+                        mapCached.remove(prop.getName());
+                        }
+                    else
                         {
                         mapCached.put(prop.getName(), hRef);
                         }
                     }
                 }
-
-            ClassTemplate templateCategory = template.f_templateCategory;
-            if (templateCategory != null)
-                {
-                // the categories are not generic; no reason to resolve
-                templateCategory.f_clazzCanonical.createFields(mapCached);
-                }
-
-            // TODO: process the mix-ins
-
-            template = template.getSuper();
             }
 
         mapFields.putAll(mapCached);
