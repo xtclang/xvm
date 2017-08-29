@@ -9,7 +9,7 @@ import org.xvm.asm.ConstantPool;
 
 
 /**
- * Represent a Class constant.
+ * Represent a Class constant, which identifies a specific class structure.
  */
 public class ClassConstant
         extends NamedConstant

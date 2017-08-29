@@ -16,6 +16,7 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.AnyCondition;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.UInt8Constant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.CharConstant;
@@ -887,6 +888,57 @@ public class ConstantPool
         }
 
     /**
+     * TODO
+     *
+     * @param constParent
+     * @param constSig
+     * @param access
+     *
+     * @return
+     */
+    public MethodConstant ensureMethodConstant(Constant constParent, SignatureConstant constSig, Access access)
+        {
+        assert constParent != null;
+        assert constSig    != null;
+
+        MultiMethodConstant constMultiMethod;
+        switch (constParent.getFormat())
+            {
+            case MultiMethod:
+                constMultiMethod = (MultiMethodConstant) constParent;
+                break;
+
+            case Module:
+            case Package:
+            case Class:
+            case Method:
+            case Property:
+                constMultiMethod = ensureMultiMethodConstant(constParent, constSig.getName());
+                break;
+
+            default:
+                throw new IllegalArgumentException("constant " + constParent.getFormat()
+                        + " is not a Module, Package, Class, Method, or Property");
+            }
+
+        return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access, constSig));
+        }
+
+    /**
+     * TODO
+     *
+     * @param sName
+     * @param aconstReturns
+     * @param aconstParams
+     *
+     * @return
+     */
+    public SignatureConstant ensureSignatureConstant(String sName, TypeConstant[] aconstReturns, TypeConstant[] aconstParams)
+        {
+        return (SignatureConstant) register(new SignatureConstant(this, sName, aconstReturns, aconstParams));
+        }
+
+    /**
      * Given the specified class, access, and optional type parameters, obtain a ClassTypeConstant
      * that represents that combination.
      *
@@ -980,8 +1032,24 @@ public class ConstantPool
      *
      * @return a type representing the parent of the specified child type constant
      */
-    public ParentTypeConstant ensureParentTypeConstant(TypeConstant constChild)
+    public TypeConstant ensureParentTypeConstant(TypeConstant constChild)
         {
+        // unwrap the terminal
+        if (constChild == null)
+            {
+            throw new IllegalArgumentException("child required");
+            }
+        if (!constChild.isSingleDefiningConstant())
+            {
+            throw new IllegalArgumentException("no single defining constant: " + constChild);
+            }
+        {
+        return true;
+        }
+
+        public abstract Constant getDefiningConstant();
+
+        if (constChild)
         ParentTypeConstant constant = (ParentTypeConstant) ensureLocatorLookup(Format.ParentType).get(constChild);
         if (constant == null)
             {

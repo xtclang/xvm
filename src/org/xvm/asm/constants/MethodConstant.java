@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Arrays;
 import java.util.List;
 
 import java.util.function.Consumer;
@@ -19,8 +18,8 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a Method constant. A method constant uniquely identifies a method within a named
- * multi-method (a group of methods by the same name).
+ * Represent a Method constant. A method constant uniquely identifies a method structure within a
+ * named multi-method structure (a group of methods by the same name).
  */
 public class MethodConstant
         extends IdentityConstant
@@ -40,10 +39,42 @@ public class MethodConstant
             throws IOException
         {
         super(pool);
-        m_iParent   = readMagnitude(in);
-        m_access    = Access.valueOf(readIndex(in));
-        m_aiReturns = readMagnitudeArray(in);
-        m_aiParams  = readMagnitudeArray(in);
+        m_iParent = readMagnitude(in);
+        m_access  = Access.valueOf(readIndex(in));
+        m_iSig    = readMagnitude(in);
+        }
+
+    /**
+     * Construct a constant whose value is a method identifier.
+     *
+     * @param pool         the ConstantPool that will contain this Constant
+     * @param constParent  specifies the MultiMethodConstant that contains this method
+     * @param access       the accessibility of the method, public/private etc.
+     * @param constSig     the method signature constant
+     */
+    public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, Access access,
+                          SignatureConstant constSig)
+        {
+        super(pool);
+
+        if (constParent == null)
+            {
+            throw new IllegalArgumentException("parent required");
+            }
+
+        if (access == null)
+            {
+            throw new IllegalArgumentException("access specifier required");
+            }
+
+        if (constSig == null)
+            {
+            throw new IllegalArgumentException("signature required");
+            }
+
+        m_constParent = constParent;
+        m_access      = access;
+        m_constSig    = constSig;
         }
 
     /**
@@ -58,22 +89,8 @@ public class MethodConstant
     public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, Access access,
                           TypeConstant[] returns, TypeConstant[] params)
         {
-        super(pool);
-
-        if (constParent == null)
-            {
-            throw new IllegalArgumentException("parent required");
-            }
-
-        if (access == null)
-            {
-            throw new IllegalArgumentException("access specifier required");
-            }
-
-        m_constParent   = constParent;
-        m_access        = access;
-        m_aconstReturns = validateTypes(returns);
-        m_aconstParams  = validateTypes(params);
+        this(pool, constParent, access,
+                pool.ensureSignatureConstant(constParent.getName(), returns, params));
         }
 
 
@@ -88,11 +105,19 @@ public class MethodConstant
         }
 
     /**
+     * @return the method's signature constant
+     */
+    public SignatureConstant getSignature()
+        {
+        return m_constSig;
+        }
+
+    /**
      * @return the method's return types
      */
     public List<TypeConstant> getReturns()
         {
-        return Arrays.asList(m_aconstReturns);
+        return getSignature().getReturns();
         }
 
     /**
@@ -100,7 +125,7 @@ public class MethodConstant
      */
     public TypeConstant[] getRawReturns()
         {
-        return m_aconstReturns;
+        return getSignature().getRawReturns();
         }
 
     /**
@@ -108,7 +133,7 @@ public class MethodConstant
      */
     public List<TypeConstant> getParams()
         {
-        return Arrays.asList(m_aconstParams);
+        return getSignature().getParams();
         }
 
     /**
@@ -116,7 +141,7 @@ public class MethodConstant
      */
     public TypeConstant[] getRawParams()
         {
-        return m_aconstParams;
+        return getSignature().getRawParams();
         }
 
 
@@ -153,14 +178,7 @@ public class MethodConstant
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constParent);
-        for (Constant constant : m_aconstReturns)
-            {
-            visitor.accept(constant);
-            }
-        for (Constant constant : m_aconstParams)
-            {
-            visitor.accept(constant);
-            }
+        visitor.accept(m_constSig);
         }
 
     @Override
@@ -173,11 +191,7 @@ public class MethodConstant
             n = this.m_access.compareTo(that.m_access);
             if (n == 0)
                 {
-                n = compareTypes(this.m_aconstReturns, that.m_aconstReturns);
-                if (n == 0)
-                    {
-                    n = compareTypes(this.m_aconstParams, that.m_aconstParams);
-                    }
+                n = m_constSig.compareTo(that.m_constSig);
                 }
             }
         return n;
@@ -186,26 +200,7 @@ public class MethodConstant
     @Override
     public String getValueString()
         {
-        StringBuilder sb = new StringBuilder();
-        sb.append(m_constParent.getValueString())
-          .append('(');
-
-        boolean first = true;
-        for (TypeConstant type : m_aconstParams)
-            {
-            if (first)
-                {
-                first = false;
-                }
-            else
-                {
-                sb.append(", ");
-                }
-            sb.append(type.getValueString());
-            }
-
-        sb.append(')');
-        return sb.toString();
+        return m_access.KEYWORD + ' ' + m_constSig.getValueString();
         }
 
 
@@ -216,20 +211,15 @@ public class MethodConstant
             throws IOException
         {
         final ConstantPool pool = getConstantPool();
-        m_constParent   = (MultiMethodConstant) pool.getConstant(m_iParent);
-        m_aconstReturns = lookupTypes(m_aiReturns);
-        m_aconstParams  = lookupTypes(m_aiParams);
-
-        m_aiReturns = null;
-        m_aiParams  = null;
+        m_constParent = (MultiMethodConstant) pool.getConstant(m_iParent);
+        m_constSig    = (SignatureConstant  ) pool.getConstant(m_iSig   );
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
         m_constParent = (MultiMethodConstant) pool.register(m_constParent);
-        registerTypes(pool, m_aconstReturns);
-        registerTypes(pool, m_aconstParams);
+        m_constSig    = (SignatureConstant  ) pool.register(m_constSig   );
         }
 
     @Override
@@ -239,14 +229,15 @@ public class MethodConstant
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
         writePackedLong(out, m_access.ordinal());
-        writeTypes(out, m_aconstReturns);
-        writeTypes(out, m_aconstParams);
+        writePackedLong(out, m_constSig.getPosition());
         }
 
     @Override
     public String getDescription()
         {
-        return "method=" + getValueString();
+        return "name=" + getName()
+                + ", access=" + getAccess()
+                + ", signature=" + getSignature().getValueString();
         }
 
 
@@ -255,95 +246,7 @@ public class MethodConstant
     @Override
     public int hashCode()
         {
-        return (m_constParent.hashCode() * 17 + m_access.ordinal()) * 3
-                + m_aconstReturns.length + m_aconstParams.length;
-        }
-
-
-    // ----- helpers -------------------------------------------------------------------------------
-
-    protected static int[] readMagnitudeArray(DataInput in)
-            throws IOException
-        {
-        int   c  = readMagnitude(in);
-        int[] an = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
-            an[i] = readMagnitude(in);
-            }
-        return an;
-        }
-
-    protected TypeConstant[] lookupTypes(int[] an)
-        {
-        int c = an.length;
-        TypeConstant[] aconst = new TypeConstant[c];
-        final ConstantPool pool = getConstantPool();
-        for (int i = 0; i < c; ++i)
-            {
-            aconst[i] = (TypeConstant) pool.getConstant(an[i]);
-            }
-        return aconst;
-        }
-
-    protected static void registerTypes(ConstantPool pool, TypeConstant[] aconst)
-        {
-        for (int i = 0, c = aconst.length; i < c; ++i)
-            {
-            aconst[i] = (TypeConstant) pool.register(aconst[i]);
-            }
-        }
-
-    protected static void writeTypes(DataOutput out, TypeConstant[] aconst)
-            throws IOException
-        {
-        int c = aconst.length;
-        writePackedLong(out, c);
-
-        for (int i = 0; i < c; ++i)
-            {
-            writePackedLong(out, aconst[i].getPosition());
-            }
-        }
-
-    /**
-     * Internal helper to scan a type array for nulls.
-     *
-     * @param aconst  an array of TypeConstant; may be null
-     *
-     * @return a non-null array of TypeConstant, each element of which is non-null
-     */
-    protected static TypeConstant[] validateTypes(TypeConstant[] aconst)
-        {
-        if (aconst == null)
-            {
-            return ConstantPool.NO_TYPES;
-            }
-
-        for (TypeConstant constant : aconst)
-            {
-            if (constant == null)
-                {
-                throw new IllegalArgumentException("type required");
-                }
-            }
-
-        return aconst;
-        }
-
-    protected static int compareTypes(TypeConstant[] aconstThis, TypeConstant[] aconstThat)
-        {
-        int cThis = aconstThis.length;
-        int cThat = aconstThat.length;
-        for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i)
-            {
-            int n = aconstThis[i].compareTo(aconstThat[i]);
-            if (n != 0)
-                {
-                return n;
-                }
-            }
-        return cThis - cThat;
+        return (m_constParent.hashCode() * 17 + m_access.ordinal()) * 3 + m_constSig.hashCode();
         }
 
 
@@ -356,19 +259,10 @@ public class MethodConstant
     private int m_iParent;
 
     /**
-     * During disassembly, this holds the indexes of the type constants for the return values.
+     * During disassembly, this holds the index of the constant that specifies the signature of this
+     * method.
      */
-    private int[] m_aiReturns;
-
-    /**
-     * During disassembly, this holds the indexes of the type constants for the parameters.
-     */
-    private int[] m_aiParams;
-
-    /**
-     * The constant that represents the parent of this method.
-     */
-    private MultiMethodConstant m_constParent;
+    private int m_iSig;
 
     /**
      * The accessibility of the method.
@@ -376,12 +270,12 @@ public class MethodConstant
     private Access m_access;
 
     /**
-     * The return values from the method.
+     * The constant that represents the parent of this method.
      */
-    TypeConstant[] m_aconstReturns;
+    private MultiMethodConstant m_constParent;
 
     /**
-     * The invocation parameters of the method.
+     * The constant that represents the signature of this method.
      */
-    TypeConstant[] m_aconstParams;
+    private SignatureConstant m_constSig;
     }

@@ -25,6 +25,36 @@ import static org.xvm.util.Handy.writePackedLong;
  * have to specify which exact method is being invoked (such as a particular method on a particular
  * class), but rather that some virtual method chain exists such that it matches a particular
  * signature.
+ * <p/>
+ * In Ecstasy, a type is simply a collection of methods and properties. Even properties can be
+ * expressed as methods; a property of type T and name N can be represented as a method N that takes
+ * no parameters and returns a single value of type T. As such, a type can represented as a
+ * collection of method signatures.
+ * <p/>
+ * Method signatures are not necessarily exact, however. Consider the support in Ecstasy for auto-
+ * narrowing types:
+ * <p/>
+ * <code><pre>
+ *     interface I
+ *         {
+ *         I foo();
+ *         Void bar(I i);
+ *         }
+ * </pre></code>
+ * <p/>
+ * Now consider a class:
+ * <p/>
+ * <code><pre>
+ *     class C
+ *         {
+ *         C! foo() {...}
+ *         Void bar(C! c) {...}
+ *         }
+ * </pre></code>
+ * <p/>
+ * While the class does not explicitly implement the interface I, and while the methods on the class
+ * are explicit (not auto-narrowing), the class C does implicitly implement interface I, and thus an
+ * instance of C can be passed to (or returned from) any method that accepts (or returns) an "I".
  */
 public class SignatureConstant
         extends PseudoConstant
@@ -215,8 +245,9 @@ public class SignatureConstant
     @Override
     public String getDescription()
         {
-        // TODO
-        return "method=" + getValueString();
+        return "name=" + getValueString()
+                + ", params=" + formatTypes(m_aconstParams)
+                + ", returns=" + formatTypes(m_aconstReturns);
         }
 
 
@@ -362,6 +393,29 @@ public class SignatureConstant
                 }
             }
         return cThis - cThat;
+        }
+
+    /**
+     * Render an array of TypeConstant objects as a comma-delimited string containing those types.
+     *
+     * @param aconst  the array of type constants
+     *
+     * @return a parenthesized, comma-delimited string of types
+     */
+    protected static String formatTypes(TypeConstant[] aconst)
+        {
+        StringBuilder sb = new StringBuilder();
+        sb.append('(');
+        for (int i = 0, c = aconst.length; i < c; ++i)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+            sb.append(aconst[i].getValueString());
+            }
+        sb.append(')');
+        return sb.toString();
         }
 
 

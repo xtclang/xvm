@@ -9,7 +9,7 @@ import org.xvm.asm.ConstantPool;
 
 
 /**
- * Represent a property constant.
+ * Represent a property constant, which identifies a particular property structure.
  */
 public class PropertyConstant
         extends NamedConstant

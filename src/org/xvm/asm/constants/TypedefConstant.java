@@ -9,7 +9,7 @@ import org.xvm.asm.ConstantPool;
 
 
 /**
- * Represent a "typedef" constant.
+ * Represent a "typedef" constant, which identifies a specific typedef structure.
  */
 public class TypedefConstant
         extends NamedConstant
