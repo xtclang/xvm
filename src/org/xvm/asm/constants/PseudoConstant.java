@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import java.io.DataOutput;
 import java.io.IOException;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 

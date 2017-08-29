@@ -7,8 +7,6 @@ import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnresolvedClassConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.compiler.ErrorListener;
 
