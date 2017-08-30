@@ -1,16 +1,15 @@
 package org.xvm.proto;
 
 import org.xvm.asm.Constant;
-
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
-import org.xvm.asm.constants.Int64Constant;
+import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.TupleConstant;
+import org.xvm.asm.constants.ArrayConstant;
 
 import org.xvm.proto.template.xClass;
 import org.xvm.proto.template.xFunction;
@@ -69,7 +68,7 @@ public class ObjectHeap
             return xString.INSTANCE;
             }
 
-        if (constValue instanceof Int64Constant)
+        if (constValue instanceof IntConstant)
             {
             return xInt64.INSTANCE;
             }
@@ -92,7 +91,7 @@ public class ObjectHeap
             return xModule.INSTANCE;
             }
 
-        if (constValue instanceof TupleConstant)
+        if (constValue instanceof ArrayConstant)
             {
             return xTuple.INSTANCE;
             }

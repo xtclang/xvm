@@ -1,3 +1,4 @@
+
 package org.xvm.asm.constants;
 
 
@@ -54,71 +55,50 @@ public class ParameterizedTypeConstant
                 {
                 aiType[i] = readIndex(in);
                 }
-            m_aiType = aiType;
+            m_aiTypeParams = aiType;
             }
         }
 
     /**
-     * Construct a constant whose value is a data type.
+     * Construct a constant whose value is a type-parameterized data type.
      *
-     * @param pool     the ConstantPool that will contain this Constant
-     * @param constId  a ModuleConstant, PackageConstant, or ClassConstant
+     * @param pool             the ConstantPool that will contain this Constant
+     * @param constType        a TypeConstant representing the parameterized type
+     * @param constTypeParams  a number of TypeConstants representing the type parameters
      */
-    public ParameterizedTypeConstant(ConstantPool pool, IdentityConstant constId,
-            TypeConstant... constTypes)
+    public ParameterizedTypeConstant(ConstantPool pool, TypeConstant constType,
+            TypeConstant... constTypeParams)
         {
         super(pool);
 
-        if (constId instanceof ThisClassConstant)
+        if (constType == null)
             {
-            if (!constId.getName().equals(ThisClassConstant.THIS_TYPE))
-                {
-                throw new IllegalArgumentException("symbolic constant " + constId
-                        + " is not \"" + ThisClassConstant.THIS_TYPE + "\"");
-                }
-            if (constTypes != null && constTypes.length > 0)
-                {
-                throw new IllegalArgumentException("auto-narrowing this:type can not specify type params");
-                }
+            throw new IllegalArgumentException("type required");
             }
-        else if (!(constId instanceof ModuleConstant
-                || constId instanceof PackageConstant
-                || constId instanceof ClassConstant
-                || constId instanceof PropertyConstant
-                || constId instanceof TypedefConstant))
+        if (constType.isParamsSpecified())
             {
-            throw new IllegalArgumentException("constant " + constId.getFormat()
-                    + " is not a Module, Package, Class, Typedef, or Property (formal type parameter)");
+            throw new IllegalArgumentException("type is already parameterized");
+            }
+        if (!constType.isSingleDefiningConstant())
+            {
+            throw new IllegalArgumentException("type must refer to a single underlying class");
             }
 
-        m_constId    = constId;
-        m_access     = access == null ? Access.PUBLIC : access;
-        m_listParams = constTypes == null || constTypes.length == 0 ? Collections.EMPTY_LIST : Arrays.asList(constTypes);
+        m_constType      = constType;
+        m_listTypeParams = constTypeParams == null || constTypeParams.length == 0
+                ? Collections.EMPTY_LIST
+                : Arrays.asList(constTypeParams);
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
-     * @return a ModuleConstant, PackageConstant, or ClassConstant
+     * @return the TypeConstant for the parameterized class
      */
-    public IdentityConstant getClassConstant()
+    public TypeConstant getClassTypeConstant()
         {
-        return m_constId;
-        }
-
-    @Override
-    public boolean isAutoNarrowing()
-        {
-        return m_constId instanceof ThisClassConstant;
-        }
-
-    /**
-     * @return the access modifier for the class (public, private, etc.)
-     */
-    public Access getAccess()
-        {
-        return m_access;
+        return m_constType;
         }
 
     /**
@@ -126,9 +106,21 @@ public class ParameterizedTypeConstant
      */
     public List<TypeConstant> getTypeConstants()
         {
-        List<TypeConstant> list = m_listParams;
+        List<TypeConstant> list = m_listTypeParams;
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
+        }
+
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return m_constType.isAutoNarrowing();
+        }
+
+    @Override
+    public Constant getDefiningConstant()
+        {
+        return m_constType.getDefiningConstant();
         }
 
 
@@ -143,8 +135,8 @@ public class ParameterizedTypeConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        visitor.accept(m_constId);
-        for (Constant param : m_listParams)
+        visitor.accept(m_constType);
+        for (Constant param : m_listTypeParams)
             {
             visitor.accept(param);
             }
@@ -153,8 +145,8 @@ public class ParameterizedTypeConstant
     @Override
     protected Object getLocator()
         {
-        return m_access == Access.PUBLIC && m_listParams.isEmpty()
-                ? m_constId
+        return m_listTypeParams.isEmpty()
+                ? m_constType
                 : null;
         }
 
@@ -162,16 +154,11 @@ public class ParameterizedTypeConstant
     protected int compareDetails(Constant obj)
         {
         ParameterizedTypeConstant that = (ParameterizedTypeConstant) obj;
-        int n = this.m_constId.compareTo(that.m_constId);
+        int n = this.m_constType.compareTo(that.m_constType);
         if (n == 0)
             {
-            n = this.m_access.compareTo(that.m_access);
-            }
-
-        if (n == 0)
-            {
-            List<TypeConstant> listThis = this.m_listParams;
-            List<TypeConstant> listThat = that.m_listParams;
+            List<TypeConstant> listThis = this.m_listTypeParams;
+            List<TypeConstant> listThat = that.m_listTypeParams;
             for (int i = 0, c = Math.min(listThis.size(), listThat.size()); i < c; ++i)
                 {
                 n = listThis.get(i).compareTo(listThat.get(i));
@@ -189,14 +176,14 @@ public class ParameterizedTypeConstant
     public String getValueString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(m_constId.getValueString());
+        sb.append(m_constType.getValueString());
 
-        if (!m_listParams.isEmpty())
+        if (!m_listTypeParams.isEmpty())
             {
             sb.append('<');
 
             boolean first = true;
-            for (TypeConstant type : m_listParams)
+            for (TypeConstant type : m_listTypeParams)
                 {
                 if (first)
                     {
@@ -212,11 +199,6 @@ public class ParameterizedTypeConstant
             sb.append('>');
             }
 
-        if (m_access != Access.PUBLIC)
-            {
-            sb.append(':').append(m_access.KEYWORD);
-            }
-
         return sb.toString();
         }
 
@@ -229,30 +211,31 @@ public class ParameterizedTypeConstant
         {
         ConstantPool pool = getConstantPool();
 
-        m_constId = (IdentityConstant) pool.getConstant(m_iDef);
+        m_constType = (TypeConstant) pool.getConstant(m_iType);
 
-        if (m_aiType == null)
+        if (m_aiTypeParams == null)
             {
-            m_listParams = Collections.EMPTY_LIST;
+            m_listTypeParams = Collections.EMPTY_LIST;
             }
         else
             {
-            int c = m_aiType.length;
+            int c = m_aiTypeParams.length;
             List<TypeConstant> listParams = new ArrayList<>(c);
             for (int i = 0; i < c; ++i)
                 {
-                listParams.add((TypeConstant) pool.getConstant(m_aiType[i]));
+                listParams.add((TypeConstant) pool.getConstant(m_aiTypeParams[i]));
                 }
-            m_listParams = listParams;
+            m_listTypeParams = listParams;
+            m_aiTypeParams   = null;
             }
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constId = (IdentityConstant) pool.register(m_constId);
+        m_constType = (TypeConstant) pool.register(m_constType);
 
-        List<TypeConstant> listParams = m_listParams;
+        List<TypeConstant> listParams = m_listTypeParams;
         for (int i = 0, c = listParams.size(); i < c; ++i)
             {
             TypeConstant constOld = listParams.get(i);
@@ -269,10 +252,9 @@ public class ParameterizedTypeConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, indexOf(m_constId));
-        writePackedLong(out, m_access.ordinal());
-        writePackedLong(out, m_listParams.size());
-        for (TypeConstant constType : m_listParams)
+        writePackedLong(out, indexOf(m_constType));
+        writePackedLong(out, m_listTypeParams.size());
+        for (TypeConstant constType : m_listTypeParams)
             {
             writePackedLong(out, constType.getPosition());
             }
@@ -284,7 +266,7 @@ public class ParameterizedTypeConstant
     @Override
     public int hashCode()
         {
-        return m_constId.hashCode() + m_access.ordinal() + (m_listParams == null ? 0 : m_listParams.hashCode());
+        return m_constType.hashCode() + m_listTypeParams.hashCode();
         }
 
 
@@ -298,7 +280,7 @@ public class ParameterizedTypeConstant
     /**
      * During disassembly, this holds the index of the the type parameters.
      */
-    private transient int[] m_aiType;
+    private transient int[] m_aiTypeParams;
 
     /**
      * The underlying TypeConstant.
@@ -308,5 +290,5 @@ public class ParameterizedTypeConstant
     /**
      * The type parameters.
      */
-    private List<TypeConstant> m_listParams;
+    private List<TypeConstant> m_listTypeParams;
     }

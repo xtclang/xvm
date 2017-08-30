@@ -5,9 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Collections;
-import java.util.List;
-
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -100,6 +97,12 @@ public class AccessTypeConstant
         return m_access;
         }
 
+    @Override
+    public Constant getDefiningConstant()
+        {
+        return m_constType.getDefiningConstant();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -113,16 +116,12 @@ public class AccessTypeConstant
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);
-        for (Constant param : m_listParams)
-            {
-            visitor.accept(param);
-            }
         }
 
     @Override
     protected Object getLocator()
         {
-        return m_access == Access.PUBLIC && m_listParams.isEmpty()
+        return m_access == Access.PUBLIC
                 ? m_constType
                 : null;
         }
@@ -136,61 +135,27 @@ public class AccessTypeConstant
             {
             n = this.m_access.compareTo(that.m_access);
             }
-
-        if (n == 0)
-            {
-            List<TypeConstant> listThis = this.m_listParams;
-            List<TypeConstant> listThat = that.m_listParams;
-            for (int i = 0, c = Math.min(listThis.size(), listThat.size()); i < c; ++i)
-                {
-                n = listThis.get(i).compareTo(listThat.get(i));
-                if (n != 0)
-                    {
-                    return n;
-                    }
-                }
-            n = listThis.size() - listThat.size();
-            }
         return n;
         }
 
     @Override
     public String getValueString()
         {
-        StringBuilder sb = new StringBuilder();
-        sb.append(m_constType.getValueString());
-
-        if (!m_listParams.isEmpty())
-            {
-            sb.append('<');
-
-            boolean first = true;
-            for (TypeConstant type : m_listParams)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(type.getValueString());
-                }
-
-            sb.append('>');
-            }
-
-        if (m_access != Access.PUBLIC)
-            {
-            sb.append(':').append(m_access.KEYWORD);
-            }
-
-        return sb.toString();
+        return new StringBuilder()
+                .append(m_constType.getValueString())
+                .append(':')
+                .append(m_access.KEYWORD)
+                .toString();
         }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        m_constType = (TypeConstant) pool.register(m_constType);
+        }
 
     @Override
     protected void assemble(DataOutput out)

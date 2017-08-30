@@ -5,7 +5,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.ParameterizedTypeConstant;
-import org.xvm.asm.constants.TupleConstant;
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.ClassTemplate;
@@ -91,7 +91,7 @@ public class xTuple
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        TupleConstant constTuple = (TupleConstant) constant;
+        ArrayConstant constTuple = (ArrayConstant) constant;
 
         List<Constant> list = constTuple.getValue();
         int c = list.size();

@@ -3,7 +3,7 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 
-import org.xvm.asm.constants.Int64Constant;
+import org.xvm.asm.constants.IntConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -34,8 +34,8 @@ public class xBit
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        return constant instanceof Int64Constant ? new JavaLong(f_clazzCanonical,
-                ((Int64Constant) constant).getValue().getLong()) : null;
+        return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
+                ((IntConstant) constant).getValue().getLong()) : null;
         }
 
     @Override

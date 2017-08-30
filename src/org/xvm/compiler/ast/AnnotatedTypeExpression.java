@@ -9,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ErrorListener;
 
@@ -69,10 +68,7 @@ public class AnnotatedTypeExpression
             annotation.resolveNames(listRevisit, errs);
             type.resolveNames(listRevisit, errs);
 
-            TypeConstant  constType   = type.ensureTypeConstant();
-            ClassConstant constClass  = (ClassConstant) annotation.getType().asClassTypeConstant(errs).getClassConstant();
-            Constant[]    aconstParam = null;
-
+            Constant[]       aconstParam = null;
             List<Expression> args = annotation.getArguments();
             if (args != null)
                 {
@@ -95,7 +91,10 @@ public class AnnotatedTypeExpression
 
             // store off the annotated type
             ConstantPool pool = getConstantPool();
-            setTypeConstant(pool.ensureAnnotatedTypeConstant(constClass, aconstParam, constType));
+            ClassConstant constAnnotation = (ClassConstant) annotation.getType().ensureTypeConstant(
+                    errs).getDefiningConstant();
+            setTypeConstant(pool.ensureAnnotatedTypeConstant(constAnnotation, aconstParam,
+                    type.ensureTypeConstant()));
 
             super.resolveNames(listRevisit, errs);
             }

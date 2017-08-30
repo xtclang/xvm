@@ -35,6 +35,17 @@ public class IntConstant
         }
 
     /**
+     * Construct a constant whose value is a signed 64-bit PackedInteger.
+     *
+     * @param pool  the ConstantPool that will contain this Constant
+     * @param pint  the PackedInteger value
+     */
+    public IntConstant(ConstantPool pool, PackedInteger pint)
+        {
+        this(pool, Format.Int64, pint);
+        }
+
+    /**
      * Construct a constant whose value is a PackedInteger.
      *
      * @param pool    the ConstantPool that will contain this Constant

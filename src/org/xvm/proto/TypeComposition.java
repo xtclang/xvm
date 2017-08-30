@@ -206,7 +206,7 @@ public class TypeComposition
         if (constType instanceof ParameterizedTypeConstant)
             {
             ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constType;
-            ClassTemplate template = f_template.f_types.getTemplate(constClass.getClassConstant());
+            ClassTemplate template = f_template.f_types.getTemplate(constClass.getClassTypeConstant());
             return template.resolve(constClass, f_mapGenericActual);
             }
 

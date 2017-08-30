@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
-import org.xvm.asm.constants.RegisterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.Handy;
@@ -133,7 +132,7 @@ public class Parameter
     public TypeConstant getTypeParameterType()
         {
         assert isTypeParameter();
-        assert m_constType instanceof ParameterizedTypeConstant && m_constType.isEcstasyType();
+        assert m_constType instanceof ParameterizedTypeConstant && m_constType.isEcstasy("Type");
         assert ((ParameterizedTypeConstant) m_constType).getTypeConstants().size() > 0;
 
         return ((ParameterizedTypeConstant) m_constType).getTypeConstants().get(0);
@@ -142,7 +141,7 @@ public class Parameter
     /**
      * @return the RegisterTypeConstant that corresponds to this register being used as a type param
      */
-    public RegisterTypeConstant asTypeParameterType()
+    public TypeConstant asTypeParameterType()
         {
         assert isTypeParameter();
         return getConstantPool().ensureRegisterTypeConstant(m_iParam);

@@ -56,7 +56,7 @@ public class NamedTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public ParameterizedTypeConstant asClassTypeConstant(ErrorListener errs)
+    public ParameterizedTypeConstant ensureTypeConstant(ErrorListener errs)
         {
         TypeConstant constType = getTypeConstant();
         if (constType instanceof ParameterizedTypeConstant)
@@ -71,7 +71,7 @@ public class NamedTypeExpression
             log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
             }
 
-        return super.asClassTypeConstant(errs);
+        return super.ensureTypeConstant(errs);
         }
 
     /**

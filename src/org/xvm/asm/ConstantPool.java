@@ -13,10 +13,25 @@ import java.util.Iterator;
 
 import org.xvm.asm.Constant.Format;
 
+import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.AnyCondition;
+import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.DecimalConstant;
+import org.xvm.asm.constants.EnumConstant;
+import org.xvm.asm.constants.Float128Constant;
+import org.xvm.asm.constants.Float16Constant;
+import org.xvm.asm.constants.Float32Constant;
+import org.xvm.asm.constants.Float64Constant;
+import org.xvm.asm.constants.Int8Constant;
+import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.MapConstant;
+import org.xvm.asm.constants.PseudoConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.UInt8Constant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.CharConstant;
@@ -27,7 +42,6 @@ import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
-import org.xvm.asm.constants.Int64Constant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -40,10 +54,10 @@ import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.ThisClassConstant;
-import org.xvm.asm.constants.TupleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.VarFPConstant;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
@@ -266,7 +280,7 @@ public class ConstantPool
      *
      * @return an IntConstant for the passed {@code long} value
      */
-    public Int64Constant ensureIntConstant(long n)
+    public IntConstant ensureIntConstant(long n)
         {
         return ensureIntConstant(PackedInteger.valueOf(n));
         }
@@ -278,13 +292,13 @@ public class ConstantPool
      *
      * @return an IntConstant for the passed PackedInteger value
      */
-    public Int64Constant ensureIntConstant(PackedInteger pint)
+    public IntConstant ensureIntConstant(PackedInteger pint)
         {
         // check the pre-existing constants first
-        Int64Constant constant = (Int64Constant) ensureLocatorLookup(Format.Int64).get(pint);
+        IntConstant constant = (IntConstant) ensureLocatorLookup(Format.Int64).get(pint);
         if (constant == null)
             {
-            constant = (Int64Constant) register(new Int64Constant(this, pint));
+            constant = (IntConstant) register(new IntConstant(this, pint));
             }
         return constant;
         }
@@ -307,17 +321,18 @@ public class ConstantPool
         }
 
     /**
-     * Given an array of constants, obtain a TupleConstant that represents the corresponding tuple.
+     * Create a tuple constant value.
      *
-     * @param aconst  an array of conditions
+     * @param constType  the type of the tuple
+     * @param aconst     an array of constant values
      *
-     * @return a TupleConstant
+     * @return a constant representing the tuple value
      */
-    public TupleConstant ensureTupleConstant(Constant[] aconst)
+    public ArrayConstant ensureTupleConstant(TypeConstant constType, Constant[] aconst)
         {
         checkElementsNonNull(aconst);
 
-        return (TupleConstant) register(new TupleConstant(this, aconst.clone()));
+        return (ArrayConstant) register(new ArrayConstant(this, Format.Tuple, constType, aconst.clone()));
         }
 
     /**
@@ -540,56 +555,6 @@ public class ConstantPool
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
                         + " is not a Module, Package, Class, or Method");
             }
-        }
-
-    /**
-     * Obtain an auto-narrowing class constant that represents the parent of the specified
-     * auto-narrowing class constant, which itself must represent a non-static inner class.
-     *
-     * @param constChild  an auto-narrowing class constant
-     *
-     * @return an auto-narrowing class constant representing the parent of the specified class
-     *         constant
-     */
-    public ParentClassConstant ensureParentClassConstant(IdentityConstant constChild)
-        {
-        ParentClassConstant constant = (ParentClassConstant) ensureLocatorLookup(Format.ParentClass).get(constChild);
-        if (constant == null)
-            {
-            constant = (ParentClassConstant) register(new ParentClassConstant(this, constChild));
-            }
-        return constant;
-        }
-
-    /**
-     * Obtain an auto-narrowing class type that represents a non-static inner class child of the
-     * specified auto-narrowing type.
-     *
-     * @param constParent  an auto-narrowing class constant
-     * @param sChild       the name of the non-static inner class to obtain an auto-narrowing class
-     *                     constant for
-     *
-     * @return an auto-narrowing class constant representing the child of the specified class
-     *         constant
-     */
-    public ChildClassConstant ensureChildClassConstant(IdentityConstant constParent, String sChild)
-        {
-        if (!constParent.isAutoNarrowing())
-            {
-            throw new IllegalArgumentException("parent is not auto-narrowing class: " + constParent);
-            }
-
-        ChildClassConstant constant = null;
-        if (constParent instanceof ThisClassConstant && constParent.getName().equals(
-                ThisClassConstant.THIS_CLASS))
-            {
-            constant = (ChildClassConstant) ensureLocatorLookup(Format.ChildClass).get(sChild);
-            }
-        if (constant == null)
-            {
-            constant = (ChildClassConstant) register(new ChildClassConstant(this, constParent, sChild));
-            }
-        return constant;
         }
 
     /**
@@ -948,8 +913,8 @@ public class ConstantPool
      *
      * @return a ClassTypeConstant
      */
-    public ParameterizedTypeConstant ensureClassTypeConstant(IdentityConstant constClass,
-                                                     Access access, TypeConstant... constTypes)
+    public TypeConstant ensureClassTypeConstant(Constant constClass,
+                                                Access access, TypeConstant... constTypes)
         {
         if (!(constClass instanceof ModuleConstant
                 || constClass instanceof PackageConstant
@@ -961,18 +926,83 @@ public class ConstantPool
                     + " is not a Module, Package, Class, Typedef, or Property (formal type parameter)");
             }
 
-        ParameterizedTypeConstant constant = null;
-        if (constClass.getFormat() == Format.Class && access == Access.PUBLIC && constTypes == null)
+        TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constClass);
+        if (constType == null)
             {
-            constant = (ParameterizedTypeConstant) ensureLocatorLookup(Format.TerminalType).get(constClass);
+            constType = (TypeConstant) register(new TerminalTypeConstant(this, constClass));
             }
-        if (constant == null)
+
+        if (access != null)
             {
-            constant = (ParameterizedTypeConstant) register(new ParameterizedTypeConstant(this, constClass, access, constTypes));
+            constType = ensureAccessTypeConstant(constType, access);
             }
-        return constant;
+        
+        if (constTypes != null)
+            {
+            constType = ensureParameterizedTypeConstant(constType, constTypes);
+            }
+        
+        return constType;
         }
 
+    /**
+     * TODO
+     * 
+     * @param constType
+     * @param access
+     * 
+     * @return
+     */
+    public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access)
+        {
+        TypeConstant constAccess = null;
+
+        if (access == null)
+            {
+            access = Access.PUBLIC;
+            }
+        
+        if (constType.isAccessSpecified())
+            {
+            if (constType.getAccess() == access)
+                {
+                return constType;
+                }
+            else
+                {
+                // TODO could unwrap and re-wrap
+                throw new IllegalArgumentException("type already has an access specified");
+                }
+            }
+        
+        if (access == Access.PUBLIC)
+            {
+            constAccess = (TypeConstant) ensureLocatorLookup(Format.AccessType).get(constType);
+            }
+        
+        if (constAccess == null)
+            {
+            constAccess = (TypeConstant) register(new AccessTypeConstant(this, constType, access));
+            }
+        
+        return constAccess;
+        }
+
+    /**
+     * TODO
+     * 
+     * @param constType
+     * @param constTypes
+     * 
+     * @return
+     */
+    public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant[] constTypes)
+        {
+        // TODO validate (make sure that it can be parameterized, and that it's not already parameterized) 
+        // TODO locator
+        return (TypeConstant) register(new ParameterizedTypeConstant(this, constType, constTypes));
+        }
+    
     /**
      * Given the specified type, obtain a TypeConstant that represents the explicitly immutable form
      * of that type.
@@ -1003,25 +1033,53 @@ public class ConstantPool
         }
 
     /**
+     * Obtain an auto-narrowing constant that represents the class of "this".
+     *
+     * @return an auto-narrowing constant that represents the class of "this"
+     */
+    public ThisClassConstant ensureThisClassConstant()
+        {
+        ThisClassConstant constant = (ThisClassConstant)
+                ensureLocatorLookup(Format.ThisClass).get(ThisClassConstant.THIS_CLASS);
+        if (constant != null)
+            {
+            return constant;
+            }
+
+        return (ThisClassConstant) register(new ThisClassConstant(this));
+        }
+
+    /**
      * Obtain an auto-narrowing class type constant that represents the type of "this".
      *
      * @param access  the access modifier, or null
      *
      * @return an auto-narrowing class type constant that represents the type of "this"
      */
-    public ParameterizedTypeConstant ensureThisTypeConstant(Access access)
+    public TypeConstant ensureThisTypeConstant(Access access)
         {
-        ThisClassConstant constId  = ensureSymbolicConstant(ThisClassConstant.THIS_TYPE);
-        ParameterizedTypeConstant constant = null;
-        if (access == null || access == Access.PUBLIC)
+        // get the raw type
+        ThisClassConstant constId   = ensureThisClassConstant();
+        TypeConstant      constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
+        if (constType == null)
             {
-            constant = (ParameterizedTypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
+            constType = (TypeConstant) register(new TerminalTypeConstant(this, constId));
             }
-        if (constant == null)
+        if (access == null)
             {
-            constant = (ParameterizedTypeConstant) register(new ParameterizedTypeConstant(this, constId, access));
+            return constType;
             }
-        return constant;
+
+        // apply access modifier
+        if (access == Access.PUBLIC)
+            {
+            TypeConstant constAccess = (AccessTypeConstant) ensureLocatorLookup(Format.AccessType).get(constType);
+            if (constAccess != null)
+                {
+                return constAccess;
+                }
+            }
+        return (TypeConstant) register(new AccessTypeConstant(this, constType, access));
         }
 
     /**
@@ -1034,28 +1092,28 @@ public class ConstantPool
      */
     public TypeConstant ensureParentTypeConstant(TypeConstant constChild)
         {
-        // unwrap the terminal
-        if (constChild == null)
+        if (constChild == null || !constChild.isAutoNarrowing()
+                || !constChild.isSingleDefiningConstant() || constChild.isParamsSpecified())
             {
-            throw new IllegalArgumentException("child required");
+            throw new IllegalArgumentException("single, auto-narrowing, non-parameterized child required");
             }
-        if (!constChild.isSingleDefiningConstant())
-            {
-            throw new IllegalArgumentException("no single defining constant: " + constChild);
-            }
-        {
-        return true;
-        }
 
-        public abstract Constant getDefiningConstant();
+        // TODO locator
 
-        if (constChild)
-        ParentTypeConstant constant = (ParentTypeConstant) ensureLocatorLookup(Format.ParentType).get(constChild);
-        if (constant == null)
+        TypeConstant constParent = new TerminalTypeConstant(this, new ParentClassConstant(this,
+                (PseudoConstant) constChild.getDefiningConstant()));
+
+        // wrap the parent in the same way that the child was wrapped
+        if (constChild.isAccessSpecified())
             {
-            constant = (ParentTypeConstant) register(new ParentTypeConstant(this, constChild));
+            constParent = new AccessTypeConstant(this, constParent, constChild.getAccess());
             }
-        return constant;
+        if (constChild.isImmutabilitySpecified())
+            {
+            constParent = new ImmutableTypeConstant(this, constParent);
+            }
+
+        return (TypeConstant) register(constParent);
         }
 
     /**
@@ -1067,64 +1125,55 @@ public class ConstantPool
      *
      * @return
      */
-    public ChildTypeConstant ensureChildTypeConstant(TypeConstant constParent, String sChild)
+    public TypeConstant ensureChildTypeConstant(TypeConstant constParent, String sChild)
         {
-        if (!constParent.isAutoNarrowing())
+        if (constParent == null || !constParent.isAutoNarrowing()
+                || !constParent.isSingleDefiningConstant() || constParent.isParamsSpecified())
             {
-            throw new IllegalArgumentException("parent is not auto-narrowing type: " + constParent);
+            throw new IllegalArgumentException("single, auto-narrowing, non-parameterized parent required");
             }
 
-        ChildTypeConstant constant = null;
-        if (constParent instanceof ParameterizedTypeConstant && ((ParameterizedTypeConstant) constParent).getAccess() == Access.PUBLIC)
+        // TODO locator
+
+        TypeConstant constChild = new TerminalTypeConstant(this, new ChildClassConstant(this,
+                (PseudoConstant) constParent.getDefiningConstant(), sChild));
+
+        // wrap the child in the same way that the parent was wrapped
+        if (constParent.isAccessSpecified())
             {
-            constant = (ChildTypeConstant) ensureLocatorLookup(Format.ChildType).get(sChild);
+            constChild = new AccessTypeConstant(this, constChild, constParent.getAccess());
             }
-        if (constant == null)
+        if (constParent.isImmutabilitySpecified())
             {
-            constant = (ChildTypeConstant) register(new ChildTypeConstant(this, constParent, sChild));
+            constChild = new ImmutableTypeConstant(this, constChild);
             }
-        return constant;
+
+        return constChild;
         }
 
-    /**
-     * Obtain a symbolic constant for the specified symbol name.
-     *
-     * @param sName  a predefined symbol name
-     *
-     * @return the symbolic constant corresponding to the specified symbol name
-     */
-    public ThisClassConstant ensureSymbolicConstant(String sName)
-        {
-        ThisClassConstant constant = (ThisClassConstant) ensureLocatorLookup(Format.ThisClass).get(sName);
-        if (constant == null)
-            {
-            constant = (ThisClassConstant) register(new ThisClassConstant(this, sName));
-            }
-        return constant;
-        }
-
-    /**
-     * Given the specified parameter name, obtain a TypeConstant that represents the type parameter.
-     *
-     * @param constParent  the type that contains the type parameter
-     * @param sName        the name of the type parameter
-     *
-     * @return the constant representing the type parameter
-     */
-    public ParameterTypeConstant ensureParameterTypeConstant(TypeConstant constParent, String sName)
-        {
-        ParameterTypeConstant constant = null;
-        if (constParent.isAutoNarrowing() && constParent instanceof ParameterizedTypeConstant
-                    && ((ParameterizedTypeConstant) constParent).getAccess() == Access.PUBLIC)
-            {
-            constant = (ParameterTypeConstant) ensureLocatorLookup(Format.ParameterType).get(sName);
-            }
-        if (constant == null)
-            {
-            constant = (ParameterTypeConstant) register(new ParameterTypeConstant(this, constParent, sName));
-            }
-        return constant;
-        }
+// TODO - determine if this should be based on just the name, or should it require a PropertyConstant?
+//    /**
+//     * Given the specified type parameter name, obtain a TypeConstant that represents the type parameter.
+//     *
+//     * @param constParent  the type that contains the type parameter
+//     * @param sName        the name of the type parameter
+//     *
+//     * @return the constant representing the type parameter
+//     */
+//    public TypeConstant ensureParameterTypeConstant(TypeConstant constParent, String sName)
+//        {
+//        TypeConstant constant = null;
+//        if (constParent.isAutoNarrowing() && constParent instanceof ParameterizedTypeConstant
+//                    && ((ParameterizedTypeConstant) constParent).getAccess() == Access.PUBLIC)
+//            {
+//            constant = (TypeConstant) ensureLocatorLookup(Format.ParameterType).get(sName);
+//            }
+//        if (constant == null)
+//            {
+//            constant = (TypeConstant) register(new TypeConstant(this, constParent, sName));
+//            }
+//        return constant;
+//        }
 
     /**
      * Given the specified register index, obtain a TypeConstant that represents the type parameter.
@@ -1133,15 +1182,20 @@ public class ConstantPool
      *
      * @return the RegisterTypeConstant for the specified register number
      */
-    public RegisterTypeConstant ensureRegisterTypeConstant(int iReg)
+    public TypeConstant ensureRegisterTypeConstant(int iReg)
         {
-        assert iReg >= 0;
-        RegisterTypeConstant constant = (RegisterTypeConstant) ensureLocatorLookup(Format.RegisterType).get(iReg);
-        if (constant == null)
+        RegisterConstant constReg = (RegisterConstant) ensureLocatorLookup(Format.Register).get(iReg);
+        if (constReg  == null)
             {
-            constant = (RegisterTypeConstant) register(new RegisterTypeConstant(this, iReg));
+            constReg = (RegisterConstant) register(new RegisterConstant(this, iReg));
             }
-        return constant;
+
+        TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constReg);
+        if (constType == null)
+            {
+            constType = (TypeConstant) register(new TerminalTypeConstant(this, constReg));
+            }
+        return constType;
         }
 
     /**
@@ -1204,18 +1258,6 @@ public class ConstantPool
     public UnionTypeConstant ensureUnionTypeConstant(TypeConstant constType1, TypeConstant constType2)
         {
         return (UnionTypeConstant) register(new UnionTypeConstant(this, constType1, constType2));
-        }
-
-    /**
-     * Create a new TypeConstant whose exact type will eventually be resolved.
-     *
-     * @param oType  some opaque representation of the type
-     *
-     * @return a new TypeConstant
-     */
-    public UnresolvedTypeConstant createUnresolvedTypeConstant(Object oType)
-        {
-        return new UnresolvedTypeConstant(this, oType);
         }
 
 
@@ -1300,12 +1342,65 @@ public class ConstantPool
             Format   format = Constant.Format.valueOf(nFmt);
             switch (format)
                 {
+                /*
+                * Values.
+                */
+                case IntLiteral:
+                case FPLiteral:
+                case Date:
+                case Time:
+                case DateTime:
+                case Duration:
+                case TimeInterval:
+                    constant = new LiteralConstant(this, format, in);
+                    break;
+
+                case Int8:
+                    constant = new Int8Constant(this, format, in);
+                    break;
+
                 case UInt8:
                     constant = new UInt8Constant(this, format, in);
                     break;
 
-                case UInt8Array:
-                    constant = new UInt8ArrayConstant(this, format, in);
+                case Int16:
+                case Int32:
+                case Int64:
+                case Int128:
+                case VarInt:
+                case UInt16:
+                case UInt32:
+                case UInt64:
+                case UInt128:
+                case VarUInt:
+                    constant = new IntConstant(this, format, in);
+                    break;
+
+                case Float16:
+                    constant = new Float16Constant(this, format, in);
+                    break;
+
+                case Float32:
+                    constant = new Float32Constant(this, format, in);
+                    break;
+
+                case Float64:
+                    constant = new Float64Constant(this, format, in);
+                    break;
+
+                case Float128:
+                    constant = new Float128Constant(this, format, in);
+                    break;
+
+                case Dec32:
+                case Dec64:
+                case Dec128:
+                    constant = new DecimalConstant(this, format, in);
+                    break;
+
+                case VarFloat:
+                case VarDec:
+                    constant = new VarFPConstant(this, format, in);
                     break;
 
                 case Char:
@@ -1316,14 +1411,32 @@ public class ConstantPool
                     constant = new StringConstant(this, format, in);
                     break;
 
-                case Int64:
-                    constant = new Int64Constant(this, format, in);
+                case Version:
+                    constant = new VersionConstant(this, format, in);
                     break;
 
+                case Enum:
+                    constant = new EnumConstant(this, format, in);
+                    break;
+
+                case Array:
                 case Tuple:
-                    constant = new TupleConstant(this, format, in);
+                case Set:
+                    constant = new ArrayConstant(this, format, in);
                     break;
 
+                case UInt8Array:
+                    constant = new UInt8ArrayConstant(this, format, in);
+                    break;
+
+                case MapEntry:
+                case Map:
+                    constant = new MapConstant(this, format, in);
+                    break;
+
+                /*
+                * Structural identifiers.
+                */
                 case Module:
                     constant = new ModuleConstant(this, format, in);
                     break;
@@ -1352,10 +1465,66 @@ public class ConstantPool
                     constant = new MethodConstant(this, format, in);
                     break;
 
-                case Version:
-                    constant = new VersionConstant(this, format, in);
+                /*
+                * Pseudo identifiers.
+                */
+                case UnresolvedName:
+                    throw new IOException("UnresolvedName not supported persistently");
+
+                case ThisClass:
+                    constant = new ThisClassConstant(this, format, in);
                     break;
 
+                case ParentClass:
+                    constant = new ParentClassConstant(this, format, in);
+                    break;
+
+                case ChildClass:
+                    constant = new ChildClassConstant(this, format, in);
+                    break;
+
+                case Register:
+                    constant = new RegisterConstant(this, format, in);
+                    break;
+
+                case Signature:
+                    constant = new SignatureConstant(this, format, in);
+                    break;
+
+                /*
+                * Types.
+                */
+                case TerminalType:
+                    constant = new ParameterizedTypeConstant(this, format, in);
+                    break;
+
+                case ImmutableType:
+                    constant = new ImmutableTypeConstant(this, format, in);
+                    break;
+
+                case AccessType:
+                    constant = new AccessTypeConstant(this, format, in);
+                    break;
+                    
+                case AnnotatedType:
+                    constant = new AnnotatedTypeConstant(this, format, in);
+                    break;
+
+                case ParameterizedType:
+                    constant = new ParameterizedTypeConstant(this, format, in);
+                    break;
+
+                case UnionType:
+                    constant = new UnionTypeConstant(this, format, in);
+                    break;
+
+                case IntersectionType:
+                    constant = new IntersectionTypeConstant(this, format, in);
+                    break;
+
+                /*
+                 * Conditions.
+                 */
                 case ConditionNot:
                     constant = new NotCondition(this, format, in);
                     break;
@@ -1384,31 +1553,6 @@ public class ConstantPool
                     constant = new VersionedCondition(this, format, in);
                     break;
 
-                case TerminalType:
-                    constant = new ParameterizedTypeConstant(this, format, in);
-                    break;
-
-                case ImmutableType:
-                    constant = new ImmutableTypeConstant(this, format, in);
-                    break;
-
-                case UnionType:
-                    constant = new UnionTypeConstant(this, format, in);
-                    break;
-
-                case IntersectionType:
-                    constant = new IntersectionTypeConstant(this, format, in);
-                    break;
-
-                case AnnotatedType:
-                    constant = new AnnotatedTypeConstant(this, format, in);
-                    break;
-
-                case ParameterType:
-                    constant = new ParameterTypeConstant(this, format, in);
-                    break;
-
-                case Unresolved:
                 default:
                     throw new IOException("Unsupported constant format: " + nFmt);
                 }

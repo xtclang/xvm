@@ -34,10 +34,10 @@ public class NullableTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public ParameterizedTypeConstant asClassTypeConstant(ErrorListener errs)
+    public ParameterizedTypeConstant ensureTypeConstant(ErrorListener errs)
         {
         log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
-        return super.asClassTypeConstant(errs);
+        return super.ensureTypeConstant(errs);
         }
 
     @Override
