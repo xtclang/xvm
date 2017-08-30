@@ -74,16 +74,11 @@ public class Enum
         if (constant instanceof ClassConstant)
             {
             ClassConstant constClass = (ClassConstant) constant;
-            String sName = constClass.getName();
 
             Enum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
                 (Enum) getSuper() : this;
 
-            int ix = template.m_listNames.indexOf(sName);
-            if (ix >= 0)
-                {
-                return template.m_listHandles.get(ix);
-                }
+            return template.getEnumByName(constClass.getName());
             }
         return null;
         }
@@ -122,6 +117,16 @@ public class Enum
         return frame.assignValue(iReturn,
                 xString.makeHandle(m_listNames.get((int) hEnum.getValue())));
         }
+
+    // ----- helper method -----
+
+    public EnumHandle getEnumByName(String sName)
+        {
+        int ix = m_listNames.indexOf(sName);
+        return ix >= 0 ? m_listHandles.get(ix) : null;
+        }
+
+    // ----- ObjectHandle -----
 
     public static class EnumHandle
                 extends JavaLong

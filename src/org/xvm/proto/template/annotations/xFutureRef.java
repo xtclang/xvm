@@ -3,14 +3,19 @@ package org.xvm.proto.template.annotations;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.PropertyStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
-import org.xvm.proto.template.xException;
+import org.xvm.proto.Utils;
+import org.xvm.proto.template.Enum;
+import org.xvm.proto.template.Enum.EnumHandle;
 import org.xvm.proto.template.Function.FunctionHandle;
+import org.xvm.proto.template.xBoolean;
+import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xNullable;
 import org.xvm.proto.template.Ref;
 
@@ -26,6 +31,9 @@ public class xFutureRef
         extends Ref
     {
     public static xFutureRef INSTANCE;
+    public static EnumHandle Pending;
+    public static EnumHandle Result;
+    public static EnumHandle Error;
 
     public xFutureRef(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -40,18 +48,75 @@ public class xFutureRef
     @Override
     public void initDeclared()
         {
-        //    enum Completion {Pending, Result, Error};
-        //    public/private Completion completion = Pending;
-        //    private Boolean assignable = false;
-        //    private Exception? failure = null;
-        //    typedef function Void (Completion, RefType?, Exception?) NotifyDependent;
-        //    private NotifyDependent? notify = null;
-
         // FutureRef!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
-        markNativeMethod("whenComplete", null, new String[] {"annotations.FutureRef<RefType>"});
+        markNativeMethod("whenComplete", null, new String[] {"annotations.FutureRef!<RefType>"});
+        markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureRef!<RefType>"});
+        markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureRef!<RefType>"});
 
         markNativeMethod("get", VOID, new String[]{"RefType"});
         markNativeMethod("set", new String[]{"RefType"}, VOID);
+
+        Enum enumCompletion = (Enum) f_types.getTemplate("annotations.FutureRef.Completion");
+        Pending = enumCompletion.getEnumByName("Pending");
+        Result = enumCompletion.getEnumByName("Result");
+        Error = enumCompletion.getEnumByName("Error");
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+        {
+        FutureHandle hThis = (FutureHandle) hTarget;
+        CompletableFuture cf = hThis.m_future;
+
+        switch (property.getName())
+            {
+            case "assignable":
+                return frame.assignValue(iReturn, xBoolean.makeHandle(cf == null || !cf.isDone()));
+
+            case "assigned":
+                return frame.assignValue(iReturn, xBoolean.makeHandle(cf != null && cf.isDone()));
+
+            case "failure":
+                {
+                if (cf != null && cf.isCompletedExceptionally())
+                    {
+                    try
+                        {
+                        cf.get();
+                        throw new IllegalStateException(); // cannot happen
+                        }
+                    catch (Exception e)
+                        {
+                        Throwable eOrig = e.getCause();
+                        if (eOrig instanceof ExceptionHandle.WrapperException)
+                            {
+                            ExceptionHandle hException =
+                                    ((ExceptionHandle.WrapperException) eOrig).getExceptionHandle();
+                            return frame.assignValue(iReturn, hException);
+                            }
+                        throw new UnsupportedOperationException("Unexpected exception", e);
+                        }
+                    }
+                return frame.assignValue(iReturn, xNullable.NULL);
+                }
+
+            case "completion":
+                {
+                EnumHandle hValue =
+                    cf == null || !cf.isDone() ?
+                        Pending : // REVIEW: shouldn't we throw if unassigned?
+                    cf.isCompletedExceptionally() ?
+                        Error :
+                        Result;
+                return frame.assignValue(iReturn, hValue);
+                }
+
+            case "notify":
+                // currently unused
+                return frame.assignValue(iReturn, xNullable.NULL);
+
+            }
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override
@@ -62,7 +127,34 @@ public class xFutureRef
 
         switch (method.getName())
             {
+            case "thenDo":
+                {
+                FunctionHandle hRun = (FunctionHandle) hArg;
+
+                CompletableFuture cf = hThis.m_future.thenRun(() ->
+                    {
+                    frame.f_context.callLater(hRun, Utils.OBJECTS_NONE);
+                    });
+
+                return frame.assignValue(iReturn, makeHandle(cf));
+                }
+
+            case "passTo":
+                {
+                FunctionHandle hConsume = (FunctionHandle) hArg;
+
+                CompletableFuture cf = hThis.m_future.thenAccept(r ->
+                    {
+                    ObjectHandle[] ahArg = new ObjectHandle[1];
+                    ahArg[0] = r;
+                    frame.f_context.callLater(hConsume, ahArg);
+                    });
+
+                return frame.assignValue(iReturn, makeHandle(cf));
+                }
+
             case "whenComplete":
+                {
                 FunctionHandle hNotify = (FunctionHandle) hArg;
 
                 CompletableFuture<ObjectHandle> cf = hThis.m_future.whenComplete((r, x) ->
@@ -76,6 +168,7 @@ public class xFutureRef
                     });
 
                 return frame.assignValue(iReturn, makeHandle(cf));
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);

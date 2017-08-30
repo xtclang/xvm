@@ -120,6 +120,12 @@ public class xAtomicIntNumber
             }
 
         @Override
+        public boolean isAssigned()
+            {
+            return m_atomicValue != null;
+            }
+
+        @Override
         protected ObjectHandle getInternal()
                 throws ExceptionHandle.WrapperException
             {

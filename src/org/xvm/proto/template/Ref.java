@@ -2,6 +2,7 @@ package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
@@ -34,10 +35,36 @@ public class Ref
     @Override
     public void initDeclared()
         {
+        markCalculated("assigned");
         markNativeGetter("assigned");
-        markNativeSetter("assigned");
         markNativeMethod("get", VOID, new String[]{"RefType"});
         markNativeMethod("set", new String[]{"RefType"}, VOID);
+        markCalculated("name");
+        markNativeGetter("name");
+        markCalculated("selfContained");
+        markNativeGetter("selfContained");
+        }
+
+
+    @Override
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+        {
+        RefHandle hThis = (RefHandle) hTarget;
+
+        switch (property.getName())
+            {
+            case "assigned":
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isAssigned()));
+
+            case "name":
+                String sName = hThis.m_sName;
+                return frame.assignValue(iReturn, sName == null ?
+                    xNullable.NULL : xString.makeHandle(sName));
+
+            case "selfContained":
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isSelfContained()));
+            }
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override
@@ -99,7 +126,7 @@ public class Ref
         {
         protected String m_sName;
         protected Frame m_frame;
-        protected int m_iVar = REF_REFERENT;
+        protected int m_iVar;
 
         protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
 
@@ -115,6 +142,7 @@ public class Ref
 
             m_sName = sName;
             m_fMutable = true;
+            m_iVar = REF_REFERENT;
             }
 
         public RefHandle(TypeComposition clazz, Frame frame, int iVar)
@@ -143,6 +171,26 @@ public class Ref
 
             m_frame = frame;
             m_iVar = iVar;
+            }
+
+        public boolean isAssigned()
+            {
+            switch (m_iVar)
+                {
+                case REF_REFERENT:
+                    return m_hDelegate != null;
+
+                case REF_REF:
+                    return ((RefHandle) m_hDelegate).isAssigned();
+
+                default: // assertion m_iVar >= 0
+                    return m_frame.f_ahVar[m_iVar] != null;
+                }
+            }
+
+        public boolean isSelfContained()
+            {
+            return m_iVar == REF_REFERENT;
             }
 
         public ObjectHandle get()

@@ -87,6 +87,14 @@ public class Adapter
             String sParam = sName.substring(ofTypeParam + 1, sName.length() - 1);
             String sSimpleName = sName.substring(0, ofTypeParam);
 
+            // TODO: auto-narrowing (ThisTypeConstant)
+            boolean fAutoNarrow = true;
+            if (sSimpleName.endsWith("!"))
+                {
+                sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
+                fAutoNarrow = false;
+                }
+
             ClassConstant constClass = f_container.f_types.getClassConstant(sSimpleName);
             if (constClass != null)
                 {

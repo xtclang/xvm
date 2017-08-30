@@ -78,6 +78,12 @@ public class xAtomicRef
             }
 
         @Override
+        public boolean isAssigned()
+            {
+            return m_atomic != null;
+            }
+
+        @Override
         protected ObjectHandle getInternal()
                 throws ExceptionHandle.WrapperException
             {

@@ -274,7 +274,8 @@ public abstract class ClassTemplate
                     for (int i = 0, c = atParamTest.length; i < c; i++)
                         {
                         // compensate for "function"
-                        if (atParamTest[i].getValueString().contains("function"))
+                        if (atParamTest[i].getValueString().contains("function") &&
+                            atParam[i].getValueString().contains("Function"))
                             {
                             continue;
                             }
