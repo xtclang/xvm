@@ -426,9 +426,24 @@ class TestApp
             }
         }
 
+    static const PrettyRectangle
+            extends Rectangle
+            incorporates Formatter
+        {
+        construct PrettyRectangle(Point tl, Point br, String prefix)
+            {
+            construct Rectangle(tl, br);
+            construct Formatter(prefix);
+            }
+        }
+
     static Void testMixin()
         {
-        PrettyPoint p2 = new PrettyPoint(1, 2, "**** ");
-        print(p2);
+        PrettyPoint prp = new PrettyPoint(1, 2, "*** ");
+        print(prp);
+
+        Point p2 = new Point(2, 1);
+        PrettyRectangle prr = new PrettyRectangle(prp, p2, "+++ ");
+        print(prp);
         }
     }

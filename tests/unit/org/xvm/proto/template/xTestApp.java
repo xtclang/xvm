@@ -637,30 +637,56 @@ public class xTestApp extends xModule
             };
         mtToString.m_cVars = 2;
 
-        ClassTemplate ctPoint2 = f_types.getTemplate("TestApp.PrettyPoint");
-        adapter.addMethod(ctPoint2.f_struct, "construct", new String[] {"Int64", "Int64", "String"}, VOID);
-        MethodInfo mtConst2 = ctPoint2.ensureMethodInfo("construct", new String[]{"Int64", "Int64", "String"});
-        mtConst2.m_aop = new Op[]
+        ClassTemplate ctPrPoint = f_types.getTemplate("TestApp.PrettyPoint");
+        adapter.addMethod(ctPrPoint.f_struct, "construct", new String[] {"Int64", "Int64", "String"}, VOID);
+        MethodInfo mtPrPConst = ctPrPoint.ensureMethodInfo("construct", new String[]{"Int64", "Int64", "String"});
+        mtPrPConst.m_aop = new Op[]
             { // #0 = x; #1 = y; #2 = prefix
             new Construct_N(adapter.getMethodConstId("TestApp.Point", "construct"),
                     new int[] {0, 1}),
             new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"), 2),
             new Return_0()
             };
-        mtConst2.m_cVars = 3;
+        mtPrPConst.m_cVars = 3;
+
+        ClassTemplate ctPrRectangle = f_types.getTemplate("TestApp.PrettyRectangle");
+        adapter.addMethod(ctPrRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point", "String"}, VOID);
+        MethodInfo mtPrRConst = ctPrRectangle.ensureMethodInfo("construct", new String[]{"TestApp.Point", "TestApp.Point", "String"});
+        mtPrRConst.m_aop = new Op[]
+            { // #0 = tl; #1 = br; #2 = prefix
+            new Construct_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
+                    new int[] {0, 1}),
+            new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"), 2),
+            new Return_0()
+            };
+        mtPrRConst.m_cVars = 3;
 
         MethodInfo ftTestMixin = ensureMethodInfo("testMixin", VOID);
         ftTestMixin.m_aop = new Op[]
             {
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testMixin() #")),
             new NVar(adapter.getClassTypeConstId("TestApp.PrettyPoint"),
-                    adapter.ensureValueConstantId("p2")), // #0 (p2)
+                    adapter.ensureValueConstantId("prp")), // #0 (prp)
             new New_N(adapter.getMethodConstId("TestApp.PrettyPoint", "construct"),
                     new int[]{-adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(2),
-                              -adapter.ensureValueConstantId("**** ")}, 0),
+                              -adapter.ensureValueConstantId("*** ")}, 0),
             new X_Print(0),
+
+            new NVar(adapter.getClassTypeConstId("TestApp.Point"),
+                    adapter.ensureValueConstantId("p2")), // #1 (p2)
+            new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+                    new int[]{-adapter.ensureValueConstantId(2), -adapter.ensureValueConstantId(1)},
+                    1),
+
+            new NVar(adapter.getClassTypeConstId("TestApp.PrettyRectangle"),
+                    adapter.ensureValueConstantId("prr")), // #2 (prr)
+            new New_N(adapter.getMethodConstId("TestApp.PrettyRectangle", "construct"),
+                    new int[]{0, 1, -adapter.ensureValueConstantId("+++ ")}, 2),
+            new X_Print(2),
+
             new Return_0(),
             };
-        ftTestMixin.m_cVars = 1;
+        ftTestMixin.m_cVars = 3;
 
         // --- run()
         MethodInfo mtRun = ensureMethodInfo("run", VOID, VOID);

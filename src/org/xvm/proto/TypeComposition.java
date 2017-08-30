@@ -109,6 +109,11 @@ public class TypeComposition
         return null;
         }
 
+    public boolean isRoot()
+        {
+        return this == xObject.CLASS;
+        }
+
     public List<ClassTemplate> getCallChain()
         {
         if (m_listCallChain != null)
@@ -143,7 +148,8 @@ public class TypeComposition
     //   1.3 declared methods on the incorporated mixins, traits and delegates (recursively)
     //   1.4 if the class belongs to a "built-in category" (e.g. Enum, Service, Const)
     //       declared methods for the category itself
-    //   1.5 followed by the "declared" chain on the super class
+    //   1.5 followed by the "declared" chain on the super class,
+    //       unless the super is the root Object and "this" class is a mixin or a trait
     //
     // 2. The "default" chain that consists of:
     //   2.1 default methods on the interfaces that are declared by encapsulating
@@ -176,7 +182,8 @@ public class TypeComposition
         // 1.2
         list.add(f_template);
 
-        if (fTop && struct.getFormat() == Component.Format.MIXIN)
+        Component.Format format = struct.getFormat();
+        if (fTop && format == Component.Format.MIXIN)
             {
             // native mix-in (e.g. FutureRef)
             ClassTypeConstant constInto =
@@ -197,9 +204,12 @@ public class TypeComposition
                 {
                 case Incorporates:
                     // TODO: how to detect a conditional incorporation?
-                case Delegates:
                     TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
                     addNoDupes(clzContribution.collectDeclaredCallChain(false), list, set);
+                    break;
+
+                case Delegates:
+                    // TODO:
                     break;
                 }
             }
@@ -213,7 +223,12 @@ public class TypeComposition
             }
 
         // 1.5
-        addNoDupes(clzSuper.collectDeclaredCallChain(false), list, set);
+        if (!clzSuper.isRoot() ||
+                !(format == Component.Format.MIXIN ||
+                  format == Component.Format.TRAIT))
+            {
+            addNoDupes(clzSuper.collectDeclaredCallChain(false), list, set);
+            }
         return list;
         }
 
@@ -515,6 +530,8 @@ public class TypeComposition
             if (method != null)
                 {
                 list.add(method);
+
+                // TODO: if (!method.callsSuper() {break;})
                 }
             }
         return new CallChain(list);
@@ -547,6 +564,8 @@ public class TypeComposition
                     {
                     // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
                     list.add((MethodStructure) mms.children().get(0));
+
+                    // TODO: if (!method.callsSuper() {break;})
                     }
 
                 if (template.isStateful())
