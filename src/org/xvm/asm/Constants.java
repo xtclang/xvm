@@ -55,6 +55,11 @@ public interface Constants
     public static final String X_CLASS_NULLABLE = "Nullable";
 
     /**
+     * The name of the Function class.
+     */
+    public static final String X_CLASS_FUNCTION = "Function";
+
+    /**
      * The name of the Array class.
      */
     public static final String X_CLASS_ARRAY = "collections.Array";

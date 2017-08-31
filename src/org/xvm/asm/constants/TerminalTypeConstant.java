@@ -72,14 +72,11 @@ public class TerminalTypeConstant
             case Class:
             case Typedef:
             case Property:
-            case MultiMethod:
-            case Method:
-            case UnresolvedName:
+            case Register:
             case ThisClass:
             case ParentClass:
             case ChildClass:
-            case Register:
-            case Signature:
+            case UnresolvedName:
                 break;
 
             default:
@@ -91,14 +88,46 @@ public class TerminalTypeConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- TypeConstant methods ------------------------------------------------------------------
 
-    /**
-     * @return the underlying constant that this TypeConstant represents the type of; either an
-     *         IdentityConstant (ModuleConstant, PackageConstant, ClassConstant, TypedefConstant,
-     *         PropertyConstant), or a PseudoConstant (ThisClassConstant, ParentClassConstant,
-     *         ChildClassConstant, RegisterConstant, or UnresolvedNameConstant)
-     */
+
+    @Override
+    public boolean isImmutabilitySpecified()
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isAccessSpecified()
+        {
+        return false;
+        }
+
+    @Override
+    public Access getAccess()
+        {
+        return Access.PUBLIC;
+        }
+
+    @Override
+    public boolean isParamsSpecified()
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isAnnotated()
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isSingleDefiningConstant()
+        {
+        return true;
+        }
+
+    @Override
     public Constant getDefiningConstant()
         {
         Constant constId = m_constId;

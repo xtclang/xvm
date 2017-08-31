@@ -6,9 +6,9 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.TerminalTypeConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ErrorListener;
 
@@ -57,6 +57,54 @@ public class AnnotatedTypeExpression
         }
 
 
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        // this is a bit complicated:
+        // 1) we need the class of the annotation
+        // 2) we need a constant for each parameter (how do we know we're ready to ask for those at
+        //    this point? what do we do if the parameters are NOT constant? how do we log an error?)
+        // 3) we need the underlying type -- but this is easy: type.ensureTypeConstant()
+        //
+        // the question is, how do we put the resulting TypeConstant together in a way that if it's
+        // not all resolved at this point, that it will get resolved during the resolveNames pass?
+
+        TypeConstant constAnnotationType = annotation.getType().ensureTypeConstant();
+        if (!(constAnnotationType instanceof TerminalTypeConstant))
+            {
+            // TODO should this be a throw? or an error logged? or a temporary place-holder constant
+            // returned just to avoid blowing up?
+            throw new IllegalStateException("illegal annotation class: " + constAnnotationType);
+            }
+
+        Constant[]       aconstParam = null;
+        List<Expression> args = annotation.getArguments();
+        if (args != null)
+            {
+            int cArgs = args.size();
+            aconstParam = new Constant[cArgs];
+            for (int i = 0; i < cArgs; ++i)
+                {
+                Expression exprArg = args.get(i);
+                if (exprArg.isConstant())
+                    {
+                    aconstParam[i] = exprArg.toConstant();
+                    }
+                else
+                    {
+                    // TODO should this be a throw? or an error logged?
+                    throw new IllegalStateException("annotation param not constant: " + exprArg);
+                    }
+                }
+            }
+
+        return getConstantPool().ensureAnnotatedTypeConstant(
+                constAnnotationType.getDefiningConstant(), aconstParam, type.ensureTypeConstant());
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -68,33 +116,11 @@ public class AnnotatedTypeExpression
             annotation.resolveNames(listRevisit, errs);
             type.resolveNames(listRevisit, errs);
 
-            Constant[]       aconstParam = null;
-            List<Expression> args = annotation.getArguments();
-            if (args != null)
-                {
-                int cArgs = args.size();
-                aconstParam = new Constant[cArgs];
-                for (int i = 0; i < cArgs; ++i)
-                    {
-                    Expression exprArg = args.get(i);
-                    if (exprArg.isConstant())
-                        {
-                        aconstParam[i] = exprArg.toConstant();
-                        }
-                    else
-                        {
-                        // TODO log error
-                        throw new IllegalStateException("not a constant: " + exprArg);
-                        }
-                    }
-                }
+            // TODO verify that the annotation type is a class type
+            // TODO verify that each of the params is a constant
 
-            // store off the annotated type
-            ConstantPool pool = getConstantPool();
-            ClassConstant constAnnotation = (ClassConstant) annotation.getType().ensureTypeConstant(
-                    errs).getDefiningConstant();
-            setTypeConstant(pool.ensureAnnotatedTypeConstant(constAnnotation, aconstParam,
-                    type.ensureTypeConstant()));
+            // store off a type constant for this type expression
+            ensureTypeConstant();
 
             super.resolveNames(listRevisit, errs);
             }

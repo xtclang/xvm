@@ -133,9 +133,9 @@ public class Parameter
         {
         assert isTypeParameter();
         assert m_constType instanceof ParameterizedTypeConstant && m_constType.isEcstasy("Type");
-        assert ((ParameterizedTypeConstant) m_constType).getTypeConstants().size() > 0;
+        assert ((ParameterizedTypeConstant) m_constType).getParamTypes().size() > 0;
 
-        return ((ParameterizedTypeConstant) m_constType).getTypeConstants().get(0);
+        return ((ParameterizedTypeConstant) m_constType).getParamTypes().get(0);
         }
 
     /**

@@ -61,20 +61,22 @@ public class IntersectionTypeConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- TypeConstant methods ------------------------------------------------------------------
 
-    /**
-     * @return the first TypeConstant
-     */
-    public TypeConstant getType1()
+    @Override
+    public boolean isRelationalType()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeConstant getUnderlyingType()
         {
         return m_constType1;
         }
 
-    /**
-     * @return the second TypeConstant
-     */
-    public TypeConstant getType2()
+    @Override
+    public TypeConstant getUnderlyingType2()
         {
         return m_constType2;
         }

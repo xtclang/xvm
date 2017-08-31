@@ -127,11 +127,11 @@ public class ClassConstant
         }
 
     /**
-     * @return the ClassTypeConstant for the public interface of this class
+     * @return a TypeConstant for this class
      */
-    public ParameterizedTypeConstant asTypeConstant()
+    public TypeConstant asTypeConstant()
         {
-        return getConstantPool().ensureClassTypeConstant(this, Access.PUBLIC);
+        return getConstantPool().ensureClassTypeConstant(this, null);
         }
 
 

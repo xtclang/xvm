@@ -19,8 +19,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
-import org.xvm.asm.constants.IdentityConstant;
-
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;

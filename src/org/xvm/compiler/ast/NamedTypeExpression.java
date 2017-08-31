@@ -14,6 +14,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ErrorListener;
@@ -55,25 +56,6 @@ public class NamedTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    @Override
-    public ParameterizedTypeConstant ensureTypeConstant(ErrorListener errs)
-        {
-        TypeConstant constType = getTypeConstant();
-        if (constType instanceof ParameterizedTypeConstant)
-            {
-            return (ParameterizedTypeConstant) constType;
-            }
-
-        // if there's already a type, and it's not a TerminalType, then it's an error
-        // if there's an immutable keyword, then it _can't_ be a TerminalType
-        if (constType != null && !(constType instanceof ResolvableConstant) || immutable != null)
-            {
-            log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
-            }
-
-        return super.ensureTypeConstant(errs);
-        }
-
     /**
      * Assemble the qualified name.
      *
@@ -98,6 +80,46 @@ public class NamedTypeExpression
             }
 
         return sb.toString();
+        }
+
+    public String[] getNames()
+        {
+        List<Token> list = names;
+        int         c    = list.size();
+        String[]    as   = new String[c];
+        for (int i = 0; i < c; ++i)
+            {
+            as[i] = list.get(i).getValue().toString();
+            }
+        return as;
+        }
+
+    public Constant getIdentityConstant()
+        {
+        Constant constId = m_constId;
+        if (constId == null)
+            {
+            m_constId = constId = new UnresolvedNameConstant(getConstantPool(), getNames());
+            }
+        else if (constId instanceof ResolvableConstant)
+            {
+            m_constId = constId = ((ResolvableConstant) constId).unwrap();
+            }
+        return constId;
+        }
+
+    protected void setIdentityConstant(Constant constId)
+        {
+        if (constId instanceof ResolvableConstant)
+            {
+            constId = ((ResolvableConstant) constId).unwrap();
+            }
+        m_constId = constId;
+        }
+
+    public List<TypeExpression> getParamTypes()
+        {
+        return paramTypes;
         }
 
     /**
@@ -171,6 +193,54 @@ public class NamedTypeExpression
         }
 
 
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        Constant constId = getIdentityConstant();
+        Access access = getExplicitAccess();
+        List<TypeExpression> paramTypes = this.paramTypes;
+        if (constant instanceof TypeConstant)
+            {
+            // access needs to be null
+            if (access != null)
+                {
+                throw new IllegalStateException("log error: access override unexpected");
+                }
+
+            // must be no type params
+            if (paramTypes != null && !paramTypes.isEmpty())
+                {
+                throw new IllegalStateException("log error: type params unexpected");
+                }
+
+            setTypeConstant((TypeConstant) constant);
+            }
+
+        TypeConstant constType;
+        ConstantPool pool = getConstantPool();
+        int cParams = paramTypes.size();
+        if (cParams == 0)
+            {
+            constType = pool.ensureClassTypeConstant(constId, access);
+            }
+        else
+            {
+            TypeConstant[] aconstParams = new TypeConstant[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                aconstParams[i] = paramTypes.get(i).ensureTypeConstant();
+                }
+            constType = pool.ensureClassTypeConstant(constId, access, aconstParams);
+            }
+
+        return immutable == null
+                ? constType
+                : pool.ensureImmutableTypeConstant(constType);
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -189,91 +259,8 @@ public class NamedTypeExpression
                 }
             assert resolver.getResult() == Result.RESOLVED;
 
-            Constant constant = resolver.getConstant();
-            if (constant instanceof TypeConstant)
-                {
-                // access needs to be null
-                if (access != null)
-                    {
-                    throw new IllegalStateException("log error: access override unexpected");
-                    }
-
-                // must be no type params
-                if (paramTypes != null && !paramTypes.isEmpty())
-                    {
-                    throw new IllegalStateException("log error: type params unexpected");
-                    }
-
-                setTypeConstant((TypeConstant) constant);
-                }
-            else if (constant instanceof IdentityConstant)
-                {
-                // determine the type's class
-                IdentityConstant constId = (IdentityConstant) constant;
-                setIdentityConstant(constId);
-
-                // determine the type accessibility
-                Access accessType = Access.PUBLIC;
-                if (access != null)
-                    {
-                    switch (access.getId())
-                        {
-                        case PUBLIC:
-                            accessType = Access.PUBLIC;
-                            break;
-
-                        case PROTECTED:
-                            accessType = Access.PROTECTED;
-                            break;
-
-                        case PRIVATE:
-                            accessType = Access.PRIVATE;
-                            break;
-
-                        default:
-                            throw new IllegalStateException("access=" + access);
-                        }
-                    }
-
-                // determine the type parameters
-                TypeConstant[] aconstParams = null;
-                if (paramTypes != null)
-                    {
-                    int cParams = paramTypes.size();
-                    aconstParams = new TypeConstant[cParams];
-                    for (int i = 0; i < cParams; ++i)
-                        {
-                        TypeExpression paramType = paramTypes.get(i);
-                        TypeConstant constType = paramType.getTypeConstant();
-                        if (constType == null)
-                            {
-                            assert !(paramType instanceof NameResolving) ||
-                                    ((NameResolving) paramType)
-                                            .getNameResolver().getResult() == Result.ERROR;
-                            return;
-                            }
-                        aconstParams[i] = constType;
-                        }
-                    }
-
-                // create the ClassTypeConstant that represents the type expression
-                ConstantPool pool = getConstantPool();
-                TypeConstant constType =
-                        pool.ensureClassTypeConstant(constId, accessType, aconstParams);
-
-                // if it is immutable, then it must be an ImmutableTypeConstant (which is _NOT_ a
-                // ClassTypeConstant)
-                if (immutable != null)
-                    {
-                    constType = pool.ensureImmutableTypeConstant(constType);
-                    }
-
-                setTypeConstant(constType);
-                }
-            else
-                {
-                throw new UnsupportedOperationException("constant=" + constant);
-                }
+            m_constId = resolver.getConstant();
+            ensureTypeConstant();
             }
         }
 
@@ -342,6 +329,7 @@ public class NamedTypeExpression
     protected long                 lEndPos;
 
     protected transient NameResolver m_resolver;
+    protected transient Constant     m_constId;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "paramTypes");
     }

@@ -91,36 +91,26 @@ public class ParameterizedTypeConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- TypeConstant methods ------------------------------------------------------------------
 
-    /**
-     * @return the TypeConstant for the parameterized class
-     */
-    public TypeConstant getClassTypeConstant()
+    @Override
+    public boolean isModifyingType()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeConstant getUnderlyingType()
         {
         return m_constType;
         }
 
-    /**
-     * @return a read-only list of type constants for the type parameters
-     */
-    public List<TypeConstant> getTypeConstants()
+    @Override
+    public List<TypeConstant> getParamTypes()
         {
         List<TypeConstant> list = m_listTypeParams;
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
-        }
-
-    @Override
-    public boolean isAutoNarrowing()
-        {
-        return m_constType.isAutoNarrowing();
-        }
-
-    @Override
-    public Constant getDefiningConstant()
-        {
-        return m_constType.getDefiningConstant();
         }
 
 

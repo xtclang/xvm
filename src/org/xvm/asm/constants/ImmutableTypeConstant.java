@@ -58,14 +58,24 @@ public class ImmutableTypeConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- TypeConstant methods ------------------------------------------------------------------
 
-    /**
-     * @return the underlying TypeConstant
-     */
-    public TypeConstant getType()
+    @Override
+    public boolean isModifyingType()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeConstant getUnderlyingType()
         {
         return m_constType;
+        }
+
+    @Override
+    public boolean isImmutabilitySpecified()
+        {
+        return true;
         }
 
 

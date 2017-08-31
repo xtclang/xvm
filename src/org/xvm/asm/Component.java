@@ -2523,11 +2523,11 @@ public abstract class Component
     public interface ResolutionCollector
         {
         /**
-         * Invoked when a name resolves to type parameter.
+         * Invoked when a name resolves to something that is not a child component.
          *
-         * @param constParam  the type parameter
+         * @param constId  the constant that was resolved to
          */
-        void resolvedParameter(TypeConstant constParam);
+        void resolvedConstant(Constant constId);
 
         /**
          * Invoked when a name resolves to a child component.

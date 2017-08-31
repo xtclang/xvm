@@ -520,6 +520,7 @@ public abstract class Constant
         ParameterizedType,
         UnionType,
         IntersectionType,
+        DifferenceType,
 
         /*
          * Conditions.

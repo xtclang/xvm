@@ -56,6 +56,26 @@ public class DecoratedTypeExpression
         }
 
 
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        switch (keyword.getId())
+            {
+            case IMMUTABLE:
+                return getConstantPool().ensureImmutableTypeConstant(type.ensureTypeConstant());
+
+            case CONDITIONAL:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            default:
+                throw new IllegalStateException("keyword=" + keyword);
+            }
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -65,23 +85,11 @@ public class DecoratedTypeExpression
             {
             // resolve the sub-type
             type.resolveNames(listRevisit, errs);
-            TypeConstant constType = type.ensureTypeConstant();
-            switch (keyword.getId())
-                {
-                case IMMUTABLE:
-                    constType = getConstantPool().ensureImmutableTypeConstant(constType);
-                    break;
 
-                case CONDITIONAL:
-                    // TODO
-                    // throw new UnsupportedOperationException();
-                    break;
+            // store off a type constant for this type expression
+            ensureTypeConstant();
 
-                default:
-                    throw new IllegalStateException("keyword=" + keyword);
-                }
-
-            setTypeConstant(constType);
+            super.resolveNames(listRevisit, errs);
             }
         }
 

@@ -107,7 +107,7 @@ public abstract class ClassTemplate
 
         if (opt.isPresent())
             {
-            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getClassTypeConstant();
+            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getUnderlyingType();
             structSuper = (ClassStructure) constClass.getComponent();
             templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
             }
@@ -360,9 +360,9 @@ public abstract class ClassTemplate
     // produce a TypeComposition for this template by resolving the generic types
     public TypeComposition resolve(ParameterizedTypeConstant constClassType, Map<String, Type> mapActual)
         {
-        assert constClassType.getClassTypeConstant().getPathString().equals(f_sName);
+        assert constClassType.getUnderlyingType().getPathString().equals(f_sName);
 
-        List<TypeConstant> listParams = constClassType.getTypeConstants();
+        List<TypeConstant> listParams = constClassType.getParamTypes();
 
         int cParams = listParams.size();
         if (cParams == 0)
@@ -388,7 +388,7 @@ public abstract class ClassTemplate
         if (constParamType instanceof ParameterizedTypeConstant)
             {
             ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constParamType;
-            ClassTemplate template = f_types.getTemplate(constClass.getClassTypeConstant());
+            ClassTemplate template = f_types.getTemplate(constClass.getUnderlyingType());
             return template.resolve(constClass, mapActual).ensurePublicType();
             }
 
@@ -1059,7 +1059,7 @@ public abstract class ClassTemplate
 
             TypeConstant constType = f_types.f_adapter.resolveType(f_property);
             if (constType instanceof ParameterizedTypeConstant &&
-                    ((ParameterizedTypeConstant) constType).getClassTypeConstant().getName().equals("Int64"))
+                    ((ParameterizedTypeConstant) constType).getUnderlyingType().getName().equals("Int64"))
                 {
                 markAsRef("annotations.AtomicIntNumber");
                 }

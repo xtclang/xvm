@@ -78,38 +78,28 @@ public class ArrayConstant
             {
             throw new IllegalArgumentException("format required");
             }
+        if (constType == null)
+            {
+            throw new IllegalArgumentException("type required");
+            }
+
+        // determine what the class must be based on the constant format
         String sClassName;
         switch (fmt)
             {
             case Array:
-                sClassName = X_CLASS_ARRAY;
-                break;
             case Tuple:
-                sClassName = X_CLASS_TUPLE;
-                break;
             case Set:
-                sClassName = X_CLASS_SET;
+                sClassName = fmt.name();
                 break;
 
             default:
                 throw new IllegalArgumentException("unsupported format: " + fmt);
             }
 
-        if (constType == null)
-            {
-            throw new IllegalArgumentException("type required");
-            }
-        if (constType instanceof ImmutableTypeConstant)
-            {
-            constType = ((ImmutableTypeConstant) constType).getType();
-            }
-        if (!(constType instanceof ParameterizedTypeConstant)
-                || !(((ParameterizedTypeConstant) constType).getClassTypeConstant() instanceof ClassConstant))
-            {
-            throw new IllegalArgumentException("type must be a class type");
-            }
-        ClassConstant constClass = (ClassConstant) ((ParameterizedTypeConstant) constType).getClassTypeConstant();
-        if (!(constClass.isEcstasyClass(sClassName)))
+        // require that the underlying identity be a class (not an auto-narrowing type for example)
+        // and make sure that it matches
+        if (!constType.isEcstasy(sClassName))
             {
             throw new IllegalArgumentException("type for " + fmt + " must be " + sClassName
                     + " (unsupported type: " + constType + ")");

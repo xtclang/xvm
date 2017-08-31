@@ -244,7 +244,7 @@ public class TypeSet
         if (constType instanceof ParameterizedTypeConstant)
             {
             ParameterizedTypeConstant constClassType = (ParameterizedTypeConstant) constType;
-            ClassTemplate template = getTemplate(constClassType.getClassTypeConstant());
+            ClassTemplate template = getTemplate(constClassType.getUnderlyingType());
             return template.resolve(constClassType, Collections.EMPTY_MAP);
             }
 

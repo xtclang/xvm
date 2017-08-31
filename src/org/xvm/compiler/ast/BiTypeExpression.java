@@ -39,13 +39,6 @@ public class BiTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public ParameterizedTypeConstant ensureTypeConstant(ErrorListener errs)
-        {
-        log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
-        return super.ensureTypeConstant(errs);
-        }
-
-    @Override
     protected boolean canResolveNames()
         {
         return super.canResolveNames() ||
@@ -71,6 +64,32 @@ public class BiTypeExpression
         }
 
 
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        TypeConstant constType1 = type1.ensureTypeConstant();
+        TypeConstant constType2 = type2.ensureTypeConstant();
+
+        final ConstantPool pool = getConstantPool();
+        switch (operator.getId())
+            {
+            case ADD:
+                return pool.ensureUnionTypeConstant(constType1, constType2);
+
+            case BIT_OR:
+                return pool.ensureIntersectionTypeConstant(constType1, constType2);
+
+            case SUB:
+                return pool.ensureDifferenceTypeConstant(constType1, constType2);
+
+            default:
+                throw new IllegalStateException("unsupported operator: " + operator);
+            }
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -82,13 +101,7 @@ public class BiTypeExpression
             type1.resolveNames(listRevisit, errs);
             type2.resolveNames(listRevisit, errs);
 
-            TypeConstant constType1 = type1.ensureTypeConstant();
-            TypeConstant constType2 = type2.ensureTypeConstant();
-
-            ConstantPool pool = getConstantPool();
-            setTypeConstant(operator.getId() == Token.Id.ADD
-                    ? pool.ensureUnionTypeConstant(constType1, constType2)
-                    : pool.ensureIntersectionTypeConstant(constType1, constType2));
+            ensureTypeConstant();
 
             super.resolveNames(listRevisit, errs);
             }
@@ -121,7 +134,7 @@ public class BiTypeExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression type1;
-    protected Token operator;
+    protected Token          operator;
     protected TypeExpression type2;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BiTypeExpression.class, "type1", "type2");

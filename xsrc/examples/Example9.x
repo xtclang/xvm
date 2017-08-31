@@ -275,3 +275,22 @@ interface Map<KeyType, ElementType>
     {
     KeyType first();        // return value type constant is Terminal(Property(ThisClass, "KeyType"))
     }
+
+
+// X atomic impl in Java
+boolean replace(AtomicRef ref, GeneClass clz, ObjectHandle expected, ObjectHandle newval)
+    {
+    if (ref.replace(expected, newval))
+        {
+        return true;
+        }
+
+    ObjectHandle oldval;
+    while (Utils.equals(clz, oldval = ref.get(), expected))
+        {
+        if (ref.replace(oldval, newval))
+            {
+            return true;
+            }
+        }
+    }

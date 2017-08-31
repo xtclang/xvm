@@ -65,24 +65,28 @@ public class AccessTypeConstant
             {
             throw new IllegalArgumentException("type access is already specified");
             }
+        if (!constType.isSingleDefiningConstant())
+            {
+            throw new IllegalArgumentException("access cannot be specified for a relational type");
+            }
 
         m_constType = constType;
         m_access    = access;
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
+    // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    public boolean isImmutabilitySpecified()
+    public boolean isModifyingType()
         {
-        return m_constType.isImmutabilitySpecified();
+        return true;
         }
 
     @Override
-    public boolean isAutoNarrowing()
+    public TypeConstant getUnderlyingType()
         {
-        return m_constType.isAutoNarrowing();
+        return m_constType;
         }
 
     @Override
@@ -95,12 +99,6 @@ public class AccessTypeConstant
     public Access getAccess()
         {
         return m_access;
-        }
-
-    @Override
-    public Constant getDefiningConstant()
-        {
-        return m_constType.getDefiningConstant();
         }
 
 
@@ -150,6 +148,13 @@ public class AccessTypeConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void disassemble(DataInput in)
+            throws IOException
+        {
+        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
+        }
 
     @Override
     protected void registerConstants(ConstantPool pool)

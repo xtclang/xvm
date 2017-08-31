@@ -15,9 +15,9 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a constant that specifies the union ("|") of two types.
+ * Represent a constant that specifies the difference (relative complement) ("-") of two types.
  */
-public class UnionTypeConstant
+public class DifferenceTypeConstant
         extends TypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -31,7 +31,7 @@ public class UnionTypeConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public UnionTypeConstant(ConstantPool pool, Format format, DataInput in)
+    public DifferenceTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -47,7 +47,7 @@ public class UnionTypeConstant
      * @param constType1  the first TypeConstant to union
      * @param constType2  the second TypeConstant to union
      */
-    public UnionTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2)
+    public DifferenceTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2)
         {
         super(pool);
 
@@ -87,7 +87,7 @@ public class UnionTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.UnionType;
+        return Format.DifferenceType;
         }
 
     @Override
@@ -100,10 +100,10 @@ public class UnionTypeConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        int n = this.m_constType1.compareTo(((UnionTypeConstant) that).m_constType1);
+        int n = this.m_constType1.compareTo(((DifferenceTypeConstant) that).m_constType1);
         if (n == 0)
             {
-            n = this.m_constType2.compareTo(((UnionTypeConstant) that).m_constType2);
+            n = this.m_constType2.compareTo(((DifferenceTypeConstant) that).m_constType2);
             }
         return n;
         }
@@ -111,7 +111,7 @@ public class UnionTypeConstant
     @Override
     public String getValueString()
         {
-        return m_constType1.getValueString() + " | " + m_constType2.getValueString();
+        return m_constType1.getValueString() + " - " + m_constType2.getValueString();
         }
 
 
@@ -147,7 +147,7 @@ public class UnionTypeConstant
     @Override
     public int hashCode()
         {
-        return "|".hashCode() ^ m_constType1.hashCode() ^ m_constType2.hashCode();
+        return "-".hashCode() ^ m_constType1.hashCode() ^ m_constType2.hashCode();
         }
 
 

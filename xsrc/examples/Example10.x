@@ -4,6 +4,11 @@ interface RestClient
     {
     RestResult query(String request);
     }
+interface ConsoleApp
+    {
+    Void onCommand(String command);
+    @ro Console console;
+    }
 
 
 // client application
@@ -28,6 +33,7 @@ module MyApp
     Void onException(Exception e)
         {
         @Inject Console console;
+        console.print("Query did not complete successfully:");
         console.print(e);
         console.result = 1;
         }

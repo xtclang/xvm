@@ -5,13 +5,10 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
-
-import org.xvm.util.Severity;
 
 
 /**
@@ -32,13 +29,6 @@ public class NullableTypeExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
-    @Override
-    public ParameterizedTypeConstant ensureTypeConstant(ErrorListener errs)
-        {
-        log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE);
-        return super.ensureTypeConstant(errs);
-        }
 
     @Override
     protected boolean canResolveNames()
@@ -65,6 +55,15 @@ public class NullableTypeExpression
         }
 
 
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        return getConstantPool().ensureNullableTypeConstant(type.ensureTypeConstant());
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -74,10 +73,9 @@ public class NullableTypeExpression
             {
             // resolve the sub-type
             type.resolveNames(listRevisit, errs);
-            TypeConstant constSub = type.ensureTypeConstant();
 
             // obtain and store off the Nullable form of the sub-type
-            setTypeConstant(getConstantPool().ensureNullableTypeConstant(constSub));
+            ensureTypeConstant();
 
             super.resolveNames(listRevisit, errs);
             }

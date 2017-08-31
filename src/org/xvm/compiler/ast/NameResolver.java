@@ -10,9 +10,6 @@ import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
@@ -302,9 +299,9 @@ public class NameResolver
     // ----- ResolutionCollector -------------------------------------------------------------------
 
     @Override
-    public void resolvedParameter(TypeConstant constParam)
+    public void resolvedConstant(Constant constId)
         {
-        m_constant  = constParam;
+        m_constant  = constId;
         m_component = null;
         }
 

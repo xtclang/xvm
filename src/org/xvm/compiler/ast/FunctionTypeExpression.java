@@ -1,7 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.compiler.*;
 
 import java.lang.reflect.Field;
 
@@ -30,6 +32,15 @@ public class FunctionTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public List<TypeExpression> getReturnValues()
+        {
+        return returnValues;
+        }
+
+    public List<TypeExpression> getParamTypes()
+        {
+        return paramTypes;
+        }
 
     @Override
     public long getStartPosition()
@@ -47,6 +58,62 @@ public class FunctionTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        ConstantPool pool = getConstantPool();
+        return pool.ensureClassTypeConstant(
+                pool.ensureEcstasyClassConstant(Constants.X_CLASS_FUNCTION),
+                null,
+                toTupleType(toTypeConstantArray(returnValues)),
+                toTupleType(toTypeConstantArray(paramTypes)));
+        }
+
+    private TypeConstant toTupleType(TypeConstant[] aconstTypes)
+        {
+        ConstantPool pool = getConstantPool();
+        return pool.ensureClassTypeConstant(
+                pool.ensureEcstasyClassConstant(Constants.X_CLASS_TUPLE), null, aconstTypes);
+        }
+
+    private static TypeConstant[] toTypeConstantArray(List<TypeExpression> list)
+        {
+        int            c      = list.size();
+        TypeConstant[] aconst = new TypeConstant[c];
+        for (int i = 0; i < c; ++i)
+            {
+            aconst[i] = list.get(i).ensureTypeConstant();
+            }
+        return aconst;
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+            {
+            for (TypeExpression type : returnValues)
+                {
+                type.resolveNames(listRevisit, errs);
+                }
+            for (TypeExpression type : paramTypes)
+                {
+                type.resolveNames(listRevisit, errs);
+                }
+
+            // obtain and store off the Nullable form of the sub-type
+            ensureTypeConstant();
+
+            super.resolveNames(listRevisit, errs);
+            }
         }
 
 

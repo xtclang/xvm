@@ -69,7 +69,7 @@ public class AnnotatedTypeConstant
      * @param aconstParam  the parameters of the annotation, or null
      * @param constType    the type being annotated
      */
-    public AnnotatedTypeConstant(ConstantPool pool, ClassConstant constClass,
+    public AnnotatedTypeConstant(ConstantPool pool, Constant constClass,
             Constant[] aconstParam, TypeConstant constType)
         {
         super(pool);
@@ -100,7 +100,7 @@ public class AnnotatedTypeConstant
     /**
      * @return the class of the annotation
      */
-    public ClassConstant getAnnotationClass()
+    public Constant getAnnotationClass()
         {
         return m_constClass;
         }
@@ -115,12 +115,25 @@ public class AnnotatedTypeConstant
         return list;
         }
 
-    /**
-     * @return the annotated type
-     */
-    public TypeConstant getAnnotatedType()
+
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    public boolean isModifyingType()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeConstant getUnderlyingType()
         {
         return m_constType;
+        }
+
+    @Override
+    public boolean isAnnotated()
+        {
+        return true;
         }
 
 
@@ -299,7 +312,7 @@ public class AnnotatedTypeConstant
     /**
      * The annotating class.
      */
-    private ClassConstant m_constClass;
+    private Constant m_constClass;
 
     /**
      * The annotation parameters.

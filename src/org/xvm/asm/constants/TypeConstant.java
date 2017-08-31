@@ -5,12 +5,23 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 
 /**
  * A base class for the various forms of Constants that will represent data types.
+ * <p/>
+ * Each type has 0, 1, or 2 underlying types:
+ * <ul>
+ * <li>A {@link TerminalTypeConstant} has no underlying type(s); it is a terminal;</li>
+ * <li>Type constants that modify a single underlying type include {@link
+ *     ImmutableTypeConstant}, {@link AccessTypeConstant}, {@link ParameterizedTypeConstant},
+ *     and {@link AnnotatedTypeConstant}; and</li>
+ * <li>Type constants that relate two underlying types include {@link IntersectionTypeConstant},
+ *     {@link UnionTypeConstant}, and {@link DifferenceTypeConstant}.</li>
+ * </ul>
  *
  * @author cp 2017.04.24
  */
@@ -47,36 +58,165 @@ public abstract class TypeConstant
 
     // ----- type-specific functionality -----------------------------------------------------------
 
+    /**
+     * Determine if the type has exactly one underlying type that it modifies the meaning of.
+     * An underlying type is a type whose definition is modified by this type constant.
+     * <p/>
+     * <ul>
+     * <li>{@link ImmutableTypeConstant}</li>
+     * <li>{@link AccessTypeConstant}</li>
+     * <li>{@link ParameterizedTypeConstant}</li>
+     * <li>{@link AnnotatedTypeConstant}</li>
+     * </ul>
+     *
+     * @return true iff this is a modifying type constant
+     */
+    public boolean isModifyingType()
+        {
+        return false;
+        }
+
+    /**
+     * Determine if the type represents a relation between two underlying types.
+     * <p/>
+     * <ul>
+     * <li>{@link IntersectionTypeConstant}</li>
+     * <li>{@link UnionTypeConstant}</li>
+     * <li>{@link DifferenceTypeConstant}</li>
+     * </ul>
+     * <p/>
+     *
+     * @return true iff this is a relational type constant
+     */
+    public boolean isRelationalType()
+        {
+        return false;
+        }
+
+    /**
+     * Obtain the underlying type, or the first of two underlying types if the type constant has
+     * two underlying types.
+     *
+     * @return the underlying type constant
+     *
+     * @throws UnsupportedOperationException if there is no underlying type
+     */
+    public TypeConstant getUnderlyingType()
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Obtain the second underlying type if the type constant has two underlying types.
+     *
+     * @return the second underlying type constant
+     *
+     * @throws UnsupportedOperationException if there is no second underlying type
+     */
+    public TypeConstant getUnderlyingType2()
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * @return true iff the type specifies immutability
+     */
     public boolean isImmutabilitySpecified()
         {
-        return false;
+        return getUnderlyingType().isImmutabilitySpecified()
+                && (!isRelationalType() || getUnderlyingType2().isImmutabilitySpecified());
         }
 
+    /**
+     * @return true iff the type specifies accessibility
+     */
     public boolean isAccessSpecified()
         {
-        return false;
+        if (!getUnderlyingType().isAccessSpecified())
+            {
+            return false;
+            }
+
+        return !isRelationalType() ||
+                getUnderlyingType2().isAccessSpecified() &&
+                getUnderlyingType().getAccess() == getUnderlyingType2().getAccess();
         }
 
+    /**
+     * @return the access, if it is specified, otherwise public
+     *
+     * @throws UnsupportedOperationException if the type is relational and contains conflicting
+     *         access specifiers
+     */
     public Access getAccess()
         {
-        return Access.PUBLIC;
+        Access access = getUnderlyingType().getAccess();
+
+        if (isRelationalType())
+            {
+            if (getUnderlyingType().getAccess() != access)
+                {
+                throw new UnsupportedOperationException("relational access mismatch");
+                }
+            }
+
+        return access;
         }
 
+    /**
+     * @return true iff type parameters for the type are specified
+     */
     public boolean isParamsSpecified()
         {
-        return false;
+        return isModifyingType() && getUnderlyingType().isParamsSpecified();
         }
 
-    public boolean isSingleDefiningConstant()
+    /**
+     * @return the type parameters, iff the type has parameters specified
+     *
+     * @throws UnsupportedOperationException if there are no type parameters specified, or if the
+     *         type is a relational type
+     */
+    public List<TypeConstant> getParamTypes()
         {
-        return true;
+        if (isModifyingType())
+            {
+            return getUnderlyingType().getParamTypes();
+            }
+
+        throw new UnsupportedOperationException();
         }
 
-    public abstract Constant getDefiningConstant();
-
+    /**
+     * @return true iff annotations of the type are specified
+     */
     public boolean isAnnotated()
         {
-        return false;
+        return isModifyingType() && getUnderlyingType().isAnnotated();
+        }
+
+    /**
+     * @return true iff there is a single defining constant, which means that the type does not
+     *         contain any relational type constants
+     */
+    public boolean isSingleDefiningConstant()
+        {
+        return isModifyingType() && getUnderlyingType().isSingleDefiningConstant();
+        }
+
+    /**
+     * @return the defining constant, iff there is a single defining constant
+     *
+     * @throws UnsupportedOperationException if there is not a single defining constant
+     */
+    public Constant getDefiningConstant()
+        {
+        if (isRelationalType())
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        return getUnderlyingType().getDefiningConstant();
         }
 
     /**
@@ -84,7 +224,8 @@ public abstract class TypeConstant
      */
     public boolean isAutoNarrowing()
         {
-        return false;
+        return getUnderlyingType().isAutoNarrowing()
+                && (!isRelationalType() || getUnderlyingType2().isAutoNarrowing());
         }
 
     /**
@@ -100,6 +241,7 @@ public abstract class TypeConstant
         IdentityConstant constId = getConstantPool().getImplicitlyImportedIdentity(sName);
         if (constId == null)
             {
+            // TODO could just take the name as is (including qualified notation) and assume it's an Ecstasy class
             throw new IllegalArgumentException("no such implicit name: " + sName);
             }
 

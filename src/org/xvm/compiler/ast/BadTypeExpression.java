@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import org.xvm.asm.constants.TypeConstant;
 
 
 /**
@@ -18,6 +19,15 @@ public class BadTypeExpression
     public BadTypeExpression(Expression nonType)
         {
         this.nonType = nonType;
+        }
+
+
+    // ----- TypeExpression methods ----------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        throw new UnsupportedOperationException();
         }
 
 

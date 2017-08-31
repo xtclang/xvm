@@ -69,6 +69,17 @@ public class ArrayTypeExpression
         }
 
 
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        final ConstantPool pool = getConstantPool();
+        return pool.ensureClassTypeConstant(pool.ensureEcstasyClassConstant(Constants.X_CLASS_ARRAY),
+                null, type.ensureTypeConstant());
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -78,16 +89,9 @@ public class ArrayTypeExpression
             {
             // resolve the sub-type
             type.resolveNames(listRevisit, errs);
-            TypeConstant constSub = type.ensureTypeConstant();
-
-            // obtain the Array type
-            ConstantPool pool       = getConstantPool();
-            TypeConstant constArray = pool.ensureClassTypeConstant(
-                    pool.ensureEcstasyClassConstant(Constants.X_CLASS_ARRAY),
-                    Constants.Access.PUBLIC, constSub);
 
             // store off the type that is an array of the sub-type
-            setTypeConstant(constArray);
+            ensureTypeConstant();
 
             super.resolveNames(listRevisit, errs);
             }

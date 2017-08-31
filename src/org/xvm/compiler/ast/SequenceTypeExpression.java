@@ -58,6 +58,19 @@ public class SequenceTypeExpression
         }
 
 
+    // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        // build an Array type
+        ConstantPool pool = getConstantPool();
+        return pool.ensureClassTypeConstant(
+                pool.ensureEcstasyClassConstant(Constants.X_CLASS_SEQUENCE),
+                null, type.ensureTypeConstant());
+        }
+
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
@@ -67,16 +80,9 @@ public class SequenceTypeExpression
             {
             // resolve the sub-type
             type.resolveNames(listRevisit, errs);
-            TypeConstant constSub = type.ensureTypeConstant();
-
-            // obtain the Array type
-            ConstantPool pool       = getConstantPool();
-            TypeConstant constArray = pool.ensureClassTypeConstant(
-                    pool.ensureEcstasyClassConstant(Constants.X_CLASS_SEQUENCE),
-                    Constants.Access.PUBLIC, constSub);
 
             // store off the type that is an array of the sub-type
-            setTypeConstant(constArray);
+            ensureTypeConstant();
 
             super.resolveNames(listRevisit, errs);
             }

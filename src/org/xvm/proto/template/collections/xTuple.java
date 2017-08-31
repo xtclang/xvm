@@ -71,7 +71,7 @@ public class xTuple
     @Override
     public TypeComposition resolve(ParameterizedTypeConstant constClassType, Map<String, Type> mapActual)
         {
-        List<TypeConstant> listParams = constClassType.getTypeConstants();
+        List<TypeConstant> listParams = constClassType.getParamTypes();
 
         int cParams = listParams.size();
         if (cParams == 0)
