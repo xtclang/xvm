@@ -72,6 +72,8 @@
 
 // in this group, the lvalue-target could be either a positive number, representing
 // a register, or a negative - representing a local CONST_PROPERTY
++INC        rvalue-target                                                           ; in-place increment; no result
+ DEC        rvalue-target                                                           ; ditto
 +POSTINC    lvalue-target, lvalue-return                                            ; T++ -> T
  POSTDEC    lvalue-target, lvalue-return                                            ; T-— -> T
 +PREINC     lvalue-target, lvalue-return                                            ; ++T -> T
@@ -112,9 +114,9 @@
  P_XOR_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
 
 // local property based
-+L_GET      CONST_PROPERTY, lvalue                 ; local get property (target=this)
-+L_SET      CONST_PROPERTY, rvalue                 ; local set property (target=this)
- L_REF      CONST_PROPERTY                         ; next register represents the Property ref for the specified local property (target=this)
++L_GET      CONST_PROPERTY, lvalue   ; local get property (target=this)
++L_SET      CONST_PROPERTY, rvalue   ; local set property (target=this)
+ L_REF      CONST_PROPERTY           ; next register represents the Property ref for the specified local property (target=this)
 
 // function calls
 +CALL_00    rvalue-function

@@ -605,55 +605,37 @@ public abstract class ClassTemplate
         throw new IllegalStateException("Invalid op for " + f_sName);
         }
 
+    // Next operation (Sequential)
+    // return either R_NEXT or R_EXCEPTION
+    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        throw new IllegalStateException("Invalid op for " + f_sName);
+        }
+
+    // Prev operation (Sequential)
+    // return either R_NEXT or R_EXCEPTION
+    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        throw new IllegalStateException("Invalid op for " + f_sName);
+        }
+
     // ---- OpCode support: register or property operations -----
 
 
     // increment the property value and place the result into the specified frame register
-    // return either R_NEXT or R_EXCEPTION
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        TypeComposition clazz = hTarget.f_clazz;
-
-        int iResult = getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL);
-        switch (iResult)
+        switch (getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL))
             {
             case Op.R_EXCEPTION:
                 return Op.R_EXCEPTION;
 
             case Op.R_NEXT:
-                {
-                ObjectHandle hValue = frame.getFrameLocal();
-                int iRes = hValue.f_clazz.f_template.invokePreInc(frame, hValue, null, Frame.RET_LOCAL);
-                if (iRes == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-                ObjectHandle hValueNew = frame.getFrameLocal();
-                iRes = frame.assignValue(iReturn, hValueNew);
-                if (iRes == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-                return clazz.f_template.setPropertyValue(frame, hTarget, sPropName, hValueNew);
-                }
+                return new Utils.PreInc(hTarget, sPropName, iReturn).proceed(frame);
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
-                    {
-                    ObjectHandle hValue = frameCaller.getFrameLocal();
-                    int iRes = hValue.f_clazz.f_template.invokePreInc(frame, hValue, null, Frame.RET_LOCAL);
-                    if (iRes == Op.R_EXCEPTION)
-                        {
-                        return Op.R_EXCEPTION;
-                        }
-                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
-                    iRes = frame.assignValue(iReturn, hValueNew);
-                    if (iRes == Op.R_EXCEPTION)
-                        {
-                        return Op.R_EXCEPTION;
-                        }
-                    return clazz.f_template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
-                    });
+                frame.m_frameNext.setContinuation(new Utils.PreInc(hTarget, sPropName, iReturn));
                 return Op.R_CALL;
 
             default:
@@ -662,52 +644,19 @@ public abstract class ClassTemplate
         }
 
     // place the property value into the specified frame register and increment it
-    // return either R_NEXT or R_EXCEPTION
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        TypeComposition clazz = hTarget.f_clazz;
-
-        int iResult = getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL);
-        switch (iResult)
+        switch (getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL))
             {
             case Op.R_EXCEPTION:
                 return Op.R_EXCEPTION;
 
             case Op.R_NEXT:
-                {
-                ObjectHandle hValue = frame.getFrameLocal();
-
-                int iRes = frame.assignValue(iReturn, hValue);
-                if (iRes == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-                iRes = hValue.f_clazz.f_template.invokePostInc(frame, hValue, null, Frame.RET_LOCAL);
-                if (iRes == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-                ObjectHandle hValueNew = frame.getFrameLocal();
-                return clazz.f_template.setPropertyValue(frame, hTarget, sPropName, hValueNew);
-                }
+                return new Utils.PostInc(hTarget, sPropName, iReturn).proceed(frame);
 
             case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
-                    {
-                    ObjectHandle hValue = frameCaller.getFrameLocal();
-                    int iRes = frame.assignValue(iReturn, hValue);
-                    if (iRes == Op.R_EXCEPTION)
-                        {
-                        return Op.R_EXCEPTION;
-                        }
-                    iRes = hValue.f_clazz.f_template.invokePostInc(frameCaller, hValue, null, Frame.RET_LOCAL);
-                    if (iRes == Op.R_EXCEPTION)
-                        {
-                        return Op.R_EXCEPTION;
-                        }
-                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
-                    return clazz.f_template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
-                    });
+                frame.m_frameNext.setContinuation(new Utils.PostInc(hTarget, sPropName, iReturn));
                 return Op.R_CALL;
 
             default:

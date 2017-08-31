@@ -72,7 +72,6 @@ public class xInt64
 
         // TODO: check overflow
         ObjectHandle hResult = makeHandle(hThis.getValue() + hThat.getValue());
-
         return frame.assignValue(iReturn, hResult);
         }
 
@@ -87,22 +86,23 @@ public class xInt64
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        assert sPropName == null;
-
         JavaLong hThis = (JavaLong) hTarget;
 
         // TODO: check overflow
-        ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
-
+        ObjectHandle hResult = makeHandle(hThis.getValue() - 1);
         return frame.assignValue(iReturn, hResult);
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return invokePreInc(frame, hTarget, sPropName, iReturn);
+        JavaLong hThis = (JavaLong) hTarget;
+
+        // TODO: check overflow
+        ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
+        return frame.assignValue(iReturn, hResult);
         }
 
     @Override

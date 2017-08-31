@@ -90,4 +90,77 @@ public abstract class Utils
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
         return clzValue.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
+
+    // ----- PostInc support -----
+
+    public static class PreInc
+            implements Frame.Continuation
+        {
+        private final ObjectHandle hTarget;
+        private final String sPropName;
+        private final int iReturn;
+
+        public PreInc(ObjectHandle hTarget, String sPropName, int iReturn)
+            {
+            this.hTarget = hTarget;
+            this.sPropName = sPropName;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ObjectHandle hValueOld = frameCaller.getFrameLocal();
+
+            int iRes = hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
+            if (iRes == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
+
+            ObjectHandle hValueNew = frameCaller.getFrameLocal();
+            iRes = frameCaller.assignValue(iReturn, hValueNew);
+            if (iRes == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
+            return hTarget.f_clazz.f_template.
+                    setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+            }
+        }
+
+    public static class PostInc
+            implements Frame.Continuation
+        {
+        private final ObjectHandle hTarget;
+        private final String sPropName;
+        private final int iReturn;
+
+        public PostInc(ObjectHandle hTarget, String sPropName, int iReturn)
+            {
+            this.hTarget = hTarget;
+            this.sPropName = sPropName;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ObjectHandle hValueOld = frameCaller.getFrameLocal();
+
+            int iRes = frameCaller.assignValue(iReturn, hValueOld);
+            if (iRes == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
+            iRes = hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
+            if (iRes == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
+            ObjectHandle hValueNew = frameCaller.getFrameLocal();
+            return hTarget.f_clazz.f_template.
+                    setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+            }
+        }
     }

@@ -57,8 +57,7 @@ public class PreInc extends OpProperty
                     return R_REPEAT;
                     }
 
-                if (hValue.f_clazz.f_template.
-                        invokePreInc(frame, hValue, null, Frame.RET_LOCAL) == R_EXCEPTION)
+                if (hValue.f_clazz.f_template.invokeNext(frame, hValue, Frame.RET_LOCAL) == R_EXCEPTION)
                     {
                     return R_EXCEPTION;
                     }

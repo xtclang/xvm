@@ -61,6 +61,10 @@
 
 + mixin processing
 
++ revisit PreInc, PostInc; add Inc, Dec ops
+
+- introduce stock exception (Bounds, IllegalState, etc.)
+
 - Property and Method
 
 - Class, Type
