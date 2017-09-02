@@ -131,10 +131,10 @@
 +CALL_N1    rvalue-function, #params:(rvalue), lvalue-return
 +CALL_NN    rvalue-function, #params:(rvalue), #returns:(lvalue)
 +CALL_NT    rvalue-function, #params:(rvalue), lvalue-return-tuple
- CALL_T0    rvalue-function, rvalue-params-tuple
- CALL_T1    rvalue-function, rvalue-params-tuple, lvalue-return
- CALL_TN    rvalue-function, rvalue-params-tuple, #returns:(lvalue)
- CALL_TT    rvalue-function, rvalue-params-tuple, lvalue-return-tuple
++CALL_T0    rvalue-function, rvalue-params-tuple
++CALL_T1    rvalue-function, rvalue-params-tuple, lvalue-return
++CALL_TN    rvalue-function, rvalue-params-tuple, #returns:(lvalue)
++CALL_TT    rvalue-function, rvalue-params-tuple, lvalue-return-tuple
 
 // method calls
 +INVOKE_00  rvalue-target, CONST-METHOD

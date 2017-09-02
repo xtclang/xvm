@@ -6,7 +6,6 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.Enum.EnumHandle;
 import org.xvm.proto.template.xOrdered;
 
 import java.io.DataInput;
@@ -71,16 +70,24 @@ public class JumpLt extends Op
                 throw new IllegalStateException();
                 }
 
-            int iResult = clz1.callCompare(frame, hTest1, hTest2, Frame.RET_LOCAL);
-
-            if (iResult == R_EXCEPTION)
+            switch (clz1.callCompare(frame, hTest1, hTest2, Frame.RET_LOCAL))
                 {
-                return R_EXCEPTION;
+                case R_EXCEPTION:
+                    return R_EXCEPTION;
+
+                case R_NEXT:
+                    return frame.getFrameLocal() == xOrdered.LESSER ?
+                            iPC + f_nRelAddr : iPC + 1;
+
+                case R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        frame.getFrameLocal() == xOrdered.LESSER ?
+                            iPC + f_nRelAddr : iPC + 1);
+                    return R_CALL;
+
+                default:
+                    throw new IllegalStateException();
                 }
-
-            EnumHandle hResult = (EnumHandle) frame.getFrameLocal();
-
-            return hResult == xOrdered.LESSER ? iPC + f_nRelAddr : iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)
             {

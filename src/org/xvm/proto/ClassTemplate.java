@@ -827,10 +827,15 @@ public abstract class ClassTemplate
     // ----- support for equality and comparison ------
 
     // compare for equality two object handles that both belong to the specified class
-    // return R_NEXT or R_EXCEPTION
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xBoolean.TRUE);
+            }
+
         // if there is an "equals" function, we need to call it
         MethodStructure functionEquals = findCompareFunction("equals", xBoolean.TYPES);
         if (functionEquals != null)
@@ -841,11 +846,11 @@ public abstract class ClassTemplate
 
         // only Const classes have an automatic implementation;
         // for everyone else it's either a native method or a ref equality
-        return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
+        return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
     // compare for order two object handles that both belong to the specified class
-    // return R_NEXT or R_EXCEPTION
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int callCompare(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {

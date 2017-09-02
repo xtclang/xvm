@@ -582,9 +582,11 @@ public class xTestApp extends xModule
 
             new Var(adapter.getClassTypeConstId("Boolean")), // #2
             new IsEq(0, 1, 2),
+            new X_Print(-adapter.ensureValueConstantId("p1 == p2")),
             new X_Print(2),
 
             new IsGt(1, 0, 2),
+            new X_Print(-adapter.ensureValueConstantId("p2 > p1")),
             new X_Print(2),
 
             new NVar(adapter.getClassTypeConstId("TestApp.Rectangle"),

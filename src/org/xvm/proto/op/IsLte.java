@@ -8,7 +8,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.Enum.EnumHandle;
 import org.xvm.proto.template.xOrdered;
 
 import java.io.DataInput;
@@ -72,17 +71,24 @@ public class IsLte extends Op
                 throw new IllegalStateException();
                 }
 
-            int iResult = clz1.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL);
-            if (iResult == R_EXCEPTION)
+            switch (clz1.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
                 {
-                return R_EXCEPTION;
+                case R_EXCEPTION:
+                    return R_EXCEPTION;
+
+                case R_NEXT:
+                    return frame.assignValue(f_nRetValue, xBoolean.makeHandle(
+                            frame.getFrameLocal() != xOrdered.LESSER));
+
+                case R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        frame.assignValue(f_nRetValue, xBoolean.makeHandle(
+                                frameCaller.getFrameLocal() != xOrdered.GREATER)));
+                    return R_CALL;
+
+                default:
+                    throw new IllegalStateException();
                 }
-
-            EnumHandle hResult = (EnumHandle) frame.getFrameLocal();
-
-            frame.assignValue(f_nRetValue,
-                    xBoolean.makeHandle(hResult != xOrdered.GREATER));
-            return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)
             {

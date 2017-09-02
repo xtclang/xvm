@@ -5,6 +5,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
+import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xBoolean.BooleanHandle;
 
 import java.io.DataInput;
@@ -69,16 +70,28 @@ public class JumpEq extends Op
                 throw new IllegalStateException();
                 }
 
-            int iResult= clz1.callEquals(frame, hTest1, hTest2, Frame.RET_LOCAL);
-
-            if (iResult == R_EXCEPTION)
+            switch (clz1.callEquals(frame, hTest1, hTest2, Frame.RET_LOCAL))
                 {
-                return R_EXCEPTION;
+                case R_EXCEPTION:
+                    return R_EXCEPTION;
+
+                case R_NEXT:
+                    {
+                    BooleanHandle hResult = (BooleanHandle) frame.getFrameLocal();
+                    return hResult.get() ? iPC + f_nRelAddr : iPC + 1;
+                    }
+
+                case R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        {
+                        BooleanHandle hResult = (BooleanHandle) frame.getFrameLocal();
+                        return hResult.get() ? iPC + f_nRelAddr : iPC + 1;
+                        });
+                    return R_CALL;
+
+                default:
+                    throw new IllegalStateException();
                 }
-
-            BooleanHandle hResult = (BooleanHandle) frame.getFrameLocal();
-
-            return hResult.get() ? iPC + f_nRelAddr : iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)
             {

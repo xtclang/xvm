@@ -14,9 +14,12 @@ import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
+import org.xvm.proto.template.xBoolean;
+import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.Ref;
 import org.xvm.proto.template.Ref.RefHandle;
+import org.xvm.proto.template.xOrdered;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -665,6 +668,11 @@ public class TypeComposition
     // return R_NEXT or R_EXCEPTION
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
+        if (hValue1 == hValue2)
+            {
+            frame.assignValue(iReturn, xBoolean.TRUE);
+            return Op.R_NEXT;
+            }
         return f_template.callEquals(frame, this, hValue1, hValue2, iReturn);
         }
 
@@ -672,6 +680,11 @@ public class TypeComposition
     // return R_NEXT or R_EXCEPTION
     public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
+        if (hValue1 == hValue2)
+            {
+            frame.assignValue(iReturn, xOrdered.EQUAL);
+            return Op.R_NEXT;
+            }
         return f_template.callCompare(frame, this, hValue1, hValue2, iReturn);
         }
 

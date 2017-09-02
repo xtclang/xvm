@@ -15,6 +15,7 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.Utils;
 
+import org.xvm.proto.template.Enum.EnumHandle;
 import org.xvm.proto.template.xString.StringHandle;
 
 import java.util.Iterator;
@@ -83,35 +84,8 @@ public class Const
 
         assert (f_struct.getFormat() == Component.Format.CONST);
 
-        GenericHandle hV1 = (GenericHandle) hValue1;
-        GenericHandle hV2 = (GenericHandle) hValue2;
-
-        for (String sProp : clazz.getFieldNames())
-            {
-            ObjectHandle h1 = hV1.getField(sProp);
-            ObjectHandle h2 = hV2.getField(sProp);
-
-            if (h1 == null || h2 == null)
-                {
-                frame.m_hException = xException.makeHandle("Unassigned property \"" + sProp +'"');
-                return Op.R_EXCEPTION;
-                }
-
-            TypeComposition classProp = clazz.resolveClass(getProperty(sProp).getType());
-
-            int iRet = classProp.callEquals(frame, h1, h2, Frame.RET_LOCAL);
-            if (iRet == Op.R_EXCEPTION)
-                {
-                return Op.R_EXCEPTION;
-                }
-
-            ObjectHandle hResult = frame.getFrameLocal();
-            if (hResult == xBoolean.FALSE)
-                {
-                return frame.assignValue(iReturn, xBoolean.FALSE);
-                }
-            }
-        return frame.assignValue(iReturn, xBoolean.TRUE);
+        return new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
+                clazz, clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     @Override
@@ -126,49 +100,10 @@ public class Const
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
             }
 
-        ClassStructure struct = f_struct;
+        assert (f_struct.getFormat() == Component.Format.CONST);
 
-        assert (struct.getFormat() == Component.Format.CONST);
-
-        GenericHandle hV1 = (GenericHandle) hValue1;
-        GenericHandle hV2 = (GenericHandle) hValue2;
-
-        for (Component comp : struct.children())
-            {
-            if (comp instanceof PropertyStructure)
-                {
-                PropertyStructure property = (PropertyStructure) comp;
-                if (isCalculated(property))
-                    {
-                    continue;
-                    }
-
-                String sProp = property.getName();
-                ObjectHandle h1 = hV1.getField(sProp);
-                ObjectHandle h2 = hV2.getField(sProp);
-
-                if (h1 == null || h2 == null)
-                    {
-                    frame.m_hException = xException.makeHandle("Unassigned property \"" + sProp + '"');
-                    return Op.R_EXCEPTION;
-                    }
-
-                TypeComposition classProp = clazz.resolveClass(property.getType());
-
-                int iRet = classProp.callCompare(frame, h1, h2, Frame.RET_LOCAL);
-                if (iRet == Op.R_EXCEPTION)
-                    {
-                    return Op.R_EXCEPTION;
-                    }
-
-                Enum.EnumHandle hResult = (Enum.EnumHandle) frame.getFrameLocal();
-                if (hResult != xOrdered.EQUAL)
-                    {
-                    return frame.assignValue(iReturn, hResult);
-                    }
-                }
-            }
-        return frame.assignValue(iReturn, xOrdered.EQUAL);
+        return new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
+                clazz, clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     @Override
@@ -199,6 +134,156 @@ public class Const
         }
 
     // ----- helper classes -----
+
+    /**
+     * Helper class for equals() implementation.
+     */
+    protected class Equals
+            implements Frame.Continuation
+        {
+        final private GenericHandle hValue1;
+        final private GenericHandle hValue2;
+        final private TypeComposition clazz;
+        final private Iterator<String> iterFields;
+        final private int iReturn;
+
+        public Equals(GenericHandle hValue1, GenericHandle hValue2, TypeComposition clazz,
+                      Iterator<String> iterFields, int iReturn)
+            {
+            this.hValue1 = hValue1;
+            this.hValue2 = hValue2;
+            this.clazz = clazz;
+            this.iterFields = iterFields;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ObjectHandle hResult = frameCaller.getFrameLocal();
+            if (hResult == xBoolean.FALSE)
+                {
+                return frameCaller.assignValue(iReturn, hResult);
+                }
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (iterFields.hasNext())
+                {
+                String sProp = iterFields.next();
+
+                ObjectHandle h1 = hValue1.getField(sProp);
+                ObjectHandle h2 = hValue2.getField(sProp);
+
+                if (h1 == null || h2 == null)
+                    {
+                    frameCaller.m_hException = xException.makeHandle("Unassigned property \"" + sProp +'"');
+                    return Op.R_EXCEPTION;
+                    }
+
+                TypeComposition classProp = clazz.resolveClass(getProperty(sProp).getType());
+
+                switch (classProp.callEquals(frameCaller, h1, h2, Frame.RET_LOCAL))
+                    {
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    case Op.R_NEXT:
+                        ObjectHandle hResult = frameCaller.getFrameLocal();
+                        if (hResult == xBoolean.FALSE)
+                            {
+                            return frameCaller.assignValue(iReturn, hResult);
+                            }
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+            }
+        }
+
+    /**
+     * Helper class for compare() implementation.
+     */
+    protected class Compare
+            implements Frame.Continuation
+        {
+        final private GenericHandle hValue1;
+        final private GenericHandle hValue2;
+        final private TypeComposition clazz;
+        final private Iterator<String> iterFields;
+        final private int iReturn;
+
+        public Compare(GenericHandle hValue1, GenericHandle hValue2, TypeComposition clazz,
+                       Iterator<String> iterFields, int iReturn)
+            {
+            this.hValue1 = hValue1;
+            this.hValue2 = hValue2;
+            this.clazz = clazz;
+            this.iterFields = iterFields;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            EnumHandle hResult = (EnumHandle) frameCaller.getFrameLocal();
+            if (hResult != xOrdered.EQUAL)
+                {
+                return frameCaller.assignValue(iReturn, hResult);
+                }
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (iterFields.hasNext())
+                {
+                String sProp = iterFields.next();
+
+                ObjectHandle h1 = hValue1.getField(sProp);
+                ObjectHandle h2 = hValue2.getField(sProp);
+
+                if (h1 == null || h2 == null)
+                    {
+                    frameCaller.m_hException = xException.makeHandle("Unassigned property \"" + sProp +'"');
+                    return Op.R_EXCEPTION;
+                    }
+
+                TypeComposition classProp = clazz.resolveClass(getProperty(sProp).getType());
+
+                switch (classProp.callCompare(frameCaller, h1, h2, Frame.RET_LOCAL))
+                    {
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    case Op.R_NEXT:
+                        EnumHandle hResult = (EnumHandle) frameCaller.getFrameLocal();
+                        if (hResult != xOrdered.EQUAL)
+                            {
+                            return frameCaller.assignValue(iReturn, hResult);
+                            }
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            return frameCaller.assignValue(iReturn, xOrdered.EQUAL);
+            }
+        }
 
     /**
      * Helper class for buildStringValue() implementation.

@@ -1,3 +1,5 @@
+import annotations.AtomicRef;
+
 class TestApp
     {
     // entry point
@@ -302,6 +304,19 @@ class TestApp
             print(ri2);
             }
         print(ri.get());
+
+        TestClass t = new TestClass("before");
+        Ref<String> rp = &t.prop1;
+        print(rp);
+        rp.set("after");
+        print(t);
+
+        TestService svc = new TestService();
+        ri = &svc.counter;
+        print(ri.get());
+
+        AtomicRef<Int> ari = &svc.counter2;
+        print(ari.replace(1, 2));
         }
 
     static String lambda_2(Ref<Int> i) {} // TODO: remove
