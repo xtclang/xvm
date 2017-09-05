@@ -7,6 +7,7 @@ import java.util.List;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.proto.ClassTemplate;
 
 import java.io.DataInput;
@@ -242,7 +243,9 @@ public class MethodStructure
 
             if (param.getName().equals(sName))
                 {
-                collector.resolvedParameter(param.asTypeParameterType()); // TODO
+                // TODO there is no obvious connection from the parameter type back to the method that declares it, so this only works if evaluating code immediately within a method declaration
+                // TODO consider "<MapType extends Map> Void foo(MapType map)" and somewhere later having to resolve for "MapType.KeyType".
+                collector.resolvedConstant(param.asTypeParameterType());
                 return true;
                 }
             }

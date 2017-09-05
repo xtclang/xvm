@@ -1800,6 +1800,9 @@ public class Parser
 
         TypeExpression type = parseTypeExpression();
 
+        // optional "as" keyword
+        match(Id.AS);
+
         Token simpleName = expect(Id.IDENTIFIER);
 
         expect(Id.SEMICOLON);

@@ -294,3 +294,16 @@ boolean replace(AtomicRef ref, GeneClass clz, ObjectHandle expected, ObjectHandl
             }
         }
     }
+
+
+// ----- type resolution challenges
+
+interface Map<KeyType, ValueType> {...}
+
+class MyClass<MapType1 extends Map, MapType2 extends Map>
+    {
+    Void process(MapType1.KeyType k1, MapType2.KeyType k2)  // TODO resolve both "KeyType" correctly
+        {
+        // ...
+        }
+    }

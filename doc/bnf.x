@@ -496,7 +496,7 @@ Catch
     "catch" "(" TypeExpression Name ")" StatementBlock
 
 TypeDefStatement
-    "typedef" TypeExpression Name ";"
+    "typedef" TypeExpression "as"-opt Name ";"
 
 #
 # expressions
