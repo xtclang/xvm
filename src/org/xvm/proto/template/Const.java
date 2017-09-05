@@ -288,7 +288,7 @@ public class Const
     /**
      * Helper class for buildStringValue() implementation.
      */
-    protected class ToString
+    protected static class ToString
             implements Frame.Continuation
         {
         final private GenericHandle hConst;
@@ -368,7 +368,7 @@ public class Const
     /**
      * Helper class for buildHashCode() implementation.
      */
-    protected class HashGet
+    protected static class HashGet
             implements Frame.Continuation
         {
         final private GenericHandle hConst;

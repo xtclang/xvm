@@ -78,14 +78,14 @@ public class IsNotEq extends Op
                 case R_NEXT:
                     {
                     BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
-                    return frame.assignValue(f_nRetValue, xBoolean.makeHandle(!hValue.get()));
+                    return frame.assignValue(f_nRetValue, xBoolean.not(hValue));
                     }
 
                 case R_CALL:
                     frame.m_frameNext.setContinuation(frameCaller ->
                         {
                         BooleanHandle hValue = (BooleanHandle) frameCaller.getFrameLocal();
-                        return frame.assignValue(f_nRetValue, xBoolean.makeHandle(!hValue.get()));
+                        return frame.assignValue(f_nRetValue, xBoolean.not(hValue));
                         });
                     return R_CALL;
 

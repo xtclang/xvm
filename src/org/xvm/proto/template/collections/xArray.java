@@ -231,7 +231,7 @@ public class xArray
     /**
      * Helper class for equals() implementation.
      */
-    protected class Equals
+    protected static class Equals
             implements Frame.Continuation
         {
         final private ObjectHandle[] ah1;

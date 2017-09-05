@@ -56,7 +56,7 @@ public class IsNot extends Op
                 return R_REPEAT;
                 }
 
-            frame.assignValue(f_nRetValue, xBoolean.makeHandle(!hValue.get()));
+            frame.assignValue(f_nRetValue, xBoolean.not(hValue));
 
             return iPC + 1;
             }

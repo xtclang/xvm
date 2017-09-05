@@ -155,20 +155,28 @@ public class xString
                 switch (method.getName())
                     {
                     case "indexOf": // (Boolean, Int) indexOf(String s, Range<Int>? range)
+                        int cReturns = aiReturn.length;
+                        if (cReturns == 0)
+                            {
+                            return Op.R_NEXT;
+                            }
+
                         String s = ((StringHandle) ahArg[0]).getValue();
                         ObjectHandle hRange = ahArg[1];
                         if (hRange == xNullable.NULL)
                             {
                             int of = hThis.m_sValue.indexOf(s);
-                            if (of >= 0)
+                            if (of < 0)
                                 {
-                                int nR = frame.assignValue(aiReturn[0], xBoolean.TRUE);
-                                if (nR == Op.R_EXCEPTION)
-                                    {
-                                    return Op.R_EXCEPTION;
-                                    }
-                                return frame.assignValue(aiReturn[1], xInt64.makeHandle(of));
+                                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                                 }
+
+                            int iResult = frame.assignValue(aiReturn[0], xBoolean.TRUE);
+                            if (iResult == Op.R_EXCEPTION || cReturns == 1)
+                                {
+                                return iResult;
+                                }
+                            return frame.assignValue(aiReturn[1], xInt64.makeHandle(of));
                             }
                         else
                             {

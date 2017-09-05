@@ -83,6 +83,11 @@ public class xBoolean
         return f ? TRUE : FALSE;
         }
 
+    public static BooleanHandle not(BooleanHandle hValue)
+        {
+        return hValue == FALSE ? TRUE : FALSE;
+        }
+
     public static class BooleanHandle
                 extends EnumHandle
         {

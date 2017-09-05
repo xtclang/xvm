@@ -158,6 +158,7 @@ public class xInt64
 
     public static JavaLong makeHandle(long lValue)
         {
+        // TODO: create a cache of common values
         return new JavaLong(INSTANCE.f_clazzCanonical, lValue);
         }
     }

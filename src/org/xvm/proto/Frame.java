@@ -63,6 +63,9 @@ public class Frame
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI = -65002;   // an indicator for "multiple return values"
 
+    // the first of the multiple return into the "frame local"
+    public final static int[] RET_FIRST_LOCAL = new int[] {RET_LOCAL};
+
     public static final int VAR_STANDARD = 0;
     public static final int VAR_DYNAMIC_REF = 1;
     public static final int VAR_WAITING = 2;
@@ -419,6 +422,31 @@ public class Frame
             default:
                 throw new IllegalArgumentException("nVar=" + nVar);
             }
+        }
+
+    // specialization of assignValue() that takes up to two return values
+    // return R_NEXT, R_EXCEPTION or R_BLOCK (only if any of the values is a FutureRef)
+    public int assignValues(int[] anVar, ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        int c = anVar.length;
+        if (c == 0)
+            {
+            return Op.R_NEXT;
+            }
+
+        int iResult1 = assignValue(anVar[0], hValue1);
+        if (iResult1 == Op.R_EXCEPTION || c == 1 || hValue2 == null)
+            {
+            return iResult1;
+            }
+
+        if (iResult1 == Op.R_BLOCK)
+            {
+            int iResult2 = assignValue(anVar[1], hValue2);
+            return iResult2 == Op.R_EXCEPTION ? Op.R_EXCEPTION : Op.R_BLOCK;
+            }
+
+        return assignValue(anVar[1], hValue2);
         }
 
     // return R_RETURN, R_RETURN_EXCEPTION or R_BLOCK_RETURN
