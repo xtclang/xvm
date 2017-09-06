@@ -100,14 +100,13 @@ public class xArray
                                 array.assignArrayValue(hArray, i, frameCaller.getFrameLocal());
                         if (hException != null)
                             {
-                            frameCaller.m_hException = hException;
-                            return Op.R_CALL;
+                            return frameCaller.raiseException(hException);
                             }
 
                         if (++i < cCapacity)
                             {
                             ahArg[0] = xInt64.makeHandle(i);
-                            // TODO: ditto
+
                             hSupplier.call1(frameCaller, null, ahArg, Frame.RET_LOCAL);
                             frameCaller.m_frameNext.setContinuation(this);
                             return Op.R_CALL;

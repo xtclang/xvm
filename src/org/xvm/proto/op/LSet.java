@@ -63,8 +63,7 @@ public class LSet extends OpProperty
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

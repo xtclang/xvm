@@ -125,8 +125,7 @@ public class xTuple
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return Op.R_EXCEPTION;
+            return frame.raiseException(e);
             }
 
         TupleHandle hTuple = new TupleHandle(clazz, ahValue);

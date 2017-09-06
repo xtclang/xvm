@@ -35,14 +35,17 @@ public class Ref
     @Override
     public void initDeclared()
         {
-        markCalculated("assigned");
         markNativeGetter("assigned");
         markNativeMethod("get", VOID, new String[]{"RefType"});
         markNativeMethod("set", new String[]{"RefType"}, VOID);
-        markCalculated("name");
         markNativeGetter("name");
-        markCalculated("selfContained");
         markNativeGetter("selfContained");
+
+        // extends Referent
+        markNativeGetter("ActualType");
+        markNativeGetter("isService");
+        markNativeGetter("isConst");
+        markNativeGetter("isImmutable");
         }
 
 
@@ -63,6 +66,42 @@ public class Ref
 
             case "selfContained":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isSelfContained()));
+
+            case "isService":
+                try
+                    {
+                    ObjectHandle hReferent = hThis.get();
+                    return frame.assignValue(iReturn, xBoolean.makeHandle(
+                            hReferent.f_clazz.f_template.isService()));
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    return frame.raiseException(e);
+                    }
+
+            case "isConst":
+                try
+                    {
+                    ObjectHandle hReferent = hThis.get();
+                    return frame.assignValue(iReturn, xBoolean.makeHandle(
+                            hReferent.f_clazz.f_template.isConst()));
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    return frame.raiseException(e);
+                    }
+
+            case "isImmutable":
+                try
+                    {
+                    ObjectHandle hReferent = hThis.get();
+                    return frame.assignValue(iReturn, xBoolean.makeHandle(
+                            !hReferent.isMutable()));
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    return frame.raiseException(e);
+                    }
             }
         return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
@@ -85,8 +124,7 @@ public class Ref
                             }
                         catch (ExceptionHandle.WrapperException e)
                             {
-                            frame.m_hException = e.getExceptionHandle();
-                            return Op.R_EXCEPTION;
+                            return frame.raiseException(e);
                             }
                     }
             }
@@ -104,12 +142,7 @@ public class Ref
             {
             case "set":
                 ExceptionHandle hException = hThis.set(hArg);
-                if (hException != null)
-                    {
-                    frame.m_hException = hException;
-                    return Op.R_EXCEPTION;
-                    }
-                return Op.R_NEXT;
+                return hException == null ? Op.R_NEXT : frame.raiseException(hException);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }

@@ -368,8 +368,7 @@ public class Frame
                                 }
                             catch (ExceptionHandle.WrapperException e)
                                 {
-                                m_hException = e.getExceptionHandle();
-                                return Op.R_EXCEPTION;
+                                return raiseException(e);
                                 }
                             }
                         else
@@ -394,13 +393,10 @@ public class Frame
                     break;
 
                 case VAR_DYNAMIC_REF:
+                    {
                     ExceptionHandle hException = ((RefHandle) f_ahVar[nVar]).set(hValue);
-                    if (hException != null)
-                        {
-                        m_hException = hException;
-                        return Op.R_EXCEPTION;
-                        }
-                    return Op.R_NEXT;
+                    return hException == null ? Op.R_NEXT : raiseException(hException);
+                    }
 
                 default:
                     throw new IllegalStateException();
@@ -501,6 +497,19 @@ public class Frame
             }
         }
 
+    // return R_EXCEPTION
+    public int raiseException(ExceptionHandle.WrapperException e)
+        {
+        return raiseException(e.getExceptionHandle());
+        }
+
+    // return R_EXCEPTION
+    public int raiseException(ExceptionHandle hException)
+        {
+        m_hException = hException;
+        return Op.R_EXCEPTION;
+        }
+
     private ObjectHandle getReturnValue(int iArg)
         {
         return iArg >= 0 ?
@@ -542,12 +551,7 @@ public class Frame
                 }
             }
 
-        if (hException != null)
-            {
-            m_hException = hException;
-            return Op.R_EXCEPTION;
-            }
-        return Op.R_NEXT;
+        return hException == null ? Op.R_NEXT : raiseException(hException);
         }
 
     // return the class of the specified argument

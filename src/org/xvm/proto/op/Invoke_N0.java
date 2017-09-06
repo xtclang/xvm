@@ -78,8 +78,7 @@ public class Invoke_N0 extends OpInvocable
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

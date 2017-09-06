@@ -83,8 +83,7 @@ public class Invoke_TT extends OpInvocable
 
             if (ahArg.length != Adapter.getArgCount(method))
                 {
-                frame.m_hException = xException.makeHandle("Invalid tuple argument");
-                return R_EXCEPTION;
+                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                 }
 
             int cArgs = ahArg.length;
@@ -92,8 +91,7 @@ public class Invoke_TT extends OpInvocable
 
             if (cArgs != Adapter.getArgCount(method))
                 {
-                frame.m_hException = xException.makeHandle("Invalid tuple argument");
-                return R_EXCEPTION;
+                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                 }
 
             ObjectHandle[] ahVar;
@@ -111,8 +109,7 @@ public class Invoke_TT extends OpInvocable
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

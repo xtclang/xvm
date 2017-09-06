@@ -30,10 +30,5 @@ interface Console
     static class TerminalConsole
             implements Console
         {
-        // TODO: how to remove it?
-        Void print(Object o);
-        Void println(Object o);
-        String readLine();
-        Boolean echo(Boolean f);
         }
     }

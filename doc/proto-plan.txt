@@ -63,13 +63,13 @@
 
 + revisit PreInc, PostInc; add Inc, Dec ops
 
-- introduce stock exception (Bounds, IllegalState, etc.)
-
 - Property and Method
 
 - Class, Type
 
 - a new DVAR like op-code to provide additional parameters (e.g. injection name)
+
+- introduce stock exception (Bounds, IllegalState, etc.)
 
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$

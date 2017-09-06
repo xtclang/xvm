@@ -46,7 +46,6 @@ public class Const
     @Override
     public void initDeclared()
         {
-        markCalculated("hash");
         markNativeGetter("hash");
         markNativeMethod("to", VOID, STRING);
         }
@@ -179,8 +178,8 @@ public class Const
 
                 if (h1 == null || h2 == null)
                     {
-                    frameCaller.m_hException = xException.makeHandle("Unassigned property \"" + sProp +'"');
-                    return Op.R_EXCEPTION;
+                    return frameCaller.raiseException(
+                            xException.makeHandle("Unassigned property \"" + sProp +'"'));
                     }
 
                 TypeComposition classProp = clazz.resolveClass(getProperty(sProp).getType());
@@ -254,8 +253,8 @@ public class Const
 
                 if (h1 == null || h2 == null)
                     {
-                    frameCaller.m_hException = xException.makeHandle("Unassigned property \"" + sProp +'"');
-                    return Op.R_EXCEPTION;
+                    return frameCaller.raiseException(
+                            xException.makeHandle("Unassigned property \"" + sProp +'"'));
                     }
 
                 TypeComposition classProp = clazz.resolveClass(getProperty(sProp).getType());
@@ -407,8 +406,8 @@ public class Const
 
                 if (hProp == null)
                     {
-                    frameCaller.m_hException = xException.makeHandle("Unassigned property: \"" + sProp + '"');
-                    return Op.R_NEXT;
+                    return frameCaller.raiseException(
+                            xException.makeHandle("Unassigned property: \"" + sProp + '"'));
                     }
 
                 switch (Utils.callHash(frameCaller, hProp))

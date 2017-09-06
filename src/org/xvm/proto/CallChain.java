@@ -125,8 +125,7 @@ public class CallChain
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return Op.R_EXCEPTION;
+            return frame.raiseException(e);
             }
 
         MethodStructure methodSuper = getMethod(nDepth);
@@ -186,8 +185,7 @@ public class CallChain
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return Op.R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
 
@@ -225,8 +223,7 @@ public class CallChain
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return Op.R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
 
@@ -271,13 +268,9 @@ public class CallChain
         @Override
         protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
             {
-            ObjectHandle.ExceptionHandle hException = hThis.f_clazz.f_template.setFieldValue(hThis, f_property, hArg);
-            if (hException != null)
-                {
-                frame.m_hException = hException;
-                return Op.R_EXCEPTION;
-                }
-            return Op.R_NEXT;
+            ObjectHandle.ExceptionHandle hException =
+                    hThis.f_clazz.f_template.setFieldValue(hThis, f_property, hArg);
+            return hException == null ? Op.R_NEXT : frame.raiseException(hException);
             }
         }
     }

@@ -5,7 +5,6 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
-import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xBoolean.BooleanHandle;
 
 import java.io.DataInput;
@@ -95,8 +94,7 @@ public class JumpEq extends Op
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

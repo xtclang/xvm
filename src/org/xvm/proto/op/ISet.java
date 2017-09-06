@@ -72,12 +72,6 @@ public class ISet extends Op
             hException = e.getExceptionHandle();
             }
 
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-
-        frame.m_hException = hException;
-        return R_EXCEPTION;
+        return hException == null ? iPC + 1 : frame.raiseException(hException);
         }
     }

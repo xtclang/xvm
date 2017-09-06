@@ -3,7 +3,6 @@ package org.xvm.proto.template;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.proto.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 
@@ -49,8 +48,7 @@ public interface IndexSupport
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return Op.R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
 
@@ -67,8 +65,7 @@ public interface IndexSupport
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return Op.R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
 

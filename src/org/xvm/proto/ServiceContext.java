@@ -223,8 +223,7 @@ public class ServiceContext
 
         if (fiber.isTimedOut())
             {
-            frame.m_hException = xException.makeHandle("The service has timed-out");
-            iPC = Op.R_EXCEPTION;
+            iPC = frame.raiseException(xException.makeHandle("The service has timed-out"));
             }
         else if (fiber.getStatus() == FiberStatus.Waiting)
             {
@@ -371,7 +370,8 @@ public class ServiceContext
                             throw new IllegalStateException("Proto-frame is missing the continuation: " + hException);
                             }
 
-                        frame.m_hException = hException;
+                        frame.raiseException(hException);
+
                         switch (frame.m_continuation.proceed(null))
                             {
                             case Op.R_NEXT:

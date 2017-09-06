@@ -70,5 +70,5 @@ interface Referent
     /**
      * Determine if the referent is immutable.
      */
-    @ro Boolean immutable_;
+    @ro Boolean isImmutable;
     }

@@ -52,7 +52,6 @@ public class AssertV extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             BooleanHandle hTest = (BooleanHandle) frame.getArgument(f_nValue);
@@ -90,14 +89,11 @@ public class AssertV extends OpCallable
                 }
             sb.append(')');
 
-            hException = xException.makeHandle(sb.toString());
+            return frame.raiseException(xException.makeHandle(sb.toString()));
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
+            return frame.raiseException(e);
             }
-
-        frame.m_hException = hException;
-        return R_EXCEPTION;
         }
     }

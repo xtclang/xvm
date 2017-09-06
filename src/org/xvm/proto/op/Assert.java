@@ -42,7 +42,6 @@ public class Assert extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             BooleanHandle hTest = (BooleanHandle) frame.getArgument(f_nValue);
@@ -56,14 +55,11 @@ public class Assert extends OpCallable
                 return iPC + 1;
                 }
 
-            hException = xException.makeHandle("Assertion failed");
+            return frame.raiseException(xException.makeHandle("Assertion failed"));
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
+            return frame.raiseException(e);
             }
-
-        frame.m_hException = hException;
-        return R_EXCEPTION;
         }
     }

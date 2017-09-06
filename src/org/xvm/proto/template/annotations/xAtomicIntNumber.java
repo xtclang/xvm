@@ -4,7 +4,6 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.template.xException;
@@ -63,8 +62,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            frame.m_hException = xException.makeHandle("Unassigned reference");
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(atomic.incrementAndGet()));
@@ -77,8 +75,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            frame.m_hException = xException.makeHandle("Unassigned reference");
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndIncrement()));
@@ -91,8 +88,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            frame.m_hException = xException.makeHandle("Unassigned reference");
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
         long lValue = atomic.get();

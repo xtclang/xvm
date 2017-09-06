@@ -10,7 +10,6 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
-import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -57,8 +56,7 @@ public class xInt64
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
-            frame.m_hException = xException.makeHandle("Invalid array size: " + cCapacity);
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle("Invalid array size: " + cCapacity));
             }
 
         return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity));

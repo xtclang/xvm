@@ -82,8 +82,7 @@ public class Call_0T extends OpCallable
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

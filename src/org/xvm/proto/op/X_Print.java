@@ -1,10 +1,8 @@
 package org.xvm.proto.op;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.StringConstant;
 
-import org.xvm.proto.Adapter;
 import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -101,8 +99,7 @@ public class X_Print extends OpInvocable
                 }
             catch (ObjectHandle.ExceptionHandle.WrapperException e)
                 {
-                frame.m_hException = e.getExceptionHandle();
-                return R_EXCEPTION;
+                return frame.raiseException(e);
                 }
             }
         else

@@ -81,8 +81,7 @@ public class Call_T1 extends OpCallable
                 MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
                 if (ahArg.length != Adapter.getArgCount(function))
                     {
-                    frame.m_hException = xException.makeHandle("Invalid tuple argument");
-                    return R_EXCEPTION;
+                    return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                     }
 
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(function)];
@@ -101,8 +100,7 @@ public class Call_T1 extends OpCallable
 
             if (ahArg.length != Adapter.getArgCount(getMethodStructure(frame, f_nFunctionValue)))
                 {
-                frame.m_hException = xException.makeHandle("Invalid tuple argument");
-                return R_EXCEPTION;
+                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                 }
 
             System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
@@ -111,8 +109,7 @@ public class Call_T1 extends OpCallable
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

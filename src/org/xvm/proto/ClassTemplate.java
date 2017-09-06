@@ -6,6 +6,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.StringConstant;
@@ -60,6 +61,8 @@ public abstract class ClassTemplate
     public final ClassTemplate f_templateSuper;
     public final ClassTemplate f_templateCategory; // a native category
 
+    public final boolean f_fService; // is this a service
+
     // ----- caches ------
 
     // cache of TypeCompositions
@@ -100,6 +103,7 @@ public abstract class ClassTemplate
         ClassStructure structSuper = null;
         ClassTemplate templateSuper = null;
         ClassTemplate templateCategory = null;
+        boolean fService = false;
 
         ClassTypeConstant constSuper = Adapter.getContribution(structClass, ClassStructure.Composition.Extends);
         if (constSuper == null)
@@ -114,6 +118,7 @@ public abstract class ClassTemplate
             {
             structSuper = (ClassStructure) constSuper.getClassConstant().getComponent();
             templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
+            fService = templateSuper.isService();
             }
 
         if (structSuper == null || structClass.getFormat() != structSuper.getFormat())
@@ -122,6 +127,7 @@ public abstract class ClassTemplate
                 {
                 case SERVICE:
                     templateCategory = Service.INSTANCE;
+                    fService = true;
                     break;
 
                 case CONST:
@@ -137,6 +143,7 @@ public abstract class ClassTemplate
         f_templateSuper = templateSuper;
         f_templateCategory = templateCategory;
         f_clazzCanonical = createCanonicalClass();
+        f_fService = fService;
         }
 
     protected TypeComposition createCanonicalClass()
@@ -215,7 +222,23 @@ public abstract class ClassTemplate
 
     public boolean isService()
         {
-        return f_struct.getFormat() == Component.Format.SERVICE;
+        return f_fService;
+        }
+
+    public boolean isConst()
+        {
+        switch (f_struct.getFormat())
+            {
+            case PACKAGE:
+            case CONST:
+            case ENUM:
+            case ENUMVALUE:
+            case MODULE:
+                return true;
+
+            default:
+                return false;
+            }
         }
 
     // should we generate fields for this class
@@ -230,7 +253,7 @@ public abstract class ClassTemplate
                 return true;
 
             default:
-                    return false;
+                return false;
             }
         }
 
@@ -239,9 +262,36 @@ public abstract class ClassTemplate
         return f_struct.isStatic();
         }
 
-    public PropertyStructure getProperty(String sName)
+    public PropertyStructure getProperty(String sPropName)
         {
-        return (PropertyStructure) f_struct.getChild(sName);
+        return (PropertyStructure) f_struct.getChild(sPropName);
+        }
+
+    public PropertyStructure ensureProperty(String sPropName)
+        {
+        PropertyStructure property = getProperty(sPropName);
+        if (property != null)
+            {
+            return property;
+            }
+
+        PropertyStructure propSuper = null;
+        for (ClassTemplate templateSuper : f_clazzCanonical.getCallChain())
+            {
+            propSuper = templateSuper.getProperty(sPropName);
+            if (propSuper != null)
+                {
+                break;
+                }
+            }
+
+        if (propSuper == null)
+            {
+            throw new IllegalArgumentException("Property is not defined " + f_sName + "#" + sPropName);
+            }
+
+        return f_struct.createProperty(false,
+                propSuper.getAccess(), propSuper.getType(), sPropName);
         }
 
     public ClassTypeConstant getTypeConstant()
@@ -733,8 +783,7 @@ public abstract class ClassTemplate
                         "Un-initialized property \"" : "Invalid property \"";
                 }
 
-            frame.m_hException = xException.makeHandle(sErr + sName + '"');
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle(sErr + sName + '"'));
             }
 
         if (isRef(property))
@@ -745,8 +794,7 @@ public abstract class ClassTemplate
                 }
             catch (ExceptionHandle.WrapperException e)
                 {
-                frame.m_hException = e.getExceptionHandle();
-                return Op.R_EXCEPTION;
+                return frame.raiseException(e);
                 }
             }
 
@@ -795,12 +843,7 @@ public abstract class ClassTemplate
                 }
             }
 
-        if (hException != null)
-            {
-            frame.m_hException = hException;
-            return Op.R_EXCEPTION;
-            }
-        return Op.R_NEXT;
+        return hException == null ? Op.R_NEXT : frame.raiseException(hException);
         }
 
     public ExceptionHandle setFieldValue(ObjectHandle hTarget,
@@ -894,8 +937,8 @@ public abstract class ClassTemplate
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
-            frame.m_hException = xException.makeHandle("Invalid array size: " + cCapacity);
-            return Op.R_EXCEPTION;
+            return frame.raiseException(
+                    xException.makeHandle("Invalid array size: " + cCapacity));
             }
 
         return frame.assignValue(iReturn, xArray.makeHandle(clzArray, cCapacity));
@@ -972,7 +1015,26 @@ public abstract class ClassTemplate
         MethodStructure method = f_types.f_adapter.getMethod(this, sName, asParam, asRet);
         if (method == null)
             {
-            throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);
+            MethodStructure methodSuper = null;
+            for (ClassTemplate templateSuper : f_clazzCanonical.getCallChain())
+                {
+                methodSuper = f_types.f_adapter.getMethod(templateSuper, sName, asParam, asRet);
+                if (methodSuper != null)
+                    {
+                    break;
+                    }
+                }
+
+            if (methodSuper == null)
+                {
+                throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);
+                }
+
+            method = f_struct.createMethod(false,
+                    methodSuper.getAccess(),
+                    methodSuper.getReturns().toArray(new Parameter[methodSuper.getReturnCount()]),
+                    sName,
+                    methodSuper.getParams().toArray(new Parameter[methodSuper.getParamCount()]));
             }
         return ensureMethodInfo(method);
         }
@@ -1002,9 +1064,11 @@ public abstract class ClassTemplate
         ensurePropertyInfo(sPropName).markAtomic();
         }
 
+    // mark the property getter as native
+    // Note: this also makes the property "calculated" (no storage)
     public void markNativeGetter(String sPropName)
         {
-        MethodStructure methodGet = Adapter.getGetter(getProperty(sPropName));
+        MethodStructure methodGet = Adapter.getGetter(ensureProperty(sPropName));
         if (methodGet == null)
             {
             ensurePropertyInfo(sPropName).m_fNativeGetter = true;
@@ -1013,11 +1077,14 @@ public abstract class ClassTemplate
             {
             ensureMethodInfo(methodGet).m_fNative = true;
             }
+        ensurePropertyInfo(sPropName).m_fCalculated = true;
         }
 
+    // mark the property setter as native
+    // Note: this also makes the property "calculated" (no storage)
     public void markNativeSetter(String sPropName)
         {
-        MethodStructure methodSet = Adapter.getSetter(getProperty(sPropName));
+        MethodStructure methodSet = Adapter.getSetter(ensureProperty(sPropName));
         if (methodSet == null)
             {
             ensurePropertyInfo(sPropName).m_fNativeSetter = true;
@@ -1026,6 +1093,7 @@ public abstract class ClassTemplate
             {
             ensureMethodInfo(methodSet).m_fNative = true;
             }
+        ensurePropertyInfo(sPropName).m_fCalculated = false;
         }
 
     public MethodInfo ensureGetter(String sPropName)
@@ -1059,7 +1127,7 @@ public abstract class ClassTemplate
 
     public PropertyInfo ensurePropertyInfo(String sPropName)
         {
-        PropertyStructure property = getProperty(sPropName);
+        PropertyStructure property = ensureProperty(sPropName);
 
         PropertyInfo info = property.getInfo();
         if (info == null)

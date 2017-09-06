@@ -97,7 +97,7 @@ class TestApp
         }
 
     class TestClass2
-            extends TestApp.TestClass // TODO: should be allowed to be non-qualified
+            extends TestClass
         {
         Int prop2;
 
