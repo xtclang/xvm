@@ -1179,16 +1179,21 @@ public class ConstantPool
     /**
      * Given the specified register index, obtain a TypeConstant that represents the type parameter.
      *
-     * @param iReg  the register number
+     * @param constMethod  the containing method
+     * @param iReg         the register number
      *
      * @return the RegisterTypeConstant for the specified register number
      */
-    public TypeConstant ensureRegisterTypeConstant(int iReg)
+    public TypeConstant ensureRegisterTypeConstant(MethodConstant constMethod, int iReg)
         {
-        RegisterConstant constReg = (RegisterConstant) ensureLocatorLookup(Format.Register).get(iReg);
-        if (constReg  == null)
+        RegisterConstant constReg = null;
+        if (iReg == 0)
             {
-            constReg = (RegisterConstant) register(new RegisterConstant(this, iReg));
+            constReg = (RegisterConstant) ensureLocatorLookup(Format.Register).get(constMethod);
+            }
+        if (constReg == null)
+            {
+            constReg = (RegisterConstant) register(new RegisterConstant(this, constMethod, iReg));
             }
 
         TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constReg);

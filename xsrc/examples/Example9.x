@@ -307,3 +307,4 @@ class MyClass<MapType1 extends Map, MapType2 extends Map>
         // ...
         }
     }
+

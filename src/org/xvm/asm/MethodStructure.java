@@ -245,7 +245,7 @@ public class MethodStructure
                 {
                 // TODO there is no obvious connection from the parameter type back to the method that declares it, so this only works if evaluating code immediately within a method declaration
                 // TODO consider "<MapType extends Map> Void foo(MapType map)" and somewhere later having to resolve for "MapType.KeyType".
-                collector.resolvedConstant(param.asTypeParameterType());
+                collector.resolvedTypeParam(param.asTypeParameterType(getIdentityConstant()));
                 return true;
                 }
             }
