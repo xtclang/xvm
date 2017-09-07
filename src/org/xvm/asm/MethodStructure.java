@@ -234,7 +234,7 @@ public class MethodStructure
         }
 
     @Override
-    public boolean resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
         {
         for (int i = 0, c = m_cTypeParams; i < c; ++i)
             {

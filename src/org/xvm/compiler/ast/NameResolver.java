@@ -5,12 +5,19 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
@@ -56,6 +63,10 @@ public class NameResolver
      */
     public Result resolve(List<AstNode> listRevisit, ErrorListener errs)
         {
+        // store off the error list for use by call backs
+        // (note: there's no attempt to clean this up later)
+        m_errs = errs;
+
         switch (m_status)
             {
             case INITIAL:
@@ -132,17 +143,28 @@ public class NameResolver
                                 listRevisit.add(m_node);
                                 return Result.DEFERRED;
                                 }
-                            else if (componentResolver.resolveName(m_sName, this))
+
+                            // ask the component to resolve the name
+                            switch (componentResolver.resolveName(m_sName, this))
                                 {
-                                if (isAmbiguous())
-                                    {
-                                    m_node.log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS,
-                                            m_sName, node);
+                                case UNKNOWN:
+                                    // the component didn't know the name; keep walking up
+                                    break;
+
+                                case RESOLVED:
+                                    // the component resolved the first name
+                                    break WalkUpToTheRoot;
+
+                                case ERROR:
                                     m_status = Status.ERROR;
                                     return Result.ERROR;
-                                    }
 
-                                break WalkUpToTheRoot;
+                                case DEFERRED:
+                                    listRevisit.add(m_node);
+                                    return Result.DEFERRED;
+
+                                default:
+                                    throw new IllegalStateException();
                                 }
                             }
 
@@ -181,27 +203,29 @@ public class NameResolver
                 // name has to be relative to that component
                 while (m_sName != null)
                     {
-                    Component componentResolver = m_component;
-                    if (componentResolver == null)
+                    switch (ensurePartiallyResolvedComponent().resolveName(m_sName, this))
                         {
-                        // must be a type parameter, and that type parameter must have a constraint,
-                        // which we'll use as the component
-                        assert m_constant != null;
-                        // TODO "<T extends String>" would mean use String as the componentResolver
-                        throw new UnsupportedOperationException();
-                        }
+                        case UNKNOWN:
+                            // the component didn't know the name
+                            m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_component.getIdentityConstant());
+                            m_status = Status.ERROR;
+                            return Result.ERROR;
 
-                    if (componentResolver.resolveName(m_sName, this) && !isAmbiguous())
-                        {
-                        m_sName = m_iter.hasNext() ? m_iter.next() : null;
-                        }
-                    else
-                        {
-                        m_node.log(errs, Severity.ERROR,
-                                isAmbiguous() ? Compiler.NAME_AMBIGUOUS : Compiler.NAME_MISSING,
-                                m_sName, m_component.getIdentityConstant());
-                        m_status = Status.ERROR;
-                        return Result.ERROR;
+                        case RESOLVED:
+                            // the component resolved the name; advance to the next one
+                            m_sName = m_iter.hasNext() ? m_iter.next() : null;
+                            break;
+
+                        case ERROR:
+                            m_status = Status.ERROR;
+                            return Result.ERROR;
+
+                        case DEFERRED:
+                            listRevisit.add(m_node);
+                            return Result.DEFERRED;
+
+                        default:
+                            throw new IllegalStateException();
                         }
                     }
 
@@ -221,16 +245,6 @@ public class NameResolver
         }
 
     /**
-     * Determine if the thus-far resolved component refers to more than a single identity.
-     *
-     * @return true if the specified component refers to more than one identity
-     */
-    public boolean isAmbiguous()
-        {
-        return m_component instanceof CompositeComponent && ((CompositeComponent) m_component).isAmbiguous();
-        }
-
-    /**
      * Obtain the component for the specified node, but only if the node is ready to resolve names.
      *
      * @param node  a ComponentStatement
@@ -242,6 +256,34 @@ public class NameResolver
         return node.canResolveNames()
                 ? node.getComponent()
                 : null;
+        }
+
+    /**
+     * @return the component that is responsible for resolving the next name
+     */
+    private Component ensurePartiallyResolvedComponent()
+        {
+        assert m_component != null || (m_fTypeParam && m_constant != null);
+
+        if (m_fTypeParam)
+            {
+            // TODO find the component that is the "extends ?" of the type param
+            // the last resolve step resulted in a type parameter, so the next step must
+            // also result in a type parameter
+            if (m_constant instanceof RegisterConstant)
+                {
+                RegisterConstant constReg  = (RegisterConstant) m_constant;
+                TypeConstant     constType = constReg.getMethod().getSignature().getRawParams()[constReg.getRegister()];
+                }
+            m_constant instanceof PropertyConstant;
+            assert m_constant instanceof != null;
+            // TODO "<T extends Map>" would mean use String as the componentResolver
+            throw new UnsupportedOperationException();
+
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        return m_component;
         }
 
     /**
@@ -300,17 +342,41 @@ public class NameResolver
     // ----- ResolutionCollector -------------------------------------------------------------------
 
     @Override
-    public void resolvedComponent(Component component)
+    public ResolutionResult resolvedComponent(Component component)
         {
+        assert !m_fTypeParam;
+
+        // it is possible that the name "resolved to" an ambiguous component, which is an error
+        if (component instanceof CompositeComponent && ((CompositeComponent) m_component).isAmbiguous())
+            {
+            m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
+            m_status = Status.ERROR;
+            return ResolutionResult.ERROR;
+            }
+
+        IdentityConstant constId = component.getIdentityConstant();
+        if (component.getFormat() == Format.PROPERTY)
+            {
+            // while it resolved to a component, the component is a property, which indicates that
+            // the name resolved to a type parameter
+            return resolvedTypeParam(constId);
+            }
+
         m_component = component;
-        m_constant  = component.getIdentityConstant();
+        m_constant  = constId;
+        return ResolutionResult.RESOLVED;
         }
 
     @Override
-    public void resolvedTypeParam(TypeConstant constType)
+    public ResolutionResult resolvedTypeParam(Constant constParam)
         {
-        m_constant  = constType;
-        m_component = null;
+        assert constParam instanceof RegisterConstant || constParam instanceof PropertyConstant;
+
+        m_constant   = constParam;
+        m_component  = null;
+        m_fTypeParam = true;
+
+        return ResolutionResult.RESOLVED;
         }
 
 
@@ -376,4 +442,14 @@ public class NameResolver
      * The component representing what the node has thus far resolved to.
      */
     private Component        m_component;
+
+    /**
+     * Set to true when the resolution has switched into "type param mode".
+     */
+    private boolean          m_fTypeParam;
+
+    /**
+     * The ErrorListener to log errors to.
+     */
+    private ErrorListener    m_errs;
     }

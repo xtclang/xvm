@@ -262,7 +262,7 @@ public class ModuleStructure
         }
 
     @Override
-    public boolean resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
         {
         return moduleActual == null
                 ? super.resolveName(sName, collector)

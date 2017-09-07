@@ -65,6 +65,25 @@ public class RegisterConstant
         }
 
 
+    // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the MethodConstant that the register belongs to
+     */
+    public MethodConstant getMethod()
+        {
+        return m_constMethod;
+        }
+
+    /**
+     * @return the register number (zero based)
+     */
+    public int getRegister()
+        {
+        return m_iReg;
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

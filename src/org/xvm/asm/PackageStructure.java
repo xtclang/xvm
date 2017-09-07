@@ -113,7 +113,7 @@ public class PackageStructure
         }
 
     @Override
-    public boolean resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
         {
         return m_constModule == null
                 ? super.resolveName(sName, collector)

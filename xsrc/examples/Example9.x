@@ -306,5 +306,10 @@ class MyClass<MapType1 extends Map, MapType2 extends Map>
         {
         // ...
         }
+
+    <MT3 extends MapType1, KT3 extends MapType1.KeyType> Void process(MT3.KeyType k, KT3 k3)  // TODO resolve both "KeyType" correctly
+        {
+        // ...
+        }
     }
 

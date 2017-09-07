@@ -138,7 +138,8 @@ public class PropertyStructure
 
     private TypeConstant m_type;
 
-    // ----- TEMPORARY ------
+
+    // ----- TEMPORARY -----------------------------------------------------------------------------
 
     /**
      * The transient run-time method data.

@@ -1260,16 +1260,16 @@ public abstract class Component
      *
      * @return true iff any matches for the name were collected
      */
-    public boolean resolveName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
         {
         Component component = getChild(sName);
         if (component != null)
             {
             collector.resolvedComponent(component);
-            return true;
+            return ResolutionResult.RESOLVED;
             }
 
-        return false;
+        return ResolutionResult.UNKNOWN;
         }
 
     /**
@@ -2517,6 +2517,8 @@ public abstract class Component
 
     // ----- interface: ResolutionCollector --------------------------------------------------------
 
+    public enum ResolutionResult {UNKNOWN, RESOLVED, DEFERRED, ERROR}
+
     /**
      * A callback interface used by the name resolution functionality of the Component.
      */
@@ -2527,15 +2529,15 @@ public abstract class Component
          *
          * @param component  the child component (which may be a composite)
          */
-        void resolvedComponent(Component component);
+        ResolutionResult resolvedComponent(Component component);
 
         /**
          * Invoked when a name resolves to something that is a type parameter of a parameterized
          * type or of a method.
          *
-         * @param constType  the TypeConstant that represents the type constraint of the type param
+         * @param constParam  a PropertyConstant or RegisterConstant that represents the type param
          */
-        void resolvedTypeParam(TypeConstant constType);
+        ResolutionResult resolvedTypeParam(Constant constParam);
         }
 
 
