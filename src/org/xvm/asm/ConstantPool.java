@@ -58,6 +58,7 @@ import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UInt8Constant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.VarFPConstant;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
@@ -362,7 +363,7 @@ public class ConstantPool
      *
      * @return a PresentCondition
      */
-    public PresentCondition ensurePresentCondition(IdentityConstant constId)
+    public PresentCondition ensurePresentCondition(Constant constId)
         {
         PresentCondition cond = (PresentCondition) ensureLocatorLookup(Format.ConditionPresent).get(constId);
         if (cond == null)
@@ -920,8 +921,9 @@ public class ConstantPool
         if (!(constClass instanceof ModuleConstant
                 || constClass instanceof PackageConstant
                 || constClass instanceof ClassConstant
-                || constClass instanceof PropertyConstant
-                || constClass instanceof TypedefConstant))
+//                || constClass instanceof PropertyConstant         // TODO is this still possible?
+                || constClass instanceof TypedefConstant
+                || constClass instanceof UnresolvedNameConstant))
             {
             throw new IllegalArgumentException("constant " + constClass.getFormat()
                     + " is not a Module, Package, Class, Typedef, or Property (formal type parameter)");
@@ -938,7 +940,7 @@ public class ConstantPool
             constType = ensureAccessTypeConstant(constType, access);
             }
         
-        if (constTypes != null)
+        if (constTypes != null && constTypes.length > 0)
             {
             constType = ensureParameterizedTypeConstant(constType, constTypes);
             }

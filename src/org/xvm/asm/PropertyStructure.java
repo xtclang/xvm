@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -66,6 +67,69 @@ public class PropertyStructure
         }
 
     /**
+     * @return true iff this property is a type parameter
+     */
+    public boolean isTypeParameter()
+        {
+        // first, check the type
+        TypeConstant constPropType = m_type;
+        if (!(constPropType.isSingleDefiningConstant()                          // must be a class
+                && constPropType.getDefiningConstant().equals(
+                        getConstantPool().ensureEcstasyClassConstant("Type")))) // must be "Type"
+            {
+            return false;
+            }
+
+        // parent must be a class, and the name of this parameter must be a type parameter of the
+        // parent class
+        Component parent = getParent();
+        if (parent instanceof CompositeComponent)
+            {
+            for (Component parentEach : ((CompositeComponent) parent).components())
+                {
+                if (!isTypeParameterOf(parentEach))
+                    {
+                    return false;
+                    }
+                }
+            return true;
+            }
+        else
+            {
+            return isTypeParameterOf(parent);
+            }
+        }
+
+    /**
+     * Determine if this property is a type parameter of the specified parent component.
+     *
+     * @param component a non-composite parent component
+     *
+     * @return true iff this property represents a type parameter on the specified component
+     */
+    private boolean isTypeParameterOf(Component component)
+        {
+        return component instanceof ClassStructure
+                && ((ClassStructure) component).getTypeParams().containsKey(getName());
+        }
+
+    /**
+     * @return the base type for the type parameter, from the "extends" clause, or Object if no
+     *         explicit "extends" clause was present, or null if the property is not a type param
+     */
+    public TypeConstant getTypeParameterExtendsType()
+        {
+        if (!isTypeParameter())
+            {
+            return null;
+            }
+
+        return m_type.isParamsSpecified()
+                ? m_type.getParamTypes().get(0)
+                : m_type.getConstantPool().ensureEcstasyTypeConstant("Object");
+        }
+
+    /**
      * @return the transient property info
      */
     public ClassTemplate.PropertyInfo getInfo()
@@ -84,6 +148,7 @@ public class PropertyStructure
             }
         m_info = info;
         }
+
 
     // ----- component methods ---------------------------------------------------------------------
 

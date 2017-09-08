@@ -17,7 +17,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.util.Handy;
 
@@ -279,7 +278,8 @@ public class Adapter
                 {
                 aconst[i] = ensureValueConstant(ao[i]);
                 }
-            return f_container.f_pool.ensureTupleConstant(aconst);
+            TypeConstant type = f_container.f_pool.ensureEcstasyTypeConstant("Tuple"); // TODO need type-params
+            return f_container.f_pool.ensureTupleConstant(type, aconst);
             }
 
         if (oValue == null)
@@ -356,11 +356,6 @@ public class Adapter
     public TypeConstant resolveType(PropertyStructure property)
         {
         TypeConstant constType = property.getType();
-
-        if (constType instanceof UnresolvedTypeConstant)
-            {
-            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
-            }
 
         if (constType instanceof ParameterizedTypeConstant)
             {

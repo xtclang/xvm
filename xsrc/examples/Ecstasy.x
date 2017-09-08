@@ -1,6 +1,6 @@
 module Ecstasy.xtclang.org
     {
-    typedef Tuple<> Void;
+    // typedef Tuple<> Void;
 
     class Object
         {

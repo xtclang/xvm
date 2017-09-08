@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.constants.ConditionalConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
@@ -33,6 +34,13 @@ public class DotNameExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant instantiateTypeConstant()
+        {
+        // TODO
+        return null;
+        }
 
     @Override
     public boolean validateCondition(ErrorListener errs)

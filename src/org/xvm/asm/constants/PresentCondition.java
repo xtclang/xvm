@@ -49,9 +49,10 @@ public class PresentCondition
      * @param pool           the ConstantPool that will contain this Constant
      * @param constVMStruct  the Module, Package, Class, Property or Method
      */
-    public PresentCondition(ConstantPool pool, IdentityConstant constVMStruct)
+    public PresentCondition(ConstantPool pool, Constant constVMStruct)
         {
         super(pool);
+        assert constVMStruct  instanceof IdentityConstant || constVMStruct instanceof UnresolvedNameConstant;
         m_constStruct = constVMStruct;
         }
 
@@ -66,7 +67,7 @@ public class PresentCondition
      */
     public IdentityConstant getPresentConstant()
         {
-        return m_constStruct;
+        return (IdentityConstant) m_constStruct;
         }
 
 
@@ -75,7 +76,7 @@ public class PresentCondition
     @Override
     public boolean evaluate(LinkerContext ctx)
         {
-        return ctx.isPresent(m_constStruct);
+        return ctx.isPresent((IdentityConstant) m_constStruct);
         }
 
     @Override
@@ -89,8 +90,8 @@ public class PresentCondition
         {
         if (that instanceof PresentCondition)
             {
-            IdentityConstant constThis = this.m_constStruct;
-            IdentityConstant constThat = ((PresentCondition) that).m_constStruct;
+            IdentityConstant constThis = (IdentityConstant) this.m_constStruct;
+            IdentityConstant constThat = (IdentityConstant) ((PresentCondition) that).m_constStruct;
             if (constThis.equals(constThat))
                 {
                 // they're testing the same thing
@@ -213,5 +214,5 @@ public class PresentCondition
     /**
      * A ModuleConstant, PackageConstant, ClassConstant, PropertyConstant, or MethodConstant.
      */
-    private IdentityConstant m_constStruct;
+    private Constant m_constStruct;
     }

@@ -414,7 +414,7 @@ public abstract class Component
      * @param composition  the contribution category
      * @param constType    the contribution class type
      */
-    public void addContribution(Composition composition, ParameterizedTypeConstant constType)
+    public void addContribution(Composition composition, TypeConstant constType)
         {
         addContribution(new Contribution(composition, constType));
         }
@@ -436,7 +436,7 @@ public abstract class Component
      * @param constType    the annotation class type
      * @param aconstParam  the annotation parameters (optional)
      */
-    public void addAnnotation(ParameterizedTypeConstant constType, Constant[] aconstParam)
+    public void addAnnotation(TypeConstant constType, Constant[] aconstParam)
         {
         addContribution(new Contribution(constType, aconstParam));
         }
@@ -447,7 +447,7 @@ public abstract class Component
      * @param constClass  the class type to delegate
      * @param constProp   the property specifying the reference to delegate to
      */
-    public void addDelegation(ParameterizedTypeConstant constClass, PropertyConstant constProp)
+    public void addDelegation(TypeConstant constClass, PropertyConstant constProp)
         {
         addContribution(new Contribution(constClass, constProp));
         }
@@ -2200,7 +2200,7 @@ public abstract class Component
          *                     Implements, Into, Incorporates, or Enumerates
          * @param constType    specifies the class type being contributed
          */
-        protected Contribution(Composition composition, ParameterizedTypeConstant constType)
+        protected Contribution(Composition composition, TypeConstant constType)
             {
             assert composition != null && constType != null;
 
@@ -2285,7 +2285,7 @@ public abstract class Component
          * @param delegate     for a Delegates composition, this is the property that provides the
          *                     delegate reference
          */
-        protected Contribution(ParameterizedTypeConstant constant, PropertyConstant delegate)
+        protected Contribution(TypeConstant constant, PropertyConstant delegate)
             {
             assert constant != null && delegate != null;
 
@@ -2300,7 +2300,7 @@ public abstract class Component
          * @param constType    specifies the class type of the annotation
          * @param aconstParam  an array of annotation parameters; may be null
          */
-        protected Contribution(ParameterizedTypeConstant constType, Constant[] aconstParam)
+        protected Contribution(TypeConstant constType, Constant[] aconstParam)
             {
             assert constType != null;
 
@@ -2342,10 +2342,10 @@ public abstract class Component
          *
          * @return the ClassTypeConstant for this contribution
          */
-        public ParameterizedTypeConstant getClassConstant()
+        public TypeConstant getClassConstant()
             {
-            return m_constContrib instanceof ParameterizedTypeConstant
-                    ? (ParameterizedTypeConstant) m_constContrib
+            return m_constContrib instanceof TypeConstant
+                    ? (TypeConstant) m_constContrib
                     : null;
             }
 

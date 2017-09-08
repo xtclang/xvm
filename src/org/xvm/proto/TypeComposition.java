@@ -9,9 +9,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xRef;
@@ -198,27 +196,28 @@ public class TypeComposition
     // will resolve in List<String>
     public TypeComposition resolve(TypeConstant constType)
         {
-        if (constType instanceof UnresolvedTypeConstant)
-            {
-            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
-            }
-
-        if (constType instanceof ParameterizedTypeConstant)
-            {
-            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constType;
-            ClassTemplate template = f_template.f_types.getTemplate(constClass.getUnderlyingType());
-            return template.resolve(constClass, f_mapGenericActual);
-            }
-
-        if (constType instanceof ParameterTypeConstant)
-            {
-            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
-            Type type = f_mapGenericActual.get(constParam.getName());
-            if (type != null && type.f_clazz != null)
-                {
-                return type.f_clazz;
-                }
-            }
+        // TODO gg+cp discuss
+//        if (constType instanceof UnresolvedTypeConstant)
+//            {
+//            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+//            }
+//
+//        if (constType instanceof ParameterizedTypeConstant)
+//            {
+//            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constType;
+//            ClassTemplate template = f_template.f_types.getTemplate(constClass.getUnderlyingType());
+//            return template.resolve(constClass, f_mapGenericActual);
+//            }
+//
+//        if (constType instanceof ParameterTypeConstant)
+//            {
+//            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
+//            Type type = f_mapGenericActual.get(constParam.getName());
+//            if (type != null && type.f_clazz != null)
+//                {
+//                return type.f_clazz;
+//                }
+//            }
 
         return xObject.CLASS;
         }

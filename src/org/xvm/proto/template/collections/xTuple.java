@@ -93,13 +93,13 @@ public class xTuple
         {
         ArrayConstant constTuple = (ArrayConstant) constant;
 
-        List<Constant> list = constTuple.getValue();
-        int c = list.size();
+        Constant[] aconst = constTuple.getValue();
+        int c = aconst.length;
         ObjectHandle[] ahValue = new ObjectHandle[c];
         Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
-            Constant constValue = list.get(i);
+            Constant constValue = aconst[i];
 
             ahValue[i] = heap.ensureConstHandle(constValue.getPosition());
             aType[i] = heap.getConstTemplate(constValue).f_clazzCanonical.ensurePublicType();

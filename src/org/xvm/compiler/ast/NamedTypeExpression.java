@@ -9,21 +9,15 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
-import org.xvm.asm.constants.ParameterizedTypeConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.constants.UnresolvedNameConstant;
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.NameResolver.NameResolving;
 import org.xvm.compiler.ast.NameResolver.Result;
-
-import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
@@ -198,10 +192,11 @@ public class NamedTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant()
         {
-        Constant constId = getIdentityConstant();
-        Access access = getExplicitAccess();
+        Constant             constId    = getIdentityConstant();
+        Access               access     = getExplicitAccess();
         List<TypeExpression> paramTypes = this.paramTypes;
-        if (constant instanceof TypeConstant)
+
+        if (constId instanceof TypeConstant)
             {
             // access needs to be null
             if (access != null)
@@ -215,12 +210,12 @@ public class NamedTypeExpression
                 throw new IllegalStateException("log error: type params unexpected");
                 }
 
-            setTypeConstant((TypeConstant) constant);
+            return (TypeConstant) constId;
             }
 
         TypeConstant constType;
-        ConstantPool pool = getConstantPool();
-        int cParams = paramTypes.size();
+        ConstantPool pool    = getConstantPool();
+        int          cParams = paramTypes == null ? 0 : paramTypes.size();
         if (cParams == 0)
             {
             constType = pool.ensureClassTypeConstant(constId, access);
@@ -259,7 +254,13 @@ public class NamedTypeExpression
                 }
             assert resolver.getResult() == Result.RESOLVED;
 
-            m_constId = resolver.getConstant();
+            Constant constId = resolver.getConstant();
+            if (m_constId instanceof ResolvableConstant)
+                {
+                ((ResolvableConstant) m_constId).resolve(constId);
+                }
+            m_constId = constId;
+
             ensureTypeConstant();
             }
         }

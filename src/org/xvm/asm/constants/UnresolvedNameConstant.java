@@ -196,10 +196,6 @@ public class UnresolvedNameConstant
             {
             m_constId = pool.register(unwrap());
             }
-        else
-            {
-            throw new IllegalStateException("unresolved: " + getName());
-            }
         }
 
     @Override

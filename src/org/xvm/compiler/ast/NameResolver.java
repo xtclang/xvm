@@ -267,20 +267,82 @@ public class NameResolver
 
         if (m_fTypeParam)
             {
-            // TODO find the component that is the "extends ?" of the type param
-            // the last resolve step resulted in a type parameter, so the next step must
-            // also result in a type parameter
-            if (m_constant instanceof RegisterConstant)
+            // once we get into the domain of type parameters, the "resolving component to use next"
+            // is not pre-loaded. the quintessential example is the type parameter "MapType extends
+            // Map", and then resolving "MapType.KeyType", where there is no actual type (or
+            // component) for MapType, but the "Map" component is used instead
+            Constant constParam = m_constant;
+            while (true)
                 {
-                RegisterConstant constReg  = (RegisterConstant) m_constant;
-                TypeConstant     constType = constReg.getMethod().getSignature().getRawParams()[constReg.getRegister()];
-                }
-            m_constant instanceof PropertyConstant;
-            assert m_constant instanceof != null;
-            // TODO "<T extends Map>" would mean use String as the componentResolver
-            throw new UnsupportedOperationException();
+                TypeConstant constParamType;
+                if (constParam instanceof RegisterConstant)
+                    {
+                    RegisterConstant constReg = (RegisterConstant) constParam;
+                    TypeConstant constType =
+                            constReg.getMethod().getSignature().getRawParams()[constReg.getRegister()];
+                    // the type of the register isn't the "parameterized type"; rather, it is a type
+                    // of class Type that carries the "parameterized type" as a parameter of itself,
+                    // e.g. "Type<Map>" for a parameterizezd type of Map
+                    if (!(constType.isSingleDefiningConstant()                  // must be a class
+                            && constType.getDefiningConstant().equals(constType.getConstantPool()
+                                    .ensureEcstasyClassConstant("Type"))))      // must be "Type"
+                        {
+                        throw new IllegalStateException("invalid register constant type: " + constType);
+                        }
 
-            throw new UnsupportedOperationException("TODO");
+                    constParamType = constType.isParamsSpecified()
+                            ? constType.getParamTypes().get(0)
+                            : constType.getConstantPool().ensureEcstasyTypeConstant("Object");
+                    }
+                else if (constParam instanceof PropertyConstant)
+                    {
+                    PropertyConstant constProp = (PropertyConstant) constParam;
+                    Component structProp = constProp.getComponent();
+                    if (structProp instanceof PropertyStructure)
+                        {
+                        constParamType = ((PropertyStructure) structProp).getType();
+                        }
+                    else if (structProp instanceof CompositeComponent)
+                        {
+                        List<Component> listProps = ((CompositeComponent) structProp).components();
+                        constParamType = ((PropertyStructure) listProps.get(0)).getType();
+                        for (int i = 1, c = listProps.size(); i < c; ++i)
+                            {
+                            TypeConstant constTypeN = ((PropertyStructure) listProps.get(i)).getType();
+                            if (!constParamType.equals(constTypeN))
+                                {
+                                // eventual To-Do: we need to handle cases where composite
+                                // components differ in substantial ways, such as type, but for now
+                                // this is just an assertion that the type does not vary
+                                throw new UnsupportedOperationException("non-uniform composite property type: "
+                                        + constProp + "; 0=" + constParamType + ", " + i + "=" + constTypeN);
+                                }
+                            }
+                        }
+                    else
+                        {
+                        throw new IllegalStateException("property id=" + constProp + ", property struct=" + structProp);
+                        }
+                    }
+                else
+                    {
+                    throw new IllegalStateException("constant=" + constParam);
+                    }
+
+                if (!constParamType.isSingleDefiningConstant())
+                    {
+                    // eventual To-Do is to support intersection types, etc.
+                    throw new UnsupportedOperationException("type is not singular: " + constParamType);
+                    }
+
+                Constant constId = constParamType.getDefiningConstant();
+                if (constId instanceof IdentityConstant)
+                    {
+                    return ((IdentityConstant) constId).getComponent();
+                    }
+
+                constParam = constId;
+                }
             }
 
         return m_component;
@@ -364,6 +426,7 @@ public class NameResolver
 
         m_component = component;
         m_constant  = constId;
+
         return ResolutionResult.RESOLVED;
         }
 

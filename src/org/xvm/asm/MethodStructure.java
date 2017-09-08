@@ -243,15 +243,12 @@ public class MethodStructure
 
             if (param.getName().equals(sName))
                 {
-                // TODO there is no obvious connection from the parameter type back to the method that declares it, so this only works if evaluating code immediately within a method declaration
-                // TODO consider "<MapType extends Map> Void foo(MapType map)" and somewhere later having to resolve for "MapType.KeyType".
-                collector.resolvedTypeParam(param.asTypeParameterType(getIdentityConstant()));
-                return true;
+                return collector.resolvedTypeParam(param.asTypeParameterType(getIdentityConstant()));
                 }
             }
 
         // method short-circuits the search
-        return false;
+        return ResolutionResult.UNKNOWN;
         }
 
 

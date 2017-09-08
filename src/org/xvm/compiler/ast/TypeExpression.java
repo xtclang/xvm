@@ -49,15 +49,9 @@ public abstract class TypeExpression
         }
 
     /**
-     * This needs to be overridden by any TypeExpression that evaluates to something other than a
-     * class type.
-     *
-     * @return
+     * @return a TypeConstant for this TypeExpression
      */
     protected abstract TypeConstant instantiateTypeConstant();
-
-
-    // ----- accessors -----------------------------------------------------------------------------
 
     /**
      * @return the TypeConstant currently associated with this TypeExpression, or null

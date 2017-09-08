@@ -8,6 +8,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
@@ -107,7 +108,7 @@ public abstract class ClassTemplate
 
         if (opt.isPresent())
             {
-            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getUnderlyingType();
+            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getUnderlyingType().getDefiningConstant();
             structSuper = (ClassStructure) constClass.getComponent();
             templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
             }
@@ -230,7 +231,7 @@ public abstract class ClassTemplate
         return (PropertyStructure) f_struct.getChild(sName);
         }
 
-    public ParameterizedTypeConstant getTypeConstant()
+    public TypeConstant getTypeConstant()
         {
         return ((ClassConstant) f_struct.getIdentityConstant()).asTypeConstant();
         }
@@ -360,7 +361,10 @@ public abstract class ClassTemplate
     // produce a TypeComposition for this template by resolving the generic types
     public TypeComposition resolve(ParameterizedTypeConstant constClassType, Map<String, Type> mapActual)
         {
-        assert constClassType.getUnderlyingType().getPathString().equals(f_sName);
+        // TODO GG+CP discuss
+        assert constClassType.getUnderlyingType().isSingleDefiningConstant()
+                && constClassType.getUnderlyingType().getDefiningConstant() instanceof IdentityConstant
+                && ((IdentityConstant) constClassType.getUnderlyingType().getDefiningConstant()).getPathString().equals(f_sName);
 
         List<TypeConstant> listParams = constClassType.getParamTypes();
 
@@ -385,24 +389,25 @@ public abstract class ClassTemplate
     // resolve a parameter type
     protected Type resolveParameterType(TypeConstant constParamType, Map<String, Type> mapActual)
         {
-        if (constParamType instanceof ParameterizedTypeConstant)
-            {
-            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constParamType;
-            ClassTemplate template = f_types.getTemplate(constClass.getUnderlyingType());
-            return template.resolve(constClass, mapActual).ensurePublicType();
-            }
-
-        if (constParamType instanceof ParameterTypeConstant)
-            {
-            ParameterTypeConstant constParam = (ParameterTypeConstant) constParamType;
-            Type type = mapActual.get(constParam.getName());
-
-            if (type == null)
-                {
-                throw new IllegalArgumentException("Unresolved type parameter: " + constParam);
-                }
-            return type;
-            }
+        // TODO need to review with GG+CP
+//        if (constParamType instanceof ParameterizedTypeConstant)
+//            {
+//            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constParamType;
+//            ClassTemplate template = f_types.getTemplate(constClass.getUnderlyingType());
+//            return template.resolve(constClass, mapActual).ensurePublicType();
+//            }
+//
+//        if (constParamType instanceof ParameterTypeConstant)
+//            {
+//            ParameterTypeConstant constParam = (ParameterTypeConstant) constParamType;
+//            Type type = mapActual.get(constParam.getName());
+//
+//            if (type == null)
+//                {
+//                throw new IllegalArgumentException("Unresolved type parameter: " + constParam);
+//                }
+//            return type;
+//            }
 
         if (constParamType instanceof IntersectionTypeConstant ||
                 constParamType instanceof UnionTypeConstant)
@@ -1058,15 +1063,23 @@ public abstract class ClassTemplate
             m_fAtomic = true;
 
             TypeConstant constType = f_types.f_adapter.resolveType(f_property);
-            if (constType instanceof ParameterizedTypeConstant &&
-                    ((ParameterizedTypeConstant) constType).getUnderlyingType().getName().equals("Int64"))
+            if (constType.isParamsSpecified())
                 {
-                markAsRef("annotations.AtomicIntNumber");
+                TypeConstant constParam = constType.getParamTypes().get(0);
+                if (constParam.isSingleDefiningConstant())
+                    {
+                    Constant constId = constParam.getDefiningConstant();
+                    if (constId
+                            instanceof ParameterizedTypeConstant &&
+                            ((IdentityConstant) constType.getUnderlyingType().getDefiningConstant()).getName().equals("Int64"))
+                        {
+                        markAsRef("annotations.AtomicIntNumber");
+                        return;
+                        }
+                    }
                 }
-            else
-                {
-                markAsRef("annotations.AtomicRef");
-                }
+
+            markAsRef("annotations.AtomicRef");
             }
 
         public void markAsRef(String sRefClassName)
