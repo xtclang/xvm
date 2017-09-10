@@ -421,7 +421,7 @@ public class NameResolver
             {
             // while it resolved to a component, the component is a property, which indicates that
             // the name resolved to a type parameter
-            return resolvedTypeParam(constId.getConstantPool().ensureTypeParameterConstant(constId));
+            return resolvedTypeParam(constId);
             }
 
         m_component = component;
@@ -431,11 +431,10 @@ public class NameResolver
         }
 
     @Override
-    public ResolutionResult resolvedTypeParam(TypeConstant constType)
+    public ResolutionResult resolvedTypeParam(Constant constType)
         {
         assert constType != null;
-        assert constType.getDefiningConstant() instanceof RegisterConstant
-                || constType.getDefiningConstant() instanceof PropertyConstant;
+        assert constType instanceof RegisterConstant || constType instanceof PropertyConstant;
 
         m_constant   = constType;
         m_component  = null;

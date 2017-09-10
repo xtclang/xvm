@@ -95,6 +95,7 @@ public class UnresolvedNameConstant
     public void resolve(Constant constant)
         {
         assert this.m_constId == null || this.m_constId == constant || this.m_constId.equals(constant);
+        assert !(constant instanceof TypeConstant);
         this.m_constId = constant;
         }
 

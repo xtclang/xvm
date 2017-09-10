@@ -64,6 +64,8 @@ public class TerminalTypeConstant
     public TerminalTypeConstant(ConstantPool pool, Constant constId)
         {
         super(pool);
+
+        assert !(constId instanceof TypeConstant);
         
         switch (constId.getFormat()) 
             {

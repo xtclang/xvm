@@ -1186,7 +1186,7 @@ public class ConstantPool
      *
      * @return the RegisterTypeConstant for the specified register number
      */
-    public TypeConstant ensureRegisterTypeConstant(MethodConstant constMethod, int iReg)
+    public RegisterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg)
         {
         RegisterConstant constReg = null;
         if (iReg == 0)
@@ -1197,11 +1197,25 @@ public class ConstantPool
             {
             constReg = (RegisterConstant) register(new RegisterConstant(this, constMethod, iReg));
             }
+        return constReg;
+        }
 
-        TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constReg);
+    /**
+     * TODO
+     *
+     * @param constId
+     *
+     * @return
+     */
+    public TerminalTypeConstant ensureTerminalTypeConstant(Constant constId)
+        {
+        assert constId != null && !(constId instanceof TypeConstant);
+
+        TerminalTypeConstant constType = (TerminalTypeConstant)
+                ensureLocatorLookup(Format.TerminalType).get(constId);
         if (constType == null)
             {
-            constType = (TypeConstant) register(new TerminalTypeConstant(this, constReg));
+            constType = (TerminalTypeConstant) register(new TerminalTypeConstant(this, constId));
             }
         return constType;
         }
