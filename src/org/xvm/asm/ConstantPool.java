@@ -939,7 +939,8 @@ public class ConstantPool
             {
             constType = ensureAccessTypeConstant(constType, access);
             }
-        
+
+        // TODO there is something wrong here where I'm not passing any constTypes in, but the array is 0-length (which only matters for Tuple?)
         if (constTypes != null && constTypes.length > 0)
             {
             constType = ensureParameterizedTypeConstant(constType, constTypes);
