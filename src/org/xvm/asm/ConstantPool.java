@@ -1154,29 +1154,28 @@ public class ConstantPool
         return constChild;
         }
 
-// TODO - determine if this should be based on just the name, or should it require a PropertyConstant?
-//    /**
-//     * Given the specified type parameter name, obtain a TypeConstant that represents the type parameter.
-//     *
-//     * @param constParent  the type that contains the type parameter
-//     * @param sName        the name of the type parameter
-//     *
-//     * @return the constant representing the type parameter
-//     */
-//    public TypeConstant ensureParameterTypeConstant(TypeConstant constParent, String sName)
-//        {
-//        TypeConstant constant = null;
-//        if (constParent.isAutoNarrowing() && constParent instanceof ParameterizedTypeConstant
-//                    && ((ParameterizedTypeConstant) constParent).getAccess() == Access.PUBLIC)
-//            {
-//            constant = (TypeConstant) ensureLocatorLookup(Format.ParameterType).get(sName);
-//            }
-//        if (constant == null)
-//            {
-//            constant = (TypeConstant) register(new TypeConstant(this, constParent, sName));
-//            }
-//        return constant;
-//        }
+    /**
+     * Given the specified property or register constant, obtain a TypeConstant that represents a
+     * type parameter.
+     *
+     * @param constId  a constant specifying a property or register of a method
+     *
+     * @return the constant representing the type parameter
+     */
+    public TerminalTypeConstant ensureTypeParameterConstant(Constant constId)
+        {
+        if (!(constId instanceof RegisterConstant || constId instanceof PropertyConstant))
+            {
+            throw new IllegalArgumentException("invalid parameter identifier: " + constId);
+            }
+
+        TerminalTypeConstant constType = (TerminalTypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
+        if (constType == null)
+            {
+            constType = (TerminalTypeConstant) register(new TerminalTypeConstant(this, constId));
+            }
+        return constType;
+        }
 
     /**
      * Given the specified register index, obtain a TypeConstant that represents the type parameter.

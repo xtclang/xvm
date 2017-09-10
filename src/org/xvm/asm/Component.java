@@ -2535,9 +2535,10 @@ public abstract class Component
          * Invoked when a name resolves to something that is a type parameter of a parameterized
          * type or of a method.
          *
-         * @param constParam  a PropertyConstant or RegisterConstant that represents the type param
+         * @param constType  a TypeConstant representing a type parameter (with an underlying
+         *                   PropertyConstant or RegisterConstant)
          */
-        ResolutionResult resolvedTypeParam(Constant constParam);
+        ResolutionResult resolvedTypeParam(TypeConstant constType);
         }
 
 

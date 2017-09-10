@@ -2,15 +2,15 @@ module Test
     {
     class Fubar
         {
-        Int number;
-        Int[] numbers;
-        Object... params;
+//        Int number;
+//        Int[] numbers;
+//        Object... params;
 
 // problem #1 - is the solution a SubstitutableTypeConstant that takes the place of each instance of "T"?
-//        <T> conditional T foo(T t)          // compiled as "(Boolean*, T) foo(Type<Object> T*, T t)"
-//            {
-//            return t;
-//            }
+        <T> conditional T foo(T t)          // compiled as "(Boolean*, T) foo(Type<Object> T*, T t)"
+            {
+            return t;
+            }
 
 // problem #2 ".Type" resolution ... kind of like problem #2 ... hmmm ...
 //        Fubar! fn(String s)
