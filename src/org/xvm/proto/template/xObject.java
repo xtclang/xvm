@@ -12,9 +12,6 @@ import org.xvm.proto.TypeComposition;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * TODO:
  *
@@ -25,9 +22,8 @@ public class xObject
     {
     public static xObject INSTANCE;
     public static TypeComposition CLASS;
+    public static Type TYPE;
     public static MethodConstant TO_STRING; // TODO: should be MethodIdConst
-
-    private final static Map<Integer, Type[]> s_mapCanonical = new HashMap<>(4);
 
     public xObject(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -37,6 +33,7 @@ public class xObject
             {
             INSTANCE = this;
             CLASS = f_clazzCanonical;
+            TYPE = CLASS.ensurePublicType();
             }
         }
 

@@ -111,6 +111,7 @@ interface Ref<RefType>
      * the RefType; the RefType is often the <i>compile-time type</i> of the
      * reference.)
      */
+    @Override
     @ro Type ActualType;
 
     /**

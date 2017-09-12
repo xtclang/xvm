@@ -48,7 +48,6 @@ public class Ref
         markNativeGetter("isImmutable");
         }
 
-
     @Override
     public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
@@ -56,6 +55,17 @@ public class Ref
 
         switch (property.getName())
             {
+            case "ActualType":
+                try
+                    {
+                    ObjectHandle hReferent = hThis.get();
+                    return frame.assignValue(iReturn, xType.makeHandle(hReferent.m_type));
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    return frame.raiseException(e);
+                    }
+
             case "assigned":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isAssigned()));
 
@@ -63,6 +73,10 @@ public class Ref
                 String sName = hThis.m_sName;
                 return frame.assignValue(iReturn, sName == null ?
                     xNullable.NULL : xString.makeHandle(sName));
+
+            case "byteLength":
+                // TODO: deferred
+                return frame.assignValue(iReturn, xInt64.makeHandle(0));
 
             case "selfContained":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isSelfContained()));
@@ -145,6 +159,33 @@ public class Ref
                 return hException == null ? Op.R_NEXT : frame.raiseException(hException);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        RefHandle hThis = (RefHandle) hTarget;
+
+        switch (method.getName())
+            {
+            case "peek":
+                if (hThis.isAssigned())
+                    {
+                    try
+                        {
+                        return frame.assignValues(aiReturn, xBoolean.TRUE, hThis.get());
+                        }
+                    catch (ExceptionHandle.WrapperException e)
+                        {
+                        return frame.raiseException(e);
+                        }
+                    }
+                 else
+                    {
+                    return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                    }
+            }
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     @Override

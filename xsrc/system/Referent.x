@@ -44,6 +44,14 @@ interface Referent
 
     /**
      * Determine if the class of the referent implements the specified interface.
+     *
+     * Note: unlike the {@link instanceOf}, this method doesn't simply check if the referent's class
+     * has all methods that the specified interface has. Instead, it returns true iff any of the
+     * following conditions holds true:
+     *  - the referent's class explicitly declares that it implements the specified interface, or
+     *  - the referent's super class implements the specified interface (recursively), or
+     *  - any of the interfaces that the referent's class declares to implement extends the
+     *    specified interface (recursively)
      */
     Boolean implements_(Class interface_);
 
