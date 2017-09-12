@@ -248,6 +248,21 @@ public abstract class TypeConstant
         return isSingleDefiningConstant() && getDefiningConstant().equals(constId);
         }
 
+    /**
+     * @return TODO
+     */
+    public TypeConstant getTypeParameterType()
+        {
+        if (!isEcstasy("Type"))
+            {
+            throw new IllegalStateException("not a type parameter type: " + this);
+            }
+
+        return isParamsSpecified()
+                ? getParamTypes().get(0)
+                : getConstantPool().ensureEcstasyTypeConstant("Object");
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

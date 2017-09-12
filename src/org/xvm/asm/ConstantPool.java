@@ -621,6 +621,7 @@ public class ConstantPool
             case "Boolean":
             case "Char":
             case "Class":
+            case "Iterator":
             case "Object":
             case "String":
             case "Type":
@@ -1805,13 +1806,19 @@ public class ConstantPool
             for (Constant constant : m_listConst)
                 {
                 Constant constantOld = m_mapConstants.get(constant.getFormat()).put(constant, constant);
-                assert constantOld == null;
+                if (constantOld != null && constantOld != constant)
+                    {
+                    throw new IllegalStateException("constant collision: old=" + constantOld + ", new=" + constant);
+                    }
 
                 Object oLocator = constant.getLocator();
                 if (oLocator != null)
                     {
                     constantOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                    assert constantOld == null;
+                    if (constantOld != null && constantOld != constant)
+                        {
+                        throw new IllegalStateException("locator collision: old=" + constantOld + ", new=" + constant);
+                        }
                     }
                 }
             }

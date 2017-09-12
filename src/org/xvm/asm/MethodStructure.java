@@ -368,10 +368,8 @@ public class MethodStructure
      */
     private Parameter[] m_aParams;
 
-    // ----- TEMPORARY ------
-
     /**
-     * The transient run-time method data.
+     * (TEMPORARY) The transient run-time method data.
      */
     private transient ClassTemplate.MethodInfo m_info;
     }

@@ -95,6 +95,7 @@ public class RegisterConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
+        // TODO likely infinite loop
         visitor.accept(m_constMethod);
         }
 
@@ -109,6 +110,7 @@ public class RegisterConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        // TODO infinite loop
         int n = m_constMethod.compareTo(((RegisterConstant) that).m_constMethod);
         if (n == 0)
             {
@@ -154,7 +156,7 @@ public class RegisterConstant
     @Override
     public String getDescription()
         {
-        return "method=" + m_constMethod + ", register=" + m_iReg;
+        return "method=" + m_constMethod.getName() + ", register=" + m_iReg;
         }
 
 
@@ -163,7 +165,9 @@ public class RegisterConstant
     @Override
     public int hashCode()
         {
-        return m_constMethod.hashCode() + m_iReg;
+        // this cannot use the method's hash code as part of its hashcode, or an infinite loop will
+        // result, because the method parameters are part of the method constant's hash code
+        return m_constMethod.getName().hashCode() + m_iReg;
         }
 
 

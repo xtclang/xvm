@@ -13,11 +13,13 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
@@ -207,7 +209,7 @@ public class NameResolver
                         {
                         case UNKNOWN:
                             // the component didn't know the name
-                            m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_component.getIdentityConstant());
+                            m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
                             m_status = Status.ERROR;
                             return Result.ERROR;
 
@@ -274,74 +276,94 @@ public class NameResolver
             Constant constParam = m_constant;
             while (true)
                 {
-                TypeConstant constParamType;
-                if (constParam instanceof RegisterConstant)
+                TypeConstant constType;
+                switch (constParam.getFormat())
                     {
-                    RegisterConstant constReg = (RegisterConstant) constParam;
-                    TypeConstant constType =
-                            constReg.getMethod().getSignature().getRawParams()[constReg.getRegister()];
-                    // the type of the register isn't the "parameterized type"; rather, it is a type
-                    // of class Type that carries the "parameterized type" as a parameter of itself,
-                    // e.g. "Type<Map>" for a parameterizezd type of Map
-                    if (!(constType.isSingleDefiningConstant()                  // must be a class
-                            && constType.getDefiningConstant().equals(constType.getConstantPool()
-                                    .ensureEcstasyClassConstant("Type"))))      // must be "Type"
-                        {
-                        throw new IllegalStateException("invalid register constant type: " + constType);
-                        }
+                    case Module:
+                    case Package:
+                    case Class:
+                        return ((IdentityConstant) constParam).getComponent();
 
-                    constParamType = constType.isParamsSpecified()
-                            ? constType.getParamTypes().get(0)
-                            : constType.getConstantPool().ensureEcstasyTypeConstant("Object");
-                    }
-                else if (constParam instanceof PropertyConstant)
-                    {
-                    PropertyConstant constProp = (PropertyConstant) constParam;
-                    Component structProp = constProp.getComponent();
-                    if (structProp instanceof PropertyStructure)
+                    case Property:
                         {
-                        constParamType = ((PropertyStructure) structProp).getType();
-                        }
-                    else if (structProp instanceof CompositeComponent)
-                        {
-                        List<Component> listProps = ((CompositeComponent) structProp).components();
-                        constParamType = ((PropertyStructure) listProps.get(0)).getType();
-                        for (int i = 1, c = listProps.size(); i < c; ++i)
+                        PropertyConstant constProp  = (PropertyConstant) constParam;
+                        Component        structProp = constProp.getComponent();
+                        if (structProp instanceof PropertyStructure)
                             {
-                            TypeConstant constTypeN = ((PropertyStructure) listProps.get(i)).getType();
-                            if (!constParamType.equals(constTypeN))
+                            constType = ((PropertyStructure) structProp).getType();
+                            }
+                        else if (structProp instanceof CompositeComponent)
+                            {
+                            List<Component> listProps = ((CompositeComponent) structProp).components();
+                            constType = ((PropertyStructure) listProps.get(0)).getType();
+                            for (int i = 1, c = listProps.size(); i < c; ++i)
                                 {
-                                // eventual To-Do: we need to handle cases where composite
-                                // components differ in substantial ways, such as type, but for now
-                                // this is just an assertion that the type does not vary
-                                throw new UnsupportedOperationException("non-uniform composite property type: "
-                                        + constProp + "; 0=" + constParamType + ", " + i + "=" + constTypeN);
+                                TypeConstant constTypeN = ((PropertyStructure) listProps.get(i)).getType();
+                                if (!constType.equals(constTypeN))
+                                    {
+                                    // eventual To-Do: we need to handle cases where composite
+                                    // components differ in substantial ways, such as type, but for now
+                                    // this is just an assertion that the type does not vary
+                                    throw new UnsupportedOperationException("non-uniform composite property type: "
+                                            + constProp + "; 0=" + constType + ", " + i + "=" + constTypeN);
+                                    }
                                 }
                             }
+                        else
+                            {
+                            throw new IllegalStateException("property id=" + constProp + ", property struct=" + structProp);
+                            }
                         }
-                    else
+                        break;
+
+                    case Typedef:
                         {
-                        throw new IllegalStateException("property id=" + constProp + ", property struct=" + structProp);
+                        TypedefConstant constTypedef  = (TypedefConstant) constParam;
+                        Component       structTypedef = constTypedef.getComponent();
+                        if (structTypedef instanceof TypedefStructure)
+                            {
+                            constType = ((TypedefStructure) structTypedef).getType();
+                            }
+                        else if (structTypedef instanceof CompositeComponent)
+                            {
+                            List<Component> listTypedefs = ((CompositeComponent) structTypedef).components();
+                            constType = ((TypedefStructure) listTypedefs.get(0)).getType();
+                            for (int i = 1, c = listTypedefs.size(); i < c; ++i)
+                                {
+                                TypeConstant constTypeN = ((TypedefStructure) listTypedefs.get(i)).getType();
+                                if (!constType.equals(constTypeN))
+                                    {
+                                    // eventual To-Do: we need to handle cases where composite
+                                    // components differ in substantial ways, such as type, but for now
+                                    // this is just an assertion that the type does not vary
+                                    throw new UnsupportedOperationException("non-uniform composite typedef type: "
+                                            + constTypedef + "; 0=" + constType + ", " + i + "=" + constTypeN);
+                                    }
+                                }
+                            }
+                        else
+                            {
+                            throw new IllegalStateException("Typedef id=" + constTypedef + ", Typedef struct=" + structTypedef);
+                            }
                         }
-                    }
-                else
-                    {
-                    throw new IllegalStateException("constant=" + constParam);
+                        break;
+
+
+                    case Register:
+                        RegisterConstant constReg = (RegisterConstant) constParam;
+                        constType = constReg.getMethod().getSignature().getRawParams()[constReg.getRegister()];
+                        break;
+
+                    default:
+                        throw new IllegalStateException("illegal type param constant id: " + constParam);
                     }
 
+                TypeConstant constParamType = constType.getTypeParameterType();
                 if (!constParamType.isSingleDefiningConstant())
                     {
-                    // eventual To-Do is to support intersection types, etc.
-                    throw new UnsupportedOperationException("type is not singular: " + constParamType);
+                    throw new IllegalStateException("not a single defining constant: " + constParamType);
                     }
-
-                Constant constId = constParamType.getDefiningConstant();
-                if (constId instanceof IdentityConstant)
-                    {
-                    return ((IdentityConstant) constId).getComponent();
-                    }
-
-                constParam = constId;
+                constParam = constParamType.getIdentityConstant();
                 }
             }
 
