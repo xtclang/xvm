@@ -102,8 +102,7 @@ public class FileStructureTest
         ClassStructure clzHashMap = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "HashMap", null);
         clzHashMap.addTypeParam("KeyType", ((ClassConstant) clzHash.getIdentityConstant()).asTypeConstant());
         clzHashMap.addTypeParam("ValueType", ((ClassConstant) clzObj.getIdentityConstant()).asTypeConstant());
-        clzHashMap.addContribution(ClassStructure.Composition.Implements,
-                file.getConstantPool().ensureClassTypeConstant((ClassConstant) clzMap.getIdentityConstant(), Constants.Access.PUBLIC));
+        clzHashMap.addContribution(ClassStructure.Composition.Implements, clzMap.getIdentityConstant().asTypeConstant());
 
         testFileStructure(file);
         }

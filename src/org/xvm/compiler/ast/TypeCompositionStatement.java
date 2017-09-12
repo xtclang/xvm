@@ -673,7 +673,7 @@ public class TypeCompositionStatement
                             // each type parameter also has a synthetic property of the same name,
                             // whose type is of type"Type<exprType>"
                             TypeConstant constPropType = pool.ensureClassTypeConstant(pool
-                                    .ensureEcstasyClassConstant("Type"), Access.PUBLIC, constType);
+                                    .ensureEcstasyClassConstant("Type"), null, constType);
 
                             // create the property and mark it as synthetic
                             component.createProperty(false, Access.PUBLIC, constPropType, sParam)
@@ -1081,7 +1081,7 @@ public class TypeCompositionStatement
                         contribution.getComposition() == Component.Composition.Extends))
                     {
                     struct.addContribution(ClassStructure.Composition.Extends,
-                            pool.ensureClassTypeConstant(constDefaultSuper, Access.PUBLIC));
+                            pool.ensureTerminalTypeConstant(constDefaultSuper));
                     }
                 }
             }
@@ -1096,7 +1096,7 @@ public class TypeCompositionStatement
                     {
                     // TODO there is still an issue with this w.r.t. conditionals; verify there is no "into" on this struct
                     struct.addContribution(ClassStructure.Composition.Into,
-                            pool.ensureClassTypeConstant(constDefaultInto, Access.PUBLIC));
+                            pool.ensureTerminalTypeConstant(constDefaultInto));
                     }
                 }
             }

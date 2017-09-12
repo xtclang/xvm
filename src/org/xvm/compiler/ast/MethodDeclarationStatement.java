@@ -130,7 +130,7 @@ public class MethodDeclarationStatement
                     Parameter      param = typeParams.get(i);
                     TypeExpression exprType  = param.getType();
                     TypeConstant   constType = pool.ensureClassTypeConstant(
-                            pool.ensureEcstasyClassConstant("Type"), Access.PUBLIC,
+                            pool.ensureEcstasyClassConstant("Type"), null,
                             exprType == null
                                     ? pool.ensureEcstasyTypeConstant("Object")
                                     : exprType.ensureTypeConstant());
@@ -305,7 +305,7 @@ public class MethodDeclarationStatement
                 sb.append(' ')
                   .append(sBody);
                 }
-            
+
             if (continuation != null)
                 {
                 String sFinally = continuation.toString();

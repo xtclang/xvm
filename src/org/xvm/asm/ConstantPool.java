@@ -569,7 +569,7 @@ public class ConstantPool
      */
     public TypeConstant ensureEcstasyTypeConstant(String sClass)
         {
-        return ensureClassTypeConstant(ensureEcstasyClassConstant(sClass), Access.PUBLIC);
+        return ensureTerminalTypeConstant(ensureEcstasyClassConstant(sClass));
         }
 
     /**
@@ -934,16 +934,16 @@ public class ConstantPool
             {
             constType = ensureParameterizedTypeConstant(constType, constTypes);
             }
-        
+
         return constType;
         }
 
     /**
      * Obtain a constant that represents a type constant of a particular accessibility.
-     * 
+     *
      * @param constType  the underlying constant
      * @param access     the desired accessibility
-     * 
+     *
      * @return a type constant with the specified accessibility
      */
     public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access)
@@ -954,7 +954,7 @@ public class ConstantPool
             {
             access = Access.PUBLIC;
             }
-        
+
         if (constType.isAccessSpecified())
             {
             if (constType.getAccess() == access)
@@ -966,26 +966,26 @@ public class ConstantPool
                 throw new IllegalArgumentException("type already has an access specified");
                 }
             }
-        
+
         if (access == Access.PUBLIC)
             {
             constAccess = (TypeConstant) ensureLocatorLookup(Format.AccessType).get(constType);
             }
-        
+
         if (constAccess == null)
             {
             constAccess = (TypeConstant) register(new AccessTypeConstant(this, constType, access));
             }
-        
+
         return constAccess;
         }
 
     /**
      * Obtain a constant that represents a type parameterized by the specified type parameter types.
-     * 
+     *
      * @param constType   the parameterized type
      * @param constTypes  the types of the parameters of the parameterized type
-     * 
+     *
      * @return a type constant with the specified type parameter types
      */
     public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant[] constTypes)
@@ -1014,7 +1014,7 @@ public class ConstantPool
 
         return (TypeConstant) register(new ParameterizedTypeConstant(this, constType, constTypes));
         }
-    
+
     /**
      * Given the specified type, obtain a TypeConstant that represents the explicitly immutable form
      * of that type.
@@ -1258,9 +1258,7 @@ public class ConstantPool
      */
     public IntersectionTypeConstant ensureNullableTypeConstant(TypeConstant constType)
         {
-        TypeConstant constNullable = ensureClassTypeConstant(
-                ensureEcstasyClassConstant(org.xvm.compiler.Constants.X_CLASS_NULLABLE),
-                Access.PUBLIC);
+        TypeConstant constNullable = ensureEcstasyTypeConstant(org.xvm.compiler.Constants.X_CLASS_NULLABLE);
         return ensureIntersectionTypeConstant(constNullable, constType);
         }
 
@@ -1552,7 +1550,7 @@ public class ConstantPool
                 case AccessType:
                     constant = new AccessTypeConstant(this, format, in);
                     break;
-                    
+
                 case AnnotatedType:
                     constant = new AnnotatedTypeConstant(this, format, in);
                     break;

@@ -110,13 +110,17 @@ public class Adapter
             if (component != null)
                 {
                 IdentityConstant constId = component.getIdentityConstant();
-                if (constId instanceof ClassConstant)
+                switch (constId.getFormat())
                     {
-                    constType = ((ClassConstant) constId).asTypeConstant();
-                    }
-                else if (constId instanceof TypedefConstant)
-                    {
-                    constType = ((TypedefStructure) component).getType();
+                    case Module:
+                    case Package:
+                    case Class:
+                        constType = constId.asTypeConstant();
+                        break;
+
+                    case Typedef:
+                        constType = ((TypedefStructure) component).getType();
+                        break;
                     }
                 }
             }
@@ -176,7 +180,7 @@ public class Adapter
             }
         while (template != null);
 
-        if (method == null && asArgType != null)
+        if (method == null && (asArgType != null || asRetType != null))
             {
             method = getMethod(templateTop, sMethName, null, null);
             if (method != null)
