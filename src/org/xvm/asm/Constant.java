@@ -535,26 +535,6 @@ public abstract class Constant
         ;
 
         /**
-         * Determine if structures of the type are length-encoded when assembled.
-         *
-         * @return true if the persistent form of the corresponding XVM structure gets
-         *         length-encoded
-         */
-        public boolean isLengthEncoded()
-            {
-            switch (this)
-                {
-                case Package:
-                case Class:
-                case Method:
-                    return true;
-
-                default:
-                    return false;
-                }
-            }
-
-        /**
          * Look up a Format enum by its ordinal.
          *
          * @param i  the ordinal

@@ -3563,17 +3563,20 @@ s     *
      */
     Annotation parseAnnotation(boolean required)
         {
+        long lStartPos = peek().getStartPosition();
         if (match(Id.AT, required) == null)
             {
             return null;
             }
 
-        long                lStartPos = getLastMatch().getStartPosition();
-        NamedTypeExpression type      = parseNamedTypeExpression();
-        List<Expression>    args      = null;
+        // while the annotation is technically a named type expression, it only allows a qualified
+        // name (and none of the other things that are normally allowed in a named type expression)
+        NamedTypeExpression type = new NamedTypeExpression(null, parseQualifiedName(),
+                null, null, null, getLastMatch().getEndPosition());
 
         // a trailing argument list is only assumed to be part of the annotation if there is
         // no whitespace separating the annotation from the arguments
+        List<Expression> args = null;
         Token token = peek();
         if (token != null && token.getId() == Id.L_PAREN && !token.hasLeadingWhitespace())
             {

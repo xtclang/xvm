@@ -128,7 +128,7 @@ public class ModuleConstant
         }
 
     @Override
-    public List<IdentityConstant> getIdentityConstantPath()
+    public List<IdentityConstant> getPath()
         {
         List<IdentityConstant> list = new ArrayList<>();
         list.add(this);

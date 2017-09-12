@@ -125,7 +125,7 @@ public class ParameterizedTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.TerminalType;
+        return Format.ParameterizedType;
         }
 
     @Override

@@ -213,26 +213,31 @@ public class NamedTypeExpression
             return (TypeConstant) constId;
             }
 
-        TypeConstant constType;
-        ConstantPool pool    = getConstantPool();
-        int          cParams = paramTypes == null ? 0 : paramTypes.size();
-        if (cParams == 0)
+        ConstantPool pool      = getConstantPool();
+        TypeConstant constType = pool.ensureTerminalTypeConstant(constId);
+
+        if (paramTypes != null)
             {
-            constType = pool.ensureClassTypeConstant(constId, access);
-            }
-        else
-            {
+            int            cParams      = paramTypes.size();
             TypeConstant[] aconstParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
                 aconstParams[i] = paramTypes.get(i).ensureTypeConstant();
                 }
-            constType = pool.ensureClassTypeConstant(constId, access, aconstParams);
+            constType = pool.ensureParameterizedTypeConstant(constType, aconstParams);
             }
 
-        return immutable == null
-                ? constType
-                : pool.ensureImmutableTypeConstant(constType);
+        if (access != null)
+            {
+            constType = pool.ensureAccessTypeConstant(constType, access);
+            }
+
+        if (immutable != null)
+            {
+            constType = pool.ensureImmutableTypeConstant(constType);
+            }
+
+        return constType;
         }
 
 

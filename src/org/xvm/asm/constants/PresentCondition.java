@@ -101,8 +101,8 @@ public class PresentCondition
             if (constThis.getModuleConstant().equals(constThat.getModuleConstant()))
                 {
                 // they're testing two things from the same module, so they could be related
-                List<IdentityConstant> listThis = constThis.getIdentityConstantPath();
-                List<IdentityConstant> listThat = constThat.getIdentityConstantPath();
+                List<IdentityConstant> listThis = constThis.getPath();
+                List<IdentityConstant> listThat = constThat.getPath();
                 int cThis = listThis.size();
                 int cThat = listThat.size();
                 for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i)

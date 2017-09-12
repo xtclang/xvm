@@ -107,7 +107,7 @@ public class AccessTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.TerminalType;
+        return Format.AccessType;
         }
 
     @Override

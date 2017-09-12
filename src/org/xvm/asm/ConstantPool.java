@@ -11,6 +11,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import java.util.List;
 import org.xvm.asm.Constant.Format;
 
 import org.xvm.asm.constants.AccessTypeConstant;
@@ -823,8 +824,7 @@ public class ConstantPool
      * @param aconstReturns  the return values from the method
      * @param aconstParams   the invocation parameters for the method
      *
-     * @return the MethodConstant for the specified method name of the specified container with the
-     *         specified parameters and return values
+     * @return the MethodConstant
      */
     public MethodConstant ensureMethodConstant(Constant constParent, String sName, Access access,
             TypeConstant[] aconstReturns, TypeConstant[] aconstParams)
@@ -856,13 +856,13 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Obtain a constant that represents the specified methods.
      *
-     * @param constParent
-     * @param constSig
-     * @param access
+     * @param constParent  the constant identifying the parent of the method
+     * @param constSig     the signature of the method
+     * @param access       the method accessibility
      *
-     * @return
+     * @return the MethodConstant
      */
     public MethodConstant ensureMethodConstant(Constant constParent, SignatureConstant constSig, Access access)
         {
@@ -893,13 +893,13 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Obtain a constant that represents a method signature.
      *
-     * @param sName
-     * @param aconstReturns
-     * @param aconstParams
+     * @param sName          the method name
+     * @param aconstReturns  the return value types
+     * @param aconstParams   the parameter types
      *
-     * @return
+     * @return the SignatureConstant
      */
     public SignatureConstant ensureSignatureConstant(String sName, TypeConstant[] aconstReturns, TypeConstant[] aconstParams)
         {
@@ -919,17 +919,6 @@ public class ConstantPool
     public TypeConstant ensureClassTypeConstant(Constant constClass,
                                                 Access access, TypeConstant... constTypes)
         {
-        if (!(constClass instanceof ModuleConstant
-                || constClass instanceof PackageConstant
-                || constClass instanceof ClassConstant
-//                || constClass instanceof PropertyConstant         // TODO is this still possible?
-                || constClass instanceof TypedefConstant
-                || constClass instanceof UnresolvedNameConstant))
-            {
-            throw new IllegalArgumentException("constant " + constClass.getFormat()
-                    + " is not a Module, Package, Class, Typedef, or Property (formal type parameter)");
-            }
-
         TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constClass);
         if (constType == null)
             {
@@ -941,7 +930,6 @@ public class ConstantPool
             constType = ensureAccessTypeConstant(constType, access);
             }
 
-        // TODO there is something wrong here where I'm not passing any constTypes in, but the array is 0-length (which only matters for Tuple?)
         if (constTypes != null && constTypes.length > 0)
             {
             constType = ensureParameterizedTypeConstant(constType, constTypes);
@@ -951,12 +939,12 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Obtain a constant that represents a type constant of a particular accessibility.
      * 
-     * @param constType
-     * @param access
+     * @param constType  the underlying constant
+     * @param access     the desired accessibility
      * 
-     * @return
+     * @return a type constant with the specified accessibility
      */
     public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access)
         {
@@ -975,7 +963,6 @@ public class ConstantPool
                 }
             else
                 {
-                // TODO could unwrap and re-wrap
                 throw new IllegalArgumentException("type already has an access specified");
                 }
             }
@@ -994,17 +981,37 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Obtain a constant that represents a type parameterized by the specified type parameter types.
      * 
-     * @param constType
-     * @param constTypes
+     * @param constType   the parameterized type
+     * @param constTypes  the types of the parameters of the parameterized type
      * 
-     * @return
+     * @return a type constant with the specified type parameter types
      */
     public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant[] constTypes)
         {
-        // TODO validate (make sure that it can be parameterized, and that it's not already parameterized) 
-        // TODO locator
+        if (constType.isParamsSpecified())
+            {
+            List<TypeConstant> listTypes = constType.getParamTypes();
+            int c = listTypes.size();
+            CheckTypes: if (c == constTypes.length)
+                {
+                for (int i = 0; i < c; ++i)
+                    {
+                    if (!constTypes[i].equals(listTypes.get(i)))
+                        {
+                        break CheckTypes;
+                        }
+                    }
+
+                // types all match
+                return constType;
+                }
+
+            // types do not match
+            throw new IllegalArgumentException("type already has parameters specified");
+            }
+
         return (TypeConstant) register(new ParameterizedTypeConstant(this, constType, constTypes));
         }
     
@@ -1103,8 +1110,6 @@ public class ConstantPool
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized child required");
             }
 
-        // TODO locator
-
         TypeConstant constParent = new TerminalTypeConstant(this, new ParentClassConstant(this,
                 (PseudoConstant) constChild.getDefiningConstant()));
 
@@ -1137,8 +1142,6 @@ public class ConstantPool
             {
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized parent required");
             }
-
-        // TODO locator
 
         TypeConstant constChild = new TerminalTypeConstant(this, new ChildClassConstant(this,
                 (PseudoConstant) constParent.getDefiningConstant(), sChild));
@@ -1202,22 +1205,29 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Obtain a constant representing the type of the specified identity.
      *
-     * @param constId
+     * @param constId  an identity of a class, package, module, type definition, or type parameter
      *
-     * @return
+     * @return the TerminalTypeConstant corresponding to the specified identity
      */
     public TerminalTypeConstant ensureTerminalTypeConstant(Constant constId)
         {
         assert constId != null && !(constId instanceof TypeConstant);
 
-        TerminalTypeConstant constType = (TerminalTypeConstant)
-                ensureLocatorLookup(Format.TerminalType).get(constId);
+        TerminalTypeConstant constType = null;
+
+        Object locator  = constId.getLocator();
+        if (locator != null)
+            {
+            constType = (TerminalTypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
+            }
+
         if (constType == null)
             {
             constType = (TerminalTypeConstant) register(new TerminalTypeConstant(this, constId));
             }
+
         return constType;
         }
 

@@ -131,7 +131,7 @@ public class ClassConstant
      */
     public TypeConstant asTypeConstant()
         {
-        return getConstantPool().ensureClassTypeConstant(this, null);
+        return getConstantPool().ensureTerminalTypeConstant(this);
         }
 
 

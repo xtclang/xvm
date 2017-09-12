@@ -72,9 +72,9 @@ public abstract class IdentityConstant
     /**
      * @return a List of IdentityConstants that makes up the path to this IdentityConstant
      */
-    public  List<IdentityConstant> getIdentityConstantPath()
+    public  List<IdentityConstant> getPath()
         {
-        List<IdentityConstant> list = getParentConstant().getIdentityConstantPath();
+        List<IdentityConstant> list = getParentConstant().getPath();
         list.add(this);
         return list;
         }
@@ -113,6 +113,7 @@ public abstract class IdentityConstant
         {
         return false;
         }
+
 
     // ----- constant methods ----------------------------------------------------------------------
 
