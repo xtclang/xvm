@@ -31,7 +31,6 @@ import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xOrdered;
 import org.xvm.proto.template.xString;
-import org.xvm.proto.template.xType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -156,10 +155,17 @@ public abstract class ClassTemplate
         else
             {
             mapParamsActual = new HashMap<>(mapParams.size());
+
+            // first run; just introduce the names (if recursive)
+            for (StringConstant constName : mapParams.keySet())
+                {
+                mapParamsActual.put(constName.getValue(), xObject.TYPE);
+                }
+
             for (StringConstant constName : mapParams.keySet())
                 {
                 TypeConstant constType = mapParams.get(constName);
-                Type typeObject = f_types.resolveParameterType(constType, Collections.EMPTY_MAP);
+                Type typeObject = f_types.resolveParameterType(constType, mapParamsActual);
                 mapParamsActual.put(constName.getValue(), typeObject);
                 }
             }
@@ -754,7 +760,7 @@ public abstract class ClassTemplate
             {
             Type type = hTarget.f_clazz.getActualType(sName);
 
-            return frame.assignValue(iReturn, xType.makeHandle(type));
+            return frame.assignValue(iReturn, type.getHandle());
             }
 
         GenericHandle hThis = (GenericHandle) hTarget;
@@ -1157,7 +1163,7 @@ public abstract class ClassTemplate
             m_fAtomic = true;
 
             TypeConstant constType = f_property.getType();
-            if (constType.isEcstasy("Int64"))
+            if (constType.isEcstasy("Int"))
                 {
                 markAsRef("annotations.AtomicIntNumber");
                 }

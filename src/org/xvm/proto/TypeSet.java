@@ -361,8 +361,7 @@ public class TypeSet
 
     public Type createType(TypeComposition clazz, Constant.Access access)
         {
-        Type type = new Type(clazz);
-        // TODO create the specified type
+        Type type = new Type(clazz, access);
 
         addType(type);
         return type;

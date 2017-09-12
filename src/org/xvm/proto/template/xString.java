@@ -60,30 +60,6 @@ public class xString
         return frame.assignValue(iReturn, makeHandle(hThis.m_sValue + hThat.m_sValue));
         }
 
-    // ----- comparison support -----
-
-    @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        StringHandle h1 = (StringHandle) hValue1;
-        StringHandle h2 = (StringHandle) hValue2;
-
-        return frame.assignValue(iReturn,
-                xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
-        }
-
-    @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        StringHandle h1 = (StringHandle) hValue1;
-        StringHandle h2 = (StringHandle) hValue2;
-
-        return frame.assignValue(iReturn,
-                xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
-        }
-
     @Override
     public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
@@ -189,6 +165,29 @@ public class xString
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
+    // ----- comparison support -----
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        StringHandle h1 = (StringHandle) hValue1;
+        StringHandle h2 = (StringHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+                xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        StringHandle h1 = (StringHandle) hValue1;
+        StringHandle h2 = (StringHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+                xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
+        }
 
     @Override
     public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)

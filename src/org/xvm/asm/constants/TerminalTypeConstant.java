@@ -66,8 +66,8 @@ public class TerminalTypeConstant
         super(pool);
 
         assert !(constId instanceof TypeConstant);
-        
-        switch (constId.getFormat()) 
+
+        switch (constId.getFormat())
             {
             case Module:
             case Package:
@@ -177,7 +177,17 @@ public class TerminalTypeConstant
     protected int compareDetails(Constant obj)
         {
         TerminalTypeConstant that = (TerminalTypeConstant) obj;
-        return this.m_constId.compareTo(that.m_constId);
+        Constant constThis = this.m_constId;
+        if (constThis instanceof ResolvableConstant)
+            {
+            constThis = ((ResolvableConstant) constThis).unwrap();
+            }
+        Constant constThat = that.m_constId;
+        if (constThat instanceof ResolvableConstant)
+            {
+            constThat = ((ResolvableConstant) constThat).unwrap();
+            }
+        return constThis.compareTo(constThat);
         }
 
     @Override

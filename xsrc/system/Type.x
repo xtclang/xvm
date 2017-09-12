@@ -35,8 +35,7 @@ import collections.ListMap;
  * {@code const} object even has a "{@code this}"; as a result, it is impossible to create circular
  * references using {@code const} classes.)
  */
-class Type<DataType>
-        implements Const, collections.ConstAble
+const Type<DataType>
     {
     // ----- primary state -------------------------------------------------------------------------
 
@@ -151,7 +150,7 @@ class Type<DataType>
      * Determine if references and values of the specified type will be _assignable to_ references
      * of this type.
      *
-     * let _T1_ and _T2_ be two types
+     * let _T1_ and _T2_ be two types  (T2 == this, T1 == that)
      * * let _M1_ be the set of all methods in _T1_ (including those representing properties)
      * * let _M2_ be the set of all methods in _T2_ (including those representing properties)
      * * let _T2_ be a "derivative type" of _T1_ iff
@@ -173,11 +172,11 @@ class Type<DataType>
      *       2. both _p1_ and _p2_ are (or are resolved from) the same type parameter, and both of
      *          the following hold true:
      *          1. _p2_ is assignable to _p1_
-     *          2. _t1_ produces _p1_
+     *          2. _T1_ produces _p1_
      *    3. _m1_ and _m2_ have the same number of return values, and for each return type _r1_ of
      *       _m1_ and _r2_ of _m2_, the following holds true:
      *      1. _r2_ is assignable to _r1_
-     * 2. if _t1_ is explicitly immutable, then _t2_ must also be explicitly immutable.
+     * 2. if _T1_ is explicitly immutable, then _T2_ must also be explicitly immutable.
      */
     Boolean isA(Type that)
         {
@@ -191,13 +190,18 @@ class Type<DataType>
             return false;
             }
 
+        if (that == Object.PublicType)
+            {
+            return true;
+            }
+
         // this type must have a matching method for each method of that type
         nextMethod: for (Method thatMethod : that.allMethods)
             {
             // find the corresponding method on this type
-            for (Method thisMethod : this.allMethodsByName[thatMethod.name].methods)
+            for (Method m2 : this.allMethodsByName[m1.name].methods)
                 {
-                if (thisMethod.isSubstitutableFor(thatMethod))
+                if (m2.isSubstitutableFor(m1))
                     {
                     continue nextMethod;
                     }
@@ -211,24 +215,23 @@ class Type<DataType>
         }
 
     /**
-     * Determine if this type _consumes_ that type.
+     * Determine if this type _consumes_ a formal type with the specified name.
      *
-     * @see Method.consumes
+     * @see Method.consumesFormalType
      */
-    Boolean consumes(Type that)
+    Boolean consumesFormalType(String typeName)
         {
-        return methods.matchAny(method -> method.consumes(that));
+        return methods.matchAny(method -> method.consumesFormal(typeName));
         }
 
     /**
-     * Determine if this type _produces_ that type.
+     * Determine if this type _produces_ a formal type with the specified name.
      *
-     * @see Method.produces
+     * @see Method.producesFormalType
      */
-    Boolean produces(Type that)
+    Boolean producesFormalType(String typeName)
         {
-        // TODO
-        return methods.matchAny(method -> method.produces(that));
+        return methods.matchAny(method -> method.producesFormalType(typeName));
         }
 
     /**

@@ -126,6 +126,11 @@ public class Enum
         return ix >= 0 ? m_listHandles.get(ix) : null;
         }
 
+    public EnumHandle getEnumByOrdinal(int ix)
+        {
+        return ix >= 0 ? m_listHandles.get(ix) : null;
+        }
+
     // ----- ObjectHandle -----
 
     public static class EnumHandle

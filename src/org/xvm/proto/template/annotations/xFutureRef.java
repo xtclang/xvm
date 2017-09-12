@@ -49,7 +49,7 @@ public class xFutureRef
     public void initDeclared()
         {
         // FutureRef!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
-        markNativeMethod("whenComplete", null, new String[] {"annotations.FutureRef!<RefType>"});
+        markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureRef!<RefType>"});
         markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureRef!<RefType>"});
         markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureRef!<RefType>"});
 

@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
 import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -179,12 +180,9 @@ public abstract class TypeConstant
      */
     public List<TypeConstant> getParamTypes()
         {
-        if (isModifyingType())
-            {
-            return getUnderlyingType().getParamTypes();
-            }
-
-        throw new UnsupportedOperationException();
+        return isModifyingType()
+                ? getUnderlyingType().getParamTypes()
+                : Collections.EMPTY_LIST;
         }
 
     /**

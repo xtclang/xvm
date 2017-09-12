@@ -1,6 +1,23 @@
 package org.xvm.proto;
 
+import org.xvm.asm.Component;
+import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.PropertyStructure;
+
+import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.proto.template.collections.xArray;
+import org.xvm.proto.template.types.xMethod;
+import org.xvm.proto.template.types.xMethod.MethodHandle;
+import org.xvm.proto.template.xType;
+import org.xvm.proto.template.xType.TypeHandle;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,17 +29,20 @@ import java.util.Set;
 public class Type
     {
     final public TypeComposition f_clazz; // optional
+    final public Constants.Access f_access; // only if f_clazz != null
+
+    private TypeHandle m_hType;
     private int m_nId;
 
-    private Map<String, PropertyTypelet> m_props = new HashMap<>();
-    private Map<String, MultiMethodTypelet> m_methods = new HashMap<>();
+    private xArray.GenericArrayHandle m_methods = null;
     private boolean m_fConstant;
 
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
 
-    public Type(TypeComposition clazz)
+    public Type(TypeComposition clazz, Constants.Access access)
         {
         f_clazz = clazz;
+        f_access = access;
         }
 
     public int getId()
@@ -36,14 +56,61 @@ public class Type
         m_nId = id;
         }
 
-    public void addProperty(String sName, Type type)
+    public TypeHandle getHandle()
         {
-
+        TypeHandle hType = m_hType;
+        if (hType == null)
+            {
+            hType = m_hType = xType.makeHandle(this);
+            }
+        return hType;
         }
 
-    public void resolve(TypeSet typeset)
+    public xArray.GenericArrayHandle getAllMethods()
         {
+        xArray.GenericArrayHandle methods = m_methods;
+        if (methods == null)
+            {
+            Set<MethodConstant> setMethods = new HashSet<>(); // replace w/ SignatureConstant
+            List<MethodHandle> listHandles = new ArrayList<>();
+            int nAccess = f_access.ordinal(); // 1=public, 2=protected, 3=private
 
+            for (ClassTemplate template : f_clazz.getCallChain())
+                {
+                for (Component cc : template.f_struct.children())
+                    {
+                    if (cc instanceof MultiMethodStructure)
+                        {
+                        MultiMethodStructure mm = (MultiMethodStructure) cc;
+                        for (Component cmm : mm.children())
+                            {
+                            if (cmm instanceof MethodStructure)
+                                {
+                                MethodStructure method = (MethodStructure) cmm;
+                                if (method.getAccess().ordinal() <= nAccess &&
+                                    setMethods.add(method.getIdentityConstant()))
+                                    {
+                                    listHandles.add(xMethod.makeHandle(method, f_clazz, this));
+                                    }
+                                }
+                            }
+                        }
+                    else if (cc instanceof PropertyStructure)
+                        {
+                        PropertyStructure property = (PropertyStructure) cc;
+                        MethodStructure getter = Adapter.getGetter(property);
+                        MethodStructure setter = Adapter.getSetter(property);
+
+                        }
+                    }
+
+                // private methods are only visible for the top class in the chain
+                nAccess = Math.min(2, nAccess);
+                }
+            methods = m_methods = xArray.makeHandle(xMethod.TYPE,
+                    listHandles.toArray(new ObjectHandle[listHandles.size()]));
+            }
+        return methods;
         }
 
     /**
@@ -100,101 +167,6 @@ public class Type
             {
             sb.append(" Name=").append(f_clazz);
             }
-        if (m_fConstant)
-            {
-            sb.append(" constant");
-            }
-        if (!m_props.isEmpty())
-            {
-            sb.append("\nProperties:");
-            for (PropertyTypelet t : m_props.values())
-                {
-                sb.append(t);
-                }
-
-            sb.append("\nMethods:");
-            for (MultiMethodTypelet t : m_methods.values())
-                {
-                sb.append(t);
-                }
-            }
         return sb.toString();
-        }
-
-    public static class PropertyTypelet
-        {
-        String m_sName;
-        Type m_type;
-
-        PropertyTypelet(String sName, Type type)
-            {
-            m_sName = sName;
-            m_type = type;
-            }
-
-        @Override
-        public String toString()
-            {
-            // e.g. "#17 name"
-            return "\n  #" + m_type + " " + m_sName;
-            }
-        }
-
-    public static class MultiMethodTypelet
-        {
-        String m_sName;
-        Set<MethodTypelet> m_setMethods;
-
-        @Override
-        public String toString()
-            {
-            StringBuilder sb = new StringBuilder();
-            for (MethodTypelet mt : m_setMethods)
-                {
-                sb.append("\n  ").append(mt);
-                }
-            return sb.toString();
-            }
-
-        protected class MethodTypelet
-            {
-            Type[] m_typeArg;
-            Type[] m_typeRet;
-
-            MethodTypelet(Type[] typeArg, Type[] typeRet)
-                {
-                m_typeArg = typeArg;
-                m_typeRet = typeRet;
-                }
-
-            @Override
-            public String toString()
-                {
-                // e.g. "(#17) foo(#11, #34)"
-                StringBuilder sb = new StringBuilder();
-                sb.append('(');
-                for (int i = 0, c = m_typeRet.length; i < c; i++)
-                    {
-                    sb.append('#').append(m_typeRet[i].m_nId);
-                    if (i < c)
-                        {
-                        sb.append(", ");
-                        }
-                    }
-                sb.append(") ").append(MultiMethodTypelet.this.m_sName);
-
-                sb.append('(');
-                for (int i = 0, c = m_typeArg.length; i < c; i++)
-                    {
-                    sb.append('#').append(m_typeArg[i].m_nId);
-                    if (i < c)
-                        {
-                        sb.append(", ");
-                        }
-                    }
-                sb.append(')');
-                return sb.toString();
-                }
-            }
         }
     }

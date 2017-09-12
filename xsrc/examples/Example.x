@@ -2711,6 +2711,7 @@ parameterized Class.
 let "parameterized type" be a Type that originates from the formal Type of a parameterized Class.
 
 for any method m of a parameterized type with a type parameter T:
+
 - let m "consume" T if any of the following holds true:
  1. m has a parameter type declared as T;
  2. m has a return type that "consumes T";
@@ -2720,6 +2721,7 @@ for any method m of a parameterized type with a type parameter T:
      or the method returning the Ref<T> is annotated with @ro/ReadOnly, then m is assumed to not
      "consume T"
  3. m has a parameter type that "produces T".
+
 - let m "produce" T if any of the following holds true:
  1. m has a return type declared as T;
  2. has a return type that "produces T";
@@ -2734,7 +2736,7 @@ let T1 and T2 be two types
  3. C2 is a derivative Class of C1
 - if T1 and T2 are both parameterized types, let "same type parameter" be a type parameter of
   T1 that also is a type parameter of T2 because T2 is a derivative type of T1, or T1 is a
-  derivative type of T1, or both T1 and T2 are derivative types of some T3.
+  derivative type of T2, or both T1 and T2 are derivative types of some T3.
 
 Type T2 is assignable to a Type T1 iff both of the following hold true:
 1. for each m1 in M1, there exists an m2 in M2 for which all of the following hold true:
@@ -2750,6 +2752,15 @@ Type T2 is assignable to a Type T1 iff both of the following hold true:
       m2, the following holds true:
     1.3.1 r2 is assignable to r1
 2. If T1 is explicitly immutable, then T2 must also be explicitly immutable.
+
+// This is a summary of all of the above, in a simple 2x2 matrix:
+//
+//                   widening                narrowing
+// C<T1> -> C<T2>    T1=String -> T2=Object  T1=Object -> T2=String
+// ----------------  ----------------------  -------------------------
+// !(C consumes T1)  ok                      Compile Time Error
+// !(C produces T1)  possible RTE            ok
+
 
 // example covariance testing
 
@@ -2781,8 +2792,19 @@ class FakePCofString
 
 C<String>      x = new C<Object>();  // ok
 C<Object>      x = new PC<String>(); // fails
-PC<Object>     x = new PC<String>(); // ok
+PC<Object>     x = new PC<String>(); // ok, but the RT needs to "safe-wrap" the consuming methods
 FakePCofObject x = new PC<String>(); // fails
+PC<String>     x = new PC<Object>(); // fails
+
+class C<T>
+    {
+    T prop1;  // consumes & produces
+    @ro T prop2; // produces only
+    @ro P<T> prop3; // consumes only
+    @ro PC<T> prop4; // consumes & produces
+    }
+
+
 
 // how does auto-mixin work with class -> formal type -> resolved type if the mixin mixes in
 // because of the information in the resolved type?

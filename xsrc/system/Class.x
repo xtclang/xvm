@@ -34,8 +34,7 @@ import types.TypeParameter;
  * {@code const} object even has a "{@code this}"; as a result, it is impossible to create circular
  * references using {@code const} classes.)
  */
-class Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>
-        implements Const, collections.ConstAble
+const Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>
 //        incorporates conditional Enumeration<PublicType extends Enum>
     {
     // ----- data types ----------------------------------------------------------------------------

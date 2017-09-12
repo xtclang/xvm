@@ -1,7 +1,10 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.PropertyStructure;
+
 import org.xvm.proto.*;
+import org.xvm.proto.template.collections.xArray;
 
 import java.util.Collections;
 
@@ -28,20 +31,34 @@ public class xType
     @Override
     public void initDeclared()
         {
-        // TODO
+        markNativeGetter("allMethods");
+        markNativeGetter("explicitlyImmutable");
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+        {
+        TypeHandle hThis = (TypeHandle) hTarget;
+
+        switch (property.getName())
+            {
+            case "allMethods":
+                Type type = hThis.getType();
+                xArray.GenericArrayHandle methods = type.getAllMethods();
+                return frame.assignValue(iReturn, methods);
+            }
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     public static TypeHandle makeHandle(Type type)
         {
-        return new TypeHandle(
-                INSTANCE.ensureClass(Collections.singletonMap("DataType", type)),
-                type);
+        return new TypeHandle(INSTANCE.ensureClass(Collections.singletonMap("DataType", type)));
         }
 
     public static class TypeHandle
             extends ObjectHandle
         {
-        protected TypeHandle(TypeComposition clazz, Type type)
+        protected TypeHandle(TypeComposition clazz)
             {
             super(clazz);
             }

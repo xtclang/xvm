@@ -120,6 +120,7 @@ public class Container
         f_types.getTemplate("String");
         f_types.getTemplate("Module");
         f_types.getTemplate("Type");
+        f_types.getTemplate("types.Method");
 
         // the native interfaces are pseudo-classes (also with INSTANCE static variable)
         f_types.initNativeInterfaces();

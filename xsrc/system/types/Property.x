@@ -14,6 +14,12 @@ const Property<TargetType, PropertyType>(Method<TargetType, Tuple<Ref<PropertyTy
 
     // TODO determine if the property is lazy, future, atomic, soft, weak
 
+    Boolean readOnly;
+
+    Method? getter;
+    Method? setter;
+
+
     // ----- dynamic behavior ----------------------------------------------------------------------
 
     /**

@@ -43,7 +43,7 @@ class Object
      */
     Object[] to<Object[]>()
         {
-        return {this}.as(Object[]);
+        return {this};
         }
 
     /**

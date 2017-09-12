@@ -21,6 +21,13 @@ const Method<TargetType,
      */
     Boolean conditionalReturn;
 
+    enum Access {Public, Protected, Private}
+
+    /**
+     * Method access.
+     */
+    Access access;
+
     // -----
 
     /**
@@ -47,35 +54,54 @@ const Method<TargetType,
         }
 
     /**
-     * Determine if this method _consumes_ that type.
+     * Determine if this method _consumes_ a formal type with the specified name.
      *
      * A method _m_ "consumes" type _T_ if any of the following holds true:
      * 1. _m_ has a parameter type declared as _T_;
-     * 2. _m_ has a return type that _"consumes T"_;
-     * 3. _m_ has a parameter type that _"produces T"_.
+     * 2. _m_ has a parameter type that _"produces T"_.
+     * 3. _m_ has a return type that _"consumes T"_;
      *
-     * There is a notable exception to the above rule #2 for a method on a type corresponding to a
+     * There is a notable exception to the above rule #3 for a method on a type corresponding to a
      * property, which returns a {@code Ref}) to represent the property type, and thus (due to the
      * the methods on {@code Ref<T>}) appears to _"consume T"_; however, if the type containing
      * the property is explicitly immutable, or the method returning the {@code Ref<T>}) is
      * annotated with {@code @ro}/{@code ReadOnly}, then _m_ is assumed to not _"consume T"_.
-     * TODO implement the above exception to the rule
      */
-    Boolean consumes(Type that)
+    Boolean consumesFormalType(String typeName, Boolean ignoreImmediateProduction = false)
         {
-        for (Type param : ParamTypes)
+        paramLoop: for (Type paramType : ParamTypes)
             {
-            if (param == that || param.produces(that))
+            if (String[] names : formalParamName(paramLoop.counter))
                 {
-                return true;
+                if (!ignoreImmediateProduction && names.contains(typeName))
+                    {
+                    return true;
+                    }
+                }
+            else
+                {
+                if (paramType.producesFormalType(typeName))
+                    {
+                    return true;
+                    }
                 }
             }
 
-        for (Type return_ : ReturnTypes)
+        returnLoop: for (Type returnType : ReturnTypes)
             {
-            if (return_.consumes(that))
+            if (String[] names : formalReturnName(returnLoop.counter))
                 {
-                return true;
+                // may produce, but doesn't consume
+                }
+            else
+                {
+                // see the exception of the rule 3 above
+                ignoreImmediateProduction = property?.readOnly;
+
+                if (returnType.consumesFormalType(typeName, ignoreImmediateProduction))
+                    {
+                    return true;
+                    }
                 }
             }
 
@@ -83,28 +109,45 @@ const Method<TargetType,
         }
 
     /**
-     * Determine if this method _produces_ that type.
+     * Determine if this method _produces_ a formal type with the specified name.
      *
      * A method _m_ "produces" type _T_ if any of the following holds true:
      * 1. _m_ has a return type declared as _T_;
      * 2. _m_ has a return type that _"produces T"_;
      * 3. _m_ has a parameter type that _"consumes T"_.
      */
-    Boolean produces(Type that)
+    Boolean produces(String typeName)
         {
-        for (Type return_ : ReturnTypes)
+        returnLoop: for (Type returnType : ReturnTypes)
             {
-            if (return_ == that || return_.produces(that))
+            if (String[] names : formalReturnName(returnLoop.counter))
                 {
-                return true;
+                if (names.contains(typeName))
+                    {
+                    return true;
+                    }
+                }
+            else
+                {
+                if (returnType.producesFormalType(typeName))
+                    {
+                    return true;
+                    }
                 }
             }
 
-        for (Type param : ParamTypes)
+        paramLoop: for (Type paramType : ParamTypes)
             {
-            if (param.consumes(that))
+            if (String[] names : formalParamName(paramLoop.counter))
                 {
-                return true;
+                // may produce, but doesn't consume
+                }
+            else
+                {
+                if (paramType.consumesFormalType(typeName))
+                    {
+                    return true;
+                    }
                 }
             }
 
@@ -123,8 +166,9 @@ const Method<TargetType,
             return true;
             }
 
-        // TODO
         /*
+         * Excerpt From Type#isA() documentation (where m2 == this and m1 == that):
+         *
          * Type _T2_ is assignable to a Type _T1_ iff both of the following hold true:
          * 1. for each _m1_ in _M1_, there exists an _m2_ in _M2_ for which all of the following hold
          *    true:
@@ -135,16 +179,77 @@ const Method<TargetType,
          *       2. both _p1_ and _p2_ are (or are resolved from) the same type parameter, and both of
          *          the following hold true:
          *          1. _p2_ is assignable to _p1_
-         *          2. _t1_ produces _p1_
+         *          2. _T1_ produces _p1_
          *    3. _m1_ and _m2_ have the same number of return values, and for each return type _r1_ of
          *       _m1_ and _r2_ of _m2_, the following holds true:
          *      1. _r2_ is assignable to _r1_
-         * 2. if _t1_ is explicitly immutable, then _t2_ must also be explicitly immutable.
          */
+
+        if (this.name             != that.name            ||
+            this.ParamTypes.size  != that.ParamTypes.size ||
+            this.ReturnTypes.size != that.ReturnTypes.size)
+            {
+            return false;
+            }
+
+        for (Type typeR2 : this.ReturnTypes, Type typeR1 : that.ReturnTypes)
+             {
+             if (!typeR2.isA(typeR1))
+                 {
+                 return false;
+                 }
+             }
+
+        loop: for (Type typeP2 : this.ParamTypes, Type typeP1 : that.ParamTypes)
+            {
+            if (typeP1.isA(typeP2))
+                {
+                continue;
+                }
+
+            if (!typeP2.isA(typeP1))
+                {
+                return false;
+                }
+
+            // if there is an number of different formal names, then at least one of them must be
+            // produced by the type T1
+            if (String[] namesThis : this.formalParamNames(loop.count))
+                {
+                if (String[] namesThat : that.formalParamNames(loop.count))
+                    {
+                    for (String name : nameThis.intersection(namesThat))
+                        {
+                        if (that.TargetType.produces(typeP1))
+                            {
+                            return true;
+                            }
+                        }
+                    }
+                }
+            return false;
+            }
 
         return true;
         }
 
+    /**
+     * Return an array of formal type names for the parameter type at the specified index.
+     * If the parameter type is not a formal one, this method will return false.
+     */
+    conditional String[] formalParamNames(Int i)
+         {
+         TODO -- native
+         }
+
+    /**
+     * Return an array of formal type names for the return type at the specified index.
+     * If the return type is not a formal one, this method will return false.
+     */
+    conditional String[] formalReturnNames(Int i)
+         {
+         TODO -- native
+         }
 
     // ----- dynamic behavior ----------------------------------------------------------------------
 
