@@ -12,12 +12,12 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
 
+import org.xvm.proto.template.xObject;
 import org.xvm.util.Handy;
 
 import java.util.Arrays;
@@ -247,7 +247,7 @@ public class Adapter
         for (int i = 0; i < cTypes; i++)
             {
             String sType = asType[i].trim();
-            aType[i] = new Parameter(pool, (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType)),
+            aType[i] = new Parameter(pool, (TypeConstant) pool.getConstant(getClassTypeConstId(sType)),
                     (fReturn ?"r":"p")+i, null, fReturn, i, false);
             }
         return aType;
@@ -280,12 +280,31 @@ public class Adapter
             {
             Object[] ao = (Object[]) oValue;
             int c = ao.length;
+            TypeConstant[] atype = new TypeConstant[c];
             Constant[] aconst = new Constant[c];
+            ConstantPool pool = f_container.f_pool;
             for (int i = 0; i < c; i++)
                 {
-                aconst[i] = ensureValueConstant(ao[i]);
+                Constant constVal = ensureValueConstant(ao[i]);
+                TypeConstant constType;
+                switch (constVal.getFormat())
+                    {
+                    case String:
+                        constType = pool.ensureEcstasyTypeConstant("String");
+                        break;
+                    case Int64:
+                        constType = pool.ensureEcstasyTypeConstant("Int64");
+                        break;
+                    default:
+                        constType = pool.ensureEcstasyTypeConstant("Object");
+                        break;
+                    }
+                atype[i]  = constType;
+                aconst[i] = constVal;
                 }
-            return f_container.f_pool.ensureTupleConstant(aconst);
+            TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
+                    pool.ensureEcstasyTypeConstant("collections.Tuple"), atype);
+            return pool.ensureTupleConstant(typeTuple, aconst);
             }
 
         if (oValue == null)
@@ -358,7 +377,7 @@ public class Adapter
         }
 
     // TODO: move this to ClassStructure
-    public static ClassTypeConstant getContribution(ClassStructure structClass, Component.Composition composition)
+    public static TypeConstant getContribution(ClassStructure structClass, Component.Composition composition)
         {
         Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
                 filter(contribution -> contribution.getComposition().equals(composition)).findFirst();

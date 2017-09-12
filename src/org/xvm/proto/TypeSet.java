@@ -4,16 +4,14 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
-import org.xvm.asm.constants.ParameterTypeConstant;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnionTypeConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.template.Const;
 import org.xvm.proto.template.Enum;
@@ -238,15 +236,15 @@ public class TypeSet
     // ----- TypeCompositions -----
 
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
-    public TypeComposition ensureComposition(int nClassConstId)
+    public TypeComposition ensureComposition(int nClassConstId)     // TODO GG add target
         {
         TypeComposition typeComposition = f_mapConstCompositions.get(nClassConstId);
         if (typeComposition == null)
             {
-            TypeConstant constTyp = (TypeConstant)
+            TypeConstant constType = (TypeConstant)
                     f_container.f_pool.getConstant(nClassConstId); // must exist
 
-            typeComposition = resolveComposition(constTyp);
+            typeComposition = resolveComposition(constType);
 
             f_mapConstCompositions.put(nClassConstId, typeComposition);
             }
@@ -256,56 +254,69 @@ public class TypeSet
     // produce a TypeComposition based on the specified TypeConstant
     protected TypeComposition resolveComposition(TypeConstant constType)
         {
-        if (constType instanceof ClassTypeConstant)
+        Constant constId = constType.getDefiningConstant();
+        String   sParam;
+        switch (constId.getFormat())
             {
-            ClassTypeConstant constClassType = (ClassTypeConstant) constType;
-            ClassTemplate template = getTemplate(constClassType.getClassConstant());
-            return template.resolveClass(constClassType, Collections.EMPTY_MAP);
+            case Module:
+            case Package:
+            case Class:
+                ClassTemplate template = getTemplate((IdentityConstant) constId);
+                return template.resolveClass(constType, Collections.EMPTY_MAP); // TODO
+
+            case Register:
+                RegisterConstant constReg = (RegisterConstant) constId;
+                MethodStructure method = (MethodStructure) constReg.getMethod().getComponent();
+                sParam = method.getParam(constReg.getRegister()).getName();
+                break;
+
+            case Property:
+                sParam  = ((PropertyConstant) constId).getName();
+                break;
+
+            default:
+                throw new IllegalStateException("unsupported constant: " + constId);
             }
 
-        if (constType instanceof IntersectionTypeConstant ||
-                constType instanceof UnionTypeConstant)
-            {
-            throw new UnsupportedOperationException("TODO");
-            }
-
+        /* TODO
+        Type type = f_mapGenericActual.get(sParam);
+        return type == null || type.f_clazz == null
+                ? xObject.CLASS
+                : type.f_clazz;
+        */
         throw new IllegalArgumentException("Unresolved type constant: " + constType);
         }
 
     // resolve a parameter type given a map of actual parameter types
     public Type resolveParameterType(TypeConstant constType, Map<String, Type> mapActual)
         {
-        if (constType instanceof UnresolvedTypeConstant)
+        // TODO merge with above and/or TypeComposition logic
+        Constant constId = constType.getDefiningConstant();
+        String   sParam;
+        switch (constId.getFormat())
             {
-            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+            case Module:
+            case Package:
+            case Class:
+                ClassTemplate template = getTemplate((IdentityConstant) constId);
+                return template.resolveClass(constType, mapActual).ensurePublicType();
+
+            case Register:
+                RegisterConstant constReg = (RegisterConstant) constId;
+                MethodStructure  method = (MethodStructure) constReg.getMethod().getComponent();
+                sParam = method.getParam(constReg.getRegister()).getName();
+                break;
+
+            case Property:
+                sParam  = ((PropertyConstant) constId).getName();
+                break;
+
+            default:
+                throw new IllegalStateException("unsupported constant: " + constId);
             }
 
-        if (constType instanceof ClassTypeConstant)
-            {
-            ClassTypeConstant constClass = (ClassTypeConstant) constType;
-            ClassTemplate template = getTemplate(constClass.getClassConstant());
-            return template.resolveClass(constClass, mapActual).ensurePublicType();
-            }
-
-        if (constType instanceof ParameterTypeConstant)
-            {
-            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
-            Type type = mapActual.get(constParam.getName());
-
-            if (type == null)
-                {
-                throw new IllegalArgumentException("Unresolved type constant: " + constParam);
-                }
-            return type;
-            }
-
-        if (constType instanceof IntersectionTypeConstant ||
-                constType instanceof UnionTypeConstant)
-            {
-            throw new UnsupportedOperationException("TODO");
-            }
-
-        throw new IllegalArgumentException("Unresolved type constant: " + constType);
+        Type type = mapActual.get(sParam);
+        return type == null ? xObject.TYPE : type;
         }
 
     // ----- Types -----

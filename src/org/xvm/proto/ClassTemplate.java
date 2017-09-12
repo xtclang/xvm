@@ -9,12 +9,10 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
@@ -105,7 +103,7 @@ public abstract class ClassTemplate
         ClassTemplate templateCategory = null;
         boolean fService = false;
 
-        ClassTypeConstant constSuper = Adapter.getContribution(structClass, ClassStructure.Composition.Extends);
+        TypeConstant constSuper = Adapter.getContribution(structClass, ClassStructure.Composition.Extends);
         if (constSuper == null)
             {
             if (!f_sName.equals("Object"))
@@ -116,7 +114,7 @@ public abstract class ClassTemplate
             }
         else
             {
-            structSuper = (ClassStructure) constSuper.getClassConstant().getComponent();
+            structSuper = (ClassStructure) ((IdentityConstant) constSuper.getDefiningConstant()).getComponent();
             templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
             fService = templateSuper.isService();
             }
@@ -294,9 +292,9 @@ public abstract class ClassTemplate
                 propSuper.getAccess(), propSuper.getType(), sPropName);
         }
 
-    public ClassTypeConstant getTypeConstant()
+    public TypeConstant getTypeConstant()
         {
-        return ((ClassConstant) f_struct.getIdentityConstant()).asTypeConstant();
+        return f_struct.getIdentityConstant().asTypeConstant();
         }
 
     // get a method declared at this template level
@@ -428,11 +426,11 @@ public abstract class ClassTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
-    public TypeComposition resolveClass(ClassTypeConstant constClassType, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(TypeConstant constClassType, Map<String, Type> mapActual)
         {
-        assert constClassType.getClassConstant().getPathString().equals(f_sName);
+        assert ((IdentityConstant) constClassType.getDefiningConstant()).getPathString().equals(f_sName);
 
-        List<TypeConstant> listParams = constClassType.getTypeConstants();
+        List<TypeConstant> listParams = constClassType.getParamTypes();
 
         int cParams = listParams.size();
         if (cParams == 0)
@@ -1159,12 +1157,7 @@ public abstract class ClassTemplate
             m_fAtomic = true;
 
             TypeConstant constType = f_property.getType();
-            if (constType instanceof UnresolvedTypeConstant)
-                {
-                constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
-                }
-            if (constType instanceof ClassTypeConstant &&
-                    ((ClassTypeConstant) constType).getClassConstant().getName().equals("Int64"))
+            if (constType.isEcstasy("Int64"))
                 {
                 markAsRef("annotations.AtomicIntNumber");
                 }

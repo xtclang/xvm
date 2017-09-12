@@ -2,20 +2,20 @@ package org.xvm.proto;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.Ref;
 import org.xvm.proto.template.Ref.RefHandle;
@@ -189,12 +189,13 @@ public class TypeComposition
         if (fTop && format == Component.Format.MIXIN)
             {
             // native mix-in (e.g. FutureRef)
-            ClassTypeConstant constInto =
+            TypeConstant constInto =
                     Adapter.getContribution(struct, Component.Composition.Into);
 
             assert constInto != null;
 
-            ClassTemplate templateInto = f_template.f_types.getTemplate(constInto.getClassConstant());
+            ClassTemplate templateInto = f_template.f_types.getTemplate(
+                    (IdentityConstant) constInto.getDefiningConstant());
             TypeComposition clzInto = templateInto.resolveClass(constInto, f_mapGenericActual);
 
             addNoDupes(clzInto.collectDeclaredCallChain(false), list, set);
@@ -421,29 +422,34 @@ public class TypeComposition
     //       but returns TypeComposition rather than Type and is more tolerant
     public TypeComposition resolveClass(TypeConstant constType)
         {
-        if (constType instanceof UnresolvedTypeConstant)
+        Constant constId = constType.getDefiningConstant();
+        String   sParam;
+        switch (constId.getFormat())
             {
-            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+            case Module:
+            case Package:
+            case Class:
+                ClassTemplate template = f_template.f_types.getTemplate((IdentityConstant) constId);
+                return template.resolveClass(constType, f_mapGenericActual);
+
+            case Register:
+                RegisterConstant constReg = (RegisterConstant) constId;
+                MethodStructure  method = (MethodStructure) constReg.getMethod().getComponent();
+                sParam = method.getParam(constReg.getRegister()).getName();
+                break;
+
+            case Property:
+                sParam  = ((PropertyConstant) constId).getName();
+                break;
+
+            default:
+                throw new IllegalStateException("unsupported constant: " + constId);
             }
 
-        if (constType instanceof ClassTypeConstant)
-            {
-            ClassTypeConstant constClass = (ClassTypeConstant) constType;
-            ClassTemplate template = f_template.f_types.getTemplate(constClass.getClassConstant());
-            return template.resolveClass(constClass, f_mapGenericActual);
-            }
-
-        if (constType instanceof ParameterTypeConstant)
-            {
-            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
-            Type type = f_mapGenericActual.get(constParam.getName());
-            if (type != null && type.f_clazz != null)
-                {
-                return type.f_clazz;
-                }
-            }
-
-        return xObject.CLASS;
+        Type type = f_mapGenericActual.get(sParam);
+        return type == null || type.f_clazz == null
+                ? xObject.CLASS
+                : type.f_clazz;
         }
 
     // retrieve the actual type for the specified formal parameter name

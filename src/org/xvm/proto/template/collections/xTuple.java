@@ -4,8 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.ClassTypeConstant;
-import org.xvm.asm.constants.TupleConstant;
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.ClassTemplate;
@@ -69,9 +68,9 @@ public class xTuple
         }
 
     @Override
-    public TypeComposition resolveClass(ClassTypeConstant constClassType, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(TypeConstant constClassType, Map<String, Type> mapActual)
         {
-        List<TypeConstant> listParams = constClassType.getTypeConstants();
+        List<TypeConstant> listParams = constClassType.getParamTypes();
 
         int cParams = listParams.size();
         if (cParams == 0)
@@ -91,15 +90,15 @@ public class xTuple
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        TupleConstant constTuple = (TupleConstant) constant;
+        ArrayConstant constTuple = (ArrayConstant) constant;
 
-        List<Constant> list = constTuple.getValue();
-        int c = list.size();
+        Constant[] aconst = constTuple.getValue();
+        int c = aconst.length;
         ObjectHandle[] ahValue = new ObjectHandle[c];
         Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
-            Constant constValue = list.get(i);
+            Constant constValue = aconst[i];
 
             ahValue[i] = heap.ensureConstHandle(constValue.getPosition());
             aType[i] = heap.getConstTemplate(constValue).f_clazzCanonical.ensurePublicType();

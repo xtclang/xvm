@@ -114,6 +114,24 @@ public abstract class IdentityConstant
         return false;
         }
 
+    /**
+     * @return a TypeConstant for this class
+     */
+    public TypeConstant asTypeConstant()
+        {
+        switch (getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return getConstantPool().ensureTerminalTypeConstant(this);
+
+            default:
+                throw new IllegalStateException("not a class type: " + this);
+            }
+        }
+
+
 
     // ----- constant methods ----------------------------------------------------------------------
 

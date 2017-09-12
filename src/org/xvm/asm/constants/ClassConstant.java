@@ -126,14 +126,6 @@ public class ClassConstant
                 && ((ModuleConstant) constName).isEcstasyModule();
         }
 
-    /**
-     * @return a TypeConstant for this class
-     */
-    public TypeConstant asTypeConstant()
-        {
-        return getConstantPool().ensureTerminalTypeConstant(this);
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
