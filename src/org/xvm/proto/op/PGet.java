@@ -1,12 +1,11 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpProperty;
-import org.xvm.proto.TypeComposition;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -59,16 +58,15 @@ public class PGet extends OpProperty
                 return R_REPEAT;
                 }
 
-            TypeComposition clazz = hTarget.f_clazz;
+            PropertyConstant constProperty = (PropertyConstant)
+                    frame.f_context.f_pool.getConstant(f_nPropConstId);
 
-            PropertyStructure property = getPropertyStructure(frame, clazz, f_nPropConstId);
-
-            return clazz.f_template.getPropertyValue(frame, hTarget, property, f_nRetValue);
+            return hTarget.f_clazz.f_template.getPropertyValue(
+                    frame, hTarget, constProperty.getName(), f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

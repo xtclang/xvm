@@ -9,7 +9,7 @@ import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.annotations.xInjectedRef;
-import org.xvm.proto.template.xRef.RefHandle;
+import org.xvm.proto.template.Ref.RefHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -76,8 +76,7 @@ public class DNVar extends Op
                     }
                 catch (ExceptionHandle.WrapperException e)
                     {
-                    frame.m_hException = e.getExceptionHandle();
-                    return R_EXCEPTION;
+                    return frame.raiseException(e);
                     }
 
                 m_ref = hRef;

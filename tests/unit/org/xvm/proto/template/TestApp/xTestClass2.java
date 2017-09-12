@@ -30,10 +30,8 @@ public class xTestClass2 extends ClassTemplate
         adapter.addMethod(f_struct, "construct", new String[]{"Int64", "String"}, VOID);
         adapter.addMethod(f_struct, "finally", new String[]{"Int64", "String"}, VOID);
 
-        MethodInfo construct = ensureMethodInfo("construct",
-                new String[]{"Int64", "String"});
-        MethodInfo ftFinally = ensureMethodInfo("finally",
-                new String[]{"Int64", "String"});
+        MethodInfo construct = ensureMethodInfo("construct", new String[]{"Int64", "String"});
+        MethodInfo ftFinally = ensureMethodInfo("finally", new String[]{"Int64", "String"});
 
         construct.m_aop = new Op[]
             { // #0 = i; #1 = s

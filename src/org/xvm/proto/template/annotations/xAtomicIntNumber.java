@@ -1,16 +1,14 @@
 package org.xvm.proto.template.annotations;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xInt64;
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.Ref;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -20,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author gg 2017.02.27
  */
 public class xAtomicIntNumber
-        extends xRef
+        extends Ref
     {
     public static xAtomicIntNumber INSTANCE;
 
@@ -58,28 +56,26 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 
         if (atomic == null)
             {
-            frame.m_hException = xException.makeHandle("Unassigned reference");
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(atomic.incrementAndGet()));
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 
         if (atomic == null)
             {
-            frame.m_hException = xException.makeHandle("Unassigned reference");
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndIncrement()));
@@ -92,8 +88,7 @@ public class xAtomicIntNumber
 
         if (atomic == null)
             {
-            frame.m_hException = xException.makeHandle("Unassigned reference");
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
         long lValue = atomic.get();
@@ -118,6 +113,12 @@ public class xAtomicIntNumber
         protected AtomicIntRefHandle(TypeComposition clazz, String sName)
             {
             super(clazz, sName);
+            }
+
+        @Override
+        public boolean isAssigned()
+            {
+            return m_atomicValue != null;
             }
 
         @Override

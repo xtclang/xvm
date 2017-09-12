@@ -1,14 +1,15 @@
 package org.xvm.proto.template.collections;
 
 import org.xvm.asm.ClassStructure;
+
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
+
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xInt64;
@@ -97,8 +98,7 @@ public class xIntArray
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            frame.m_hException = IndexSupport.outOfRange(lIndex, hArray.m_cSize);
-            return Op.R_EXCEPTION;
+            return frame.raiseException(IndexSupport.outOfRange(lIndex, hArray.m_cSize));
             }
 
         return frame.assignValue(iReturn,

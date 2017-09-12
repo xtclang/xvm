@@ -5,12 +5,13 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
+import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.xBoolean;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.Ref;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -20,18 +21,18 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author gg 2017.02.27
  */
 public class xAtomicRef
-        extends xRef
+        extends Ref
     {
     public xAtomicRef(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure, false);
         }
 
-
     @Override
     public void initDeclared()
         {
         markNativeMethod("replace", new String[]{"RefType", "RefType"});
+        markNativeMethod("replaceFailed", new String[]{"RefType", "RefType"}, new String[] {"RefType"});
         }
 
     @Override
@@ -46,14 +47,93 @@ public class xAtomicRef
                 switch (method.getName())
                     {
                     case "replace":
-                        boolean fSuccess = hThis.m_atomic.compareAndSet(ahArg[0], ahArg[1]);
+                        {
+                        ObjectHandle hExpect = ahArg[0];
+                        ObjectHandle hNew = ahArg[1];
+                        AtomicReference<ObjectHandle> atomic = hThis.m_atomic;
 
-                        return frame.assignValue(iReturn,
-                                fSuccess ? xBoolean.TRUE : xBoolean.FALSE);
+                        // conceptually, the logic looks like:
+                        //
+                        //    if (atomic.compareAndSet(hExpect, hNew))
+                        //       {
+                        //       return true;
+                        //       }
+                        //    TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
+                        //
+                        //    ObjectHandle hCurrent;
+                        //    while (clz.callEquals(hCurrent = atomic.get(), hExpect))
+                        //       {
+                        //       if (atomic.compareAndSet(hCurrent, hNew))
+                        //           {
+                        //           return true;
+                        //           }
+                        //       nExpect = hCurrent;
+                        //       }
+                        //    return false;
+
+                        if (atomic.compareAndSet(hExpect, hNew))
+                            {
+                            return frame.assignValue(iReturn, xBoolean.TRUE);
+                            }
+
+                        TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
+
+                        return new Replace(clz, atomic, hExpect, hNew, iReturn).doNext(frame);
+                        }
                     }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        AtomicHandle hThis = (AtomicHandle) hTarget;
+
+        switch (ahArg.length)
+            {
+            case 2:
+                switch (method.getName())
+                    {
+                    case "replaceFailed":
+                        {
+                        ObjectHandle hExpect = ahArg[0];
+                        ObjectHandle hNew = ahArg[1];
+                        AtomicReference<ObjectHandle> atomic = hThis.m_atomic;
+
+                        // conceptually, the logic looks like:
+                        //
+                        //    if (atomic.compareAndSet(hExpect, hNew))
+                        //       {
+                        //       return false;
+                        //       }
+                        //    TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
+                        //
+                        //    ObjectHandle hCurrent;
+                        //    while (clz.callEquals(hCurrent = atomic.get(), hExpect))
+                        //       {
+                        //       if (atomic.compareAndSet(hCurrent, hNew))
+                        //           {
+                        //           return false;
+                        //           }
+                        //       nExpect = hCurrent;
+                        //       }
+                        //    return true, hExpect;
+
+                        if (atomic.compareAndSet(hExpect, hNew))
+                            {
+                            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                            }
+
+                        TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
+
+                        return new ReplaceFailed(clz, atomic, hExpect, hNew, aiReturn).doNext(frame);
+                        }
+                    }
+            }
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     @Override
@@ -75,6 +155,12 @@ public class xAtomicRef
                 {
                 m_atomic.set(hValue);
                 }
+            }
+
+        @Override
+        public boolean isAssigned()
+            {
+            return m_atomic != null;
             }
 
         @Override
@@ -100,6 +186,154 @@ public class xAtomicRef
         public String toString()
             {
             return f_clazz + " -> " + m_atomic.get();
+            }
+        }
+
+    /**
+     * Helper class for replace() implementation.
+     */
+    protected static class Replace
+            implements Frame.Continuation
+        {
+        private final TypeComposition clz;
+        private final AtomicReference<ObjectHandle> atomic;
+        private ObjectHandle hExpect;
+        private final ObjectHandle hNew;
+        private final int iReturn;
+
+        public Replace(TypeComposition clz, AtomicReference<ObjectHandle> atomic,
+                       ObjectHandle hExpect, ObjectHandle hNew, int iReturn)
+            {
+            this.clz = clz;
+            this.atomic = atomic;
+            this.hExpect = hExpect;
+            this.hNew = hNew;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+                {
+                return frameCaller.assignValue(iReturn, xBoolean.FALSE);
+                }
+
+            if (atomic.compareAndSet(hExpect, hNew))
+                {
+                return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+                }
+
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (true)
+                {
+                ObjectHandle hCurrent = atomic.get();
+
+                switch (clz.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
+                    {
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    case Op.R_NEXT:
+                        if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+                            {
+                            return frameCaller.assignValue(iReturn, xBoolean.FALSE);
+                            }
+
+                        if (atomic.compareAndSet(hCurrent, hNew))
+                            {
+                            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+                            }
+                        hExpect = hCurrent;
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        hExpect = hCurrent;
+                        return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            }
+        }
+
+    /**
+     * Helper class for replaceFailed() implementation.
+     */
+    protected static class ReplaceFailed
+            implements Frame.Continuation
+        {
+        private final TypeComposition clz;
+        private final AtomicReference<ObjectHandle> atomic;
+        private ObjectHandle hExpect;
+        private final ObjectHandle hNew;
+        private final int[] aiReturn;
+
+        public ReplaceFailed(TypeComposition clz, AtomicReference<ObjectHandle> atomic,
+                             ObjectHandle hExpect, ObjectHandle hNew, int[] aiReturn)
+            {
+            this.clz = clz;
+            this.atomic = atomic;
+            this.hExpect = hExpect;
+            this.hNew = hNew;
+            this.aiReturn = aiReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+                {
+                return frameCaller.assignValues(aiReturn, xBoolean.TRUE, hExpect);
+                }
+
+            if (atomic.compareAndSet(hExpect, hNew))
+                {
+                return frameCaller.assignValues(aiReturn, xBoolean.FALSE, null);
+                }
+
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (true)
+                {
+                ObjectHandle hCurrent = atomic.get();
+
+                switch (clz.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
+                    {
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    case Op.R_NEXT:
+                        if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+                            {
+                            return frameCaller.assignValues(aiReturn, xBoolean.TRUE, hCurrent);
+                            }
+
+                        if (atomic.compareAndSet(hCurrent, hNew))
+                            {
+                            return frameCaller.assignValues(aiReturn, xBoolean.FALSE, null);
+                            }
+                        hExpect = hCurrent;
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        hExpect = hCurrent;
+                        return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
             }
         }
     }

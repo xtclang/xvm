@@ -36,6 +36,7 @@ import types.TypeParameter;
  */
 class Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>
         implements Const, collections.ConstAble
+//        incorporates conditional Enumeration<PublicType extends Enum>
     {
     // ----- data types ----------------------------------------------------------------------------
 

@@ -4,6 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.proto.CallChain;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -18,7 +19,7 @@ import org.xvm.proto.TypeSet;
 import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.annotations.xFutureRef;
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -27,12 +28,12 @@ import java.util.concurrent.CompletableFuture;
  *
  * @author gg 2017.02.27
  */
-public class xService
+public class Service
         extends ClassTemplate
     {
-    public static xService INSTANCE;
+    public static Service INSTANCE;
 
-    public xService(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Service(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
 
@@ -51,6 +52,12 @@ public class xService
         }
 
     @Override
+    public boolean isStateful()
+        {
+        return true;
+        }
+
+    @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         ServiceContext context = frame.f_context;
@@ -60,6 +67,22 @@ public class xService
         setFieldValue(hService, clazz.getProperty("serviceName"), xString.makeHandle(f_sName));
 
         return hService;
+        }
+
+    @Override
+    public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+            super.invoke1(frame, chain, hTarget, ahVar, iReturn) :
+            Function.makeAsyncHandle(chain, 0).call1(frame, hTarget, ahVar, iReturn);
+        }
+
+    @Override
+    public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+            super.invokeN(frame, chain, hTarget, ahVar, aiReturn) :
+            Function.makeAsyncHandle(chain, 0).callN(frame, hTarget, ahVar, aiReturn);
         }
 
     @Override
@@ -105,49 +128,50 @@ public class xService
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName,
+                            int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
             {
-            return super.invokePreInc(frame, hTarget, property, iReturn);
+            return super.invokePreInc(frame, hTarget, sPropName, iReturn);
             }
 
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
-                frame, property, this::invokePreInc);
+                frame, sPropName, this::invokePreInc);
 
         return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
             {
-            return super.invokePostInc(frame, hTarget, property, iReturn);
+            return super.invokePostInc(frame, hTarget, sPropName, iReturn);
             }
 
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
-                frame, property, this::invokePostInc);
+                frame, sPropName, this::invokePostInc);
 
         return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
 
     @Override
-    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
             {
-            return super.getPropertyValue(frame, hTarget, property, iReturn);
+            return super.getPropertyValue(frame, hTarget, sPropName, iReturn);
             }
 
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
-                frame, property, this::getPropertyValue);
+                frame, sPropName, this::getPropertyValue);
 
         return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
         }
@@ -165,17 +189,17 @@ public class xService
         }
 
     @Override
-    public int setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyStructure property,
+    public int setPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName,
                                 ObjectHandle hValue)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(property))
+        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
             {
-            return super.setPropertyValue(frame, hTarget, property, hValue);
+            return super.setPropertyValue(frame, hTarget, sPropName, hValue);
             }
 
-        hService.m_context.sendProperty10Request(frame, property, hValue, this::setPropertyValue);
+        hService.m_context.sendProperty10Request(frame, sPropName, hValue, this::setPropertyValue);
 
         return Op.R_NEXT;
         }
@@ -255,7 +279,7 @@ public class xService
     public interface PropertyOperation01
             extends PropertyOperation
         {
-        int invoke(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn);
+        int invoke(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn);
         }
 
     // an operation against a property that takes one parameter and returns zero values
@@ -263,8 +287,7 @@ public class xService
     public interface PropertyOperation10
             extends PropertyOperation
         {
-        int invoke(Frame frame, ObjectHandle hTarget, PropertyStructure property,
-                   ObjectHandle hValue);
+        int invoke(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue);
         }
 
     // an operation against a property that takes one parameter and returns one value
@@ -272,7 +295,7 @@ public class xService
     public interface PropertyOperation11
             extends PropertyOperation
         {
-        int invoke(Frame frame, ObjectHandle hTarget, PropertyStructure property,
+        int invoke(Frame frame, ObjectHandle hTarget, String sPropName,
                    ObjectHandle hValue, int iReturn);
         }
 

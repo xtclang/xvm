@@ -9,10 +9,10 @@ import org.xvm.asm.constants.IntConstant;
 
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xFunction.FullyBoundHandle;
+import org.xvm.proto.template.Function;
+import org.xvm.proto.template.Function.FullyBoundHandle;
 import org.xvm.proto.template.annotations.xFutureRef.FutureHandle;
-import org.xvm.proto.template.xRef.RefHandle;
+import org.xvm.proto.template.Ref.RefHandle;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -20,7 +20,6 @@ import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.template.collections.xTuple;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 /**
  * A call stack frame.
@@ -54,6 +53,8 @@ public class Frame
     public FullyBoundHandle     m_hfnFinally;   // a "finally" method for the constructors
     public Frame                m_frameNext;    // the next frame to call
     public Continuation         m_continuation; // a function to call after this frame returns
+    public CallChain            m_chain;        // an invocation call chain
+    public int                  m_nDepth;       // this frame's depth in the call chain
     private ObjectHandle        m_hFrameLocal;  // a "frame local" holding area
 
     // positive return values indicate a caller's frame register
@@ -61,6 +62,9 @@ public class Frame
     public final static int RET_LOCAL = -65000;   // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI = -65002;   // an indicator for "multiple return values"
+
+    // the first of the multiple return into the "frame local"
+    public final static int[] RET_FIRST_LOCAL = new int[] {RET_LOCAL};
 
     public static final int VAR_STANDARD = 0;
     public static final int VAR_DYNAMIC_REF = 1;
@@ -95,7 +99,7 @@ public class Frame
         f_aiReturn = aiReturn;
         }
 
-    // construct a initial (native) frame
+    // construct an initial (native) frame
     protected Frame(Fiber fiber, int iCallerPC, Op[] aopNative,
                     ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
@@ -126,16 +130,36 @@ public class Frame
         }
 
     // a convenience method; ahVar - prepared variables
-    public int call1(MethodStructure template, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+    public int call1(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = f_context.createFrame1(this, template, hTarget, ahVar, iReturn);
+        m_frameNext = f_context.createFrame1(this, method, hTarget, ahVar, iReturn);
         return Op.R_CALL;
         }
 
     // a convenience method
-    public int callN(MethodStructure template, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+    public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        m_frameNext = f_context.createFrameN(this, template, hTarget, ahVar, aiReturn);
+        m_frameNext = f_context.createFrameN(this, method, hTarget, ahVar, aiReturn);
+        return Op.R_CALL;
+        }
+
+    // a convenience method; ahVar - prepared variables
+    public int invoke1(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        Frame frameNext = m_frameNext = f_context.createFrame1(this,
+                chain.getMethod(nDepth), hTarget, ahVar, iReturn);
+        frameNext.m_chain = chain;
+        frameNext.m_nDepth = nDepth;
+        return Op.R_CALL;
+        }
+
+    // a convenience method
+    public int invokeN(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        Frame frameNext = m_frameNext = f_context.createFrameN(this,
+                chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
+        frameNext.m_chain = chain;
+        frameNext.m_nDepth = nDepth;
         return Op.R_CALL;
         }
 
@@ -191,9 +215,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-
-                MethodStructure method = hThis.f_clazz.resolveSuper(f_function);
-                return xFunction.makeHandle(method).bind(0, f_hTarget);
+                return Function.makeHandle(m_chain, m_nDepth).bind(0, f_hTarget);
 
             case Op.A_TARGET: // same as this:private; never used
                 if (f_hTarget == null)
@@ -346,8 +368,7 @@ public class Frame
                                 }
                             catch (ExceptionHandle.WrapperException e)
                                 {
-                                m_hException = e.getExceptionHandle();
-                                return Op.R_EXCEPTION;
+                                return raiseException(e);
                                 }
                             }
                         else
@@ -372,13 +393,10 @@ public class Frame
                     break;
 
                 case VAR_DYNAMIC_REF:
+                    {
                     ExceptionHandle hException = ((RefHandle) f_ahVar[nVar]).set(hValue);
-                    if (hException != null)
-                        {
-                        m_hException = hException;
-                        return Op.R_EXCEPTION;
-                        }
-                    return Op.R_NEXT;
+                    return hException == null ? Op.R_NEXT : raiseException(hException);
+                    }
 
                 default:
                     throw new IllegalStateException();
@@ -400,6 +418,31 @@ public class Frame
             default:
                 throw new IllegalArgumentException("nVar=" + nVar);
             }
+        }
+
+    // specialization of assignValue() that takes up to two return values
+    // return R_NEXT, R_EXCEPTION or R_BLOCK (only if any of the values is a FutureRef)
+    public int assignValues(int[] anVar, ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        int c = anVar.length;
+        if (c == 0)
+            {
+            return Op.R_NEXT;
+            }
+
+        int iResult1 = assignValue(anVar[0], hValue1);
+        if (iResult1 == Op.R_EXCEPTION || c == 1 || hValue2 == null)
+            {
+            return iResult1;
+            }
+
+        if (iResult1 == Op.R_BLOCK)
+            {
+            int iResult2 = assignValue(anVar[1], hValue2);
+            return iResult2 == Op.R_EXCEPTION ? Op.R_EXCEPTION : Op.R_BLOCK;
+            }
+
+        return assignValue(anVar[1], hValue2);
         }
 
     // return R_RETURN, R_RETURN_EXCEPTION or R_BLOCK_RETURN
@@ -454,6 +497,19 @@ public class Frame
             }
         }
 
+    // return R_EXCEPTION
+    public int raiseException(ExceptionHandle.WrapperException e)
+        {
+        return raiseException(e.getExceptionHandle());
+        }
+
+    // return R_EXCEPTION
+    public int raiseException(ExceptionHandle hException)
+        {
+        m_hException = hException;
+        return Op.R_EXCEPTION;
+        }
+
     private ObjectHandle getReturnValue(int iArg)
         {
         return iArg >= 0 ?
@@ -495,12 +551,7 @@ public class Frame
                 }
             }
 
-        if (hException != null)
-            {
-            m_hException = hException;
-            return Op.R_EXCEPTION;
-            }
-        return Op.R_NEXT;
+        return hException == null ? Op.R_NEXT : raiseException(hException);
         }
 
     // return the class of the specified argument

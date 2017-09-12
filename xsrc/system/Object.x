@@ -12,7 +12,7 @@ class Object
     /**
      * The meta-data for each object is represented by the Meta interface.
      */
-    protected Meta meta.get()
+    protected Meta<Object:public, Object:protected, Object:private> meta.get()
         {
         // the Meta object is provided by the runtime
         return super();

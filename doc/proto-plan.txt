@@ -59,11 +59,17 @@
 
 + implement missing enum methods
 
++ mixin processing
+
++ revisit PreInc, PostInc; add Inc, Dec ops
+
 - Property and Method
 
 - Class, Type
 
 - a new DVAR like op-code to provide additional parameters (e.g. injection name)
+
+- introduce stock exception (Bounds, IllegalState, etc.)
 
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$

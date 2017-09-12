@@ -58,12 +58,11 @@ public class Construct_N extends OpCallable
                 }
             frame.chainFinalizer(hStruct.f_clazz.f_template.makeFinalizer(constructor, hStruct, ahVar));
 
-            return frame.call1(constructor, null, ahVar, Frame.RET_UNUSED);
+            return frame.call1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

@@ -12,7 +12,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -23,6 +23,7 @@ import org.xvm.util.Handy;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 
 /**
@@ -86,6 +87,14 @@ public class Adapter
             String sParam = sName.substring(ofTypeParam + 1, sName.length() - 1);
             String sSimpleName = sName.substring(0, ofTypeParam);
 
+            // TODO: auto-narrowing (ThisTypeConstant)
+            boolean fAutoNarrow = true;
+            if (sSimpleName.endsWith("!"))
+                {
+                sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
+                fAutoNarrow = false;
+                }
+
             ClassConstant constClass = f_container.f_types.getClassConstant(sSimpleName);
             if (constClass != null)
                 {
@@ -132,16 +141,18 @@ public class Adapter
 
     public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
         {
-        return getMethod(sClassName, sMethName, asArgType, asRetType)
+        ClassTemplate template = f_container.f_types.getTemplate(sClassName);
+
+        return getMethod(template, sMethName, asArgType, asRetType)
                 .getIdentityConstant().getPosition();
         }
 
-    public MethodStructure getMethod(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
+    public MethodStructure getMethod(ClassTemplate template, String sMethName, String[] asArgType, String[] asRetType)
         {
-        ClassTemplate template = f_container.f_types.getTemplate(sClassName);
         TypeConstant[] atArg = getTypeConstants(template, asArgType);
         TypeConstant[] atRet = getTypeConstants(template, asRetType);
 
+        ClassTemplate templateTop = template;
         MethodStructure method;
         do
             {
@@ -167,20 +178,16 @@ public class Adapter
 
         if (method == null && asArgType != null)
             {
-            method = getMethod(sClassName, sMethName, null, null);
-
-            System.out.println("\n******** parameter mismatch at " + sClassName + "#" + sMethName);
-            System.out.println("         arguments " + Arrays.toString(atArg));
-            System.out.println("         return " + Arrays.toString(atRet));
-            System.out.println("         found " + method.getIdentityConstant() + "\n");
-
+            method = getMethod(templateTop, sMethName, null, null);
             if (method != null)
                 {
-                return method;
+                System.out.println("\n******** parameter mismatch at " + templateTop.f_sName + "#" + sMethName);
+                System.out.println("         arguments " + Arrays.toString(atArg));
+                System.out.println("         return " + Arrays.toString(atRet));
+                System.out.println("         found " + method.getIdentityConstant() + "\n");
                 }
             }
-
-        throw new IllegalArgumentException("Method is not defined: " + sClassName + '#' + sMethName);
+        return method;
         }
 
     public int getPropertyConstId(String sClassName, String sPropName)
@@ -240,7 +247,7 @@ public class Adapter
         for (int i = 0; i < cTypes; i++)
             {
             String sType = asType[i].trim();
-            aType[i] = new Parameter(pool, (ParameterizedTypeConstant) pool.getConstant(getClassTypeConstId(sType)),
+            aType[i] = new Parameter(pool, (ClassTypeConstant) pool.getConstant(getClassTypeConstId(sType)),
                     (fReturn ?"r":"p")+i, null, fReturn, i, false);
             }
         return aType;
@@ -278,8 +285,7 @@ public class Adapter
                 {
                 aconst[i] = ensureValueConstant(ao[i]);
                 }
-            TypeConstant type = f_container.f_pool.ensureEcstasyTypeConstant("Tuple"); // TODO need type-params
-            return f_container.f_pool.ensureTupleConstant(type, aconst);
+            return f_container.f_pool.ensureTupleConstant(aconst);
             }
 
         if (oValue == null)
@@ -313,9 +319,7 @@ public class Adapter
     public int getVarCount(MethodStructure method)
         {
         ClassTemplate.MethodInfo tm = method.getInfo();
-        return tm == null || tm.m_fNative ? // this can only be a constructor
-                method.getIdentityConstant().getRawParams().length:
-                tm.m_cVars;
+        return tm == null || tm.m_fNative ? getArgCount(method) : tm.m_cVars;
         }
 
     public Op[] getOps(MethodStructure method)
@@ -331,7 +335,7 @@ public class Adapter
         return tmFinally == null ? null : tmFinally.f_struct;
         }
 
-    public boolean isNative(MethodStructure method)
+    public static boolean isNative(MethodStructure method)
         {
         ClassTemplate.MethodInfo tm = method.getInfo();
         return tm != null && tm.m_fNative;
@@ -353,15 +357,12 @@ public class Adapter
         return mms == null ? null : (MethodStructure) mms.children().get(0);
         }
 
-    public TypeConstant resolveType(PropertyStructure property)
+    // TODO: move this to ClassStructure
+    public static ClassTypeConstant getContribution(ClassStructure structClass, Component.Composition composition)
         {
-        TypeConstant constType = property.getType();
+        Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
+                filter(contribution -> contribution.getComposition().equals(composition)).findFirst();
 
-        if (constType instanceof ParameterizedTypeConstant)
-            {
-            return constType;
-            }
-
-        throw new UnsupportedOperationException("Unsupported type: " + constType + " for " + property);
+        return opt.isPresent() ? opt.get().getClassConstant() : null;
         }
     }

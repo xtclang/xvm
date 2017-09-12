@@ -6,32 +6,32 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.GenericHandle;
 
 import org.xvm.proto.template.collections.xArray;
+import org.xvm.proto.template.collections.xTuple;
+import org.xvm.proto.template.Const;
+import org.xvm.proto.template.Enum;
+import org.xvm.proto.template.Enum.EnumHandle;
+import org.xvm.proto.template.Function;
+import org.xvm.proto.template.Function.FullyBoundHandle;
+import org.xvm.proto.template.Ref.RefHandle;
+import org.xvm.proto.template.Service;
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xConst;
-import org.xvm.proto.template.xEnum;
-import org.xvm.proto.template.xEnum.EnumHandle;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xFunction.FullyBoundHandle;
 import org.xvm.proto.template.xObject;
 import org.xvm.proto.template.xOrdered;
-import org.xvm.proto.template.xRef.RefHandle;
-import org.xvm.proto.template.xService;
 import org.xvm.proto.template.xString;
 import org.xvm.proto.template.xType;
 
@@ -41,7 +41,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -61,6 +60,8 @@ public abstract class ClassTemplate
 
     public final ClassTemplate f_templateSuper;
     public final ClassTemplate f_templateCategory; // a native category
+
+    public final boolean f_fService; // is this a service
 
     // ----- caches ------
 
@@ -102,38 +103,39 @@ public abstract class ClassTemplate
         ClassStructure structSuper = null;
         ClassTemplate templateSuper = null;
         ClassTemplate templateCategory = null;
+        boolean fService = false;
 
-        Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
-                filter((c) -> c.getComposition().equals(ClassStructure.Composition.Extends)).findFirst();
-
-        if (opt.isPresent())
-            {
-            ClassConstant constClass = (ClassConstant) opt.get().getClassConstant().getUnderlyingType().getDefiningConstant();
-            structSuper = (ClassStructure) constClass.getComponent();
-            templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
-            }
-
-        if (structSuper == null)
+        ClassTypeConstant constSuper = Adapter.getContribution(structClass, ClassStructure.Composition.Extends);
+        if (constSuper == null)
             {
             if (!f_sName.equals("Object"))
                 {
+                // TODO: do we need this?
                 templateSuper = xObject.INSTANCE;
                 }
             }
-        else if (structClass.getFormat() != structSuper.getFormat())
+        else
+            {
+            structSuper = (ClassStructure) constSuper.getClassConstant().getComponent();
+            templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
+            fService = templateSuper.isService();
+            }
+
+        if (structSuper == null || structClass.getFormat() != structSuper.getFormat())
             {
             switch (structClass.getFormat())
                 {
                 case SERVICE:
-                    templateCategory = xService.INSTANCE;
+                    templateCategory = Service.INSTANCE;
+                    fService = true;
                     break;
 
                 case CONST:
-                    templateCategory = xConst.INSTANCE;
+                    templateCategory = Const.INSTANCE;
                     break;
 
                 case ENUM:
-                    templateCategory = xEnum.INSTANCE;
+                    templateCategory = Enum.INSTANCE;
                     break;
                 }
             }
@@ -141,6 +143,7 @@ public abstract class ClassTemplate
         f_templateSuper = templateSuper;
         f_templateCategory = templateCategory;
         f_clazzCanonical = createCanonicalClass();
+        f_fService = fService;
         }
 
     protected TypeComposition createCanonicalClass()
@@ -155,19 +158,20 @@ public abstract class ClassTemplate
         else
             {
             mapParamsActual = new HashMap<>(mapParams.size());
-            Type typeObject = xObject.INSTANCE.f_clazzCanonical.ensurePublicType();
             for (StringConstant constName : mapParams.keySet())
                 {
+                TypeConstant constType = mapParams.get(constName);
+                Type typeObject = f_types.resolveParameterType(constType, Collections.EMPTY_MAP);
                 mapParamsActual.put(constName.getValue(), typeObject);
                 }
             }
 
-        return new TypeComposition(this, mapParamsActual);
+        return new TypeComposition(this, mapParamsActual, true);
         }
 
     public boolean isRootObject()
         {
-        return f_templateSuper == null;
+        return f_templateSuper == null && f_struct.getFormat() == Component.Format.CLASS;
         }
 
     /**
@@ -218,7 +222,39 @@ public abstract class ClassTemplate
 
     public boolean isService()
         {
-        return f_struct.getFormat() == Component.Format.SERVICE;
+        return f_fService;
+        }
+
+    public boolean isConst()
+        {
+        switch (f_struct.getFormat())
+            {
+            case PACKAGE:
+            case CONST:
+            case ENUM:
+            case ENUMVALUE:
+            case MODULE:
+                return true;
+
+            default:
+                return false;
+            }
+        }
+
+    // should we generate fields for this class
+    public boolean isStateful()
+        {
+        switch (f_struct.getFormat())
+            {
+            case CLASS:
+            case CONST:
+            case MIXIN:
+            case SERVICE:
+                return true;
+
+            default:
+                return false;
+            }
         }
 
     public boolean isSingleton()
@@ -226,12 +262,39 @@ public abstract class ClassTemplate
         return f_struct.isStatic();
         }
 
-    public PropertyStructure getProperty(String sName)
+    public PropertyStructure getProperty(String sPropName)
         {
-        return (PropertyStructure) f_struct.getChild(sName);
+        return (PropertyStructure) f_struct.getChild(sPropName);
         }
 
-    public TypeConstant getTypeConstant()
+    public PropertyStructure ensureProperty(String sPropName)
+        {
+        PropertyStructure property = getProperty(sPropName);
+        if (property != null)
+            {
+            return property;
+            }
+
+        PropertyStructure propSuper = null;
+        for (ClassTemplate templateSuper : f_clazzCanonical.getCallChain())
+            {
+            propSuper = templateSuper.getProperty(sPropName);
+            if (propSuper != null)
+                {
+                break;
+                }
+            }
+
+        if (propSuper == null)
+            {
+            throw new IllegalArgumentException("Property is not defined " + f_sName + "#" + sPropName);
+            }
+
+        return f_struct.createProperty(false,
+                propSuper.getAccess(), propSuper.getType(), sPropName);
+        }
+
+    public ClassTypeConstant getTypeConstant()
         {
         return ((ClassConstant) f_struct.getIdentityConstant()).asTypeConstant();
         }
@@ -261,7 +324,8 @@ public abstract class ClassTemplate
                     for (int i = 0, c = atParamTest.length; i < c; i++)
                         {
                         // compensate for "function"
-                        if (atParamTest[i].getValueString().contains("function"))
+                        if (atParamTest[i].getValueString().contains("function") &&
+                            atParam[i].getValueString().contains("Function"))
                             {
                             continue;
                             }
@@ -328,11 +392,16 @@ public abstract class ClassTemplate
                     }
 
                 // TODO: remove
-                if (mms.children().size() == 1)
+                if (mms.children().size() == 1
+                        && atParam.length == atParamTest.length
+                        && atReturn.length == atReturnTest.length
+                        )
                     {
                     System.out.println("\n\t\t****** Signature mismatch for " +
-                            constMethod + " at " + f_sName + "\n");
-                    return method;
+                            constMethod + " at " + f_sName + " (" +
+                            Arrays.toString(atReturnTest) + ") " +
+                            Arrays.toString(atParamTest) + "\n");
+                    return null;
                     }
                 }
             }
@@ -359,14 +428,11 @@ public abstract class ClassTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
-    public TypeComposition resolve(ParameterizedTypeConstant constClassType, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(ClassTypeConstant constClassType, Map<String, Type> mapActual)
         {
-        // TODO GG+CP discuss
-        assert constClassType.getUnderlyingType().isSingleDefiningConstant()
-                && constClassType.getUnderlyingType().getDefiningConstant() instanceof IdentityConstant
-                && ((IdentityConstant) constClassType.getUnderlyingType().getDefiningConstant()).getPathString().equals(f_sName);
+        assert constClassType.getClassConstant().getPathString().equals(f_sName);
 
-        List<TypeConstant> listParams = constClassType.getParamTypes();
+        List<TypeConstant> listParams = constClassType.getTypeConstants();
 
         int cParams = listParams.size();
         if (cParams == 0)
@@ -381,53 +447,41 @@ public abstract class ClassTemplate
         for (String sParamName : f_listGenericParams)
             {
             mapActualParams.put(sParamName,
-                    resolveParameterType(listParams.get(ix++), mapActual));
+                    f_types.resolveParameterType(listParams.get(ix++), mapActual));
             }
         return ensureClass(mapActualParams);
-        }
-
-    // resolve a parameter type
-    protected Type resolveParameterType(TypeConstant constParamType, Map<String, Type> mapActual)
-        {
-        // TODO need to review with GG+CP
-//        if (constParamType instanceof ParameterizedTypeConstant)
-//            {
-//            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constParamType;
-//            ClassTemplate template = f_types.getTemplate(constClass.getUnderlyingType());
-//            return template.resolve(constClass, mapActual).ensurePublicType();
-//            }
-//
-//        if (constParamType instanceof ParameterTypeConstant)
-//            {
-//            ParameterTypeConstant constParam = (ParameterTypeConstant) constParamType;
-//            Type type = mapActual.get(constParam.getName());
-//
-//            if (type == null)
-//                {
-//                throw new IllegalArgumentException("Unresolved type parameter: " + constParam);
-//                }
-//            return type;
-//            }
-
-        if (constParamType instanceof IntersectionTypeConstant ||
-                constParamType instanceof UnionTypeConstant)
-            {
-            throw new UnsupportedOperationException("TODO");
-            }
-
-        throw new IllegalArgumentException("Unresolved type constant: " + constParamType);
         }
 
     // produce a TypeComposition for this template using the actual types for formal parameters
     public TypeComposition ensureClass(Map<String, Type> mapParams)
         {
+        assert mapParams.size() == f_listGenericParams.size() || this instanceof xTuple;
+
+        if (mapParams.isEmpty())
+            {
+            return f_clazzCanonical;
+            }
+
         // sort the parameters by name and use the list of sorted (by formal name) types as a key
         Map<String, Type> mapSorted = mapParams.size() > 1 ?
                 new TreeMap<>(mapParams) : mapParams;
         List<Type> key = new ArrayList<>(mapSorted.values());
 
         return m_mapCompositions.computeIfAbsent(key,
-                (x) -> new TypeComposition(this, mapParams));
+                (x) -> new TypeComposition(this, mapParams, false));
+        }
+
+    @Override
+    public int hashCode()
+        {
+        return f_sName.hashCode();
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        // type compositions are singletons
+        return this == obj;
         }
 
     @Override
@@ -518,18 +572,30 @@ public abstract class ClassTemplate
         MethodStructure methodFinally = f_types.f_adapter.getFinalizer(constructor);
 
         return methodFinally == null ? FullyBoundHandle.NO_OP :
-                xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
+                Function.makeHandle(methodFinally).bindAll(hStruct, ahArg);
         }
 
     protected boolean isConstructImmutable()
         {
-        return this instanceof xConst;
+        return this instanceof Const;
         }
 
     // ----- OpCode support ------
 
+    // invoke with a zero or one return value
+    public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
+        }
+
+    // invoke with more than one return value
+    public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        return frame.invokeN(chain, 0, hTarget, ahVar, aiReturn);
+        }
+
     // invokeNative property "get" operation
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         throw new IllegalStateException("Unknown property getter: (" + f_sName + ")." + property.getName());
         }
@@ -589,104 +655,91 @@ public abstract class ClassTemplate
         throw new IllegalStateException("Invalid op for " + f_sName);
         }
 
-    // ---- OpCode support: register or property operations -----
-
-    // helper method
-    private ObjectHandle extractPropertyValue(GenericHandle hTarget, PropertyStructure property)
+    // Next operation (Sequential)
+    // return either R_NEXT or R_EXCEPTION
+    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        if (property == null)
-            {
-            throw new IllegalStateException("Invalid op for " + f_sName);
-            }
-
-        ObjectHandle hProp = hTarget.m_mapFields.get(property.getName());
-
-        if (hProp == null)
-            {
-            throw new IllegalStateException((hTarget.m_mapFields.containsKey(property.getName()) ?
-                    "Un-initialized property \"" : "Invalid property \"") + property + '"');
-            }
-        return hProp;
+        throw new IllegalStateException("Invalid op for " + f_sName);
         }
 
-    // increment the property value and place the result into the specified frame register
+    // Prev operation (Sequential)
     // return either R_NEXT or R_EXCEPTION
-    public int invokePreInc(Frame frame, ObjectHandle hTarget,
-                            PropertyStructure property, int iReturn)
+    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        GenericHandle hThis = (GenericHandle) hTarget;
+        throw new IllegalStateException("Invalid op for " + f_sName);
+        }
 
-        ObjectHandle hProp = extractPropertyValue(hThis, property);
+    // ---- OpCode support: register or property operations -----
 
-        if (isRef(property))
+
+    // increment the property value and place the result into the specified frame register
+    // return R_NEXT, R_CALL or R_EXCEPTION
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        switch (getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL))
             {
-            return getRefTemplate(property).invokePreInc(frame, hProp, null, iReturn);
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            case Op.R_NEXT:
+                return new Utils.PreInc(hTarget, sPropName, iReturn).proceed(frame);
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(new Utils.PreInc(hTarget, sPropName, iReturn));
+                return Op.R_CALL;
+
+            default:
+                throw new IllegalStateException();
             }
-
-        int nResult = hProp.f_clazz.f_template.invokePreInc(frame, hProp, null, Frame.RET_LOCAL);
-        if (nResult == Op.R_EXCEPTION)
-            {
-            return nResult;
-            }
-
-        ObjectHandle hPropNew = frame.getFrameLocal();
-        hThis.m_mapFields.put(property.getName(), hPropNew);
-
-        return frame.assignValue(iReturn, hPropNew);
         }
 
     // place the property value into the specified frame register and increment it
-    // return either R_NEXT or R_EXCEPTION
-    public int invokePostInc(Frame frame, ObjectHandle hTarget,
-                             PropertyStructure property, int iReturn)
+    // return R_NEXT, R_CALL or R_EXCEPTION
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        GenericHandle hThis = (GenericHandle) hTarget;
-
-        ObjectHandle hProp = extractPropertyValue(hThis, property);
-
-        if (isRef(property))
+        switch (getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL))
             {
-            return getRefTemplate(property).invokePostInc(frame, hProp, null, iReturn);
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            case Op.R_NEXT:
+                return new Utils.PostInc(hTarget, sPropName, iReturn).proceed(frame);
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(new Utils.PostInc(hTarget, sPropName, iReturn));
+                return Op.R_CALL;
+
+            default:
+                throw new IllegalStateException();
             }
-
-        int nResult = hProp.f_clazz.f_template.invokePostInc(frame, hProp, null, Frame.RET_LOCAL);
-        if (nResult == Op.R_EXCEPTION)
-            {
-            return nResult;
-            }
-
-        ObjectHandle hPropNew = frame.getFrameLocal();
-        hThis.m_mapFields.put(property.getName(), hPropNew);
-
-        return frame.assignValue(iReturn, hProp);
         }
 
     // ----- OpCode support: property operations -----
 
     // get a property value into the specified register
     // return R_NEXT, R_CALL or R_EXCEPTION
-    public int getPropertyValue(Frame frame, ObjectHandle hTarget,
-                                PropertyStructure property, int iReturn)
+    public int getPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        if (property == null)
+        if (sPropName == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
-        if (isNativeGetter(property))
+        CallChain.PropertyCallChain chain = hTarget.f_clazz.getPropertyGetterChain(sPropName);
+        if (chain.isNative())
             {
-            return invokeNativeGet(frame, hTarget, property, iReturn);
+            return invokeNativeGet(frame, chain.getProperty(), hTarget, iReturn);
             }
 
-        MethodStructure method = hTarget.isStruct() ? null : Adapter.getGetter(property);
+        MethodStructure method = hTarget.isStruct() ? null : chain.getTop();
         if (method == null)
             {
-            return getFieldValue(frame, hTarget, property, iReturn);
+            return getFieldValue(frame, hTarget, chain.getProperty(), iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
 
-        return frame.call1(method, hTarget, ahVar, iReturn);
+        return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
     public int getFieldValue(Frame frame, ObjectHandle hTarget,
@@ -697,16 +750,16 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        GenericHandle hThis = (GenericHandle) hTarget;
         String sName = property.getName();
 
         if (isGenericType(sName))
             {
-            Type type = hThis.f_clazz.getActualType(sName);
+            Type type = hTarget.f_clazz.getActualType(sName);
 
             return frame.assignValue(iReturn, xType.makeHandle(type));
             }
 
+        GenericHandle hThis = (GenericHandle) hTarget;
         ObjectHandle hValue = hThis.m_mapFields.get(sName);
 
         if (hValue == null)
@@ -714,8 +767,7 @@ public abstract class ClassTemplate
             String sErr;
             if (isInjectable(property))
                 {
-                TypeConstant constType = frame.f_adapter.resolveType(property);
-                TypeComposition clz = f_types.resolve(constType);
+                TypeComposition clz = hThis.f_clazz.resolveClass(property.getType());
 
                 hValue = frame.f_context.f_container.getInjectable(sName, clz);
                 if (hValue != null)
@@ -731,8 +783,7 @@ public abstract class ClassTemplate
                         "Un-initialized property \"" : "Invalid property \"";
                 }
 
-            frame.m_hException = xException.makeHandle(sErr + sName + '"');
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle(sErr + sName + '"'));
             }
 
         if (isRef(property))
@@ -743,8 +794,7 @@ public abstract class ClassTemplate
                 }
             catch (ExceptionHandle.WrapperException e)
                 {
-                frame.m_hException = e.getExceptionHandle();
-                return Op.R_EXCEPTION;
+                return frame.raiseException(e);
                 }
             }
 
@@ -752,13 +802,15 @@ public abstract class ClassTemplate
         }
 
     // set a property value
-    public int setPropertyValue(Frame frame, ObjectHandle hTarget,
-                                PropertyStructure property, ObjectHandle hValue)
+    public int setPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
-        if (property == null)
+        if (sPropName == null)
             {
             throw new IllegalStateException(f_sName);
             }
+
+        CallChain.PropertyCallChain chain = hTarget.f_clazz.getPropertySetterChain(sPropName);
+        PropertyStructure property = chain.getProperty();
 
         ExceptionHandle hException = null;
         if (!hTarget.isMutable())
@@ -791,12 +843,7 @@ public abstract class ClassTemplate
                 }
             }
 
-        if (hException != null)
-            {
-            frame.m_hException = hException;
-            return Op.R_EXCEPTION;
-            }
-        return Op.R_NEXT;
+        return hException == null ? Op.R_NEXT : frame.raiseException(hException);
         }
 
     public ExceptionHandle setFieldValue(ObjectHandle hTarget,
@@ -823,10 +870,15 @@ public abstract class ClassTemplate
     // ----- support for equality and comparison ------
 
     // compare for equality two object handles that both belong to the specified class
-    // return R_NEXT or R_EXCEPTION
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xBoolean.TRUE);
+            }
+
         // if there is an "equals" function, we need to call it
         MethodStructure functionEquals = findCompareFunction("equals", xBoolean.TYPES);
         if (functionEquals != null)
@@ -837,11 +889,11 @@ public abstract class ClassTemplate
 
         // only Const classes have an automatic implementation;
         // for everyone else it's either a native method or a ref equality
-        return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
+        return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
     // compare for order two object handles that both belong to the specified class
-    // return R_NEXT or R_EXCEPTION
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int callCompare(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -885,8 +937,8 @@ public abstract class ClassTemplate
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
-            frame.m_hException = xException.makeHandle("Invalid array size: " + cCapacity);
-            return Op.R_EXCEPTION;
+            return frame.raiseException(
+                    xException.makeHandle("Invalid array size: " + cCapacity));
             }
 
         return frame.assignValue(iReturn, xArray.makeHandle(clzArray, cCapacity));
@@ -960,8 +1012,30 @@ public abstract class ClassTemplate
 
     public MethodInfo ensureMethodInfo(String sName, String[] asParam, String[] asRet)
         {
-        MethodStructure method = f_types.f_adapter.getMethod(f_sName, sName, asParam, asRet);
+        MethodStructure method = f_types.f_adapter.getMethod(this, sName, asParam, asRet);
+        if (method == null)
+            {
+            MethodStructure methodSuper = null;
+            for (ClassTemplate templateSuper : f_clazzCanonical.getCallChain())
+                {
+                methodSuper = f_types.f_adapter.getMethod(templateSuper, sName, asParam, asRet);
+                if (methodSuper != null)
+                    {
+                    break;
+                    }
+                }
 
+            if (methodSuper == null)
+                {
+                throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);
+                }
+
+            method = f_struct.createMethod(false,
+                    methodSuper.getAccess(),
+                    methodSuper.getReturns().toArray(new Parameter[methodSuper.getReturnCount()]),
+                    sName,
+                    methodSuper.getParams().toArray(new Parameter[methodSuper.getParamCount()]));
+            }
         return ensureMethodInfo(method);
         }
 
@@ -990,14 +1064,36 @@ public abstract class ClassTemplate
         ensurePropertyInfo(sPropName).markAtomic();
         }
 
+    // mark the property getter as native
+    // Note: this also makes the property "calculated" (no storage)
     public void markNativeGetter(String sPropName)
         {
-        ensurePropertyInfo(sPropName).m_fNativeGetter = true;
+        MethodStructure methodGet = Adapter.getGetter(ensureProperty(sPropName));
+        if (methodGet == null)
+            {
+            ensurePropertyInfo(sPropName).m_fNativeGetter = true;
+            }
+        else
+            {
+            ensureMethodInfo(methodGet).m_fNative = true;
+            }
+        ensurePropertyInfo(sPropName).m_fCalculated = true;
         }
 
+    // mark the property setter as native
+    // Note: this also makes the property "calculated" (no storage)
     public void markNativeSetter(String sPropName)
         {
-        ensurePropertyInfo(sPropName).m_fNativeSetter = true;
+        MethodStructure methodSet = Adapter.getSetter(ensureProperty(sPropName));
+        if (methodSet == null)
+            {
+            ensurePropertyInfo(sPropName).m_fNativeSetter = true;
+            }
+        else
+            {
+            ensureMethodInfo(methodSet).m_fNative = true;
+            }
+        ensurePropertyInfo(sPropName).m_fCalculated = false;
         }
 
     public MethodInfo ensureGetter(String sPropName)
@@ -1031,7 +1127,7 @@ public abstract class ClassTemplate
 
     public PropertyInfo ensurePropertyInfo(String sPropName)
         {
-        PropertyStructure property = getProperty(sPropName);
+        PropertyStructure property = ensureProperty(sPropName);
 
         PropertyInfo info = property.getInfo();
         if (info == null)
@@ -1062,24 +1158,20 @@ public abstract class ClassTemplate
             {
             m_fAtomic = true;
 
-            TypeConstant constType = f_types.f_adapter.resolveType(f_property);
-            if (constType.isParamsSpecified())
+            TypeConstant constType = f_property.getType();
+            if (constType instanceof UnresolvedTypeConstant)
                 {
-                TypeConstant constParam = constType.getParamTypes().get(0);
-                if (constParam.isSingleDefiningConstant())
-                    {
-                    Constant constId = constParam.getDefiningConstant();
-                    if (constId
-                            instanceof ParameterizedTypeConstant &&
-                            ((IdentityConstant) constType.getUnderlyingType().getDefiningConstant()).getName().equals("Int64"))
-                        {
-                        markAsRef("annotations.AtomicIntNumber");
-                        return;
-                        }
-                    }
+                constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
                 }
-
-            markAsRef("annotations.AtomicRef");
+            if (constType instanceof ClassTypeConstant &&
+                    ((ClassTypeConstant) constType).getClassConstant().getName().equals("Int64"))
+                {
+                markAsRef("annotations.AtomicIntNumber");
+                }
+            else
+                {
+                markAsRef("annotations.AtomicRef");
+                }
             }
 
         public void markAsRef(String sRefClassName)
@@ -1091,6 +1183,5 @@ public abstract class ClassTemplate
     public static String[] VOID = new String[0];
     public static String[] OBJECT = new String[]{"Object"};
     public static String[] INT = new String[]{"Int64"};
-    public static String[] BOOLEAN = new String[]{"Boolean"};
     public static String[] STRING = new String[]{"String"};
     }

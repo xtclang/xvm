@@ -3,7 +3,6 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
@@ -19,19 +18,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TODO:
+ * A template for the base of all Enum classes
  *
  * @author gg 2017.02.27
  */
-public class xEnum
-        extends xConst
+public class Enum
+        extends Const
     {
-    public static xEnum INSTANCE;
+    public static Enum INSTANCE;
 
     protected List<String> m_listNames;
     protected List<EnumHandle> m_listHandles;
 
-    public xEnum(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Enum(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure, false);
 
@@ -75,22 +74,17 @@ public class xEnum
         if (constant instanceof ClassConstant)
             {
             ClassConstant constClass = (ClassConstant) constant;
-            String sName = constClass.getName();
 
-            xEnum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
-                (xEnum) getSuper() : this;
+            Enum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
+                (Enum) getSuper() : this;
 
-            int ix = template.m_listNames.indexOf(sName);
-            if (ix >= 0)
-                {
-                return template.m_listHandles.get(ix);
-                }
+            return template.getEnumByName(constClass.getName());
             }
         return null;
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         EnumHandle hEnum = (EnumHandle) hTarget;
 
@@ -104,7 +98,7 @@ public class xEnum
                 return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getValue()));
             }
 
-        return super.invokeNativeGet(frame, hTarget, property, iReturn);
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override
@@ -123,6 +117,16 @@ public class xEnum
         return frame.assignValue(iReturn,
                 xString.makeHandle(m_listNames.get((int) hEnum.getValue())));
         }
+
+    // ----- helper method -----
+
+    public EnumHandle getEnumByName(String sName)
+        {
+        int ix = m_listNames.indexOf(sName);
+        return ix >= 0 ? m_listHandles.get(ix) : null;
+        }
+
+    // ----- ObjectHandle -----
 
     public static class EnumHandle
                 extends JavaLong

@@ -11,8 +11,8 @@ import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.Utils;
 
-import org.xvm.proto.template.xFunction.FunctionHandle;
-import org.xvm.proto.template.xFunction.NativeMethodHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
+import org.xvm.proto.template.Function.NativeMethodHandle;
 
 import java.util.Timer;
 import java.util.TimerTask;

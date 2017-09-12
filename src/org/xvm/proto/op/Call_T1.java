@@ -2,6 +2,7 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Adapter;
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -9,7 +10,7 @@ import org.xvm.proto.OpCallable;
 
 import org.xvm.proto.template.collections.xTuple.TupleHandle;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -54,13 +55,19 @@ public class Call_T1 extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        try
+        if (f_nFunctionValue == A_SUPER)
             {
-            if (f_nFunctionValue == A_SUPER)
+            CallChain chain = frame.m_chain;
+            if (chain == null)
                 {
-                return callSuperN1(frame, new int[]{f_nArgTupleValue}, f_nRetValue);
+                throw new IllegalStateException();
                 }
 
+            return chain.callSuperN1(frame, new int[]{f_nArgTupleValue}, f_nRetValue);
+            }
+
+        try
+            {
             TupleHandle hArgTuple = (TupleHandle) frame.getArgument(f_nArgTupleValue);
             if (hArgTuple == null)
                 {
@@ -74,8 +81,7 @@ public class Call_T1 extends OpCallable
                 MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
                 if (ahArg.length != Adapter.getArgCount(function))
                     {
-                    frame.m_hException = xException.makeHandle("Invalid tuple argument");
-                    return R_EXCEPTION;
+                    return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                     }
 
                 ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(function)];
@@ -94,8 +100,7 @@ public class Call_T1 extends OpCallable
 
             if (ahArg.length != Adapter.getArgCount(getMethodStructure(frame, f_nFunctionValue)))
                 {
-                frame.m_hException = xException.makeHandle("Invalid tuple argument");
-                return R_EXCEPTION;
+                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                 }
 
             System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
@@ -104,8 +109,7 @@ public class Call_T1 extends OpCallable
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

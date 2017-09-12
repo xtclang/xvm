@@ -7,14 +7,20 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
-import org.xvm.proto.template.xConst;
-import org.xvm.proto.template.xEnum;
+import org.xvm.proto.template.Const;
+import org.xvm.proto.template.Enum;
+import org.xvm.proto.template.Function;
+import org.xvm.proto.template.Ref;
+import org.xvm.proto.template.Service;
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xService;
 
 import java.io.File;
 
@@ -104,7 +110,16 @@ public class TypeSet
                     }
                 }
             }
+        }
 
+    protected void initNativeInterfaces()
+        {
+        // initialize necessary INSTANCE references
+        new Enum(this, (ClassStructure) getClassConstant("Enum").getComponent(), true).initDeclared();
+        new Const(this, (ClassStructure) getClassConstant("Const").getComponent(), true).initDeclared();
+        new Function(this, (ClassStructure) getClassConstant("Function").getComponent(), true).initDeclared();
+        new Service(this, (ClassStructure) getClassConstant("Service").getComponent(), true).initDeclared();
+        new Ref(this, (ClassStructure) getClassConstant("Ref").getComponent(), true).initDeclared();
         }
 
     // ----- templates -----
@@ -160,13 +175,13 @@ public class TypeSet
                         template = getNativeTemplate(sEnumName, structClass);
                         if (template == null)
                             {
-                            template = new xEnum(this, structClass, false);
+                            template = new Enum(this, structClass, false);
                             }
                         // no need to call initDeclared() for the values
                         break;
 
                     case ENUM:
-                        template = new xEnum(this, structClass, false);
+                        template = new Enum(this, structClass, false);
                         template.initDeclared();
                         break;
 
@@ -177,11 +192,11 @@ public class TypeSet
                         break;
 
                     case SERVICE:
-                        template = new xService(this, structClass, false);
+                        template = new Service(this, structClass, false);
                         break;
 
                     case CONST:
-                        template = new xConst(this, structClass, false);
+                        template = new Const(this, structClass, false);
                         break;
 
                     default:
@@ -231,26 +246,66 @@ public class TypeSet
             TypeConstant constTyp = (TypeConstant)
                     f_container.f_pool.getConstant(nClassConstId); // must exist
 
-            typeComposition = resolve(constTyp);
+            typeComposition = resolveComposition(constTyp);
 
             f_mapConstCompositions.put(nClassConstId, typeComposition);
             }
         return typeComposition;
         }
 
-    // produce a TypeComposition based on the specified ClassTypeConstant
-    protected TypeComposition resolve(TypeConstant constType)
+    // produce a TypeComposition based on the specified TypeConstant
+    protected TypeComposition resolveComposition(TypeConstant constType)
         {
-        if (constType instanceof ParameterizedTypeConstant)
+        if (constType instanceof ClassTypeConstant)
             {
-            ParameterizedTypeConstant constClassType = (ParameterizedTypeConstant) constType;
-            ClassTemplate template = getTemplate((IdentityConstant)
-                    constClassType.getUnderlyingType().getDefiningConstant());
-            return template.resolve(constClassType, Collections.EMPTY_MAP);
+            ClassTypeConstant constClassType = (ClassTypeConstant) constType;
+            ClassTemplate template = getTemplate(constClassType.getClassConstant());
+            return template.resolveClass(constClassType, Collections.EMPTY_MAP);
             }
 
-        // TODO: create TypeComposition for Union and Intersection types
-        throw new UnsupportedOperationException();
+        if (constType instanceof IntersectionTypeConstant ||
+                constType instanceof UnionTypeConstant)
+            {
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        throw new IllegalArgumentException("Unresolved type constant: " + constType);
+        }
+
+    // resolve a parameter type given a map of actual parameter types
+    public Type resolveParameterType(TypeConstant constType, Map<String, Type> mapActual)
+        {
+        if (constType instanceof UnresolvedTypeConstant)
+            {
+            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+            }
+
+        if (constType instanceof ClassTypeConstant)
+            {
+            ClassTypeConstant constClass = (ClassTypeConstant) constType;
+            ClassTemplate template = getTemplate(constClass.getClassConstant());
+            return template.resolveClass(constClass, mapActual).ensurePublicType();
+            }
+
+        if (constType instanceof ParameterTypeConstant)
+            {
+            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
+            Type type = mapActual.get(constParam.getName());
+
+            if (type == null)
+                {
+                throw new IllegalArgumentException("Unresolved type constant: " + constParam);
+                }
+            return type;
+            }
+
+        if (constType instanceof IntersectionTypeConstant ||
+                constType instanceof UnionTypeConstant)
+            {
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        throw new IllegalArgumentException("Unresolved type constant: " + constType);
         }
 
     // ----- Types -----

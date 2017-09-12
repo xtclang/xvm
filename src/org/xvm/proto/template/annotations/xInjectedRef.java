@@ -6,7 +6,7 @@ import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xRef;
+import org.xvm.proto.template.Ref;
 
 import java.util.concurrent.ExecutionException;
 
@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutionException;
  * @author gg 2017.02.27
  */
 public class xInjectedRef
-        extends xRef
+        extends Ref
     {
     public static xInjectedRef INSTANCE;
 

@@ -1,9 +1,5 @@
 package org.xvm.proto;
 
-import org.xvm.asm.PropertyStructure;
-import org.xvm.proto.template.xRef;
-import org.xvm.proto.template.xRef.RefHandle;
-
 import org.xvm.util.ListMap;
 
 import java.util.Map;

@@ -16,12 +16,11 @@ import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.IndexSupport;
 import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xObject;
 
 import java.util.Collections;
-import java.util.function.Supplier;
 
 /**
  * TODO:
@@ -101,14 +100,13 @@ public class xArray
                                 array.assignArrayValue(hArray, i, frameCaller.getFrameLocal());
                         if (hException != null)
                             {
-                            frameCaller.m_hException = hException;
-                            return Op.R_CALL;
+                            return frameCaller.raiseException(hException);
                             }
 
                         if (++i < cCapacity)
                             {
                             ahArg[0] = xInt64.makeHandle(i);
-                            // TODO: ditto
+
                             hSupplier.call1(frameCaller, null, ahArg, Frame.RET_LOCAL);
                             frameCaller.m_frameNext.setContinuation(this);
                             return Op.R_CALL;
@@ -126,21 +124,25 @@ public class xArray
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        GenericArrayHandle h1 = (GenericArrayHandle) hValue1;
-        GenericArrayHandle h2 = (GenericArrayHandle) hValue2;
+        GenericArrayHandle hArray1 = (GenericArrayHandle) hValue1;
+        GenericArrayHandle hArray2 = (GenericArrayHandle) hValue2;
 
-        ObjectHandle[] ah1 = h1.m_ahValue;
-        ObjectHandle[] ah2 = h2.m_ahValue;
+        ObjectHandle[] ah1 = hArray1.m_ahValue;
+        ObjectHandle[] ah2 = hArray2.m_ahValue;
 
-        if (ah1.length != ah2.length)
+        // compare the array dimensions
+        int cElements = ah1.length;
+        if (cElements != ah2.length)
             {
             return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
-        Type type1 = getElementType(h1, 0);
-        Type type2 = getElementType(h2, 0);
+        // then compare the element types
+        Type type1 = getElementType(hArray1, 0);
+        Type type2 = getElementType(hArray2, 0);
 
         TypeComposition clazzEl = type1.f_clazz;
         if (clazzEl == null || clazzEl != type2.f_clazz)
@@ -148,21 +150,9 @@ public class xArray
             return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
-        for (int i = 0, c = ah1.length; i < c; i++)
-            {
-            int iRet = clazzEl.callEquals(frame, h1, h2, Frame.RET_LOCAL);
-            if (iRet == Op.R_EXCEPTION)
-                {
-                return Op.R_EXCEPTION;
-                }
-
-            ObjectHandle hResult = frame.getFrameLocal();
-            if (hResult == xBoolean.FALSE)
-                {
-                return frame.assignValue(iReturn, xBoolean.FALSE);
-                }
-            }
-        return frame.assignValue(iReturn, xBoolean.TRUE);
+        // now compare arrays elements one-by-one
+        int[] holder = new int[] {0}; // the index holder
+        return new Equals(ah1, ah2, clazzEl, cElements, holder, iReturn).doNext(frame);
         }
 
     // ----- IndexSupport methods -----
@@ -233,6 +223,70 @@ public class xArray
         ArrayHandle hArray = (ArrayHandle) hTarget;
 
         return hArray.m_cSize;
+        }
+
+    // ----- helper classes -----
+
+    /**
+     * Helper class for equals() implementation.
+     */
+    protected static class Equals
+            implements Frame.Continuation
+        {
+        final private ObjectHandle[] ah1;
+        final private ObjectHandle[] ah2;
+        final private TypeComposition clazzEl;
+        final private int cElements;
+        final private int[] holder;
+        final private int iReturn;
+
+        public Equals(ObjectHandle[] ah1, ObjectHandle[] ah2, TypeComposition clazzEl,
+                      int cElements, int[] holder, int iReturn)
+            {
+            this.ah1 = ah1;
+            this.ah2 = ah2;
+            this.clazzEl = clazzEl;
+            this.cElements = cElements;
+            this.holder = holder;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ObjectHandle hResult = frameCaller.getFrameLocal();
+            if (hResult == xBoolean.FALSE)
+                {
+                return frameCaller.assignValue(iReturn, hResult);
+                }
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            int iEl;
+            while ((iEl = holder[0]++) < cElements)
+                {
+                switch (clazzEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Frame.RET_LOCAL))
+                    {
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    case Op.R_NEXT:
+                        ObjectHandle hResult = frameCaller.getFrameLocal();
+                        if (hResult == xBoolean.FALSE)
+                            {
+                            return frameCaller.assignValue(iReturn, hResult);
+                            }
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+                    }
+                }
+            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+            }
         }
 
     // ----- ObjectHandle helpers -----

@@ -1,12 +1,11 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpProperty;
-import org.xvm.proto.TypeComposition;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -52,31 +51,40 @@ public class PreInc extends OpProperty
             if (f_nArgValue >= 0)
                 {
                 // operation on a register
-                ObjectHandle hTarget = frame.getArgument(f_nArgValue);
-                if (hTarget == null)
+                ObjectHandle hValue = frame.getArgument(f_nArgValue);
+                if (hValue == null)
                     {
                     return R_REPEAT;
                     }
 
-                return hTarget.f_clazz.f_template.
-                        invokePreInc(frame, hTarget, null, f_nRetValue);
+                if (hValue.f_clazz.f_template.invokeNext(frame, hValue, Frame.RET_LOCAL) == R_EXCEPTION)
+                    {
+                    return R_EXCEPTION;
+                    }
+
+                ObjectHandle hValueNew = frame.getFrameLocal();
+                if (frame.assignValue(f_nRetValue, hValueNew) == R_EXCEPTION ||
+                    frame.assignValue(f_nArgValue, hValueNew) == R_EXCEPTION)
+                    {
+                    return R_EXCEPTION;
+                    }
+                return iPC + 1;
                 }
             else
                 {
                 // operation on a local property
                 ObjectHandle hTarget = frame.getThis();
-                TypeComposition clazz = hTarget.f_clazz;
 
-                PropertyStructure property = getPropertyStructure(frame, clazz, -f_nArgValue);
+                PropertyConstant constProperty = (PropertyConstant)
+                        frame.f_context.f_pool.getConstant(-f_nArgValue);
 
-                return hTarget.f_clazz.f_template.
-                        invokePreInc(frame, hTarget, property, f_nRetValue);
+                return hTarget.f_clazz.f_template.invokePreInc(
+                        frame, hTarget, constProperty.getName(), f_nRetValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

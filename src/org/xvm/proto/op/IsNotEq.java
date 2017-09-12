@@ -70,20 +70,32 @@ public class IsNotEq extends Op
                 throw new IllegalStateException();
                 }
 
-            int iResult = clz1.callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL);
-            if (iResult == R_EXCEPTION)
+            switch (clz1.callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL))
                 {
-                return R_EXCEPTION;
+                case R_EXCEPTION:
+                    return R_EXCEPTION;
+
+                case R_NEXT:
+                    {
+                    BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
+                    return frame.assignValue(f_nRetValue, xBoolean.not(hValue));
+                    }
+
+                case R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        {
+                        BooleanHandle hValue = (BooleanHandle) frameCaller.getFrameLocal();
+                        return frame.assignValue(f_nRetValue, xBoolean.not(hValue));
+                        });
+                    return R_CALL;
+
+                default:
+                    throw new IllegalStateException();
                 }
-
-            BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
-
-            return frame.assignValue(f_nRetValue, xBoolean.makeHandle(!hValue.get()));
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

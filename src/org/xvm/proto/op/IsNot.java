@@ -56,14 +56,13 @@ public class IsNot extends Op
                 return R_REPEAT;
                 }
 
-            frame.assignValue(f_nRetValue, xBoolean.makeHandle(!hValue.get()));
+            frame.assignValue(f_nRetValue, xBoolean.not(hValue));
 
             return iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

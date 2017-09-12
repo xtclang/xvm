@@ -3,6 +3,7 @@ package org.xvm.proto.op;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.proto.Adapter;
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -10,8 +11,6 @@ import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.xException;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xService.ServiceHandle;
 import org.xvm.proto.template.collections.xTuple.TupleHandle;
 
 import java.io.DataInput;
@@ -74,34 +73,38 @@ public class Invoke_T1 extends OpInvocable
             TypeComposition clz = hTarget.f_clazz;
             ObjectHandle[] ahArg = hArgTuple.m_ahValue;
 
-            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
+            CallChain chain = getCallChain(frame, clz, f_nMethodId);
+            MethodStructure method = chain.getTop();
 
-            if (frame.f_adapter.isNative(method))
+            if (chain.isNative())
                 {
                 return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, f_nRetValue);
                 }
 
-            if (ahArg.length != Adapter.getArgCount(method))
+            int cArgs = ahArg.length;
+            int cVars = frame.f_adapter.getVarCount(method);
+
+            if (cArgs != Adapter.getArgCount(method))
                 {
-                frame.m_hException = xException.makeHandle("Invalid tuple argument");
-                return R_EXCEPTION;
+                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-
-            System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
-
-            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
+            ObjectHandle[] ahVar;
+            if (cVars > cArgs)
                 {
-                return xFunction.makeAsyncHandle(method).call1(frame, hTarget, ahVar, f_nRetValue);
+                ahVar = new ObjectHandle[cVars];
+                System.arraycopy(ahArg, 0, ahVar, 0, cArgs);
+                }
+            else
+                {
+                ahVar = ahArg;
                 }
 
-            return frame.call1(method, hTarget, ahVar, f_nRetValue);
+            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

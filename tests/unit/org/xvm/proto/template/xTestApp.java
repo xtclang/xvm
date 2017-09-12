@@ -223,10 +223,15 @@ public class xTestApp extends xModule
             new Var(adapter.getClassTypeConstId("Int64")), // #8
             new PPreInc(0, adapter.getPropertyConstId("TestApp.TestService", "counter2"), 8),
             new X_Print(8),
+
             new PPostInc(0, adapter.getPropertyConstId("TestApp.TestService", "counter"), 8),
             new X_Print(8),
             new Invoke_01(0, adapter.getMethodConstId("TestApp.TestService", "increment"), 8),
             new X_Print(8),
+
+            new Var(adapter.getClassTypeConstId("Type")), // #9
+            new PGet(4, adapter.getPropertyConstId("Ref", "RefType"), 9),
+            new X_Print(9),
 
             new Invoke_00(Op.A_SERVICE, adapter.getMethodConstId("TestApp.TestService", "yield")),
 
@@ -234,7 +239,7 @@ public class xTestApp extends xModule
                             -adapter.ensureValueConstantId(0)),
             new Return_0(),
             };
-        ftTestService.m_cVars = 9;
+        ftTestService.m_cVars = 10;
         ftTestService.m_cScopes = 2;
 
         // --- testService2 ---
@@ -330,13 +335,13 @@ public class xTestApp extends xModule
                              -adapter.ensureValueConstantId("bye")),
             new X_Print(0),
 
-            new NVar(adapter.getClassTypeConstId("Ref"),
+            new NVar(adapter.getClassTypeConstId("Ref<Int64>"),
                      adapter.ensureValueConstantId("ri")), // #3 (ri)
             new Enter(),
             new INVar(adapter.getClassTypeConstId("Int64"),
                       adapter.ensureValueConstantId("i"),
                       -adapter.ensureValueConstantId(1)), // #4 (i)
-            new NVar(adapter.getClassTypeConstId("Ref"),
+            new NVar(adapter.getClassTypeConstId("Ref<Int64>"),
                      adapter.ensureValueConstantId("ri2")), // #5 (ri2)
             new MoveRef(4, 5),
             new MoveRef(4, 3),
@@ -441,7 +446,7 @@ public class xTestApp extends xModule
         ftTestTuple.m_aop = new Op[]
             {
             new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")),
-            new INVar(adapter.getClassTypeConstId("collections.Tuple"),
+            new INVar(adapter.getClassTypeConstId("collections.Tuple<String,Int64>"),
                       adapter.ensureValueConstantId("t"),
                       -adapter.ensureValueConstantId(new Object[] {"zero", Integer.valueOf(0)})), // #0 (t)
 
@@ -577,9 +582,11 @@ public class xTestApp extends xModule
 
             new Var(adapter.getClassTypeConstId("Boolean")), // #2
             new IsEq(0, 1, 2),
+            new X_Print(-adapter.ensureValueConstantId("p1 == p2")),
             new X_Print(2),
 
             new IsGt(1, 0, 2),
+            new X_Print(-adapter.ensureValueConstantId("p2 > p1")),
             new X_Print(2),
 
             new NVar(adapter.getClassTypeConstId("TestApp.Rectangle"),
@@ -609,6 +616,80 @@ public class xTestApp extends xModule
             };
         ftTestConst.m_cVars = 9;
 
+        ClassTemplate ctFormatter = f_types.getTemplate("TestApp.Formatter");
+        adapter.addMethod(ctFormatter.f_struct, "construct", STRING, VOID);
+
+        MethodInfo mtFormatter = ctFormatter.ensureMethodInfo("construct", STRING);
+        mtFormatter.m_aop = new Op[]
+            { // #0 = prefix
+            new LSet(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0),
+            new Return_0()
+            };
+        mtFormatter.m_cVars = 1;
+
+        MethodInfo mtToString = ctFormatter.ensureMethodInfo("to", VOID, STRING);
+        mtToString.m_aop = new Op[]
+            {
+            new Var(adapter.getClassTypeConstId("String")), // #0
+            new LGet(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0),
+            new Var(adapter.getClassTypeConstId("String")), // #1
+            new Call_01(Op.A_SUPER, 1),
+            new Add(0, 1, 0),
+            new Return_1(0)
+            };
+        mtToString.m_cVars = 2;
+
+        ClassTemplate ctPrPoint = f_types.getTemplate("TestApp.PrettyPoint");
+        adapter.addMethod(ctPrPoint.f_struct, "construct", new String[] {"Int64", "Int64", "String"}, VOID);
+        MethodInfo mtPrPConst = ctPrPoint.ensureMethodInfo("construct", new String[]{"Int64", "Int64", "String"});
+        mtPrPConst.m_aop = new Op[]
+            { // #0 = x; #1 = y; #2 = prefix
+            new Construct_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+                    new int[] {0, 1}),
+            new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"), 2),
+            new Return_0()
+            };
+        mtPrPConst.m_cVars = 3;
+
+        ClassTemplate ctPrRectangle = f_types.getTemplate("TestApp.PrettyRectangle");
+        adapter.addMethod(ctPrRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point", "String"}, VOID);
+        MethodInfo mtPrRConst = ctPrRectangle.ensureMethodInfo("construct", new String[]{"TestApp.Point", "TestApp.Point", "String"});
+        mtPrRConst.m_aop = new Op[]
+            { // #0 = tl; #1 = br; #2 = prefix
+            new Construct_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
+                    new int[] {0, 1}),
+            new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"), 2),
+            new Return_0()
+            };
+        mtPrRConst.m_cVars = 3;
+
+        MethodInfo ftTestMixin = ensureMethodInfo("testMixin", VOID);
+        ftTestMixin.m_aop = new Op[]
+            {
+            new X_Print(-adapter.ensureValueConstantId("\n# in TestApp.testMixin() #")),
+            new NVar(adapter.getClassTypeConstId("TestApp.PrettyPoint"),
+                    adapter.ensureValueConstantId("prp")), // #0 (prp)
+            new New_N(adapter.getMethodConstId("TestApp.PrettyPoint", "construct"),
+                    new int[]{-adapter.ensureValueConstantId(1), -adapter.ensureValueConstantId(2),
+                              -adapter.ensureValueConstantId("*** ")}, 0),
+            new X_Print(0),
+
+            new NVar(adapter.getClassTypeConstId("TestApp.Point"),
+                    adapter.ensureValueConstantId("p2")), // #1 (p2)
+            new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+                    new int[]{-adapter.ensureValueConstantId(2), -adapter.ensureValueConstantId(1)},
+                    1),
+
+            new NVar(adapter.getClassTypeConstId("TestApp.PrettyRectangle"),
+                    adapter.ensureValueConstantId("prr")), // #2 (prr)
+            new New_N(adapter.getMethodConstId("TestApp.PrettyRectangle", "construct"),
+                    new int[]{0, 1, -adapter.ensureValueConstantId("+++ ")}, 2),
+            new X_Print(2),
+
+            new Return_0(),
+            };
+        ftTestMixin.m_cVars = 3;
+
         // --- run()
         MethodInfo mtRun = ensureMethodInfo("run", VOID, VOID);
         mtRun.m_aop = new Op[]
@@ -622,6 +703,7 @@ public class xTestApp extends xModule
             new Call_00(-adapter.getMethodConstId("TestApp", "testArray")),
             new Call_00(-adapter.getMethodConstId("TestApp", "testTuple")),
             new Call_00(-adapter.getMethodConstId("TestApp", "testConst")),
+            new Call_00(-adapter.getMethodConstId("TestApp", "testMixin")),
             new Return_0()
             };
         mtRun.m_cVars = 2;

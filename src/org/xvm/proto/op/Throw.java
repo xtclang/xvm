@@ -42,17 +42,17 @@ public class Throw extends Op
         try
             {
             // there are no "const" exceptions
-            frame.m_hException = (ExceptionHandle) frame.getArgument(f_nArgValue);
-            if (frame.m_hException == null)
+            ExceptionHandle hException = (ExceptionHandle) frame.getArgument(f_nArgValue);
+            if (hException == null)
                 {
                 return R_REPEAT;
                 }
+
+            return frame.raiseException(hException);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
+            return frame.raiseException(e);
             }
-
-        return R_EXCEPTION;
         }
     }

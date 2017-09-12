@@ -10,7 +10,6 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
 import org.xvm.proto.ObjectHeap;
-import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -22,7 +21,7 @@ import org.xvm.proto.template.collections.xIntArray;
  * @author gg 2017.02.27
  */
 public class xInt64
-        extends xConst
+        extends Const
     {
     public static xInt64 INSTANCE;
 
@@ -57,8 +56,7 @@ public class xInt64
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
-            frame.m_hException = xException.makeHandle("Invalid array size: " + cCapacity);
-            return Op.R_EXCEPTION;
+            return frame.raiseException(xException.makeHandle("Invalid array size: " + cCapacity));
             }
 
         return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity));
@@ -72,7 +70,6 @@ public class xInt64
 
         // TODO: check overflow
         ObjectHandle hResult = makeHandle(hThis.getValue() + hThat.getValue());
-
         return frame.assignValue(iReturn, hResult);
         }
 
@@ -87,28 +84,27 @@ public class xInt64
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget,
-                            PropertyStructure property, int iReturn)
+    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        assert property == null;
-
         JavaLong hThis = (JavaLong) hTarget;
 
         // TODO: check overflow
-        ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
-
+        ObjectHandle hResult = makeHandle(hThis.getValue() - 1);
         return frame.assignValue(iReturn, hResult);
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget,
-                             PropertyStructure property, int iReturn)
+    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return invokePreInc(frame, hTarget, property, iReturn);
+        JavaLong hThis = (JavaLong) hTarget;
+
+        // TODO: check overflow
+        ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
+        return frame.assignValue(iReturn, hResult);
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
@@ -118,7 +114,7 @@ public class xInt64
                 return frame.assignValue(iReturn, hThis);
             }
 
-        return super.invokeNativeGet(frame, hTarget, property, iReturn);
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override
@@ -160,6 +156,7 @@ public class xInt64
 
     public static JavaLong makeHandle(long lValue)
         {
+        // TODO: create a cache of common values
         return new JavaLong(INSTANCE.f_clazzCanonical, lValue);
         }
     }

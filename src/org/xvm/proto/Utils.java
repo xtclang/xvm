@@ -1,17 +1,9 @@
 package org.xvm.proto;
 
-
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
-
-import org.xvm.proto.template.xConst;
+import org.xvm.proto.template.Const;
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xString;
 
 import java.sql.Timestamp;
-import java.util.Iterator;
-import java.util.List;
-import java.util.function.Supplier;
 
 
 /**
@@ -69,17 +61,16 @@ public abstract class Utils
     public static int callHash(Frame frame, ObjectHandle hConst)
         {
         TypeComposition clzConst = hConst.f_clazz;
-        PropertyStructure property = clzConst.getProperty("hash");
-        MethodStructure method = Adapter.getGetter(property);
+        CallChain chain = clzConst.getPropertyGetterChain("hash");
 
-        if (frame.f_adapter.isNative(method))
+        if (chain.isNative())
             {
-            xConst template = (xConst) clzConst.f_template; // should we get it from method?
+            Const template = (Const) clzConst.f_template; // should we get it from method?
             return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-        return frame.call1(method, hConst, ahVar, Frame.RET_LOCAL);
+        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
+        return clzConst.f_template.invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
         }
 
     // ----- to<String> support -----
@@ -89,15 +80,87 @@ public abstract class Utils
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
         TypeComposition clzValue = hValue.f_clazz;
-        List<MethodStructure> callChain = clzValue.getMethodCallChain(xObject.TO_STRING);
-        MethodStructure method = callChain.isEmpty() ? null : callChain.get(0);
+        CallChain chain = clzValue.getMethodCallChain(xObject.TO_STRING);
 
-        if (method == null || frame.f_adapter.isNative(method))
+        if (chain.isNative())
             {
             return clzValue.f_template.buildStringValue(frame, hValue, Frame.RET_LOCAL);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
-        return frame.call1(method, hValue, ahVar, Frame.RET_LOCAL);
+        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
+        return clzValue.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
+        }
+
+    // ----- PostInc support -----
+
+    public static class PreInc
+            implements Frame.Continuation
+        {
+        private final ObjectHandle hTarget;
+        private final String sPropName;
+        private final int iReturn;
+
+        public PreInc(ObjectHandle hTarget, String sPropName, int iReturn)
+            {
+            this.hTarget = hTarget;
+            this.sPropName = sPropName;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ObjectHandle hValueOld = frameCaller.getFrameLocal();
+
+            int iRes = hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
+            if (iRes == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
+
+            ObjectHandle hValueNew = frameCaller.getFrameLocal();
+            iRes = frameCaller.assignValue(iReturn, hValueNew);
+            if (iRes == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
+            return hTarget.f_clazz.f_template.
+                    setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+            }
+        }
+
+    public static class PostInc
+            implements Frame.Continuation
+        {
+        private final ObjectHandle hTarget;
+        private final String sPropName;
+        private final int iReturn;
+
+        public PostInc(ObjectHandle hTarget, String sPropName, int iReturn)
+            {
+            this.hTarget = hTarget;
+            this.sPropName = sPropName;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ObjectHandle hValueOld = frameCaller.getFrameLocal();
+
+            int iRes = frameCaller.assignValue(iReturn, hValueOld);
+            if (iRes == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
+            iRes = hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
+            if (iRes == Op.R_EXCEPTION)
+                {
+                return Op.R_EXCEPTION;
+                }
+            ObjectHandle hValueNew = frameCaller.getFrameLocal();
+            return hTarget.f_clazz.f_template.
+                    setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+            }
         }
     }

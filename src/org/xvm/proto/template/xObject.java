@@ -1,9 +1,12 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.proto.Frame;
+import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.ClassTemplate;
@@ -40,7 +43,20 @@ public class xObject
     @Override
     public void initDeclared()
         {
-        TO_STRING = f_types.f_adapter.getMethod("Object", "to", VOID, STRING).getIdentityConstant();
+        TO_STRING = f_types.f_adapter.getMethod(this, "to", VOID, STRING).getIdentityConstant();
         markNativeMethod("to", VOID, STRING);
+        markCalculated("meta");
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+        {
+        switch (property.getName())
+            {
+            case "meta":
+                return frame.assignValue(iReturn, hTarget);
+            }
+
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
     }

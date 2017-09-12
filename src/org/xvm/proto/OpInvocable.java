@@ -1,7 +1,5 @@
 package org.xvm.proto;
 
-import org.xvm.asm.MethodStructure;
-
 import org.xvm.asm.constants.MethodConstant;
 
 /**
@@ -13,16 +11,15 @@ public abstract class OpInvocable extends Op
     {
     private TypeComposition m_clazz;  // cached class
     private int m_nMethodId;          // cached method id
-    private MethodStructure m_method; // cached method
+    private CallChain m_chain;        // cached call chain
 
-    protected MethodStructure getMethodStructure(Frame frame,
-                                                 TypeComposition clazz, int nMethodConstId)
+    protected CallChain getCallChain(Frame frame, TypeComposition clazz, int nMethodConstId)
         {
         assert(nMethodConstId >= 0);
 
-        if (m_method != null && nMethodConstId == m_nMethodId && m_clazz == clazz)
+        if (m_chain != null && nMethodConstId == m_nMethodId && m_clazz == clazz)
             {
-            return m_method;
+            return m_chain;
             }
 
         MethodConstant constMethod = (MethodConstant)
@@ -30,6 +27,6 @@ public abstract class OpInvocable extends Op
 
         m_nMethodId = nMethodConstId;
         m_clazz = clazz;
-        return m_method = clazz.getMethodCallChain(constMethod).get(0);
+        return m_chain = clazz.getMethodCallChain(constMethod);
         }
     }

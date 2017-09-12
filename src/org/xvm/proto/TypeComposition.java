@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -7,20 +8,26 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ParameterTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
+import org.xvm.proto.template.xBoolean;
+import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xRef;
-import org.xvm.proto.template.xRef.RefHandle;
-import org.xvm.proto.template.collections.xTuple;
+import org.xvm.proto.template.Ref;
+import org.xvm.proto.template.Ref.RefHandle;
+import org.xvm.proto.template.xOrdered;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * TypeComposition represents a fully resolved class (e.g. ArrayList<String>).
@@ -35,29 +42,49 @@ public class TypeComposition
     public final ClassTemplate f_template;
 
     public final Map<String, Type> f_mapGenericActual; // corresponding to the template's GenericTypeName
+    private final boolean f_fCanonical;
 
+    private TypeComposition m_clzSuper;
     private Type m_typePublic;
     private Type m_typeProtected;
     private Type m_typePrivate;
     private Type m_typeStruct;
 
-    // cached call chain (the top-most method first)
-    private Map<MethodConstant, List<MethodStructure>> m_mapMethods = new HashMap<>();
+    // cached "declared" call chain
+    private List<ClassTemplate> m_listDeclaredChain;
+
+    // cached "default" call chain
+    private List<ClassTemplate> m_listDefaultChain;
+
+    // cached "full" call chain
+    private List<ClassTemplate> m_listCallChain;
+
+    // cached method call chain (the top-most method first)
+    private Map<MethodConstant, CallChain> m_mapMethods = new HashMap<>();
+
+    // cached property getter call chain (the top-most method first)
+    private Map<String, CallChain.PropertyCallChain> m_mapGetters = new HashMap<>();
+
+    // cached property setter call chain (the top-most method first)
+    private Map<String, CallChain.PropertyCallChain> m_mapSetters = new HashMap<>();
 
     // cached map of fields (values are always nulls)
     private Map<String, ObjectHandle> m_mapFields;
 
-    public TypeComposition(ClassTemplate template, Map<String, Type> mapParamsActual)
+    public TypeComposition(ClassTemplate template, Map<String, Type> mapParamsActual, boolean fCanonical)
         {
-        assert(mapParamsActual.size() == template.f_struct.getTypeParams().size() ||
-              template instanceof xTuple);
-
         f_template = template;
         f_mapGenericActual = mapParamsActual;
+        f_fCanonical = fCanonical;
         }
 
     public TypeComposition getSuper()
         {
+        if (m_clzSuper != null)
+            {
+            return m_clzSuper;
+            }
+
         ClassTemplate templateSuper = f_template.getSuper();
         if (templateSuper != null)
             {
@@ -66,20 +93,215 @@ public class TypeComposition
 
             if (mapFormalTypes.isEmpty())
                 {
-                return templateSuper.ensureClass(Collections.EMPTY_MAP);
+                return templateSuper.f_clazzCanonical;
                 }
 
             Map<String, Type> mapParams = new HashMap<>();
             for (Map.Entry<StringConstant, TypeConstant> entryFormal : mapFormalTypes.entrySet())
                 {
                 String sParamName = entryFormal.getKey().getValue();
-                mapParams.put(sParamName, f_mapGenericActual.get(sParamName));
+                if (templateSuper.f_listGenericParams.contains(sParamName))
+                    {
+                    mapParams.put(sParamName, f_mapGenericActual.get(sParamName));
+                    }
                 }
 
-            return templateSuper.ensureClass(mapParams);
+            return m_clzSuper = templateSuper.ensureClass(mapParams);
             }
 
         return null;
+        }
+
+    public boolean isRoot()
+        {
+        return this == xObject.CLASS;
+        }
+
+    public List<ClassTemplate> getCallChain()
+        {
+        if (m_listCallChain != null)
+            {
+            return m_listCallChain;
+            }
+
+        List<ClassTemplate> listDeclared = collectDeclaredCallChain(true);
+
+        TypeComposition clzSuper = getSuper();
+        if (clzSuper == null)
+            {
+            // this is "Object"; it has no contribution
+            return m_listCallChain = listDeclared;
+            }
+
+        List<ClassTemplate> listDefault = collectDefaultCallChain();
+        if (listDefault.isEmpty())
+            {
+            return m_listCallChain = listDeclared;
+            }
+
+        List<ClassTemplate> listMerge = new LinkedList<>(listDeclared);
+        addNoDupes(listDefault, listMerge, new HashSet<>(listDeclared));
+        return m_listCallChain = listMerge;
+        }
+
+    // There are two parts on the call chain:
+    //  1. The "declared" chain that consists of:
+    //   1.1 declared methods on the encapsulating mixins and traits (recursively)
+    //   1.2 methods implemented by the class
+    //   1.3 declared methods on the incorporated mixins, traits and delegates (recursively)
+    //   1.4 if the class belongs to a "built-in category" (e.g. Enum, Service, Const)
+    //       declared methods for the category itself
+    //   1.5 followed by the "declared" chain on the super class,
+    //       unless the super is the root Object and "this" class is a mixin or a trait
+    //
+    // 2. The "default" chain that consists of:
+    //   2.1 default methods on the interfaces that are declared by encapsulating
+    //          mixins and traits (recursively)
+    //   2.2 default methods on the interfaces implemented by the class (recursively)
+    //   2.3 default methods on the interfaces that are declared by mixins, traits and delegates (recursively)
+    //   2.4 followed by the "default" chain on the super class
+    //
+    //  @param fTop  true if this composition is the "top of the chain"
+    protected List<ClassTemplate> collectDeclaredCallChain(boolean fTop)
+        {
+        if (m_listDeclaredChain != null)
+            {
+            return m_listDeclaredChain;
+            }
+
+        TypeComposition clzSuper = getSuper();
+        if (clzSuper == null)
+            {
+            // this is "Object"; it has no contribution
+            return m_listDeclaredChain = Collections.singletonList(f_template);
+            }
+
+        ClassStructure struct = f_template.f_struct;
+        List<ClassTemplate> list = m_listDeclaredChain = new LinkedList<>();
+        Set<ClassTemplate> set = new HashSet<>(); // to avoid duplicates
+
+        // TODO: 1.1
+
+        // 1.2
+        list.add(f_template);
+
+        Component.Format format = struct.getFormat();
+        if (fTop && format == Component.Format.MIXIN)
+            {
+            // native mix-in (e.g. FutureRef)
+            ClassTypeConstant constInto =
+                    Adapter.getContribution(struct, Component.Composition.Into);
+
+            assert constInto != null;
+
+            ClassTemplate templateInto = f_template.f_types.getTemplate(constInto.getClassConstant());
+            TypeComposition clzInto = templateInto.resolveClass(constInto, f_mapGenericActual);
+
+            addNoDupes(clzInto.collectDeclaredCallChain(false), list, set);
+            }
+
+        // 1.3
+        for (Component.Contribution contribution : struct.getContributionsAsList())
+            {
+            switch (contribution.getComposition())
+                {
+                case Incorporates:
+                    // TODO: how to detect a conditional incorporation?
+                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    addNoDupes(clzContribution.collectDeclaredCallChain(false), list, set);
+                    break;
+
+                case Delegates:
+                    // TODO:
+                    break;
+                }
+            }
+
+        // 1.4
+        ClassTemplate templateCategory = f_template.f_templateCategory;
+        if (templateCategory != null)
+            {
+            // all categories are non-generic
+            list.add(templateCategory);
+            }
+
+        // 1.5
+        if (!clzSuper.isRoot() ||
+                !(format == Component.Format.MIXIN ||
+                  format == Component.Format.TRAIT))
+            {
+            addNoDupes(clzSuper.collectDeclaredCallChain(false), list, set);
+            }
+        return list;
+        }
+
+    protected List<ClassTemplate> collectDefaultCallChain()
+        {
+        if (m_listDefaultChain != null)
+            {
+            return m_listDefaultChain;
+            }
+
+        TypeComposition clzSuper = getSuper();
+        if (clzSuper == null)
+            {
+            // this is "Object"; it has no contribution
+            return Collections.emptyList();
+            }
+
+        ClassStructure struct = f_template.f_struct;
+        List<ClassTemplate> list = m_listDefaultChain = new LinkedList<>();
+        Set<ClassTemplate> set = new HashSet<>(); // to avoid duplicates
+
+        // TODO: 2.1
+
+        // 2.2
+        if (f_template.f_struct.getFormat() == Component.Format.INTERFACE)
+            {
+            list.add(f_template);
+            set.add(f_template);
+            }
+
+        for (Component.Contribution contribution : struct.getContributionsAsList())
+            {
+            switch (contribution.getComposition())
+                {
+                case Incorporates:
+                    // TODO: how to detect a conditional incorporation?
+                case Delegates:
+                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
+                    break;
+                }
+            }
+
+        // 2.3
+        for (Component.Contribution contribution : struct.getContributionsAsList())
+            {
+            switch (contribution.getComposition())
+                {
+                case Implements:
+                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
+                    break;
+                }
+            }
+
+        // 2.4
+        addNoDupes(clzSuper.collectDefaultCallChain(), list, set);
+        return list;
+        }
+
+    private void addNoDupes(List<ClassTemplate> listFrom, List<ClassTemplate> listTo,
+                            Set<ClassTemplate> setDupes)
+        {
+        for (ClassTemplate template : listFrom)
+            {
+            if (setDupes.add(template))
+                {
+                listTo.add(template);
+                }
+            }
         }
 
     public ObjectHandle ensureAccess(ObjectHandle handle, Constants.Access access)
@@ -190,34 +412,36 @@ public class TypeComposition
         return false;
         }
 
-    // given a TypeConstant, return a corresponding TypeComposition within this class's context;
-    // Object.class if the type cannot be resolved
-    // for example, List<KeyType> in the context of Map<String, Int>
-    // will resolve in List<String>
-    public TypeComposition resolve(TypeConstant constType)
+    // given a TypeConstant, return a corresponding TypeComposition within this class's context
+    // or Object.class if the type cannot be resolved;
+    //
+    // for example, List<KeyType> in the context of Map<String, Int> will resolve in List<String>
+    //
+    // Note: this impl is almost identical to TypeSet.resolveParameterType()
+    //       but returns TypeComposition rather than Type and is more tolerant
+    public TypeComposition resolveClass(TypeConstant constType)
         {
-        // TODO gg+cp discuss
-//        if (constType instanceof UnresolvedTypeConstant)
-//            {
-//            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
-//            }
-//
-//        if (constType instanceof ParameterizedTypeConstant)
-//            {
-//            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constType;
-//            ClassTemplate template = f_template.f_types.getTemplate(constClass.getUnderlyingType());
-//            return template.resolve(constClass, f_mapGenericActual);
-//            }
-//
-//        if (constType instanceof ParameterTypeConstant)
-//            {
-//            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
-//            Type type = f_mapGenericActual.get(constParam.getName());
-//            if (type != null && type.f_clazz != null)
-//                {
-//                return type.f_clazz;
-//                }
-//            }
+        if (constType instanceof UnresolvedTypeConstant)
+            {
+            constType = ((UnresolvedTypeConstant) constType).getResolvedConstant();
+            }
+
+        if (constType instanceof ClassTypeConstant)
+            {
+            ClassTypeConstant constClass = (ClassTypeConstant) constType;
+            ClassTemplate template = f_template.f_types.getTemplate(constClass.getClassConstant());
+            return template.resolveClass(constClass, f_mapGenericActual);
+            }
+
+        if (constType instanceof ParameterTypeConstant)
+            {
+            ParameterTypeConstant constParam = (ParameterTypeConstant) constType;
+            Type type = f_mapGenericActual.get(constParam.getName());
+            if (type != null && type.f_clazz != null)
+                {
+                return type.f_clazz;
+                }
+            }
 
         return xObject.CLASS;
         }
@@ -241,150 +465,125 @@ public class TypeComposition
                                          Frame.Continuation continuation)
         {
         ClassTemplate template = f_template;
-        MethodStructure methodDefault = template.getDeclaredMethod("default", TypeSet.VOID, TypeSet.VOID);
-        ClassTemplate templateSuper = template.getSuper();
 
-        Frame frameDefault;
-        if (methodDefault == null)
+        // TODO: there must be a better way to create a MethodIdConst
+        MethodStructure method = template.f_types.f_adapter.getMethod(template, "default",
+                ClassTemplate.VOID, ClassTemplate.VOID);
+        if (method == null)
             {
-            frameDefault = null;
+            return null;
+            }
+
+        MethodConstant constDefault = method.getIdentityConstant();
+        CallChain chain = getMethodCallChain(constDefault);
+
+        int cMethods = chain.getDepth();
+        if (cMethods == 0)
+            {
+            return null;
+            }
+
+        Frame frameBase = frame.f_context.createFrame1(frame, chain.getMethod(cMethods - 1),
+                hStruct, ahVar, Frame.RET_UNUSED);
+
+        if (cMethods > 1)
+            {
+            int[] holder = new int[]{cMethods - 1};
+            Frame.Continuation cont = new Frame.Continuation()
+                {
+                public int proceed(Frame frameCaller)
+                    {
+                    int i = --holder[0];
+                    if(i > 0)
+                        {
+                        frameCaller.call1(chain.getMethod(i), hStruct, ahVar, Frame.RET_UNUSED);
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+                        }
+                    else
+                        {
+                        return continuation.proceed(frameCaller);
+                        }
+                    }
+                };
+            frameBase.setContinuation(cont);
             }
         else
             {
-            frameDefault = frame.f_context.createFrame1(frame, methodDefault,
-                    hStruct, ahVar, Frame.RET_UNUSED);
-            frameDefault.setContinuation(continuation);
-            continuation = null;
+            frameBase.setContinuation(continuation);
             }
-
-        Frame frameSuper = null;
-        if (templateSuper != null)
-            {
-            TypeComposition clazzSuper = templateSuper.ensureClass(f_mapGenericActual);
-            frameSuper = clazzSuper.callDefaultConstructors(frame, hStruct, ahVar, continuation);
-            }
-
-        if (frameSuper == null)
-            {
-            return frameDefault;
-            }
-
-        if (frameDefault != null)
-            {
-            frameSuper.setContinuation(frameCaller -> frameCaller.call(frameDefault));
-            }
-        return frameSuper;
+        return frameBase;
         }
 
     // retrieve the call chain for the specified method
     // TODO: replace MethodConstant with MethodIdConstant
-    public List<MethodStructure> getMethodCallChain(MethodConstant constMethod)
+    public CallChain getMethodCallChain(MethodConstant constMethod)
         {
-        return m_mapMethods.computeIfAbsent(constMethod,
-                cm -> collectMethodCallChain(cm, new LinkedList<>()));
+        return m_mapMethods.computeIfAbsent(constMethod, this::collectMethodCallChain);
         }
 
     // find a matching method and add to the list
     // TODO: replace MethodConstant with MethodIdConstant
-    protected List<MethodStructure> collectMethodCallChain(
-            MethodConstant constMethod, List<MethodStructure> list)
+    protected CallChain collectMethodCallChain(MethodConstant constMethod)
         {
-        ClassTemplate template = f_template;
-        MethodStructure method = template.getDeclaredMethod(constMethod);
-        if (method != null)
+        List<MethodStructure> list = new LinkedList<>();
+        for (ClassTemplate template : getCallChain())
             {
-            list.add(method);
-            }
-
-        ClassTemplate templateCategory = template.f_templateCategory;
-        if (templateCategory != null)
-            {
-            method = templateCategory.getDeclaredMethod(constMethod);
+            MethodStructure method = template.getDeclaredMethod(constMethod);
             if (method != null)
                 {
                 list.add(method);
 
-                // the native (category) methods don't "super" to anything
-                return list;
+                // TODO: if (!method.callsSuper() {break;})
                 }
             }
-
-        TypeComposition clzSuper = getSuper();
-        if (clzSuper != null)
-            {
-            clzSuper.collectMethodCallChain(constMethod, list);
-            }
-
-        // TODO: walk default methods on interfaces
-        return list;
+        return new CallChain(list);
         }
 
-    // resolve the super call chain for the specified method
-    public MethodStructure resolveSuper(MethodStructure method)
+    public CallChain.PropertyCallChain getPropertyGetterChain(String sProperty)
         {
-        MethodConstant constMethod = method.getIdentityConstant();
-
-        List<MethodStructure> listMethods = m_mapMethods.computeIfAbsent(constMethod, cm ->
-        {
-        Component container = method.getParent().getParent();
-        return container instanceof PropertyStructure ?
-                collectAccessorCallChain(container.getName(), cm, new LinkedList<>()) :
-                collectMethodCallChain(cm, new LinkedList<>());
-        });
-
-        for (int i = 0, c = listMethods.size(); i < c - 1; i++)
-            {
-            if (listMethods.get(i).equals(method))
-                {
-                return listMethods.get(i + 1);
-                }
-            }
-        return null;
+        return m_mapGetters.computeIfAbsent(sProperty, sPropName ->
+                collectPropertyCallChain(sPropName, true));
         }
 
-    // find a matching property accessor and add to the list
-    // TODO: replace MethodConstant with MethodIdConstant
-    protected List<MethodStructure> collectAccessorCallChain(
-            String sPropName, MethodConstant constMethod, List<MethodStructure> list)
+    public CallChain.PropertyCallChain getPropertySetterChain(String sProperty)
         {
-        PropertyStructure property = f_template.getProperty(sPropName);
+        return m_mapSetters.computeIfAbsent(sProperty, sPropName ->
+                collectPropertyCallChain(sPropName, false));
+        }
 
-        if (property != null)
+    protected CallChain.PropertyCallChain collectPropertyCallChain(String sPropName, boolean fGetter)
+        {
+        PropertyStructure propertyBase = null;
+        List<MethodStructure> list = new LinkedList<>();
+        for (ClassTemplate template : getCallChain())
             {
-            MultiMethodStructure mms = (MultiMethodStructure) property.getChild(constMethod.getName());
-            if (mms != null)
-                {
-                // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
-                list.add((MethodStructure) mms.children().get(0));
-                }
-            }
-
-        ClassTemplate templateCategory = f_template.f_templateCategory;
-        if (templateCategory != null)
-            {
-            property = templateCategory.getProperty(sPropName);
+            PropertyStructure property = template.getProperty(sPropName);
             if (property != null)
                 {
-                MultiMethodStructure mms = (MultiMethodStructure) property.getChild(constMethod.getName());
+                MultiMethodStructure mms = (MultiMethodStructure) property.getChild(
+                        fGetter ? "get" : "set");
                 if (mms != null)
                     {
-                    // TODO: compare the signature
+                    // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
                     list.add((MethodStructure) mms.children().get(0));
 
-                    // the native (category) methods don't super to anything
-                    return list;
+                    // TODO: if (!method.callsSuper() {break;})
+                    }
+
+                if (template.isStateful())
+                    {
+                    propertyBase = property;
                     }
                 }
             }
 
-        TypeComposition clzSuper = getSuper();
-        if (clzSuper != null)
+        if (propertyBase == null)
             {
-            clzSuper.collectAccessorCallChain(sPropName, constMethod, list);
+            throw new IllegalStateException("Class " + this + " missing property " + sPropName);
             }
 
-        // TODO: walk default methods on interfaces
-        return list;
+        return new CallChain.PropertyCallChain(list, propertyBase, fGetter);
         }
 
     // retrieve the property structure for the specified property
@@ -413,6 +612,13 @@ public class TypeComposition
         return clzSuper == null ? null : clzSuper.getProperty(sPropName);
         }
 
+    // return the set of field names
+    public Set<String> getFieldNames()
+        {
+        return m_mapFields.keySet();
+        }
+
+    // create unassigned (with a null value) entries for all fields
     protected void createFields(Map<String, ObjectHandle> mapFields)
         {
         Map mapCached = m_mapFields;
@@ -424,9 +630,7 @@ public class TypeComposition
 
         m_mapFields = mapCached = new HashMap<>();
 
-        ClassTemplate template = f_template;
-
-        while (!template.isRootObject())
+        for (ClassTemplate template : collectDeclaredCallChain(true))
             {
             for (Component child : template.f_struct.children())
                 {
@@ -437,28 +641,22 @@ public class TypeComposition
                     RefHandle hRef = null;
                     if (template.isRef(prop))
                         {
-                        xRef referent = (xRef) template.getRefTemplate(prop);
+                        Ref referent = (Ref) template.getRefTemplate(prop);
 
                         hRef = referent.createRefHandle(referent.f_clazzCanonical, null);
                         }
 
-                    if (!template.isCalculated(prop) || hRef != null)
+                    if (template.isCalculated(prop))
+                        {
+                        // compensate for the lack of "isDeclaredAtThisLevel" API
+                        mapCached.remove(prop.getName());
+                        }
+                    else
                         {
                         mapCached.put(prop.getName(), hRef);
                         }
                     }
                 }
-
-            ClassTemplate templateCategory = template.f_templateCategory;
-            if (templateCategory != null)
-                {
-                // the categories are not generic; no reason to resolve
-                templateCategory.f_clazzCanonical.createFields(mapCached);
-                }
-
-            // TODO: process the mix-ins
-
-            template = template.getSuper();
             }
 
         mapFields.putAll(mapCached);
@@ -470,6 +668,11 @@ public class TypeComposition
     // return R_NEXT or R_EXCEPTION
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
+        if (hValue1 == hValue2)
+            {
+            frame.assignValue(iReturn, xBoolean.TRUE);
+            return Op.R_NEXT;
+            }
         return f_template.callEquals(frame, this, hValue1, hValue2, iReturn);
         }
 
@@ -477,6 +680,11 @@ public class TypeComposition
     // return R_NEXT or R_EXCEPTION
     public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
+        if (hValue1 == hValue2)
+            {
+            frame.assignValue(iReturn, xOrdered.EQUAL);
+            return Op.R_NEXT;
+            }
         return f_template.callCompare(frame, this, hValue1, hValue2, iReturn);
         }
 

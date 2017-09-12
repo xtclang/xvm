@@ -1,14 +1,11 @@
 package org.xvm.proto.op;
 
-import org.xvm.asm.MethodStructure;
-
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpInvocable;
 import org.xvm.proto.TypeComposition;
-import org.xvm.proto.template.xFunction;
-import org.xvm.proto.template.xService.ServiceHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -68,27 +65,22 @@ public class Invoke_1N extends OpInvocable
                 }
 
             TypeComposition clz = hTarget.f_clazz;
-            MethodStructure method = getMethodStructure(frame, clz, f_nMethodId);
+            CallChain chain = getCallChain(frame, clz, f_nMethodId);
 
-            if (frame.f_adapter.isNative(method))
+            if (chain.isNative())
                 {
-                return clz.f_template.invokeNativeNN(frame, method, hTarget, new ObjectHandle[]{hArg}, f_anRetValue);
+                return clz.f_template.invokeNativeNN(frame, chain.getTop(), hTarget,
+                        new ObjectHandle[]{hArg}, f_anRetValue);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
             ahVar[0] = hArg;
 
-            if (clz.f_template.isService() && frame.f_context != ((ServiceHandle) hTarget).m_context)
-                {
-                return xFunction.makeAsyncHandle(method).callN(frame, hTarget, ahVar, f_anRetValue);
-                }
-
-            return frame.callN(method, hTarget, ahVar, f_anRetValue);
+            return clz.f_template.invokeN(frame, chain, hTarget, ahVar, f_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

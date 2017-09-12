@@ -2,13 +2,14 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.OpCallable;
 import org.xvm.proto.Utils;
 
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -51,7 +52,13 @@ public class Call_01 extends OpCallable
         {
         if (f_nFunctionValue == A_SUPER)
             {
-            return callSuper01(frame, f_nRetValue);
+            CallChain chain = frame.m_chain;
+            if (chain == null)
+                {
+                throw new IllegalStateException();
+                }
+
+            return chain.callSuper01(frame, f_nRetValue);
             }
 
         if (f_nFunctionValue < 0)
@@ -75,8 +82,7 @@ public class Call_01 extends OpCallable
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

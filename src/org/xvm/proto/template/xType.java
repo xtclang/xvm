@@ -3,6 +3,8 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.proto.*;
 
+import java.util.Collections;
+
 /**
  * TODO:
  *
@@ -31,19 +33,22 @@ public class xType
 
     public static TypeHandle makeHandle(Type type)
         {
-        return new TypeHandle(INSTANCE.f_clazzCanonical, type);
+        return new TypeHandle(
+                INSTANCE.ensureClass(Collections.singletonMap("DataType", type)),
+                type);
         }
 
     public static class TypeHandle
             extends ObjectHandle
         {
-        public Type m_type; // the type represented by this handle
-
         protected TypeHandle(TypeComposition clazz, Type type)
             {
             super(clazz);
+            }
 
-            m_type = type;
+        protected Type getType()
+            {
+            return f_clazz.getActualType("DataType");
             }
         }
     }

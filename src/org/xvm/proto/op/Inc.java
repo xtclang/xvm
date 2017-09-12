@@ -12,35 +12,31 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * POSTINC lvalue-target, lvalue-return ; T++ -> T
+ * INC rvalue-target ; in-place increment; no result
  *
  * @author gg 2017.03.08
  */
-public class PostInc extends OpProperty
+public class Inc extends OpProperty
     {
     private final int f_nArgValue;
-    private final int f_nRetValue;
 
-    public PostInc(int nArg, int nRet)
+    public Inc(int nArg)
         {
         f_nArgValue = nArg;
-        f_nRetValue = nRet;
         }
 
-    public PostInc(DataInput in)
+    public Inc(DataInput in)
             throws IOException
         {
         f_nArgValue = in.readInt();
-        f_nRetValue = in.readInt();
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_POSTINC);
+        out.write(OP_INC);
         out.writeInt(f_nArgValue);
-        out.writeInt(f_nRetValue);
         }
 
     @Override
@@ -57,18 +53,7 @@ public class PostInc extends OpProperty
                     return R_REPEAT;
                     }
 
-                if (hValue.f_clazz.f_template.invokeNext(frame, hValue, Frame.RET_LOCAL) == R_EXCEPTION)
-                    {
-                    return R_EXCEPTION;
-                    }
-
-                ObjectHandle hValueNew = frame.getFrameLocal();
-                if (frame.assignValue(f_nRetValue, hValue) == R_EXCEPTION ||
-                    frame.assignValue(f_nArgValue, hValueNew) == R_EXCEPTION)
-                    {
-                    return R_EXCEPTION;
-                    }
-                return iPC + 1;
+                return hValue.f_clazz.f_template.invokeNext(frame, hValue, f_nArgValue);
                 }
             else
                 {
@@ -79,7 +64,7 @@ public class PostInc extends OpProperty
                         frame.f_context.f_pool.getConstant(-f_nArgValue);
 
                 return hTarget.f_clazz.f_template.invokePostInc(
-                        frame, hTarget, constProperty.getName(), f_nRetValue);
+                        frame, hTarget, constProperty.getName(), Frame.RET_UNUSED);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

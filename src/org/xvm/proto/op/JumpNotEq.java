@@ -70,21 +70,33 @@ public class JumpNotEq extends Op
                 throw new IllegalStateException();
                 }
 
-            int iResult = clz1.callEquals(frame, hTest1, hTest2, Frame.RET_LOCAL);
-
-            if (iResult == R_EXCEPTION)
+            switch (clz1.callEquals(frame, hTest1, hTest2, Frame.RET_LOCAL))
                 {
-                return R_EXCEPTION;
+                case R_EXCEPTION:
+                    return R_EXCEPTION;
+
+                case R_NEXT:
+                    {
+                    BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
+                    return hValue.get() ? iPC + 1 : iPC + f_nRelAddr;
+                    }
+
+                case R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        {
+                        BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
+                        return hValue.get() ? iPC + 1 : iPC + f_nRelAddr;
+                        });
+                    return R_CALL;
+
+                default:
+                    throw new IllegalStateException();
                 }
 
-            BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
-
-            return hValue.get() ? iPC + 1 : iPC + f_nRelAddr;
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return R_EXCEPTION;
+            return frame.raiseException(e);
             }
         }
     }

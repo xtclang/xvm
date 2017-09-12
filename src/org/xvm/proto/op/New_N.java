@@ -56,7 +56,6 @@ public class New_N extends OpCallable
         MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
         IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
 
-        ExceptionHandle hException;
         try
             {
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue,
@@ -73,15 +72,7 @@ public class New_N extends OpCallable
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
+            return frame.raiseException(e);
             }
-
-        if (hException == null)
-            {
-            return iPC + 1;
-            }
-
-        frame.m_hException = hException;
-        return R_EXCEPTION;
         }
     }

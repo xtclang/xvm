@@ -20,7 +20,7 @@ import org.xvm.proto.op.Return_0;
  * @author gg 2017.02.27
  */
 public class xException
-        extends xConst
+        extends Const
     {
     public static xException INSTANCE;
 

@@ -406,3 +406,22 @@ static <T> Boolean bar(T t1, T t2)
     T t = f ? t1 : t2; // NVAR Object, "t"
     }
 }
+
+// mixin: "incorporate" vs. "encapsulate":
+
+@ThisMixinEncapsulates class MyClass
+        incorporates ThisMixinGetsPutBeneathMyCodeButOverTheMyBaseClassCode
+        extends MyBaseClass
+        // etc.
+    {
+    }
+
+@ObjectStreaming("Hello", 7)
+class ObjectFileStream()
+        extends FileStream
+    {
+    ...
+    }
+
+new @ObjectStreaming FileStream()
+

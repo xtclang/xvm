@@ -12,7 +12,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.ArrayConstant;
 
 import org.xvm.proto.template.xClass;
-import org.xvm.proto.template.xFunction;
+import org.xvm.proto.template.Function;
 import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xString;
@@ -98,7 +98,7 @@ public class ObjectHeap
 
         if (constValue instanceof MethodConstant)
             {
-            return xFunction.INSTANCE;
+            return Function.INSTANCE;
             }
 
         throw new UnsupportedOperationException("Unknown constant " + constValue);

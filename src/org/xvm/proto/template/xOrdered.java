@@ -14,7 +14,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xOrdered
-        extends xEnum
+        extends Enum
     {
     public static EnumHandle LESSER;
     public static EnumHandle EQUAL;

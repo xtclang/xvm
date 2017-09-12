@@ -21,7 +21,7 @@ import org.xvm.proto.TypeSet;
  * @author gg 2017.02.27
  */
 public class xString
-        extends xConst
+        extends Const
     {
     public static xString INSTANCE;
 
@@ -85,7 +85,7 @@ public class xString
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
@@ -95,7 +95,7 @@ public class xString
                 return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_sValue.length()));
             }
 
-        return super.invokeNativeGet(frame, hTarget, property, iReturn);
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
     @Override
@@ -155,20 +155,28 @@ public class xString
                 switch (method.getName())
                     {
                     case "indexOf": // (Boolean, Int) indexOf(String s, Range<Int>? range)
+                        int cReturns = aiReturn.length;
+                        if (cReturns == 0)
+                            {
+                            return Op.R_NEXT;
+                            }
+
                         String s = ((StringHandle) ahArg[0]).getValue();
                         ObjectHandle hRange = ahArg[1];
                         if (hRange == xNullable.NULL)
                             {
                             int of = hThis.m_sValue.indexOf(s);
-                            if (of >= 0)
+                            if (of < 0)
                                 {
-                                int nR = frame.assignValue(aiReturn[0], xBoolean.TRUE);
-                                if (nR == Op.R_EXCEPTION)
-                                    {
-                                    return Op.R_EXCEPTION;
-                                    }
-                                return frame.assignValue(aiReturn[1], xInt64.makeHandle(of));
+                                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                                 }
+
+                            int iResult = frame.assignValue(aiReturn[0], xBoolean.TRUE);
+                            if (iResult == Op.R_EXCEPTION || cReturns == 1)
+                                {
+                                return iResult;
+                                }
+                            return frame.assignValue(aiReturn[1], xInt64.makeHandle(of));
                             }
                         else
                             {

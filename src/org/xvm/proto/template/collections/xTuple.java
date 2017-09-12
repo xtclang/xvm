@@ -4,8 +4,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.ParameterizedTypeConstant;
-import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.ClassTypeConstant;
+import org.xvm.asm.constants.TupleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.ClassTemplate;
@@ -65,13 +65,13 @@ public class xTuple
     protected TypeComposition createCanonicalClass()
         {
         // this is Void.class
-        return new TypeComposition(this, Collections.EMPTY_MAP);
+        return new TypeComposition(this, Collections.EMPTY_MAP, true);
         }
 
     @Override
-    public TypeComposition resolve(ParameterizedTypeConstant constClassType, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(ClassTypeConstant constClassType, Map<String, Type> mapActual)
         {
-        List<TypeConstant> listParams = constClassType.getParamTypes();
+        List<TypeConstant> listParams = constClassType.getTypeConstants();
 
         int cParams = listParams.size();
         if (cParams == 0)
@@ -83,7 +83,7 @@ public class xTuple
         for (int i = 0, c = listParams.size(); i < c; i++)
             {
             mapParams.put("ElementTypes[" + i + ']',
-                    resolveParameterType(listParams.get(i), mapActual));
+                    f_types.resolveParameterType(listParams.get(i), mapActual));
             }
         return ensureClass(mapParams);
         }
@@ -91,15 +91,15 @@ public class xTuple
     @Override
     public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
         {
-        ArrayConstant constTuple = (ArrayConstant) constant;
+        TupleConstant constTuple = (TupleConstant) constant;
 
-        Constant[] aconst = constTuple.getValue();
-        int c = aconst.length;
+        List<Constant> list = constTuple.getValue();
+        int c = list.size();
         ObjectHandle[] ahValue = new ObjectHandle[c];
         Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
-            Constant constValue = aconst[i];
+            Constant constValue = list.get(i);
 
             ahValue[i] = heap.ensureConstHandle(constValue.getPosition());
             aType[i] = heap.getConstTemplate(constValue).f_clazzCanonical.ensurePublicType();
@@ -125,8 +125,7 @@ public class xTuple
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            frame.m_hException = e.getExceptionHandle();
-            return Op.R_EXCEPTION;
+            return frame.raiseException(e);
             }
 
         TupleHandle hTuple = new TupleHandle(clazz, ahValue);

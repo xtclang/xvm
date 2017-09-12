@@ -2,7 +2,6 @@ package org.xvm.proto;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.proto.Fiber.FiberStatus;
@@ -10,15 +9,15 @@ import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import org.xvm.proto.op.Return_0;
 
-import org.xvm.proto.template.xFunction.FunctionHandle;
+import org.xvm.proto.template.Function.FunctionHandle;
 import org.xvm.proto.template.xException;
 import org.xvm.proto.template.xObject;
-import org.xvm.proto.template.xService;
-import org.xvm.proto.template.xService.PropertyOperation;
-import org.xvm.proto.template.xService.PropertyOperation10;
-import org.xvm.proto.template.xService.PropertyOperation01;
-import org.xvm.proto.template.xService.PropertyOperation11;
-import org.xvm.proto.template.xService.ServiceHandle;
+import org.xvm.proto.template.Service;
+import org.xvm.proto.template.Service.PropertyOperation;
+import org.xvm.proto.template.Service.PropertyOperation10;
+import org.xvm.proto.template.Service.PropertyOperation01;
+import org.xvm.proto.template.Service.PropertyOperation11;
+import org.xvm.proto.template.Service.ServiceHandle;
 
 import java.util.Queue;
 
@@ -224,8 +223,7 @@ public class ServiceContext
 
         if (fiber.isTimedOut())
             {
-            frame.m_hException = xException.makeHandle("The service has timed-out");
-            iPC = Op.R_EXCEPTION;
+            iPC = frame.raiseException(xException.makeHandle("The service has timed-out"));
             }
         else if (fiber.getStatus() == FiberStatus.Waiting)
             {
@@ -372,7 +370,8 @@ public class ServiceContext
                             throw new IllegalStateException("Proto-frame is missing the continuation: " + hException);
                             }
 
-                        frame.m_hException = hException;
+                        frame.raiseException(hException);
+
                         switch (frame.m_continuation.proceed(null))
                             {
                             case Op.R_NEXT:
@@ -496,20 +495,20 @@ public class ServiceContext
 
     // send and asynchronous property operation message
     public CompletableFuture<ObjectHandle> sendProperty01Request(Frame frameCaller,
-            PropertyStructure property, PropertyOperation01 op)
+                                            String sPropName, PropertyOperation01 op)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new PropertyOpRequest(frameCaller, property, null, 1, future, op));
+        addRequest(new PropertyOpRequest(frameCaller, sPropName, null, 1, future, op));
 
         return future;
         }
 
     // send and asynchronous property operation message
     public void sendProperty10Request(Frame frameCaller,
-            PropertyStructure property, ObjectHandle hValue, PropertyOperation10 op)
+                                      String sPropName, ObjectHandle hValue, PropertyOperation10 op)
         {
-        addRequest(new PropertyOpRequest(frameCaller, property, hValue, 0, null, op));
+        addRequest(new PropertyOpRequest(frameCaller, sPropName, hValue, 0, null, op));
         }
 
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
@@ -611,7 +610,7 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     IdentityConstant constClass = f_constructor.getParent().getParent().getIdentityConstant();
-                    xService service = (xService) frame.f_context.f_types.getTemplate(constClass);
+                    Service service = (Service) frame.f_context.f_types.getTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
                     }
@@ -748,19 +747,19 @@ public class ServiceContext
     public static class PropertyOpRequest
             extends Message
         {
-        private final PropertyStructure f_property;
+        private final String f_sPropName;
         private final ObjectHandle f_hValue;
         private final int f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
         private final PropertyOperation f_op;
 
-        public PropertyOpRequest(Frame frameCaller, PropertyStructure property,
+        public PropertyOpRequest(Frame frameCaller, String sPropName,
                                  ObjectHandle hValue, int cReturns,
                                  CompletableFuture<ObjectHandle> future, PropertyOperation op)
             {
             super(frameCaller);
 
-            f_property = property;
+            f_sPropName = sPropName;
             f_hValue = hValue;
             f_cReturns = cReturns;
             f_future = future;
@@ -777,10 +776,10 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     return cReturns == 0
-                            ? ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_property, f_hValue)
+                            ? ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_sPropName, f_hValue)
                        : f_hValue == null
-                            ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_property, 0)
-                            : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_property, f_hValue, 0);
+                            ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_sPropName, 0)
+                            : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_sPropName, f_hValue, 0);
                     }
                 };
 

@@ -87,7 +87,7 @@ public class Type
     @Override
     public String toString()
         {
-        return f_clazz.toString();
+        return f_clazz == null ? "<no class>" : f_clazz.toString();
         }
 
     // ----- debugging support ------

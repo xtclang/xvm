@@ -8,6 +8,8 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.proto.Adapter;
+import org.xvm.proto.CallChain;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -18,7 +20,7 @@ import org.xvm.proto.TypeSet;
 import org.xvm.proto.Utils;
 
 import org.xvm.proto.template.annotations.xFutureRef;
-import org.xvm.proto.template.xService.ServiceHandle;
+import org.xvm.proto.template.Service.ServiceHandle;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -27,12 +29,12 @@ import java.util.concurrent.CompletableFuture;
  *
  * @author gg 2017.02.27
  */
-public class xFunction
+public class Function
         extends ClassTemplate
     {
-    public static xFunction INSTANCE;
+    public static Function INSTANCE;
 
-    public xFunction(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Function(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
 
@@ -64,23 +66,35 @@ public class xFunction
     public static class FunctionHandle
             extends ObjectHandle
         {
-        protected MethodStructure m_invoke;
+        // a function to call
+        protected final MethodStructure f_function;
+
+        // a method call chain (not null only if function is null)
+        protected final CallChain f_chain;
+        protected final int f_nDepth;
 
         protected FunctionHandle(TypeComposition clazz, MethodStructure function)
             {
             super(clazz);
 
-            m_invoke = function;
+            f_function = function;
+            f_chain = null;
+            f_nDepth = 0;
             }
 
-        public MethodStructure getTemplate()
+        protected FunctionHandle(TypeComposition clazz, CallChain chain, int nDepth)
             {
-            return m_invoke;
+            super(clazz);
+
+            f_function = null;
+            f_chain = chain;
+            f_nDepth = nDepth;
             }
 
         public int getVarCount()
             {
-            return f_clazz.f_template.f_types.f_adapter.getVarCount(m_invoke);
+            return f_clazz.f_template.f_types.f_adapter.getVarCount(
+                    f_function == null ? f_chain.getMethod(f_nDepth) : f_function);
             }
 
         // ----- FunctionHandle interface -----
@@ -143,13 +157,17 @@ public class xFunction
         // invoke with zero or one return to be placed into the specified register;
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            return frame.call1(m_invoke, hTarget, ahVar, iReturn);
+            return f_function == null ?
+                    frame.invoke1(f_chain, f_nDepth, hTarget, ahVar, iReturn) :
+                    frame.call1(f_function, hTarget, ahVar, iReturn);
             }
 
         // invoke with multiple return values;
         protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            return frame.callN(m_invoke, hTarget, ahVar, aiReturn);
+            return f_function == null ?
+                    frame.invokeN(f_chain, f_nDepth, hTarget, ahVar, aiReturn) :
+                    frame.callN(f_function, hTarget, ahVar, aiReturn);
             }
 
         // bind a specified argument
@@ -176,7 +194,8 @@ public class xFunction
         @Override
         public String toString()
             {
-            return super.toString() + m_invoke;
+            return super.toString() +
+                    (f_function == null ? f_chain.getMethod(f_nDepth) : f_function);
             }
         }
 
@@ -187,7 +206,7 @@ public class xFunction
 
         protected DelegatingHandle(TypeComposition clazz, FunctionHandle hDelegate)
             {
-            super(clazz, hDelegate == null ? null : hDelegate.m_invoke);
+            super(clazz, hDelegate == null ? null : hDelegate.f_function);
 
             m_hDelegate = hDelegate;
             }
@@ -211,6 +230,12 @@ public class xFunction
             }
 
         @Override
+        public int getVarCount()
+            {
+            return m_hDelegate.getVarCount();
+            }
+
+        @Override
         public String toString()
             {
             return getClass().getSimpleName() + " -> " + m_hDelegate;
@@ -220,9 +245,9 @@ public class xFunction
     public static class NativeMethodHandle
             extends FunctionHandle
         {
-        final protected xService.NativeOperation f_op;
+        final protected Service.NativeOperation f_op;
 
-        public NativeMethodHandle(xService.NativeOperation op)
+        public NativeMethodHandle(Service.NativeOperation op)
             {
             super(INSTANCE.f_clazzCanonical, null);
 
@@ -385,9 +410,9 @@ public class xFunction
     public static class AsyncHandle
             extends FunctionHandle
         {
-        protected AsyncHandle(TypeComposition clazz, MethodStructure function)
+        protected AsyncHandle(TypeComposition clazz, CallChain chain, int nDepth)
             {
-            super(clazz, function);
+            super(clazz, chain, nDepth);
             }
 
         // ----- FunctionHandle interface -----
@@ -398,7 +423,7 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) hTarget;
 
             // native method on the service means "execute on the caller's thread"
-            if (frame.f_adapter.isNative(m_invoke) || frame.f_context == hService.m_context)
+            if (f_chain.isNative() || frame.f_context == hService.m_context)
                 {
                 return super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
@@ -420,7 +445,7 @@ public class xFunction
             ServiceHandle hService = (ServiceHandle) hTarget;
 
             // native method on the service means "execute on the caller's thread"
-            if (frame.f_adapter.isNative(m_invoke) || frame.f_context == hService.m_context)
+            if (f_chain.isNative() || frame.f_context == hService.m_context)
                 {
                 return super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
@@ -457,11 +482,14 @@ public class xFunction
             }
         }
 
-    public static AsyncHandle makeAsyncHandle(MethodStructure function)
+    public static AsyncHandle makeAsyncHandle(CallChain chain, int nDepth)
         {
-        assert function.getParent().getParent().getFormat() == Component.Format.SERVICE;
+        return new AsyncHandle(INSTANCE.f_clazzCanonical, chain, nDepth);
+        }
 
-        return new AsyncHandle(INSTANCE.f_clazzCanonical, function);
+    public static FunctionHandle makeHandle(CallChain chain, int nDepth)
+        {
+        return new FunctionHandle(INSTANCE.f_clazzCanonical, chain, nDepth);
         }
 
     public static FunctionHandle makeHandle(MethodStructure function)

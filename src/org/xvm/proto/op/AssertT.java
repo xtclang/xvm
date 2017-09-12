@@ -48,7 +48,6 @@ public class AssertT extends OpCallable
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
         try
             {
             BooleanHandle hTest = (BooleanHandle) frame.getArgument(f_nValue);
@@ -65,14 +64,12 @@ public class AssertT extends OpCallable
             StringConstant constText = (StringConstant)
                     frame.f_context.f_pool.getConstant(-f_nTextConstId);
 
-            hException = xException.makeHandle("Assertion failed: " + constText.getValueString());
+            return frame.raiseException(
+                    xException.makeHandle("Assertion failed: " + constText.getValueString()));
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
+            return frame.raiseException(e);
             }
-
-        frame.m_hException = hException;
-        return R_EXCEPTION;
         }
     }

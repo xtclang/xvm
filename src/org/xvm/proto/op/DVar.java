@@ -4,7 +4,7 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 
-import org.xvm.proto.template.xRef.RefHandle;
+import org.xvm.proto.template.Ref.RefHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;

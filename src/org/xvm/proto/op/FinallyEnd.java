@@ -41,7 +41,6 @@ public class FinallyEnd extends Op
             }
 
         // re-throw
-        frame.m_hException = hException;
-        return R_EXCEPTION;
+        return frame.raiseException(hException);
         }
     }

@@ -1,3 +1,5 @@
+import annotations.AtomicRef;
+
 class TestApp
     {
     // entry point
@@ -95,7 +97,7 @@ class TestApp
         }
 
     class TestClass2
-            extends TestApp.TestClass // TODO: should be allowed to be non-qualified
+            extends TestClass
         {
         Int prop2;
 
@@ -178,6 +180,7 @@ class TestApp
         print(++svc.counter2);
         print(svc.counter++);
         print(svc.increment());
+        print(rfc.RefType);
 
         this:service.yield();
 
@@ -301,6 +304,19 @@ class TestApp
             print(ri2);
             }
         print(ri.get());
+
+        TestClass t = new TestClass("before");
+        Ref<String> rp = &t.prop1;
+        print(rp);
+        rp.set("after");
+        print(t);
+
+        TestService svc = new TestService();
+        ri = &svc.counter;
+        print(ri.get());
+
+        AtomicRef<Int> ari = &svc.counter2;
+        print(ari.replace(1, 2));
         }
 
     static String lambda_2(Ref<Int> i) {} // TODO: remove
@@ -332,7 +348,7 @@ class TestApp
         print(t[1]);
 
         Int i = 0;
-        Tuple<String, Int> t2 = new Tuple("", i); // fixed-size (rigid)
+        Tuple<String, Int> t2 = ("", i); // fixed-size (rigid)
         print(t2);
 
         t2[0] = "t";
@@ -402,5 +418,47 @@ class TestApp
         Color c = Blue;
         print(c);
         print(c.ordinal);
+        }
+
+    mixin Formatter(String prefix) into Object
+        {
+        String prefix; // TODO: remove
+
+        String to<String>()
+            {
+            return prefix + super();
+            }
+        }
+
+    static const PrettyPoint
+            extends Point
+            incorporates Formatter
+        {
+        construct PrettyPoint(Int x, Int y, String prefix)
+            {
+            construct Point(x, y);
+            construct Formatter(prefix);
+            }
+        }
+
+    static const PrettyRectangle
+            extends Rectangle
+            incorporates Formatter
+        {
+        construct PrettyRectangle(Point tl, Point br, String prefix)
+            {
+            construct Rectangle(tl, br);
+            construct Formatter(prefix);
+            }
+        }
+
+    static Void testMixin()
+        {
+        PrettyPoint prp = new PrettyPoint(1, 2, "*** ");
+        print(prp);
+
+        Point p2 = new Point(2, 1);
+        PrettyRectangle prr = new PrettyRectangle(prp, p2, "+++ ");
+        print(prp);
         }
     }
