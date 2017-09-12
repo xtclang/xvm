@@ -59,9 +59,9 @@ module Test
             // ...
             }
 
-//        <MT3 extends MapType1, KT3 extends MapType1.KeyType> Void process(MT3.KeyType k, KT3 k3)  // TODO resolve both "KeyType" correctly
-//            {
-//            // ...
-//            }
+        <MT3 extends MapType1, KT3 extends MapType1.KeyType> Void process(MT3.KeyType k, KT3 k3)  // TODO resolve both "KeyType" correctly
+            {
+            // ...
+            }
         }
     }

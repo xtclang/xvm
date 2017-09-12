@@ -363,7 +363,7 @@ public class NameResolver
                     {
                     throw new IllegalStateException("not a single defining constant: " + constParamType);
                     }
-                constParam = constParamType.getIdentityConstant();
+                constParam = constParamType.getDefiningConstant();
                 }
             }
 
@@ -428,8 +428,6 @@ public class NameResolver
     @Override
     public ResolutionResult resolvedComponent(Component component)
         {
-        assert !m_fTypeParam;
-
         // it is possible that the name "resolved to" an ambiguous component, which is an error
         if (component instanceof CompositeComponent && ((CompositeComponent) m_component).isAmbiguous())
             {

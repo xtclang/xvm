@@ -106,6 +106,12 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean isParamsSpecified()
+        {
+        return true;
+        }
+
+    @Override
     public List<TypeConstant> getParamTypes()
         {
         List<TypeConstant> list = m_listTypeParams;
