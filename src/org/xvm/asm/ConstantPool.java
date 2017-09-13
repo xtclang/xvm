@@ -561,6 +561,18 @@ public class ConstantPool
         }
 
     /**
+     * Given a ClassConstant, obtain an Enum constant.
+     *
+     * @param constClass  a ClassConstant for the Enum
+     *
+     * @return an EnumConstant representing the Enum
+     */
+    public EnumConstant ensureEnumConstant(ClassConstant constClass)
+        {
+        return (EnumConstant) register(new EnumConstant(this, constClass));
+        }
+
+    /**
      * Helper to get a TypeConstant for a class in the Ecstasy core module.
      *
      * @param sClass  the qualified class name, dot-delimited
