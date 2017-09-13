@@ -64,4 +64,15 @@ module Test
             // ...
             }
         }
+
+    mixin MyMixin<T extends Int>
+        {
+        // ...
+        }
+
+    class MyClass2<T>
+            incorporates conditional MyMixin<T extends Int>
+        {
+        // TODO
+        }
     }

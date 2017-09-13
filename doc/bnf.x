@@ -133,9 +133,13 @@ Composition
     "extends" TypeExpression ArgumentList-opt
     "implements" TypeExpression
     "delegates" TypeExpression "(" Expression ")"
-    "incorporates" TypeExpression ArgumentList-opt
+    "incorporates" IncorporatesFinish
     "into" TypeExpression
     ImportClause QualifiedName VersionRequirement-opt
+
+IncorporatesFinish
+    "conditional" QualifiedName TypeParameterList ArgumentList-opt
+    TypeExpression ArgumentList-opt
 
 ImportClause
     "import"
@@ -916,9 +920,11 @@ FreeformVertical
 TypeExpression
     UnionedTypeExpression
 
+# '+' creates a union of two types; '-' creates a difference of two types
 UnionedTypeExpression
     IntersectingTypeExpression
     UnionedTypeExpression + IntersectingTypeExpression
+    UnionedTypeExpression - IntersectingTypeExpression
 
 IntersectingTypeExpression
     NonBiTypeExpression
