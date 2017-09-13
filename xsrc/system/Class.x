@@ -514,6 +514,14 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      */
     Class incorporate(Class that);
 
+    /**
+     * Obtain a public type for this Class instance.
+     */
+    @auto Type to<Type>()
+        {
+        return PublicType;
+        }
+
     // ----- object creation -----------------------------------------------------------------------
 
     /**
