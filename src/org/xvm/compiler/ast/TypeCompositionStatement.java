@@ -1592,6 +1592,6 @@ public class TypeCompositionStatement
     transient private ModuleStructure moduleImported;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
-            "annotations", "typeParams", "constructorParams", "typeArgs", "args", "compositions",
-            "body");
+            "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",
+            "compositions", "body");
     }

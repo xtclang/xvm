@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -2164,7 +2163,7 @@ public abstract class Component
      * abstract sense, meaning any class, interface, mixin, trait, value, enum, or service) can be
      * composed of any number of contributing components.
      */
-    public static class Contribution
+    public class Contribution
         {
         /**
          * @see XvmStructure#disassemble(DataInput)
@@ -2188,6 +2187,20 @@ public abstract class Component
                         aconst[i] = pool.getConstant(readIndex(in));
                         }
                     m_aconstArgs = aconst;
+                    break;
+
+                case Incorporates:
+                    final int cParams = readMagnitude(in);
+                    if (cParams > 0)
+                        {
+                        final ListMap<StringConstant, TypeConstant> map = new ListMap<>();
+                        for (int i = 0; i < cParams; ++i)
+                            {
+                            map.put((StringConstant) pool.getConstant(readMagnitude(in)),
+                                    (TypeConstant  ) pool.getConstant(readMagnitude(in)));
+                            }
+                        m_mapParams = map;
+                        }
                     break;
                 }
             }
@@ -2265,7 +2278,7 @@ public abstract class Component
                 case Into:
                 case Incorporates:
                 case Enumerates:
-                    throw new IllegalArgumentException(composition + " uses the constructor with a ClassTypeConstant");
+                    throw new IllegalArgumentException(composition + " uses the constructor with a TypeConstant");
 
                 case Delegates:
                     throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
@@ -2311,7 +2324,7 @@ public abstract class Component
 
             m_composition  = Composition.Annotation;
             m_constContrib = constType;
-            m_aconstArgs = aconstParam;
+            m_aconstArgs   = aconstParam;
             }
 
         /**
@@ -2377,6 +2390,50 @@ public abstract class Component
             }
 
         /**
+         * Obtain the type constraints for the conditional mixin.
+         *
+         * @return a read-only map of type parameter name to type constraint, or null if the
+         *         Composition is not "incorporates conditional"
+         */
+        public Map<StringConstant, TypeConstant> getTypeParams()
+            {
+            Map<StringConstant, TypeConstant> map = m_mapParams;
+            if (map == null)
+                {
+                return null;
+                }
+            assert (map = Collections.unmodifiableMap(map)) != null;
+            return map;
+            }
+
+        /**
+         * Add a type constraint for a conditional mixin.
+         *
+         * @param sName  the type parameter name from the class which is incorporating the mixin
+         * @param clz    the type parameter type constraint for the conditional incorporation
+         */
+        public void addTypeParam(String sName, TypeConstant clz)
+            {
+            if (m_composition != Composition.Incorporates)
+                {
+                throw new IllegalStateException("not an \"incorporates\" contribution");
+                }
+            if (sName == null || clz == null)
+                {
+                throw new IllegalArgumentException("name and class required");
+                }
+
+            ListMap<StringConstant, TypeConstant> map = m_mapParams;
+            if (map == null)
+                {
+                m_mapParams = map = new ListMap<>();
+                }
+
+            map.put(getConstantPool().ensureCharStringConstant(sName), clz);
+            markModified();
+            }
+
+        /**
          * @see XvmStructure#registerConstants(ConstantPool)
          */
         protected void registerConstants(ConstantPool pool)
@@ -2390,6 +2447,18 @@ public abstract class Component
                 for (int i = 0, c = aconst.length; i < c; ++i)
                     {
                     aconst[i] = pool.register(aconst[i]);
+                    }
+                }
+
+            ListMap<StringConstant, TypeConstant> mapOld = m_mapParams;
+            ListMap<StringConstant, TypeConstant> mapNew;
+            if (mapOld != null)
+                {
+                m_mapParams = mapNew = new ListMap<>();
+                for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.asList())
+                    {
+                    mapNew.put((StringConstant) pool.register(entry.getKey()),
+                               (TypeConstant  ) pool.register(entry.getValue()));
                     }
                 }
             }
@@ -2417,6 +2486,9 @@ public abstract class Component
                         writePackedLong(out, aconst[i].getPosition());
                         }
                     break;
+
+                case Incorporates:
+                    // TODO incorporates m_mapParams
                 }
             }
 
@@ -2438,6 +2510,7 @@ public abstract class Component
                     && this.m_constContrib.equals(that.m_constContrib)
                     && Handy.equals(this.m_constProp, that.m_constProp)
                     && Handy.equalArraysNullOk(this.m_aconstArgs, that.m_aconstArgs);
+            // TODO incorporates m_mapParams
             }
 
         @Override
@@ -2454,6 +2527,8 @@ public abstract class Component
                 sb.append(m_composition.toString().toLowerCase())
                   .append(' ');
                 }
+
+            // TODO incorporates m_mapParams "conditional"
 
             sb.append(m_constContrib.getDescription());
 
@@ -2487,6 +2562,7 @@ public abstract class Component
                   .append(m_constProp.getDescription())
                   .append(')');
                 }
+            // TODO incorporates m_mapParams
 
             return sb.toString();
             }
@@ -2512,6 +2588,11 @@ public abstract class Component
          * The optional arguments, if this Composition represents an annotation.
          */
         private Constant[] m_aconstArgs;
+
+        /**
+         * The name-to-type information for "incorporates conditional" constraints.
+         */
+        private ListMap<StringConstant, TypeConstant> m_mapParams;
         }
 
 
