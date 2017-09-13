@@ -41,6 +41,11 @@ public class Parameter
         return (String) name.getValue();
         }
 
+    public Token getNameToken()
+        {
+        return name;
+        }
+
     @Override
     public long getEndPosition()
         {

@@ -10,7 +10,6 @@ import java.util.List;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 
@@ -95,13 +94,13 @@ public abstract class Composition
         if (condition != null)
             {
             sb.append("if (")
-                    .append(condition)
-                    .append(") { ");
+              .append(condition)
+              .append(") { ");
             }
 
         sb.append(keyword.getId().TEXT)
-                .append(' ')
-                .append(type);
+          .append(' ')
+          .append(type);
 
         return sb.toString();
         }
@@ -184,10 +183,11 @@ public abstract class Composition
     public static class Incorporates
             extends Composition
         {
-        public Incorporates(Expression condition, Token keyword, TypeExpression type, List<Expression> args)
+        public Incorporates(Expression condition, Token keyword, TypeExpression type, List<Expression> args, List<Parameter> constraints)
             {
             super(condition, keyword, type);
-            this.args = args;
+            this.args        = args;
+            this.constraints = constraints;
             }
 
         /**
@@ -198,7 +198,25 @@ public abstract class Composition
         public Incorporates(Annotation annotation)
             {
             this(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
-                    Token.Id.INCORPORATES), annotation.type, annotation.args);
+                    Token.Id.INCORPORATES), annotation.type, annotation.args, null);
+            }
+
+        /**
+         * @return true iff the incorporates clause is conditional based on the generic parameters
+         *         of the specified type
+         */
+        public boolean isConditional()
+            {
+            return constraints != null;
+            }
+
+        /**
+         * @return true iff the incorporates clause is conditional based on the generic parameters
+         *         of the specified type
+         */
+        public List<Parameter> getConstraints()
+            {
+            return constraints;
             }
 
         @Override
@@ -220,7 +238,43 @@ public abstract class Composition
             {
             StringBuilder sb = new StringBuilder();
 
-            sb.append(toStartString());
+            if (condition != null)
+                {
+                sb.append("if (")
+                  .append(condition)
+                  .append(") { ");
+                }
+
+            sb.append(keyword.getId().TEXT);
+
+            if (isConditional())
+                {
+                // special handling for "incorporates conditional <T1 extends T2, ..>"
+                String sType = type.toString();
+                sb.append(" conditional ")
+                  .append(sType, 0, sType.indexOf('<'));
+
+                sb.append('<');
+                boolean first = true;
+                for (Parameter param : constraints)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(param.toTypeParamString());
+                    }
+                sb.append('>');
+                }
+            else
+                {
+                sb.append(' ')
+                  .append(type);
+                }
 
             if (args != null)
                 {
@@ -246,8 +300,9 @@ public abstract class Composition
             }
 
         protected List<Expression> args;
+        protected List<Parameter>  constraints;
 
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class, "condition", "type", "args");
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class, "condition", "type", "args", "constraints");
         }
 
 

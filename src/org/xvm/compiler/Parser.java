@@ -7,12 +7,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.xvm.asm.Version;
+import org.xvm.asm.*;
 
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.*;
 
+import org.xvm.compiler.ast.Parameter;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
@@ -329,11 +330,36 @@ public class Parser
                 }
             else if ((keyword = match(Id.INCORPORATES)) != null)
                 {
+                // "incorporates" IncorporatesFinish
+                // IncorporatesFinish
+                //     "conditional" QualifiedName TypeParameterList ArgumentList-opt
+                //     TypeExpression ArgumentList-opt
                 do
                     {
-                    TypeExpression   type = parseTypeExpression();
+                    TypeExpression  type;
+                    List<Parameter> constraints = null;
+                    if (match(Id.CONDITIONAL) == null)
+                        {
+                        type = parseTypeExpression();
+                        }
+                    else
+                        {
+                        // parse the type parameter list e.g. "<KeyType extends Int, ValueType>",
+                        // and turn it into a type parameter name list e.g. "<KeyType, ValueType>"
+                        List<Token>          names       = parseQualifiedName();
+                                             constraints = parseTypeParameterList(true);
+                        List<TypeExpression> paramnames  = new ArrayList<>();
+                        for (Parameter param : constraints)
+                            {
+                            Token       tokName       = param.getNameToken();
+                            List<Token> listParamName = Collections.singletonList(tokName);
+                            paramnames.add(new NamedTypeExpression(null, listParamName,
+                                    null, null, null, tokName.getEndPosition()));
+                            }
+                        type = new NamedTypeExpression(null, names, null, null, paramnames, getLastMatch().getEndPosition());
+                        }
                     List<Expression> args = parseArgumentList(false);
-                    compositions.add(new Composition.Incorporates(exprCondition, keyword, type, args));
+                    compositions.add(new Composition.Incorporates(exprCondition, keyword, type, args, constraints));
                     }
                 while (match(Id.COMMA) != null);
                 fAny = true;
@@ -3126,12 +3152,13 @@ s     *
         }
 
     /**
-     * Parse a type expression of the form "Type + Type".
+     * Parse a type expression of the form "Type + Type" or "Type - Type".
      *
      * <p/><code><pre>
      * UnionedTypeExpression
      *     IntersectingTypeExpression
      *     UnionedTypeExpression + IntersectingTypeExpression
+     *     UnionedTypeExpression - IntersectingTypeExpression
      * </pre></code>
      *
      * @return a type expression
@@ -3139,10 +3166,15 @@ s     *
     TypeExpression parseUnionedTypeExpression()
         {
         TypeExpression expr = parseIntersectingTypeExpression();
-        while (peek().getId() == Id.ADD)
+        Token tokOp;
+        do
             {
-            expr = new BiTypeExpression(expr, expect(Id.ADD), parseIntersectingTypeExpression());
+            if ((tokOp = match(Id.ADD)) != null || (tokOp = match(Id.SUB)) != null)
+                {
+                expr = new BiTypeExpression(expr, tokOp, parseIntersectingTypeExpression());
+                }
             }
+        while (tokOp != null);
         return expr;
         }
 
@@ -3929,7 +3961,6 @@ s     *
             }
 
         List<VersionOverride> overrides = new ArrayList<>();
-        Token                 tokVer    = getLastMatch();
         overrides.add(new VersionOverride(exprVer));
 
         Set<Version> setGood = new HashSet<>();
