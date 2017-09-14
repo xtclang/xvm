@@ -38,7 +38,7 @@ public class MultiMethodConstant
      * @param constParent  the module, package, class, or method that contains this property
      * @param sName        the property name
      */
-    public MultiMethodConstant(ConstantPool pool, Constant constParent, String sName)
+    public MultiMethodConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {
         super(pool, constParent, sName);
 

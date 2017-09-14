@@ -233,6 +233,19 @@ public abstract class MultiCondition
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    public boolean containsUnresolved()
+        {
+        for (Constant constant : m_aconstCond)
+            {
+            if (constant.containsUnresolved())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         for (Constant constant : m_aconstCond)

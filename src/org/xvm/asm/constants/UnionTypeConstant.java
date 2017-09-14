@@ -91,6 +91,12 @@ public class UnionTypeConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constType1.containsUnresolved() || m_constType2.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType1);

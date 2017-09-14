@@ -111,6 +111,13 @@ public class UnresolvedNameConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        Constant constant = unwrap();
+        return constant instanceof ResolvableConstant || constant.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         if (m_constId != null)

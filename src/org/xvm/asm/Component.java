@@ -449,15 +449,15 @@ public abstract class Component
         addContribution(new Contribution(constClass, constProp));
         }
 
-    public void addIncorporatesConditional()
+    /**
+     * Add a mixin via an "incorporates" or "incorporates conditional".
+     *
+     * @param constClass
+     * @param mapConstraints
+     */
+    public void addIncorporates(TypeConstant constClass, Map<String, TypeConstant> mapConstraints)
         {
-        Contribution contrib = new Contribution(Composition.Incorporates, constType)
-
-        for ()
-            {
-            contrib.addTypeParam();
-            }
-        addContribution(contrib);
+        addContribution(new Contribution(constClass, mapConstraints));
         }
 
     /**
@@ -2336,6 +2336,27 @@ public abstract class Component
             }
 
         /**
+         * Construct an "incorporates conditional" Contribution.
+         *
+         * @param constType       the type of the mixin
+         * @param mapConstraints  the type constraints that make the mixim conditional
+         */
+        protected Contribution(TypeConstant constType, Map<String, TypeConstant> mapConstraints)
+            {
+            this(Composition.Incorporates, constType);
+
+            if (mapConstraints != null && !mapConstraints.isEmpty())
+                {
+                ListMap<StringConstant, TypeConstant> map = new ListMap<>();
+                for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
+                    {
+                    map.put(getConstantPool().ensureCharStringConstant(entry.getKey()), entry.getValue());
+                    }
+                m_mapParams = map;
+                }
+            }
+
+        /**
          * Obtain the form of composition represented by this contribution.
          *
          * @return the Composition type for this contribution
@@ -2412,33 +2433,6 @@ public abstract class Component
                 }
             assert (map = Collections.unmodifiableMap(map)) != null;
             return map;
-            }
-
-        /**
-         * Add a type constraint for a conditional mixin.
-         *
-         * @param sName  the type parameter name from the class which is incorporating the mixin
-         * @param clz    the type parameter type constraint for the conditional incorporation
-         */
-        public void addTypeParam(String sName, TypeConstant clz)
-            {
-            if (m_composition != Composition.Incorporates)
-                {
-                throw new IllegalStateException("not an \"incorporates\" contribution");
-                }
-            if (sName == null || clz == null)
-                {
-                throw new IllegalArgumentException("name and class required");
-                }
-
-            ListMap<StringConstant, TypeConstant> map = m_mapParams;
-            if (map == null)
-                {
-                m_mapParams = map = new ListMap<>();
-                }
-
-            map.put(getConstantPool().ensureCharStringConstant(sName), clz);
-            markModified();
             }
 
         /**

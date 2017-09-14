@@ -158,6 +158,12 @@ public class NotCondition
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constCond.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constCond);

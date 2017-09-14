@@ -160,6 +160,12 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constId.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constId);

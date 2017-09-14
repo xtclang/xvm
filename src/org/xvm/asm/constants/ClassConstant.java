@@ -38,7 +38,7 @@ public class ClassConstant
      * @param constParent  the module, package, class, or method that contains this class
      * @param sName        the unqualified class name
      */
-    public ClassConstant(ConstantPool pool, Constant constParent, String sName)
+    public ClassConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {
         super(pool, constParent, sName);
 

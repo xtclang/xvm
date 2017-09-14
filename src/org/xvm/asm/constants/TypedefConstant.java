@@ -38,7 +38,7 @@ public class TypedefConstant
      * @param constParent  the structure that contains the typedef
      * @param sName        the typedef name
      */
-    public TypedefConstant(ConstantPool pool, Constant constParent, String sName)
+    public TypedefConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {
         super(pool, constParent, sName);
 

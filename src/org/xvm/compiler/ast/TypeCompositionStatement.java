@@ -33,6 +33,7 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Handy;
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Constants.ECSTASY_MODULE;
@@ -1055,28 +1056,29 @@ public class TypeCompositionStatement
 
                 case INCORPORATES:
                     // these are all OK; other checks will be done after the types are resolvable
-                    Composition.Incorporates incorp = (Composition.Incorporates) composition;
+                    Composition.Incorporates      incorp         = (Composition.Incorporates) composition;
+                    ListMap<String, TypeConstant> mapConstraints = null;
                     if (incorp.isConditional())
                         {
-                        incorp.getConstraints()
-                        // type is null means no constraint
-                        // name
-
-                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                        for (Parameter constraint : incorp.getConstraints())
                             {
-                            // register the mixin/trait that the component incorporates
-                            struct.addContribution(ClassStructure.Composition.Incorporates,
-                                    composition.getType().ensureTypeConstant());
+                            // type is null means no constraint
+                            TypeExpression type = constraint.getType();
+                            if (type != null)
+                                {
+                                if (mapConstraints == null)
+                                    {
+                                    mapConstraints = new ListMap<>();
+                                    }
+                                mapConstraints.put(constraint.getName(), type.ensureTypeConstant());
+                                }
                             }
                         }
-                    else
+
+                    for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                         {
-                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
-                            {
-                            // register the mixin/trait that the component incorporates
-                            struct.addContribution(ClassStructure.Composition.Incorporates,
-                                    composition.getType().ensureTypeConstant());
-                            }
+                        // register the mixin/trait that the component incorporates
+                        struct.addIncorporates(composition.getType().ensureTypeConstant(), mapConstraints);
                         }
                     break;
 

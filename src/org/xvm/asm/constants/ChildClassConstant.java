@@ -116,6 +116,12 @@ public class ChildClassConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constParent.containsUnresolved() || m_constName.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constParent);

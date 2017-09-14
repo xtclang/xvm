@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
-
 import java.util.List;
+
 import org.xvm.asm.Constant.Format;
 
 import org.xvm.asm.constants.AccessTypeConstant;
@@ -59,7 +59,6 @@ import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UInt8Constant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
-import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.VarFPConstant;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
@@ -139,51 +138,49 @@ public class ConstantPool
         // if the constant is resolvable, and has been resolved, then use the resolved constant
         if (constant instanceof ResolvableConstant)
             {
-            Constant resolved = ((ResolvableConstant) constant).getResolvedConstant();
-            if (resolved == null)
-                {
-                if (m_fRecurseReg)
-                    {
-                    // when assembling the pool, resolvable constants are not themselves registered
-                    return constant;
-                    }
-                }
-            else
-                {
-                constant = resolved;
-                }
+            constant = ((ResolvableConstant) constant).unwrap();
             }
 
         // check if the Constant is already registered
-        final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
-        final Constant constantOld = mapConstants.get(constant);
         boolean fRegisterRecursively = false;
-        if (constantOld == null)
+        if (constant.containsUnresolved())
             {
-            if (constant.getContaining() != this)
+            if (m_fRecurseReg)
                 {
-                constant = constant.adoptedBy(this);
+                throw new IllegalStateException("unresolved constant: " + constant);
                 }
-
-            // add the Constant
-            constant.setPosition(m_listConst.size());
-            m_listConst.add(constant);
-            mapConstants.put(constant, constant);
-
-            // also allow the constant to be looked up by a locator
-            Object oLocator = constant.getLocator();
-            if (oLocator != null)
-                {
-                ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                }
-
-            // make sure that the recursively referenced constants are all
-            // registered (and that they are aware of their being referenced)
-            fRegisterRecursively = true;
             }
         else
             {
-            constant = constantOld;
+            final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
+            final Constant constantOld = mapConstants.get(constant);
+            if (constantOld == null)
+                {
+                if (constant.getContaining() != this)
+                    {
+                    constant = constant.adoptedBy(this);
+                    }
+
+                // add the Constant
+                constant.setPosition(m_listConst.size());
+                m_listConst.add(constant);
+                mapConstants.put(constant, constant);
+
+                // also allow the constant to be looked up by a locator
+                Object oLocator = constant.getLocator();
+                if (oLocator != null)
+                    {
+                    ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                    }
+
+                // make sure that the recursively referenced constants are all
+                // registered (and that they are aware of their being referenced)
+                fRegisterRecursively = true;
+                }
+            else
+                {
+                constant = constantOld;
+                }
             }
 
         if (m_fRecurseReg)
@@ -510,7 +507,7 @@ public class ConstantPool
      *
      * @return the specified PackageConstant
      */
-    public PackageConstant ensurePackageConstant(Constant constParent, String sPackage)
+    public PackageConstant ensurePackageConstant(IdentityConstant constParent, String sPackage)
         {
         if (constParent == null)
             {
@@ -544,7 +541,7 @@ public class ConstantPool
      *
      * @return
      */
-    public ClassConstant ensureClassConstant(Constant constParent, String sClass)
+    public ClassConstant ensureClassConstant(IdentityConstant constParent, String sClass)
         {
         switch (constParent.getFormat())
             {
@@ -593,9 +590,9 @@ public class ConstantPool
      */
     public ClassConstant ensureEcstasyClassConstant(String sClass)
         {
-        Constant constParent = ensureModuleConstant(ECSTASY_MODULE);
-        int      ofStart     = 0;
-        int      ofEnd       = sClass.indexOf('.');
+        IdentityConstant constParent = ensureModuleConstant(ECSTASY_MODULE);
+        int              ofStart     = 0;
+        int              ofEnd       = sClass.indexOf('.');
         while (ofEnd >= 0)
             {
             String sName = sClass.substring(ofStart, ofEnd);
@@ -791,7 +788,7 @@ public class ConstantPool
      *
      * @return the specified TypedefConstant
      */
-    public TypedefConstant ensureTypedefConstant(Constant constParent, String sName)
+    public TypedefConstant ensureTypedefConstant(IdentityConstant constParent, String sName)
         {
         return (TypedefConstant) register(new TypedefConstant(this, constParent, sName));
         }
@@ -806,7 +803,7 @@ public class ConstantPool
      *
      * @return the specified PropertyConstant
      */
-    public PropertyConstant ensurePropertyConstant(Constant constParent, String sName)
+    public PropertyConstant ensurePropertyConstant(IdentityConstant constParent, String sName)
         {
         return (PropertyConstant) register(new PropertyConstant(this, constParent, sName));
         }
@@ -821,7 +818,7 @@ public class ConstantPool
      *
      * @return the specified MultiMethodConstant
      */
-    public MultiMethodConstant ensureMultiMethodConstant(Constant constParent, String sName)
+    public MultiMethodConstant ensureMultiMethodConstant(IdentityConstant constParent, String sName)
         {
         return (MultiMethodConstant) register(new MultiMethodConstant(this, constParent, sName));
         }
@@ -838,7 +835,7 @@ public class ConstantPool
      *
      * @return the MethodConstant
      */
-    public MethodConstant ensureMethodConstant(Constant constParent, String sName, Access access,
+    public MethodConstant ensureMethodConstant(IdentityConstant constParent, String sName, Access access,
             TypeConstant[] aconstReturns, TypeConstant[] aconstParams)
         {
         assert constParent != null;
@@ -876,7 +873,7 @@ public class ConstantPool
      *
      * @return the MethodConstant
      */
-    public MethodConstant ensureMethodConstant(Constant constParent, SignatureConstant constSig, Access access)
+    public MethodConstant ensureMethodConstant(IdentityConstant constParent, SignatureConstant constSig, Access access)
         {
         assert constParent != null;
         assert constSig    != null;
@@ -1270,7 +1267,8 @@ public class ConstantPool
      */
     public IntersectionTypeConstant ensureNullableTypeConstant(TypeConstant constType)
         {
-        TypeConstant constNullable = ensureEcstasyTypeConstant(org.xvm.compiler.Constants.X_CLASS_NULLABLE);
+        TypeConstant constNullable = ensureEcstasyTypeConstant(
+                org.xvm.compiler.Constants.X_CLASS_NULLABLE);
         return ensureIntersectionTypeConstant(constNullable, constType);
         }
 
