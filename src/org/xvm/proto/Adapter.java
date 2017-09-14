@@ -135,7 +135,8 @@ public class Adapter
 
     public int ensureEnumConstId(String sEnum)
         {
-        return f_container.f_types.getClassConstant(sEnum).getPosition();
+        ClassConstant constClass = f_container.f_types.getClassConstant(sEnum);
+        return f_container.f_pool.ensureEnumConstant(constClass).getPosition();
         }
 
     public int getMethodConstId(String sClassName, String sMethName)
@@ -185,10 +186,14 @@ public class Adapter
             method = getMethod(templateTop, sMethName, null, null);
             if (method != null)
                 {
+                MethodConstant constMethod = method.getIdentityConstant();
                 System.out.println("\n******** parameter mismatch at " + templateTop.f_sName + "#" + sMethName);
+                System.out.println("     provided:");
                 System.out.println("         arguments " + Arrays.toString(atArg));
                 System.out.println("         return " + Arrays.toString(atRet));
-                System.out.println("         found " + method.getIdentityConstant() + "\n");
+                System.out.println("     found:");
+                System.out.println("         arguments " + Arrays.toString(constMethod.getRawParams()));
+                System.out.println("         return " + Arrays.toString(constMethod.getRawReturns()));
                 }
             }
         return method;
@@ -273,8 +278,9 @@ public class Adapter
 
         if (oValue instanceof Boolean)
             {
-            return f_container.f_types.getClassConstant(
+            ClassConstant constClass = f_container.f_types.getClassConstant(
                     ((Boolean) oValue).booleanValue() ? "Boolean.True" : "Boolean.False");
+            return f_container.f_pool.ensureEnumConstant(constClass);
             }
 
         if (oValue instanceof Object[])
@@ -310,7 +316,8 @@ public class Adapter
 
         if (oValue == null)
             {
-            return f_container.f_types.getClassConstant("Nullable.Null");
+            ClassConstant constClass = f_container.f_types.getClassConstant("Nullable.Null");
+            return f_container.f_pool.ensureEnumConstant(constClass);
             }
 
         throw new IllegalArgumentException();

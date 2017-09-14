@@ -9,7 +9,6 @@ import org.xvm.asm.constants.IntConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -44,7 +43,7 @@ public class xInt64
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
                 (((IntConstant) constant).getValue().getLong())) : null;

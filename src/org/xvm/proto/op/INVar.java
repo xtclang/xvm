@@ -54,7 +54,9 @@ public class INVar extends Op
         {
         ServiceContext context = frame.f_context;
 
-        TypeComposition clazz = context.f_types.ensureComposition(f_nClassConstId);
+        TypeComposition clazz = context.f_types.ensureComposition(
+                f_nClassConstId, frame.getActualTypes());
+
         StringConstant constName = (StringConstant)
                 context.f_pool.getConstant(f_nNameConstId);
 

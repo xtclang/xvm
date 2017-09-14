@@ -6,6 +6,7 @@ import org.xvm.asm.constants.ParameterizedTypeConstant;
 
 import org.xvm.proto.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,12 +36,12 @@ public class xClass
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof ParameterizedTypeConstant)
             {
             ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constant;
-            TypeComposition clzTarget = f_types.ensureComposition(constClass.getPosition());
+            TypeComposition clzTarget = f_types.ensureComposition(constClass.getPosition(), Collections.emptyMap());
 
             Map<String, Type> mapParams = new HashMap<>();
             mapParams.put("PublicType", clzTarget.ensurePublicType());

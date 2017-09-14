@@ -165,7 +165,7 @@ public abstract class ClassTemplate
             for (StringConstant constName : mapParams.keySet())
                 {
                 TypeConstant constType = mapParams.get(constName);
-                Type typeObject = f_types.resolveParameterType(constType, mapParamsActual);
+                Type typeObject = f_types.resolveType(constType, mapParamsActual);
                 mapParamsActual.put(constName.getValue(), typeObject);
                 }
             }
@@ -328,7 +328,7 @@ public abstract class ClassTemplate
                     for (int i = 0, c = atParamTest.length; i < c; i++)
                         {
                         // compensate for "function"
-                        if (atParamTest[i].getValueString().contains("function") &&
+                        if (atParamTest[i].getValueString().contains("Function") &&
                             atParam[i].getValueString().contains("Function"))
                             {
                             continue;
@@ -401,10 +401,14 @@ public abstract class ClassTemplate
                         && atReturn.length == atReturnTest.length
                         )
                     {
-                    System.out.println("\n\t\t****** Signature mismatch for " +
-                            constMethod + " at " + f_sName + " (" +
-                            Arrays.toString(atReturnTest) + ") " +
-                            Arrays.toString(atParamTest) + "\n");
+                    System.out.println("\n****** Signature mismatch for " + f_sName + "#" + constMethod.getName());
+                    System.out.println("   provided:");
+                    System.out.println("       " + Arrays.toString(constMethod.getRawParams()));
+                    System.out.println("       " + Arrays.toString(constMethod.getRawReturns()));
+                    System.out.println("   found:");
+                    System.out.println("       " + Arrays.toString(atParamTest));
+                    System.out.println("       " + Arrays.toString(atReturnTest));
+                    System.out.println();
                     return null;
                     }
                 }
@@ -412,7 +416,8 @@ public abstract class ClassTemplate
         return null;
         }
 
-    // find one of the "equals" or "compare"  methods
+    // find one of the "equals" or "compare" functions definition
+    // @param atRet is one of xBoolean.TYPES or xOrdered.TYPES
     public MethodStructure findCompareFunction(String sName, TypeConstant[] atRet)
         {
         ClassTemplate template = this;
@@ -451,7 +456,7 @@ public abstract class ClassTemplate
         for (String sParamName : f_listGenericParams)
             {
             mapActualParams.put(sParamName,
-                    f_types.resolveParameterType(listParams.get(ix++), mapActual));
+                    f_types.resolveType(listParams.get(ix++), mapActual));
             }
         return ensureClass(mapActualParams);
         }
@@ -506,9 +511,15 @@ public abstract class ClassTemplate
 
     // assign (Int i = 5;)
     // @return an immutable handle or null if this type doesn't take that constant
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         return null;
+        }
+
+    // @return true if a constant always results into the same ObjectHandle
+    public boolean isConstantCacheable(Constant constant)
+        {
+        return true;
         }
 
     // return a handle with this:struct access

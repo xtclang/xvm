@@ -19,6 +19,8 @@ import org.xvm.proto.ObjectHandle.JavaLong;
 
 import org.xvm.proto.template.collections.xTuple;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -333,6 +335,16 @@ public class Frame
         return f_hTarget;
         }
 
+    public Map<String, Type> getActualTypes()
+        {
+        if (f_hTarget == null)
+            {
+            // TODO: do we need to collect formal type parameters for a function?
+            return Collections.EMPTY_MAP;
+            }
+        return f_hTarget.f_clazz.f_mapGenericActual;
+        }
+
     public ObjectHandle getFrameLocal()
         {
         return m_hFrameLocal;
@@ -516,7 +528,7 @@ public class Frame
                     f_ahVar[iArg] :
                iArg <= -Op.MAX_CONST_ID ?
                     getPredefinedArgument(iArg) :
-                    f_context.f_heapGlobal.ensureConstHandle(-iArg);
+                    f_context.f_heapGlobal.ensureConstHandle(this, -iArg);
         }
 
     public int checkWaitingRegisters()
@@ -590,7 +602,7 @@ public class Frame
             }
 
         return iArg < -Op.MAX_CONST_ID ? getPredefinedArgument(iArg) :
-            f_context.f_heapGlobal.ensureConstHandle(-iArg);
+            f_context.f_heapGlobal.ensureConstHandle(this, -iArg);
         }
 
     // return the ObjectHandle[] or null if the value is "pending future", or
@@ -911,7 +923,7 @@ public class Frame
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {
                 TypeComposition clzCatch = context.f_types.
-                        ensureComposition(f_anClassConstId[iCatch]);
+                        ensureComposition(f_anClassConstId[iCatch], frame.getActualTypes());
                 if (clzException.extends_(clzCatch))
                     {
                     StringConstant constVarName = (StringConstant)
