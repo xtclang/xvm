@@ -48,7 +48,7 @@ public class Service
         {
         markNativeMethod("yield", VOID);
         markNativeMethod("invokeLater", new String[]{"Function"});
-        markNativeMethod("registerTimeout", INT);
+        markNativeMethod("registerTimeout", new String[]{"Timeout?"}, VOID);
         }
 
     @Override

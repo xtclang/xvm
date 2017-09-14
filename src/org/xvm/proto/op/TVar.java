@@ -3,9 +3,9 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
-import org.xvm.proto.ServiceContext;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 import org.xvm.proto.template.collections.xTuple;
 import org.xvm.proto.template.collections.xTuple.TupleHandle;
@@ -13,6 +13,8 @@ import org.xvm.proto.template.collections.xTuple.TupleHandle;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import java.util.Map;
 
 /**
  * TVAR #values:(TYPE_CONST, rvalue-src) ; next register is an initialized anonymous Tuple variable
@@ -62,8 +64,6 @@ public class TVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        ServiceContext context = frame.f_context;
-
         int[] anClassId = f_anClassConstId;
 
         int cArgs = anClassId.length;
@@ -77,10 +77,13 @@ public class TVar extends Op
                 return R_REPEAT;
                 }
 
+            TypeSet types = frame.f_context.f_types;
+            Map<String, Type> mapActual = frame.getActualTypes();
+
             Type[] aType = new Type[cArgs];
             for (int i = 0; i < cArgs; i++)
                 {
-                TypeComposition clazz = context.f_types.ensureComposition(anClassId[i]);
+                TypeComposition clazz = types.ensureComposition(anClassId[i], mapActual);
 
                 aType[i] = clazz.ensurePublicType();
                 }

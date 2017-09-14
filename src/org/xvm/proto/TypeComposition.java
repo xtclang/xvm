@@ -422,34 +422,7 @@ public class TypeComposition
     //       but returns TypeComposition rather than Type and is more tolerant
     public TypeComposition resolveClass(TypeConstant constType)
         {
-        Constant constId = constType.getDefiningConstant();
-        String   sParam;
-        switch (constId.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-                ClassTemplate template = f_template.f_types.getTemplate((IdentityConstant) constId);
-                return template.resolveClass(constType, f_mapGenericActual);
-
-            case Register:
-                RegisterConstant constReg = (RegisterConstant) constId;
-                MethodStructure  method = (MethodStructure) constReg.getMethod().getComponent();
-                sParam = method.getParam(constReg.getRegister()).getName();
-                break;
-
-            case Property:
-                sParam  = ((PropertyConstant) constId).getName();
-                break;
-
-            default:
-                throw new IllegalStateException("unsupported constant: " + constId);
-            }
-
-        Type type = f_mapGenericActual.get(sParam);
-        return type == null || type.f_clazz == null
-                ? xObject.CLASS
-                : type.f_clazz;
+        return f_template.f_types.resolveClass(constType, f_mapGenericActual);
         }
 
     // retrieve the actual type for the specified formal parameter name

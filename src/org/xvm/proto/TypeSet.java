@@ -236,61 +236,32 @@ public class TypeSet
     // ----- TypeCompositions -----
 
     // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
-    public TypeComposition ensureComposition(int nClassConstId)     // TODO GG add target
+    public TypeComposition ensureComposition(int nTypeConstId, Map<String, Type> mapActual)
         {
-        TypeComposition typeComposition = f_mapConstCompositions.get(nClassConstId);
+        TypeComposition typeComposition = f_mapConstCompositions.get(nTypeConstId);
         if (typeComposition == null)
             {
             TypeConstant constType = (TypeConstant)
-                    f_container.f_pool.getConstant(nClassConstId); // must exist
+                    f_container.f_pool.getConstant(nTypeConstId); // must exist
 
-            typeComposition = resolveComposition(constType);
+            typeComposition = resolveClass(constType, mapActual);
 
-            f_mapConstCompositions.put(nClassConstId, typeComposition);
+            f_mapConstCompositions.put(nTypeConstId, typeComposition);
             }
         return typeComposition;
         }
 
     // produce a TypeComposition based on the specified TypeConstant
-    protected TypeComposition resolveComposition(TypeConstant constType)
+    // using the specified actual type parameters
+    public TypeComposition resolveClass(TypeConstant constType, Map<String, Type> mapActual)
         {
-        Constant constId = constType.getDefiningConstant();
-        String   sParam;
-        switch (constId.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-                ClassTemplate template = getTemplate((IdentityConstant) constId);
-                return template.resolveClass(constType, Collections.EMPTY_MAP); // TODO
-
-            case Register:
-                RegisterConstant constReg = (RegisterConstant) constId;
-                MethodStructure method = (MethodStructure) constReg.getMethod().getComponent();
-                sParam = method.getParam(constReg.getRegister()).getName();
-                break;
-
-            case Property:
-                sParam  = ((PropertyConstant) constId).getName();
-                break;
-
-            default:
-                throw new IllegalStateException("unsupported constant: " + constId);
-            }
-
-        /* TODO
-        Type type = f_mapGenericActual.get(sParam);
-        return type == null || type.f_clazz == null
-                ? xObject.CLASS
-                : type.f_clazz;
-        */
-        throw new IllegalArgumentException("Unresolved type constant: " + constType);
+        Type type = resolveType(constType, mapActual);
+        return type.f_clazz == null ? xObject.CLASS : type.f_clazz;
         }
 
     // resolve a parameter type given a map of actual parameter types
-    public Type resolveParameterType(TypeConstant constType, Map<String, Type> mapActual)
+    public Type resolveType(TypeConstant constType, Map<String, Type> mapActual)
         {
-        // TODO merge with above and/or TypeComposition logic
         Constant constId = constType.getDefiningConstant();
         String   sParam;
         switch (constId.getFormat())

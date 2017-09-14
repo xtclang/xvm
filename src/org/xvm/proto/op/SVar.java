@@ -4,7 +4,6 @@ import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
-import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
 import org.xvm.proto.template.collections.xArray;
@@ -47,9 +46,8 @@ public class SVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        ServiceContext context = frame.f_context;
-
-        TypeComposition clazzEl = context.f_types.ensureComposition(f_nClassConstId);
+        TypeComposition clazzEl = frame.f_context.f_types.ensureComposition(
+                f_nClassConstId, frame.getActualTypes());
 
         try
             {

@@ -41,7 +41,8 @@ public class DVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clz = frame.f_context.f_types.ensureComposition(f_nClassConstId);
+        TypeComposition clz = frame.f_context.f_types.ensureComposition(
+                    f_nClassConstId, frame.getActualTypes());
 
         RefHandle hRef = clz.f_template.createRefHandle(clz, null);
 

@@ -39,7 +39,8 @@ public class Var extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clazz = frame.f_context.f_types.ensureComposition(f_nClassConstId);
+        TypeComposition clazz = frame.f_context.f_types.ensureComposition(
+                f_nClassConstId, frame.getActualTypes());
 
         frame.introduceVar(clazz, null, Frame.VAR_STANDARD, null);
 

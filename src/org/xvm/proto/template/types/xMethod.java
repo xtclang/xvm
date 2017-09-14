@@ -11,7 +11,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
@@ -58,7 +57,7 @@ public class xMethod
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof MethodConstant)
             {
@@ -104,7 +103,7 @@ public class xMethod
             Parameter parameter = method.getParam(i);
 
             mapParams.put("ElementTypes[" + i + ']',
-                    types.resolveParameterType(parameter.getType(), mapActualClass));
+                    types.resolveType(parameter.getType(), mapActualClass));
             }
         mapActualMethod.put("ParamTypes", xTuple.INSTANCE.ensureClass(mapParams).ensurePublicType());
 
@@ -114,7 +113,7 @@ public class xMethod
             Parameter parameter = method.getReturn(i);
 
             mapReturns.put("ElementTypes[" + i + ']',
-                    types.resolveParameterType(parameter.getType(), mapActualClass));
+                    types.resolveType(parameter.getType(), mapActualClass));
             }
         mapActualMethod.put("ReturnTypes", xTuple.INSTANCE.ensureClass(mapReturns).ensurePublicType());
 

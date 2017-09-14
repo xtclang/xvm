@@ -1,19 +1,16 @@
 package org.xvm.proto.template;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.proto.Adapter;
 import org.xvm.proto.CallChain;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
@@ -50,7 +47,7 @@ public class Function
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof MethodConstant)
             {

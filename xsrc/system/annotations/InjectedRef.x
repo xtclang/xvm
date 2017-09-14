@@ -8,12 +8,14 @@
 mixin InjectedRef<RefType>(Type type, String name, Object? opts = null)
         into Ref<RefType>
     {
+    @Override
     RefType get()
         {
         assert assigned;
         return super();
         }
 
+    @Override
     Void set(RefType value)
         {
         assert false;

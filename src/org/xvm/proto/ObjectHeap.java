@@ -3,20 +3,16 @@ package org.xvm.proto;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
-import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.EnumConstant;
 
+import org.xvm.proto.template.collections.xArray;
 import org.xvm.proto.template.xClass;
 import org.xvm.proto.template.Function;
 import org.xvm.proto.template.xInt64;
 import org.xvm.proto.template.xModule;
 import org.xvm.proto.template.xString;
 import org.xvm.proto.template.collections.xTuple;
+import org.xvm.proto.template.xType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,16 +36,20 @@ public class ObjectHeap
         }
 
     // nValueConstId -- "literal" (Int/String/etc.) Constant known by the ConstantPool
-    public ObjectHandle ensureConstHandle(int nValueConstId)
+    public ObjectHandle ensureConstHandle(Frame frame, int nValueConstId)
         {
         ObjectHandle handle = m_mapConstants.get(nValueConstId);
         if (handle == null)
             {
-            Constant constValue = f_pool.getConstant(nValueConstId); // must exist
+            Constant constValue = f_pool.getConstant(nValueConstId);
+            ClassTemplate template = getConstTemplate(constValue); // must exist
 
-            handle = getConstTemplate(constValue).createConstHandle(constValue, this);
+            handle = template.createConstHandle(frame, constValue);
 
-            m_mapConstants.put(nValueConstId, handle);
+            if (template.isConstantCacheable(constValue))
+                {
+                m_mapConstants.put(nValueConstId, handle);
+                }
             }
 
         return handle;
@@ -57,50 +57,117 @@ public class ObjectHeap
 
     public ClassTemplate getConstTemplate(int nValueConstId)
         {
-        Constant constValue = f_pool.getConstant(nValueConstId);
+        Constant constValue = f_pool.getConstant(nValueConstId); // must exist
         return getConstTemplate(constValue);
         }
 
     public ClassTemplate getConstTemplate(Constant constValue)
         {
-        if (constValue instanceof StringConstant)
+        switch (constValue.getFormat())
             {
-            return xString.INSTANCE;
-            }
+            case Array:
+                return xArray.INSTANCE;
 
-        if (constValue instanceof IntConstant)
-            {
-            return xInt64.INSTANCE;
-            }
+            case Int64:
+                return xInt64.INSTANCE;
 
-        if (constValue instanceof ClassConstant)
-            {
-            // an enum or enum value
-            ClassTemplate template = f_types.getTemplate((ClassConstant) constValue);
-            assert (template.isSingleton());
-            return template;
-            }
+            case IntLiteral:
+            case Int8:
+            case Int16:
+            case Int32:
+            case Int128:
+            case VarInt:
+            case UInt8:
+            case UInt16:
+            case UInt32:
+            case UInt64:
+            case UInt128:
+            case VarUInt:
+            case FPLiteral:
+            case Float16:
+            case Float32:
+            case Float64:
+            case Float128:
+            case VarFloat:
+            case Dec32:
+            case Dec64:
+            case Dec128:
+            case VarDec:
+                throw new UnsupportedOperationException("TODO" + constValue);
 
-        if (constValue instanceof ParameterizedTypeConstant)
-            {
-            return xClass.INSTANCE;
-            }
+            case Char:
+                throw new UnsupportedOperationException("TODO" + constValue);
 
-        if (constValue instanceof ModuleConstant)
-            {
-            return xModule.INSTANCE;
-            }
+            case String:
+                return xString.INSTANCE;
 
-        if (constValue instanceof ArrayConstant)
-            {
-            return xTuple.INSTANCE;
-            }
+            case Date:
+            case Time:
+            case DateTime:
+            case Duration:
+            case TimeInterval:
+            case Version:
+                throw new UnsupportedOperationException("TODO" + constValue);
 
-        if (constValue instanceof MethodConstant)
-            {
-            return Function.INSTANCE;
-            }
+            case Enum:
+                {
+                EnumConstant constEnum = (EnumConstant) constValue;
+                ClassTemplate template = f_types.getTemplate(constEnum.getValue());
+                assert (template.isSingleton());
+                return template;
+                }
 
-        throw new UnsupportedOperationException("Unknown constant " + constValue);
+            case Tuple:
+                return xTuple.INSTANCE;
+
+            case UInt8Array:
+                throw new UnsupportedOperationException("TODO" + constValue);
+
+            case Set:
+            case MapEntry:
+            case Map:
+                throw new UnsupportedOperationException("TODO" + constValue);
+
+            case Module:
+                return xModule.INSTANCE;
+
+            case Package:
+            case Property:
+                throw new UnsupportedOperationException("TODO" + constValue);
+
+            case Method:
+                return Function.INSTANCE;
+
+            case TerminalType:
+            case AnnotatedType:
+            case ParameterizedType:
+                return xClass.INSTANCE;
+
+            case ImmutableType:
+            case AccessType:
+            case UnionType:
+            case IntersectionType:
+            case DifferenceType:
+                return xType.INSTANCE;
+
+            case ConditionNot:
+            case ConditionAll:
+            case ConditionAny:
+            case ConditionNamed:
+            case ConditionPresent:
+            case ConditionVersionMatches:
+            case ConditionVersioned:
+            case MultiMethod:
+            case Register:
+            case Signature:
+            case Typedef:
+            case Class:
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+            case UnresolvedName:
+            default:
+                throw new IllegalStateException(constValue.toString());
+            }
         }
     }
