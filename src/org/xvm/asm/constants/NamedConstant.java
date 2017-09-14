@@ -85,6 +85,11 @@ public abstract class NamedConstant
         return (IdentityConstant) m_constParent;
         }
 
+    public StringConstant getNameConstant()
+        {
+        return m_constName;
+        }
+
     @Override
     public String getName()
         {

@@ -1055,11 +1055,28 @@ public class TypeCompositionStatement
 
                 case INCORPORATES:
                     // these are all OK; other checks will be done after the types are resolvable
-                    for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                    Composition.Incorporates incorp = (Composition.Incorporates) composition;
+                    if (incorp.isConditional())
                         {
-                        // register the mixin/trait that the component incorporates
-                        struct.addContribution(ClassStructure.Composition.Incorporates,
-                                composition.getType().ensureTypeConstant());
+                        incorp.getConstraints()
+                        // type is null means no constraint
+                        // name
+
+                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            {
+                            // register the mixin/trait that the component incorporates
+                            struct.addContribution(ClassStructure.Composition.Incorporates,
+                                    composition.getType().ensureTypeConstant());
+                            }
+                        }
+                    else
+                        {
+                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            {
+                            // register the mixin/trait that the component incorporates
+                            struct.addContribution(ClassStructure.Composition.Incorporates,
+                                    composition.getType().ensureTypeConstant());
+                            }
                         }
                     break;
 

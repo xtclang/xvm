@@ -90,8 +90,6 @@ import static org.xvm.util.Handy.writePackedLong;
  * there is a length-encoded "children" section, which contains all of the nested components; a
  * length of 0 indicates that there are no children. The children section is composed of the number
  * of child components, followed by a sequence of that many components.
- *
- * @author cp 2017.05.02
  */
 public abstract class Component
         extends XvmStructure
@@ -449,6 +447,17 @@ public abstract class Component
     public void addDelegation(TypeConstant constClass, PropertyConstant constProp)
         {
         addContribution(new Contribution(constClass, constProp));
+        }
+
+    public void addIncorporatesConditional()
+        {
+        Contribution contrib = new Contribution(Composition.Incorporates, constType)
+
+        for ()
+            {
+            contrib.addTypeParam();
+            }
+        addContribution(contrib);
         }
 
     /**
@@ -2231,7 +2240,6 @@ public abstract class Component
                         }
                     break;
 
-
                 case Delegates:
                     throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
 
@@ -2488,7 +2496,20 @@ public abstract class Component
                     break;
 
                 case Incorporates:
-                    // TODO incorporates m_mapParams
+                    final ListMap<StringConstant, TypeConstant> map = m_mapParams;
+                    if (map == null)
+                        {
+                        writePackedLong(out, 0);
+                        }
+                    else
+                        {
+                        writePackedLong(out, map.size());
+                        for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
+                            {
+                            writePackedLong(out, entry.getKey()  .getPosition());
+                            writePackedLong(out, entry.getValue().getPosition());
+                            }
+                        }
                 }
             }
 
@@ -2509,8 +2530,8 @@ public abstract class Component
             return this.m_composition == that.m_composition
                     && this.m_constContrib.equals(that.m_constContrib)
                     && Handy.equals(this.m_constProp, that.m_constProp)
-                    && Handy.equalArraysNullOk(this.m_aconstArgs, that.m_aconstArgs);
-            // TODO incorporates m_mapParams
+                    && Handy.equalArraysNullOk(this.m_aconstArgs, that.m_aconstArgs)
+                    && Handy.equals(this.m_mapParams, that.m_mapParams);
             }
 
         @Override
@@ -2528,41 +2549,78 @@ public abstract class Component
                   .append(' ');
                 }
 
-            // TODO incorporates m_mapParams "conditional"
-
-            sb.append(m_constContrib.getDescription());
-
-            if (m_composition == Composition.Annotation)
+            if (m_composition == Composition.Incorporates && m_mapParams != null)
                 {
-                if (m_aconstArgs != null && m_aconstArgs.length > 0)
+                TypeConstant constMixin = (TypeConstant) m_constContrib;
+                sb.append("conditional ")
+                  .append(constMixin.getDefiningConstant())
+                  .append('<');
+
+                boolean fFirst = true;
+                for (TypeConstant constParam : constMixin.getParamTypes())
                     {
-                    sb.append('(');
-
-                    boolean fFirst = true;
-                    for (Constant constParam : m_aconstArgs)
+                    if (fFirst)
                         {
-                        if (fFirst)
-                            {
-                            fFirst = false;
-                            }
-                        else
-                            {
-                            sb.append(", ");
-                            }
-
-                        sb.append(constParam.getValueString());
+                        fFirst = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
                         }
 
-                    sb.append(')');
+                    sb.append(constParam.getValueString());
+
+                    // extract the type name from the type param
+                    if (constParam.isSingleDefiningConstant()
+                            && constParam.getDefiningConstant() instanceof PropertyConstant)
+                        {
+                        StringConstant constName       = ((PropertyConstant) constParam.getDefiningConstant()).getNameConstant();
+                        TypeConstant   constConstraint = m_mapParams.get(constName);
+                        if (constConstraint != null)
+                            {
+                            sb.append(" extends ")
+                                    .append(constConstraint.getValueString());
+                            }
+                        }
+                    }
+
+                sb.append('>');
+                }
+            else
+                {
+                sb.append(m_constContrib.getDescription());
+
+                if (m_composition == Composition.Annotation)
+                    {
+                    if (m_aconstArgs != null && m_aconstArgs.length > 0)
+                        {
+                        sb.append('(');
+
+                        boolean fFirst = true;
+                        for (Constant constParam : m_aconstArgs)
+                            {
+                            if (fFirst)
+                                {
+                                fFirst = false;
+                                }
+                            else
+                                {
+                                sb.append(", ");
+                                }
+
+                            sb.append(constParam.getValueString());
+                            }
+
+                        sb.append(')');
+                        }
+                    }
+                else if (m_composition == Composition.Delegates)
+                    {
+                    sb.append('(')
+                      .append(m_constProp.getDescription())
+                      .append(')');
                     }
                 }
-            else if (m_composition == Composition.Delegates)
-                {
-                sb.append('(')
-                  .append(m_constProp.getDescription())
-                  .append(')');
-                }
-            // TODO incorporates m_mapParams
 
             return sb.toString();
             }
@@ -2573,7 +2631,7 @@ public abstract class Component
         private Composition m_composition;
 
         /**
-         * Defines the module (ModuleConstant) or class (ClassTypeConstant) that was used as part
+         * Defines the module (ModuleConstant) or class (TypeConstant) that was used as part
          * of the composition.
          */
         private Constant m_constContrib;
