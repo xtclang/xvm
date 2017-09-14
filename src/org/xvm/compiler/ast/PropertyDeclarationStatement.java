@@ -235,5 +235,5 @@ public class PropertyDeclarationStatement
     protected Token              doc;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
-            "annotations", "type", "value", "body");
+            "condition", "annotations", "type", "value", "body");
     }

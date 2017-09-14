@@ -174,7 +174,8 @@ public abstract class Composition
 
         protected List<Expression> args;
 
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Extends.class, "condition", "type", "args");
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Extends.class,
+                "condition", "type", "args");
         }
 
 
@@ -302,7 +303,8 @@ public abstract class Composition
         protected List<Expression> args;
         protected List<Parameter>  constraints;
 
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class, "condition", "type", "args", "constraints");
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class,
+                "condition", "type", "args", "constraints");
         }
 
 
@@ -474,8 +476,7 @@ public abstract class Composition
         protected List<VersionOverride> vers;
         protected long                  lEndPos;
 
-        private static final Field[] CHILD_FIELDS =
-                fieldsForNames(Import.class, "condition", "type", "vers");
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Import.class, "condition", "type", "vers");
         }
 
 
@@ -485,6 +486,5 @@ public abstract class Composition
     protected Token          keyword;
     protected TypeExpression type;
 
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(Composition.class, "condition", "type");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(Composition.class, "condition", "type");
     }

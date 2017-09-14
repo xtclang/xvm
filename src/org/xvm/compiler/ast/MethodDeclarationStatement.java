@@ -349,5 +349,5 @@ public class MethodDeclarationStatement
     protected Token                doc;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
-            "annotations", "typeParams", "returns", "redundant", "params", "body", "continuation");
+            "condition", "annotations", "typeParams", "returns", "redundant", "params", "body", "continuation");
     }
