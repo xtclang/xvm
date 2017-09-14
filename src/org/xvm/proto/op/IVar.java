@@ -3,7 +3,6 @@ package org.xvm.proto.op;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
-import org.xvm.proto.ServiceContext;
 import org.xvm.proto.TypeComposition;
 
 import java.io.DataInput;
@@ -45,8 +44,8 @@ public class IVar extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        ServiceContext context = frame.f_context;
-        TypeComposition clazz = context.f_types.ensureComposition(f_nClassConstId);
+        TypeComposition clazz = frame.f_context.f_types.ensureComposition(
+                f_nClassConstId, frame.getActualTypes());
 
         try
             {

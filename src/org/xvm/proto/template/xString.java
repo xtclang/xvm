@@ -10,7 +10,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
@@ -45,7 +44,7 @@ public class xString
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         return constant instanceof StringConstant ? new StringHandle(f_clazzCanonical,
                 ((StringConstant) constant).getValue()) : null;

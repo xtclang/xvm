@@ -77,7 +77,8 @@ public class New_1G extends OpCallable
                 }
             else
                 {
-                clzTarget = frame.f_context.f_types.ensureComposition(-f_nTypeValue);
+                clzTarget = frame.f_context.f_types.ensureComposition(
+                        -f_nTypeValue, frame.getActualTypes());
                 }
 
             ObjectHandle[] ahVar = frame.getArguments(

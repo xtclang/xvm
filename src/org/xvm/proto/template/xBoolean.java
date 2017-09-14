@@ -4,12 +4,11 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.EnumConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -48,18 +47,12 @@ public class xBoolean
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        if (f_struct.getFormat() == Component.Format.ENUMVALUE)
+        if (constant instanceof EnumConstant)
             {
-            Enum template = (Enum) getSuper();
-            return template.createConstHandle(constant, heap);
-            }
-
-        if (constant instanceof ClassConstant)
-            {
-            ClassConstant constClass = (ClassConstant) constant;
-            switch (constClass.getName())
+            EnumConstant constEnum = (EnumConstant) constant;
+            switch (constEnum.getValue().getName())
                 {
                 case "False":
                     return FALSE;

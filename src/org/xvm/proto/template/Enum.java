@@ -7,10 +7,10 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
 
+import org.xvm.asm.constants.EnumConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -69,11 +69,11 @@ public class Enum
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof ClassConstant)
+        if (constant instanceof EnumConstant)
             {
-            ClassConstant constClass = (ClassConstant) constant;
+            ClassConstant constClass = ((EnumConstant) constant).getValue();
 
             Enum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
                 (Enum) getSuper() : this;

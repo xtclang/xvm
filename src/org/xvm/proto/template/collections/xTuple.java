@@ -82,31 +82,59 @@ public class xTuple
         for (int i = 0, c = listParams.size(); i < c; i++)
             {
             mapParams.put("ElementTypes[" + i + ']',
-                    f_types.resolveParameterType(listParams.get(i), mapActual));
+                    f_types.resolveType(listParams.get(i), mapActual));
             }
         return ensureClass(mapParams);
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         ArrayConstant constTuple = (ArrayConstant) constant;
 
+        ObjectHeap heap = f_types.f_container.f_heapGlobal;
+
+        TypeConstant constType = constTuple.getType();
+        List<TypeConstant> listElemTypes = constType.getParamTypes();
+        Map<String, Type> mapActual = frame.getActualTypes();
+
         Constant[] aconst = constTuple.getValue();
         int c = aconst.length;
+
         ObjectHandle[] ahValue = new ObjectHandle[c];
         Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
             Constant constValue = aconst[i];
 
-            ahValue[i] = heap.ensureConstHandle(constValue.getPosition());
-            aType[i] = heap.getConstTemplate(constValue).f_clazzCanonical.ensurePublicType();
+            TypeConstant constElemType = listElemTypes.get(i);
+
+            ahValue[i] = heap.ensureConstHandle(frame, constValue.getPosition());
+            aType[i] = f_types.resolveClass(constElemType, mapActual).ensurePublicType();
             }
 
         TupleHandle hTuple = makeHandle(aType, ahValue);
         hTuple.makeImmutable();
         return hTuple;
+        }
+
+    @Override
+    public boolean isConstantCacheable(Constant constant)
+        {
+        ArrayConstant constTuple = (ArrayConstant) constant;
+        TypeConstant constType = constTuple.getType();
+
+        ObjectHeap heap = f_types.f_container.f_heapGlobal;
+
+        for (TypeConstant constElemType : constType.getParamTypes())
+            {
+            ClassTemplate template = heap.getConstTemplate(constElemType);
+            if (!template.isConstantCacheable(constElemType))
+                {
+                return false;
+                }
+            }
+        return true;
         }
 
     @Override

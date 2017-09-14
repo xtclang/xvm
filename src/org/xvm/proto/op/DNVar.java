@@ -63,7 +63,8 @@ public class DNVar extends Op
         RefHandle hRef = m_ref;
         if (hRef == null)
             {
-            TypeComposition clz = frame.f_context.f_types.ensureComposition(f_nClassConstId);
+            TypeComposition clz = context.f_types.ensureComposition(
+                    f_nClassConstId, frame.getActualTypes());
 
             hRef = clz.f_template.createRefHandle(clz, sName);
 

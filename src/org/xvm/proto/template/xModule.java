@@ -5,8 +5,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHeap;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 
@@ -39,7 +39,7 @@ public class xModule
         }
 
     @Override
-    public ObjectHandle createConstHandle(Constant constant, ObjectHeap heap)
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof ModuleConstant)
             {

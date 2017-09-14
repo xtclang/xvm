@@ -119,7 +119,9 @@ public class Container
         f_types.getTemplate("Object");
         f_types.getTemplate("String");
         f_types.getTemplate("Module");
+        f_types.getTemplate("Class");
         f_types.getTemplate("Type");
+        f_types.getTemplate("Ordered");
         f_types.getTemplate("types.Method");
 
         // the native interfaces are pseudo-classes (also with INSTANCE static variable)
@@ -144,7 +146,7 @@ public class Container
                 }
 
             // m_hModule = (ModuleHandle) app.createConstHandle(f_constModule, f_heapGlobal);
-            m_hApp = app.createConstHandle(app.f_struct.getIdentityConstant(), f_heapGlobal);
+            m_hApp = app.createConstHandle(null, app.f_struct.getIdentityConstant());
 
             m_contextMain.callLater(Function.makeHandle(mtRun), new ObjectHandle[]{m_hApp});
             }
