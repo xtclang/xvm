@@ -48,7 +48,7 @@ public abstract class NamedConstant
      * @param constParent  the module, package, class, or method that contains this property
      * @param sName        the property name
      */
-    public NamedConstant(ConstantPool pool, Constant constParent, String sName)
+    public NamedConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {
         super(pool);
 

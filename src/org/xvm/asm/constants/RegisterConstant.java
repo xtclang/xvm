@@ -93,10 +93,41 @@ public class RegisterConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        if (fReEntry)
+            {
+            return false;
+            }
+
+        fReEntry = true;
+        try
+            {
+            return m_constMethod.containsUnresolved();
+            }
+        finally
+            {
+            fReEntry = false;
+            }
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        // TODO likely infinite loop
-        visitor.accept(m_constMethod);
+        if (fReEntry)
+            {
+            return;
+            }
+
+        fReEntry = true;
+        try
+            {
+            visitor.accept(m_constMethod);
+            }
+        finally
+            {
+            fReEntry = false;
+            }
         }
 
     @Override
@@ -110,13 +141,20 @@ public class RegisterConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        // TODO infinite loop
-        int n = m_constMethod.compareTo(((RegisterConstant) that).m_constMethod);
-        if (n == 0)
+        if (fReEntry)
             {
-            n = this.m_iReg - ((RegisterConstant) that).m_iReg;;
+            return this.m_iReg - ((RegisterConstant) that).m_iReg;
             }
-        return n;
+
+        fReEntry = true;
+        try
+            {
+            return m_constMethod.compareTo(((RegisterConstant) that).m_constMethod);
+            }
+        finally
+            {
+            fReEntry = false;
+            }
         }
 
     @Override
@@ -165,9 +203,20 @@ public class RegisterConstant
     @Override
     public int hashCode()
         {
-        // this cannot use the method's hash code as part of its hashcode, or an infinite loop will
-        // result, because the method parameters are part of the method constant's hash code
-        return m_constMethod.getName().hashCode() + m_iReg;
+        if (fReEntry)
+            {
+            return 0;
+            }
+
+        fReEntry = true;
+        try
+            {
+            return fReEntry ? 0 : m_constMethod.hashCode() + m_iReg;
+            }
+        finally
+            {
+            fReEntry = false;
+            }
         }
 
 
@@ -187,4 +236,6 @@ public class RegisterConstant
      * The register index.
      */
     private int m_iReg;
+
+    private transient boolean fReEntry;
     }

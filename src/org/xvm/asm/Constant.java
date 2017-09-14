@@ -138,6 +138,15 @@ public abstract class Constant
         }
 
     /**
+     * @return false iff the constant is resolved, and all reachable constants within the constant
+     *         are resolved
+     */
+    public boolean containsUnresolved()
+        {
+        return false;
+        }
+
+    /**
      * Create a clone of this Constant so that it can be adopted by a different ConstantPool.
      *
      * @param pool  the pool that will hold the clone of this Constant

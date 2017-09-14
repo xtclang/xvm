@@ -154,6 +154,30 @@ public class SignatureConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        if (m_constName.containsUnresolved())
+            {
+            return true;
+            }
+        for (Constant constant : m_aconstReturns)
+            {
+            if (constant.containsUnresolved())
+                {
+                return true;
+                }
+            }
+        for (Constant constant : m_aconstParams)
+            {
+            if (constant.containsUnresolved())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constName);

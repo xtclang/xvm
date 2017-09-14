@@ -146,6 +146,23 @@ public class AnnotatedTypeConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        if (m_constClass.containsUnresolved() || m_constType.containsUnresolved())
+            {
+            return true;
+            }
+        for (Constant param : m_listParams)
+            {
+            if (param.containsUnresolved())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constClass);

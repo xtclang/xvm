@@ -129,6 +129,23 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        if (m_constType.containsUnresolved())
+            {
+            return true;
+            }
+        for (Constant param : m_listTypeParams)
+            {
+            if (param.containsUnresolved())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);

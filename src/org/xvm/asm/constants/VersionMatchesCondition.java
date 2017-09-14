@@ -148,6 +148,12 @@ public class VersionMatchesCondition
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constStruct.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constStruct);

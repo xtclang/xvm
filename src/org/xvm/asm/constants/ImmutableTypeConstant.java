@@ -94,6 +94,12 @@ public class ImmutableTypeConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constType.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);

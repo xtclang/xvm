@@ -39,7 +39,7 @@ public class PackageConstant
      * @param constParent  the module or package that contains this package
      * @param sName        the unqualified package name
      */
-    public PackageConstant(ConstantPool pool, Constant constParent, String sName)
+    public PackageConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {
         super(pool, constParent, sName);
 
