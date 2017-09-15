@@ -311,16 +311,7 @@ public class SignatureConstant
     @Override
     public int hashCode()
         {
-        int n = m_constName.hashCode();
-        for (TypeConstant constant : m_aconstReturns)
-            {
-            n = n * 17 + constant.hashCode();
-            }
-        for (TypeConstant constant : m_aconstParams)
-            {
-            n = n * 17 + constant.hashCode();
-            }
-        return n;
+        return (m_constName.hashCode() * 17 + m_aconstReturns.length * 3) + m_aconstReturns.length;
         }
 
 
