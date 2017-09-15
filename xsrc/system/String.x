@@ -5,7 +5,7 @@ const String
 
     conditional Int indexOf(String value, Range<Int>? range = null)
         {
-        return super(value, range);
+        TODO - native
         }
 
     Char get(Int index);

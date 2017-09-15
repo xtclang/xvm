@@ -110,6 +110,7 @@ public class TypeSet
             }
         }
 
+    // see Container.start()
     protected void initNativeInterfaces()
         {
         // initialize necessary INSTANCE references

@@ -390,27 +390,28 @@ public abstract class ClassTemplate
                 TypeConstant[] atParamTest = constTest.getRawParams();
                 TypeConstant[] atReturnTest = constTest.getRawReturns();
 
-                if (Arrays.equals(atParam, atParamTest) && Arrays.equals(atReturn, atReturnTest))
+                if (Arrays.equals(atParam, atParamTest) &&
+                    Arrays.equals(atReturn, atReturnTest))
                     {
                     return method;
                     }
 
-                // TODO: remove
-                if (mms.children().size() == 1
-                        && atParam.length == atParamTest.length
-                        && atReturn.length == atReturnTest.length
-                        )
-                    {
-                    System.out.println("\n****** Signature mismatch for " + f_sName + "#" + constMethod.getName());
-                    System.out.println("   provided:");
-                    System.out.println("       " + Arrays.toString(constMethod.getRawParams()));
-                    System.out.println("       " + Arrays.toString(constMethod.getRawReturns()));
-                    System.out.println("   found:");
-                    System.out.println("       " + Arrays.toString(atParamTest));
-                    System.out.println("       " + Arrays.toString(atReturnTest));
-                    System.out.println();
-                    return null;
-                    }
+//                // TODO: remove; this is for debugging only
+//                if (mms.children().size() == 1
+//                        && atParam.length == atParamTest.length
+//                        && atReturn.length == atReturnTest.length
+//                        )
+//                    {
+//                    System.out.println("\n****** not a match " + f_sName + "#" + constMethod.getName());
+//                    System.out.println("   provided:");
+//                    System.out.println("       " + Arrays.toString(constMethod.getRawParams()));
+//                    System.out.println("       " + Arrays.toString(constMethod.getRawReturns()));
+//                    System.out.println("   found:");
+//                    System.out.println("       " + Arrays.toString(atParamTest));
+//                    System.out.println("       " + Arrays.toString(atReturnTest));
+//                    System.out.println();
+//                    return null;
+//                    }
                 }
             }
         return null;
