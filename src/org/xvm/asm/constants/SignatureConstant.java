@@ -211,7 +211,38 @@ public class SignatureConstant
     public String getValueString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(m_constName.getValueString())
+
+        switch (m_aconstReturns.length)
+            {
+            case 0:
+                sb.append("Void");
+                break;
+
+            case 1:
+                sb.append(m_aconstReturns[0].getValueString());
+                break;
+
+            default:
+                sb.append('(');
+                boolean first = true;
+                for (TypeConstant type : m_aconstReturns)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(type.getValueString());
+                    }
+                sb.append(')');
+                break;
+            }
+
+        sb.append(' ')
+          .append(m_constName.getValueString())
           .append('(');
 
         boolean first = true;

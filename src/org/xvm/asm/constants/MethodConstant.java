@@ -246,7 +246,7 @@ public class MethodConstant
     @Override
     public int hashCode()
         {
-        return m_constParent.hashCode() * 17 + m_access.ordinal();
+        return (m_constParent.hashCode() * 17 + m_access.ordinal()) * 3 + m_constSig.hashCode();
         }
 
 
