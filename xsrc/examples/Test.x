@@ -75,4 +75,11 @@ module Test
         {
         // TODO
         }
+
+    typedef MyClass2<Int> Vector;
+
+    class MyTest
+        {
+        Vector v;
+        }
     }

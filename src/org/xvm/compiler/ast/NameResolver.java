@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.CompositeComponent;
@@ -17,6 +16,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.constants.TypedefConstant;
@@ -428,33 +428,79 @@ public class NameResolver
     @Override
     public ResolutionResult resolvedComponent(Component component)
         {
-        // it is possible that the name "resolved to" an ambiguous component, which is an error
-        if (component instanceof CompositeComponent && ((CompositeComponent) m_component).isAmbiguous())
-            {
-            m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
-            m_status = Status.ERROR;
-            return ResolutionResult.ERROR;
-            }
-
         IdentityConstant constId = component.getIdentityConstant();
-        if (component.getFormat() == Format.PROPERTY)
+        while (true)
             {
-            // while it resolved to a component, the component is a property, which indicates that
-            // the name resolved to a type parameter
-            return resolvedTypeParam(constId);
+            // it is possible that the name "resolved to" an ambiguous component, which is an error
+            if (component instanceof CompositeComponent &&
+                    ((CompositeComponent) m_component).isAmbiguous())
+                {
+                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
+                m_status = Status.ERROR;
+                return ResolutionResult.ERROR;
+                }
+
+            switch (component.getFormat())
+                {
+                case PROPERTY:
+                    // while it resolved to a component, the component is a property, which indicates that
+                    // the name resolved to a type parameter
+                    return resolvedType(constId);
+
+                case TYPEDEF:
+                    // determine if the typedef can be replaced with the component that it refers to
+                    {
+                    TypeConstant constType;
+                    boolean      fUnwrappable = true;
+                    if (component instanceof CompositeComponent)
+                        {
+                        List listComponents = ((CompositeComponent) component).components();
+                        constType = ((TypedefStructure) listComponents.get(0)).getType();
+                        for (int i = 1, c = listComponents.size(); i < c; ++i)
+                            {
+                            TypeConstant constTypeN = ((TypedefStructure) listComponents.get(i)).getType();
+                            if (!constType.equals(constTypeN))
+                                {
+                                fUnwrappable = false;
+                                break;
+                                }
+                            }
+                        }
+                    else
+                        {
+                        constType = ((TypedefStructure) component).getType();
+                        }
+
+                    if (fUnwrappable)
+                        {
+                        if (constType instanceof TerminalTypeConstant)
+                            {
+                            Constant constUnwrapped = constType.getDefiningConstant();
+                            if (constUnwrapped instanceof IdentityConstant)
+                                {
+                                constId   = (IdentityConstant) constUnwrapped;
+                                component = constId.getComponent();
+                                break;
+                                }
+                            }
+
+                        resolvedType(constType);
+                        return ResolutionResult.RESOLVED;
+                        }
+                    }
+                    // fall through
+                default:
+                    m_component = component;
+                    m_constant  = constId;
+                    return ResolutionResult.RESOLVED;
+                }
             }
-
-        m_component = component;
-        m_constant  = constId;
-
-        return ResolutionResult.RESOLVED;
         }
 
     @Override
-    public ResolutionResult resolvedTypeParam(Constant constType)
+    public ResolutionResult resolvedType(Constant constType)
         {
         assert constType != null;
-        assert constType instanceof RegisterConstant || constType instanceof PropertyConstant;
 
         m_constant   = constType;
         m_component  = null;
