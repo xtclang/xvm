@@ -114,18 +114,20 @@ public class Container
             {
             throw new IllegalStateException("Already started");
             }
+        Utils.registerGlobalSignatures(f_pool);
+
+        f_types.getTemplate("Object");
+
+        // the native interfaces are pseudo-classes (also with INSTANCE static variable)
+        f_types.initNativeInterfaces();
 
         // every native class that has an INSTANCE static variable may need to be here
-        f_types.getTemplate("Object");
         f_types.getTemplate("String");
         f_types.getTemplate("Module");
         f_types.getTemplate("Class");
         f_types.getTemplate("Type");
         f_types.getTemplate("Ordered");
         f_types.getTemplate("types.Method");
-
-        // the native interfaces are pseudo-classes (also with INSTANCE static variable)
-        f_types.initNativeInterfaces();
 
         m_contextMain = createServiceContext("main");
         Service.makeHandle(m_contextMain,

@@ -15,9 +15,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypedefConstant;
 
-import org.xvm.proto.template.xObject;
 import org.xvm.util.Handy;
 
 import java.util.Arrays;

@@ -63,6 +63,10 @@
 
 + revisit PreInc, PostInc; add Inc, Dec ops
 
++ use of the MethodSignature instead of MethodConstant
+
+- createConst() processing for Array, Set, Map etc.
+
 - Property and Method
 
 - Class, Type

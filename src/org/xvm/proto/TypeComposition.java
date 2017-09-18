@@ -2,15 +2,13 @@ package org.xvm.proto;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -60,7 +58,7 @@ public class TypeComposition
     private List<ClassTemplate> m_listCallChain;
 
     // cached method call chain (the top-most method first)
-    private Map<MethodConstant, CallChain> m_mapMethods = new HashMap<>();
+    private Map<SignatureConstant, CallChain> m_mapMethods = new HashMap<>();
 
     // cached property getter call chain (the top-most method first)
     private Map<String, CallChain.PropertyCallChain> m_mapGetters = new HashMap<>();
@@ -443,18 +441,7 @@ public class TypeComposition
     public Frame callDefaultConstructors(Frame frame, ObjectHandle hStruct, ObjectHandle[] ahVar,
                                          Frame.Continuation continuation)
         {
-        ClassTemplate template = f_template;
-
-        // TODO: there must be a better way to create a MethodIdConst
-        MethodStructure method = template.f_types.f_adapter.getMethod(template, "default",
-                ClassTemplate.VOID, ClassTemplate.VOID);
-        if (method == null)
-            {
-            return null;
-            }
-
-        MethodConstant constDefault = method.getIdentityConstant();
-        CallChain chain = getMethodCallChain(constDefault);
+        CallChain chain = getMethodCallChain(Utils.SIG_DEFAULT);
 
         int cMethods = chain.getDepth();
         if (cMethods == 0)
@@ -495,20 +482,18 @@ public class TypeComposition
         }
 
     // retrieve the call chain for the specified method
-    // TODO: replace MethodConstant with MethodIdConstant
-    public CallChain getMethodCallChain(MethodConstant constMethod)
+    public CallChain getMethodCallChain(SignatureConstant constSignature)
         {
-        return m_mapMethods.computeIfAbsent(constMethod, this::collectMethodCallChain);
+        return m_mapMethods.computeIfAbsent(constSignature, this::collectMethodCallChain);
         }
 
     // find a matching method and add to the list
-    // TODO: replace MethodConstant with MethodIdConstant
-    protected CallChain collectMethodCallChain(MethodConstant constMethod)
+    protected CallChain collectMethodCallChain(SignatureConstant constSignature)
         {
         List<MethodStructure> list = new LinkedList<>();
         for (ClassTemplate template : getCallChain())
             {
-            MethodStructure method = template.getDeclaredMethod(constMethod);
+            MethodStructure method = template.getDeclaredMethod(constSignature);
             if (method != null)
                 {
                 list.add(method);
