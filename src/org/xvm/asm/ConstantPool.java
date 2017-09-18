@@ -1225,11 +1225,11 @@ public class ConstantPool
      *
      * @return the TerminalTypeConstant corresponding to the specified identity
      */
-    public TerminalTypeConstant ensureTerminalTypeConstant(Constant constId)
+    public TypeConstant ensureTerminalTypeConstant(Constant constId)
         {
         assert constId != null && !(constId instanceof TypeConstant);
 
-        TerminalTypeConstant constType = null;
+        TypeConstant constType = null;
 
         Object locator  = constId.getLocator();
         if (locator != null)
@@ -1239,7 +1239,7 @@ public class ConstantPool
 
         if (constType == null)
             {
-            constType = (TerminalTypeConstant) register(new TerminalTypeConstant(this, constId));
+            constType = (TypeConstant) register(new TerminalTypeConstant(this, constId));
             }
 
         return constType;
