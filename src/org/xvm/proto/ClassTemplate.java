@@ -8,8 +8,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -107,7 +109,6 @@ public abstract class ClassTemplate
             {
             if (!f_sName.equals("Object"))
                 {
-                // TODO: do we need this?
                 templateSuper = xObject.INSTANCE;
                 }
             }
@@ -185,7 +186,6 @@ public abstract class ClassTemplate
      */
     public void initDeclared()
         {
-        markNativeMethod("to", VOID, STRING);
         }
 
     // does this template extend that?
@@ -325,15 +325,9 @@ public abstract class ClassTemplate
                         continue;
                         }
 
-                    for (int i = 0, c = atParamTest.length; i < c; i++)
+                    for (int i = 0; i < cParams; i++)
                         {
-                        // compensate for "function"
-                        if (atParamTest[i].getValueString().contains("Function") &&
-                            atParam[i].getValueString().contains("Function"))
-                            {
-                            continue;
-                            }
-                        if (!atParamTest[i].equals(atParam[i]))
+                        if (!compareTypes(atParamTest[i], atParam[i]))
                             {
                             continue nextMethod;
                             }
@@ -353,9 +347,9 @@ public abstract class ClassTemplate
                         continue;
                         }
 
-                    for (int i = 0, c = atReturnTest.length; i < c; i++)
+                    for (int i = 0; i < cReturns; i++)
                         {
-                        if (!atReturnTest[i].equals(atReturn[i]))
+                        if (!compareTypes(atReturnTest[i], atReturn[i]))
                             {
                             continue nextMethod;
                             }
@@ -368,21 +362,40 @@ public abstract class ClassTemplate
         return null;
         }
 
-    // get a method declared at this template level
-    // TODO: replace MethodConstant with MethodIdConstant
-    public MethodStructure getDeclaredMethod(MethodConstant constMethod)
+    // compare the specified types
+    private boolean compareTypes(TypeConstant tTest, TypeConstant tParam)
         {
-        MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(constMethod.getName());
+        while (tTest.isSingleDefiningConstant()
+                && tTest.getDefiningConstant().getFormat() == Constant.Format.Typedef)
+            {
+            tTest = ((TypedefStructure)
+                    ((IdentityConstant) tTest.getDefiningConstant()).getComponent()).getType();
+            }
+
+        // compensate for "function"
+        if (tTest.getValueString().contains("Function") &&
+            tParam.getValueString().contains("Function"))
+            {
+            return true;
+            }
+
+        return tTest.equals(tParam);
+        }
+
+    // get a method declared at this template level
+    public MethodStructure getDeclaredMethod(SignatureConstant constSignature)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(constSignature.getName());
 
         if (mms != null)
             {
             //        Optional<Component> opt = mms.children().stream().filter(
-            //                method -> method.getIdentityConstant().equals(constMethod)).findAny();
+            //                method -> method.getIdentityConstant().matches(constSignature)).findAny();
             //
             //        return opt.isPresent() ? (MethodStructure) opt.get() : null;
 
-            TypeConstant[] atParam = constMethod.getRawParams();
-            TypeConstant[] atReturn = constMethod.getRawReturns();
+            TypeConstant[] atParam = constSignature.getRawParams();
+            TypeConstant[] atReturn = constSignature.getRawReturns();
 
             for (MethodStructure method : (List<MethodStructure>) (List) mms.children())
                 {

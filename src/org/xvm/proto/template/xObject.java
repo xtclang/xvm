@@ -3,8 +3,6 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.MethodConstant;
-
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Type;
@@ -23,7 +21,6 @@ public class xObject
     public static xObject INSTANCE;
     public static TypeComposition CLASS;
     public static Type TYPE;
-    public static MethodConstant TO_STRING; // TODO: should be MethodIdConst
 
     public xObject(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -40,7 +37,6 @@ public class xObject
     @Override
     public void initDeclared()
         {
-        TO_STRING = f_types.f_adapter.getMethod(this, "to", VOID, STRING).getIdentityConstant();
         markNativeMethod("to", VOID, STRING);
         markCalculated("meta");
         }
