@@ -247,7 +247,15 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return TODO
+     * @return this same type, but without any typedefs in it
+     */
+    public abstract TypeConstant resolveTypedefs();
+
+    /**
+     * Type parameters are compiled as the "Type" type; assuming that this type is the type
+     * {@code Type<T>}, determine what {@code T} is.
+     *
+     * @return the type that the type parameter (whose type is this) refers to
      */
     public TypeConstant getTypeParameterType()
         {

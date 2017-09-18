@@ -283,7 +283,7 @@ public class MethodStructure
 
             if (param.getName().equals(sName))
                 {
-                return collector.resolvedTypeParam(
+                return collector.resolvedType(
                         getConstantPool().ensureRegisterConstant(getIdentityConstant(), i));
                 }
             }

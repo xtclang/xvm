@@ -2665,12 +2665,13 @@ public abstract class Component
         ResolutionResult resolvedComponent(Component component);
 
         /**
-         * Invoked when a name resolves to something that is a type parameter of a parameterized
-         * type or of a method.
+         * Invoked when a name resolves to something that is a type constant, such as a type
+         * parameter of a parameterized type or of a method.
          *
-         * @param constType  a type parameter, either a PropertyConstant or a RegisterConstant
+         * @param constType  a type; typically a type parameter, either a PropertyConstant or a
+         *                   RegisterConstant
          */
-        ResolutionResult resolvedTypeParam(Constant constType);
+        ResolutionResult resolvedType(Constant constType);
         }
 
 

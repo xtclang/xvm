@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.CompositeComponent;
@@ -17,6 +16,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.constants.TypedefConstant;
@@ -265,9 +265,9 @@ public class NameResolver
      */
     private Component ensurePartiallyResolvedComponent()
         {
-        assert m_component != null || (m_fTypeParam && m_constant != null);
+        assert m_component != null || (m_fTypeMode && m_constant != null);
 
-        if (m_fTypeParam)
+        if (m_fTypeMode)
             {
             // once we get into the domain of type parameters, the "resolving component to use next"
             // is not pre-loaded. the quintessential example is the type parameter "MapType extends
@@ -429,36 +429,48 @@ public class NameResolver
     public ResolutionResult resolvedComponent(Component component)
         {
         // it is possible that the name "resolved to" an ambiguous component, which is an error
-        if (component instanceof CompositeComponent && ((CompositeComponent) m_component).isAmbiguous())
+        IdentityConstant constId = component.getIdentityConstant();
+        if (component instanceof CompositeComponent &&
+                ((CompositeComponent) m_component).isAmbiguous())
             {
             m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
             m_status = Status.ERROR;
             return ResolutionResult.ERROR;
             }
 
-        IdentityConstant constId = component.getIdentityConstant();
-        if (component.getFormat() == Format.PROPERTY)
+        switch (component.getFormat())
             {
-            // while it resolved to a component, the component is a property, which indicates that
-            // the name resolved to a type parameter
-            return resolvedTypeParam(constId);
+            case PROPERTY:
+            case TYPEDEF:
+                // while it resolved to a component, the component is a property, which indicates that
+                // the name resolved to a type parameter
+                return resolvedType(constId);
+
+            default:
+                if (m_fTypeMode)
+                    {
+                    // can't switch from type mode to identity mode
+                    m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
+                    m_status = Status.ERROR;
+                    return ResolutionResult.ERROR;
+                    }
+                else
+                    {
+                    m_component = component;
+                    m_constant  = constId;
+                    return ResolutionResult.RESOLVED;
+                    }
             }
-
-        m_component = component;
-        m_constant  = constId;
-
-        return ResolutionResult.RESOLVED;
         }
 
     @Override
-    public ResolutionResult resolvedTypeParam(Constant constType)
+    public ResolutionResult resolvedType(Constant constType)
         {
         assert constType != null;
-        assert constType instanceof RegisterConstant || constType instanceof PropertyConstant;
 
-        m_constant   = constType;
-        m_component  = null;
-        m_fTypeParam = true;
+        m_constant  = constType;
+        m_component = null;
+        m_fTypeMode = true;
 
         return ResolutionResult.RESOLVED;
         }
@@ -528,9 +540,10 @@ public class NameResolver
     private Component        m_component;
 
     /**
-     * Set to true when the resolution has switched into "type param mode".
+     * Set to true when the resolution has switched into "type mode". This occurs once a type
+     * parameter or type definition has been encountered.
      */
-    private boolean          m_fTypeParam;
+    private boolean          m_fTypeMode;
 
     /**
      * The ErrorListener to log errors to.

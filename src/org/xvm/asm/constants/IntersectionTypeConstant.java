@@ -81,6 +81,18 @@ public class IntersectionTypeConstant
         return m_constType2;
         }
 
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.resolveTypedefs();
+        TypeConstant constResolved2 = constOriginal2.resolveTypedefs();
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : getConstantPool().ensureIntersectionTypeConstant(constResolved1, constResolved2);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

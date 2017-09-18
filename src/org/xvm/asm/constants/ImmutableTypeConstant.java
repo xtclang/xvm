@@ -78,6 +78,16 @@ public class ImmutableTypeConstant
         return true;
         }
 
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveTypedefs();
+        return constResolved == constOriginal
+                ? this
+                : getConstantPool().ensureImmutableTypeConstant(constResolved);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
