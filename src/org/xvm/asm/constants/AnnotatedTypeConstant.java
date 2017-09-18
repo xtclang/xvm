@@ -115,6 +115,15 @@ public class AnnotatedTypeConstant
         return list;
         }
 
+    /**
+     * @return an array of constants which are the parameters for the annotation
+     */
+    public Constant[] getAnnotationParamsAsArray()
+        {
+        List<Constant> list = m_listParams;
+        return list.toArray(new Constant[list.size()]);
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -134,6 +143,17 @@ public class AnnotatedTypeConstant
     public boolean isAnnotated()
         {
         return true;
+        }
+
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveTypedefs();
+        return constResolved == constOriginal
+                ? this
+                : getConstantPool().ensureAnnotatedTypeConstant(m_constClass,
+                        getAnnotationParamsAsArray(), constResolved);
         }
 
 

@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.TypedefStructure;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -150,6 +151,12 @@ public class TerminalTypeConstant
         return m_constId.isAutoNarrowing();
         }
 
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        return (TypeConstant) simplify();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -163,6 +170,24 @@ public class TerminalTypeConstant
     public boolean containsUnresolved()
         {
         return m_constId.containsUnresolved();
+        }
+
+    @Override
+    public Constant simplify()
+        {
+        Constant constOriginal = m_constId;
+        Constant constResolved = constOriginal.simplify();
+
+        // compile down all of the types that refer to typedefs so that they refer to the underlying
+        // types instead
+        if (constResolved instanceof TypedefConstant)
+            {
+            return ((TypedefStructure) ((TypedefConstant) constResolved).getComponent()).getType().simplify();
+            }
+
+        return constResolved != constOriginal
+                ? getConstantPool().ensureTerminalTypeConstant(constResolved)
+                : this;
         }
 
     @Override

@@ -101,6 +101,16 @@ public class AccessTypeConstant
         return m_access;
         }
 
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveTypedefs();
+        return constResolved == constOriginal
+                ? this
+                : getConstantPool().ensureAccessTypeConstant(constResolved, m_access);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

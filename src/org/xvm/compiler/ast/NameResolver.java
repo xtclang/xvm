@@ -265,9 +265,9 @@ public class NameResolver
      */
     private Component ensurePartiallyResolvedComponent()
         {
-        assert m_component != null || (m_fTypeParam && m_constant != null);
+        assert m_component != null || (m_fTypeMode && m_constant != null);
 
-        if (m_fTypeParam)
+        if (m_fTypeMode)
             {
             // once we get into the domain of type parameters, the "resolving component to use next"
             // is not pre-loaded. the quintessential example is the type parameter "MapType extends
@@ -428,72 +428,38 @@ public class NameResolver
     @Override
     public ResolutionResult resolvedComponent(Component component)
         {
+        // it is possible that the name "resolved to" an ambiguous component, which is an error
         IdentityConstant constId = component.getIdentityConstant();
-        while (true)
+        if (component instanceof CompositeComponent &&
+                ((CompositeComponent) m_component).isAmbiguous())
             {
-            // it is possible that the name "resolved to" an ambiguous component, which is an error
-            if (component instanceof CompositeComponent &&
-                    ((CompositeComponent) m_component).isAmbiguous())
-                {
-                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
-                m_status = Status.ERROR;
-                return ResolutionResult.ERROR;
-                }
+            m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
+            m_status = Status.ERROR;
+            return ResolutionResult.ERROR;
+            }
 
-            switch (component.getFormat())
-                {
-                case PROPERTY:
-                    // while it resolved to a component, the component is a property, which indicates that
-                    // the name resolved to a type parameter
-                    return resolvedType(constId);
+        switch (component.getFormat())
+            {
+            case PROPERTY:
+            case TYPEDEF:
+                // while it resolved to a component, the component is a property, which indicates that
+                // the name resolved to a type parameter
+                return resolvedType(constId);
 
-                case TYPEDEF:
-                    // determine if the typedef can be replaced with the component that it refers to
+            default:
+                if (m_fTypeMode)
                     {
-                    TypeConstant constType;
-                    boolean      fUnwrappable = true;
-                    if (component instanceof CompositeComponent)
-                        {
-                        List listComponents = ((CompositeComponent) component).components();
-                        constType = ((TypedefStructure) listComponents.get(0)).getType();
-                        for (int i = 1, c = listComponents.size(); i < c; ++i)
-                            {
-                            TypeConstant constTypeN = ((TypedefStructure) listComponents.get(i)).getType();
-                            if (!constType.equals(constTypeN))
-                                {
-                                fUnwrappable = false;
-                                break;
-                                }
-                            }
-                        }
-                    else
-                        {
-                        constType = ((TypedefStructure) component).getType();
-                        }
-
-                    if (fUnwrappable)
-                        {
-                        if (constType instanceof TerminalTypeConstant)
-                            {
-                            Constant constUnwrapped = constType.getDefiningConstant();
-                            if (constUnwrapped instanceof IdentityConstant)
-                                {
-                                constId   = (IdentityConstant) constUnwrapped;
-                                component = constId.getComponent();
-                                break;
-                                }
-                            }
-
-                        resolvedType(constType);
-                        return ResolutionResult.RESOLVED;
-                        }
+                    // can't switch from type mode to identity mode
+                    m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
+                    m_status = Status.ERROR;
+                    return ResolutionResult.ERROR;
                     }
-                    // fall through
-                default:
+                else
+                    {
                     m_component = component;
                     m_constant  = constId;
                     return ResolutionResult.RESOLVED;
-                }
+                    }
             }
         }
 
@@ -502,9 +468,9 @@ public class NameResolver
         {
         assert constType != null;
 
-        m_constant   = constType;
-        m_component  = null;
-        m_fTypeParam = true;
+        m_constant  = constType;
+        m_component = null;
+        m_fTypeMode = true;
 
         return ResolutionResult.RESOLVED;
         }
@@ -574,9 +540,10 @@ public class NameResolver
     private Component        m_component;
 
     /**
-     * Set to true when the resolution has switched into "type param mode".
+     * Set to true when the resolution has switched into "type mode". This occurs once a type
+     * parameter or type definition has been encountered.
      */
-    private boolean          m_fTypeParam;
+    private boolean          m_fTypeMode;
 
     /**
      * The ErrorListener to log errors to.

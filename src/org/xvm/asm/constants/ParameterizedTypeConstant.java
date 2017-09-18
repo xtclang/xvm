@@ -119,6 +119,35 @@ public class ParameterizedTypeConstant
         return list;
         }
 
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveTypedefs();
+        boolean      fDiff         = constOriginal != constResolved;
+
+        List<TypeConstant> listOriginal   = m_listTypeParams;
+        TypeConstant[]     aconstResolved = null;
+        for (int i = 0, c = listOriginal.size(); i < c; ++i)
+            {
+            TypeConstant constParamOriginal = listOriginal.get(i);
+            TypeConstant constParamResolved = constParamOriginal.resolveTypedefs();
+            if (fDiff || constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == null)
+                    {
+                    aconstResolved = listOriginal.toArray(new TypeConstant[c]);
+                    }
+                aconstResolved[i] = constParamResolved;
+                fDiff = true;
+                }
+            }
+
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                : this;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
