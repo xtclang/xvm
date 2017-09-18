@@ -73,7 +73,7 @@ public class Invoke_1T extends OpInvocable
                         hArg, -f_nTupleRetValue - 1);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
+            ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getVarCount()];
             ahVar[0] = hArg;
 
             return clz.f_template.invoke1(frame, chain, hTarget, ahVar, -f_nTupleRetValue - 1);

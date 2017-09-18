@@ -766,7 +766,7 @@ public abstract class ClassTemplate
             return getFieldValue(frame, hTarget, chain.getProperty(), iReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
+        ObjectHandle[] ahVar = new ObjectHandle[method.getVarCount()];
 
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
@@ -865,7 +865,7 @@ public abstract class ClassTemplate
                 }
             else
                 {
-                ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(method)];
+                ObjectHandle[] ahVar = new ObjectHandle[method.getVarCount()];
                 ahVar[1] = hValue;
 
                 return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);

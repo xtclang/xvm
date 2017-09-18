@@ -329,30 +329,6 @@ public class Adapter
                 getTypeParameters(asRetType, true), getTypeParameters(asArgType, false));
         }
 
-    public int getScopeCount(MethodStructure method)
-        {
-        ClassTemplate.MethodInfo tm = method.getInfo();
-        return tm == null ? 1 : tm.m_cScopes;
-        }
-
-    public static int getArgCount(MethodStructure method)
-        {
-        MethodConstant constMethod = method.getIdentityConstant();
-        return constMethod.getRawParams().length;
-        }
-
-    public int getVarCount(MethodStructure method)
-        {
-        ClassTemplate.MethodInfo tm = method.getInfo();
-        return tm == null || tm.m_fNative ? getArgCount(method) : tm.m_cVars;
-        }
-
-    public Op[] getOps(MethodStructure method)
-        {
-        ClassTemplate.MethodInfo tm = method.getInfo();
-        return tm == null ? null : tm.m_aop;
-        }
-
     public MethodStructure getFinalizer(MethodStructure constructor)
         {
         ClassTemplate.MethodInfo tmConstruct = constructor.getInfo();

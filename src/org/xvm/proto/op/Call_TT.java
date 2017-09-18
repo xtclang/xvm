@@ -2,7 +2,6 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.Adapter;
 import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -80,12 +79,12 @@ public class Call_TT extends OpCallable
             if (f_nFunctionValue < 0)
                 {
                 MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
-                if (ahArg.length != Adapter.getArgCount(function))
+                if (ahArg.length != function.getParamCount())
                     {
                     return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                     }
 
-                ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(function)];
+                ObjectHandle[] ahVar = new ObjectHandle[function.getVarCount()];
                 System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
 
                 return frame.call1(function, null, ahVar, -f_nRetTupleValue - 1);
@@ -99,7 +98,7 @@ public class Call_TT extends OpCallable
 
             ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
 
-            if (ahArg.length != Adapter.getArgCount(getMethodStructure(frame, f_nFunctionValue)))
+            if (ahArg.length != getMethodStructure(frame, f_nFunctionValue).getParamCount())
                 {
                 return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                 }

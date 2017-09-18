@@ -81,7 +81,7 @@ public class New_NG extends OpCallable
                         -f_nTypeValue, frame.getActualTypes());
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor));
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount());
             if (ahVar == null)
                 {
                 return R_REPEAT;

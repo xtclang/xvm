@@ -9,6 +9,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.ClassTemplate;
+import org.xvm.proto.Op;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -147,6 +148,36 @@ public class MethodStructure
         return Arrays.asList(m_aParams);
         }
 
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    /**
+     * @return the number of variables (registers) necessary for a frame running this method's code
+     *         (including the parameters)
+     */
+    public int getVarCount()
+        {
+        ClassTemplate.MethodInfo info = m_info;
+        return info == null || info.m_fNative ? getParamCount() : info.m_cVars;
+        }
+
+    /**
+     * @return the number of scopes necessary for a frame running this method's code
+     */
+    public int getScopeCount()
+        {
+        ClassTemplate.MethodInfo tm = m_info;
+        return tm == null ? 1 : tm.m_cScopes;
+        }
+
+    /**
+     * @return the op-code array for this method
+     */
+    public Op[] getOps()
+        {
+        ClassTemplate.MethodInfo info = m_info;
+        return info == null ? null : info.m_aop;
+        }
     /**
      * @return the transient method info
      */
@@ -169,7 +200,6 @@ public class MethodStructure
 
 
     // ----- Component methods ---------------------------------------------------------------------
-
 
     @Override
     public boolean isConditionalReturn()
@@ -253,7 +283,7 @@ public class MethodStructure
         }
 
 
-// ----- XvmStructure methods ------------------------------------------------------------------
+    // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
     public MethodConstant getIdentityConstant()

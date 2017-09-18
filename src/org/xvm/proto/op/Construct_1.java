@@ -57,7 +57,7 @@ public class Construct_1 extends OpCallable
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(constructor)];
+            ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
             ahVar[0] = hArg;
 
             frame.chainFinalizer(hStruct.f_clazz.f_template.makeFinalizer(constructor, hStruct, ahVar));

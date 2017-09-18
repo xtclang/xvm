@@ -1,8 +1,10 @@
 package org.xvm.proto;
 
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.proto.template.Const;
 
 import java.sql.Timestamp;
@@ -84,7 +86,7 @@ public abstract class Utils
             return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getVarCount()];
         return clzConst.f_template.invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
         }
 
@@ -102,7 +104,7 @@ public abstract class Utils
             return clzValue.f_template.buildStringValue(frame, hValue, Frame.RET_LOCAL);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getVarCount()];
         return clzValue.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
 
