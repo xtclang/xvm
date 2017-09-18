@@ -498,7 +498,10 @@ public class TypeComposition
                 {
                 list.add(method);
 
-                // TODO: if (!method.callsSuper() {break;})
+                if (!method.isSuperCalled())
+                    {
+                    break;
+                    }
                 }
             }
         return new CallChain(list);

@@ -178,6 +178,16 @@ public class MethodStructure
         ClassTemplate.MethodInfo info = m_info;
         return info == null ? null : info.m_aop;
         }
+
+    /**
+     * Indicates whether or not this method contains a call to its super.
+     */
+    public boolean isSuperCalled()
+        {
+        // TODO: the compiler would supply this information
+        return true;
+        }
+
     /**
      * @return the transient method info
      */
