@@ -140,7 +140,7 @@ public class Parameter
     /**
      * @return the TerminalTypeConstant that corresponds to this register being used as a type param
      */
-    public TerminalTypeConstant asTypeParameterType(MethodConstant constMethod)
+    public TypeConstant asTypeParameterType(MethodConstant constMethod)
         {
         assert isTypeParameter();
         ConstantPool pool = getConstantPool();
