@@ -182,7 +182,10 @@ public class TerminalTypeConstant
         // types instead
         if (constResolved instanceof TypedefConstant)
             {
-            return ((TypedefStructure) ((TypedefConstant) constResolved).getComponent()).getType().simplify();
+            TypedefConstant  constTypedef  = (TypedefConstant) constResolved;
+            TypedefStructure structTypedef = (TypedefStructure) constTypedef.getComponent();
+            TypeConstant     constType     = (TypeConstant) structTypedef.getType().simplify();
+            return constType;
             }
 
         return constResolved != constOriginal

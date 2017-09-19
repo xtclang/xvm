@@ -111,6 +111,54 @@ public class UnresolvedNameConstant
         }
 
     @Override
+    public boolean isType()
+        {
+        return isResolved()
+            ? unwrap().isType()
+            : super.isType();
+        }
+
+    @Override
+    public boolean isValue()
+        {
+        return isResolved()
+                ? unwrap().isValue()
+                : super.isValue();
+        }
+
+    @Override
+    public boolean isClass()
+        {
+        return isResolved()
+                ? unwrap().isClass()
+                : super.isClass();
+        }
+
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return isResolved()
+                ? unwrap().isAutoNarrowing()
+                : super.isAutoNarrowing();
+        }
+
+    @Override
+    public boolean isProperty()
+        {
+        return isResolved()
+                ? unwrap().isProperty()
+                : super.isProperty();
+        }
+
+    @Override
+    public boolean isMethod()
+        {
+        return isResolved()
+                ? unwrap().isMethod()
+                : super.isMethod();
+        }
+
+    @Override
     public boolean containsUnresolved()
         {
         Constant constant = unwrap();
@@ -133,6 +181,12 @@ public class UnresolvedNameConstant
             {
             visitor.accept(m_constId);
             }
+        }
+
+    @Override
+    protected void setPosition(int iPos)
+        {
+        throw new UnsupportedOperationException("unresolved: " + this);
         }
 
     @Override

@@ -76,10 +76,12 @@ module Test
         // TODO
         }
 
-    typedef MyClass2<Int> Vector;
+    typedef Void Alarm();
 
-    class MyTest
+    class MyTest3
         {
-        Vector v;
+        Alarm alarm;
+
+        Alarm foo(Alarm alarm);
         }
     }

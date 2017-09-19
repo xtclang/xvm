@@ -430,8 +430,7 @@ public class NameResolver
         {
         // it is possible that the name "resolved to" an ambiguous component, which is an error
         IdentityConstant constId = component.getIdentityConstant();
-        if (component instanceof CompositeComponent &&
-                ((CompositeComponent) m_component).isAmbiguous())
+        if (component instanceof CompositeComponent && ((CompositeComponent) component).isAmbiguous())
             {
             m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
             m_status = Status.ERROR;
