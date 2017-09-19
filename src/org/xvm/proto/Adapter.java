@@ -347,7 +347,7 @@ public class Adapter
         MultiMethodStructure mms = (MultiMethodStructure) property.getChild("get");
 
         // TODO: use the type
-        return mms == null ? null : (MethodStructure) mms.children().get(0);
+        return mms == null ? null : mms.methods().get(0);
         }
 
     public static MethodStructure getSetter(PropertyStructure property)
@@ -355,7 +355,7 @@ public class Adapter
         MultiMethodStructure mms = (MultiMethodStructure) property.getChild("set");
 
         // TODO: use the type
-        return mms == null ? null : (MethodStructure) mms.children().get(0);
+        return mms == null ? null : mms.methods().get(0);
         }
 
     // TODO: move this to ClassStructure

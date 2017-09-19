@@ -10,7 +10,6 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.template.xBoolean;
@@ -491,16 +490,32 @@ public class TypeComposition
     protected CallChain collectMethodCallChain(SignatureConstant constSignature)
         {
         List<MethodStructure> list = new LinkedList<>();
+
+        nextInChain:
         for (ClassTemplate template : getCallChain())
             {
-            MethodStructure method = template.getDeclaredMethod(constSignature);
-            if (method != null)
+            MultiMethodStructure mms = (MultiMethodStructure) template.f_struct.getChild(constSignature.getName());
+            if (mms != null)
                 {
-                list.add(method);
-
-                if (!method.isSuperCalled())
+                for (MethodStructure method : mms.methods())
                     {
-                    break;
+                    if (method.isSubstitutableFor(constSignature, this))
+                        {
+                        list.add(method);
+
+                        if (!method.isSuperCalled())
+                            {
+                            break nextInChain;
+                            }
+                        // no need to check other methods; it would be an error anyway...
+                        break;
+                        }
+
+                    if (false) // debug only
+                        {
+                        System.out.println("non-match: \nprovided: " + constSignature +
+                                "\n found: " + method.getIdentityConstant().getSignature());
+                        }
                     }
                 }
             }
@@ -533,7 +548,7 @@ public class TypeComposition
                 if (mms != null)
                     {
                     // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
-                    list.add((MethodStructure) mms.children().get(0));
+                    list.add(mms.methods().get(0));
 
                     // TODO: if (!method.callsSuper() {break;})
                     }

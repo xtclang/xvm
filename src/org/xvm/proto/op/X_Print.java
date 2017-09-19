@@ -4,6 +4,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.proto.CallChain;
+import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.Op;
@@ -67,7 +68,8 @@ public class X_Print extends OpInvocable
                 // call the "to<String>()" method for the object to get the value
                 TypeComposition clz = hValue.f_clazz;
                 CallChain chain = getCallChain(frame, clz,
-                        frame.f_adapter.getMethodConstId("Object", "to"));
+                        frame.f_adapter.getMethodConstId("Object", "to",
+                                ClassTemplate.VOID, ClassTemplate.STRING));
 
                 int iResult;
                 if (chain.isNative())

@@ -77,27 +77,22 @@ public class Type
 
             for (ClassTemplate template : f_clazz.getCallChain())
                 {
-                for (Component cc : template.f_struct.children())
+                for (Component child : template.f_struct.children())
                     {
-                    if (cc instanceof MultiMethodStructure)
+                    if (child instanceof MultiMethodStructure)
                         {
-                        MultiMethodStructure mm = (MultiMethodStructure) cc;
-                        for (Component cmm : mm.children())
+                        for (MethodStructure method : ((MultiMethodStructure) child).methods())
                             {
-                            if (cmm instanceof MethodStructure)
+                            if (method.getAccess().ordinal() <= nAccess &&
+                                setMethods.add(method.getIdentityConstant()))
                                 {
-                                MethodStructure method = (MethodStructure) cmm;
-                                if (method.getAccess().ordinal() <= nAccess &&
-                                    setMethods.add(method.getIdentityConstant()))
-                                    {
-                                    listHandles.add(xMethod.makeHandle(method, f_clazz, this));
-                                    }
+                                listHandles.add(xMethod.makeHandle(method, f_clazz, this));
                                 }
                             }
                         }
-                    else if (cc instanceof PropertyStructure)
+                    else if (child instanceof PropertyStructure)
                         {
-                        PropertyStructure property = (PropertyStructure) cc;
+                        PropertyStructure property = (PropertyStructure) child;
                         MethodStructure getter = Adapter.getGetter(property);
                         MethodStructure setter = Adapter.getSetter(property);
 

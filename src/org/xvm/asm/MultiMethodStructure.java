@@ -6,6 +6,8 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import java.util.List;
+
 
 /**
  * An XVM Structure that represents a multi-method, which is a group of methods that share a name.
@@ -97,5 +99,13 @@ public class MultiMethodStructure
         MethodStructure struct = new MethodStructure(this, nFlags, constId, null, aReturns, aParams);
         addChild(struct);
         return struct;
+        }
+
+    /**
+     * Helper method to return a list of methods.
+     */
+    public List<MethodStructure> methods()
+        {
+        return (List<MethodStructure>) (List) super.children();
         }
     }

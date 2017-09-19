@@ -7,8 +7,11 @@ import java.io.IOException;
 
 import java.util.Collections;
 import java.util.List;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.proto.TypeComposition;
 
 
 /**
@@ -267,6 +270,39 @@ public abstract class TypeConstant
         return isParamsSpecified()
                 ? getParamTypes().get(0)
                 : getConstantPool().ensureEcstasyTypeConstant("Object");
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    /**
+     * Determine if references and values of the specified type will be _assignable to_ references
+     * of this type.
+     *
+     * @param that   the type to match
+     * @param clazz  the TypeComposition in which context's the matching is evaluated
+     *
+     * See Type.x # isA()
+     */
+    public boolean isA(TypeConstant that, TypeComposition clazz)
+        {
+        if (this.equals(that))
+            {
+            return true;
+            }
+
+        if (that.isImmutabilitySpecified() && !this.isImmutabilitySpecified())
+            {
+            return false;
+            }
+
+        if (that.isEcstasy("Object"))
+            {
+            return true;
+            }
+
+        // TODO:
+        return this.equals(that);
         }
 
 

@@ -35,7 +35,6 @@ import org.xvm.proto.template.xOrdered;
 import org.xvm.proto.template.xString;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -310,7 +309,7 @@ public abstract class ClassTemplate
         if (mms != null)
             {
             nextMethod:
-            for (MethodStructure method : ((List<MethodStructure>) (List) mms.children()))
+            for (MethodStructure method : mms.methods())
                 {
                 MethodConstant constMethod = method.getIdentityConstant();
 
@@ -380,54 +379,6 @@ public abstract class ClassTemplate
             }
 
         return tTest.equals(tParam);
-        }
-
-    // get a method declared at this template level
-    public MethodStructure getDeclaredMethod(SignatureConstant constSignature)
-        {
-        MultiMethodStructure mms = (MultiMethodStructure) f_struct.getChild(constSignature.getName());
-
-        if (mms != null)
-            {
-            //        Optional<Component> opt = mms.children().stream().filter(
-            //                method -> method.getIdentityConstant().matches(constSignature)).findAny();
-            //
-            //        return opt.isPresent() ? (MethodStructure) opt.get() : null;
-
-            TypeConstant[] atParam = constSignature.getRawParams();
-            TypeConstant[] atReturn = constSignature.getRawReturns();
-
-            for (MethodStructure method : (List<MethodStructure>) (List) mms.children())
-                {
-                MethodConstant constTest = method.getIdentityConstant();
-                TypeConstant[] atParamTest = constTest.getRawParams();
-                TypeConstant[] atReturnTest = constTest.getRawReturns();
-
-                if (Arrays.equals(atParam, atParamTest) &&
-                    Arrays.equals(atReturn, atReturnTest))
-                    {
-                    return method;
-                    }
-
-//                // TODO: remove; this is for debugging only
-//                if (mms.children().size() == 1
-//                        && atParam.length == atParamTest.length
-//                        && atReturn.length == atReturnTest.length
-//                        )
-//                    {
-//                    System.out.println("\n****** not a match " + f_sName + "#" + constMethod.getName());
-//                    System.out.println("   provided:");
-//                    System.out.println("       " + Arrays.toString(constMethod.getRawParams()));
-//                    System.out.println("       " + Arrays.toString(constMethod.getRawReturns()));
-//                    System.out.println("   found:");
-//                    System.out.println("       " + Arrays.toString(atParamTest));
-//                    System.out.println("       " + Arrays.toString(atReturnTest));
-//                    System.out.println();
-//                    return null;
-//                    }
-                }
-            }
-        return null;
         }
 
     // find one of the "equals" or "compare" functions definition

@@ -6,10 +6,12 @@ import java.util.List;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Op;
+import org.xvm.proto.TypeComposition;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -185,6 +187,53 @@ public class MethodStructure
     public boolean isSuperCalled()
         {
         // TODO: the compiler would supply this information
+        return true;
+        }
+
+    /**
+     * Check if this method could act as a substitute for the specified method.
+     *
+     * @param signature   the signature of the matching method
+     * @param clazz       the TypeComposition in which context's the matching is evaluated
+     */
+    public boolean isSubstitutableFor(SignatureConstant signature, TypeComposition clazz)
+        {
+        int cParams = getParamCount();
+        int cReturns = getReturnCount();
+
+        if (cParams != signature.getParams().size() ||
+            cReturns != signature.getReturns().size())
+            {
+            return false;
+            }
+
+        /*
+         * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
+         *
+         * 1. for each _m1_ in _M1_, there exists an _m2_ in _M2_ for which all of the following hold
+         *    true:
+         *    1. _m1_ and _m2_ have the same name
+         *    2. _m1_ and _m2_ have the same number of parameters, and for each parameter type _p1_ of
+         *       _m1_ and _p2_ of _m2_, at least one of the following holds true:
+         *       1. _p1_ is assignable to _p2_
+         *       2. both _p1_ and _p2_ are (or are resolved from) the same type parameter, and both of
+         *          the following hold true:
+         *          1. _p2_ is assignable to _p1_
+         *          2. _T1_ produces _p1_
+         *    3. _m1_ and _m2_ have the same number of return values, and for each return type _r1_ of
+         *       _m1_ and _r2_ of _m2_, the following holds true:
+         *      1. _r2_ is assignable to _r1_
+         */
+        for (int i = 0; i < cReturns; i++)
+            {
+            TypeConstant typeR2 = getReturn(i).getType();
+            TypeConstant typeR1 = signature.getRawReturns()[i];
+
+            if (!typeR2.isA(typeR1, clazz))
+                {
+                return false;
+                }
+            }
         return true;
         }
 
@@ -377,11 +426,13 @@ public class MethodStructure
             }
         }
 
-
     @Override
     public String getDescription()
         {
         return new StringBuilder()
+                .append("id=")
+                .append(getIdentityConstant())
+                .append(", ")
                 .append(super.getDescription())
                 .append(", conditional=")
                 .append(isConditionalReturn())
