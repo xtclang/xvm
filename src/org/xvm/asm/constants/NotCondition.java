@@ -164,6 +164,13 @@ public class NotCondition
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constCond = (ConditionalConstant) m_constCond.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constCond);

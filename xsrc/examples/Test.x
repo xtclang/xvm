@@ -76,7 +76,7 @@ module Test
         // TODO
         }
 
-    typedef Void Alarm();
+    typedef function Void Alarm();
 
     class MyTest3
         {

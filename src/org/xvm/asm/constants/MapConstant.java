@@ -182,6 +182,22 @@ public class MapConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constType = (TypeConstant) m_constType.simplify();
+
+        Constant[] aconstKey = m_aconstKey;
+        Constant[] aconstVal = m_aconstVal;
+        for (int i = 0, c = aconstKey.length; i < c; ++i)
+            {
+            aconstKey[i] = aconstKey[i].simplify();
+            aconstVal[i] = aconstVal[i].simplify();
+            }
+
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);

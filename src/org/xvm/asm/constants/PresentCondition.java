@@ -154,6 +154,13 @@ public class PresentCondition
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constStruct = m_constStruct.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constStruct);

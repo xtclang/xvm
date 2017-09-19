@@ -112,6 +112,27 @@ public class RegisterConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        if (fReEntry)
+            {
+            return this;
+            }
+
+        fReEntry = true;
+        try
+            {
+            m_constMethod = (MethodConstant) m_constMethod.simplify();
+            }
+        finally
+            {
+            fReEntry = false;
+            }
+
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         if (fReEntry)

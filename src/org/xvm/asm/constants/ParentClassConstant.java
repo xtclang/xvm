@@ -109,6 +109,13 @@ public class ParentClassConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constChild = (PseudoConstant) m_constChild.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constChild);

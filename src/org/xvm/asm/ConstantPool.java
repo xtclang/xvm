@@ -750,7 +750,7 @@ public class ConstantPool
 
         if (sDef != null)
             {
-            constId = ensureTypedefConstant(constId, sClz);
+            constId = ensureTypedefConstant(constId, sDef);
             }
         else if (sClz != null)
             {
@@ -1760,8 +1760,9 @@ public class ConstantPool
 
         // sort the Constants by how often they are referred to within the FileStructure, with the
         // most frequently referred-to Constants appearing first
-        // TODO Arrays.sort(Constant.MFU_ORDER);
-        Arrays.sort(aconst, 0, cAfter, Comparator.<Constant>naturalOrder());
+        Arrays.sort(aconst, 0, cAfter, DEBUG
+                ? Comparator.<Constant>naturalOrder()
+                : Constant.MFU_ORDER);
 
         // mark each constant with its new position and add to the list
         list.clear();

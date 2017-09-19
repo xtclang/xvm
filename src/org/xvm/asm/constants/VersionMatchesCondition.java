@@ -154,6 +154,14 @@ public class VersionMatchesCondition
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constStruct = (ModuleConstant)  m_constStruct.simplify();
+        m_constVer    = (VersionConstant) m_constVer.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constStruct);

@@ -29,6 +29,11 @@ public interface Constants
     public static final int VERSION_MINOR_CUR = 0;
 
     /**
+     * Compile-time debug flag.
+     */
+    public static final boolean DEBUG = true;
+
+    /**
      * The qualified name of the Ecstasy core module. This is the only module that has no external
      * dependencies.
      */
@@ -83,6 +88,7 @@ public interface Constants
      * The name of the null value (a singleton), which is a child of {@link #X_CLASS_NULLABLE}.
      */
     public static final String X_CLASS_NULL = "Nullable.Null";
+
 
     /**
      * The Access enumeration refers to the level of accessibility to a class that a reference will

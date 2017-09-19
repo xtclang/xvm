@@ -107,6 +107,13 @@ public class NamedCondition
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constName = (StringConstant) m_constName.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constName);
