@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -135,11 +136,10 @@ public class ConstantPool
             return null;
             }
 
-        // if the constant is resolvable, and has been resolved, then use the resolved constant
-        if (constant instanceof ResolvableConstant)
-            {
-            constant = ((ResolvableConstant) constant).unwrap();
-            }
+        // before registering the constant, see if there is a simpler alternative to use; for
+        // example, this allows a type constant that refers to a typedef constant to be replaced
+        // with the type constant that the typedef refers to, removing a level of indirection
+        constant = constant.simplify();
 
         // check if the Constant is already registered
         boolean fRegisterRecursively = false;
@@ -152,11 +152,6 @@ public class ConstantPool
             }
         else
             {
-            // before registering the constant, see if there is a simpler alternative to use; for
-            // example, this allows a type constant that refers to a typedef constant to be replaced
-            // with the type constant that the typedef refers to, removing a level of indirection
-            constant = constant.simplify();
-
             final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
             final Constant constantOld = mapConstants.get(constant);
             if (constantOld == null)
@@ -622,14 +617,19 @@ public class ConstantPool
      */
     public IdentityConstant getImplicitlyImportedIdentity(String sName)
         {
-        String sPkg = null;
-        String sClz = null;
-        String sSub = null;
+        String  sPkg = null;
+        String  sClz = null;
+        String  sSub = null;
+        String  sDef = null;
 
         switch (sName)
             {
             case "Ecstasy":
             case "X":
+                break;
+
+            case "Void":
+                sDef = sName;
                 break;
 
             case "Bit":
@@ -640,7 +640,6 @@ public class ConstantPool
             case "Object":
             case "String":
             case "Type":
-            case "Void":
                 sClz = sName;
                 break;
 
@@ -743,11 +742,17 @@ public class ConstantPool
             }
 
         IdentityConstant constId = ensureModuleConstant(ECSTASY_MODULE);
+
         if (sPkg != null)
             {
             constId = ensurePackageConstant(constId, sPkg);
             }
-        if (sClz != null)
+
+        if (sDef != null)
+            {
+            constId = ensureTypedefConstant(constId, sClz);
+            }
+        else if (sClz != null)
             {
             constId = ensureClassConstant(constId, sClz);
             if (sSub != null)
@@ -755,6 +760,7 @@ public class ConstantPool
                 constId = ensureClassConstant(constId, sSub);
                 }
             }
+
         return constId;
         }
 
@@ -1734,7 +1740,8 @@ public class ConstantPool
         {
         // sort the Constants by how often they are referred to within the FileStructure, with the
         // most frequently referred-to Constants appearing first
-        m_listConst.sort(Constant.MFU_ORDER);
+        // TODO m_listConst.sort(Constant.MFU_ORDER);
+        m_listConst.sort(Comparator.<Constant>naturalOrder());
 
         // go through and mark each constant with its new position; the iteration is backwards to
         // support the efficient removal of all of the unused Constants from the end of the list

@@ -150,7 +150,7 @@ public class SignatureConstant
     @Override
     public Format getFormat()
         {
-        return Format.Method;
+        return Format.Signature;
         }
 
     @Override
