@@ -175,6 +175,25 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constType = (TypeConstant) m_constType.simplify();
+
+        List<TypeConstant> listParams = m_listTypeParams;
+        for (int i = 0, c = listParams.size(); i < c; ++i)
+            {
+            TypeConstant constOld = listParams.get(i);
+            TypeConstant constNew = (TypeConstant) constOld.simplify();
+            if (constNew != constOld)
+                {
+                listParams.set(i, constNew);
+                }
+            }
+
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);

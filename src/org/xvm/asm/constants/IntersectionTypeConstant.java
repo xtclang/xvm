@@ -109,6 +109,14 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constType1 = (TypeConstant) m_constType1.simplify();
+        m_constType2 = (TypeConstant) m_constType2.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType1);

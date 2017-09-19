@@ -113,48 +113,48 @@ public class UnresolvedNameConstant
     @Override
     public boolean isType()
         {
-        return isResolved()
-            ? unwrap().isType()
+        return isNameResolved()
+            ? m_constId.isType()
             : super.isType();
         }
 
     @Override
     public boolean isValue()
         {
-        return isResolved()
-                ? unwrap().isValue()
+        return isNameResolved()
+                ? m_constId.isValue()
                 : super.isValue();
         }
 
     @Override
     public boolean isClass()
         {
-        return isResolved()
-                ? unwrap().isClass()
+        return isNameResolved()
+                ? m_constId.isClass()
                 : super.isClass();
         }
 
     @Override
     public boolean isAutoNarrowing()
         {
-        return isResolved()
-                ? unwrap().isAutoNarrowing()
+        return isNameResolved()
+                ? m_constId.isAutoNarrowing()
                 : super.isAutoNarrowing();
         }
 
     @Override
     public boolean isProperty()
         {
-        return isResolved()
-                ? unwrap().isProperty()
+        return isNameResolved()
+                ? m_constId.isProperty()
                 : super.isProperty();
         }
 
     @Override
     public boolean isMethod()
         {
-        return isResolved()
-                ? unwrap().isMethod()
+        return isNameResolved()
+                ? m_constId.isMethod()
                 : super.isMethod();
         }
 
@@ -265,7 +265,7 @@ public class UnresolvedNameConstant
         {
         if (isNameResolved())
             {
-            m_constId = pool.register(unwrap());
+            m_constId = pool.register(m_constId);
             }
         }
 
@@ -276,11 +276,11 @@ public class UnresolvedNameConstant
         Constant constId = unwrap();
         if (constId instanceof IdentityConstant)
             {
-            ((IdentityConstant) m_constId).assemble(out);
+            ((IdentityConstant) constId).assemble(out);
             }
         else if (constId instanceof PseudoConstant)
             {
-            ((PseudoConstant) m_constId).assemble(out);
+            ((PseudoConstant) constId).assemble(out);
             }
         else
             {

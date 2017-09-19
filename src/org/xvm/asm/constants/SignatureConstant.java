@@ -300,7 +300,7 @@ public class SignatureConstant
     @Override
     public String getDescription()
         {
-        return "name=" + getValueString()
+        return "name=" + getName()
                 + ", params=" + formatTypes(m_aconstParams)
                 + ", returns=" + formatTypes(m_aconstReturns);
         }
@@ -311,7 +311,7 @@ public class SignatureConstant
     @Override
     public int hashCode()
         {
-        return (m_constName.hashCode() * 17 + m_aconstReturns.length * 3) + m_aconstReturns.length;
+        return (m_constName.hashCode() * 17 + m_aconstParams.length * 3) + m_aconstReturns.length;
         }
 
 

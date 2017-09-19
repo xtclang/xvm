@@ -103,6 +103,14 @@ public abstract class NamedConstant
     public abstract Format getFormat();
 
     @Override
+    public Constant simplify()
+        {
+        m_constParent = m_constParent.simplify();
+        m_constName   = (StringConstant) m_constName.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constParent);

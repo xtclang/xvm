@@ -167,6 +167,13 @@ public class ModuleConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constName = (StringConstant) m_constName.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constName);
@@ -176,19 +183,6 @@ public class ModuleConstant
     public Object getLocator()
         {
         return m_constName.getLocator();
-        }
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
-        }
-
-    @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        m_constName = (StringConstant) pool.register(m_constName);
         }
 
     @Override
@@ -205,6 +199,19 @@ public class ModuleConstant
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void disassemble(DataInput in)
+            throws IOException
+        {
+        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
+        }
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        m_constName = (StringConstant) pool.register(m_constName);
+        }
 
     @Override
     protected void assemble(DataOutput out)

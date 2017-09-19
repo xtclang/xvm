@@ -127,6 +127,13 @@ public class AccessTypeConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constType = (TypeConstant) m_constType.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);

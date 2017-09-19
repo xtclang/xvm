@@ -175,6 +175,14 @@ public class MethodConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constParent = (MultiMethodConstant) m_constParent.simplify();
+        m_constSig    = (SignatureConstant  ) m_constSig.simplify();
+        return this;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constParent);
@@ -191,7 +199,7 @@ public class MethodConstant
             n = this.m_access.compareTo(that.m_access);
             if (n == 0)
                 {
-                n = m_constSig.compareTo(that.m_constSig);
+                n = this.m_constSig.compareTo(that.m_constSig);
                 }
             }
         return n;

@@ -5,11 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component;
+import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.TypedefStructure;
+import org.xvm.compiler.ast.Composition;
+import org.xvm.proto.Type;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -175,22 +180,37 @@ public class TerminalTypeConstant
     @Override
     public Constant simplify()
         {
-        Constant constOriginal = m_constId;
-        Constant constResolved = constOriginal.simplify();
+        m_constId = m_constId.simplify();
 
         // compile down all of the types that refer to typedefs so that they refer to the underlying
         // types instead
-        if (constResolved instanceof TypedefConstant)
+        if (m_constId instanceof TypedefConstant)
             {
-            TypedefConstant  constTypedef  = (TypedefConstant) constResolved;
-            TypedefStructure structTypedef = (TypedefStructure) constTypedef.getComponent();
-            TypeConstant     constType     = (TypeConstant) structTypedef.getType().simplify();
+            Component    typedef   = ((TypedefConstant) m_constId).getComponent();
+            TypeConstant constType;
+            if (typedef instanceof CompositeComponent)
+                {
+                List<Component> typdefs = ((CompositeComponent) typedef).components();
+                constType = (TypeConstant) ((TypedefStructure) typdefs.get(0)).getType().simplify();
+                for (int i = 1, c = typdefs.size(); i < c; ++i)
+                    {
+                    TypeConstant constTypeN = (TypeConstant) ((TypedefStructure) typdefs.get(i)).getType().simplify();
+                    if (!constType.equals(constTypeN))
+                        {
+                        // typedef points to more than one type, conditionally, so just leave the
+                        // typedef in place
+                        return this;
+                        }
+                    }
+                }
+            else
+                {
+                constType = (TypeConstant) ((TypedefStructure) typedef).getType().simplify();
+                }
             return constType;
             }
 
-        return constResolved != constOriginal
-                ? getConstantPool().ensureTerminalTypeConstant(constResolved)
-                : this;
+        return this;
         }
 
     @Override

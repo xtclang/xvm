@@ -166,6 +166,25 @@ public class AnnotatedTypeConstant
         }
 
     @Override
+    public Constant simplify()
+        {
+        m_constType = (TypeConstant) m_constType.simplify();
+
+        List<Constant> listParams = m_listParams;
+        for (int i = 0, c = listParams.size(); i < c; ++i)
+            {
+            Constant constOld = listParams.get(i);
+            Constant constNew = constOld.simplify();
+            if (constNew != constOld)
+                {
+                listParams.set(i, constNew);
+                }
+            }
+
+        return this;
+        }
+
+    @Override
     public boolean containsUnresolved()
         {
         if (m_constClass.containsUnresolved() || m_constType.containsUnresolved())
@@ -289,7 +308,7 @@ public class AnnotatedTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constClass = (ClassConstant) pool.register(m_constClass);
+        m_constClass = pool.register(m_constClass);
 
         List<Constant> listParams = m_listParams;
         for (int i = 0, c = listParams.size(); i < c; ++i)
