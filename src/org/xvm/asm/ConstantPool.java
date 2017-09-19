@@ -51,7 +51,6 @@ import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.RegisterConstant;
-import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
@@ -163,9 +162,8 @@ public class ConstantPool
                     }
 
                 // add the Constant
-                int iPos = m_listConst.size();
+                constant.setPosition(m_listConst.size());
                 m_listConst.add(constant);
-                constant.setPosition(iPos);
                 mapConstants.put(constant, constant);
 
                 // also allow the constant to be looked up by a locator
@@ -1629,8 +1627,8 @@ public class ConstantPool
                     throw new IOException("Unsupported constant format: " + nFmt);
                 }
 
-            m_listConst.add(constant);
             constant.setPosition(i);
+            m_listConst.add(constant);
             }
 
         // convert indexes into constant references
