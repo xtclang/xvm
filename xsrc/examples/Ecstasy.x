@@ -24,11 +24,6 @@ module Ecstasy.xtclang.org
         conditional ElementType next();
         }
 
-    package annotations
-        {
-        mixin InjectedRef {}
-        }
-
     package collections
         {
         interface Tuple // <ElementTypes extends Tuple<ElementTypes...>>
@@ -40,6 +35,32 @@ module Ecstasy.xtclang.org
             conditional ValueType get(KeyType key);
 
             Void put(KeyType key, ValueType value);
+            }
+        }
+
+    interface Ref<RefType>
+        {
+        RefType get();
+        Void set(RefType value);
+        }
+
+    package annotations
+        {
+        mixin Override {}
+
+        mixin InjectedRef<RefType> into Ref<RefType>
+            {
+            @Override
+            RefType get()
+                {
+                return super();
+                }
+
+            @Override
+            Void set(RefType value)
+                {
+                assert false;
+                }
             }
         }
     }

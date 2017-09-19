@@ -348,6 +348,12 @@ public class MethodStructure
         {
         super.registerConstants(pool);
 
+        // if the return type is Void, that means that there is no return type at all
+        if (m_aReturns.length == 1 && m_aReturns[0].getType().isVoid())
+            {
+            m_aReturns = NO_PARAMS;
+            }
+
         for (Parameter param : m_aReturns)
             {
             param.registerConstants(pool);
@@ -382,6 +388,11 @@ public class MethodStructure
     public String getDescription()
         {
         return new StringBuilder()
+                .append("id=\"")
+                .append(getIdentityConstant().getValueString())
+                .append("\", sig=")
+                .append(getIdentityConstant().getSignature())
+                .append(", ")
                 .append(super.getDescription())
                 .append(", conditional=")
                 .append(isConditionalReturn())
@@ -392,6 +403,11 @@ public class MethodStructure
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Empty array of Parameters.
+     */
+    public static final Parameter[] NO_PARAMS = new Parameter[0];
 
     /**
      * The return value types. (A zero-length array is "Void".)

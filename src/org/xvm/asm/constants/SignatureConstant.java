@@ -187,16 +187,9 @@ public class SignatureConstant
         // replace a void return with no return
         if (m_aconstReturns.length == 1)
             {
-            TypeConstant constType = m_aconstReturns[0];
-            if (constType.isSingleDefiningConstant())
+            if (m_aconstReturns[0].isVoid())
                 {
-                Constant constId = constType.getDefiningConstant();
-                if (constId.equals(getConstantPool().getImplicitlyImportedIdentity("Void")) ||
-                        (constId.equals(getConstantPool().getImplicitlyImportedIdentity("Tuple"))
-                                && constType.isParamsSpecified() && constType.getParamTypes().isEmpty()))
-                    {
-                    m_aconstReturns = NO_TYPES;
-                    }
+                m_aconstReturns = NO_TYPES;
                 }
             }
 
@@ -268,7 +261,7 @@ public class SignatureConstant
             }
 
         sb.append(' ')
-          .append(m_constName.getValueString())
+          .append(m_constName.getValue())
           .append('(');
 
         boolean first = true;
@@ -509,7 +502,7 @@ public class SignatureConstant
     /**
      * Empty array of types.
      */
-    private static final TypeConstant[] NO_TYPES = new TypeConstant[0];
+    public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
 
     /**
      * During disassembly, this holds the index of the constant that specifies the name of this

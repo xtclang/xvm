@@ -247,6 +247,25 @@ public abstract class TypeConstant
         }
 
     /**
+     * Determine if this is "Void".
+     *
+     * @return true iff this is provably "Void"
+     */
+    public boolean isVoid()
+        {
+        if (isEcstasy("Void"))
+            {
+            return true;
+            }
+
+        TypeConstant constThis = (TypeConstant) this.simplify();
+        return !constThis.containsUnresolved()
+                && constThis.isEcstasy("Tuple")
+                && constThis.isParamsSpecified()
+                && constThis.getParamTypes().isEmpty();
+        }
+
+    /**
      * @return this same type, but without any typedefs in it
      */
     public abstract TypeConstant resolveTypedefs();

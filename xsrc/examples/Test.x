@@ -1,11 +1,5 @@
 module Test
     {
-    Void fnVoid();
-    Tuple fnTupleNone();
-    Tuple<> fnTupleEmpty();
-    Tuple<Int> fnTupleInt();
-    Tuple<Tuple> fnTupleTuple();
-
 //    class Fubar
 //        {
 //        Int number;
@@ -90,4 +84,14 @@ module Test
 //
 //        Alarm foo(Alarm alarm);
 //        }
+
+// problem: Void compiling to Tuple instead of being eliminated
+    Void fnVoid();
+    Tuple fnTupleNone();
+    Tuple<> fnTupleEmpty();
+    Tuple<Int> fnTupleInt();
+    Tuple<Tuple> fnTupleTuple();
+
+// problem: InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
+//    @inject String option;
     }
