@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -162,8 +163,9 @@ public class ConstantPool
                     }
 
                 // add the Constant
-                constant.setPosition(m_listConst.size());
+                int iPos = m_listConst.size();
                 m_listConst.add(constant);
+                constant.setPosition(iPos);
                 mapConstants.put(constant, constant);
 
                 // also allow the constant to be looked up by a locator
@@ -1627,8 +1629,8 @@ public class ConstantPool
                     throw new IOException("Unsupported constant format: " + nFmt);
                 }
 
-            constant.setPosition(i);
             m_listConst.add(constant);
+            constant.setPosition(i);
             }
 
         // convert indexes into constant references
@@ -1738,28 +1740,38 @@ public class ConstantPool
      */
     private void optimize()
         {
-        // sort the Constants by how often they are referred to within the FileStructure, with the
-        // most frequently referred-to Constants appearing first
-        // TODO m_listConst.sort(Constant.MFU_ORDER);
-        m_listConst.sort(Comparator.<Constant>naturalOrder());
+        ArrayList<Constant> list = m_listConst;
 
-        // go through and mark each constant with its new position; the iteration is backwards to
-        // support the efficient removal of all of the unused Constants from the end of the list
-        for (int i = m_listConst.size() - 1; i >= 0; --i)
+        // remove unused constants
+        int cBefore       = list.size();
+        Constant[] aconst = new Constant[cBefore];
+        int cAfter        = 0;
+
+        for (int i = 0; i < cBefore; i++)
             {
-            Constant constant = m_listConst.get(i);
+            Constant constant = list.get(i);
             if (constant.hasRefs())
                 {
-                if (i != constant.getPosition())
-                    {
-                    constant.setPosition(i);
-                    }
+                aconst[cAfter++] = constant;
                 }
             else
                 {
                 constant.setPosition(-1);
-                m_listConst.remove(i);
                 }
+            }
+
+        // sort the Constants by how often they are referred to within the FileStructure, with the
+        // most frequently referred-to Constants appearing first
+        // TODO Arrays.sort(Constant.MFU_ORDER);
+        Arrays.sort(aconst, 0, cAfter, Comparator.<Constant>naturalOrder());
+
+        // mark each constant with its new position and add to the list
+        list.clear();
+        for (int i = 0; i < cAfter; ++i)
+            {
+            Constant constant = aconst[i];
+            constant.setPosition(i);
+            list.add(constant);
             }
 
         // discard any previous lookup structures, since contents may have changed
@@ -1838,7 +1850,8 @@ public class ConstantPool
                 Constant constantOld = m_mapConstants.get(constant.getFormat()).put(constant, constant);
                 if (constantOld != null && constantOld != constant)
                     {
-                    throw new IllegalStateException("constant collision: old=" + constantOld + ", new=" + constant);
+                    //throw new IllegalStateException("constant collision: old=" + constantOld + ", new=" + constant);
+                    System.out.println("constant collision: old=" + constantOld + ", new=" + constant);
                     }
 
                 Object oLocator = constant.getLocator();
