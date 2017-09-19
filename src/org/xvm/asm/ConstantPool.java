@@ -1849,8 +1849,7 @@ public class ConstantPool
                 Constant constantOld = m_mapConstants.get(constant.getFormat()).put(constant, constant);
                 if (constantOld != null && constantOld != constant)
                     {
-                    //throw new IllegalStateException("constant collision: old=" + constantOld + ", new=" + constant);
-                    System.out.println("constant collision: old=" + constantOld + ", new=" + constant);
+                    throw new IllegalStateException("constant collision: old=" + constantOld + ", new=" + constant);
                     }
 
                 Object oLocator = constant.getLocator();

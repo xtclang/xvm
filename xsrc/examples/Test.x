@@ -1,5 +1,11 @@
 module Test
     {
+    Void fnVoid();
+    Tuple fnTupleNone();
+    Tuple<> fnTupleEmpty();
+    Tuple<Int> fnTupleInt();
+    Tuple<Tuple> fnTupleTuple();
+
 //    class Fubar
 //        {
 //        Int number;
@@ -64,24 +70,24 @@ module Test
 //            // ...
 //            }
 //        }
-
-    mixin MyMixin<T extends Int>
-        {
-        // ...
-        }
-
-    class MyClass2<T>
-            incorporates conditional MyMixin<T extends Int>
-        {
-        // TODO
-        }
-
-    typedef function Void Alarm();
-
-    class MyTest3
-        {
-        Alarm alarm;
-
-        Alarm foo(Alarm alarm);
-        }
+//
+//    mixin MyMixin<T extends Int>
+//        {
+//        // ...
+//        }
+//
+//    class MyClass2<T>
+//            incorporates conditional MyMixin<T extends Int>
+//        {
+//        // TODO
+//        }
+//
+//    typedef function Void Alarm();
+//
+//    class MyTest3
+//        {
+//        Alarm alarm;
+//
+//        Alarm foo(Alarm alarm);
+//        }
     }

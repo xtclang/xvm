@@ -183,6 +183,23 @@ public class SignatureConstant
         m_constName = (StringConstant) m_constName.simplify();
         simplifyTypes(m_aconstReturns);
         simplifyTypes(m_aconstParams);
+
+        // replace a void return with no return
+        if (m_aconstReturns.length == 1)
+            {
+            TypeConstant constType = m_aconstReturns[0];
+            if (constType.isSingleDefiningConstant())
+                {
+                Constant constId = constType.getDefiningConstant();
+                if (constId.equals(getConstantPool().getImplicitlyImportedIdentity("Void")) ||
+                        (constId.equals(getConstantPool().getImplicitlyImportedIdentity("Tuple"))
+                                && constType.isParamsSpecified() && constType.getParamTypes().isEmpty()))
+                    {
+                    m_aconstReturns = NO_TYPES;
+                    }
+                }
+            }
+
         return this;
         }
 
@@ -488,6 +505,11 @@ public class SignatureConstant
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Empty array of types.
+     */
+    private static final TypeConstant[] NO_TYPES = new TypeConstant[0];
 
     /**
      * During disassembly, this holds the index of the constant that specifies the name of this
