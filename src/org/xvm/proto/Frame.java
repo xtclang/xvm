@@ -4,6 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.IntConstant;
 
@@ -86,16 +87,16 @@ public class Frame
         f_adapter = f_context.f_types.f_adapter;
 
         f_function = function;
-        f_aOp = function == null ? Op.STUB : f_adapter.getOps(function);
+        f_aOp = function == null ? Op.STUB : function.getOps();
 
         f_hTarget = hTarget;
 
         f_ahVar = ahVar;
         f_aInfo = new VarInfo[ahVar.length];
 
-        int cScopes = function == null ? 1 : f_adapter.getScopeCount(function);
+        int cScopes = function == null ? 1 : function.getScopeCount();
         f_anNextVar = new int[cScopes];
-        f_anNextVar[0] = function == null ? 0 : Adapter.getArgCount(function);
+        f_anNextVar[0] = function == null ? 0 : function.getParamCount();
 
         f_iReturn = iReturn;
         f_aiReturn = aiReturn;
@@ -676,7 +677,7 @@ public class Frame
         VarInfo info = f_aInfo[nVar];
         if (info == null)
             {
-            int cArgs = Adapter.getArgCount(f_function);
+            int cArgs = f_function.getParamCount();
             String sName = "<arg " + nVar + ">";
 
             if (nVar >= cArgs)
@@ -793,7 +794,7 @@ public class Frame
                     MethodStructure fnCaller = fiber.f_fnCaller;
                     sb.append("\n  ")
                       .append(formatFrameDetails(fiberCaller.f_context, fnCaller,
-                              iPC, f_adapter.getOps(fnCaller)));
+                              iPC, fnCaller.getOps()));
                     break;
                     }
                 fiber = fiberCaller;

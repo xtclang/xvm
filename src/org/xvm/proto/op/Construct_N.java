@@ -51,7 +51,7 @@ public class Construct_N extends OpCallable
             MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
 
             ObjectHandle hStruct = frame.getThis();
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, frame.f_adapter.getVarCount(constructor));
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getVarCount());
             if (ahVar == null)
                 {
                 return R_REPEAT;

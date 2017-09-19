@@ -2,7 +2,6 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.Adapter;
 import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -81,15 +80,10 @@ public class Invoke_TT extends OpInvocable
                 return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, -f_nTupleRetValue - 1);
                 }
 
-            if (ahArg.length != Adapter.getArgCount(method))
-                {
-                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
-                }
-
             int cArgs = ahArg.length;
-            int cVars = frame.f_adapter.getVarCount(method);
+            int cVars = method.getVarCount();
 
-            if (cArgs != Adapter.getArgCount(method))
+            if (cArgs != method.getParamCount())
                 {
                 return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                 }

@@ -69,7 +69,7 @@ public class Invoke_10 extends OpInvocable
                         hArg, Frame.RET_UNUSED);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[frame.f_adapter.getVarCount(chain.getTop())];
+            ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getVarCount()];
             ahVar[0] = hArg;
 
             return clz.f_template.invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);

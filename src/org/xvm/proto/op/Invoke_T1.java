@@ -2,7 +2,6 @@ package org.xvm.proto.op;
 
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.proto.Adapter;
 import org.xvm.proto.CallChain;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
@@ -82,9 +81,9 @@ public class Invoke_T1 extends OpInvocable
                 }
 
             int cArgs = ahArg.length;
-            int cVars = frame.f_adapter.getVarCount(method);
+            int cVars = method.getVarCount();
 
-            if (cArgs != Adapter.getArgCount(method))
+            if (cArgs != method.getParamCount())
                 {
                 return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                 }
