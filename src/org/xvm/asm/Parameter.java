@@ -9,7 +9,6 @@ import java.io.PrintWriter;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.Handy;

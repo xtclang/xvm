@@ -44,6 +44,7 @@
     <profile version="1.0">
       <option name="myName" value="Project Default" />
       <option name="myLocal" value="true" />
+      <inspection_tool class="AssertWithSideEffects" enabled="false" level="WARNING" enabled_by_default="false" />
       <inspection_tool class="BooleanConstructor" enabled="false" level="WARNING" enabled_by_default="false" />
       <inspection_tool class="CheckTagEmptyBody" enabled="false" level="WARNING" enabled_by_default="false" />
       <inspection_tool class="ClassNameWithMistakes" enabled="false" level="INFO" enabled_by_default="false" />
@@ -64,6 +65,7 @@
         <option name="m_ignoreTestCases" value="true" />
         <option name="m_ignoreIgnoreParameter" value="true" />
       </inspection_tool>
+      <inspection_tool class="EqualsWhichDoesntCheckParameterClass" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
       <inspection_tool class="FieldNameWithMistakes" enabled="false" level="INFO" enabled_by_default="false" />
       <inspection_tool class="ForCanBeForeach" enabled="false" level="WARNING" enabled_by_default="false">
         <option name="REPORT_INDEXED_LOOP" value="true" />
@@ -110,6 +112,10 @@
       <inspection_tool class="JpaQlInspection" enabled="false" level="ERROR" enabled_by_default="false" />
       <inspection_tool class="JpaQueryApiInspection" enabled="false" level="ERROR" enabled_by_default="false" />
       <inspection_tool class="LocalVariableNameWithMistakes" enabled="false" level="INFO" enabled_by_default="false" />
+      <inspection_tool class="LoggerInitializedWithForeignClass" enabled="false" level="WARNING" enabled_by_default="false">
+        <option name="loggerClassName" value="org.apache.log4j.Logger,org.slf4j.LoggerFactory,org.apache.commons.logging.LogFactory,java.util.logging.Logger" />
+        <option name="loggerFactoryMethodName" value="getLogger,getLogger,getLog,getLogger" />
+      </inspection_tool>
       <inspection_tool class="MethodNameWithMistakes" enabled="false" level="INFO" enabled_by_default="false" />
       <inspection_tool class="MimeType" enabled="false" level="ERROR" enabled_by_default="false" />
       <inspection_tool class="MissedExecutable" level="WARNING" enabled="false" />
@@ -117,6 +123,7 @@
       <inspection_tool class="ReferencesToClassesFromDefaultPackagesInJSPFile" enabled="false" level="ERROR" enabled_by_default="false" />
       <inspection_tool class="SelfIncludingJspFiles" enabled="false" level="ERROR" enabled_by_default="false" />
       <inspection_tool class="SimplifiableIfStatement" enabled="false" level="WARNING" enabled_by_default="false" />
+      <inspection_tool class="StringBufferReplaceableByString" enabled="false" level="WARNING" enabled_by_default="false" />
       <inspection_tool class="StringWithMistakes" enabled="false" level="INFO" enabled_by_default="false" />
       <inspection_tool class="SynchronizationOnLocalVariableOrMethodParameter" enabled="false" level="WARNING" enabled_by_default="false">
         <option name="reportLocalVariables" value="true" />
@@ -299,10 +306,39 @@
   <component name="ProjectDictionaryState">
     <dictionary name="ggleyzer">
       <words>
+        <w>aconst</w>
+        <w>assignability</w>
+        <w>castable</w>
+        <w>constant's</w>
+        <w>containee</w>
+        <w>dereferenced</w>
         <w>entrancy</w>
+        <w>finessable</w>
+        <w>frameless</w>
+        <w>freeform</w>
         <w>genericized</w>
+        <w>hashable</w>
+        <w>hexit</w>
+        <w>ieee</w>
+        <w>inits</w>
+        <w>instanceof</w>
         <w>locators</w>
+        <w>mixins</w>
         <w>nullable</w>
+        <w>orderable</w>
+        <w>referrer's</w>
+        <w>should've</w>
+        <w>signum</w>
+        <w>staticness</w>
+        <w>super's</w>
+        <w>syntheticness</w>
+        <w>tuple's</w>
+        <w>typelet</w>
+        <w>typelets</w>
+        <w>unhideable</w>
+        <w>unrepresentability</w>
+        <w>xqiz</w>
+        <w>xtclang</w>
       </words>
     </dictionary>
     <dictionary name="cameron">
@@ -314,6 +350,7 @@
   </component>
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../../sandbox/sandbox.iml" filepath="$PROJECT_DIR$/../../sandbox/sandbox.iml" group="External" />
       <module fileurl="file://$PROJECT_DIR$/xvm.iml" filepath="$PROJECT_DIR$/xvm.iml" />
     </modules>
   </component>

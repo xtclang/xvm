@@ -638,6 +638,7 @@ public class ConstantPool
             case "Class":
             case "Iterator":
             case "Object":
+            case "Ref":
             case "String":
             case "Type":
                 sClz = sName;
