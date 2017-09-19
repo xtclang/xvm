@@ -3697,10 +3697,9 @@ s     *
         List<TypeExpression> types = null;
         if (match(Id.COMP_LT, required) != null)
             {
-            if (peek().getId() != Id.COMP_GT)
-                {
-                types = parseTypeExpressionList();
-                }
+            types = peek().getId() == Id.COMP_GT
+                    ? Collections.EMPTY_LIST
+                    : parseTypeExpressionList();
             expect(Id.COMP_GT);
             }
         return types;

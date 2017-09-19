@@ -21,7 +21,6 @@ import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
