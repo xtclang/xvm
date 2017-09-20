@@ -27,9 +27,6 @@ public class xTestClass2 extends ClassTemplate
     @Override
     public void initDeclared()
         {
-        adapter.addMethod(f_struct, "construct", new String[]{"Int64", "String"}, VOID);
-        adapter.addMethod(f_struct, "finally", new String[]{"Int64", "String"}, VOID);
-
         MethodInfo construct = ensureMethodInfo("construct", new String[]{"Int64", "String"});
         MethodInfo ftFinally = ensureMethodInfo("finally", new String[]{"Int64", "String"});
 

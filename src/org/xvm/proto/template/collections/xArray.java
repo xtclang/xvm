@@ -48,9 +48,7 @@ public class xArray
     @Override
     public void initDeclared()
         {
-        // TODO: remove
-        f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"Int64", "Function"}, VOID);
-
+        markNativeMethod("construct", INT);
         markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT, new String[] {"Ref<ElementType>"});
         markNativeMethod("reify", VOID, new String[] {"collections.Array<ElementType>"});

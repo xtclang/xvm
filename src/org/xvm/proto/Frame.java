@@ -925,7 +925,7 @@ public class Frame
                 {
                 TypeComposition clzCatch = context.f_types.
                         ensureComposition(f_anClassConstId[iCatch], frame.getActualTypes());
-                if (clzException.extends_(clzCatch))
+                if (clzException.isA(clzCatch))
                     {
                     StringConstant constVarName = (StringConstant)
                             context.f_pool.getConstant(f_anNameConstId[iCatch]);

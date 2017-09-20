@@ -396,8 +396,8 @@ public class TypeComposition
         return type == m_typeStruct;
         }
 
-    // does this class extend that?
-    public boolean extends_(TypeComposition that)
+    // is this class assignable to the specified class
+    public boolean isA(TypeComposition that)
         {
         assert that.f_template.f_struct.getFormat() != Component.Format.INTERFACE;
 
@@ -538,6 +538,7 @@ public class TypeComposition
         {
         PropertyStructure propertyBase = null;
         List<MethodStructure> list = new LinkedList<>();
+
         for (ClassTemplate template : getCallChain())
             {
             PropertyStructure property = template.getProperty(sPropName);
@@ -548,9 +549,14 @@ public class TypeComposition
                 if (mms != null)
                     {
                     // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
-                    list.add(mms.methods().get(0));
+                    MethodStructure method = mms.methods().get(0);
 
-                    // TODO: if (!method.callsSuper() {break;})
+                    list.add(method);
+
+                    if (!method.isSuperCalled())
+                        {
+                        break;
+                        }
                     }
 
                 if (template.isStateful())

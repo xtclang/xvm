@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.proto.TypeComposition;
+import org.xvm.proto.TypeSet;
 
 
 /**
@@ -295,11 +296,10 @@ public abstract class TypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     /**
-     * Determine if references and values of the specified type will be _assignable to_ references
-     * of this type.
+     * Determine if values of the specified type will be assignable to values of this type.
      *
      * @param that   the type to match
-     * @param clazz  the TypeComposition in which context's the matching is evaluated
+     * @param clazz  the TypeComposition in which context's the assignability is evaluated
      *
      * See Type.x # isA()
      */
@@ -320,8 +320,12 @@ public abstract class TypeConstant
             return true;
             }
 
-        // TODO:
-        return this.equals(that);
+        TypeSet types = clazz.f_template.f_types;
+
+        TypeComposition clzThis = types.resolveClass(this, clazz.f_mapGenericActual);
+        TypeComposition clzThat = types.resolveClass(that, clazz.f_mapGenericActual);
+
+        return clzThis.isA(clzThat);
         }
 
 

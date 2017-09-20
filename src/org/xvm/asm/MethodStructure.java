@@ -234,6 +234,41 @@ public class MethodStructure
                 return false;
                 }
             }
+
+        for (int i = 0; i < cParams; i++)
+            {
+            TypeConstant typeP2 = getParam(i).getType();
+            TypeConstant typeP1 = signature.getRawParams()[i];
+
+            if (typeP1.isA(typeP2, clazz))
+                {
+                continue;
+                }
+
+            if (!typeP2.isA(typeP1, clazz))
+                {
+                return false;
+                }
+
+            // TODO:
+            // if there is an number of different formal names, then at least one of them must be
+            // produced by the type T1
+//            if (String[] namesThis : this.formalParamNames(loop.count))
+//                {
+//                if (String[] namesThat : that.formalParamNames(loop.count))
+//                    {
+//                    for (String name : nameThis.intersection(namesThat))
+//                        {
+//                        if (that.TargetType.produces(typeP1))
+//                            {
+//                            return true;
+//                            }
+//                        }
+//                    }
+//                }
+
+            return false;
+            }
         return true;
         }
 
@@ -397,6 +432,12 @@ public class MethodStructure
         {
         super.registerConstants(pool);
 
+        // if the return type is Void, that means that there is no return type at all
+        if (m_aReturns.length == 1 && m_aReturns[0].getType().isVoid())
+            {
+            m_aReturns = NO_PARAMS;
+            }
+
         for (Parameter param : m_aReturns)
             {
             param.registerConstants(pool);
@@ -426,12 +467,15 @@ public class MethodStructure
             }
         }
 
+
     @Override
     public String getDescription()
         {
         return new StringBuilder()
-                .append("id=")
-                .append(getIdentityConstant())
+                .append("id=\"")
+                .append(getIdentityConstant().getValueString())
+                .append("\", sig=")
+                .append(getIdentityConstant().getSignature())
                 .append(", ")
                 .append(super.getDescription())
                 .append(", conditional=")
@@ -443,6 +487,11 @@ public class MethodStructure
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Empty array of Parameters.
+     */
+    public static final Parameter[] NO_PARAMS = new Parameter[0];
 
     /**
      * The return value types. (A zero-length array is "Void".)

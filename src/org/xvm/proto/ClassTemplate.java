@@ -338,11 +338,6 @@ public abstract class ClassTemplate
                     int cReturns = atReturnTest.length;
                     if (cReturns != atReturn.length)
                         {
-                        // compensate for the return type of Void
-                        if (atReturn.length == 0 && atReturnTest[0].getValueString().contains("Tuple"))
-                            {
-                            return method;
-                            }
                         continue;
                         }
 

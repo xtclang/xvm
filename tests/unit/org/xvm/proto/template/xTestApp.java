@@ -404,7 +404,7 @@ public class xTestApp extends xModule
 
             new NVar(adapter.getClassTypeConstId("collections.Array<String>"),
                      adapter.ensureValueConstantId("as1")),   // #2 (as1)
-            new New_NG(adapter.getMethodConstId("collections.Array", "construct"),
+            new New_NG(adapter.getMethodConstId("collections.Array", "construct", new String[]{"Int64", "Function"}, VOID),
                        -adapter.getClassTypeConstId("collections.Array<String>"),
                        new int[] {-adapter.ensureValueConstantId(5),
                                   -adapter.getMethodConstId("TestApp", "lambda_2")}, 2),
@@ -640,7 +640,6 @@ public class xTestApp extends xModule
         mtToString.m_cVars = 2;
 
         ClassTemplate ctPrPoint = f_types.getTemplate("TestApp.PrettyPoint");
-        adapter.addMethod(ctPrPoint.f_struct, "construct", new String[] {"Int64", "Int64", "String"}, VOID);
         MethodInfo mtPrPConst = ctPrPoint.ensureMethodInfo("construct", new String[]{"Int64", "Int64", "String"});
         mtPrPConst.m_aop = new Op[]
             { // #0 = x; #1 = y; #2 = prefix
@@ -652,7 +651,6 @@ public class xTestApp extends xModule
         mtPrPConst.m_cVars = 3;
 
         ClassTemplate ctPrRectangle = f_types.getTemplate("TestApp.PrettyRectangle");
-        adapter.addMethod(ctPrRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point", "String"}, VOID);
         MethodInfo mtPrRConst = ctPrRectangle.ensureMethodInfo("construct", new String[]{"TestApp.Point", "TestApp.Point", "String"});
         mtPrRConst.m_aop = new Op[]
             { // #0 = tl; #1 = br; #2 = prefix

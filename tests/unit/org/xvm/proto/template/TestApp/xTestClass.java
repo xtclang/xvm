@@ -27,9 +27,6 @@ public class xTestClass extends ClassTemplate
     public void initDeclared()
         {
         // --- constructor()
-        adapter.addMethod(f_struct, "construct",STRING, VOID);
-        adapter.addMethod(f_struct, "finally", STRING, VOID);
-
         MethodInfo construct = ensureMethodInfo("construct", STRING);
         MethodInfo ftFinally = ensureMethodInfo("finally", STRING);
 
