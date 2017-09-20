@@ -503,7 +503,8 @@ public abstract class Constant
         Duration,       // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
         TimeInterval,   // ISO8601 datetime '/' datetime format
         Version,
-        Enum,
+        SingletonConst,
+        SingletonService,
         Tuple,
         Array,
         UInt8Array,     // byte[]

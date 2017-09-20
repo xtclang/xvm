@@ -7,7 +7,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
 
-import org.xvm.asm.constants.EnumConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
@@ -71,9 +71,9 @@ public class Enum
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof EnumConstant)
+        if (constant instanceof SingletonConstant)
             {
-            ClassConstant constClass = ((EnumConstant) constant).getValue();
+            ClassConstant constClass = ((SingletonConstant) constant).getValue();
 
             Enum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
                 (Enum) getSuper() : this;

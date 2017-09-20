@@ -65,16 +65,16 @@ module Test
 //            }
 //        }
 //
-//    mixin MyMixin<T extends Int>
-//        {
-//        // ...
-//        }
-//
-//    class MyClass2<T>
-//            incorporates conditional MyMixin<T extends Int>
-//        {
-//        // TODO
-//        }
+    mixin MyMixin<T>
+        {
+        // ...
+        }
+
+    class MyClass2<T>
+            incorporates conditional MyMixin<T extends Int>
+        {
+        // TODO
+        }
 //
 //    typedef function Void Alarm();
 //
@@ -86,11 +86,11 @@ module Test
 //        }
 
 // problem: Void compiling to Tuple instead of being eliminated
-    Void fnVoid();
-    Tuple fnTupleNone();
-    Tuple<> fnTupleEmpty();
-    Tuple<Int> fnTupleInt();
-    Tuple<Tuple> fnTupleTuple();
+//    Void fnVoid();
+//    Tuple fnTupleNone();
+//    Tuple<> fnTupleEmpty();
+//    Tuple<Int> fnTupleInt();
+//    Tuple<Tuple> fnTupleTuple();
 
 // problem: InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
 //    @inject String option;

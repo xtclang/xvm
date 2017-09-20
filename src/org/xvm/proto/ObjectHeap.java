@@ -3,7 +3,7 @@ package org.xvm.proto;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.EnumConstant;
+import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.proto.template.collections.xArray;
 import org.xvm.proto.template.xClass;
@@ -109,9 +109,9 @@ public class ObjectHeap
             case Version:
                 throw new UnsupportedOperationException("TODO" + constValue);
 
-            case Enum:
+            case SingletonConst:
                 {
-                EnumConstant constEnum = (EnumConstant) constValue;
+                SingletonConstant constEnum = (SingletonConstant) constValue;
                 ClassTemplate template = f_types.getTemplate(constEnum.getValue());
                 assert (template.isSingleton());
                 return template;

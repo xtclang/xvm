@@ -134,7 +134,7 @@ public class Adapter
     public int ensureEnumConstId(String sEnum)
         {
         ClassConstant constClass = f_container.f_types.getClassConstant(sEnum);
-        return f_container.f_pool.ensureEnumConstant(constClass).getPosition();
+        return f_container.f_pool.ensureSingletonConstConstant(constClass).getPosition();
         }
 
     public int getMethodConstId(String sClassName, String sMethName)
@@ -278,7 +278,7 @@ public class Adapter
             {
             ClassConstant constClass = f_container.f_types.getClassConstant(
                     ((Boolean) oValue).booleanValue() ? "Boolean.True" : "Boolean.False");
-            return f_container.f_pool.ensureEnumConstant(constClass);
+            return f_container.f_pool.ensureSingletonConstConstant(constClass);
             }
 
         if (oValue instanceof Object[])
@@ -315,7 +315,7 @@ public class Adapter
         if (oValue == null)
             {
             ClassConstant constClass = f_container.f_types.getClassConstant("Nullable.Null");
-            return f_container.f_pool.ensureEnumConstant(constClass);
+            return f_container.f_pool.ensureSingletonConstConstant(constClass);
             }
 
         throw new IllegalArgumentException();

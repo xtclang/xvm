@@ -15,9 +15,9 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent an enum value as a constant value.
+ * Represent a singleton instance of a const class (such as an enum value) as a constant value.
  */
-public class EnumConstant
+public class SingletonConstant
         extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -31,26 +31,32 @@ public class EnumConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public EnumConstant(ConstantPool pool, Format format, DataInput in)
+    public SingletonConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
+        m_fmt    = format;
         m_iClass = readMagnitude(in);
         }
 
     /**
      * Construct a constant whose value is a literal.
-     *
-     * @param pool        the ConstantPool that will contain this Constant
-     * @param constClass  the class constant for the enum value
+     *  @param pool        the ConstantPool that will contain this Constant
+     * @param format
+     * @param constClass  the class constant for the singleton value
      */
-    public EnumConstant(ConstantPool pool, ClassConstant constClass)
+    public SingletonConstant(ConstantPool pool, Format format, ClassConstant constClass)
         {
         super(pool);
 
+        if (format != Format.SingletonConst && format != Format.SingletonService)
+            {
+            throw new IllegalArgumentException("format must be SingletonConst or SingletonService");
+            }
+
         if (constClass == null)
             {
-            throw new IllegalStateException("enum value required");
+            throw new IllegalArgumentException("class of the singleton value required");
             }
 
         m_constClass = constClass;
@@ -67,7 +73,7 @@ public class EnumConstant
 
     /**
      * {@inheritDoc}
-     * @return  the class constant for the enum value
+     * @return  the class constant for the singleton value
      */
     @Override
     public ClassConstant getValue()
@@ -81,7 +87,7 @@ public class EnumConstant
     @Override
     public Format getFormat()
         {
-        return Format.Enum;
+        return m_fmt;
         }
 
     @Override
@@ -106,7 +112,7 @@ public class EnumConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        return this.getValue().compareTo(((EnumConstant) that).getValue());
+        return this.getValue().compareTo(((SingletonConstant) that).getValue());
         }
 
     @Override
@@ -142,7 +148,7 @@ public class EnumConstant
     @Override
     public String getDescription()
         {
-        return "enum-value=" + m_constClass.getName();
+        return "singleton-" + (m_fmt == Format.SingletonConst ? "const=" : "service=") + m_constClass.getName();
         }
 
 
@@ -158,12 +164,17 @@ public class EnumConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Used during deserialization: holds the index of the enum value's class constant.
+     * The format of the constant; either SingletonConst or SingletonService.
+     */
+    private Format m_fmt;
+
+    /**
+     * Used during deserialization: holds the index of the class constant.
      */
     private transient int m_iClass;
 
     /**
-     * The Class Constant that is the identity of the enum value.
+     * The Class Constant that of the singleton value.
      */
     private ClassConstant m_constClass;
     }

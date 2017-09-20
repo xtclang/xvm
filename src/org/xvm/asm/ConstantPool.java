@@ -27,7 +27,7 @@ import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DifferenceTypeConstant;
-import org.xvm.asm.constants.EnumConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.Float128Constant;
 import org.xvm.asm.constants.Float16Constant;
 import org.xvm.asm.constants.Float32Constant;
@@ -562,11 +562,23 @@ public class ConstantPool
      *
      * @param constClass  a ClassConstant for the Enum
      *
-     * @return an EnumConstant representing the Enum
+     * @return an SingletonConstant representing the Enum
      */
-    public EnumConstant ensureEnumConstant(ClassConstant constClass)
+    public SingletonConstant ensureSingletonConstConstant(ClassConstant constClass)
         {
-        return (EnumConstant) register(new EnumConstant(this, constClass));
+        return (SingletonConstant) register(new SingletonConstant(this, Format.SingletonConst, constClass));
+        }
+
+    /**
+     * Given a ClassConstant, obtain an Enum constant.
+     *
+     * @param constClass  a ClassConstant for the Enum
+     *
+     * @return an SingletonConstant representing the Enum
+     */
+    public SingletonConstant ensureSingletonServiceConstant(ClassConstant constClass)
+        {
+        return (SingletonConstant) register(new SingletonConstant(this, Format.SingletonService, constClass));
         }
 
     /**
@@ -1482,8 +1494,9 @@ public class ConstantPool
                     constant = new VersionConstant(this, format, in);
                     break;
 
-                case Enum:
-                    constant = new EnumConstant(this, format, in);
+                case SingletonConst:
+                case SingletonService:
+                    constant = new SingletonConstant(this, format, in);
                     break;
 
                 case Array:

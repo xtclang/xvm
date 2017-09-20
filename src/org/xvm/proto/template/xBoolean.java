@@ -4,7 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 
-import org.xvm.asm.constants.EnumConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.proto.Frame;
@@ -49,9 +49,9 @@ public class xBoolean
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof EnumConstant)
+        if (constant instanceof SingletonConstant)
             {
-            EnumConstant constEnum = (EnumConstant) constant;
+            SingletonConstant constEnum = (SingletonConstant) constant;
             switch (constEnum.getValue().getName())
                 {
                 case "False":
