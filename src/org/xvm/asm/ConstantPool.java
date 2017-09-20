@@ -558,11 +558,12 @@ public class ConstantPool
         }
 
     /**
-     * Given a ClassConstant, obtain an Enum constant.
+     * Given a ClassConstant for a singleton const class, obtain a constant that represents the
+     * singleton instance of that class.
      *
-     * @param constClass  a ClassConstant for the Enum
+     * @param constClass  a ClassConstant of a singleton const class
      *
-     * @return an SingletonConstant representing the Enum
+     * @return an SingletonConstant representing the singleton const value
      */
     public SingletonConstant ensureSingletonConstConstant(ClassConstant constClass)
         {
@@ -570,11 +571,12 @@ public class ConstantPool
         }
 
     /**
-     * Given a ClassConstant, obtain an Enum constant.
+     * Given a ClassConstant for a service, obtain a constant that represents the singleton instance
+     * of the class.
      *
-     * @param constClass  a ClassConstant for the Enum
+     * @param constClass  a ClassConstant of a singleton service
      *
-     * @return an SingletonConstant representing the Enum
+     * @return an SingletonConstant representing the singleton service instance
      */
     public SingletonConstant ensureSingletonServiceConstant(ClassConstant constClass)
         {
