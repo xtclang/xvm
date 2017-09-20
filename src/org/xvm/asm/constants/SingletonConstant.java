@@ -59,6 +59,7 @@ public class SingletonConstant
             throw new IllegalArgumentException("class of the singleton value required");
             }
 
+        m_fmt        = format;
         m_constClass = constClass;
         }
 
