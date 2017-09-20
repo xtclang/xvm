@@ -58,7 +58,7 @@ class Object
      * A reference to any object can be used to provide a function that returns a
      * reference to that same object.
      */
-    @auto function Object() to<function Object()>()
+    @Auto function Object() to<function Object()>()
         {
         return () -> this;
         }

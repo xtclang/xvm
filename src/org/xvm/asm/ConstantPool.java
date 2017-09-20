@@ -709,33 +709,33 @@ public class ConstantPool
                 sSub = "False";
                 break;
 
-            case "auto":
-                sPkg = "annotations";
-                sClz = "Automagic";
-                break;
-
-            case "inject":
-                sPkg = "annotations";
-                sClz = "InjectedRef";
-                break;
-
-            case "atomic":
+            case "Atomic":
                 sPkg = "annotations";
                 sClz = "AtomicRef";
                 break;
 
+            case "Auto":
+                sPkg = "annotations";
+                sClz = "Automagic";
+                break;
+
             case "FutureRef":
-            case "future":
+            case "Future":
                 sPkg = "annotations";
                 sClz = "FutureRef";
                 break;
 
-            case "lazy":
+            case "Inject":
+                sPkg = "annotations";
+                sClz = "InjectedRef";
+                break;
+
+            case "Lazy":
                 sPkg = "annotations";
                 sClz = "LazyRef";
                 break;
 
-            case "op":
+            case "Op":
                 sPkg = "annotations";
                 sClz = "Operator";
                 break;
@@ -745,9 +745,24 @@ public class ConstantPool
                 sClz = "Override";
                 break;
 
-            case "ro":
+            case "RO":
                 sPkg = "annotations";
                 sClz = "ReadOnly";
+                break;
+
+            case "Soft":
+                sPkg = "annotations";
+                sClz = "ReadOnly";
+                break;
+
+            case "Watch":
+                sPkg = "annotations";
+                sClz = "WatchRef";
+                break;
+
+            case "Weak":
+                sPkg = "annotations";
+                sClz = "WeakRef";
                 break;
 
             default:

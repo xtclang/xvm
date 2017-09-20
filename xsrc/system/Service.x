@@ -61,7 +61,7 @@
  *   {@link Reentrancy.Forbidden}. Runtime events include only:
  * * * Timeout notification for the currently executing service invocation, although the runtime
  *     may temporarily suppress these notifications within a {@link CriticalSection}.
- * * * {@code @soft} and {@code @weak} reference-cleared notifications.
+ * * * {@code @Soft} and {@code @Weak} reference-cleared notifications.
  */
 interface Service()
     {
@@ -70,7 +70,7 @@ interface Service()
      * defaults to the name of the service class. This property is intended as a means to help
      * diagnose faults, and to provide runtime manageability information.
      */
-    @atomic String serviceName.get()
+    @Atomic String serviceName.get()
         {
         return meta.class_.to<String>();
         }
@@ -89,12 +89,12 @@ interface Service()
     /**
      * Determine if the service is still running.
      */
-    @ro @atomic StatusIndicator statusIndicator;
+    @RO @Atomic StatusIndicator statusIndicator;
 
     /**
      * The current CriticalSection for the service, if any.
      */
-    @ro @atomic CriticalSection? criticalSection;
+    @RO @Atomic CriticalSection? criticalSection;
 
     /**
      * Optional re-entrancy settings for a service:
@@ -123,13 +123,13 @@ interface Service()
      * An attempt to set this from outside of the service when the service is processing will likely
      * result in an exception for the caller.
      */
-    @atomic Reentrancy reentrancy;
+    @Atomic Reentrancy reentrancy;
 
     /**
      * The Timeout that was used when the service was invoked, if any. This is the timeout that this
      * service is subject to.
      */
-    @ro @atomic Timeout? incomingTimeout;
+    @RO @Atomic Timeout? incomingTimeout;
 
     /**
      * The current Timeout that will be used by the service when it invokes other services.
@@ -137,7 +137,7 @@ interface Service()
      * By default, this is the same as the incoming Timeout, but can be overridden by creating a new
      * Timeout.
      */
-    @ro @atomic Timeout? timeout.get()
+    @RO @Atomic Timeout? timeout.get()
         {
         return super() ?: incomingTimeout;
         }
@@ -145,7 +145,7 @@ interface Service()
     /**
      * The wall-clock uptime for the service.
      */
-    @ro @atomic Duration upTime;
+    @RO @Atomic Duration upTime;
 
     /**
      * The amount of time that this service has consumed the CPU.
@@ -154,7 +154,7 @@ interface Service()
      * tracking the CPU time is too significant to accept in relation to the service's actual CPU
      * time.
      */
-    @ro @atomic Duration cpuTime;
+    @RO @Atomic Duration cpuTime;
 
     /**
      * Determine if there is currently any _visible_ contention for the service. A service is
@@ -166,7 +166,7 @@ interface Service()
      * contention visible exceeds the cost of the contention itself, in which case such contention
      * may not be visible.
      */
-    @ro @atomic Boolean contended;
+    @RO @Atomic Boolean contended;
 
     /**
      * If the service maintains a backlog to manage pending requests, determine the depth of that
@@ -176,7 +176,7 @@ interface Service()
      * it is possible that a service does not maintain a formal backlog, and thus the value of this
      * property may not correctly reflect the presence and/or amount of contention.
      */
-    @ro @atomic Int backlogDepth;
+    @RO @Atomic Int backlogDepth;
 
     /**
      * Allow the runtime to process pending runtime notifications for this service, or other service
@@ -209,12 +209,12 @@ interface Service()
      * This is the memory footprint of the service, including memory that might not be being fully
      * utilized at the moment.
      */
-    @ro @atomic Int bytesReserved;
+    @RO @Atomic Int bytesReserved;
 
     /**
      * This is the amount of memory that the service currently has allocated for stuff.
      */
-    @ro @atomic Int bytesAllocated;
+    @RO @Atomic Int bytesAllocated;
 
     /**
      * Request the service to look for objects that are no longer used and reclaim their memory.

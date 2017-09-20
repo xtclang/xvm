@@ -50,13 +50,13 @@ class Array<ElementType>
     public/private Int size     = 0;
 
     @Override
-    @op ElementType getElement(Int index)
+    @Op ElementType getElement(Int index)
         {
         return elementAt(index).get();
         }
 
     @Override
-    @op Void setElement(Int index, ElementType value)
+    @Op Void setElement(Int index, ElementType value)
         {
         elementAt(index).set();
         }
@@ -78,12 +78,12 @@ class Array<ElementType>
         return element;
         }
 
-    @op Array!<ElementType> slice(Range<Int> range);
+    @Op Array!<ElementType> slice(Range<Int> range);
 
     Array!<ElementType> reify();
 
-    @op Array!<ElementType> add(Array!<ElementType> that);
-    @op Array!<ElementType> replace(Int index, ElementType value);
+    @Op Array!<ElementType> add(Array!<ElementType> that);
+    @Op Array!<ElementType> replace(Int index, ElementType value);
 
     static Boolean equals(Array a1, Array a2)
         {

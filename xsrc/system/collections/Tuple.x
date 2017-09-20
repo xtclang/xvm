@@ -29,7 +29,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * The number of elements in the tuple. A tuple cannot change its size; a size change requires
      * the creation of a new tuple.
      */
-    @ro Int size;
+    @RO Int size;
 
     /**
      * Obtain the value of the specified element in the tuple.
@@ -38,7 +38,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * value, then the compile-time type of the returned value is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @op Object getElement(Int index);
+    @Op Object getElement(Int index);
 
     /**
      * Modify the value in the specified element in the tuple.
@@ -49,7 +49,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      *
      * This operation will throw an exception if the tuple is either persistent or {@code const}.
      */
-    @op Void setElement(Int index, Object newValue);
+    @Op Void setElement(Int index, Object newValue);
 
     /**
      * Obtain the Ref for the specified element.
@@ -58,7 +58,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * value, then the compile-time type of the returned Ref is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @op Ref<Object> elementAt(Int index);
+    @Op Ref<Object> elementAt(Int index);
 
     // ----- tuple manipulations -------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    @op Tuple add(Tuple that);
+    @Op Tuple add(Tuple that);
 
     /**
      * Modify the value of the specified element in the tuple, returning the resultant tuple.
@@ -96,7 +96,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @op Tuple slice(Range<Int> range);
+    @Op Tuple slice(Range<Int> range);
 
     /**
      * Creates and returns a new tuple that is a copy of this tuple, except with the specified

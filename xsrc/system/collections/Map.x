@@ -45,7 +45,7 @@ interface Map<KeyType, ValueType>
         /**
          * The key represented by the entry.
          */
-        @ro KeyType key;
+        @RO KeyType key;
 
         /**
          * The value associated with the entry's key.
@@ -95,7 +95,7 @@ interface Map<KeyType, ValueType>
          * True iff the entry is existent in its map. An entry does not exist in its map before its
          * {@link value} is assigned, or after a call to {@link remove}.
          */
-        @ro Boolean exists;
+        @RO Boolean exists;
 
         /**
          * The value associated with the entry's key.
@@ -147,7 +147,7 @@ interface Map<KeyType, ValueType>
     /**
      * Determine the size of the Map, which is the number of key/value pairs in the Map.
      */
-    @ro Int size;
+    @RO Int size;
 
     /**
      * Determine if the Map is empty.
@@ -157,7 +157,7 @@ interface Map<KeyType, ValueType>
      *
      *   return size > 0;
      */
-    @ro Boolean empty.get()
+    @RO Boolean empty.get()
         {
         return size > 0;
         }
@@ -239,7 +239,7 @@ interface Map<KeyType, ValueType>
      * The returned set is expected to support mutation operations iff the map is _mutable_; the
      * returned set is not expected to support the {@code add} or {@code addAll} operations.
      */
-    @ro Set<KeyType> keys;
+    @RO Set<KeyType> keys;
 
     /**
      * Obtain the set of all entries (key/value pairs) in the map.
@@ -247,7 +247,7 @@ interface Map<KeyType, ValueType>
      * The returned set is expected to support mutation operations iff the map is _mutable_; the
      * returned set is not expected to support the {@code add} or {@code addAll} operations.
      */
-    @ro Set<Entry<KeyType, ValueType>> entries;
+    @RO Set<Entry<KeyType, ValueType>> entries;
 
     /**
      * Obtain the collection of all values (one for each key) in the map.
@@ -256,7 +256,7 @@ interface Map<KeyType, ValueType>
      * the returned collection is _not_ expected to support the {@code add} or {@code addAll}
      * operations.
      */
-    @ro Collection<ValueType> values;
+    @RO Collection<ValueType> values;
 
     // ----- write operations ----------------------------------------------------------------------
 
@@ -474,7 +474,7 @@ interface Map<KeyType, ValueType>
      * @throws BoundsException if the specified index (key) does not exist
      */
     @Override
-    @op ValueType getElement(KeyType index)
+    @Op ValueType getElement(KeyType index)
         {
         if (ValueType value : get(index))
             {
@@ -497,7 +497,7 @@ interface Map<KeyType, ValueType>
      * @throws ReadOnlyException if the map is of the _persistent_ or {@code const} variety
      */
     @Override
-    @op Void setElement(KeyType index, ValueType value)
+    @Op Void setElement(KeyType index, ValueType value)
         {
         // this must be overridden by map implementations that are not of the "mutable" variety
         Map<KeyType, ValueType> newMap = put(index, value);

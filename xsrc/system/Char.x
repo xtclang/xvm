@@ -1,5 +1,5 @@
 const Char
-// TODO dooes Char extend String, or have an "@auto to<String>()"
+// TODO dooes Char extend String, or have an "@Auto to<String>()"
     {
     construct Char(UInt32 codepoint)
         {
@@ -56,7 +56,7 @@ const Char
         return codepoint.to<Int>();
         }
 
-    @auto String to<String>()
+    @Auto String to<String>()
         {
         // TODO
         }
@@ -97,7 +97,7 @@ const Char
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
         Int cTrail;
-        switch (codepoint.highestBit())             // REVIEW method or @ro property?
+        switch (codepoint.highestBit())             // REVIEW method or @RO property?
             {
             case 0b00000000000000000000000010000000:
             case 0b00000000000000000000000100000000:

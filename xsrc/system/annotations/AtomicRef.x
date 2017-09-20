@@ -17,7 +17,7 @@
  *       {
  *       // Even while the processBatch() method is running, other services can query
  *       // the percentDone value, and monitor its progress from 0% to 100%
- *       @atomic Int percentDone;
+ *       @Atomic Int percentDone;
  *
  *       Void processBatch()
  *           {
@@ -43,8 +43,8 @@
  *
  *   static service Statistics
  *       {
- *       @atomic Int hits;
- *       @atomic Int misses;
+ *       @Atomic Int hits;
+ *       @Atomic Int misses;
  *       }
  *
  *   // somewhere else in various other services

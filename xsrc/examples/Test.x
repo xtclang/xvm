@@ -93,5 +93,10 @@ module Test
 //    Tuple<Tuple> fnTupleTuple();
 
 // problem: InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
-//    @inject String option;
+    @Inject String option;        // TODO figure out where the @Inject ended up
+
+    @Inject String option2.get()  // TODO sig is wrong (shows Void, should be String)
+        {
+        return super.get();
+        }
     }

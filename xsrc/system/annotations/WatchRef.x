@@ -1,8 +1,8 @@
 /**
- * The WatchRef ({@code @watch}) mixin is used to create event notifications whenever the value of
+ * The WatchRef ({@code @Watch}) mixin is used to create event notifications whenever the value of
  * the reference changes.
  *
- *   @watch(n -> console.print("new value=" + n)) Int n = 0;
+ *   @Watch(n -> console.print("new value=" + n)) Int n = 0;
  */
 mixin WatchRef<RefType>
         into Ref<RefType>

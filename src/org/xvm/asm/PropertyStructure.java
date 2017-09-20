@@ -191,7 +191,9 @@ public class PropertyStructure
     public String getDescription()
         {
         return new StringBuilder()
-                .append("type=")
+                .append("id=")
+                .append(getIdentityConstant().getValueString())
+                .append(", type=")
                 .append(m_type)
                 .append(", ")
                 .append(super.getDescription())

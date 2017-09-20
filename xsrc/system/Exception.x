@@ -12,7 +12,7 @@ const Exception(String? text, Exception? cause = null)
     String? text;       // TODO: remove
     Exception? cause;   // TODO: remove
 
-    @inject Iterable<StackFrame> stackTrace;
+    @Inject Iterable<StackFrame> stackTrace;
 
     String to<String>()
         {

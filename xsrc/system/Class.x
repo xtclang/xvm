@@ -204,14 +204,14 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Determine if the class is a singleton, and obtain the singleton instance.
      */
-    @lazy /* TODO prop cannot be conditional */ PublicType singleton;
+    @Lazy /* TODO prop cannot be conditional */ PublicType singleton;
 
     // ----- calculated properties -----------------------------------------------------------------
 
     /**
      * The type parameters for the class.
      */
-    @lazy Map<String, TypeParameter> typeParamsByName.calc()
+    @Lazy Map<String, TypeParameter> typeParamsByName.calc()
         {
         assert meta.immutable_;
 
@@ -356,7 +356,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * * Methods (grouped together by name as a {@link MultiMethod}
      * * Functions (grouped together by name as a {@link MultiFunction}
      */
-    @lazy Map<String, NamedChild> childrenByName.calc()
+    @Lazy Map<String, NamedChild> childrenByName.calc()
         {
         assert meta.immutable_;
 
@@ -377,7 +377,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * The child classes, by name. This is a sub-set of the contents of {@link childrenByName}.
      */
-    @lazy Map<String, Class> classesByName.calc()
+    @Lazy Map<String, Class> classesByName.calc()
         {
         assert meta.immutable_;
 
@@ -394,7 +394,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * The class properties, by name. This is a sub-set of the contents of {@link childrenByName}.
      */
-    @lazy Map<String, Property> propertiesByName.calc()
+    @Lazy Map<String, Property> propertiesByName.calc()
         {
         assert meta.immutable_;
 
@@ -411,7 +411,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * The class methods, by name. This is a sub-set of the contents of {@link childrenByName}.
      */
-    @lazy Map<String, MultiMethod> methodsByName.calc()
+    @Lazy Map<String, MultiMethod> methodsByName.calc()
         {
         assert meta.immutable_;
 
@@ -435,7 +435,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * The child function literals, by name. This is a sub-set of the contents of {@link
      * childrenByName}.
      */
-    @lazy Map<String, MultiFunction> functionsByName.calc()
+    @Lazy Map<String, MultiFunction> functionsByName.calc()
         {
         assert meta.immutable_;
 
@@ -517,7 +517,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Obtain a public type for this Class instance.
      */
-    @auto Type to<Type>()
+    @Auto Type to<Type>()
         {
         return PublicType;
         }

@@ -7,12 +7,12 @@ interface UniformIndexed<IndexType, ElementType>
     /**
      * Obtain the value of the specified element.
      */
-    @op ElementType getElement(IndexType index);
+    @Op ElementType getElement(IndexType index);
 
     /**
      * Modify the value in the specified element.
      */
-    @op Void setElement(IndexType index, ElementType value)
+    @Op Void setElement(IndexType index, ElementType value)
         {
         throw new ReadOnlyException();
         }
@@ -20,7 +20,7 @@ interface UniformIndexed<IndexType, ElementType>
     /**
      * Obtain a Ref for the specified element.
      */
-    @op Ref<ElementType> elementAt(IndexType index)
+    @Op Ref<ElementType> elementAt(IndexType index)
         {
         return new SimpleRef();
 

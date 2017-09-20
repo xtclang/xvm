@@ -367,8 +367,8 @@ public class Frame
                             {
                             // TODO: allow hValue to be a subclass?
                             // this can only be a trivial assignment, for example:
-                            // @future Int i1;
-                            // @future Int i2 = i1;
+                            // @Future Int i1;
+                            // @Future Int i2 = i1;
                             break;
                             }
 

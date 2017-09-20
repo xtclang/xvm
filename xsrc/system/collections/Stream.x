@@ -508,22 +508,22 @@ interface Stream<ElementType>
         /**
          * A function which returns a new, mutable result container.
          */
-        @ro Supplier supply;
+        @RO Supplier supply;
 
         /**
          * A function which folds a value into a mutable result container.
          */
-        @ro Accumulator accumulate;
+        @RO Accumulator accumulate;
 
         /**
          * A function which combines two partial results into a combined result.
          */
-        @ro Combiner combine;
+        @RO Combiner combine;
 
         /**
          * A function which transforms the intermediate result to the final result.
          */
-        @ro Finisher finish;
+        @RO Finisher finish;
 
         /**
          * Create a Collector from a Supplier function, an Accumulator function, and a Combiner

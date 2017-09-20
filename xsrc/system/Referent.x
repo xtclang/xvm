@@ -11,7 +11,7 @@ interface Referent
      * From the referrer's point of view, the ActualType represents the full set of methods that can
      * be invoked against the referent.
      */
-    @ro Type ActualType;
+    @RO Type ActualType;
 
     /**
      * Obtain a new reference to the referent such that the reference contains only the methods and
@@ -68,15 +68,15 @@ interface Referent
     /**
      * Determine if the referent is a service.
      */
-    @ro Boolean isService;
+    @RO Boolean isService;
 
     /**
      * Determine if the referent is an immutable const.
      */
-    @ro Boolean isConst;
+    @RO Boolean isConst;
 
     /**
      * Determine if the referent is immutable.
      */
-    @ro Boolean isImmutable;
+    @RO Boolean isImmutable;
     }

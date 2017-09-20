@@ -72,42 +72,42 @@ interface IntNumber
     /**
      * Bitwise AND.
      */
-    @op IntNumber and(IntNumber that);
+    @Op IntNumber and(IntNumber that);
 
     /**
      * Bitwise OR.
      */
-    @op IntNumber or(IntNumber that);
+    @Op IntNumber or(IntNumber that);
 
     /**
      * Bitwise XOR.
      */
-    @op IntNumber xor(IntNumber that);
+    @Op IntNumber xor(IntNumber that);
 
     /**
      * Bitwise NOT.
      */
-    @op IntNumber not();
+    @Op IntNumber not();
 
     /**
      * Shift bits left. This is both a logical left shift and arithmetic left shift, for
      * both signed and unsigned integer values.
      */
-    @op IntNumber shiftLeft(Int count);
+    @Op IntNumber shiftLeft(Int count);
 
     /**
      * Shift bits right. For signed integer values, this is an arithmetic right shift. For
      * unsigned integer values, this is both a logical right shift and arithmetic right
      * shift.
      */
-    @op IntNumber shiftRight(Int count);
+    @Op IntNumber shiftRight(Int count);
 
     /**
      * "Unsigned" shift bits right. For signed integer values, this is an logical right
      * shift. For unsigned integer values, this is both a logical right shift and arithmetic
      * right shift.
      */
-    @op IntNumber shiftAllRight(Int count);
+    @Op IntNumber shiftAllRight(Int count);
 
     /**
      * Rotate bits left.
@@ -130,30 +130,30 @@ interface IntNumber
      * If any bits are set in this integer, then return an integer with only the most significant
      * (left-most) of those bits set, otherwise return zero.
      */
-    @ro IntNumber leftmostBit;
+    @RO IntNumber leftmostBit;
 
     /**
      * If any bits are set in this integer, then return an integer with only the least significant
      * (right-most) of those bits set, otherwise return zero.
      */
-    @ro IntNumber rightmostBit;
+    @RO IntNumber rightmostBit;
 
     /**
      * Determine, from left-to-right (most significant to least) the number of bits that are zero
      * preceding the most significant (left-most) bit.
      */
-    @ro IntNumber leadingZeroCount;
+    @RO IntNumber leadingZeroCount;
 
     /**
      * Determine, from right-to-left (least significant to most) the number of bits that are zero
      * following the least significant (right-most) bit.
      */
-    @ro IntNumber trailingZeroCount;
+    @RO IntNumber trailingZeroCount;
 
     /**
      * Determine the number of bits that are set (non-zero) in the integer.
      */
-    @ro IntNumber bitCount;
+    @RO IntNumber bitCount;
 
     /**
      * Swap the bit ordering of this integer's bits to produce a new integer with the

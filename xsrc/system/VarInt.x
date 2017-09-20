@@ -9,7 +9,7 @@ const VarInt
         bits = bits;
         }
 
-    @lazy Signum sign.get()
+    @Lazy Signum sign.get()
         {
         // twos-complement number will have the MSB set if negative
         if (bits[bits.length-1] == 1)

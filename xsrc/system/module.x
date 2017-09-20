@@ -46,7 +46,7 @@ module Ecstasy.xtclang.org
          * The stack traces of the various other threads-of-execution contributing to the deadlock,
          * if any.
          */
-        // @inject Iterable<StackFrame>[] stackTraces;
+        // @Inject Iterable<StackFrame>[] stackTraces;
         }
 
     /**
@@ -136,7 +136,7 @@ module Ecstasy.xtclang.org
         /**
          * The set of auto-magic mixins that objects within the module are subject to.
          */
-        @ro Iterable<Class> autoMixins;
+        @RO Iterable<Class> autoMixins;
         }
 
     /**

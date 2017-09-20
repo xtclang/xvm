@@ -9,7 +9,7 @@ mixin UncheckedInt
     {
     static const MathException extends Exception {}
 
-    @op IntNumber nextValue()
+    @Op IntNumber nextValue()
         {
         try
             {
@@ -21,7 +21,7 @@ mixin UncheckedInt
             }
         }
 
-    @op IntNumber prevValue()
+    @Op IntNumber prevValue()
         {
         try
             {
@@ -33,7 +33,7 @@ mixin UncheckedInt
             }
         }
 
-    @op UncheckedInt add(UncheckedInt n)
+    @Op UncheckedInt add(UncheckedInt n)
         {
         try
             {
@@ -45,7 +45,7 @@ mixin UncheckedInt
             }
         }
 
-    @op UncheckedInt sub(UncheckedInt n)
+    @Op UncheckedInt sub(UncheckedInt n)
         {
         try
             {
@@ -57,7 +57,7 @@ mixin UncheckedInt
             }
         }
 
-    @op UncheckedInt mul(UncheckedInt n)
+    @Op UncheckedInt mul(UncheckedInt n)
         {
         try
             {
@@ -81,7 +81,7 @@ mixin UncheckedInt
             }
         }
 
-    @op UncheckedInt neg()
+    @Op UncheckedInt neg()
         {
         try
             {

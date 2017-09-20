@@ -11,12 +11,12 @@ const BiType<DataType extends BiType>(Type type1, Type type2)
         resolved            = type1.resolved && type2.resolved;
         }
 
-    @lazy Set<Method> allMethods.calc()
+    @Lazy Set<Method> allMethods.calc()
         {
         // TODO
         }
 
-    @lazy Map<String, Type> typeParamsByName.calc()
+    @Lazy Map<String, Type> typeParamsByName.calc()
         {
         }
 

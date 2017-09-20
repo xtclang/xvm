@@ -10,7 +10,7 @@ interface Sequence<ElementType>
     /**
      * The size of the Sequence, which is the number of elements in the Sequence.
      */
-    @ro Int size;
+    @RO Int size;
 
     /**
      * Returns a sub-sequence of this Sequence. The new Sequence will likely be backed by this
@@ -27,7 +27,7 @@ interface Sequence<ElementType>
      * @throws BoundsException if the specified range exceeds either the lower or upper bounds of
      *         this sequence
      */
-    @op Sequence<ElementType> slice(Range<Int> range);
+    @Op Sequence<ElementType> slice(Range<Int> range);
 
     /**
      * Obtain a Sequence of the same length and that contains the same values as this Sequence, but

@@ -24,7 +24,7 @@ mixin SoftRef<RefType>(function Void ()? notify)
      * clock is a clock optimized for a high number of accesses, and not for correctness with
      * respect to wall clock time.
      */
-    public/private @inject Clock runtimeClock;
+    public/private @Inject Clock runtimeClock;
 
     /**
      * The last time that this reference was accessed, maintained for the use of the garbage
