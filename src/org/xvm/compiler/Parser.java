@@ -1126,7 +1126,7 @@ public class Parser
             }
 
         return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers, annotations,
-                typeVars, conditional, returns, name, redundantReturns, params, body, stmtFinally, doc);
+                typeVars, conditional, returns, keyword, name, redundantReturns, params, body, stmtFinally, doc);
         }
 
     /**
@@ -1163,7 +1163,7 @@ public class Parser
             StatementBlock             block      = parseStatementBlock();
             MethodDeclarationStatement method     = new MethodDeclarationStatement(
                     methodName.getStartPosition(), block.getEndPosition(),
-                    null, null, null, null, null, null, methodName, null, params, block, null, null);
+                    null, null, null, null, null, null, null, methodName, null, params, block, null, null);
             body    = new StatementBlock(Collections.singletonList(method),
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();

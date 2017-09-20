@@ -39,6 +39,7 @@ public class MethodDeclarationStatement
                                       List<Parameter>      typeParams,
                                       Token                conditional,
                                       List<TypeExpression> returns,
+                                      Token                keyword,
                                       Token                name,
                                       List<TypeExpression> redundant,
                                       List<Parameter>      params,
@@ -54,6 +55,7 @@ public class MethodDeclarationStatement
         this.conditional  = conditional;
         this.typeParams   = typeParams;
         this.returns      = returns;
+        this.keyword      = keyword;
         this.name         = name;
         this.redundant    = redundant;
         this.params       = params;
@@ -64,6 +66,13 @@ public class MethodDeclarationStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    public String getName()
+        {
+        return keyword == null
+                ? name.getValue().toString()
+                : keyword.getId().TEXT;
+        }
 
     @Override
     public Access getDefaultAccess()
@@ -94,7 +103,7 @@ public class MethodDeclarationStatement
 
             // create a structure for this type
             Component container = getParent().getComponent();
-            String    sName     = (String) name.getValue();
+            String    sName     = getName();
             if (container.isMethodContainer())
                 {
                 boolean         fFunction   = isStatic(modifiers);
@@ -145,6 +154,8 @@ public class MethodDeclarationStatement
 
                 MethodStructure method = container.createMethod(fFunction, access, aReturns, sName, aParams);
                 setComponent(method);
+
+                // TODO need to implement "finally" continuation
                 }
             else
                 {
@@ -228,7 +239,12 @@ public class MethodDeclarationStatement
             sb.append(") ");
             }
 
-        sb.append(name.getValue());
+        sb.append(getName());
+        if (keyword != null)
+            {
+            sb.append(' ')
+              .append(name.getValue());
+            }
 
         if (redundant != null)
             {
@@ -266,6 +282,11 @@ public class MethodDeclarationStatement
                 sb.append(param);
                 }
             sb.append(')');
+            }
+
+        if (continuation != null)
+            {
+            sb.append(" {..} finally {..}");
             }
 
         return sb.toString();
@@ -341,6 +362,7 @@ public class MethodDeclarationStatement
     protected List<Parameter>      typeParams;
     protected Token                conditional;
     protected List<TypeExpression> returns;
+    protected Token                keyword;
     protected Token                name;
     protected List<TypeExpression> redundant;
     protected List<Parameter>      params;

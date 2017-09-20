@@ -99,4 +99,11 @@ module Test
         {
         return super.get();
         }
+
+// problem: constructors are named after the class instead of "construct"
+    class ConstructorTest
+        {
+        construct ConstructorTest(Int i) {}
+        construct ConstructorTest(String s) {} finally {}
+        }
     }
