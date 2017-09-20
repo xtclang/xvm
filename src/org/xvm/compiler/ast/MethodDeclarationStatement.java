@@ -15,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
@@ -106,9 +107,10 @@ public class MethodDeclarationStatement
             String    sName     = getName();
             if (container.isMethodContainer())
                 {
-                boolean         fFunction   = isStatic(modifiers);
-                Access          access      = getDefaultAccess();
-                ConstantPool    pool        = container.getConstantPool();
+                boolean         fConstructor = keyword != null && keyword.getId() == Id.CONSTRUCT;
+                boolean         fFunction    = isStatic(modifiers) || fConstructor;
+                Access          access       = getDefaultAccess();
+                ConstantPool    pool         = container.getConstantPool();
 
                 // build array of return types
                 int ofReturn = 0;
@@ -155,7 +157,14 @@ public class MethodDeclarationStatement
                 MethodStructure method = container.createMethod(fFunction, access, aReturns, sName, aParams);
                 setComponent(method);
 
-                // TODO need to implement "finally" continuation
+                // "finally" continuation for constructors
+                if (continuation != null)
+                    {
+                    assert fConstructor;
+
+                    MethodStructure methodFinally = container.createMethod(false, Access.PRIVATE, aReturns, "finally", aParams);
+                    this.methodFinally = methodFinally;
+                    }
                 }
             else
                 {
@@ -369,6 +378,7 @@ public class MethodDeclarationStatement
     protected StatementBlock       body;
     protected StatementBlock       continuation;
     protected Token                doc;
+    protected MethodStructure      methodFinally;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
             "condition", "annotations", "typeParams", "returns", "redundant", "params", "body", "continuation");
