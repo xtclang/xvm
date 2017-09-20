@@ -44,7 +44,7 @@
 +SVAR       TYPE_CONST, #values:(rvalue-src)        ; next register is an initialized anonymous Sequence variable
 +TVAR       #values:(TYPE_CONST, rvalue-src)        ; next register is an initialized anonymous Tuple variable
 +REF        lvalue                                  ; next register represents the Variable ref for the specified variable
- CREF       rvalue                                  ; next register represents the @ro Variable ref for the specified variable
+ CREF       rvalue                                  ; next register represents the @RO Variable ref for the specified variable
  CAST       rvalue, TYPE_CONST                      ; next register holds the type-casted value
 +MOV        rvalue-src, lvalue-dest                 ; move source value to destination
 +MOV_REF    lvalue-src, lvalue-dest                 ; move reference-to-source to destination
@@ -94,7 +94,7 @@
 +P_GET        rvalue-target, CONST_PROPERTY, lvalue-return  ; get property
 +P_SET        rvalue-target, CONST_PROPERTY, rvalue         ; set property
  P_REF        rvalue-target, CONST_PROPERTY                 ; next register represents the Property ref for the specified property
- P_CREF       rvalue-target, CONST_PROPERTY                 ; next register represents the @ro Property ref for the specified property
+ P_CREF       rvalue-target, CONST_PROPERTY                 ; next register represents the @RO Property ref for the specified property
  P_INC        rvalue-target, CONST_PROPERTY                 ; in-place increment; no result
  P_DEC        rvalue-target, CONST_PROPERTY                 ; ditto
 +P_POSTINC    rvalue-target, CONST_PROPERTY, lvalue-return  ; same as POSTINC for a register
@@ -158,7 +158,7 @@
 +I_GET        rvalue-target, rvalue-index, lvalue-return        ; T = T[Ti]
 +I_SET        rvalue-target, rvalue-index, rvalue-new-value     ; T[Ti] = T
 +I_REF        rvalue-target, rvalue-index, lvalue-return        ; Ref<T> = &T[Ti]
- I_CREF       rvalue-target, rvalue-index, lvalue-return        ; @ro Ref<T> = &T[Ti]
+ I_CREF       rvalue-target, rvalue-index, lvalue-return        ; @RO Ref<T> = &T[Ti]
  I_INC        rvalue-target, rvalue-index                       ; same as INC for a property
  I_DEC        rvalue-target, rvalue-index                       ; same as DEC for a property
  I_POSTINC    rvalue-target, rvalue-index, lvalue-return        ; same as POSTINC for a property

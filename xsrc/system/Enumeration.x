@@ -45,7 +45,7 @@
  *   its Enum values are instances of the class of Enumeration values (or a subclass thereof), and
  *   no class can extend the class of any Enum.
  */
-@auto mixin Enumeration<EnumType extends Enum>
+@Auto mixin Enumeration<EnumType extends Enum>
         into Class<EnumType>
     {
     /**
@@ -71,7 +71,7 @@
      * * 2 for {@link Boolean}
      * * 3 for {@link Ordered}
      */
-    @lazy Int count.calc()
+    @Lazy Int count.calc()
         {
         return byName.size;
         }
@@ -85,7 +85,7 @@
      * * {"False", "True"} for {@link Boolean}
      * * {"Lesser", "Equal", "Greater"} for {@link Ordered}
      */
-    @lazy String[] names.calc()
+    @Lazy String[] names.calc()
         {
         return byName.keys.to<String[]>();
         }
@@ -98,7 +98,7 @@
      * * {False, True} for {@link Boolean}
      * * {Lesser, Equal, Greater} for {@link Ordered}
      */
-    @lazy EnumType[] values.calc()
+    @Lazy EnumType[] values.calc()
         {
         return byName.values.to<EnumType[]>();
         }
@@ -111,7 +111,7 @@
      * * {"False"=False, "True"=True} for {@link Boolean}
      * * {"Lesser"=Lesser, "Equal"=Equal, "Greater"=Greater} for {@link Ordered}
      */
-    @lazy Map<String, EnumType> byName.calc()
+    @Lazy Map<String, EnumType> byName.calc()
         {
         assert !(parent.instanceof(Class+Enumeration) && this.extends_(parent));
 

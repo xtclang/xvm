@@ -2,22 +2,22 @@
  * The AtomicIntNumber mixin adds atomic capabilities such as increment and decrement to every
  * atomic reference to any of the integer number types.
  */
-@auto mixin AtomicIntNumber<RefType extends IntNumber>
+@Auto mixin AtomicIntNumber<RefType extends IntNumber>
         into AtomicRef<IntNumber>
     {
-    @op Void increment()
+    @Op Void increment()
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue.nextValue())) {}
         }
 
-    @op Void decrement()
+    @Op Void decrement()
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue.prevValue())) {}
         }
 
-    @op RefType preIncrement()
+    @Op RefType preIncrement()
         {
         RefType oldValue = get();
         RefType newValue;
@@ -29,7 +29,7 @@
         return newValue;
         }
 
-    @op RefType preDecrement()
+    @Op RefType preDecrement()
         {
         RefType oldValue = get();
         RefType newValue;
@@ -41,81 +41,81 @@
         return newValue;
         }
 
-    @op RefType postIncrement()
+    @Op RefType postIncrement()
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue.nextValue())) {}
         return oldValue;
         }
 
-    @op RefType postDecrement()
+    @Op RefType postDecrement()
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue.prevValue())) {}
         return oldValue;
         }
 
-    @op Void addAssign(RefType n)
+    @Op Void addAssign(RefType n)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue + n)) {}
         }
 
-    @op Void subAssign(RefType n)
+    @Op Void subAssign(RefType n)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue - n)) {}
         }
 
-    @op Void mulAssign(RefType n)
+    @Op Void mulAssign(RefType n)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue * n)) {}
         }
 
-    @op Void divAssign(RefType n)
+    @Op Void divAssign(RefType n)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue / n)) {}
         }
 
-    @op Void modAssign(RefType n)
+    @Op Void modAssign(RefType n)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue % n)) {}
         }
 
-    @op Void andAssign(RefType n)
+    @Op Void andAssign(RefType n)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue & n)) {}
         }
 
-    @op Void orAssign(RefType n)
+    @Op Void orAssign(RefType n)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue | n)) {}
         }
 
-    @op Void xorAssign(RefType n)
+    @Op Void xorAssign(RefType n)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue ^ n)) {}
         }
 
-    @op Void shiftLeftAssign(Int count)
+    @Op Void shiftLeftAssign(Int count)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue << count)) {}
         }
 
-    @op Void shiftRightAssign(Int count)
+    @Op Void shiftRightAssign(Int count)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue >> count)) {}
         }
 
-    @op Void shiftAllRightAssign(Int count)
+    @Op Void shiftAllRightAssign(Int count)
         {
         RefType oldValue = get();
         while (oldValue : replaceFailed(oldValue, oldValue >>> count)) {}

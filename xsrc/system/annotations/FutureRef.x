@@ -21,7 +21,7 @@
  *       console.print(pi.calc(100));
  *
  *       // potentially async call to the Pi calculation service
- *       @future String fs = pi.calc(99999);
+ *       @Future String fs = pi.calc(99999);
  *       // it is not guaranteed that the calculation will occur asynchronously, but it is both
  *       // possible and likely, allowing code to execute after the call is made, but before the
  *       // call is complete. what the future allows is for the "what to do when the calculation is

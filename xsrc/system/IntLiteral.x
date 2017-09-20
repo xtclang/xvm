@@ -167,7 +167,7 @@ const IntLiteral(String text)
      * The minimum number of bits to store the IntLiteral's value as an unsigned integer,
      * where the number of bits is a power-of-two of at least 8.
      */
-    @ro Int minUIntBits.get()
+    @RO Int minUIntBits.get()
         {
 // TODO review        
         assert:always explicitSign != Signum.Negative;
@@ -185,7 +185,7 @@ const IntLiteral(String text)
      * The minimum number of bits to store the IntLiteral's value in the IEEE754 binary floating point format,
      * where the number of bits is a power-of-two of at least 16.
      */
-    @ro Int minFloatBits.get()
+    @RO Int minFloatBits.get()
         {
         TODO
         }
@@ -194,12 +194,12 @@ const IntLiteral(String text)
      * The minimum number of bits to store the IntLiteral's value in the IEEE754 decimal floating point format,
      * where the number of bits is a power-of-two of at least 8.
      */
-    @ro Int minDecBits.get()
+    @RO Int minDecBits.get()
         {
         TODO
         }
 
-    @auto Bit to<Bit>()
+    @Auto Bit to<Bit>()
         {
         if (magnitude == 0)
             {
@@ -210,7 +210,7 @@ const IntLiteral(String text)
         return 1;
         }
 
-    @auto Nibble to<Nibble>()
+    @Auto Nibble to<Nibble>()
         {
         // TODO
         }
@@ -218,13 +218,13 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length signed integer.
      */
-    @auto VarInt to<VarInt>();
+    @Auto VarInt to<VarInt>();
 
     /**
      * Convert the number to a signed 8-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int8 to<Int8>()
+    @Auto Int8 to<Int8>()
         {
         return to<VarInt>().to<Int8>();
         }
@@ -233,7 +233,7 @@ const IntLiteral(String text)
      * Convert the number to a signed 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int16 to<Int16>()
+    @Auto Int16 to<Int16>()
         {
         return to<VarInt>().to<Int16>();
         }
@@ -242,7 +242,7 @@ const IntLiteral(String text)
      * Convert the number to a signed 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int32 to<Int32>()
+    @Auto Int32 to<Int32>()
         {
         return to<VarInt>().to<Int32>();
         }
@@ -251,7 +251,7 @@ const IntLiteral(String text)
      * Convert the number to a signed 64-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int64 to<Int64>()
+    @Auto Int64 to<Int64>()
         {
         return to<VarInt>().to<Int64>();
         }
@@ -260,7 +260,7 @@ const IntLiteral(String text)
      * Convert the number to a signed 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto Int128 to<Int128>()
+    @Auto Int128 to<Int128>()
         {
         return to<VarInt>().to<Int128>();
         }
@@ -268,13 +268,13 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length unsigned integer.
      */
-    @auto VarUInt to<VarUInt>();
+    @Auto VarUInt to<VarUInt>();
 
     /**
      * Convert the number to a unsigned 8-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt8 to<UInt8>()
+    @Auto UInt8 to<UInt8>()
         {
         return to<VarUInt>().to<UInt8>();
         }
@@ -283,7 +283,7 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 16-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt16 to<UInt16>()
+    @Auto UInt16 to<UInt16>()
         {
         return to<VarUInt>().to<UInt16>();
         }
@@ -292,7 +292,7 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 32-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt32 to<UInt32>()
+    @Auto UInt32 to<UInt32>()
         {
         return to<VarUInt>().to<UInt32>();
         }
@@ -301,7 +301,7 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 64-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt64 to<UInt64>()
+    @Auto UInt64 to<UInt64>()
         {
         return to<VarUInt>().to<UInt64>();
         }
@@ -310,7 +310,7 @@ const IntLiteral(String text)
      * Convert the number to a unsigned 128-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */
-    @auto UInt128 to<UInt128>()
+    @Auto UInt128 to<UInt128>()
         {
         return to<VarInt>().to<UInt128>();
         }
@@ -318,12 +318,12 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length binary radix floating point number.
      */
-    @auto VarFloat to<VarFloat>();
+    @Auto VarFloat to<VarFloat>();
 
     /**
      * Convert the number to a 16-bit radix-2 (binary) floating point number.
      */
-    @auto Float16 to<Float16>()
+    @Auto Float16 to<Float16>()
         {
         return to<VarFloat>().to<Float16>();
         }
@@ -331,7 +331,7 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 32-bit radix-2 (binary) floating point number.
      */
-    @auto Float32 to<Float32>()
+    @Auto Float32 to<Float32>()
         {
         return to<VarFloat>().to<Float32>();
         }
@@ -339,7 +339,7 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 64-bit radix-2 (binary) floating point number.
      */
-    @auto Float64 to<Float64>()
+    @Auto Float64 to<Float64>()
         {
         return to<VarFloat>().to<Float64>();
         }
@@ -347,7 +347,7 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 128-bit radix-2 (binary) floating point number.
      */
-    @auto Float128 to<Float128>()
+    @Auto Float128 to<Float128>()
         {
         return to<VarFloat>().to<Float128>();
         }
@@ -355,12 +355,12 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length decimal radix floating point number.
      */
-    @auto VarDec to<VarDec>();
+    @Auto VarDec to<VarDec>();
 
     /**
      * Convert the number to a 32-bit radix-10 (decimal) floating point number.
      */
-    @auto Dec32 to<Dec32>()
+    @Auto Dec32 to<Dec32>()
         {
         return to<VarDec>().to<Dec32>();
         }
@@ -368,7 +368,7 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 64-bit radix-10 (decimal) floating point number.
      */
-    @auto Dec64 to<Dec64>()
+    @Auto Dec64 to<Dec64>()
         {
         return to<VarDec>().to<Dec64>();
         }
@@ -376,7 +376,7 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 128-bit radix-10 (decimal) floating point number.
      */
-    @auto Dec128 to<Dec128>()
+    @Auto Dec128 to<Dec128>()
         {
         return to<VarDec>().to<Dec128>();
         }

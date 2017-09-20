@@ -7,37 +7,37 @@ const Duration
      * The total number of hours, rounded down. This is the same as
      * #minutesTotal / 60.
      */
-    @ro Int hoursTotal;
+    @RO Int hoursTotal;
     /**
      * The total number of minutes, rounded down. This is the same as
      * #secondsTotal / 60.
      */
-    @ro Int minutesTotal;
+    @RO Int minutesTotal;
     /**
      * The total number of seconds, rounded down. This is the same as
      * #nanosecondsTotal / 1000000000.
      */
-    @ro Int secondsTotal;
+    @RO Int secondsTotal;
     /**
      * The total number of nanoseconds, rounded down.
      */
-    @ro Int nanosecondsTotal;
+    @RO Int nanosecondsTotal;
 
     /**
      * Exclusive of the time represented by #hoursTotal, the number of minutes,
      * rounded down. This is the same as #minutesTotal - (#hoursTotal * 60).
      */
-    @ro Int minutesPart;
+    @RO Int minutesPart;
     /**
      * Exclusive of the time represented by #minutesTotal, the number of seconds,
      * rounded down. This is the same as #secondsTotal - (#minutesTotal * 60).
      */
-    @ro Int secondsPart;
+    @RO Int secondsPart;
     /**
      * Exclusive of the time represented by #secondsTotal, the number of nanoseconds,
      * rounded down. This is the same as #nanosecondsTotal - (#secondsTotal * 1000000000).
      */
-    @ro Int nanosecondsPart;
+    @RO Int nanosecondsPart;
 
     Duration add(Duration duration);
     Duration sub(Duration duration);

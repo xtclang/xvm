@@ -61,7 +61,7 @@ interface Ref<RefType>
      * <li>Soft or weak references that have had their referents collected.</li>
      * </ul>
      */
-    @ro Boolean assigned;
+    @RO Boolean assigned;
 
     /**
      * Conditionally dereference the reference to obtain the referent, iff the reference is
@@ -69,13 +69,13 @@ interface Ref<RefType>
      *
      * A small number of references cannot be blindly dereferenced without risking a runtime
      * exception:
-     * * {@code @lazy} references ({@link annotations.LazyRef}) are allowed to be unassigned,
+     * * {@code @Lazy} references ({@link annotations.LazyRef}) are allowed to be unassigned,
      *   because they will lazily assign themselves on the first dereference attempt.
-     * * {@code @future} references ({@link annotations.FutureRef}) are allowed to be unassigned,
+     * * {@code @Future} references ({@link annotations.FutureRef}) are allowed to be unassigned,
      *   because they assigned only on completion of the future, and an attempt to dereference
      *   before that point in time will block until that completion occurs.
-     * * {@code @soft} and {@code @weak} references ({@link annotations.SoftRef} and {@link
-     *   annotations.SoftRef}) are allowed to be unassigned, because the garbage collector is
+     * * {@code @Soft} and {@code @Weak} references ({@link annotations.SoftRef} and {@link
+     *   annotations.WeakRef}) are allowed to be unassigned, because the garbage collector is
      *   allowed under specific conditions to clear the reference.
      */
     conditional RefType peek()
@@ -112,7 +112,7 @@ interface Ref<RefType>
      * reference.)
      */
     @Override
-    @ro Type ActualType;
+    @RO Type ActualType;
 
     /**
      * Reference equality is used to determine if two references are referring to
@@ -137,7 +137,7 @@ interface Ref<RefType>
      * struct fields, and properties are almost always named, but tuple elements are often
      * not named, and array elements are never named.
      */
-    @ro String? name;
+    @RO String? name;
 
     /**
      * The reference uses a number of bytes for its own storage; while the size of the
@@ -146,11 +146,11 @@ interface Ref<RefType>
      * may include additional information (and potentially even the entire referent!)
      * within the reference itself.
      */
-    @ro Int byteLength;
+    @RO Int byteLength;
 
     /**
      * Determine if the reference is completely self-contained, in that the referent is
      * actually embedded within the reference itself.
      */
-    @ro Boolean selfContained;
+    @RO Boolean selfContained;
     }

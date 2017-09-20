@@ -48,7 +48,7 @@ const Int64
      */
     static IntLiteral maxvalue =  0x7FFFFFFFFFFFFFFF;
 
-    @ro UInt64 magnitude.get()
+    @RO UInt64 magnitude.get()
         {
         return to<Int128>().abs().to<UInt64>();
         }
@@ -59,7 +59,7 @@ const Int64
         }
 
 // TODO
-    @op Int64 add(Int64 n);
+    @Op Int64 add(Int64 n);
 
 // TODO / REVIEW
     /**
@@ -69,27 +69,27 @@ const Int64
     Int64 add(IntNumber n);
 
 // TODO
-    @op Int64 sub(Int64 n);
+    @Op Int64 sub(Int64 n);
 
 // TODO
-    @op Int64 mul(Int64 n);
+    @Op Int64 mul(Int64 n);
 
 // TODO
-    @op Int64 div(Int64 n);
+    @Op Int64 div(Int64 n);
 
 // TODO
-    @op Int64 mod(Int64 n);
+    @Op Int64 mod(Int64 n);
 
 // TODO
     Int64 abs();
 
 // TODO
-    @op Int64 neg();
+    @Op Int64 neg();
 
 // TODO
     Int64 pow(Int64 n);
 
-    @op Int64 shl(Int64 count)
+    @Op Int64 shl(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
         for (Int64 i = 0x3F; i > 0; --i)
@@ -100,7 +100,7 @@ const Int64
         return new Int(bits);
         }
 
-    @op Int64 shr(Int64 count)
+    @Op Int64 shr(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
         for (Int64 i = 0; i < 0x3F; ++i)
@@ -110,7 +110,7 @@ const Int64
         return new Int(bits);
         }
 
-    @op Int64 ushr(Int64 count)
+    @Op Int64 ushr(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
         for (Int64 i = 0; i < 0x3F; ++i)

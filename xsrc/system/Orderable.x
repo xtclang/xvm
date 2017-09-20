@@ -8,7 +8,7 @@ interface Orderable
      * Create an Interval that represents the values between _this_ (inclusive) to _that_
      * (inclusive).
      */
-    @op Interval<Orderable> to(Orderable that)
+    @Op Interval<Orderable> to(Orderable that)
         {
         return new Interval<Orderable>(this, that);
         }

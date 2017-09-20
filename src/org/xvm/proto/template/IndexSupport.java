@@ -18,11 +18,11 @@ import java.util.function.Consumer;
  */
 public interface IndexSupport
     {
-    // @op "get" support - place the element value into the specified frame register
+    // @Op "get" support - place the element value into the specified frame register
     ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException;
 
-    // @op "set" support - assign the element value
+    // @Op "set" support - assign the element value
     ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue);
 
     // obtain the [declared] element type
@@ -32,7 +32,7 @@ public interface IndexSupport
     // get the element count
     long size(ObjectHandle hTarget);
 
-    // @op "elementAt" support - place a Ref to the element value into the specified register
+    // @Op "elementAt" support - place a Ref to the element value into the specified register
     default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         try
@@ -52,7 +52,7 @@ public interface IndexSupport
             }
         }
 
-    // @op "preInc" support - increment the element value and place the result into the specified register
+    // @Op "preInc" support - increment the element value and place the result into the specified register
     // return one of the Op.R_ values or zero
     default int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {

@@ -1,4 +1,4 @@
 interface Hashable
     {
-    @ro Int hash;
+    @RO Int hash;
     }

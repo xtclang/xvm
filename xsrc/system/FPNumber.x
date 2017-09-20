@@ -8,31 +8,31 @@ interface FPNumber
      * If the floating point number is a finite value, indicating that it is neither
      * infinite nor Not-a-Number.
      */
-    @ro Boolean finite;
+    @RO Boolean finite;
     /**
      * If the floating point number is an infinite value.
      */
-    @ro Boolean infinite;
+    @RO Boolean infinite;
     /**
      * If the floating point number is Not-a-Number.
      */
-    @ro Boolean NaN;
+    @RO Boolean NaN;
     /**
      * The radix. (The only values defined by IEEE 754-2008 are 2 and 10.)
      */
-    @ro Int radix;
+    @RO Int radix;
     /**
      * The precision, in "digits" of the radix of the floating point number, as specified by IEEE 754-2008.
      */
-    @ro Int precision;
+    @RO Int precision;
     /**
      * The maximum exponent, as specified by IEEE 754-2008.
      */
-    @ro Int emax;
+    @RO Int emax;
     /**
      * The minimum exponent, as specified by IEEE 754-2008.
      */
-    @ro Int emin.get()
+    @RO Int emin.get()
         {
         return 1 - emax;
         }

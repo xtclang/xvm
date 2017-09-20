@@ -4,23 +4,23 @@
 interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
 // interface Function<(ParamTypes), (ReturnTypes)>
     {
-    @ro Parameter[] params;
-    @ro Map<String, Parameter> paramsByName;
+    @RO Parameter[] params;
+    @RO Map<String, Parameter> paramsByName;
 
-    @ro Return[] returns;
-    @ro Map<String, Return> returnsByName;
+    @RO Return[] returns;
+    @RO Map<String, Return> returnsByName;
 
     /**
      * Determine if the function return value is a conditional return. A conditional return is a
      * Tuple of at least two elements, whose first element is a Boolean, and whose
      */
-    @ro Boolean conditionalResult;
+    @RO Boolean conditionalResult;
 
     /**
      * Determine if the function represents a service invocation. Service invocations have the
      * _potential_ for asynchronous execution.
      */
-    @ro Boolean futureResult;
+    @RO Boolean futureResult;
 
     /**
      * Binds a single parameter of the Function, resulting in a new Function that does not contain
@@ -62,7 +62,7 @@ interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<
      * executed in a synchronous manner, and the future will have completed by the time that this
      * method returns.
      */
-    @future ReturnTypes invokeService(ParamTypes args);
+    @Future ReturnTypes invokeService(ParamTypes args);
 
     // -----
 
@@ -79,7 +79,7 @@ interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<
      */
     interface Parameter<ParamType>
         {
-        @ro Int ordinal;
+        @RO Int ordinal;
         conditional String name();
         conditional ParamType defaultValue();
         }
@@ -89,7 +89,7 @@ interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<
      */
     interface Return<ReturnType>
         {
-        @ro Int ordinal;
+        @RO Int ordinal;
         conditional String name();
         }
     }

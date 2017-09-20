@@ -22,7 +22,7 @@ interface Struct
     /**
      * Dereference a name to obtain a field.
      */
-    @op Ref elementFor(String name)
+    @Op Ref elementFor(String name)
         {
         for (Ref ref : to<Ref[]>())
             {

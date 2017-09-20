@@ -20,37 +20,37 @@ const Bit
         return literal == 1;
         }
 
-    @auto Byte to<Byte>()
+    @Auto Byte to<Byte>()
         {
         return literal.to<Byte>();
         }
 
-    @auto Int to<Int>()
+    @Auto Int to<Int>()
         {
         return literal.to<Int>();
         }
 
-    @auto UInt to<UInt>()
+    @Auto UInt to<UInt>()
         {
         return literal.to<UInt>();
         }
 
-    @op Bit and(Bit that)
+    @Op Bit and(Bit that)
         {
         return this.literal == 1 && that.literal == 1 ? 1 : 0;
         }
 
-    @op Bit or(Bit that)
+    @Op Bit or(Bit that)
         {
         return this.literal == 1 || that.literal == 1 ? 1 : 0;
         }
 
-    @op Bit xor(Bit that)
+    @Op Bit xor(Bit that)
         {
         return this.literal == 1 ^ that.literal == 1 ? 1 : 0;
         }
 
-    @op Bit not()
+    @Op Bit not()
         {
         return literal == 1 ? 0 : 1;
         }

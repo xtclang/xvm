@@ -12,13 +12,13 @@ interface Clock
     typedef function Void () Alarm;
     typedef function Void () Cancellable;
 
-    @ro DateTime epoch;
-//    @ro TimeZone timezone;
-    @ro Interval precision;
-    @ro Boolean monotonic;
-    @ro Boolean realtime;
+    @RO DateTime epoch;
+//    @RO TimeZone timezone;
+    @RO Interval precision;
+    @RO Boolean monotonic;
+    @RO Boolean realtime;
 
-    @ro Time time;
+    @RO Time time;
 
     Timer createTimer();
 

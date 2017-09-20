@@ -70,7 +70,7 @@ const CriticalSection
     /**
      * The clock selected by the runtime to measure CriticalSection duration.
      */
-    @inject Clock runtimeClock;
+    @Inject Clock runtimeClock;
 
     /**
      * The service {@code Reentrancy} setting that this CriticalSection replaced, if any.

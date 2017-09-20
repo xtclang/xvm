@@ -30,7 +30,7 @@ const Nibble
         return new Char(b);
         }
 
-    @auto Byte to<Byte>()
+    @Auto Byte to<Byte>()
         {
         return    (bits[0] == 0 ? 0 : 1)
                 + (bits[1] == 0 ? 0 : 2)
@@ -38,12 +38,12 @@ const Nibble
                 + (bits[3] == 0 ? 0 : 8);
         }
 
-    @auto Int to<Int>()
+    @Auto Int to<Int>()
         {
         return to<Byte>().to<Int>();
         }
 
-    @auto UInt to<UInt>()
+    @Auto UInt to<UInt>()
         {
         return to<Byte>().to<UInt>();
         }

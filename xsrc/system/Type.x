@@ -58,7 +58,7 @@ const Type<DataType>
     /**
      * The type's methods (all of them, including those that represent properties), by name.
      */
-    @lazy Map<String, MultiMethod> allMethodsByName.calc()
+    @Lazy Map<String, MultiMethod> allMethodsByName.calc()
         {
         assert meta.immutable_;
 
@@ -81,7 +81,7 @@ const Type<DataType>
     /**
      * Obtain the set of properties that exist on the type.
      */
-    @lazy Property[] properties.calc()
+    @Lazy Property[] properties.calc()
         {
         assert meta.immutable_;
 
@@ -97,7 +97,7 @@ const Type<DataType>
         return list;
         }
 
-    @lazy Map<String, Property> propertiesByName.calc()
+    @Lazy Map<String, Property> propertiesByName.calc()
         {
         assert meta.immutable_;
 
@@ -113,7 +113,7 @@ const Type<DataType>
      * Obtain the set of methods on the type that are not present to represent a property. These
      * methods are what developers think of as _methods_.
      */
-    @lazy Method[] methods.calc()
+    @Lazy Method[] methods.calc()
         {
         Method[] list = new Method[];
         for (Method method : allMethods)
@@ -126,7 +126,7 @@ const Type<DataType>
         return list;
         }
 
-    @lazy Map<String, MultiMethod> methodsByName.calc()
+    @Lazy Map<String, MultiMethod> methodsByName.calc()
         {
         assert meta.immutable_;
 
@@ -272,7 +272,7 @@ const Type<DataType>
     // ----- const contract ------------------------------------------------------------------------
 
     @Override
-    @lazy Int hash.calc()
+    @Lazy Int hash.calc()
         {
         TODO hash
         }

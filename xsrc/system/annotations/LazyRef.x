@@ -12,14 +12,14 @@
  *
  *   const Point(Int x, Int y)
  *       {
- *       @lazy(() -> x ^ y) Int hash;
+ *       @Lazy(() -> x ^ y) Int hash;
  *       }
  *
  * Alternatively, the {@code calc()} method can be overridden:
  *
  *   const Point(Int x, Int y)
  *       {
- *       @lazy Int hash.calc()
+ *       @Lazy Int hash.calc()
  *           {
  *           return x ^ y;
  *           }

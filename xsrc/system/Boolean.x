@@ -18,19 +18,19 @@ enum Boolean
             {
             return 0;
             }
-        @op Boolean and(Boolean that)
+        @Op Boolean and(Boolean that)
             {
             return False;
             }
-        @op Boolean or(Boolean that)
+        @Op Boolean or(Boolean that)
             {
             return that;
             }
-        @op Boolean xor(Boolean that)
+        @Op Boolean xor(Boolean that)
             {
             return that;
             }
-        @op Boolean not()
+        @Op Boolean not()
             {
             return True;
             }
@@ -54,19 +54,19 @@ enum Boolean
             {
             return 1;
             }
-        @op Boolean and(Boolean that)
+        @Op Boolean and(Boolean that)
             {
             return that;
             }
-        @op Boolean or(Boolean that)
+        @Op Boolean or(Boolean that)
             {
             return True;
             }
-        @op Boolean xor(Boolean that)
+        @Op Boolean xor(Boolean that)
             {
             return !that;
             }
-        @op Boolean not()
+        @Op Boolean not()
             {
             return False;
             }
@@ -77,8 +77,8 @@ enum Boolean
     Int  to<Int>();
     UInt to<UInt>();
     
-    @op Boolean and(Boolean that);
-    @op Boolean or(Boolean that);
-    @op Boolean xor(Boolean that);
-    @op Boolean not();
+    @Op Boolean and(Boolean that);
+    @Op Boolean or(Boolean that);
+    @Op Boolean xor(Boolean that);
+    @Op Boolean not();
     }

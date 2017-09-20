@@ -17,12 +17,12 @@ interface Number
     /**
      * The number of bits that the number uses.
      */
-    @ro Int bitLength;
+    @RO Int bitLength;
 
     /**
      * The number of bytes that the number uses.
      */
-    @ro Int byteLength.get()
+    @RO Int byteLength.get()
         {
         // make sure the bit length is at least 8, and also a power-of-two
         assert:always bitLength == (bitLength & ~0x7).leftmostBit;
@@ -33,7 +33,7 @@ interface Number
     /**
      * The Sign of the number.
      */
-    @ro Signum sign;
+    @RO Signum sign;
 
     // ----- operations
 
@@ -41,34 +41,34 @@ interface Number
      * Addition: Add another number to this number, and retu
      rn the result.
      */
-    @op Number add(Number n);
+    @Op Number add(Number n);
 
     /**
      * Subtraction: Subtract another number from this number, and return the result.
      */
-    @op Number sub(Number n);
+    @Op Number sub(Number n);
 
     /**
      * Multiplication: Multiply this number by another number, and return the result.
      */
-    @op Number mul(Number n);
+    @Op Number mul(Number n);
 
     /**
      * Division: Divide this number by another number, and return the result.
      */
-    @op Number div(Number n);
+    @Op Number div(Number n);
 
     /**
      * Modulo: Return the modulo that would result from dividing this number by another number.
      */
-    @op Number mod(Number n);
+    @Op Number mod(Number n);
 
     /**
      * Division and Modulo: Divide this number by another number, and return both the
      * quotient and the modulo.
      */
-//    @op (@Desc("quotient") Number, @Desc("modulo") Number) divmod(Number n)
-    @op (Number, Number) divmod(Number n)
+//    @Op (@Desc("quotient") Number, @Desc("modulo") Number) divmod(Number n)
+    @Op (Number, Number) divmod(Number n)
         {
         return (this / n, this % n);
         }
@@ -105,7 +105,7 @@ interface Number
     /**
      * Calculate the negative of this number.
      */
-    @op Number neg();
+    @Op Number neg();
 
     /**
      * Calculate this number raised to the specified power.

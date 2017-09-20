@@ -45,7 +45,7 @@ interface Const
     /**
      * TODO
      */
-    @lazy Int hash.get()
+    @Lazy Int hash.get()
         {
         Ref[] fields = meta.struct.to<Property[]>();
         // TODO use meta.struct

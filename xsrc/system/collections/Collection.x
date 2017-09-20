@@ -38,7 +38,7 @@ interface Collection<ElementType>
     /**
      * Metadata: Is the collection limited to a distinct set of values?
      */
-    @ro Boolean distinct.get()
+    @RO Boolean distinct.get()
         {
         return false;
         }
@@ -55,7 +55,7 @@ interface Collection<ElementType>
     /**
      * Determine the size of the Collection, which is the number of elements in the Collection.
      */
-    @ro Int size;
+    @RO Int size;
 
     /**
      * Determine if the Collection is empty.
@@ -65,7 +65,7 @@ interface Collection<ElementType>
      *
      *   return size > 0;
      */
-    @ro Boolean empty.get()
+    @RO Boolean empty.get()
         {
         return size > 0;
         }

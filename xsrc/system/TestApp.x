@@ -22,7 +22,7 @@ class TestApp
 
     static Void test1()
         {
-        @inject io.Console console;
+        @Inject io.Console console;
 
         String s = "Hello world!";
         console.print("\n*** ");
@@ -142,14 +142,14 @@ class TestApp
         c = fnInc();
         print(c);
 
-        @future Int fc = svc.increment();
+        @Future Int fc = svc.increment();
         FutureRef<Int> rfc = &fc;
         print(rfc);
         print(fc);
         print(rfc);
 
         FutureRef<Int> rfc2 = &svc.increment();
-        @future Int rfc3 = rfc2;
+        @Future Int rfc3 = rfc2;
         rfc2.whenComplete((r, x) ->
             {
             print(c);
@@ -202,7 +202,7 @@ class TestApp
         Int c = testBlockingReturn();
         print(c);
 
-        @future Int fc = svc.increment();
+        @Future Int fc = svc.increment();
         print(fc);
         try
             {
@@ -249,9 +249,9 @@ class TestApp
                 }
             }
 
-        @atomic Int counter2 = 5;
+        @Atomic Int counter2 = 5;
 
-        private @inject Clock runtimeClock;
+        private @Inject Clock runtimeClock;
 
         // pre-increment
         Int increment()
@@ -270,7 +270,7 @@ class TestApp
                 }
             else
                 {
-                @future Int iRet;
+                @Future Int iRet;
                 runtimeClock.scheduleAlarm(() -> {iRet = cDelay;}, cDelay); // &iRet.set(0)
                 return iRet;
                 }

@@ -86,12 +86,17 @@ module Test
 //        }
 
 // problem: Void compiling to Tuple instead of being eliminated
-    Void fnVoid();
-    Tuple fnTupleNone();
-    Tuple<> fnTupleEmpty();
-    Tuple<Int> fnTupleInt();
-    Tuple<Tuple> fnTupleTuple();
+//    Void fnVoid();
+//    Tuple fnTupleNone();
+//    Tuple<> fnTupleEmpty();
+//    Tuple<Int> fnTupleInt();
+//    Tuple<Tuple> fnTupleTuple();
 
 // problem: InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
-//    @inject String option;
+    @Inject String option;        // TODO figure out where the @Inject ended up
+
+    @Inject String option2.get()  // TODO sig is wrong (shows Void, should be String)
+        {
+        return super.get();
+        }
     }

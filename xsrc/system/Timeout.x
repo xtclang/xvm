@@ -29,9 +29,9 @@
  *
  *   // to obtain asynchronous results from other services, use future references for the return
  *   // values from methods on those services
- *   @future Body body;
- *   @future Ad   ad1;
- *   @future Ad   ad2;
+ *   @Future Body body;
+ *   @Future Ad   ad1;
+ *   @Future Ad   ad2;
  *
  *   // async request for the page body, but don't wait more than 1000ms for it
  *   using (new Timeout(Duration:"1s"))
@@ -95,7 +95,7 @@ const Timeout
     /**
      * The clock selected by the runtime to manage timeouts.
      */
-    @inject Clock runtimeClock;
+    @Inject Clock runtimeClock;
 
     /**
      * The {@code Timeout} that this timeout replaced, if any.

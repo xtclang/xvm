@@ -9,18 +9,18 @@ interface Meta<PublicType, ProtectedType, PrivateType, StructType>
     /**
      * The class represents the type composition of the object.
      */
-    @ro Class<PublicType, ProtectedType, PrivateType, StructType> class_;
+    @RO Class<PublicType, ProtectedType, PrivateType, StructType> class_;
 
     /**
      * The containing module.
      */
-    @ro Module module_;
+    @RO Module module_;
 
     /**
      * The read-only struct for this object. Each property that has space allocated for
      * storage of the property's value will occur within this structure.
      */
-    @ro StructType struct;
+    @RO StructType struct;
 
     /**
      * This property represents the immutability of an object. This property can be set to true to
@@ -37,5 +37,5 @@ interface Meta<PublicType, ProtectedType, PrivateType, StructType>
      * self-contained} property references, but explicitly does not include the sizes of the
      * referents for references that are <b>not</b> self-contained.
      */
-    @ro Int byteLength;
+    @RO Int byteLength;
     }

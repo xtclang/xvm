@@ -10,7 +10,7 @@ interface Enum
     /**
      * The Enumeration that contains this Enum value.
      */
-    @ro Enumeration<Enum> enumeration.get()
+    @RO Enumeration<Enum> enumeration.get()
         {
         return meta.class_.parent.as(Enumeration<Enum>);
         }
@@ -18,12 +18,12 @@ interface Enum
     /**
      * The ordinal value for this Enum value.
      */
-    @ro Int ordinal;
+    @RO Int ordinal;
 
     /**
      * The unique name (within the Enumeration) of this Enum value.
      */
-    @ro String name.get()
+    @RO String name.get()
         {
         return meta.class_.name;
         }

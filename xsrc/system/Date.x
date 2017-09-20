@@ -3,7 +3,7 @@
  */
 const Date(Int year, Int month, Int day)
     {
-    @ro Int dayOfYear;
+    @RO Int dayOfYear;
     enum DayOfWeek {Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday}
 
 
