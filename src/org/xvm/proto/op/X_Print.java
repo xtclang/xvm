@@ -83,7 +83,7 @@ public class X_Print extends OpInvocable
                     }
                 else
                     {
-                    ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getVarCount()];
+                    ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
 
                     iResult = clz.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
                     }

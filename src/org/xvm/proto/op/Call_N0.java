@@ -67,7 +67,7 @@ public class Call_N0 extends OpCallable
                 {
                 MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.getVarCount());
+                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.getMaxVars());
                 if (ahVar == null)
                     {
                     return R_REPEAT;

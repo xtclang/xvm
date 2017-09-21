@@ -1,6 +1,8 @@
 package org.xvm.asm;
 
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -31,7 +33,8 @@ public class MethodStructure
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a MethodStructure with the specified identity.
+     * Construct a MethodStructure with the specified identity. This constructor is used to
+     * deserialize a MethodStructure.
      *
      * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
      * @param nFlags     the Component bit flags
@@ -44,14 +47,14 @@ public class MethodStructure
         }
 
     /**
-     * TODO - for programmatic construction (as opposed to reading from a stream)
+     * Construct a method structure.
      *
-     * @param xsParent
-     * @param nFlags
-     * @param constId
-     * @param condition
-     * @param aReturns
-     * @param aParams
+     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Module
+     * @param condition  the optional condition for this ModuleStructure
+     * @param aReturns   an array of Parameters representing the "out" values
+     * @param aParams    an array of Parameters representing the "in" values
      */
     protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId, ConditionalConstant condition,
             Parameter[] aReturns, Parameter[] aParams)
@@ -149,35 +152,148 @@ public class MethodStructure
         return Arrays.asList(m_aParams);
         }
 
-
-    // ----- run-time support ----------------------------------------------------------------------
-
-    /**
-     * @return the number of variables (registers) necessary for a frame running this method's code
-     *         (including the parameters)
-     */
-    public int getVarCount()
-        {
-        MethodInfo info = m_info;
-        return info == null || info.isNative() ? getParamCount() : info.getMaxVars();
-        }
-
-    /**
-     * @return the number of scopes necessary for a frame running this method's code
-     */
-    public int getScopeCount()
-        {
-        MethodInfo tm = m_info;
-        return tm == null ? 1 : tm.getMaxScopes();
-        }
-
     /**
      * @return the op-code array for this method
      */
     public Op[] getOps()
         {
-        MethodInfo info = m_info;
-        return info == null ? null : info.getOps();
+        Op[] aop = m_aop;
+        if (aop == null && !m_fNative)
+            {
+            byte[] abOps = m_abOps;
+            if (abOps != null)
+                {
+                try
+                    {
+                    m_aop = aop = Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)));
+                    }
+                catch (IOException e)
+                    {
+                    throw new RuntimeException(e);
+                    }
+                }
+            }
+        return m_aop;
+        }
+
+    /**
+     * Specify the ops for this method.
+     *
+     * @param aop  the op-code array for this method
+     */
+    public void setOps(Op[] aop)
+        {
+        m_aop = aop;
+        resetRuntimeInfo();
+        markModified();
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    /**
+     * Initialize the runtime information. This is done automatically.
+     */
+    public void ensureRuntimeInfo()
+        {
+        if (m_cScopes == 0)
+            {
+            Op[] aop;
+            if (m_fNative || (aop = getOps()) == null)
+                {
+                m_cVars   = getParamCount();
+                m_cScopes = 1;
+                }
+            else
+                {
+                // calc using ops
+                // TODO
+                m_cVars   = 20;
+                m_cScopes = 20;
+                }
+            }
+        }
+
+    /**
+     * Discard any runtime information.
+     */
+    public void resetRuntimeInfo()
+        {
+        m_cVars   = 0;
+        m_cScopes = 0;
+        m_fNative = false;
+        }
+
+    /**
+     * @return the number of variables (registers) necessary for a frame running this method's code
+     *         (including the parameters)
+     */
+    public int getMaxVars()
+        {
+        ensureRuntimeInfo();
+        return m_cVars;
+        }
+
+    /**
+     * @return the number of scopes necessary for a frame running this method's code
+     */
+    public int getMaxScopes()
+        {
+        ensureRuntimeInfo();
+        return m_cScopes;
+        }
+
+    /**
+     * @return true iff the method has been marked as native
+     */
+    public boolean isNative()
+        {
+        return m_fNative;
+        }
+
+    /**
+     * Specifies whether or not the method implementation is provided directly by the runtime, aka
+     * "native".
+     *
+     * @param fNative  pass true to mark the method as native
+     */
+    public void setNative(boolean fNative)
+        {
+        if (fNative)
+            {
+            resetRuntimeInfo();
+            }
+        m_fNative = fNative;
+        }
+
+    public MethodStructure getConstructFinally()
+        {
+        // TODO
+        return null;
+        }
+
+    public MethodStructure getMethodStructure()
+        {
+        // TODO
+        return null;
+        }
+
+    public void setMaxVars(int cVars)
+        {
+        // TODO this method must die
+
+        }
+
+    public void setMaxScopes(int cScopes)
+        {
+        // TODO this method must die
+        m_cScopes = cScopes;
+        }
+
+    public void setConstructFinally(MethodStructure structFinally)
+        {
+        // TODO this method must die
+        m_structFinally = structFinally;
         }
 
     /**
@@ -269,26 +385,6 @@ public class MethodStructure
             return false;
             }
         return true;
-        }
-
-    /**
-     * @return the transient method info
-     */
-    public MethodInfo getInfo()
-        {
-        return m_info;
-        }
-
-    /**
-     * Store the transient method info.
-     */
-    public void setInfo(MethodInfo info)
-        {
-        if (m_info != null)
-            {
-            throw new IllegalStateException("Info is not resettable");
-            }
-        m_info = info;
         }
 
 
@@ -493,6 +589,11 @@ public class MethodStructure
     public static final Parameter[] NO_PARAMS = new Parameter[0];
 
     /**
+     * Empty array of Ops.
+     */
+    public static final Op[] NO_OPS = new Op[0];
+
+    /**
      * The return value types. (A zero-length array is "Void".)
      */
     private Parameter[] m_aReturns;
@@ -508,7 +609,39 @@ public class MethodStructure
     private Parameter[] m_aParams;
 
     /**
-     * (TEMPORARY) The transient run-time method data.
+     * The constants used by the Ops.
      */
-    private transient MethodInfo m_info;
+    private transient Constant[] m_aconstLocal;
+
+    /**
+     * The yet-to-be-deserialized ops.
+     */
+    private transient byte[] m_abOps;
+
+    /**
+     * The instructions that make up the method's behavior. Calculated from the ops.
+     */
+    private Op[] m_aop;
+
+    /**
+     * The max number of registers used by the method. Calculated from the ops.
+     */
+    private transient int m_cVars;
+
+    /**
+     * The max number of scopes used by the method.
+     */
+    private transient int m_cScopes;
+
+    /**
+     * True iff the method has been marked as "native". This is not part of the persistent method
+     * structure; it exists only to support the prototype interpreter implementation.
+     */
+    private transient boolean m_fNative;
+
+    /**
+     * Cached method for the contruct-finally that goes with this method, iff this method is a
+     * construct function that has a finally.
+     */
+    private transient MethodStructure m_structFinally;
     }

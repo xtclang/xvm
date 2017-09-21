@@ -14,7 +14,6 @@ import org.xvm.proto.template.Function.FunctionHandle;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import org.xvm.util.Handy;
 
 
 /**
@@ -67,7 +66,7 @@ public class Call_0T extends OpCallable
             {
             MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
-            ObjectHandle[] ahVar = new ObjectHandle[function.getVarCount()];
+            ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
             return frame.call1(function, null, ahVar, -f_nTupleRetValue - 1);
             }

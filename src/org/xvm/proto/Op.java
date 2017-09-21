@@ -1,5 +1,6 @@
 package org.xvm.proto;
 
+import org.xvm.asm.Constant;
 import org.xvm.proto.op.*;
 
 import java.io.DataInput;
@@ -7,6 +8,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+
+import static org.xvm.util.Handy.readMagnitude;
+
 
 /**
  * The ops.
@@ -75,340 +79,356 @@ public abstract class Op
         throw new UnsupportedOperationException();
         }
 
+    /**
+     * Read the ops for a particular method.
+     * 
+     * @param in  the DataInput to read from
+     *
+     * @return an array of ops
+     * 
+     * @throws IOException  if an error occurs reading the ops
+     */
     public static Op[] readOps(DataInput in)
             throws IOException
         {
-        ArrayList<Op> list = new ArrayList<>();
-        switch (in.readUnsignedByte())
+        int  cOps = readMagnitude(in);
+        Op[] aop  = new Op[cOps];
+        for (int i = 0; i < cOps; ++i)
             {
-            case OP_NOP:
-                list.add(new Nop());
-                break;
-            case OP_ENTER:
-                list.add(new Enter());
-                break;
-            case OP_EXIT:
-                list.add(new Exit());
-                break;
-            case OP_GUARD:
-                list.add(new GuardStart(in));
-                break;
-            case OP_END_GUARD:
-                list.add(new GuardEnd(in));
-                break;
-            case OP_HANDLER:
-                list.add(new HandlerStart());
-                break;
-            case OP_END_HANDLER:
-                list.add(new HandlerEnd(in));
-                break;
-            case OP_GUARD_ALL:
-                list.add(new GuardAll(in));
-                break;
-            case OP_FINALLY:
-                list.add(new FinallyStart());
-                break;
-            case OP_END_FINALLY:
-                list.add(new FinallyEnd());
-                break;
-            case OP_THROW:
-                list.add(new Throw(in));
-                break;
-            case OP_ADD:
-                list.add(new Add(in));
-                break;
-            case OP_GOTO:
-                list.add(new GoTo(in));
-                break;
-            case OP_JMP:
-                list.add(new Jump(in));
-                break;
-            case OP_JMP_TRUE:
-                list.add(new JumpTrue(in));
-                break;
-            case OP_JMP_FALSE:
-                list.add(new JumpFalse(in));
-                break;
-            case OP_JMP_ZERO:
-                list.add(new JumpZero(in));
-                break;
-            case OP_JMP_NZERO:
-                list.add(new JumpNotZero(in));
-                break;
-            case OP_JMP_NULL:
-                list.add(new JumpNull(in));
-                break;
-            case OP_JMP_NNULL:
-                list.add(new JumpNotNull(in));
-                break;
-            case OP_JMP_EQ:
-                list.add(new JumpEq(in));
-                break;
-            case OP_JMP_NEQ:
-                list.add(new JumpNotEq(in));
-                break;
-            case OP_JMP_LT:
-                list.add(new JumpLt(in));
-                break;
-            case OP_JMP_LTE:
-                list.add(new JumpLte(in));
-                break;
-            case OP_JMP_GT:
-                list.add(new JumpGt(in));
-                break;
-            case OP_JMP_GTE:
-                list.add(new JumpGte(in));
-                break;
-            case OP_VAR:
-                list.add(new Var(in));
-                break;
-            case OP_IVAR:
-                list.add(new IVar(in));
-                break;
-            case OP_NVAR:
-                list.add(new NVar(in));
-                break;
-            case OP_INVAR:
-                list.add(new INVar(in));
-                break;
-            case OP_DVAR:
-                list.add(new DVar(in));
-                break;
-            case OP_DNVAR:
-                list.add(new DNVar(in));
-                break;
-            case OP_SVAR:
-                list.add(new SVar(in));
-                break;
-            case OP_TVAR:
-                list.add(new TVar(in));
-                break;
-            case OP_REF:
-                list.add(new Ref(in));
-                break;
-            case OP_MOV:
-                list.add(new Move(in));
-                break;
-            case OP_MOV_REF:
-                list.add(new MoveRef(in));
-                break;
-            case OP_NEG:
-                list.add(new Neg(in));
-                break;
-            case OP_INC:
-                list.add(new Inc(in));
-                break;
-            case OP_POSTINC:
-                list.add(new PostInc(in));
-                break;
-            case OP_PREINC:
-                list.add(new PreInc(in));
-                break;
-            case OP_P_GET:
-                list.add(new PGet(in));
-                break;
-            case OP_P_SET:
-                list.add(new PSet(in));
-                break;
-            case OP_P_POSTINC:
-                list.add(new PPostInc(in));
-                break;
-            case OP_P_PREINC:
-                list.add(new PPreInc(in));
-                break;
-            case OP_L_GET:
-                list.add(new LGet(in));
-                break;
-            case OP_L_SET:
-                list.add(new LSet(in));
-                break;
-            case OP_CALL_00:
-                list.add(new Call_00(in));
-                break;
-            case OP_CALL_01:
-                list.add(new Call_01(in));
-                break;
-            case OP_CALL_0N:
-                list.add(new Call_0N(in));
-                break;
-            case OP_CALL_0T:
-                list.add(new Call_0T(in));
-                break;
-            case OP_CALL_10:
-                list.add(new Call_10(in));
-                break;
-            case OP_CALL_11:
-                list.add(new Call_11(in));
-                break;
-            case OP_CALL_1N:
-                list.add(new Call_1N(in));
-                break;
-            case OP_CALL_1T:
-                list.add(new Call_1T(in));
-                break;
-            case OP_CALL_N0:
-                list.add(new Call_N0(in));
-                break;
-            case OP_CALL_N1:
-                list.add(new Call_N1(in));
-                break;
-            case OP_CALL_NN:
-                list.add(new Call_NN(in));
-                break;
-            case OP_CALL_NT:
-                list.add(new Call_NT(in));
-                break;
-            case OP_CALL_T0:
-                list.add(new Call_T0(in));
-                break;
-            case OP_CALL_T1:
-                list.add(new Call_T1(in));
-                break;
-            case OP_CALL_TN:
-                list.add(new Call_TN(in));
-                break;
-            case OP_CALL_TT:
-                list.add(new Call_TT(in));
-                break;
-            case OP_INVOKE_00:
-                list.add(new Invoke_00(in));
-                break;
-            case OP_INVOKE_01:
-                list.add(new Invoke_01(in));
-                break;
-            case OP_INVOKE_0N:
-                list.add(new Invoke_0N(in));
-                break;
-            case OP_INVOKE_0T:
-                list.add(new Invoke_0N(in));
-                break;
-            case OP_INVOKE_10:
-                list.add(new Invoke_10(in));
-                break;
-            case OP_INVOKE_11:
-                list.add(new Invoke_11(in));
-                break;
-            case OP_INVOKE_1N:
-                list.add(new Invoke_1N(in));
-                break;
-            case OP_INVOKE_1T:
-                list.add(new Invoke_1T(in));
-                break;
-            case OP_INVOKE_N0:
-                list.add(new Invoke_N0(in));
-                break;
-            case OP_INVOKE_N1:
-                list.add(new Invoke_N1(in));
-                break;
-            case OP_INVOKE_NN:
-                list.add(new Invoke_NN(in));
-                break;
-            case OP_INVOKE_NT:
-                list.add(new Invoke_NT(in));
-                break;
-            case OP_INVOKE_T0:
-                list.add(new Invoke_T0(in));
-                break;
-            case OP_INVOKE_T1:
-                list.add(new Invoke_T1(in));
-                break;
-            case OP_INVOKE_TN:
-                list.add(new Invoke_TN(in));
-                break;
-            case OP_INVOKE_TT:
-                list.add(new Invoke_TT(in));
-                break;
-            case OP_I_GET:
-                list.add(new IGet(in));
-                break;
-            case OP_I_SET:
-                list.add(new ISet(in));
-                break;
-            case OP_I_REF:
-                list.add(new IRef(in));
-                break;
-            case OP_NEW_1:
-                list.add(new New_1(in));
-                break;
-            case OP_NEW_N:
-                list.add(new New_N(in));
-                break;
-            case OP_NEW_0G:
-                list.add(new New_0G(in));
-                break;
-            case OP_NEW_1G:
-                list.add(new New_1G(in));
-                break;
-            case OP_NEW_NG:
-                list.add(new New_NG(in));
-                break;
-            case OP_CONSTR_1:
-                list.add(new Construct_1(in));
-                break;
-            case OP_CONSTR_N:
-                list.add(new Construct_N(in));
-                break;
-            case OP_ASSERT:
-                list.add(new Assert(in));
-                break;
-            case OP_ASSERT_T:
-                list.add(new AssertT(in));
-                break;
-            case OP_MBIND:
-                list.add(new MBind(in));
-                break;
-            case OP_FBIND:
-                list.add(new FBind(in));
-                break;
-            case OP_RETURN_0:
-                list.add(new Return_0());
-                break;
-            case OP_RETURN_1:
-                list.add(new Return_1(in));
-                break;
-            case OP_RETURN_N:
-                list.add(new Return_N(in));
-                break;
-            case OP_RETURN_T:
-                list.add(new Return_T(in));
-                break;
-            case OP_IS_ZERO:
-                list.add(new IsZero(in));
-                break;
-            case OP_IS_NZERO:
-                list.add(new IsNotZero(in));
-                break;
-            case OP_IS_NULL:
-                list.add(new IsNull(in));
-                break;
-            case OP_IS_NNULL:
-                list.add(new IsNotNull(in));
-                break;
-            case OP_IS_EQ:
-                list.add(new IsEq(in));
-                break;
-            case OP_IS_NEQ:
-                list.add(new IsNotEq(in));
-                break;
-            case OP_IS_LT:
-                list.add(new IsLt(in));
-                break;
-            case OP_IS_LTE:
-                list.add(new IsLte(in));
-                break;
-            case OP_IS_GT:
-                list.add(new IsGt(in));
-                break;
-            case OP_IS_GTE:
-                list.add(new IsGte(in));
-                break;
-            case OP_IS_NOT:
-                list.add(new IsNot(in));
-                break;
-            default:
-                throw new UnsupportedOperationException();
+            Op op;
+            switch (in.readUnsignedByte())
+                {
+                case OP_NOP:
+                    op =  new Nop();
+                    break;
+                case OP_ENTER:
+                    op =  new Enter();
+                    break;
+                case OP_EXIT:
+                    op =  new Exit();
+                    break;
+                case OP_GUARD:
+                    op =  new GuardStart(in);
+                    break;
+                case OP_END_GUARD:
+                    op =  new GuardEnd(in);
+                    break;
+                case OP_HANDLER:
+                    op =  new HandlerStart();
+                    break;
+                case OP_END_HANDLER:
+                    op =  new HandlerEnd(in);
+                    break;
+                case OP_GUARD_ALL:
+                    op =  new GuardAll(in);
+                    break;
+                case OP_FINALLY:
+                    op =  new FinallyStart();
+                    break;
+                case OP_END_FINALLY:
+                    op =  new FinallyEnd();
+                    break;
+                case OP_THROW:
+                    op =  new Throw(in);
+                    break;
+                case OP_ADD:
+                    op =  new Add(in);
+                    break;
+                case OP_GOTO:
+                    op =  new GoTo(in);
+                    break;
+                case OP_JMP:
+                    op =  new Jump(in);
+                    break;
+                case OP_JMP_TRUE:
+                    op =  new JumpTrue(in);
+                    break;
+                case OP_JMP_FALSE:
+                    op =  new JumpFalse(in);
+                    break;
+                case OP_JMP_ZERO:
+                    op =  new JumpZero(in);
+                    break;
+                case OP_JMP_NZERO:
+                    op =  new JumpNotZero(in);
+                    break;
+                case OP_JMP_NULL:
+                    op =  new JumpNull(in);
+                    break;
+                case OP_JMP_NNULL:
+                    op =  new JumpNotNull(in);
+                    break;
+                case OP_JMP_EQ:
+                    op =  new JumpEq(in);
+                    break;
+                case OP_JMP_NEQ:
+                    op =  new JumpNotEq(in);
+                    break;
+                case OP_JMP_LT:
+                    op =  new JumpLt(in);
+                    break;
+                case OP_JMP_LTE:
+                    op =  new JumpLte(in);
+                    break;
+                case OP_JMP_GT:
+                    op =  new JumpGt(in);
+                    break;
+                case OP_JMP_GTE:
+                    op =  new JumpGte(in);
+                    break;
+                case OP_VAR:
+                    op =  new Var(in);
+                    break;
+                case OP_IVAR:
+                    op =  new IVar(in);
+                    break;
+                case OP_NVAR:
+                    op =  new NVar(in);
+                    break;
+                case OP_INVAR:
+                    op =  new INVar(in);
+                    break;
+                case OP_DVAR:
+                    op =  new DVar(in);
+                    break;
+                case OP_DNVAR:
+                    op =  new DNVar(in);
+                    break;
+                case OP_SVAR:
+                    op =  new SVar(in);
+                    break;
+                case OP_TVAR:
+                    op =  new TVar(in);
+                    break;
+                case OP_REF:
+                    op =  new Ref(in);
+                    break;
+                case OP_MOV:
+                    op =  new Move(in);
+                    break;
+                case OP_MOV_REF:
+                    op =  new MoveRef(in);
+                    break;
+                case OP_NEG:
+                    op =  new Neg(in);
+                    break;
+                case OP_INC:
+                    op =  new Inc(in);
+                    break;
+                case OP_POSTINC:
+                    op =  new PostInc(in);
+                    break;
+                case OP_PREINC:
+                    op =  new PreInc(in);
+                    break;
+                case OP_P_GET:
+                    op =  new PGet(in);
+                    break;
+                case OP_P_SET:
+                    op =  new PSet(in);
+                    break;
+                case OP_P_POSTINC:
+                    op =  new PPostInc(in);
+                    break;
+                case OP_P_PREINC:
+                    op =  new PPreInc(in);
+                    break;
+                case OP_L_GET:
+                    op =  new LGet(in);
+                    break;
+                case OP_L_SET:
+                    op =  new LSet(in);
+                    break;
+                case OP_CALL_00:
+                    op =  new Call_00(in);
+                    break;
+                case OP_CALL_01:
+                    op =  new Call_01(in);
+                    break;
+                case OP_CALL_0N:
+                    op =  new Call_0N(in);
+                    break;
+                case OP_CALL_0T:
+                    op =  new Call_0T(in);
+                    break;
+                case OP_CALL_10:
+                    op =  new Call_10(in);
+                    break;
+                case OP_CALL_11:
+                    op =  new Call_11(in);
+                    break;
+                case OP_CALL_1N:
+                    op =  new Call_1N(in);
+                    break;
+                case OP_CALL_1T:
+                    op =  new Call_1T(in);
+                    break;
+                case OP_CALL_N0:
+                    op =  new Call_N0(in);
+                    break;
+                case OP_CALL_N1:
+                    op =  new Call_N1(in);
+                    break;
+                case OP_CALL_NN:
+                    op =  new Call_NN(in);
+                    break;
+                case OP_CALL_NT:
+                    op =  new Call_NT(in);
+                    break;
+                case OP_CALL_T0:
+                    op =  new Call_T0(in);
+                    break;
+                case OP_CALL_T1:
+                    op =  new Call_T1(in);
+                    break;
+                case OP_CALL_TN:
+                    op =  new Call_TN(in);
+                    break;
+                case OP_CALL_TT:
+                    op =  new Call_TT(in);
+                    break;
+                case OP_INVOKE_00:
+                    op =  new Invoke_00(in);
+                    break;
+                case OP_INVOKE_01:
+                    op =  new Invoke_01(in);
+                    break;
+                case OP_INVOKE_0N:
+                    op =  new Invoke_0N(in);
+                    break;
+                case OP_INVOKE_0T:
+                    op =  new Invoke_0N(in);
+                    break;
+                case OP_INVOKE_10:
+                    op =  new Invoke_10(in);
+                    break;
+                case OP_INVOKE_11:
+                    op =  new Invoke_11(in);
+                    break;
+                case OP_INVOKE_1N:
+                    op =  new Invoke_1N(in);
+                    break;
+                case OP_INVOKE_1T:
+                    op =  new Invoke_1T(in);
+                    break;
+                case OP_INVOKE_N0:
+                    op =  new Invoke_N0(in);
+                    break;
+                case OP_INVOKE_N1:
+                    op =  new Invoke_N1(in);
+                    break;
+                case OP_INVOKE_NN:
+                    op =  new Invoke_NN(in);
+                    break;
+                case OP_INVOKE_NT:
+                    op =  new Invoke_NT(in);
+                    break;
+                case OP_INVOKE_T0:
+                    op =  new Invoke_T0(in);
+                    break;
+                case OP_INVOKE_T1:
+                    op =  new Invoke_T1(in);
+                    break;
+                case OP_INVOKE_TN:
+                    op =  new Invoke_TN(in);
+                    break;
+                case OP_INVOKE_TT:
+                    op =  new Invoke_TT(in);
+                    break;
+                case OP_I_GET:
+                    op =  new IGet(in);
+                    break;
+                case OP_I_SET:
+                    op =  new ISet(in);
+                    break;
+                case OP_I_REF:
+                    op =  new IRef(in);
+                    break;
+                case OP_NEW_1:
+                    op =  new New_1(in);
+                    break;
+                case OP_NEW_N:
+                    op =  new New_N(in);
+                    break;
+                case OP_NEW_0G:
+                    op =  new New_0G(in);
+                    break;
+                case OP_NEW_1G:
+                    op =  new New_1G(in);
+                    break;
+                case OP_NEW_NG:
+                    op =  new New_NG(in);
+                    break;
+                case OP_CONSTR_1:
+                    op =  new Construct_1(in);
+                    break;
+                case OP_CONSTR_N:
+                    op =  new Construct_N(in);
+                    break;
+                case OP_ASSERT:
+                    op =  new Assert(in);
+                    break;
+                case OP_ASSERT_T:
+                    op =  new AssertT(in);
+                    break;
+                case OP_MBIND:
+                    op =  new MBind(in);
+                    break;
+                case OP_FBIND:
+                    op =  new FBind(in);
+                    break;
+                case OP_RETURN_0:
+                    op =  new Return_0();
+                    break;
+                case OP_RETURN_1:
+                    op =  new Return_1(in);
+                    break;
+                case OP_RETURN_N:
+                    op =  new Return_N(in);
+                    break;
+                case OP_RETURN_T:
+                    op =  new Return_T(in);
+                    break;
+                case OP_IS_ZERO:
+                    op =  new IsZero(in);
+                    break;
+                case OP_IS_NZERO:
+                    op =  new IsNotZero(in);
+                    break;
+                case OP_IS_NULL:
+                    op =  new IsNull(in);
+                    break;
+                case OP_IS_NNULL:
+                    op =  new IsNotNull(in);
+                    break;
+                case OP_IS_EQ:
+                    op =  new IsEq(in);
+                    break;
+                case OP_IS_NEQ:
+                    op =  new IsNotEq(in);
+                    break;
+                case OP_IS_LT:
+                    op =  new IsLt(in);
+                    break;
+                case OP_IS_LTE:
+                    op =  new IsLte(in);
+                    break;
+                case OP_IS_GT:
+                    op =  new IsGt(in);
+                    break;
+                case OP_IS_GTE:
+                    op =  new IsGte(in);
+                    break;
+                case OP_IS_NOT:
+                    op =  new IsNot(in);
+                    break;
+                default:
+                    throw new UnsupportedOperationException();
+                }
+            aop[i] = op;
             }
-        return list.toArray(new Op[list.size()]);
+
+        return aop;
         }
 
     // ----- helpers -----

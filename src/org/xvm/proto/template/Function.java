@@ -90,7 +90,7 @@ public class Function
 
         public int getVarCount()
             {
-            return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getVarCount();
+            return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getMaxVars();
             }
 
         // ----- FunctionHandle interface -----

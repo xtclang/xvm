@@ -99,7 +99,7 @@ public class CallChain
                     invokeNativeN(frame, methodSuper, hThis, Utils.OBJECTS_NONE, iReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getVarCount()];
+        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
 
         return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
         }
@@ -140,7 +140,7 @@ public class CallChain
                     invokeNative1(frame, methodSuper, hThis, hArg, Frame.RET_UNUSED);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getVarCount()];
+        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
         ahVar[1] = hArg;
 
         return frame.invoke1(this, nDepth, hThis, ahVar, Frame.RET_UNUSED);
@@ -175,7 +175,7 @@ public class CallChain
                         invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.getVarCount());
+            ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.getMaxVars());
             if (ahVar == null)
                 {
                 return Op.R_REPEAT;
@@ -213,7 +213,7 @@ public class CallChain
                         invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.getVarCount());
+            ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.getMaxVars());
             if (ahVar == null)
                 {
                 return Op.R_REPEAT;

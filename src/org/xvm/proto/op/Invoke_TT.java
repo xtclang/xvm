@@ -81,7 +81,7 @@ public class Invoke_TT extends OpInvocable
                 }
 
             int cArgs = ahArg.length;
-            int cVars = method.getVarCount();
+            int cVars = method.getMaxVars();
 
             if (cArgs != method.getParamCount())
                 {

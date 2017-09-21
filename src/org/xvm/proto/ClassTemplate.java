@@ -4,7 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
-import org.xvm.asm.MethodInfo;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Parameter;
@@ -712,7 +712,7 @@ public abstract class ClassTemplate
             return getFieldValue(frame, hTarget, chain.getProperty(), iReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[method.getVarCount()];
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
@@ -811,7 +811,7 @@ public abstract class ClassTemplate
                 }
             else
                 {
-                ObjectHandle[] ahVar = new ObjectHandle[method.getVarCount()];
+                ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
                 ahVar[1] = hValue;
 
                 return frame.call1(method, hTarget, ahVar, Frame.RET_UNUSED);
@@ -977,15 +977,15 @@ public abstract class ClassTemplate
 
     public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
-        ensureMethodInfo(sName, asParamType, asRetType).setNative(true);
+        ensureMethodStructure(sName, asParamType, asRetType).setNative(true);
         }
 
-    public MethodInfo ensureMethodInfo(String sName, String[] asParam)
+    public MethodStructure ensureMethodStructure(String sName, String[] asParam)
         {
-        return ensureMethodInfo(sName, asParam, VOID);
+        return ensureMethodStructure(sName, asParam, VOID);
         }
 
-    public MethodInfo ensureMethodInfo(String sName, String[] asParam, String[] asRet)
+    public MethodStructure ensureMethodStructure(String sName, String[] asParam, String[] asRet)
         {
         MethodStructure method = f_types.f_adapter.getMethod(this, sName, asParam, asRet);
         if (method == null)
@@ -1011,17 +1011,7 @@ public abstract class ClassTemplate
                     sName,
                     methodSuper.getParams().toArray(new Parameter[methodSuper.getParamCount()]));
             }
-        return ensureMethodInfo(method);
-        }
-
-    public MethodInfo ensureMethodInfo(MethodStructure method)
-        {
-        MethodInfo info = method.getInfo();
-        if (info == null)
-            {
-            method.setInfo(info = new MethodInfo(method));
-            }
-        return info;
+        return method;
         }
 
     public void markInjectable(String sPropName)
@@ -1050,7 +1040,7 @@ public abstract class ClassTemplate
             }
         else
             {
-            ensureMethodInfo(methodGet).setNative(true);
+            methodGet.setNative(true);
             }
         ensurePropertyInfo(sPropName).m_fCalculated = true;
         }
@@ -1066,23 +1056,23 @@ public abstract class ClassTemplate
             }
         else
             {
-            ensureMethodInfo(methodSet).setNative(true);
+            methodSet.setNative(true);
             }
         ensurePropertyInfo(sPropName).m_fCalculated = false;
         }
 
-    public MethodInfo ensureGetter(String sPropName)
+    public MethodStructure ensureGetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
 
-        return ensureMethodInfo(Adapter.getGetter(prop));
+        return Adapter.getGetter(prop);
         }
 
-    public MethodInfo ensureSetter(String sPropName)
+    public MethodStructure ensureSetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
 
-        return ensureMethodInfo(Adapter.getSetter(prop));
+        return Adapter.getSetter(prop);
         }
 
     public PropertyInfo ensurePropertyInfo(String sPropName)

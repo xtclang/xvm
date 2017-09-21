@@ -65,7 +65,7 @@ public class Call_01 extends OpCallable
             {
             MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
 
-            ObjectHandle[] ahVar = new ObjectHandle[function.getVarCount()];
+            ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
             return frame.call1(function, null, ahVar, f_nRetValue);
             }

@@ -62,7 +62,7 @@ public class Invoke_N0 extends OpInvocable
             CallChain chain = getCallChain(frame, clz, f_nMethodId);
 
             ObjectHandle[] ahVar = frame.getArguments(f_anArgValue,
-                    chain.getTop().getVarCount());
+                    chain.getTop().getMaxVars());
             if (ahVar == null)
                 {
                 return R_REPEAT;
