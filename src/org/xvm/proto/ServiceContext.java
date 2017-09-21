@@ -3,11 +3,12 @@ package org.xvm.proto;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.Op;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.proto.Fiber.FiberStatus;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
-import org.xvm.proto.op.Return_0;
+import org.xvm.asm.op.Return_0;
 
 import org.xvm.proto.template.Function.FunctionHandle;
 import org.xvm.proto.template.xException;

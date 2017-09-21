@@ -5,9 +5,9 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;

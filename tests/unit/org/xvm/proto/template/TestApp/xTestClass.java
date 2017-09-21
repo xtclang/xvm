@@ -3,9 +3,10 @@ package org.xvm.proto.template.TestApp;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.proto.*;
 
-import org.xvm.proto.op.*;
+import org.xvm.asm.op.*;
 
 /**
  * A test class.

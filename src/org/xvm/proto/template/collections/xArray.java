@@ -8,7 +8,7 @@ import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ArrayHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
 import org.xvm.proto.ObjectHandle.JavaLong;
-import org.xvm.proto.Op;
+import org.xvm.asm.Op;
 import org.xvm.proto.Type;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.ClassTemplate;

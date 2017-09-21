@@ -11,7 +11,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 
 import java.io.DataInput;

@@ -5,7 +5,7 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.Op;
+import org.xvm.asm.Op;
 import org.xvm.proto.TypeComposition;
 import org.xvm.proto.TypeSet;
 

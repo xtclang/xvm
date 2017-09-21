@@ -2,6 +2,7 @@ package org.xvm.proto;
 
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.Op;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 

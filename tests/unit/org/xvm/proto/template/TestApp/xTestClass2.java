@@ -4,10 +4,10 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Adapter;
-import org.xvm.proto.Op;
+import org.xvm.asm.Op;
 import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.TypeSet;
-import org.xvm.proto.op.*;
+import org.xvm.asm.op.*;
 
 /**
  * A test class.

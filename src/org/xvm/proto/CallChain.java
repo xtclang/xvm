@@ -1,6 +1,7 @@
 package org.xvm.proto;
 
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
