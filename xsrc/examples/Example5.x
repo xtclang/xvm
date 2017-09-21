@@ -425,3 +425,30 @@ class ObjectFileStream()
 
 new @ObjectStreaming FileStream()
 
+// isSubstitutableFor most generic examples
+
+class C<T>
+    {
+    (T, List<T>)
+        f1(T p1, List<T> p2);
+
+    <U> (U, List<U>)
+        f2(U p1, List<U> p2);
+
+    <U extends List<Number>> (U.ElementType, List<U.ElementType>)
+        f3(U.ElementType p1, List<U.ElementType> p2);
+    }
+
+<El> Void test(El e)
+    {
+    C<Int> c1 = ...;
+    C<El> c2 = ...;
+
+    (Number n, List<Number> ln) = c1.f1(1, new List<Int>);
+
+    (El e, List<El> ln) = c1.f2<El>(e, new List<El>);
+
+    (Number n, List<Number> ln) = c1.f1<List<Int>>(1, new List<Int>());
+
+    (Number n, List<Number> ln) = c1.f1<List<Number>>(1, new List<Int>());
+    }

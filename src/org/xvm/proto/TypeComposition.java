@@ -191,9 +191,7 @@ public class TypeComposition
 
             assert constInto != null;
 
-            ClassTemplate templateInto = f_template.f_types.getTemplate(
-                    (IdentityConstant) constInto.getDefiningConstant());
-            TypeComposition clzInto = templateInto.resolveClass(constInto, f_mapGenericActual);
+            TypeComposition clzInto = f_template.f_types.resolveClass(constInto, f_mapGenericActual);
 
             addNoDupes(clzInto.collectDeclaredCallChain(false), list, set);
             }
@@ -399,8 +397,6 @@ public class TypeComposition
     // is this class assignable to the specified class
     public boolean isA(TypeComposition that)
         {
-        assert that.f_template.f_struct.getFormat() != Component.Format.INTERFACE;
-
         if (this.f_template.extends_(that.f_template))
             {
             // TODO: check the generic type relationship

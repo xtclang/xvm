@@ -260,35 +260,82 @@ public class TypeSet
         return type.f_clazz == null ? xObject.CLASS : type.f_clazz;
         }
 
-    // resolve a parameter type given a map of actual parameter types
+    // produce a Type based on the specified TypeConstant
+    // using the specified actual type parameters
     public Type resolveType(TypeConstant constType, Map<String, Type> mapActual)
         {
-        Constant constId = constType.getDefiningConstant();
-        String   sParam;
-        switch (constId.getFormat())
+        switch (constType.getFormat())
             {
-            case Module:
-            case Package:
-            case Class:
-                ClassTemplate template = getTemplate((IdentityConstant) constId);
-                return template.resolveClass(constType, mapActual).ensurePublicType();
+            case TerminalType:
+            case ParameterizedType:
+                {
+                Constant constId = constType.getDefiningConstant();
+                String   sParam;
+                switch (constId.getFormat())
+                    {
+                    case Module:
+                    case Package:
+                    case Class:
+                        ClassTemplate template = getTemplate((IdentityConstant) constId);
+                        return template.resolveClass(constType, mapActual).ensurePublicType();
 
-            case Register:
-                RegisterConstant constReg = (RegisterConstant) constId;
-                MethodStructure  method = (MethodStructure) constReg.getMethod().getComponent();
-                sParam = method.getParam(constReg.getRegister()).getName();
-                break;
+                    case Register:
+                        RegisterConstant constReg = (RegisterConstant) constId;
+                        MethodStructure  method = (MethodStructure) constReg.getMethod().getComponent();
+                        sParam = method.getParam(constReg.getRegister()).getName();
+                        break;
 
-            case Property:
-                sParam  = ((PropertyConstant) constId).getName();
-                break;
+                    case Property:
+                        sParam  = ((PropertyConstant) constId).getName();
+                        break;
+
+                    default:
+                        throw new IllegalStateException("unsupported type: " + constId);
+                    }
+
+                Type type = mapActual.get(sParam);
+                return type == null ? xObject.TYPE : type;
+                }
+
+            case ImmutableType:
+                {
+                Type type = resolveType(constType.getUnderlyingType(), mapActual);
+                type.makeImmutable();
+                return type;
+                }
+
+            case AccessType:
+                {
+                Type type = resolveType(constType.getUnderlyingType(), mapActual);
+                switch (constType.getAccess())
+                    {
+                    case PUBLIC:
+                        return type;
+
+                    case PROTECTED:
+                        return type.f_clazz.ensureProtectedType();
+
+                    case PRIVATE:
+                        return type.f_clazz.ensurePrivateType();
+
+                    default:
+                        throw new IllegalStateException("unsupported access: " + constType);
+                    }
+                }
+
+            case AnnotatedType:
+                // example: &myObject.revealAs<@MyMixin MyClass>()
+            case UnionType:
+                // example: (String | Nullable) ns = ...;
+            case IntersectionType:
+                // example: (String + Runnable) rs = ...;
+            case DifferenceType:
+                // example: class C delegates (Iface2 - Iface1);
+                throw new UnsupportedOperationException(); // TODO
 
             default:
-                throw new IllegalStateException("unsupported constant: " + constId);
+                throw new IllegalStateException("unsupported type: " + constType);
             }
-
-        Type type = mapActual.get(sParam);
-        return type == null ? xObject.TYPE : type;
         }
 
     // ----- Types -----

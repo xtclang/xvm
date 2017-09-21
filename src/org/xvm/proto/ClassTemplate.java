@@ -397,6 +397,7 @@ public abstract class ClassTemplate
         }
 
     // produce a TypeComposition for this template by resolving the generic types
+    // NOTE: this method is overridden by the Tuple's implementation
     public TypeComposition resolveClass(TypeConstant constClassType, Map<String, Type> mapActual)
         {
         assert ((IdentityConstant) constClassType.getDefiningConstant()).getPathString().equals(f_sName);

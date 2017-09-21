@@ -35,7 +35,7 @@ public class Type
     private int m_nId;
 
     private xArray.GenericArrayHandle m_methods = null;
-    private boolean m_fConstant;
+    private boolean m_fImmutable;
 
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
 
@@ -54,6 +54,16 @@ public class Type
         {
         assert m_nId == 0;
         m_nId = id;
+        }
+
+    public boolean isImmutable()
+        {
+        return m_fImmutable;
+        }
+
+    public void makeImmutable()
+        {
+        m_fImmutable = true;
         }
 
     public TypeHandle getHandle()
