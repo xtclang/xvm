@@ -94,7 +94,7 @@ public class Frame
         f_ahVar = ahVar;
         f_aInfo = new VarInfo[ahVar.length];
 
-        int cScopes = function == null ? 1 : function.getScopeCount();
+        int cScopes = function == null ? 1 : function.getMaxScopes();
         f_anNextVar = new int[cScopes];
         f_anNextVar[0] = function == null ? 0 : function.getParamCount();
 

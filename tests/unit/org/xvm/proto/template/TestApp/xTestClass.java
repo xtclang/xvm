@@ -2,7 +2,7 @@ package org.xvm.proto.template.TestApp;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.MethodInfo;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.*;
 
 import org.xvm.proto.op.*;
@@ -28,8 +28,8 @@ public class xTestClass extends ClassTemplate
     public void initDeclared()
         {
         // --- constructor()
-        MethodInfo construct = ensureMethodInfo("construct", STRING);
-        MethodInfo ftFinally = ensureMethodInfo("finally", STRING);
+        MethodStructure construct = ensureMethodStructure("construct", STRING);
+        MethodStructure ftFinally = ensureMethodStructure("finally", STRING);
 
         construct.setOps(new Op[]
                 { // #0 = s
@@ -50,7 +50,7 @@ public class xTestClass extends ClassTemplate
         ftFinally.setMaxVars(1);
 
         // --- method1()
-        MethodInfo mtMethod1 = ensureMethodInfo("method1", VOID, INT);
+        MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
         mtMethod1.setOps(new Op[]
                 {
                         new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
@@ -70,8 +70,8 @@ public class xTestClass extends ClassTemplate
         mtMethod1.setMaxVars(4);
 
         // ----- exceptional()
-        MethodInfo mtExceptional = ensureMethodInfo("exceptional",
-                new String[]{"String?"}, INT);
+        MethodStructure mtExceptional = ensureMethodStructure("exceptional",
+                new String[] {"String?"}, INT);
         mtExceptional.setOps(new Op[]
                 { // #0 = s
                         new Var(adapter.getClassTypeConstId("Exception")), // #1
@@ -82,7 +82,7 @@ public class xTestClass extends ClassTemplate
         mtExceptional.setMaxVars(2);
 
         // ----- to<String>()
-        MethodInfo mtTo = ensureMethodInfo("to", VOID, STRING);
+        MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
                 {
                         new Var(adapter.getClassTypeConstId("String")), // #0

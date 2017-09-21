@@ -79,7 +79,7 @@ public class New_0G extends OpCallable
 
             ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getVarCount()];
+            ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 
             return template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
             }

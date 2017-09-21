@@ -68,7 +68,7 @@ public class Invoke_01 extends OpInvocable
                         Utils.OBJECTS_NONE, f_nRetValue);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getVarCount()];
+            ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
 
             return clz.f_template.invoke1(frame, chain, hTarget, ahVar, f_nRetValue);
             }

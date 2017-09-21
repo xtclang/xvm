@@ -2,7 +2,7 @@ package org.xvm.proto.template.TestApp;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.MethodInfo;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Adapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeSet;
@@ -35,7 +35,7 @@ public class xTestService extends Service
         markInjectable("runtimeClock");
         markAtomicRef("counter2");
 
-        MethodInfo mtGetCounter = ensureGetter("counter");
+        MethodStructure mtGetCounter = ensureGetter("counter");
         mtGetCounter.setOps(new Op[]
                 {
                         new X_Print(
@@ -46,7 +46,7 @@ public class xTestService extends Service
                 });
         mtGetCounter.setMaxVars(1);
 
-        MethodInfo mtSetCounter = ensureSetter("counter");
+        MethodStructure mtSetCounter = ensureSetter("counter");
         mtSetCounter.setOps(new Op[]
                 { // #0 = newValue
                         new X_Print(
@@ -57,7 +57,7 @@ public class xTestService extends Service
                 });
         mtSetCounter.setMaxVars(1);
 
-        MethodInfo ftDefault = ensureMethodInfo("default", VOID, VOID);
+        MethodStructure ftDefault = ensureMethodStructure("default", VOID, VOID);
         ftDefault.setOps(new Op[]
                 {
                         new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
@@ -66,7 +66,7 @@ public class xTestService extends Service
                 });
         ftDefault.setMaxVars(1);
 
-        MethodInfo constructor = ensureMethodInfo("construct", INT);
+        MethodStructure constructor = ensureMethodStructure("construct", INT);
         constructor.setOps(new Op[]
                 { // #0 - counter
                         new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
@@ -74,7 +74,7 @@ public class xTestService extends Service
                 });
         constructor.setMaxVars(2);
 
-        MethodInfo mtIncrement = ensureMethodInfo("increment", VOID, INT);
+        MethodStructure mtIncrement = ensureMethodStructure("increment", VOID, INT);
         mtIncrement.setOps(new Op[]
                 {
                         new X_Print(-adapter.ensureValueConstantId("# in TestService.increment #")),
@@ -85,7 +85,8 @@ public class xTestService extends Service
                 });
         mtIncrement.setMaxVars(1);
 
-        MethodInfo ftLambda$1 = ensureMethodInfo("lambda_1", new String[]{"Ref<Int64>", "Int64"});
+        MethodStructure ftLambda$1 = ensureMethodStructure("lambda_1",
+                new String[] {"Ref<Int64>", "Int64"});
         ftLambda$1.setOps(new Op[]
                 { // #0 = &iRet, #1 = cDelay
                         new Invoke_10(0, adapter.getMethodConstId("Ref", "set"), 1),
@@ -93,7 +94,7 @@ public class xTestService extends Service
                 });
         ftLambda$1.setMaxVars(2);
 
-        MethodInfo mtExceptional = ensureMethodInfo("exceptional", INT, INT);
+        MethodStructure mtExceptional = ensureMethodStructure("exceptional", INT, INT);
         mtExceptional.setOps(new Op[]
                 { // #0 - cDelay
                         new Var(adapter.getClassTypeConstId("Boolean")), // #1
@@ -128,7 +129,7 @@ public class xTestService extends Service
         mtExceptional.setMaxVars(6);
         mtExceptional.setMaxScopes(2);
 
-        MethodInfo mtTo = ensureMethodInfo("to", VOID, STRING);
+        MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
                 {
                         new X_Print(-adapter.ensureValueConstantId(

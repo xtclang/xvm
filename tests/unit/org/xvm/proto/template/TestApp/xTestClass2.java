@@ -2,7 +2,7 @@ package org.xvm.proto.template.TestApp;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.MethodInfo;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Adapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.ClassTemplate;
@@ -28,8 +28,8 @@ public class xTestClass2 extends ClassTemplate
     @Override
     public void initDeclared()
         {
-        MethodInfo construct = ensureMethodInfo("construct", new String[]{"Int64", "String"});
-        MethodInfo ftFinally = ensureMethodInfo("finally", new String[]{"Int64", "String"});
+        MethodStructure construct = ensureMethodStructure("construct", new String[] {"Int64", "String"});
+        MethodStructure ftFinally = ensureMethodStructure("finally", new String[] {"Int64", "String"});
 
         construct.setOps(new Op[]
                 { // #0 = i; #1 = s
@@ -52,7 +52,7 @@ public class xTestClass2 extends ClassTemplate
                 });
         ftFinally.setMaxVars(2);
 
-        MethodInfo mtMethod1 = ensureMethodInfo("method1", VOID, INT);
+        MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
         mtMethod1.setOps(new Op[]
                 {
                         new X_Print(
@@ -66,7 +66,7 @@ public class xTestClass2 extends ClassTemplate
                 });
         mtMethod1.setMaxVars(2);
 
-        MethodInfo mtTo = ensureMethodInfo("to", VOID, STRING);
+        MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
                 {
                         new Var(adapter.getClassTypeConstId("String")), // #0

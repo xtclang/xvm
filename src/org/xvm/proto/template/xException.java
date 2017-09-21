@@ -3,7 +3,7 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constants;
-import org.xvm.asm.MethodInfo;
+import org.xvm.asm.MethodStructure;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -42,7 +42,7 @@ public class xException
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
         markNativeMethod("to", VOID, STRING);
 
-        MethodInfo ct = ensureMethodInfo("construct", new String[]{"String", "Exception"});
+        MethodStructure ct = ensureMethodStructure("construct", new String[] {"String", "Exception"});
         ct.setOps(new Op[] // #0 - text, #1 - cause
                 {
                         new LSet(getProperty("text").getIdentityConstant().getPosition(), 0),

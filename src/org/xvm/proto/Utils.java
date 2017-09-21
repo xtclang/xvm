@@ -86,7 +86,7 @@ public abstract class Utils
             return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getVarCount()];
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
         return clzConst.f_template.invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
         }
 
@@ -104,7 +104,7 @@ public abstract class Utils
             return clzValue.f_template.buildStringValue(frame, hValue, Frame.RET_LOCAL);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getVarCount()];
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
         return clzValue.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
 

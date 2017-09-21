@@ -82,7 +82,7 @@ public class New_1G extends OpCallable
                 }
 
             ObjectHandle[] ahVar = frame.getArguments(
-                    new int[] {f_nArgValue}, constructor.getVarCount());
+                    new int[] {f_nArgValue}, constructor.getMaxVars());
             if (ahVar == null)
                 {
                 return R_REPEAT;

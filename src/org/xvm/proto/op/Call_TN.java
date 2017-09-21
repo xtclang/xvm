@@ -83,7 +83,7 @@ public class Call_TN extends OpCallable
                     return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
                     }
 
-                ObjectHandle[] ahVar = new ObjectHandle[function.getVarCount()];
+                ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
                 System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
 
                 return frame.callN(function, null, ahVar, f_anRetValue);
