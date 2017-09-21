@@ -2,6 +2,7 @@ package org.xvm.proto.template.TestApp;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.MethodInfo;
 import org.xvm.proto.Adapter;
 import org.xvm.proto.Op;
 import org.xvm.proto.ClassTemplate;
@@ -30,52 +31,55 @@ public class xTestClass2 extends ClassTemplate
         MethodInfo construct = ensureMethodInfo("construct", new String[]{"Int64", "String"});
         MethodInfo ftFinally = ensureMethodInfo("finally", new String[]{"Int64", "String"});
 
-        construct.m_aop = new Op[]
-            { // #0 = i; #1 = s
-            new X_Print(-adapter.ensureValueConstantId("# in constructor: TestClass2 #")),
-            new LSet(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 0),
-            new Construct_1(adapter.getMethodConstId("TestApp.TestClass", "construct"), 1),
-            new Return_0(),
-            };
-        construct.m_cVars = 2;
-        construct.m_mtFinally = ftFinally;
+        construct.setOps(new Op[]
+                { // #0 = i; #1 = s
+                        new X_Print(
+                                -adapter.ensureValueConstantId("# in constructor: TestClass2 #")),
+                        new LSet(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 0),
+                        new Construct_1(adapter.getMethodConstId("TestApp.TestClass", "construct"),
+                                1),
+                        new Return_0(),
+                });
+        construct.setMaxVars(2);
+        construct.setConstructFinally(ftFinally);
 
-        ftFinally.m_aop = new Op[]
-            { // #0 = i; #1 = s
-            new X_Print(-adapter.ensureValueConstantId("# in finally: TestClass2 #")),
-            new X_Print(0),
-            new X_Print(1),
-            new Return_0(),
-            };
-        ftFinally.m_cVars = 2;
+        ftFinally.setOps(new Op[]
+                { // #0 = i; #1 = s
+                        new X_Print(-adapter.ensureValueConstantId("# in finally: TestClass2 #")),
+                        new X_Print(0),
+                        new X_Print(1),
+                        new Return_0(),
+                });
+        ftFinally.setMaxVars(2);
 
         MethodInfo mtMethod1 = ensureMethodInfo("method1", VOID, INT);
-        mtMethod1.m_aop = new Op[]
-            {
-            new X_Print(-adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
-            new Var(adapter.getClassTypeConstId("Int64")), // #0
-            new Call_01(Op.A_SUPER, 0),
-            new Var(adapter.getClassTypeConstId("Int64")), // #1
-            new LGet(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 1),
-            new Add(0, 1, 0),
-            new Return_1(0),
-            };
-        mtMethod1.m_cVars = 2;
+        mtMethod1.setOps(new Op[]
+                {
+                        new X_Print(
+                                -adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
+                        new Var(adapter.getClassTypeConstId("Int64")), // #0
+                        new Call_01(Op.A_SUPER, 0),
+                        new Var(adapter.getClassTypeConstId("Int64")), // #1
+                        new LGet(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 1),
+                        new Add(0, 1, 0),
+                        new Return_1(0),
+                });
+        mtMethod1.setMaxVars(2);
 
         MethodInfo mtTo = ensureMethodInfo("to", VOID, STRING);
-        mtTo.m_aop = new Op[]
-            {
-            new Var(adapter.getClassTypeConstId("String")), // #0
-            new Call_01(Op.A_SUPER, 0),
-            new Add(0, -adapter.ensureValueConstantId(", prop2="), 0),
-            new Var(adapter.getClassTypeConstId("Int64")), // #1
-            new LGet(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 1),
-            new Var(adapter.getClassTypeConstId("String")), // #2
-            new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
-            new Add(0, 2, 0),
-            new Return_1(0),
-            };
-        mtTo.m_cVars = 3;
+        mtTo.setOps(new Op[]
+                {
+                        new Var(adapter.getClassTypeConstId("String")), // #0
+                        new Call_01(Op.A_SUPER, 0),
+                        new Add(0, -adapter.ensureValueConstantId(", prop2="), 0),
+                        new Var(adapter.getClassTypeConstId("Int64")), // #1
+                        new LGet(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 1),
+                        new Var(adapter.getClassTypeConstId("String")), // #2
+                        new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
+                        new Add(0, 2, 0),
+                        new Return_1(0),
+                });
+        mtTo.setMaxVars(3);
 
         }
     }

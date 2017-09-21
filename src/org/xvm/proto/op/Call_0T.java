@@ -14,6 +14,8 @@ import org.xvm.proto.template.Function.FunctionHandle;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import org.xvm.util.Handy;
+
 
 /**
  * CALL_0T rvalue-function, lvalue-return-tuple
@@ -43,7 +45,7 @@ public class Call_0T extends OpCallable
             throws IOException
         {
         out.write(OP_CALL_0T);
-        out.writeInt(f_nFunctionValue);
+        out.writeInt(f_nFunctionValue);     // TODO these should all look like: Handy.writePackedLong(out, f_nFunctionValue);
         out.writeInt(f_nTupleRetValue);
         }
 

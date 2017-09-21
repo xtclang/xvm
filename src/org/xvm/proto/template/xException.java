@@ -3,6 +3,7 @@ package org.xvm.proto.template;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodInfo;
 import org.xvm.proto.Frame;
 import org.xvm.proto.ObjectHandle;
 import org.xvm.proto.ObjectHandle.ExceptionHandle;
@@ -42,13 +43,13 @@ public class xException
         markNativeMethod("to", VOID, STRING);
 
         MethodInfo ct = ensureMethodInfo("construct", new String[]{"String", "Exception"});
-        ct.m_aop = new Op[] // #0 - text, #1 - cause
-            {
-            new LSet(getProperty("text").getIdentityConstant().getPosition(), 0),
-            new LSet(getProperty("cause").getIdentityConstant().getPosition(), 1),
-            new Return_0(),
-            };
-        ct.m_cVars = 2;
+        ct.setOps(new Op[] // #0 - text, #1 - cause
+                {
+                        new LSet(getProperty("text").getIdentityConstant().getPosition(), 0),
+                        new LSet(getProperty("cause").getIdentityConstant().getPosition(), 1),
+                        new Return_0(),
+                });
+        ct.setMaxVars(2);
         }
 
     @Override

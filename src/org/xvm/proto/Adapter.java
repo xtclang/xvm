@@ -5,6 +5,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodInfo;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Parameter;
@@ -331,15 +332,16 @@ public class Adapter
 
     public MethodStructure getFinalizer(MethodStructure constructor)
         {
-        ClassTemplate.MethodInfo tmConstruct = constructor.getInfo();
-        ClassTemplate.MethodInfo tmFinally = tmConstruct == null ? null : tmConstruct.m_mtFinally;
-        return tmFinally == null ? null : tmFinally.f_struct;
+        MethodInfo tmConstruct = constructor.getInfo();
+        MethodInfo tmFinally = tmConstruct == null ? null :
+                tmConstruct.getConstructFinally();
+        return tmFinally == null ? null : tmFinally.getMethodStructure();
         }
 
     public static boolean isNative(MethodStructure method)
         {
-        ClassTemplate.MethodInfo tm = method.getInfo();
-        return tm != null && tm.m_fNative;
+        MethodInfo tm = method.getInfo();
+        return tm != null && tm.isNative();
         }
 
     public static MethodStructure getGetter(PropertyStructure property)

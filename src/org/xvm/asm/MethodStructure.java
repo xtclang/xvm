@@ -9,7 +9,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.proto.ClassTemplate;
 import org.xvm.proto.Op;
 import org.xvm.proto.TypeComposition;
 
@@ -159,8 +158,8 @@ public class MethodStructure
      */
     public int getVarCount()
         {
-        ClassTemplate.MethodInfo info = m_info;
-        return info == null || info.m_fNative ? getParamCount() : info.m_cVars;
+        MethodInfo info = m_info;
+        return info == null || info.isNative() ? getParamCount() : info.getMaxVars();
         }
 
     /**
@@ -168,8 +167,8 @@ public class MethodStructure
      */
     public int getScopeCount()
         {
-        ClassTemplate.MethodInfo tm = m_info;
-        return tm == null ? 1 : tm.m_cScopes;
+        MethodInfo tm = m_info;
+        return tm == null ? 1 : tm.getMaxScopes();
         }
 
     /**
@@ -177,8 +176,8 @@ public class MethodStructure
      */
     public Op[] getOps()
         {
-        ClassTemplate.MethodInfo info = m_info;
-        return info == null ? null : info.m_aop;
+        MethodInfo info = m_info;
+        return info == null ? null : info.getOps();
         }
 
     /**
@@ -275,7 +274,7 @@ public class MethodStructure
     /**
      * @return the transient method info
      */
-    public ClassTemplate.MethodInfo getInfo()
+    public MethodInfo getInfo()
         {
         return m_info;
         }
@@ -283,7 +282,7 @@ public class MethodStructure
     /**
      * Store the transient method info.
      */
-    public void setInfo(ClassTemplate.MethodInfo info)
+    public void setInfo(MethodInfo info)
         {
         if (m_info != null)
             {
@@ -511,5 +510,5 @@ public class MethodStructure
     /**
      * (TEMPORARY) The transient run-time method data.
      */
-    private transient ClassTemplate.MethodInfo m_info;
+    private transient MethodInfo m_info;
     }

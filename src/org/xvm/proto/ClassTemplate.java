@@ -4,6 +4,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodInfo;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Parameter;
@@ -11,7 +12,6 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -977,7 +977,7 @@ public abstract class ClassTemplate
 
     public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
-        ensureMethodInfo(sName, asParamType, asRetType).m_fNative = true;
+        ensureMethodInfo(sName, asParamType, asRetType).setNative(true);
         }
 
     public MethodInfo ensureMethodInfo(String sName, String[] asParam)
@@ -1050,7 +1050,7 @@ public abstract class ClassTemplate
             }
         else
             {
-            ensureMethodInfo(methodGet).m_fNative = true;
+            ensureMethodInfo(methodGet).setNative(true);
             }
         ensurePropertyInfo(sPropName).m_fCalculated = true;
         }
@@ -1066,7 +1066,7 @@ public abstract class ClassTemplate
             }
         else
             {
-            ensureMethodInfo(methodSet).m_fNative = true;
+            ensureMethodInfo(methodSet).setNative(true);
             }
         ensurePropertyInfo(sPropName).m_fCalculated = false;
         }
@@ -1085,21 +1085,6 @@ public abstract class ClassTemplate
         return ensureMethodInfo(Adapter.getSetter(prop));
         }
 
-    public static class MethodInfo
-        {
-        public final MethodStructure f_struct;
-        public boolean m_fNative;
-        public Op[] m_aop;
-        public int m_cVars;
-        public int m_cScopes = 1;
-        public MethodInfo m_mtFinally;
-
-        public MethodInfo(MethodStructure struct)
-            {
-            f_struct = struct;
-            }
-        }
-
     public PropertyInfo ensurePropertyInfo(String sPropName)
         {
         PropertyStructure property = ensureProperty(sPropName);
@@ -1114,14 +1099,14 @@ public abstract class ClassTemplate
 
     public static class PropertyInfo
         {
-        protected final TypeSet f_types;
+        protected final TypeSet           f_types;
         protected final PropertyStructure f_property;
-        protected boolean m_fAtomic;
-        protected boolean m_fInjectable;
-        protected boolean m_fCalculated;
-        protected boolean m_fNativeGetter;
-        protected boolean m_fNativeSetter;
-        protected ClassTemplate m_templateRef;
+        protected       boolean           m_fAtomic;
+        protected       boolean           m_fInjectable;
+        protected       boolean           m_fCalculated;
+        protected       boolean           m_fNativeGetter;
+        protected       boolean           m_fNativeSetter;
+        protected       ClassTemplate     m_templateRef;
 
         public PropertyInfo(TypeSet types, PropertyStructure property)
             {
@@ -1150,8 +1135,9 @@ public abstract class ClassTemplate
             }
         }
 
-    public static String[] VOID = new String[0];
-    public static String[] OBJECT = new String[]{"Object"};
-    public static String[] INT = new String[]{"Int64"};
-    public static String[] STRING = new String[]{"String"};
+
+    public static String[] VOID   = new String[0];
+    public static String[] OBJECT = new String[] {"Object"};
+    public static String[] INT    = new String[] {"Int64"};
+    public static String[] STRING = new String[] {"String"};
     }
