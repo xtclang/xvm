@@ -9,17 +9,22 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 
+import static org.xvm.util.Handy.readPackedInt;
+
 
 /**
- * NOP - a "no op".
+ * LINE_1 - a runtime "no-op" that indicates that the next op-code is from the next line of source code. Used by the
+ * debugger, stack trace generation, etc. to determine line numbers from the current location within the op-code stream.
  */
-public class Nop extends Op
+public class Line_N
+        extends Op
     {
     /**
      * Constructor.
      */
-    public Nop()
+    public Line_N(int cLines)
         {
+        f_cLines = cLines;
         }
 
     /**
@@ -28,15 +33,16 @@ public class Nop extends Op
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public Nop(DataInput in, Constant[] aconst)
+    public Line_N(DataInput in, Constant[] aconst)
             throws IOException
         {
+        f_cLines = readPackedInt(in);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_NOP;
+        return OP_LINE_N;
         }
 
     @Override
@@ -44,4 +50,6 @@ public class Nop extends Op
         {
         return iPC + 1;
         }
+
+    private final int f_cLines;
     }

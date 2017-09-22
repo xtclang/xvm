@@ -11,14 +11,16 @@ import org.xvm.runtime.Frame;
 
 
 /**
- * NOP - a "no op".
+ * LINE_1 - a runtime "no-op" that indicates that the next op-code is from the next line of source code. Used by the
+ * debugger, stack trace generation, etc. to determine line numbers from the current location within the op-code stream.
  */
-public class Nop extends Op
+public class Line_1
+        extends Op
     {
     /**
      * Constructor.
      */
-    public Nop()
+    public Line_1()
         {
         }
 
@@ -28,7 +30,7 @@ public class Nop extends Op
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public Nop(DataInput in, Constant[] aconst)
+    public Line_1(DataInput in, Constant[] aconst)
             throws IOException
         {
         }
@@ -36,7 +38,7 @@ public class Nop extends Op
     @Override
     public int getOpCode()
         {
-        return OP_NOP;
+        return OP_LINE_1;
         }
 
     @Override

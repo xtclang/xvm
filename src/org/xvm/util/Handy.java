@@ -840,6 +840,27 @@ public class Handy
         }
 
     /**
+     * Read a variable-length encoded 32-bit integer from a stream.
+     *
+     * @param in  a <tt>DataInput</tt> stream to read from
+     *
+     * @return an <tt>int</tt> value in the range <tt>Integer.MIN_VALUE..Integer.MAX_VALUE</tt>
+     *
+     * @throws java.io.IOException  if an I/O exception occurs
+     */
+    public static int readPackedInt(DataInput in)
+            throws IOException
+        {
+        long n = readPackedLong(in);
+        if (n < Integer.MIN_VALUE || n > Integer.MAX_VALUE)
+            {
+            throw new IOException("value (" + n + ") exceeds 32-bit range");
+            }
+
+        return (int) n;
+        }
+
+    /**
      * Read a variable-length encoded 32-bit integer magnitude from a stream.
      * <p>
      * Note that while the XVM itself is a 64-bit machine, Java does not

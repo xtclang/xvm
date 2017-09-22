@@ -175,6 +175,12 @@ public class MethodStructure
         return m_aop;
         }
 
+    public Constant[] getLocalConstants()
+        {
+        // TODO
+        return null;
+        }
+
     /**
      * Specify the ops for this method.
      *

@@ -9,473 +9,488 @@ import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Frame;
 
+import static org.xvm.util.Handy.byteToHexString;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * The ops.
- *
- * @author gg 2017.02.21
+ * Base class for all XVM machine code instructions, each of which is called an "op".
  */
 public abstract class Op
     {
-    // the maximum value for the constants in the const pool
-    public static final int MAX_CONST_ID = 2_000_000_000;
+    // ----- Op interface ----------------------------------------------------------------------------------------------
 
-    // indexes for pre-defined arguments
-    public static final int A_LOCAL     = -MAX_CONST_ID;       // frame.getFrameLocal()
-    public static final int A_TARGET    = -MAX_CONST_ID - 1;   // this:target
-    public static final int A_PUBLIC    = -MAX_CONST_ID - 2;   // this:public
-    public static final int A_PROTECTED = -MAX_CONST_ID - 3;   // this:protected
-    public static final int A_PRIVATE   = -MAX_CONST_ID - 4;   // this:private
-    public static final int A_STRUCT    = -MAX_CONST_ID - 5;   // this:struct
-    public static final int A_FRAME     = -MAX_CONST_ID - 6;   // this:frame
-    public static final int A_SERVICE   = -MAX_CONST_ID - 7;   // this:service
-    public static final int A_MODULE    = -MAX_CONST_ID - 8;   // this:module
-    public static final int A_TYPE      = -MAX_CONST_ID - 9;   // this:type
-    public static final int A_SUPER     = -MAX_CONST_ID - 10;  // super (function)
+    /**
+     * @return the byte value that identifies the op-code, in the range 0-255
+     */
+    public abstract int getOpCode();
 
-    // ----- return values from the Op.process() method -----
-
-    // execute the next op-code
-    public static final int R_NEXT = -1;
-
-    // resume the previous frame execution
-    public static final int R_RETURN = -2;
-
-    // process the exception placed in frame.m_hException
-    public static final int R_EXCEPTION = -3;
-
-    // process the exception raised during return
-    public static final int R_RETURN_EXCEPTION = -4;
-
-    // call the frame placed in frame.m_frameNext
-    public static final int R_CALL = -5;
-
-    // some registers are not ready for a read; yield and repeat the same op-code
-    public static final int R_REPEAT = -6;
-
-    // some assignments were deferred; yield and check the "waiting" registers
-    // before executing the next op-code
-    public static final int R_BLOCK = -7;
-
-    // some assignments were deferred; yield and check the "waiting" registers
-    // before returning
-    public static final int R_BLOCK_RETURN = -8;
-
-    // yield before executing the next op-code
-    public static final int R_YIELD = -9;
-
-    // an stub for an op-code
-    public static final Op[] STUB = new Op[] {Return_0.INSTANCE};
-
-    // returns a positive iPC or a negative R_*
+    /**
+     * Process this op.
+     * 
+     * @param frame  current execution frame
+     * @param iPC    instruction pointer
+     * 
+     * @return a positive iPC or a negative {@code R_}* value
+     */
     public abstract int process(Frame frame, int iPC);
 
-    // write the op-code
+    /**
+     * Write the op-code.
+     * 
+     * @param out  the DataOutput to write to
+     * 
+     * @throws IOException  if an error occurs while writing the op
+     */
     public void write(DataOutput out)
             throws IOException
         {
-        throw new UnsupportedOperationException();
+        out.writeByte(getOpCode());
         }
+
+    // TODO stack depth and variable count impact calc
+
+
+    // ----- static helpers --------------------------------------------------------------------------------------------
 
     /**
      * Read the ops for a particular method.
-     * 
-     * @param in  the DataInput to read from
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
      *
      * @return an array of ops
-     * 
+     *
      * @throws IOException  if an error occurs reading the ops
      */
-    public static Op[] readOps(DataInput in)
+    public static Op[] readOps(DataInput in, Constant[] aconst)
             throws IOException
         {
         int  cOps = readMagnitude(in);
         Op[] aop  = new Op[cOps];
         for (int i = 0; i < cOps; ++i)
             {
-            Op op;
-            switch (in.readUnsignedByte())
-                {
-                case OP_NOP:
-                    op =  new Nop();
-                    break;
-                case OP_ENTER:
-                    op =  new Enter();
-                    break;
-                case OP_EXIT:
-                    op =  new Exit();
-                    break;
-                case OP_GUARD:
-                    op =  new GuardStart(in);
-                    break;
-                case OP_END_GUARD:
-                    op =  new GuardEnd(in);
-                    break;
-                case OP_HANDLER:
-                    op =  new HandlerStart();
-                    break;
-                case OP_END_HANDLER:
-                    op =  new HandlerEnd(in);
-                    break;
-                case OP_GUARD_ALL:
-                    op =  new GuardAll(in);
-                    break;
-                case OP_FINALLY:
-                    op =  new FinallyStart();
-                    break;
-                case OP_END_FINALLY:
-                    op =  new FinallyEnd();
-                    break;
-                case OP_THROW:
-                    op =  new Throw(in);
-                    break;
-                case OP_ADD:
-                    op =  new Add(in);
-                    break;
-                case OP_GOTO:
-                    op =  new GoTo(in);
-                    break;
-                case OP_JMP:
-                    op =  new Jump(in);
-                    break;
-                case OP_JMP_TRUE:
-                    op =  new JumpTrue(in);
-                    break;
-                case OP_JMP_FALSE:
-                    op =  new JumpFalse(in);
-                    break;
-                case OP_JMP_ZERO:
-                    op =  new JumpZero(in);
-                    break;
-                case OP_JMP_NZERO:
-                    op =  new JumpNotZero(in);
-                    break;
-                case OP_JMP_NULL:
-                    op =  new JumpNull(in);
-                    break;
-                case OP_JMP_NNULL:
-                    op =  new JumpNotNull(in);
-                    break;
-                case OP_JMP_EQ:
-                    op =  new JumpEq(in);
-                    break;
-                case OP_JMP_NEQ:
-                    op =  new JumpNotEq(in);
-                    break;
-                case OP_JMP_LT:
-                    op =  new JumpLt(in);
-                    break;
-                case OP_JMP_LTE:
-                    op =  new JumpLte(in);
-                    break;
-                case OP_JMP_GT:
-                    op =  new JumpGt(in);
-                    break;
-                case OP_JMP_GTE:
-                    op =  new JumpGte(in);
-                    break;
-                case OP_VAR:
-                    op =  new Var(in);
-                    break;
-                case OP_IVAR:
-                    op =  new IVar(in);
-                    break;
-                case OP_NVAR:
-                    op =  new NVar(in);
-                    break;
-                case OP_INVAR:
-                    op =  new INVar(in);
-                    break;
-                case OP_DVAR:
-                    op =  new DVar(in);
-                    break;
-                case OP_DNVAR:
-                    op =  new DNVar(in);
-                    break;
-                case OP_SVAR:
-                    op =  new SVar(in);
-                    break;
-                case OP_TVAR:
-                    op =  new TVar(in);
-                    break;
-                case OP_REF:
-                    op =  new Ref(in);
-                    break;
-                case OP_MOV:
-                    op =  new Move(in);
-                    break;
-                case OP_MOV_REF:
-                    op =  new MoveRef(in);
-                    break;
-                case OP_NEG:
-                    op =  new Neg(in);
-                    break;
-                case OP_INC:
-                    op =  new Inc(in);
-                    break;
-                case OP_POSTINC:
-                    op =  new PostInc(in);
-                    break;
-                case OP_PREINC:
-                    op =  new PreInc(in);
-                    break;
-                case OP_P_GET:
-                    op =  new PGet(in);
-                    break;
-                case OP_P_SET:
-                    op =  new PSet(in);
-                    break;
-                case OP_P_POSTINC:
-                    op =  new PPostInc(in);
-                    break;
-                case OP_P_PREINC:
-                    op =  new PPreInc(in);
-                    break;
-                case OP_L_GET:
-                    op =  new LGet(in);
-                    break;
-                case OP_L_SET:
-                    op =  new LSet(in);
-                    break;
-                case OP_CALL_00:
-                    op =  new Call_00(in);
-                    break;
-                case OP_CALL_01:
-                    op =  new Call_01(in);
-                    break;
-                case OP_CALL_0N:
-                    op =  new Call_0N(in);
-                    break;
-                case OP_CALL_0T:
-                    op =  new Call_0T(in);
-                    break;
-                case OP_CALL_10:
-                    op =  new Call_10(in);
-                    break;
-                case OP_CALL_11:
-                    op =  new Call_11(in);
-                    break;
-                case OP_CALL_1N:
-                    op =  new Call_1N(in);
-                    break;
-                case OP_CALL_1T:
-                    op =  new Call_1T(in);
-                    break;
-                case OP_CALL_N0:
-                    op =  new Call_N0(in);
-                    break;
-                case OP_CALL_N1:
-                    op =  new Call_N1(in);
-                    break;
-                case OP_CALL_NN:
-                    op =  new Call_NN(in);
-                    break;
-                case OP_CALL_NT:
-                    op =  new Call_NT(in);
-                    break;
-                case OP_CALL_T0:
-                    op =  new Call_T0(in);
-                    break;
-                case OP_CALL_T1:
-                    op =  new Call_T1(in);
-                    break;
-                case OP_CALL_TN:
-                    op =  new Call_TN(in);
-                    break;
-                case OP_CALL_TT:
-                    op =  new Call_TT(in);
-                    break;
-                case OP_INVOKE_00:
-                    op =  new Invoke_00(in);
-                    break;
-                case OP_INVOKE_01:
-                    op =  new Invoke_01(in);
-                    break;
-                case OP_INVOKE_0N:
-                    op =  new Invoke_0N(in);
-                    break;
-                case OP_INVOKE_0T:
-                    op =  new Invoke_0N(in);
-                    break;
-                case OP_INVOKE_10:
-                    op =  new Invoke_10(in);
-                    break;
-                case OP_INVOKE_11:
-                    op =  new Invoke_11(in);
-                    break;
-                case OP_INVOKE_1N:
-                    op =  new Invoke_1N(in);
-                    break;
-                case OP_INVOKE_1T:
-                    op =  new Invoke_1T(in);
-                    break;
-                case OP_INVOKE_N0:
-                    op =  new Invoke_N0(in);
-                    break;
-                case OP_INVOKE_N1:
-                    op =  new Invoke_N1(in);
-                    break;
-                case OP_INVOKE_NN:
-                    op =  new Invoke_NN(in);
-                    break;
-                case OP_INVOKE_NT:
-                    op =  new Invoke_NT(in);
-                    break;
-                case OP_INVOKE_T0:
-                    op =  new Invoke_T0(in);
-                    break;
-                case OP_INVOKE_T1:
-                    op =  new Invoke_T1(in);
-                    break;
-                case OP_INVOKE_TN:
-                    op =  new Invoke_TN(in);
-                    break;
-                case OP_INVOKE_TT:
-                    op =  new Invoke_TT(in);
-                    break;
-                case OP_I_GET:
-                    op =  new IGet(in);
-                    break;
-                case OP_I_SET:
-                    op =  new ISet(in);
-                    break;
-                case OP_I_REF:
-                    op =  new IRef(in);
-                    break;
-                case OP_NEW_1:
-                    op =  new New_1(in);
-                    break;
-                case OP_NEW_N:
-                    op =  new New_N(in);
-                    break;
-                case OP_NEW_0G:
-                    op =  new New_0G(in);
-                    break;
-                case OP_NEW_1G:
-                    op =  new New_1G(in);
-                    break;
-                case OP_NEW_NG:
-                    op =  new New_NG(in);
-                    break;
-                case OP_CONSTR_1:
-                    op =  new Construct_1(in);
-                    break;
-                case OP_CONSTR_N:
-                    op =  new Construct_N(in);
-                    break;
-                case OP_ASSERT:
-                    op =  new Assert(in);
-                    break;
-                case OP_ASSERT_T:
-                    op =  new AssertT(in);
-                    break;
-                case OP_MBIND:
-                    op =  new MBind(in);
-                    break;
-                case OP_FBIND:
-                    op =  new FBind(in);
-                    break;
-                case OP_RETURN_0:
-                    op =  new Return_0();
-                    break;
-                case OP_RETURN_1:
-                    op =  new Return_1(in);
-                    break;
-                case OP_RETURN_N:
-                    op =  new Return_N(in);
-                    break;
-                case OP_RETURN_T:
-                    op =  new Return_T(in);
-                    break;
-                case OP_IS_ZERO:
-                    op =  new IsZero(in);
-                    break;
-                case OP_IS_NZERO:
-                    op =  new IsNotZero(in);
-                    break;
-                case OP_IS_NULL:
-                    op =  new IsNull(in);
-                    break;
-                case OP_IS_NNULL:
-                    op =  new IsNotNull(in);
-                    break;
-                case OP_IS_EQ:
-                    op =  new IsEq(in);
-                    break;
-                case OP_IS_NEQ:
-                    op =  new IsNotEq(in);
-                    break;
-                case OP_IS_LT:
-                    op =  new IsLt(in);
-                    break;
-                case OP_IS_LTE:
-                    op =  new IsLte(in);
-                    break;
-                case OP_IS_GT:
-                    op =  new IsGt(in);
-                    break;
-                case OP_IS_GTE:
-                    op =  new IsGte(in);
-                    break;
-                case OP_IS_NOT:
-                    op =  new IsNot(in);
-                    break;
-                default:
-                    throw new UnsupportedOperationException();
-                }
-            aop[i] = op;
+            aop[i] = instantiate(in.readUnsignedByte(), in, aconst);;
             }
 
         return aop;
         }
 
-    // ----- helpers -----
-
-    protected static int[] readIntArray(DataInput in)
+    /**
+     * Instantiate an Op object for the specified op code.
+     *
+     * @param nOp     the op-code
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     *
+     * @return the new op instance
+     */
+    public static Op instantiate(int nOp, DataInput in, Constant[] aconst)
             throws IOException
         {
-        int c = in.readUnsignedByte();
+        switch (nOp)
+            {
+            case OP_NOP:
+                return new Nop(in, aconst);
+                break;
+            case OP_LINE_1:
+                return new Line_1(in, aconst);
+                break;
+            case OP_LINE_N:
+                return new Line_N(in, aconst);
+                break;
+            case OP_BREAK:
+                return new Break(in, aconst);
+                break;
+            case OP_ENTER:
+                return new Enter(in, aconst);
+                break;
+            case OP_EXIT:
+                return new Exit(in, aconst);
+                break;
+            case OP_GUARD:
+                return new GuardStart(in, aconst);
+                break;
+            case OP_END_GUARD:
+                return new GuardEnd(in, aconst);
+                break;
+            case OP_HANDLER:
+                return new HandlerStart(in, aconst);
+                break;
+            case OP_END_HANDLER:
+                return new HandlerEnd(in, aconst);
+                break;
+            case OP_GUARD_ALL:
+                return new GuardAll(in, aconst);
+                break;
+            case OP_FINALLY:
+                return new FinallyStart(in, aconst);
+                break;
+            case OP_END_FINALLY:
+                return new FinallyEnd(in, aconst);
+                break;
+            case OP_THROW:
+                return new Throw(in, aconst);
+                break;
+            case OP_ADD:
+                return new Add(in, aconst);
+                break;
+            case OP_GOTO:
+                return new GoTo(in, aconst);
+                break;
+            case OP_JMP:
+                return new Jump(in, aconst);
+                break;
+            case OP_JMP_TRUE:
+                return new JumpTrue(in, aconst);
+                break;
+            case OP_JMP_FALSE:
+                return new JumpFalse(in, aconst);
+                break;
+            case OP_JMP_ZERO:
+                return new JumpZero(in, aconst);
+                break;
+            case OP_JMP_NZERO:
+                return new JumpNotZero(in, aconst);
+                break;
+            case OP_JMP_NULL:
+                return new JumpNull(in, aconst);
+                break;
+            case OP_JMP_NNULL:
+                return new JumpNotNull(in, aconst);
+                break;
+            case OP_JMP_EQ:
+                return new JumpEq(in, aconst);
+                break;
+            case OP_JMP_NEQ:
+                return new JumpNotEq(in, aconst);
+                break;
+            case OP_JMP_LT:
+                return new JumpLt(in, aconst);
+                break;
+            case OP_JMP_LTE:
+                return new JumpLte(in, aconst);
+                break;
+            case OP_JMP_GT:
+                return new JumpGt(in, aconst);
+                break;
+            case OP_JMP_GTE:
+                return new JumpGte(in, aconst);
+                break;
+            case OP_VAR:
+                return new Var(in, aconst);
+                break;
+            case OP_IVAR:
+                return new IVar(in, aconst);
+                break;
+            case OP_NVAR:
+                return new NVar(in, aconst);
+                break;
+            case OP_INVAR:
+                return new INVar(in, aconst);
+                break;
+            case OP_DVAR:
+                return new DVar(in, aconst);
+                break;
+            case OP_DNVAR:
+                return new DNVar(in, aconst);
+                break;
+            case OP_SVAR:
+                return new SVar(in, aconst);
+                break;
+            case OP_TVAR:
+                return new TVar(in, aconst);
+                break;
+            case OP_REF:
+                return new Ref(in, aconst);
+                break;
+            case OP_MOV:
+                return new Move(in, aconst);
+                break;
+            case OP_MOV_REF:
+                return new MoveRef(in, aconst);
+                break;
+            case OP_NEG:
+                return new Neg(in, aconst);
+                break;
+            case OP_INC:
+                return new Inc(in, aconst);
+                break;
+            case OP_POSTINC:
+                return new PostInc(in, aconst);
+                break;
+            case OP_PREINC:
+                return new PreInc(in, aconst);
+                break;
+            case OP_P_GET:
+                return new PGet(in, aconst);
+                break;
+            case OP_P_SET:
+                return new PSet(in, aconst);
+                break;
+            case OP_P_POSTINC:
+                return new PPostInc(in, aconst);
+                break;
+            case OP_P_PREINC:
+                return new PPreInc(in, aconst);
+                break;
+            case OP_L_GET:
+                return new LGet(in, aconst);
+                break;
+            case OP_L_SET:
+                return new LSet(in, aconst);
+                break;
+            case OP_CALL_00:
+                return new Call_00(in, aconst);
+                break;
+            case OP_CALL_01:
+                return new Call_01(in, aconst);
+                break;
+            case OP_CALL_0N:
+                return new Call_0N(in, aconst);
+                break;
+            case OP_CALL_0T:
+                return new Call_0T(in, aconst);
+                break;
+            case OP_CALL_10:
+                return new Call_10(in, aconst);
+                break;
+            case OP_CALL_11:
+                return new Call_11(in, aconst);
+                break;
+            case OP_CALL_1N:
+                return new Call_1N(in, aconst);
+                break;
+            case OP_CALL_1T:
+                return new Call_1T(in, aconst);
+                break;
+            case OP_CALL_N0:
+                return new Call_N0(in, aconst);
+                break;
+            case OP_CALL_N1:
+                return new Call_N1(in, aconst);
+                break;
+            case OP_CALL_NN:
+                return new Call_NN(in, aconst);
+                break;
+            case OP_CALL_NT:
+                return new Call_NT(in, aconst);
+                break;
+            case OP_CALL_T0:
+                return new Call_T0(in, aconst);
+                break;
+            case OP_CALL_T1:
+                return new Call_T1(in, aconst);
+                break;
+            case OP_CALL_TN:
+                return new Call_TN(in, aconst);
+                break;
+            case OP_CALL_TT:
+                return new Call_TT(in, aconst);
+                break;
+            case OP_INVOKE_00:
+                return new Invoke_00(in, aconst);
+                break;
+            case OP_INVOKE_01:
+                return new Invoke_01(in, aconst);
+                break;
+            case OP_INVOKE_0N:
+                return new Invoke_0N(in, aconst);
+                break;
+            case OP_INVOKE_0T:
+                return new Invoke_0N(in, aconst);
+                break;
+            case OP_INVOKE_10:
+                return new Invoke_10(in, aconst);
+                break;
+            case OP_INVOKE_11:
+                return new Invoke_11(in, aconst);
+                break;
+            case OP_INVOKE_1N:
+                return new Invoke_1N(in, aconst);
+                break;
+            case OP_INVOKE_1T:
+                return new Invoke_1T(in, aconst);
+                break;
+            case OP_INVOKE_N0:
+                return new Invoke_N0(in, aconst);
+                break;
+            case OP_INVOKE_N1:
+                return new Invoke_N1(in, aconst);
+                break;
+            case OP_INVOKE_NN:
+                return new Invoke_NN(in, aconst);
+                break;
+            case OP_INVOKE_NT:
+                return new Invoke_NT(in, aconst);
+                break;
+            case OP_INVOKE_T0:
+                return new Invoke_T0(in, aconst);
+                break;
+            case OP_INVOKE_T1:
+                return new Invoke_T1(in, aconst);
+                break;
+            case OP_INVOKE_TN:
+                return new Invoke_TN(in, aconst);
+                break;
+            case OP_INVOKE_TT:
+                return new Invoke_TT(in, aconst);
+                break;
+            case OP_I_GET:
+                return new IGet(in, aconst);
+                break;
+            case OP_I_SET:
+                return new ISet(in, aconst);
+                break;
+            case OP_I_REF:
+                return new IRef(in, aconst);
+                break;
+            case OP_NEW_1:
+                return new New_1(in, aconst);
+                break;
+            case OP_NEW_N:
+                return new New_N(in, aconst);
+                break;
+            case OP_NEW_0G:
+                return new New_0G(in, aconst);
+                break;
+            case OP_NEW_1G:
+                return new New_1G(in, aconst);
+                break;
+            case OP_NEW_NG:
+                return new New_NG(in, aconst);
+                break;
+            case OP_CONSTR_1:
+                return new Construct_1(in, aconst);
+                break;
+            case OP_CONSTR_N:
+                return new Construct_N(in, aconst);
+                break;
+            case OP_ASSERT:
+                return new Assert(in, aconst);
+                break;
+            case OP_ASSERT_T:
+                return new AssertT(in, aconst);
+                break;
+            case OP_MBIND:
+                return new MBind(in, aconst);
+                break;
+            case OP_FBIND:
+                return new FBind(in, aconst);
+                break;
+            case OP_RETURN_0:
+                return new Return_0(in, aconst);
+                break;
+            case OP_RETURN_1:
+                return new Return_1(in, aconst);
+                break;
+            case OP_RETURN_N:
+                return new Return_N(in, aconst);
+                break;
+            case OP_RETURN_T:
+                return new Return_T(in, aconst);
+                break;
+            case OP_IS_ZERO:
+                return new IsZero(in, aconst);
+                break;
+            case OP_IS_NZERO:
+                return new IsNotZero(in, aconst);
+                break;
+            case OP_IS_NULL:
+                return new IsNull(in, aconst);
+                break;
+            case OP_IS_NNULL:
+                return new IsNotNull(in, aconst);
+                break;
+            case OP_IS_EQ:
+                return new IsEq(in, aconst);
+                break;
+            case OP_IS_NEQ:
+                return new IsNotEq(in, aconst);
+                break;
+            case OP_IS_LT:
+                return new IsLt(in, aconst);
+                break;
+            case OP_IS_LTE:
+                return new IsLte(in, aconst);
+                break;
+            case OP_IS_GT:
+                return new IsGt(in, aconst);
+                break;
+            case OP_IS_GTE:
+                return new IsGte(in, aconst);
+                break;
+            case OP_IS_NOT:
+                return new IsNot(in, aconst);
+                break;
+            default:
+                throw new IllegalStateException("op=" + byteToHexString(nOp));
+            }
+        }
+
+    /**
+     * Read an array of packed integers from the provided stream.
+     *
+     * @param in  the DataInput to read from
+     *
+     * @return an array of integers
+     *
+     * @throws IOException  if an error occurs reading the array
+     */
+    public static int[] readIntArray(DataInput in)
+            throws IOException
+        {
+        int c = readMagnitude(in);
 
         int[] ai = new int[c];
-        for (int i = 0; i < c; i++)
+        for (int i = 0; i < c; ++i)
             {
-            ai[i] = in.readInt();
+            ai[i] = readPackedInt(in);
             }
         return ai;
         }
 
-    protected static void writeIntArray(DataOutput out, int[] ai)
+    /**
+     * Write an array of integers to the provided stream in a packed format.
+     *
+     * @param out  the DataOutput to write to
+     * @param ai   the array of integers to write
+     *
+     * @throws IOException  if an error occurs writing the array
+     */
+    public static void writeIntArray(DataOutput out, int[] ai)
             throws IOException
         {
         int c = ai.length;
-        out.write(c);
+        writePackedLong(out, c);
 
-        for (int i = 0; i < c; i++)
+        for (int i = 0; i < c; ++i)
             {
-            out.writeInt(ai[i]);
+            writePackedLong(out, ai[i]);        
             }
         }
 
-    // ----- op-codes -----
+    
+    // ----- op-codes --------------------------------------------------------------------------------------------------
 
-    public static final int OP_NOP             = 0x0;
-    public static final int OP_LINE_1          = 0x1;
-    public static final int OP_LINE_N          = 0x2;
-    public static final int OP_BREAK           = 0x3;
-    public static final int OP_ENTER           = 0x4;
-    public static final int OP_EXIT            = 0x5;
-    public static final int OP_GUARD           = 0x6;
-    public static final int OP_END_GUARD       = 0x7;
-    public static final int OP_HANDLER         = 0x8;
-    public static final int OP_END_HANDLER     = 0x9;
-    public static final int OP_GUARD_ALL       = 0xA;
-    public static final int OP_FINALLY         = 0xB;
-    public static final int OP_END_FINALLY     = 0xC;
-    public static final int OP_THROW           = 0xD;
-    public static final int OP_RESERVED_0E     = 0xE;
-    public static final int OP_RESERVED_0F     = 0xF;
+    public static final int OP_NOP             = 0x00;
+    public static final int OP_LINE_1          = 0x01;
+    public static final int OP_LINE_N          = 0x02;
+    public static final int OP_BREAK           = 0x03;
+    public static final int OP_ENTER           = 0x04;
+    public static final int OP_EXIT            = 0x05;
+    public static final int OP_GUARD           = 0x06;
+    public static final int OP_END_GUARD       = 0x07;
+    public static final int OP_HANDLER         = 0x08;
+    public static final int OP_END_HANDLER     = 0x09;
+    public static final int OP_GUARD_ALL       = 0x0A;
+    public static final int OP_FINALLY         = 0x0B;
+    public static final int OP_END_FINALLY     = 0x0C;
+    public static final int OP_THROW           = 0x0D;
+    public static final int OP_RESERVED_0E     = 0x0E;
+    public static final int OP_RESERVED_0F     = 0x0F;
 
     public static final int OP_GOTO            = 0x10;
     public static final int OP_JMP             = 0x11;
@@ -707,4 +722,132 @@ public abstract class Op
     public static final int OP_NXCOND          = 0xED;
     public static final int OP_END_COND        = 0xEE;
     public static final int RESERVED_DF        = 0xEF;
+    
+    
+    // ----- pre-defined arguments -------------------------------------------------------------------------------------
+
+    /**
+     * Pre-defined argument mask. Pre-defined arguments are in the range -1 to -16, with any unused values in that
+     * range reserved for use in a future revision of the XVM.
+     */
+    public static final int A_MASK = 0xFFFFFFF0;
+
+    /**
+     * Pre-defined argument: {@code frame.getFrameLocal()}
+     */
+    public static final int A_LOCAL = -1;
+
+    /**
+     * Pre-defined argument: {@code this:target}
+     */
+    public static final int A_TARGET = -2;
+
+    /**
+     * Pre-defined argument: {@code this:public}
+     */
+    public static final int A_PUBLIC = -3;
+
+    /**
+     * Pre-defined argument: {@code this:protected}
+     */
+    public static final int A_PROTECTED = -4;
+
+    /**
+     * Pre-defined argument: {@code this:private}
+     */
+    public static final int A_PRIVATE = -5;
+
+    /**
+     * Pre-defined argument: {@code this:struct}
+     */
+    public static final int A_STRUCT = -6;
+
+    /**
+     * Pre-defined argument: {@code this:frame}
+     */
+    public static final int A_FRAME = -7;
+
+    /**
+     * Pre-defined argument: {@code this:service}
+     */
+    public static final int A_SERVICE = -8;
+
+    /**
+     * Pre-defined argument: {@code this:module}
+     */
+    public static final int A_MODULE = -9;
+
+    /**
+     * Pre-defined argument: {@code this:type}
+     */
+    public static final int A_TYPE = -10;
+
+    /**
+     * Pre-defined argument: {@code super} (function).
+     */
+    public static final int A_SUPER = -11;
+
+
+    // ----- return values from the Op.process() method ----------------------------------------------------------------
+
+    /**
+     * Result from process() method: execute the next op-code.
+     */
+    public static final int R_NEXT = -1;
+
+    /**
+     * Result from process() method: resume the previous frame execution.
+     */
+    public static final int R_RETURN = -2;
+
+    /**
+     * Result from process() method: process the exception placed in frame.m_hException.
+     */
+    public static final int R_EXCEPTION = -3;
+
+    /**
+     * Result from process() method: process the exception raised during return.
+     */
+    public static final int R_RETURN_EXCEPTION = -4;
+
+    /**
+     * Result from process() method: call the frame placed in frame.m_frameNext.
+     */
+    public static final int R_CALL = -5;
+
+    /**
+     * Result from process() method: some registers are not ready for a read; yield and repeat the same op-code.
+     */
+    public static final int R_REPEAT = -6;
+
+    /**
+     * Result from process() method: some assignments were deferred; yield and check the "waiting" registers before
+     * executing the next op-code.
+     */
+    public static final int R_BLOCK = -7;
+
+    /**
+     * Result from process() method: some assignments were deferred; yield and check the "waiting" registers before
+     * returning.
+     */
+    public static final int R_BLOCK_RETURN = -8;
+
+    /**
+     * Result from process() method: yield before executing the next op-code.
+     */
+    public static final int R_YIELD = -9;
+
+
+    // ----- other constants -------------------------------------------------------------------------------------------
+
+    /**
+     * The first constant, constant #0, is at this index (which is a negative). For a constant whose index is {@code i},
+     * it is encoded as: {@code CONSTANT_OFFSET - i}
+     */
+    public static final int CONSTANT_OFFSET = -17;
+
+    /**
+     * A stub for an op-code.
+     */
+    public static final Op[] STUB = new Op[] {Return_0.INSTANCE};
     }

@@ -11,14 +11,15 @@ import org.xvm.runtime.Frame;
 
 
 /**
- * NOP - a "no op".
+ * BREAK - a "no op" at runtime, but a breakpoint in the debugger.
  */
-public class Nop extends Op
+public class Break
+        extends Op
     {
     /**
      * Constructor.
      */
-    public Nop()
+    public Break()
         {
         }
 
@@ -28,7 +29,7 @@ public class Nop extends Op
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public Nop(DataInput in, Constant[] aconst)
+    public Break(DataInput in, Constant[] aconst)
             throws IOException
         {
         }
@@ -36,7 +37,7 @@ public class Nop extends Op
     @Override
     public int getOpCode()
         {
-        return OP_NOP;
+        return OP_BREAK;
         }
 
     @Override

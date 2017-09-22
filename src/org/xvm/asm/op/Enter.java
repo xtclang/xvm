@@ -1,9 +1,6 @@
 package org.xvm.asm.op;
 
 
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -21,10 +18,9 @@ public class Enter extends Op
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public int getOpCode()
         {
-        out.write(OP_ENTER);
+        return OP_ENTER;
         }
 
     @Override

@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -41,6 +42,7 @@ public class Frame
     public final ServiceContext  f_context;      // same as f_fiber.f_context
     public final MethodStructure f_function;
     public final Op[]            f_aOp;          // the op-codes
+    public final Constant[]      f_aconst;       // local constants
     public final ObjectHandle    f_hTarget;      // target
     public final ObjectHandle[]  f_ahVar;        // arguments/local var registers
     public final VarInfo[]       f_aInfo;        // optional info for var registers
@@ -52,7 +54,7 @@ public class Frame
     public final int             f_iPCPrev;      // the caller's PC (used only for async reporting)
     public final int             f_iId;          // the frame's id (used only for async reporting)
     public final int[]           f_anNextVar;
-            // at index i, the "next available" var register for scope i
+    // at index i, the "next available" var register for scope i
 
     public int m_iScope;       // current scope index (starts with 0)
     public int m_iGuard = -1;  // current guard index (-1 if none)
@@ -69,12 +71,14 @@ public class Frame
     // positive return values indicate a caller's frame register
     // negative value above RET_LOCAL indicate an automatic tuple conversion
     public final static int RET_LOCAL  = -65000;
-            // an indicator for the "frame local single value"
+    // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI  = -65002;   // an indicator for "multiple return values"
 
     // the first of the multiple return into the "frame local"
     public final static int[] RET_FIRST_LOCAL = new int[] {RET_LOCAL};
+
+    public final static Constant[] NO_CONSTS = new Constant[0];
 
     public static final int VAR_STANDARD    = 0;
     public static final int VAR_DYNAMIC_REF = 1;
@@ -94,7 +98,8 @@ public class Frame
         f_adapter = f_context.f_types.f_adapter;
 
         f_function = function;
-        f_aOp = function == null ? Op.STUB : function.getOps();
+        f_aOp      = function == null ? Op.STUB : function.getOps();
+        f_aconst   = function == null ? NO_CONSTS : function.getLocalConstants();
 
         f_hTarget = hTarget;
 
@@ -121,6 +126,7 @@ public class Frame
         f_iPCPrev = iCallerPC;
         f_function = null;
         f_aOp = aopNative;
+        f_aconst = NO_CONSTS;       // TODO review
 
         f_hTarget = null;
         f_ahVar = ahVar;
@@ -532,11 +538,17 @@ public class Frame
 
     private ObjectHandle getReturnValue(int iArg)
         {
-        return iArg >= 0 ?
-                    f_ahVar[iArg] :
-               iArg <= -Op.MAX_CONST_ID ?
-                    getPredefinedArgument(iArg) :
-                    f_context.f_heapGlobal.ensureConstHandle(this, -iArg);
+        return iArg >= 0
+                ? f_ahVar[iArg]
+                : iArg <= Op.CONSTANT_OFFSET
+                        ? getConstant(iArg)
+                        : getPredefinedArgument(iArg);
+
+        }
+
+    private ObjectHandle getConstant(int iArg)
+        {
+        return f_context.f_heapGlobal.ensureConstHandle(this, Op.CONSTANT_OFFSET - iArg);
         }
 
     public int checkWaitingRegisters()
@@ -578,7 +590,7 @@ public class Frame
     public TypeComposition getArgumentClass(int iArg)
         {
         return iArg >= 0 ? getVarInfo(iArg).f_clazz :
-            f_context.f_heapGlobal.getConstTemplate(-iArg).f_clazzCanonical;
+            f_context.f_heapGlobal.getConstTemplate(-iArg).f_clazzCanonical;          // TODO review iArg
         }
 
     // return the ObjectHandle, or null if the value is "pending future", or

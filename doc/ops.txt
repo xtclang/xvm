@@ -1,8 +1,8 @@
 // fundamentals
 +NOP                                                ; traditional no-op, which does nothing
- LINE_1                                             ; advance line counter
- LINE_N      #lines                                 ; advance line counter
- BREAK                                              ; explicit break-point for debugger
++LINE_1                                             ; advance line counter
++LINE_N      #lines                                 ; advance line counter
++BREAK                                              ; explicit break-point for debugger
 +ENTER                                              ; variable scope begin
 +EXIT                                               ; variable scope end
 +GUARD       #handlers:(CLASS_CONST, CONST_STRING, rel_addr)

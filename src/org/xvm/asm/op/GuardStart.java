@@ -41,7 +41,12 @@ public class GuardStart extends Op
         f_anCatchRelAddress = anCatch;
         }
 
-    public GuardStart(DataInput in)
+    public GuardStart()
+        {
+        }
+
+    @Override
+    public void read(DataInput in, int[] aiConst)
             throws IOException
         {
         int c = in.readUnsignedByte();
