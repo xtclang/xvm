@@ -204,8 +204,7 @@ public class MethodStructure
         {
         if (m_cScopes == 0)
             {
-            Op[] aop;
-            if (m_fNative || (aop = getOps()) == null)
+            if (m_fNative || getOps() == null)
                 {
                 m_cVars   = getParamCount();
                 m_cScopes = 1;
@@ -287,13 +286,11 @@ public class MethodStructure
     public void setMaxVars(int cVars)
         {
         // TODO this method must die
-
         }
 
     public void setMaxScopes(int cScopes)
         {
         // TODO this method must die
-        m_cScopes = cScopes;
         }
 
     public void setConstructFinally(MethodStructure structFinally)
