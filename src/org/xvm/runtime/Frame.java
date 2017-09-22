@@ -78,7 +78,7 @@ public class Frame
     // the first of the multiple return into the "frame local"
     public final static int[] RET_FIRST_LOCAL = new int[] {RET_LOCAL};
 
-    public final static Constant[] NO_CONSTS = new Constant[0];
+    public final static Constant[] NO_CONSTS = Constant.NO_CONSTS;
 
     public static final int VAR_STANDARD    = 0;
     public static final int VAR_DYNAMIC_REF = 1;
@@ -589,8 +589,9 @@ public class Frame
     // return the class of the specified argument
     public TypeComposition getArgumentClass(int iArg)
         {
-        return iArg >= 0 ? getVarInfo(iArg).f_clazz :
-            f_context.f_heapGlobal.getConstTemplate(-iArg).f_clazzCanonical;          // TODO review iArg
+        return iArg >= 0
+                ? getVarInfo(iArg).f_clazz
+                : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg).f_clazzCanonical;
         }
 
     // return the ObjectHandle, or null if the value is "pending future", or
@@ -621,8 +622,9 @@ public class Frame
             return hValue;
             }
 
-        return iArg < -Op.MAX_CONST_ID ? getPredefinedArgument(iArg) :
-            f_context.f_heapGlobal.ensureConstHandle(this, -iArg);
+        return iArg <= Op.CONSTANT_OFFSET
+                ? getConstant(iArg)
+                : getPredefinedArgument(iArg);
         }
 
     // return the ObjectHandle[] or null if the value is "pending future", or

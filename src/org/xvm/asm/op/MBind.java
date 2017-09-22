@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.runtime.CallChain;
@@ -15,13 +16,15 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.Function;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * MBIND rvalue-target, CONST-METHOD, lvalue-fn-result
- *
- * @author gg 2017.03.08
  */
-public class MBind extends OpInvocable
+public class MBind
+        extends OpInvocable
     {
     private final int f_nTargetValue;
     private final int f_nMethodId;
@@ -34,22 +37,34 @@ public class MBind extends OpInvocable
         f_nResultValue = nRet;
         }
 
-    public MBind(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public MBind(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = in.readInt();
-        f_nMethodId = in.readInt();
-        f_nResultValue = in.readInt();
+        f_nTargetValue = readPackedInt(in);
+        f_nMethodId = readPackedInt(in);
+        f_nResultValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
         out.write(OP_MBIND);
-        out.writeInt(f_nTargetValue);
-        out.writeInt(f_nMethodId);
-        out.writeInt(f_nResultValue);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writePackedLong(out, f_nResultValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_MBIND;
         }
 
     @Override

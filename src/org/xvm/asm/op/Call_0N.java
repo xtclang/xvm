@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
@@ -16,13 +17,15 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * CALL_0N rvalue-function,  #returns:(lvalue)
- *
- * @author gg 2017.03.08
  */
-public class Call_0N extends OpCallable
+public class Call_0N
+        extends OpCallable
     {
     private final int f_nFunctionValue;
     private final int[] f_anRetValue;
@@ -33,10 +36,16 @@ public class Call_0N extends OpCallable
         f_anRetValue = anRet;
         }
 
-    public Call_0N(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Call_0N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = in.readInt();
+        f_nFunctionValue = readPackedInt(in);
         f_anRetValue = readIntArray(in);
         }
 
@@ -45,8 +54,14 @@ public class Call_0N extends OpCallable
             throws IOException
         {
         out.write(OP_CALL_0N);
-        out.writeInt(f_nFunctionValue);
+        writePackedLong(out, f_nFunctionValue);
         writeIntArray(out, f_anRetValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_CALL_0N;
         }
 
     @Override

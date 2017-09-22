@@ -606,6 +606,11 @@ public abstract class Constant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
+     * An empty array of constants.
+     */
+    public final static Constant[] NO_CONSTS = new Constant[0];
+
+    /**
      * A cached index of the location of the Constant in the pool.
      */
     private transient int m_iPos = -1;

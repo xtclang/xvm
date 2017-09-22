@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -12,13 +13,15 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.Ref.RefHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * DVAR CONST_REF_CLASS ; next register is an anonymous "dynamic reference" variable
- *
- * @author gg 2017.03.08
  */
-public class DVar extends Op
+public class DVar
+        extends Op
     {
     final private int f_nClassConstId;
 
@@ -27,18 +30,30 @@ public class DVar extends Op
         f_nClassConstId = nClassConstId;
         }
 
-    public DVar(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public DVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = in.readInt();
+        f_nClassConstId = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
         out.write(OP_DVAR);
-        out.writeInt(f_nClassConstId);
+        writePackedLong(out, f_nClassConstId);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_DVAR;
         }
 
     @Override

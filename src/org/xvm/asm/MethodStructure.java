@@ -164,7 +164,9 @@ public class MethodStructure
                 {
                 try
                     {
-                    m_aop = aop = Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)));
+                    m_aop = aop = abOps.length == 0
+                            ? Op.NO_OPS
+                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), m_aconstLocal);
                     }
                 catch (IOException e)
                     {
@@ -177,8 +179,7 @@ public class MethodStructure
 
     public Constant[] getLocalConstants()
         {
-        // TODO
-        return null;
+        return m_aconstLocal;
         }
 
     /**
@@ -522,9 +523,24 @@ public class MethodStructure
             aParams[i] = param;
             }
 
+        // read local "constant pool"
+        int cConsts = readMagnitude(in);
+        Constant[] aconst = cConsts == 0 ? Constant.NO_CONSTS : new Constant[cConsts];
+        for (int i = 0; i < cConsts; ++i)
+            {
+            aconst[i] = pool.getConstant(readMagnitude(in));
+            }
+
+        // read code
+        int cbOps = readMagnitude(in);
+        byte[] abOps = new byte[cbOps];
+        in.readFully(abOps);
+
         m_aReturns    = aReturns;
         m_cTypeParams = cTypeParams;
         m_aParams     = aParams;
+        m_aconstLocal = aconst;
+        m_abOps       = abOps;
         }
 
     @Override
@@ -547,6 +563,8 @@ public class MethodStructure
             {
             param.registerConstants(pool);
             }
+
+        // TODO local constants!!!
         }
 
     @Override
@@ -565,6 +583,11 @@ public class MethodStructure
             {
             param.assemble(out);
             }
+
+        // TODO local constants
+        writePackedLong(out, 0);
+        // TODO code
+        writePackedLong(out, 0);
         }
 
 

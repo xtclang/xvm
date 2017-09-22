@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
@@ -18,13 +19,15 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * INVOKE_T1  rvalue-target, CONST-METHOD, rvalue-params-tuple, lvalue-return
- *
- * @author gg 2017.03.08
  */
-public class Invoke_T1 extends OpInvocable
+public class Invoke_T1
+        extends OpInvocable
     {
     private final int f_nTargetValue;
     private final int f_nMethodId;
@@ -39,13 +42,19 @@ public class Invoke_T1 extends OpInvocable
         f_nRetValue = nRet;
         }
 
-    public Invoke_T1(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Invoke_T1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = in.readInt();
-        f_nMethodId = in.readInt();
-        f_nArgTupleValue = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nTargetValue = readPackedInt(in);
+        f_nMethodId = readPackedInt(in);
+        f_nArgTupleValue = readPackedInt(in);
+        f_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -53,10 +62,16 @@ public class Invoke_T1 extends OpInvocable
             throws IOException
         {
         out.write(OP_INVOKE_T1);
-        out.writeInt(f_nTargetValue);
-        out.writeInt(f_nMethodId);
-        out.writeInt(f_nArgTupleValue);
-        out.writeInt(f_nRetValue);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writePackedLong(out, f_nArgTupleValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_INVOKE_T1;
         }
 
     @Override

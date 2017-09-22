@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -13,13 +14,15 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.IndexSupport;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * A_SET rvalue-target, rvalue-index, rvalue-new-value ; T[Ti] = T
- *
- * @author gg 2017.03.08
  */
-public class ISet extends Op
+public class ISet
+        extends Op
     {
     private final int f_nTargetValue;
     private final int f_nIndexValue;
@@ -32,22 +35,34 @@ public class ISet extends Op
         f_nValue = nValue;
         }
 
-    public ISet(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public ISet(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = in.readInt();
-        f_nIndexValue = in.readInt();
-        f_nValue = in.readInt();
+        f_nTargetValue = readPackedInt(in);
+        f_nIndexValue = readPackedInt(in);
+        f_nValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
         out.write(OP_I_SET);
-        out.writeInt(f_nTargetValue);
-        out.writeInt(f_nIndexValue);
-        out.writeInt(f_nValue);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nIndexValue);
+        writePackedLong(out, f_nValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_I_SET;
         }
 
     @Override

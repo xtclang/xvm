@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 
 import org.xvm.asm.constants.PropertyConstant;
@@ -13,13 +14,15 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * P_SET rvalue-target, CONST_PROPERTY, rvalue
- *
- * @author gg 2017.03.08
  */
-public class PSet extends OpProperty
+public class PSet
+        extends OpProperty
     {
     private final int f_nTarget;
     private final int f_nPropConstId;
@@ -32,12 +35,18 @@ public class PSet extends OpProperty
         f_nValue = nValue;
         }
 
-    public PSet(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public PSet(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTarget = in.readInt();
-        f_nPropConstId = in.readInt();
-        f_nValue = in.readInt();
+        f_nTarget = readPackedInt(in);
+        f_nPropConstId = readPackedInt(in);
+        f_nValue = readPackedInt(in);
         }
 
     @Override
@@ -45,9 +54,15 @@ public class PSet extends OpProperty
             throws IOException
         {
         out.write(OP_P_SET);
-        out.writeInt(f_nTarget);
-        out.writeInt(f_nPropConstId);
-        out.writeInt(f_nValue);
+        writePackedLong(out, f_nTarget);
+        writePackedLong(out, f_nPropConstId);
+        writePackedLong(out, f_nValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_P_SET;
         }
 
     @Override

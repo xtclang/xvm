@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
@@ -18,13 +19,15 @@ import org.xvm.runtime.template.Function.FunctionHandle;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * CALL_T1 rvalue-function, rvalue-params-tuple, lvalue-tuple-return
- *
- * @author gg 2017.03.08
  */
-public class Call_TT extends OpCallable
+public class Call_TT
+        extends OpCallable
     {
     private final int f_nFunctionValue;
     private final int f_nArgTupleValue;
@@ -37,22 +40,34 @@ public class Call_TT extends OpCallable
         f_nRetTupleValue = nRetTupleValue;
         }
 
-    public Call_TT(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Call_TT(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = in.readInt();
-        f_nArgTupleValue = in.readInt();
-        f_nRetTupleValue = in.readInt();
+        f_nFunctionValue = readPackedInt(in);
+        f_nArgTupleValue = readPackedInt(in);
+        f_nRetTupleValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
         out.write(OP_CALL_TT);
-        out.writeInt(f_nFunctionValue);
-        out.writeInt(f_nArgTupleValue);
-        out.writeInt(f_nRetTupleValue);
+        writePackedLong(out, f_nFunctionValue);
+        writePackedLong(out, f_nArgTupleValue);
+        writePackedLong(out, f_nRetTupleValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_CALL_TT;
         }
 
     @Override

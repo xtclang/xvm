@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -14,13 +15,15 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xNullable;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * IS_NULL rvalue, lvalue-return ; T == null -> Boolean
- *
- * @author gg 2017.03.08
  */
-public class IsNull extends Op
+public class IsNull
+        extends Op
     {
     private final int f_nValue;
     private final int f_nRetValue;
@@ -31,11 +34,17 @@ public class IsNull extends Op
         f_nRetValue = nRet;
         }
 
-    public IsNull(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public IsNull(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nValue = readPackedInt(in);
+        f_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -43,8 +52,14 @@ public class IsNull extends Op
             throws IOException
         {
         out.write(OP_IS_NULL);
-        out.writeInt(f_nValue);
-        out.writeInt(f_nRetValue);
+        writePackedLong(out, f_nValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_IS_NULL;
         }
 
     @Override

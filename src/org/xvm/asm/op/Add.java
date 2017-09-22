@@ -5,24 +5,23 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T
- *
- * @author gg 2017.03.08
  */
-public class Add extends Op
+public class Add
+        extends Op
     {
-    private final int f_nTargetValue;
-    private final int f_nArgValue;
-    private final int f_nRetValue;
-
     public Add(int nTarget, int nArg, int nRet)
         {
         f_nTargetValue = nTarget;
@@ -30,21 +29,24 @@ public class Add extends Op
         f_nRetValue = nRet;
         }
 
-    public Add(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Add(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = in.readInt();
-        f_nArgValue = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nTargetValue = readPackedInt(in);
+        f_nArgValue    = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
+
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public int getOpCode()
         {
-        out.write(OP_ADD);
-        out.writeInt(f_nTargetValue);
-        out.writeInt(f_nArgValue);
-        out.writeInt(f_nRetValue);
+        return OP_ADD;
         }
 
     @Override
@@ -67,4 +69,18 @@ public class Add extends Op
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.write(OP_ADD);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    private final int f_nTargetValue;
+    private final int f_nArgValue;
+    private final int f_nRetValue;
     }

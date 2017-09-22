@@ -5,7 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.OpCallable;
+import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -13,13 +14,15 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * ASSERT rvalue
- *
- * @author gg 2017.03.08
  */
-public class Assert extends OpCallable
+public class Assert
+        extends Op
     {
     private final int f_nValue;
 
@@ -28,18 +31,30 @@ public class Assert extends OpCallable
         f_nValue = nValue;
         }
 
-    public Assert(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Assert(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = in.readInt();
+        f_nValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
         out.write(OP_ASSERT);
-        out.writeInt(f_nValue);
+        writePackedLong(out, f_nValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_ASSERT;
         }
 
     @Override

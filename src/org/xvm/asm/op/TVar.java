@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.Map;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -18,13 +19,15 @@ import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * TVAR #values:(TYPE_CONST, rvalue-src) ; next register is an initialized anonymous Tuple variable
- *
- * @author gg 2017.03.08
  */
-public class TVar extends Op
+public class TVar
+        extends Op
     {
     final private int[] f_anClassConstId;
     final private int[] f_anArgValue;
@@ -35,7 +38,13 @@ public class TVar extends Op
         f_anArgValue = anValue;
         }
 
-    public TVar(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public TVar(DataInput in, Constant[] aconst)
             throws IOException
         {
         int c = in.readUnsignedByte();
@@ -44,8 +53,8 @@ public class TVar extends Op
         f_anArgValue = new int[c];
         for (int i = 0; i < c; i++)
             {
-            f_anClassConstId[i] = in.readInt();
-            f_anArgValue[i] = in.readInt();
+            f_anClassConstId[i] = readPackedInt(in);
+            f_anArgValue[i] = readPackedInt(in);
             }
         }
 
@@ -59,9 +68,15 @@ public class TVar extends Op
         out.write(c);
         for (int i = 0; i < c; i++)
             {
-            out.writeInt(f_anClassConstId[i]);
-            out.writeInt(f_anArgValue[i]);
+            writePackedLong(out, f_anClassConstId[i]);
+            writePackedLong(out, f_anArgValue[i]);
             }
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_TVAR;
         }
 
     @Override

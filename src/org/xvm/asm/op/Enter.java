@@ -1,6 +1,10 @@
 package org.xvm.asm.op;
 
 
+import java.io.DataInput;
+import java.io.IOException;
+
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -8,12 +12,25 @@ import org.xvm.runtime.Frame;
 
 /**
  * ENTER ; (variable scope begin)
- *
- * @author gg 2017.03.08
  */
-public class Enter extends Op
+public class Enter
+        extends Op
     {
+    /**
+     * Constructor.
+     */
     public Enter()
+        {
+        }
+
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Enter(DataInput in, Constant[] aconst)
+            throws IOException
         {
         }
 
