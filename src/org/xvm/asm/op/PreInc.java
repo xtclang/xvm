@@ -1,15 +1,18 @@
 package org.xvm.asm.op;
 
-import org.xvm.asm.constants.PropertyConstant;
-
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.asm.OpProperty;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.OpProperty;
+
+import org.xvm.asm.constants.PropertyConstant;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
 
 /**
  * PREINC lvalue-target, lvalue-return  ; ++T -> T

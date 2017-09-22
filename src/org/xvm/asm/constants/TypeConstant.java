@@ -11,8 +11,8 @@ import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeSet;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.TypeSet;
 
 
 /**

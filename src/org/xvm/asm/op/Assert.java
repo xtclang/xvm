@@ -1,15 +1,18 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.asm.OpCallable;
-
-import org.xvm.proto.template.xBoolean.BooleanHandle;
-import org.xvm.proto.template.xException;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.OpCallable;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
+import org.xvm.runtime.template.xException;
+
 
 /**
  * ASSERT rvalue

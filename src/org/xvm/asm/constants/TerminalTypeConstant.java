@@ -13,8 +13,6 @@ import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.TypedefStructure;
-import org.xvm.compiler.ast.Composition;
-import org.xvm.proto.Type;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;

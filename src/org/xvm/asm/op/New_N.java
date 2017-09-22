@@ -1,18 +1,20 @@
 package org.xvm.asm.op;
 
-import org.xvm.asm.MethodStructure;
-
-import org.xvm.asm.constants.IdentityConstant;
-
-import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.asm.OpCallable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.OpCallable;
+
+import org.xvm.asm.constants.IdentityConstant;
+
+import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
 
 /**
  * NEW_N CONST-CONSTRUCT, #params:(rvalue), lvalue-return

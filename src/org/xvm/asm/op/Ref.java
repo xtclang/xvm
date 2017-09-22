@@ -1,16 +1,19 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.asm.OpInvocable;
-import org.xvm.proto.TypeComposition;
-
-import org.xvm.proto.template.Ref.RefHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
+
+import org.xvm.asm.OpInvocable;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.Ref.RefHandle;
+
 
 /**
  * REF lvalue ; next register represents the Variable ref for the specified variable
@@ -55,7 +58,7 @@ public class Ref extends OpInvocable
             }
         else
             {
-            TypeComposition clzRef = org.xvm.proto.template.Ref.INSTANCE.ensureClass(
+            TypeComposition clzRef = org.xvm.runtime.template.Ref.INSTANCE.ensureClass(
                     Collections.singletonMap("RefType", infoSrc.f_clazz.ensurePublicType()));
 
             RefHandle hRef = new RefHandle(clzRef, frame, f_nSrcValue);

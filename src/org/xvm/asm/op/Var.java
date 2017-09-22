@@ -1,12 +1,15 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.asm.Op;
-import org.xvm.proto.TypeComposition;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.TypeComposition;
+
 
 /**
  * VAR CONST_CLASS  ; (next register is an uninitialized anonymous variable)

@@ -1,11 +1,14 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.asm.Op;
 
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
 
 /**
  * END_FINALLY ; finish a "finally" handler // note: EXIT

@@ -1,16 +1,19 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.asm.OpInvocable;
-import org.xvm.proto.TypeComposition;
-
-import org.xvm.proto.template.Ref;
-import org.xvm.proto.template.Ref.RefHandle;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import java.util.Collections;
+
+import org.xvm.asm.OpInvocable;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.Ref;
+import org.xvm.runtime.template.Ref.RefHandle;
+
 
 /**
  * MOV_REF lvalue-src, lvalue-dest ; move reference-to-source to destination

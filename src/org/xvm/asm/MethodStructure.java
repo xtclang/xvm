@@ -2,7 +2,11 @@ package org.xvm.asm;
 
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.IOException;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -11,11 +15,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.proto.TypeComposition;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;

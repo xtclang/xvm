@@ -1,13 +1,16 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.Frame.AllGuard;
-import org.xvm.proto.Frame.Guard;
-import org.xvm.asm.Op;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.Frame.AllGuard;
+import org.xvm.runtime.Frame.Guard;
+
 
 /**
  * GUARD_ALL rel_addr ; ENTER

@@ -1,8 +1,9 @@
 package org.xvm.asm;
 
+
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.proto.Frame;
+import org.xvm.runtime.Frame;
 
 
 /**

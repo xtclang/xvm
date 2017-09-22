@@ -1,12 +1,13 @@
 package org.xvm.asm;
 
-import org.xvm.asm.op.*;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.proto.Frame;
+import org.xvm.asm.op.*;
+
+import org.xvm.runtime.Frame;
 
 import static org.xvm.util.Handy.readMagnitude;
 

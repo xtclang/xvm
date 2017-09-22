@@ -1,10 +1,11 @@
 package org.xvm.asm;
 
+
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.proto.CallChain;
-import org.xvm.proto.Frame;
-import org.xvm.proto.TypeComposition;
+import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.TypeComposition;
 
 
 /**

@@ -1,14 +1,16 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.asm.Op;
-
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
 
 /**
  * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T

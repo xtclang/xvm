@@ -1,15 +1,18 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.asm.Op;
-
-import org.xvm.proto.template.xNullable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.xNullable;
+
 
 /**
  * JMP_NULL rvalue, rel-addr ; jump if value is null

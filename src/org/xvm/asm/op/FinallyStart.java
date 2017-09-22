@@ -1,10 +1,13 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.asm.OpInvocable;
 
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.OpInvocable;
+
+import org.xvm.runtime.Frame;
+
 
 /**
  * FINALLY ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)

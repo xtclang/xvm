@@ -1,18 +1,20 @@
 package org.xvm.asm.op;
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.constants.StringConstant;
 
-import org.xvm.proto.CallChain;
-import org.xvm.proto.ClassTemplate;
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpInvocable;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.Utils;
 
-import org.xvm.proto.template.xString;
+import org.xvm.asm.constants.StringConstant;
+
+import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xString;
 
 /**
  * Debugging only.

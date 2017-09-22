@@ -1,15 +1,18 @@
 package org.xvm.asm.op;
 
-import org.xvm.asm.constants.StringConstant;
-
-import org.xvm.proto.Frame;
-import org.xvm.asm.Op;
-import org.xvm.proto.ServiceContext;
-import org.xvm.proto.TypeComposition;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.asm.constants.StringConstant;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.TypeComposition;
+
 
 /**
  * NVAR CONST_CLASS, CONST_STRING ; (next register is an uninitialized named variable)

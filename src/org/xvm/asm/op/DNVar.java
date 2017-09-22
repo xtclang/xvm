@@ -1,19 +1,23 @@
 package org.xvm.asm.op;
 
-import org.xvm.asm.constants.StringConstant;
-
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.asm.Op;
-import org.xvm.proto.ServiceContext;
-import org.xvm.proto.TypeComposition;
-
-import org.xvm.proto.template.annotations.xInjectedRef;
-import org.xvm.proto.template.Ref.RefHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.asm.constants.StringConstant;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.Ref.RefHandle;
+
+import org.xvm.runtime.template.annotations.xInjectedRef;
+
 
 /**
  * DNVAR CONST_REF_CLASS, CONST_STRING ; next register is a named "dynamic reference" variable

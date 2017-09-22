@@ -1,13 +1,16 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.Frame.Guard;
-import org.xvm.proto.Frame.MultiGuard;
-import org.xvm.asm.Op;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.Frame.Guard;
+import org.xvm.runtime.Frame.MultiGuard;
+
 
 /**
  * GUARD #handlers:(CONST_CLASS, CONST_STRING, rel_addr)

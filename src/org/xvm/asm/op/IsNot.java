@@ -1,16 +1,18 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-
-import org.xvm.proto.Frame;
-import org.xvm.asm.Op;
-
-import org.xvm.proto.template.xBoolean;
-import org.xvm.proto.template.xBoolean.BooleanHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
+
 
 /**
  * IS_NOT rvalue, lvalue-return ; !T -> Boolean

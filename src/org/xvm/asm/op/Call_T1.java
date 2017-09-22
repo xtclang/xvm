@@ -1,20 +1,23 @@
 package org.xvm.asm.op;
 
-import org.xvm.asm.MethodStructure;
-
-import org.xvm.proto.CallChain;
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.proto.ObjectHandle.ExceptionHandle;
-import org.xvm.asm.OpCallable;
-
-import org.xvm.proto.template.collections.xTuple.TupleHandle;
-import org.xvm.proto.template.xException;
-import org.xvm.proto.template.Function.FunctionHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.OpCallable;
+
+import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.Function.FunctionHandle;
+
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
 
 /**
  * CALL_T1 rvalue-function, rvalue-params-tuple, lvalue return

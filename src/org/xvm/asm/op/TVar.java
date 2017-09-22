@@ -1,20 +1,23 @@
 package org.xvm.asm.op;
 
-import org.xvm.proto.Frame;
-import org.xvm.proto.ObjectHandle;
-import org.xvm.asm.Op;
-import org.xvm.proto.Type;
-import org.xvm.proto.TypeComposition;
-import org.xvm.proto.TypeSet;
-
-import org.xvm.proto.template.collections.xTuple;
-import org.xvm.proto.template.collections.xTuple.TupleHandle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Map;
+
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.Type;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.TypeSet;
+
+import org.xvm.runtime.template.collections.xTuple;
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
 
 /**
  * TVAR #values:(TYPE_CONST, rvalue-src) ; next register is an initialized anonymous Tuple variable
