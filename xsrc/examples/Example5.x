@@ -427,21 +427,82 @@ new @ObjectStreaming FileStream()
 
 // isSubstitutableFor most generic examples
 
+===============
+
+// producers
+
+class B1
+    {
+    B2 foo();
+    }
+
+class D1
+    {
+    D2 foo();
+    }
+
+class B2
+    {
+    B1 bar();
+    }
+
+class D2
+    {
+    D1 bar();
+    }
+
+// and a cross-cycle
+
+class B1
+    {
+    B2 foo();
+    }
+
+class D1
+    {
+    D2 foo();
+    }
+
+class B2
+    {
+    D1 bar();
+    }
+
+class D2
+    {
+    B1 bar();
+    }
+
+// is D1 assignable to B1? According to our rules, it is if D2 is assignable to B2
+// is D2 assignable to B2? It is if D1 is assignable to B1...
+
+===============
+
+
 class C<T>
     {
-    (T, List<T>)
-        f1(T p1, List<T> p2);
 
-    <U> (U, List<U>)
-        f2(U p1, List<U> p2);
+    (T, List<T>) f1(T p1, List<T> p2);
 
-    <U extends List<Number>> (U.ElementType, List<U.ElementType>)
-        f3(U.ElementType p1, List<U.ElementType> p2);
+//    <U> (U, List<U>)
+//        f2(U p1, List<U> p2);
+//
+//    <U extends List<Number>> (U.ElementType, List<U.ElementType>)
+//        f3(U.ElementType p1, List<U.ElementType> p2);
+    }
+
+class D<T>
+    {
+    (Int n, List<T>) f1(Int p1, ArrayList<T> p2) {..}
+
+    // note that the presence of this method would prevent
+    // the type D<Int> from existing
+    (Int n, List<Int>) f1(Number p1, List<Int> p2) {..}
     }
 
 <El> Void test(El e)
     {
-    C<Int> c1 = ...;
+    C<Number> c1 = new D<Int>();
     C<El> c2 = ...;
 
     (Number n, List<Number> ln) = c1.f1(1, new List<Int>);

@@ -692,6 +692,7 @@ public class Frame
                 throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
                 }
 
+            // TODO: the class info should come from the signature (compile-time info)
             info = f_aInfo[nVar] = new VarInfo(f_ahVar[nVar].f_clazz, sName, VAR_STANDARD);
             }
         return info;
