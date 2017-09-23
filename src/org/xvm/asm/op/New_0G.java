@@ -58,7 +58,7 @@ public class New_0G
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_NEW_0G);
+        out.writeByte(OP_NEW_0G);
         writePackedLong(out, f_nConstructId);
         writePackedLong(out, f_nTypeValue);
         writePackedLong(out, f_nRetValue);

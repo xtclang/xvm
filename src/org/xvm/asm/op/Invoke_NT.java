@@ -24,16 +24,19 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Invoke_NT
         extends OpInvocable
     {
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int[] f_anArgValue;
-    private final int f_nTupleRetValue;
-
+    /**
+     * Construct an INVOKE_NT op.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     * @param anArg      the r-value locations of the method arguments
+     * @param nTupleRet  the l-value location for the tuple result
+     */
     public Invoke_NT(int nTarget, int nMethodId, int[] anArg, int nTupleRet)
         {
-        f_nTargetValue = nTarget;
-        f_nMethodId = nMethodId;
-        f_anArgValue = anArg;
+        f_nTargetValue   = nTarget;
+        f_nMethodId      = nMethodId;
+        f_anArgValue     = anArg;
         f_nTupleRetValue = nTupleRet;
         }
 
@@ -46,21 +49,10 @@ public class Invoke_NT
     public Invoke_NT(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nMethodId = readPackedInt(in);
-        f_anArgValue = readIntArray(in);
+        f_nTargetValue   = readPackedInt(in);
+        f_nMethodId      = readPackedInt(in);
+        f_anArgValue     = readIntArray(in);
         f_nTupleRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_INVOKE_NT);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writeIntArray(out, f_anArgValue);
-        writePackedLong(out, f_nTupleRetValue);
         }
 
     @Override
@@ -102,4 +94,20 @@ public class Invoke_NT
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_INVOKE_NT);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writeIntArray(out, f_anArgValue);
+        writePackedLong(out, f_nTupleRetValue);
+        }
+
+    private final int   f_nTargetValue;
+    private final int   f_nMethodId;
+    private final int[] f_anArgValue;
+    private final int   f_nTupleRetValue;
     }

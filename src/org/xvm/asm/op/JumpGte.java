@@ -54,7 +54,7 @@ public class JumpGte
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP_GTE);
+        out.writeByte(OP_JMP_GTE);
         writePackedLong(out, f_nValue1);
         writePackedLong(out, f_nValue2);
         writePackedLong(out, f_nRelAddr);

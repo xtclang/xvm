@@ -54,7 +54,7 @@ public class JumpLte
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP_LTE);
+        out.writeByte(OP_JMP_LTE);
         writePackedLong(out, f_nValue1);
         writePackedLong(out, f_nValue2);
         writePackedLong(out, f_nRelAddr);

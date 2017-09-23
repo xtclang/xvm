@@ -50,7 +50,7 @@ public class Return_T
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_RETURN_T);
+        out.writeByte(OP_RETURN_T);
         writePackedLong(out, f_nArgValue);
         }
 

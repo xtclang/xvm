@@ -49,7 +49,7 @@ public class JumpTrue
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP_TRUE);
+        out.writeByte(OP_JMP_TRUE);
         writePackedLong(out, f_nValue);
         writePackedLong(out, f_nRelAddr);
         }

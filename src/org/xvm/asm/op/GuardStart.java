@@ -83,7 +83,7 @@ public class GuardStart
     @Override
     public void write(DataOutput out) throws IOException
         {
-        out.write(OP_GUARD);
+        out.writeByte(OP_GUARD);
 
         int c = f_anClassConstId.length;
         out.write(c);

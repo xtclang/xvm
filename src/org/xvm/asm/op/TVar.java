@@ -62,7 +62,7 @@ public class TVar
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_TVAR);
+        out.writeByte(OP_TVAR);
 
         int c = f_anArgValue.length;
         out.write(c);

@@ -48,7 +48,7 @@ public class IVar
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IVAR);
+        out.writeByte(OP_IVAR);
         writePackedLong(out, f_nClassConstId);
         writePackedLong(out, f_nArgValue);
         }

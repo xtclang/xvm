@@ -27,15 +27,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class AssertV
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nTextConstId;
-    private final int[] f_anValue;
-
+    /**
+     * Construct an ASSERT_V op.
+     *
+     * @param nValue   the r-value to test
+     * @param nTextId  the text to print on assertion failure
+     * @param anValue  the values to print on assertion failure
+     */
     public AssertV(int nValue, int nTextId, int[] anValue)
         {
-        f_nValue = nValue;
+        f_nValue       = nValue;
         f_nTextConstId = nTextId;
-        f_anValue = anValue;
+        f_anValue      = anValue;
         }
 
     /**
@@ -47,19 +50,9 @@ public class AssertV
     public AssertV(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
+        f_nValue       = readPackedInt(in);
         f_nTextConstId = readPackedInt(in);
-        f_anValue = readIntArray(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_ASSERT_V);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nTextConstId);
-        writeIntArray(out, f_anValue);
+        f_anValue      = readIntArray(in);
         }
 
     @Override
@@ -115,4 +108,18 @@ public class AssertV
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_ASSERT_V);
+        writePackedLong(out, f_nValue);
+        writePackedLong(out, f_nTextConstId);
+        writeIntArray(out, f_anValue);
+        }
+
+    private final int   f_nValue;
+    private final int   f_nTextConstId;
+    private final int[] f_anValue;
     }

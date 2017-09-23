@@ -54,7 +54,7 @@ public class JumpNotEq
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP_NEQ);
+        out.writeByte(OP_JMP_NEQ);
         writePackedLong(out, f_nValue1);
         writePackedLong(out, f_nValue2);
         writePackedLong(out, f_nRelAddr);

@@ -50,7 +50,7 @@ public class NVar
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_NVAR);
+        out.writeByte(OP_NVAR);
         writePackedLong(out, f_nClassConstId);
         writePackedLong(out, f_nNameConstId);
         }

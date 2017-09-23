@@ -23,9 +23,12 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Neg
         extends OpInvocable
     {
-    private final int f_nArgValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a NEG op.
+     *
+     * @param nArg  the r-value target to negate
+     * @param nRet  the l-value to store the result in
+     */
     public Neg(int nArg, int nRet)
         {
         f_nArgValue = nArg;
@@ -43,15 +46,6 @@ public class Neg
         {
         f_nArgValue = readPackedInt(in);
         f_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-    throws IOException
-        {
-        out.write(OP_NEG);
-        writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
         }
 
     @Override
@@ -80,4 +74,16 @@ public class Neg
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_NEG);
+        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    private final int f_nArgValue;
+    private final int f_nRetValue;
     }

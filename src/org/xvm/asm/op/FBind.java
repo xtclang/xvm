@@ -63,7 +63,7 @@ public class FBind
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_FBIND);
+        out.writeByte(OP_FBIND);
         writePackedLong(out, f_nFunctionValue);
 
         int c = f_anParamIx.length;

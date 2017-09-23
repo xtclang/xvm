@@ -23,13 +23,16 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Construct_1
         extends OpCallable
     {
-    private final int f_nConstructId;
-    private final int f_nArgValue;
-
-    public Construct_1(int nConstructorId, int anArg)
+    /**
+     * Construct a OP_CONSTR_1 op.
+     *
+     * @param nConstructorId  identifies the construct function
+     * @param nArg            r-value for the construct function argument
+     */
+    public Construct_1(int nConstructorId, int nArg)
         {
-        f_nConstructId = nConstructorId;
-        f_nArgValue = anArg;
+        f_nConstructId  = nConstructorId;
+        f_nArgValue     = nArg;
         }
 
     /**
@@ -41,17 +44,8 @@ public class Construct_1
     public Construct_1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nConstructId = readPackedInt(in);
-        f_nArgValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_CONSTR_1);
-        writePackedLong(out, f_nConstructId);
-        writePackedLong(out, f_nArgValue);
+        f_nConstructId  = readPackedInt(in);
+        f_nArgValue     = readPackedInt(in);
         }
 
     @Override
@@ -86,4 +80,16 @@ public class Construct_1
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CONSTR_1);
+        writePackedLong(out, f_nConstructId);
+        writePackedLong(out, f_nArgValue);
+        }
+
+    private final int f_nConstructId;
+    private final int f_nArgValue;
     }

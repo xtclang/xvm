@@ -59,7 +59,7 @@ public class DNVar
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_DNVAR);
+        out.writeByte(OP_DNVAR);
         writePackedLong(out, f_nClassConstId);
         writePackedLong(out, f_nNameConstId);
         }

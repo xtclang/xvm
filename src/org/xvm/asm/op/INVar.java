@@ -55,7 +55,7 @@ public class INVar
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_INVAR);
+        out.writeByte(OP_INVAR);
         writePackedLong(out, f_nClassConstId);
         writePackedLong(out, f_nNameConstId);
         writePackedLong(out, f_nArgValue);

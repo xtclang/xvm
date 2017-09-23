@@ -25,15 +25,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Invoke_01
         extends OpInvocable
     {
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an INVOKE_01 op.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     * @param nRet       the l-value location for the result
+     */
     public Invoke_01(int nTarget, int nMethodId, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nMethodId = nMethodId;
-        f_nRetValue = nRet;
+        f_nMethodId    = nMethodId;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -46,18 +49,8 @@ public class Invoke_01
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
-        f_nMethodId = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_INVOKE_01);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writePackedLong(out, f_nRetValue);
+        f_nMethodId    = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -95,4 +88,18 @@ public class Invoke_01
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_INVOKE_01);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    private final int f_nTargetValue;
+    private final int f_nMethodId;
+    private final int f_nRetValue;
     }

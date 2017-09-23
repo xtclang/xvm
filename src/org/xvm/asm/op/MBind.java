@@ -55,7 +55,7 @@ public class MBind
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_MBIND);
+        out.writeByte(OP_MBIND);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nMethodId);
         writePackedLong(out, f_nResultValue);

@@ -204,18 +204,27 @@ public class MethodStructure
         {
         if (m_cScopes == 0)
             {
-            if (m_fNative || getOps() == null)
+            Scope scope = new Scope();
+            for (int i = 0, c = getParamCount(); i < c; ++i)
                 {
-                m_cVars   = getParamCount();
-                m_cScopes = 1;
+                scope.allocVar();
                 }
-            else
+
+            if (!m_fNative)
                 {
-                // calc using ops
-                // TODO
-                m_cVars   = 20;
-                m_cScopes = 20;
+                // calc scopes and vars using ops
+                Op[] aop = getOps();
+                if (aop != null)
+                    {
+                    for (Op op : aop)
+                        {
+                        op.simulate(scope);
+                        }
+                    }
                 }
+
+            m_cVars   = scope.getMaxVars();
+            m_cScopes = scope.getMaxDepth();
             }
         }
 
@@ -273,29 +282,13 @@ public class MethodStructure
 
     public MethodStructure getConstructFinally()
         {
-        // TODO
-        return null;
-        }
-
-    public MethodStructure getMethodStructure()
-        {
-        // TODO
-        return null;
-        }
-
-    public void setMaxVars(int cVars)
-        {
-        // TODO this method must die
-        }
-
-    public void setMaxScopes(int cScopes)
-        {
-        // TODO this method must die
+        // TODO this method must calculate the value
+        return m_structFinally;
         }
 
     public void setConstructFinally(MethodStructure structFinally)
         {
-        // TODO this method must die
+        // TODO this method must die (eventually)
         m_structFinally = structFinally;
         }
 

@@ -43,7 +43,7 @@ public class GoTo
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_GOTO);
+        out.writeByte(OP_GOTO);
         writePackedLong(out, f_nAbsAddr);
         }
 

@@ -41,6 +41,15 @@ public abstract class Op
     public abstract int process(Frame frame, int iPC);
 
     /**
+     * Simulate the effects of the op on the passed scope.
+     *
+     * @param scope  the variable scope
+     */
+    public void simulate(Scope scope)
+        {
+        }
+
+    /**
      * Write the op-code.
      * 
      * @param out  the DataOutput to write to
@@ -53,10 +62,8 @@ public abstract class Op
         out.writeByte(getOpCode());
         }
 
-    // TODO stack depth and variable count impact calc
 
-
-    // ----- static helpers --------------------------------------------------------------------------------------------
+    // ----- static helpers ------------------------------------------------------------------------
 
     /**
      * Read the ops for a particular method.
@@ -71,11 +78,12 @@ public abstract class Op
     public static Op[] readOps(DataInput in, Constant[] aconst)
             throws IOException
         {
-        int  cOps = readMagnitude(in);
-        Op[] aop  = new Op[cOps];
+        int cOps = readMagnitude(in);
+        Op[] aop = new Op[cOps];
         for (int i = 0; i < cOps; ++i)
             {
-            aop[i] = instantiate(in.readUnsignedByte(), in, aconst);;
+            aop[i] = instantiate(in.readUnsignedByte(), in, aconst);
+            ;
             }
 
         return aop;

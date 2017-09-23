@@ -50,7 +50,7 @@ public class IsType
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IS_TYPE);
+        out.writeByte(OP_IS_TYPE);
         writePackedLong(out, f_nValue);
         writePackedLong(out, f_nType);
         writePackedLong(out, f_nRetValue);

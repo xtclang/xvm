@@ -22,11 +22,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Add
         extends Op
     {
+    /**
+     * Construct an ADD op.
+     *
+     * @param nTarget  the first r-value, which will implement the add
+     * @param nArg     the second r-value
+     * @param nRet     the l-value to store the result into
+     */
     public Add(int nTarget, int nArg, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nArgValue = nArg;
-        f_nRetValue = nRet;
+        f_nArgValue    = nArg;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -74,7 +81,7 @@ public class Add
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_ADD);
+        out.writeByte(OP_ADD);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nArgValue);
         writePackedLong(out, f_nRetValue);

@@ -53,7 +53,7 @@ public class PSet
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_P_SET);
+        out.writeByte(OP_P_SET);
         writePackedLong(out, f_nTarget);
         writePackedLong(out, f_nPropConstId);
         writePackedLong(out, f_nValue);

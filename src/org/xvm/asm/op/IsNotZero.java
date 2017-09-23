@@ -50,7 +50,7 @@ public class IsNotZero
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IS_NZERO);
+        out.writeByte(OP_IS_NZERO);
         writePackedLong(out, f_nValue);
         writePackedLong(out, f_nRetValue);
         }

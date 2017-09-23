@@ -61,7 +61,7 @@ public class New_NG
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_NEW_NG);
+        out.writeByte(OP_NEW_NG);
         writePackedLong(out, f_nConstructId);
         writePackedLong(out, f_nTypeValue);
         writeIntArray(out, f_anArgValue);

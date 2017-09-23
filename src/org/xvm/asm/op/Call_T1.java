@@ -29,15 +29,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Call_T1
         extends OpCallable
     {
-    private final int f_nFunctionValue;
-    private final int f_nArgTupleValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a CALL_T1 op.
+     *
+     * @param nFunction  the r-value indicating the function to call
+     * @param nTupleArg  the r-value indicating the tuple holding the arguments
+     * @param nRetValue  the l-value location for the result
+     */
     public Call_T1(int nFunction, int nTupleArg, int nRetValue)
         {
         f_nFunctionValue = nFunction;
         f_nArgTupleValue = nTupleArg;
-        f_nRetValue = nRetValue;
+        f_nRetValue      = nRetValue;
         }
 
     /**
@@ -51,17 +54,7 @@ public class Call_T1
         {
         f_nFunctionValue = readPackedInt(in);
         f_nArgTupleValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-    throws IOException
-        {
-        out.write(OP_CALL_T1);
-        writePackedLong(out, f_nFunctionValue);
-        writePackedLong(out, f_nArgTupleValue);
-        writePackedLong(out, f_nRetValue);
+        f_nRetValue      = readPackedInt(in);
         }
 
     @Override
@@ -130,4 +123,18 @@ public class Call_T1
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CALL_T1);
+        writePackedLong(out, f_nFunctionValue);
+        writePackedLong(out, f_nArgTupleValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    private final int f_nFunctionValue;
+    private final int f_nArgTupleValue;
+    private final int f_nRetValue;
     }

@@ -24,8 +24,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Assert
         extends Op
     {
-    private final int f_nValue;
-
+    /**
+     * Construct an ASSERT op.
+     *
+     * @param nValue  the r-value of the assertion expression
+     */
     public Assert(int nValue)
         {
         f_nValue = nValue;
@@ -41,14 +44,6 @@ public class Assert
             throws IOException
         {
         f_nValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-    throws IOException
-        {
-        out.write(OP_ASSERT);
-        writePackedLong(out, f_nValue);
         }
 
     @Override
@@ -80,4 +75,14 @@ public class Assert
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_ASSERT);
+        writePackedLong(out, f_nValue);
+        }
+
+    private final int f_nValue;
     }

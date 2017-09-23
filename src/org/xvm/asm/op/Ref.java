@@ -48,7 +48,7 @@ public class Ref
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_REF);
+        out.writeByte(OP_REF);
         writePackedLong(out, f_nSrcValue);
         }
 

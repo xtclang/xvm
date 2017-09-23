@@ -24,13 +24,16 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Invoke_00
         extends OpInvocable
     {
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-
+    /**
+     * Construct an INVOKE_00 op.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     */
     public Invoke_00(int nTarget, int nMethodId)
         {
         f_nTargetValue = nTarget;
-        f_nMethodId = nMethodId;
+        f_nMethodId    = nMethodId;
         }
 
     /**
@@ -43,16 +46,7 @@ public class Invoke_00
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
-        f_nMethodId = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_INVOKE_00);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
+        f_nMethodId    = readPackedInt(in);
         }
 
     @Override
@@ -91,4 +85,16 @@ public class Invoke_00
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_INVOKE_00);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        }
+
+    private final int f_nTargetValue;
+    private final int f_nMethodId;
     }

@@ -48,7 +48,7 @@ public class JumpNotZero
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP_NZERO);
+        out.writeByte(OP_JMP_NZERO);
         writePackedLong(out, f_nValue);
         writePackedLong(out, f_nRelAddr);
         }

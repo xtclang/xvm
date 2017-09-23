@@ -53,7 +53,7 @@ public class ISet
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_I_SET);
+        out.writeByte(OP_I_SET);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nIndexValue);
         writePackedLong(out, f_nValue);

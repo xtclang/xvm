@@ -50,7 +50,7 @@ public class LSet
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_L_SET);
+        out.writeByte(OP_L_SET);
         writePackedLong(out, f_nPropConstId);
         writePackedLong(out, f_nValue);
         }

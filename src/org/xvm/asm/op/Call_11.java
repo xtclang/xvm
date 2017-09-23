@@ -26,15 +26,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Call_11
         extends OpCallable
     {
-    private final int f_nFunctionValue;
-    private final int f_nArgValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a CALL_11 op.
+     *
+     * @param nFunction  the r-value indicating the function to call
+     * @param nArg       the r-value indicating the argument
+     * @param nRet       the l-value location for the result
+     */
     public Call_11(int nFunction, int nArg, int nRet)
         {
         f_nFunctionValue = nFunction;
-        f_nArgValue = nArg;
-        f_nRetValue = nRet;
+        f_nArgValue      = nArg;
+        f_nRetValue      = nRet;
         }
 
     /**
@@ -47,18 +50,8 @@ public class Call_11
             throws IOException
         {
         f_nFunctionValue = readPackedInt(in);
-        f_nArgValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_CALL_11);
-        writePackedLong(out, f_nFunctionValue);
-        writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
+        f_nArgValue      = readPackedInt(in);
+        f_nRetValue      = readPackedInt(in);
         }
 
     @Override
@@ -115,4 +108,18 @@ public class Call_11
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CALL_11);
+        writePackedLong(out, f_nFunctionValue);
+        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    private final int f_nFunctionValue;
+    private final int f_nArgValue;
+    private final int f_nRetValue;
     }

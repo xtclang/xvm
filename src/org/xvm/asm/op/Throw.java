@@ -21,8 +21,6 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Throw
         extends Op
     {
-    private final int f_nArgValue;
-
     public Throw(int nValue)
         {
         f_nArgValue = nValue;
@@ -70,7 +68,9 @@ public class Throw
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_THROW);
+        out.writeByte(OP_THROW);
         writePackedLong(out, f_nArgValue);
         }
+
+    private final int f_nArgValue;
     }

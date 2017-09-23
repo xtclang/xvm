@@ -54,7 +54,7 @@ public class HandlerEnd
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_END_HANDLER);
+        out.writeByte(OP_END_HANDLER);
         writePackedLong(out, f_nRelAddr);
         }
 

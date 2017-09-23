@@ -55,7 +55,7 @@ public class New_N
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_NEW_N);
+        out.writeByte(OP_NEW_N);
         writePackedLong(out, f_nConstructId);
         writeIntArray(out, f_anArgValue);
         writePackedLong(out, f_nRetValue);

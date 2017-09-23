@@ -55,7 +55,7 @@ public class GuardEnd
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_END_GUARD);
+        out.writeByte(OP_END_GUARD);
         writePackedLong(out, f_nRelAddr);
         }
 

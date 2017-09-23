@@ -48,7 +48,7 @@ public class Move
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_MOV);
+        out.writeByte(OP_MOV);
         writePackedLong(out, f_nFromValue);
         writePackedLong(out, f_nToValue);
         }

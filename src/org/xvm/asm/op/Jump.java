@@ -43,7 +43,7 @@ public class Jump
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP);
+        out.writeByte(OP_JMP);
         writePackedLong(out, f_nRelAddr);
         }
 

@@ -25,13 +25,10 @@ import static org.xvm.util.Handy.writePackedLong;
 public class SVar
         extends Op
     {
-    final private int f_nClassConstId;
-    final private int[] f_anArgValue;
-
     public SVar(int nClassConstId, int[] anValue)
         {
         f_nClassConstId = nClassConstId;
-        f_anArgValue = anValue;
+        f_anArgValue    = anValue;
         }
 
     /**
@@ -43,16 +40,8 @@ public class SVar
     public SVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = readPackedInt(in);     // TODO wrong (not in the write)
-        f_anArgValue = readIntArray(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_SVAR);
-        writeIntArray(out, f_anArgValue);
+        f_nClassConstId = readPackedInt(in);
+        f_anArgValue    = readIntArray(in);
         }
 
     @Override
@@ -87,4 +76,16 @@ public class SVar
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_SVAR);
+        writePackedLong(out, f_nClassConstId);
+        writeIntArray(out, f_anArgValue);
+        }
+
+    final private int   f_nClassConstId;
+    final private int[] f_anArgValue;
     }

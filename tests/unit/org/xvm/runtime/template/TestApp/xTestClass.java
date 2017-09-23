@@ -44,7 +44,6 @@ public class xTestClass extends ClassTemplate
             new LSet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
             new Return_0(),
             });
-        construct.setMaxVars(1);
         construct.setConstructFinally(ftFinally);
 
         ftFinally.setOps(new Op[]
@@ -53,7 +52,6 @@ public class xTestClass extends ClassTemplate
             new X_Print(0),
             new Return_0(),
             });
-        ftFinally.setMaxVars(1);
 
         // --- method1()
         MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
@@ -73,7 +71,6 @@ public class xTestClass extends ClassTemplate
             new Add(3, 1, 3),
             new Return_1(3),
             });
-        mtMethod1.setMaxVars(4);
 
         // ----- exceptional()
         MethodStructure mtExceptional = ensureMethodStructure("exceptional",
@@ -85,7 +82,6 @@ public class xTestClass extends ClassTemplate
                     new int[] {0, -adapter.ensureValueConstantId(null)}, 1),
             new Throw(1),
             });
-        mtExceptional.setMaxVars(2);
 
         // ----- to<String>()
         MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
@@ -101,6 +97,5 @@ public class xTestClass extends ClassTemplate
             new Add(0, 2, 0),
             new Return_1(0),
             });
-        mtTo.setMaxVars(3);
         }
     }

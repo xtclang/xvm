@@ -49,7 +49,7 @@ public class LGet
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_L_GET);
+        out.writeByte(OP_L_GET);
         writePackedLong(out, f_nPropConstId);
         writePackedLong(out, f_nRetValue);
         }

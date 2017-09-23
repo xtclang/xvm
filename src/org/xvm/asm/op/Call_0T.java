@@ -27,9 +27,12 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Call_0T
         extends OpCallable
     {
-    private final int f_nFunctionValue;
-    private final int f_nTupleRetValue;
-
+    /**
+     * Construct a CALL_0T op.
+     *
+     * @param nFunction  the r-value indicating the function to call
+     * @param nRet       the l-value indicating the tuple result location
+     */
     public Call_0T(int nFunction, int nRet)
         {
         f_nFunctionValue = nFunction;
@@ -47,15 +50,6 @@ public class Call_0T
         {
         f_nFunctionValue = readPackedInt(in);
         f_nTupleRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_CALL_0T);
-        writePackedLong(out, f_nFunctionValue);
-        writePackedLong(out, f_nTupleRetValue);
         }
 
     @Override
@@ -102,4 +96,16 @@ public class Call_0T
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CALL_0T);
+        writePackedLong(out, f_nFunctionValue);
+        writePackedLong(out, f_nTupleRetValue);
+        }
+
+    private final int f_nFunctionValue;
+    private final int f_nTupleRetValue;
     }

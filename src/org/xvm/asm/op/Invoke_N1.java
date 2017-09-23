@@ -24,17 +24,20 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Invoke_N1
         extends OpInvocable
     {
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int[] f_anArgValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an INVOKE_N1 op.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     * @param anArg      the r-value locations of the method arguments
+     * @param nRet       the l-value location for the result
+     */
     public Invoke_N1(int nTarget, int nMethodId, int[] anArg, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nMethodId = nMethodId;
-        f_anArgValue = anArg;
-        f_nRetValue = nRet;
+        f_nMethodId    = nMethodId;
+        f_anArgValue   = anArg;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -47,20 +50,9 @@ public class Invoke_N1
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
-        f_nMethodId = readPackedInt(in);
-        f_anArgValue = readIntArray(in);
-        f_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_INVOKE_N1);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writeIntArray(out, f_anArgValue);
-        writePackedLong(out, f_nRetValue);
+        f_nMethodId    = readPackedInt(in);
+        f_anArgValue   = readIntArray(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -103,4 +95,20 @@ public class Invoke_N1
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_INVOKE_N1);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writeIntArray(out, f_anArgValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    private final int   f_nTargetValue;
+    private final int   f_nMethodId;
+    private final int[] f_anArgValue;
+    private final int   f_nRetValue;
     }

@@ -43,7 +43,7 @@ public class Return_N
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_RETURN_N);
+        out.writeByte(OP_RETURN_N);
         writeIntArray(out, f_anArgValue);
         }
 

@@ -64,7 +64,7 @@ public class GuardAll
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_GUARD_ALL);
+        out.writeByte(OP_GUARD_ALL);
         writePackedLong(out, f_nFinallyRelAddress);
         }
 

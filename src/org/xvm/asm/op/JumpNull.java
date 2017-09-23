@@ -50,7 +50,7 @@ public class JumpNull
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP_NULL);
+        out.writeByte(OP_JMP_NULL);
         writePackedLong(out, f_nValue);
         writePackedLong(out, f_nRelAddr);
         }

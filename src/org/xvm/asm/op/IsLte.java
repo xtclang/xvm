@@ -55,7 +55,7 @@ public class IsLte
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IS_LTE);
+        out.writeByte(OP_IS_LTE);
         writePackedLong(out, f_nValue1);
         writePackedLong(out, f_nValue2);
         writePackedLong(out, f_nRetValue);

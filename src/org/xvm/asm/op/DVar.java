@@ -46,7 +46,7 @@ public class DVar
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_DVAR);
+        out.writeByte(OP_DVAR);
         writePackedLong(out, f_nClassConstId);
         }
 

@@ -52,7 +52,7 @@ public class IsEq
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_IS_EQ);
+        out.writeByte(OP_IS_EQ);
         writePackedLong(out, f_nValue1);
         writePackedLong(out, f_nValue2);
         writePackedLong(out, f_nRetValue);

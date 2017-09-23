@@ -50,7 +50,7 @@ public class PreInc
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_PREINC);
+        out.writeByte(OP_PREINC);
         writePackedLong(out, f_nArgValue);
         writePackedLong(out, f_nRetValue);
         }

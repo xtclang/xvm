@@ -47,7 +47,7 @@ public class Inc
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_INC);
+        out.writeByte(OP_INC);
         writePackedLong(out, f_nArgValue);
         }
 

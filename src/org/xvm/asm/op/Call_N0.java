@@ -26,13 +26,16 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Call_N0
         extends OpCallable
     {
-    private final int f_nFunctionValue;
-    private final int[] f_anArgValue;
-
+    /**
+     * Construct a CALL_N0 op.
+     *
+     * @param nFunction  the r-value indicating the function to call
+     * @param anArg      the r-values indicating the arguments
+     */
     public Call_N0(int nFunction, int[] anArg)
         {
         f_nFunctionValue = nFunction;
-        f_anArgValue = anArg;
+        f_anArgValue     = anArg;
         }
 
     /**
@@ -45,17 +48,7 @@ public class Call_N0
             throws IOException
         {
         f_nFunctionValue = readPackedInt(in);
-        f_anArgValue = readIntArray(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_CALL_N0);
-        writePackedLong(out, f_nFunctionValue);
-
-        writeIntArray(out, f_anArgValue);
+        f_anArgValue     = readIntArray(in);
         }
 
     @Override
@@ -112,4 +105,16 @@ public class Call_N0
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CALL_N0);
+        writePackedLong(out, f_nFunctionValue);
+        writeIntArray(out, f_anArgValue);
+        }
+
+    private final int   f_nFunctionValue;
+    private final int[] f_anArgValue;
     }

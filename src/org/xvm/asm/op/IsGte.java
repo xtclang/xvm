@@ -55,7 +55,7 @@ public class IsGte
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IS_GTE);
+        out.writeByte(OP_IS_GTE);
         writePackedLong(out, f_nValue1);
         writePackedLong(out, f_nValue2);
         writePackedLong(out, f_nRetValue);

@@ -53,7 +53,7 @@ public class IGet
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_I_GET);
+        out.writeByte(OP_I_GET);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nIndexValue);
         writePackedLong(out, f_nRetValue);

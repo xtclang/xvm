@@ -43,7 +43,7 @@ public class Return_1
     public void write(DataOutput out)
     throws IOException
         {
-        out.write(OP_RETURN_1);
+        out.writeByte(OP_RETURN_1);
         writePackedLong(out, f_nArgValue);
         }
 

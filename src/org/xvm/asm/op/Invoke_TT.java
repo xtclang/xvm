@@ -29,15 +29,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Invoke_TT
         extends OpInvocable
     {
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nArgTupleValue;
-    private final int f_nTupleRetValue;
-
+    /**
+     * Construct an INVOKE_TT op.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     * @param nArg       the r-value location of the tuple of method arguments
+     * @param nRet       the l-value location for the tuple result
+     */
     public Invoke_TT(int nTarget, int nMethodId, int nArg, int nRet)
         {
-        f_nTargetValue = nTarget;
-        f_nMethodId = nMethodId;
+        f_nTargetValue   = nTarget;
+        f_nMethodId      = nMethodId;
         f_nArgTupleValue = nArg;
         f_nTupleRetValue = nRet;
         }
@@ -51,21 +54,10 @@ public class Invoke_TT
     public Invoke_TT(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nMethodId = readPackedInt(in);
+        f_nTargetValue   = readPackedInt(in);
+        f_nMethodId      = readPackedInt(in);
         f_nArgTupleValue = readPackedInt(in);
         f_nTupleRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_INVOKE_TT);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writePackedLong(out, f_nArgTupleValue);
-        writePackedLong(out, f_nTupleRetValue);
         }
 
     @Override
@@ -124,4 +116,20 @@ public class Invoke_TT
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_INVOKE_TT);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writePackedLong(out, f_nArgTupleValue);
+        writePackedLong(out, f_nTupleRetValue);
+        }
+
+    private final int f_nTargetValue;
+    private final int f_nMethodId;
+    private final int f_nArgTupleValue;
+    private final int f_nTupleRetValue;
     }

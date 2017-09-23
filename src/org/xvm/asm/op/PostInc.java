@@ -50,7 +50,7 @@ public class PostInc
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_POSTINC);
+        out.writeByte(OP_POSTINC);
         writePackedLong(out, f_nArgValue);
         writePackedLong(out, f_nRetValue);
         }

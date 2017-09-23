@@ -26,9 +26,12 @@ import static org.xvm.util.Handy.writePackedLong;
 public class AssertT
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nTextConstId;
-
+    /**
+     * Construct an ASSERT_T op.
+     *
+     * @param nValue   the r-value to test
+     * @param nTextId  the text to display on assertion failure
+     */
     public AssertT(int nValue, int nTextId)
         {
         f_nValue = nValue;
@@ -46,15 +49,6 @@ public class AssertT
         {
         f_nValue = readPackedInt(in);
         f_nTextConstId = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.write(OP_ASSERT_T);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nTextConstId);
         }
 
     @Override
@@ -90,4 +84,16 @@ public class AssertT
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_ASSERT_T);
+        writePackedLong(out, f_nValue);
+        writePackedLong(out, f_nTextConstId);
+        }
+
+    private final int f_nValue;
+    private final int f_nTextConstId;
     }

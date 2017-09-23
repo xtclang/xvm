@@ -53,7 +53,7 @@ public class IPreInc
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_I_PREINC);
+        out.writeByte(OP_I_PREINC);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nIndexValue);
         writePackedLong(out, f_nRetValue);

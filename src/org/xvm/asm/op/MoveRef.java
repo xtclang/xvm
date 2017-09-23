@@ -51,7 +51,7 @@ public class MoveRef
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_MOV_REF);
+        out.writeByte(OP_MOV_REF);
         writePackedLong(out, f_nSrcValue);
         writePackedLong(out, f_nDestValue);
         }
