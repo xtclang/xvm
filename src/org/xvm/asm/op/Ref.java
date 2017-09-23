@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.Collections;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.runtime.Frame;
@@ -14,13 +15,15 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.Ref.RefHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * REF lvalue ; next register represents the Variable ref for the specified variable
- *
- * @author gg 2017.03.08
  */
-public class Ref extends OpInvocable
+public class Ref
+        extends OpInvocable
     {
     private final int f_nSrcValue;
 
@@ -29,18 +32,30 @@ public class Ref extends OpInvocable
         f_nSrcValue = nSrc;
         }
 
-    public Ref(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Ref(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nSrcValue = in.readInt();
+        f_nSrcValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_REF);
-        out.writeInt(f_nSrcValue);
+        out.writeByte(OP_REF);
+        writePackedLong(out, f_nSrcValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_REF;
         }
 
     @Override

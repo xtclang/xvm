@@ -1,30 +1,41 @@
 package org.xvm.asm.op;
 
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 
 
 /**
  * HANDLER ; begin an exception handler (implicit ENTER)
- *
- * @author gg 2017.03.08
  */
-public class HandlerStart extends OpInvocable
+public class HandlerStart
+        extends Op
     {
     public HandlerStart()
         {
         }
 
-    @Override
-    public void write(DataOutput out)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public HandlerStart(DataInput in, Constant[] aconst)
             throws IOException
         {
-        out.write(OP_HANDLER);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_HANDLER;
         }
 
     @Override

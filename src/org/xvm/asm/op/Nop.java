@@ -9,6 +9,9 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * NOP - a "no op".

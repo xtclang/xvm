@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
@@ -18,41 +19,48 @@ import org.xvm.runtime.template.Function.FunctionHandle;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * CALL_T1 rvalue-function, rvalue-params-tuple, lvalue return
- *
- * @author gg 2017.03.08
  */
-public class Call_T1 extends OpCallable
+public class Call_T1
+        extends OpCallable
     {
-    private final int f_nFunctionValue;
-    private final int f_nArgTupleValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a CALL_T1 op.
+     *
+     * @param nFunction  the r-value indicating the function to call
+     * @param nTupleArg  the r-value indicating the tuple holding the arguments
+     * @param nRetValue  the l-value location for the result
+     */
     public Call_T1(int nFunction, int nTupleArg, int nRetValue)
         {
         f_nFunctionValue = nFunction;
         f_nArgTupleValue = nTupleArg;
-        f_nRetValue = nRetValue;
+        f_nRetValue      = nRetValue;
         }
 
-    public Call_T1(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Call_T1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = in.readInt();
-        f_nArgTupleValue = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nFunctionValue = readPackedInt(in);
+        f_nArgTupleValue = readPackedInt(in);
+        f_nRetValue      = readPackedInt(in);
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public int getOpCode()
         {
-        out.write(OP_CALL_T1);
-        out.writeInt(f_nFunctionValue);
-        out.writeInt(f_nArgTupleValue);
-        out.writeInt(f_nRetValue);
+        return OP_CALL_T1;
         }
 
     @Override
@@ -115,4 +123,18 @@ public class Call_T1 extends OpCallable
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CALL_T1);
+        writePackedLong(out, f_nFunctionValue);
+        writePackedLong(out, f_nArgTupleValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    private final int f_nFunctionValue;
+    private final int f_nArgTupleValue;
+    private final int f_nRetValue;
     }

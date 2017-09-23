@@ -43,7 +43,6 @@ public class xTestClass2 extends ClassTemplate
                     1),
             new Return_0(),
             });
-        construct.setMaxVars(2);
         construct.setConstructFinally(ftFinally);
 
         ftFinally.setOps(new Op[]
@@ -53,7 +52,6 @@ public class xTestClass2 extends ClassTemplate
             new X_Print(1),
             new Return_0(),
             });
-        ftFinally.setMaxVars(2);
 
         MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
         mtMethod1.setOps(new Op[]
@@ -67,7 +65,6 @@ public class xTestClass2 extends ClassTemplate
             new Add(0, 1, 0),
             new Return_1(0),
             });
-        mtMethod1.setMaxVars(2);
 
         MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
@@ -82,7 +79,5 @@ public class xTestClass2 extends ClassTemplate
             new Add(0, 2, 0),
             new Return_1(0),
             });
-        mtTo.setMaxVars(3);
-
         }
     }

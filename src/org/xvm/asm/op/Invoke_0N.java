@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.runtime.CallChain;
@@ -14,41 +15,48 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * INVOKE_0N rvalue-target, CONST-METHOD, #returns:(lvalue)
- *
- * @author gg 2017.03.08
  */
-public class Invoke_0N extends OpInvocable
+public class Invoke_0N
+        extends OpInvocable
     {
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int[] f_anRetValue;
-
-    public Invoke_0N(int nTarget, int nMethodId, int nArg, int[] anRet)
+     /**
+     * Construct an INVOKE_0N op.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     * @param anRet      the l-value locations for the results
+     */
+    public Invoke_0N(int nTarget, int nMethodId, int[] anRet)
         {
         f_nTargetValue = nTarget;
-        f_nMethodId = nMethodId;
-        f_anRetValue = anRet;
+        f_nMethodId    = nMethodId;
+        f_anRetValue   = anRet;
         }
 
-    public Invoke_0N(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Invoke_0N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = in.readInt();
-        f_nMethodId = in.readInt();
-        f_anRetValue = readIntArray(in);
+        f_nTargetValue = readPackedInt(in);
+        f_nMethodId    = readPackedInt(in);
+        f_anRetValue   = readIntArray(in);
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public int getOpCode()
         {
-        out.write(OP_INVOKE_0N);
-        out.writeInt(f_nTargetValue);
-        out.writeInt(f_nMethodId);
-        writeIntArray(out, f_anRetValue);
+        return OP_INVOKE_0N;
         }
 
     @Override
@@ -80,4 +88,18 @@ public class Invoke_0N extends OpInvocable
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_INVOKE_0N);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writeIntArray(out, f_anRetValue);
+        }
+
+    private final int   f_nTargetValue;
+    private final int   f_nMethodId;
+    private final int[] f_anRetValue;
     }

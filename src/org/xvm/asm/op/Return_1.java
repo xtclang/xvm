@@ -5,17 +5,20 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * RETURN_1 rvalue
- *
- * @author gg 2017.03.08
  */
-public class Return_1 extends Op
+public class Return_1
+        extends Op
     {
     private final int f_nArgValue;
 
@@ -24,18 +27,30 @@ public class Return_1 extends Op
         f_nArgValue = nValue;
         }
 
-    public Return_1(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Return_1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nArgValue = in.readInt();
+        f_nArgValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_RETURN_1);
-        out.writeInt(f_nArgValue);
+        out.writeByte(OP_RETURN_1);
+        writePackedLong(out, f_nArgValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_RETURN_1;
         }
 
     @Override

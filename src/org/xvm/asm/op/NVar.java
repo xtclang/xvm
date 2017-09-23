@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.StringConstant;
@@ -13,13 +14,15 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * NVAR CONST_CLASS, CONST_STRING ; (next register is an uninitialized named variable)
- *
- * @author gg 2017.03.08
  */
-public class NVar extends Op
+public class NVar
+        extends Op
     {
     private final int f_nClassConstId;
     private final int f_nNameConstId;
@@ -30,20 +33,32 @@ public class NVar extends Op
         f_nNameConstId = nNameConstId;
         }
 
-    public NVar(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public NVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = in.readInt();
-        f_nNameConstId = in.readInt();
+        f_nClassConstId = readPackedInt(in);
+        f_nNameConstId = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_NVAR);
-        out.writeInt(f_nClassConstId);
-        out.writeInt(f_nNameConstId);
+        out.writeByte(OP_NVAR);
+        writePackedLong(out, f_nClassConstId);
+        writePackedLong(out, f_nNameConstId);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_NVAR;
         }
 
     @Override

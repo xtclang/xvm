@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
@@ -16,37 +17,45 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * CALL_0T rvalue-function, lvalue-return-tuple
- *
- * @author gg 2017.03.08
  */
-public class Call_0T extends OpCallable
+public class Call_0T
+        extends OpCallable
     {
-    private final int f_nFunctionValue;
-    private final int f_nTupleRetValue;
-
+    /**
+     * Construct a CALL_0T op.
+     *
+     * @param nFunction  the r-value indicating the function to call
+     * @param nRet       the l-value indicating the tuple result location
+     */
     public Call_0T(int nFunction, int nRet)
         {
         f_nFunctionValue = nFunction;
         f_nTupleRetValue = nRet;
         }
 
-    public Call_0T(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Call_0T(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = in.readInt();
-        f_nTupleRetValue = in.readInt();
+        f_nFunctionValue = readPackedInt(in);
+        f_nTupleRetValue = readPackedInt(in);
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public int getOpCode()
         {
-        out.write(OP_CALL_0T);
-        out.writeInt(f_nFunctionValue);     // TODO these should all look like: Handy.writePackedLong(out, f_nFunctionValue);
-        out.writeInt(f_nTupleRetValue);
+        return OP_CALL_0T;
         }
 
     @Override
@@ -87,4 +96,16 @@ public class Call_0T extends OpCallable
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CALL_0T);
+        writePackedLong(out, f_nFunctionValue);
+        writePackedLong(out, f_nTupleRetValue);
+        }
+
+    private final int f_nFunctionValue;
+    private final int f_nTupleRetValue;
     }

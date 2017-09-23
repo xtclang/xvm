@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.runtime.Frame;
@@ -13,13 +14,15 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * FBIND rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
- *
- * @author gg 2017.03.08
  */
-public class FBind extends OpInvocable
+public class FBind
+        extends OpInvocable
     {
     private final int f_nFunctionValue;
     private final int[] f_anParamIx;
@@ -34,37 +37,49 @@ public class FBind extends OpInvocable
         f_nResultValue = nRet;
         }
 
-    public FBind(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public FBind(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = in.readInt();
+        f_nFunctionValue = readPackedInt(in);
 
         int c = in.readUnsignedByte();
         f_anParamIx = new int[c];
         f_anParamValue = new int[c];
         for (int i = 0; i < c; i++)
             {
-            f_anParamIx[i] = in.readInt();
-            f_anParamValue[i] = in.readInt();
+            f_anParamIx[i] = readPackedInt(in);
+            f_anParamValue[i] = readPackedInt(in);
             }
-        f_nResultValue = in.readInt();
+        f_nResultValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_MBIND);
-        out.writeInt(f_nFunctionValue);
+        out.writeByte(OP_FBIND);
+        writePackedLong(out, f_nFunctionValue);
 
         int c = f_anParamIx.length;
         out.write(c);
         for (int i = 0; i < c; i++)
             {
-            out.writeInt(f_anParamIx[i]);
-            out.writeInt(f_anParamValue[i]);
+            writePackedLong(out, f_anParamIx[i]);
+            writePackedLong(out, f_anParamValue[i]);
             }
-        out.writeInt(f_nResultValue);
+        writePackedLong(out, f_nResultValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_FBIND;
         }
 
     @Override

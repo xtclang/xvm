@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.StringConstant;
@@ -18,13 +19,15 @@ import org.xvm.runtime.template.Ref.RefHandle;
 
 import org.xvm.runtime.template.annotations.xInjectedRef;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * DNVAR CONST_REF_CLASS, CONST_STRING ; next register is a named "dynamic reference" variable
- *
- * @author gg 2017.03.08
  */
-public class DNVar extends Op
+public class DNVar
+        extends Op
     {
     final private int f_nClassConstId;
     final private int f_nNameConstId;
@@ -39,20 +42,32 @@ public class DNVar extends Op
         f_nNameConstId = nNameConstId;
         }
 
-    public DNVar(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public DNVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = in.readInt();
-        f_nNameConstId = in.readInt();
+        f_nClassConstId = readPackedInt(in);
+        f_nNameConstId = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_DNVAR);
-        out.writeInt(f_nClassConstId);
-        out.writeInt(f_nNameConstId);
+        out.writeByte(OP_DNVAR);
+        writePackedLong(out, f_nClassConstId);
+        writePackedLong(out, f_nNameConstId);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_DNVAR;
         }
 
     @Override

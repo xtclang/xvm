@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
@@ -18,45 +19,51 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * INVOKE_TN rvalue-target, CONST-METHOD, rvalue-params-tuple, #returns:(lvalue)
- *
- * @author gg 2017.03.08
  */
-public class Invoke_TN extends OpInvocable
+public class Invoke_TN
+        extends OpInvocable
     {
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nArgTupleValue;
-    private final int[] f_anRetValue;
-
+    /**
+     * Construct an INVOKE_TN op.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     * @param nArg       the r-value location of the tuple of method arguments
+     * @param anRet      the l-value locations for the results
+     */
     public Invoke_TN(int nTarget, int nMethodId, int nArg, int [] anRet)
         {
-        f_nTargetValue = nTarget;
-        f_nMethodId = nMethodId;
+        f_nTargetValue   = nTarget;
+        f_nMethodId      = nMethodId;
         f_nArgTupleValue = nArg;
-        f_anRetValue = anRet;
+        f_anRetValue     = anRet;
         }
 
-    public Invoke_TN(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Invoke_TN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = in.readInt();
-        f_nMethodId = in.readInt();
-        f_nArgTupleValue = in.readInt();
-        f_anRetValue = readIntArray(in);
+        f_nTargetValue   = readPackedInt(in);
+        f_nMethodId      = readPackedInt(in);
+        f_nArgTupleValue = readPackedInt(in);
+        f_anRetValue     = readIntArray(in);
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public int getOpCode()
         {
-        out.write(OP_INVOKE_TN);
-        out.writeInt(f_nTargetValue);
-        out.writeInt(f_nMethodId);
-        out.writeInt(f_nArgTupleValue);
-        writeIntArray(out, f_anRetValue);
+        return OP_INVOKE_TN;
         }
 
     @Override
@@ -109,4 +116,20 @@ public class Invoke_TN extends OpInvocable
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_INVOKE_TN);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writePackedLong(out, f_nArgTupleValue);
+        writeIntArray(out, f_anRetValue);
+        }
+
+    private final int   f_nTargetValue;
+    private final int   f_nMethodId;
+    private final int   f_nArgTupleValue;
+    private final int[] f_anRetValue;
     }

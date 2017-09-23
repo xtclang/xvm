@@ -164,7 +164,9 @@ public class MethodStructure
                 {
                 try
                     {
-                    m_aop = aop = Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)));
+                    m_aop = aop = abOps.length == 0
+                            ? Op.NO_OPS
+                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), m_aconstLocal);
                     }
                 catch (IOException e)
                     {
@@ -177,8 +179,7 @@ public class MethodStructure
 
     public Constant[] getLocalConstants()
         {
-        // TODO
-        return null;
+        return m_aconstLocal;
         }
 
     /**
@@ -203,18 +204,27 @@ public class MethodStructure
         {
         if (m_cScopes == 0)
             {
-            if (m_fNative || getOps() == null)
+            Scope scope = new Scope();
+            for (int i = 0, c = getParamCount(); i < c; ++i)
                 {
-                m_cVars   = getParamCount();
-                m_cScopes = 1;
+                scope.allocVar();
                 }
-            else
+
+            if (!m_fNative)
                 {
-                // calc using ops
-                // TODO
-                m_cVars   = 20;
-                m_cScopes = 20;
+                // calc scopes and vars using ops
+                Op[] aop = getOps();
+                if (aop != null)
+                    {
+                    for (Op op : aop)
+                        {
+                        op.simulate(scope);
+                        }
+                    }
                 }
+
+            m_cVars   = scope.getMaxVars();
+            m_cScopes = scope.getMaxDepth();
             }
         }
 
@@ -272,29 +282,13 @@ public class MethodStructure
 
     public MethodStructure getConstructFinally()
         {
-        // TODO
-        return null;
-        }
-
-    public MethodStructure getMethodStructure()
-        {
-        // TODO
-        return null;
-        }
-
-    public void setMaxVars(int cVars)
-        {
-        // TODO this method must die
-        }
-
-    public void setMaxScopes(int cScopes)
-        {
-        // TODO this method must die
+        // TODO this method must calculate the value
+        return m_structFinally;
         }
 
     public void setConstructFinally(MethodStructure structFinally)
         {
-        // TODO this method must die
+        // TODO this method must die (eventually)
         m_structFinally = structFinally;
         }
 
@@ -519,9 +513,24 @@ public class MethodStructure
             aParams[i] = param;
             }
 
+        // read local "constant pool"
+        int cConsts = readMagnitude(in);
+        Constant[] aconst = cConsts == 0 ? Constant.NO_CONSTS : new Constant[cConsts];
+        for (int i = 0; i < cConsts; ++i)
+            {
+            aconst[i] = pool.getConstant(readMagnitude(in));
+            }
+
+        // read code
+        int cbOps = readMagnitude(in);
+        byte[] abOps = new byte[cbOps];
+        in.readFully(abOps);
+
         m_aReturns    = aReturns;
         m_cTypeParams = cTypeParams;
         m_aParams     = aParams;
+        m_aconstLocal = aconst;
+        m_abOps       = abOps;
         }
 
     @Override
@@ -544,6 +553,8 @@ public class MethodStructure
             {
             param.registerConstants(pool);
             }
+
+        // TODO local constants!!!
         }
 
     @Override
@@ -562,6 +573,11 @@ public class MethodStructure
             {
             param.assemble(out);
             }
+
+        // TODO local constants
+        writePackedLong(out, 0);
+        // TODO code
+        writePackedLong(out, 0);
         }
 
 

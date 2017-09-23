@@ -17,7 +17,7 @@ public class Break
         extends Op
     {
     /**
-     * Constructor.
+     * Construct a BREAK op.
      */
     public Break()
         {

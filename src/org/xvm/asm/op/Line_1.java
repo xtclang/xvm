@@ -11,8 +11,9 @@ import org.xvm.runtime.Frame;
 
 
 /**
- * LINE_1 - a runtime "no-op" that indicates that the next op-code is from the next line of source code. Used by the
- * debugger, stack trace generation, etc. to determine line numbers from the current location within the op-code stream.
+ * LINE_1 - a runtime "no-op" that indicates that the next op-code is from the next line of source
+ * code. Used by the debugger, stack trace generation, etc. to determine line numbers from the
+ * current location within the op-code stream.
  */
 public class Line_1
         extends Op
