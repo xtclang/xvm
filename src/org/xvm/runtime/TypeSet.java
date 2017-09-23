@@ -77,7 +77,7 @@ public class TypeSet
         URL url = clzObject.getProtectionDomain().getCodeSource().getLocation();
         String sRoot = url.getFile();
 
-        File dirNative = new File(sRoot, "org/xvm/proto/template");
+        File dirNative = new File(sRoot, "org/xvm/runtime/template");
         scanNativeDirectory(dirNative, "");
         }
 
