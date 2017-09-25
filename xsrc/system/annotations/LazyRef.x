@@ -47,7 +47,7 @@ mixin LazyRef<RefType>(function RefType ()? calculate)
                 }
             finally
                 {
-                assi`gnable = false;
+                assignable = false;
                 }
 
             return value;

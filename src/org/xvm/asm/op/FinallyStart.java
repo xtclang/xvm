@@ -61,9 +61,8 @@ public class FinallyStart
     @Override
     public void simulate(Scope scope)
         {
-        // TODO which scope gets the exception var? (GG review)
         scope.exit();
-        scope.allocVar();
         scope.enter();
+        scope.allocVar();
         }
     }

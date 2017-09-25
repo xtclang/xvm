@@ -29,7 +29,7 @@ public class SVar
     /**
      * Construct an SVAR op.
      *
-     * @param nTypeConstId  the type of the sequence TODO is this Type<ElementType> or ElementType itself?
+     * @param nTypeConstId  the type of the sequence
      * @param anValue       the values for the sequence
      */
     public SVar(int nTypeConstId, int[] anValue)
