@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -13,18 +14,23 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.IndexSupport;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * A_REF rvalue-target, rvalue-index, lvalue-return ; Ref<T> = &T[Ti]
- *
- * @author gg 2017.03.08
  */
-public class IRef extends Op
+public class IRef
+        extends Op
     {
-    private final int f_nTargetValue;
-    private final int f_nIndexValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an I_REF op.
+     *
+     * @param nTarget  the target array
+     * @param nIndex   the index of the value in the array
+     * @param nRet     the location to store the reference to the value in the array
+     */
     public IRef(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
@@ -32,22 +38,34 @@ public class IRef extends Op
         f_nRetValue = nRet;
         }
 
-    public IRef(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public IRef(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = in.readInt();
-        f_nIndexValue = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nTargetValue = readPackedInt(in);
+        f_nIndexValue  = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_I_REF);
-        out.writeInt(f_nTargetValue);
-        out.writeInt(f_nIndexValue);
-        out.writeInt(f_nRetValue);
+        out.writeByte(OP_I_REF);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nIndexValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_I_REF;
         }
 
     @Override
@@ -72,4 +90,8 @@ public class IRef extends Op
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nTargetValue;
+    private final int f_nIndexValue;
+    private final int f_nRetValue;
     }

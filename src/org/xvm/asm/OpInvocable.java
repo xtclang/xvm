@@ -15,8 +15,8 @@ import org.xvm.runtime.TypeComposition;
  */
 public abstract class OpInvocable extends Op
     {
-    private TypeComposition m_clazz;  // cached class
-    private int             m_nMethodId;          // cached method id
+    private TypeComposition m_clazz;        // cached class
+    private int             m_nMethodId;    // cached method id
     private CallChain       m_chain;        // cached call chain
 
     protected CallChain getCallChain(Frame frame, TypeComposition clazz, int nMethodConstId)
@@ -28,11 +28,12 @@ public abstract class OpInvocable extends Op
             return m_chain;
             }
 
-        MethodConstant constMethod = (MethodConstant)
-                frame.f_context.f_pool.getConstant(nMethodConstId);
+        MethodConstant constMethod = (MethodConstant) frame.f_context.f_pool.getConstant(nMethodConstId);
 
         m_nMethodId = nMethodConstId;
-        m_clazz = clazz;
-        return m_chain = clazz.getMethodCallChain(constMethod.getSignature());
+        m_clazz     = clazz;
+        m_chain     = clazz.getMethodCallChain(constMethod.getSignature());
+
+        return m_chain;
         }
     }

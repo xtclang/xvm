@@ -7,7 +7,9 @@ import java.io.IOException;
 
 import java.util.Map;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -18,34 +20,45 @@ import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * TVAR #values:(TYPE_CONST, rvalue-src) ; next register is an initialized anonymous Tuple variable
- *
- * @author gg 2017.03.08
  */
-public class TVar extends Op
+public class TVar
+        extends Op
     {
-    final private int[] f_anClassConstId;
-    final private int[] f_anArgValue;
-
-    public TVar(int[] anClassConstId, int[] anValue)
+    /**
+     * Construct a TVAR op.
+     *
+     * @param anTypeConstId  the types of the tuple fields
+     * @param anValue        the values for the tuple fields
+     */
+    public TVar(int[] anTypeConstId, int[] anValue)
         {
-        f_anClassConstId = anClassConstId;
-        f_anArgValue = anValue;
+        f_anTypeConstId = anTypeConstId;
+        f_anArgValue    = anValue;
         }
 
-    public TVar(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public TVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        int c = in.readUnsignedByte();
+        int c = readPackedInt(in);
 
-        f_anClassConstId = new int[c];
-        f_anArgValue = new int[c];
+        f_anTypeConstId = new int[c];
+        f_anArgValue    = new int[c];
         for (int i = 0; i < c; i++)
             {
-            f_anClassConstId[i] = in.readInt();
-            f_anArgValue[i] = in.readInt();
+            f_anTypeConstId[i] = readPackedInt(in);
+            f_anArgValue   [i] = readPackedInt(in);
             }
         }
 
@@ -53,21 +66,27 @@ public class TVar extends Op
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_TVAR);
+        out.writeByte(OP_TVAR);
 
         int c = f_anArgValue.length;
-        out.write(c);
+        writePackedLong(out, c);
         for (int i = 0; i < c; i++)
             {
-            out.writeInt(f_anClassConstId[i]);
-            out.writeInt(f_anArgValue[i]);
+            writePackedLong(out, f_anTypeConstId[i]);
+            writePackedLong(out, f_anArgValue[i]);
             }
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_TVAR;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        int[] anClassId = f_anClassConstId;
+        int[] anClassId = f_anTypeConstId;
 
         int cArgs = anClassId.length;
         assert cArgs == f_anArgValue.length;
@@ -80,7 +99,7 @@ public class TVar extends Op
                 return R_REPEAT;
                 }
 
-            TypeSet types = frame.f_context.f_types;
+            TypeSet           types     = frame.f_context.f_types;
             Map<String, Type> mapActual = frame.getActualTypes();
 
             Type[] aType = new Type[cArgs];
@@ -103,4 +122,12 @@ public class TVar extends Op
             }
         }
 
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    final private int[] f_anTypeConstId;
+    final private int[] f_anArgValue;
     }

@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -12,19 +13,27 @@ import org.xvm.runtime.Frame;
 
 /**
  * RETURN_N #vals:(rvalue)
- *
- * @author gg 2017.03.08
  */
-public class Return_N extends Op
+public class Return_N
+        extends Op
     {
-    private final int[] f_anArgValue;
-
+    /**
+     * Construct a RETURN_N op.
+     *
+     * @param anValue  the values to return
+     */
     public Return_N(int[] anValue)
         {
         f_anArgValue = anValue;
         }
 
-    public Return_N(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Return_N(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_anArgValue = readIntArray(in);
@@ -34,8 +43,14 @@ public class Return_N extends Op
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_RETURN_N);
+        out.writeByte(OP_RETURN_N);
         writeIntArray(out, f_anArgValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_RETURN_N;
         }
 
     @Override
@@ -89,4 +104,6 @@ public class Return_N extends Op
             }
         return R_RETURN;
         }
+
+    private final int[] f_anArgValue;
     }

@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
@@ -16,37 +17,54 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * CALL_01 rvalue-function, lvalue-return
- *
- * @author gg 2017.03.08
  */
-public class Call_01 extends OpCallable
+public class Call_01
+        extends OpCallable
     {
-    private final int f_nFunctionValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a CALL_01 op.
+     *
+     * @param nFunction  the r-value indicating the function to call
+     * @param nRet       the l-value location for the result
+     */
     public Call_01(int nFunction, int nRet)
         {
         f_nFunctionValue = nFunction;
-        f_nRetValue = nRet;
+        f_nRetValue      = nRet;
         }
 
-    public Call_01(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Call_01(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nFunctionValue = readPackedInt(in);
+        f_nRetValue      = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_CALL_01);
-        out.writeInt(f_nFunctionValue);
-        out.writeInt(f_nRetValue);
+        out.writeByte(OP_CALL_01);
+        writePackedLong(out, f_nFunctionValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_CALL_01;
         }
 
     @Override
@@ -87,4 +105,7 @@ public class Call_01 extends OpCallable
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nFunctionValue;
+    private final int f_nRetValue;
     }

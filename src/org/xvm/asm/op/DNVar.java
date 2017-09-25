@@ -5,7 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.StringConstant;
 
@@ -18,41 +20,54 @@ import org.xvm.runtime.template.Ref.RefHandle;
 
 import org.xvm.runtime.template.annotations.xInjectedRef;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * DNVAR CONST_REF_CLASS, CONST_STRING ; next register is a named "dynamic reference" variable
- *
- * @author gg 2017.03.08
  */
-public class DNVar extends Op
+public class DNVar
+        extends Op
     {
-    final private int f_nClassConstId;
-    final private int f_nNameConstId;
-
-    // cached InjectedRef
-    // NOTE: the injected ref must be named, so this caching is not needed at DVAR op
-    transient private RefHandle m_ref;
-
-    public DNVar(int nClassConstId, int nNameConstId)
+    /**
+     * Construct a DNVAR.
+     *
+     * @param nTypeConstId   the index of the constant containing the type of the variable
+     * @param nNameConstId   the index of the constant containing the name of the variable
+     */
+    public DNVar(int nTypeConstId, int nNameConstId)
         {
-        f_nClassConstId = nClassConstId;
+        f_nTypeConstId = nTypeConstId;
         f_nNameConstId = nNameConstId;
         }
 
-    public DNVar(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public DNVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = in.readInt();
-        f_nNameConstId = in.readInt();
+        f_nTypeConstId = readPackedInt(in);
+        f_nNameConstId  = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_DNVAR);
-        out.writeInt(f_nClassConstId);
-        out.writeInt(f_nNameConstId);
+        out.writeByte(OP_DNVAR);
+        writePackedLong(out, f_nTypeConstId);
+        writePackedLong(out, f_nNameConstId);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_DNVAR;
         }
 
     @Override
@@ -60,15 +75,14 @@ public class DNVar extends Op
         {
         ServiceContext context = frame.f_context;
 
-        StringConstant constName =
-                (StringConstant) context.f_pool.getConstant(f_nNameConstId);
+        StringConstant constName = (StringConstant) context.f_pool.getConstant(f_nNameConstId);
         String sName = constName.getValue();
 
         RefHandle hRef = m_ref;
         if (hRef == null)
             {
             TypeComposition clz = context.f_types.ensureComposition(
-                    f_nClassConstId, frame.getActualTypes());
+                    f_nTypeConstId, frame.getActualTypes());
 
             hRef = clz.f_template.createRefHandle(clz, sName);
 
@@ -92,4 +106,19 @@ public class DNVar extends Op
 
         return iPC + 1;
         }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    final private int f_nTypeConstId;
+    final private int f_nNameConstId;
+
+    /**
+     * cached InjectedRef.
+     * NOTE: the injected ref must be named, so this caching is not needed on the DVAR op
+     */
+    transient private RefHandle m_ref;
     }

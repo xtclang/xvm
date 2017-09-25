@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
@@ -15,41 +16,58 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * NEW_N CONST-CONSTRUCT, #params:(rvalue), lvalue-return
- *
- * @author gg 2017.03.08
  */
-public class New_N extends OpCallable
+public class New_N
+        extends OpCallable
     {
-    private final int f_nConstructId;
-    private final int[] f_anArgValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a NEW_N op.
+     *
+     * @param nConstructorId  identifies the constructor
+     * @param anArg           the constructor arguments
+     * @param nRet            the location to store the new object
+     */
     public New_N(int nConstructorId, int[] anArg, int nRet)
         {
         f_nConstructId = nConstructorId;
-        f_anArgValue = anArg;
-        f_nRetValue = nRet;
+        f_anArgValue   = anArg;
+        f_nRetValue    = nRet;
         }
 
-    public New_N(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public New_N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nConstructId = in.readInt();
-        f_anArgValue = readIntArray(in);
-        f_nRetValue = in.readInt();
+        f_nConstructId = readPackedInt(in);
+        f_anArgValue   = readIntArray(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_NEW_N);
-        out.writeInt(f_nConstructId);
+        out.writeByte(OP_NEW_N);
+        writePackedLong(out, f_nConstructId);
         writeIntArray(out, f_anArgValue);
-        out.writeInt(f_nRetValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_NEW_N;
         }
 
     @Override
@@ -77,4 +95,8 @@ public class New_N extends OpCallable
             return frame.raiseException(e);
             }
         }
+
+    private final int   f_nConstructId;
+    private final int[] f_anArgValue;
+    private final int   f_nRetValue;
     }

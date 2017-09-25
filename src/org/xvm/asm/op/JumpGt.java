@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -14,41 +15,58 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xOrdered;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * JMP_GT rvalue, rvalue, rel-addr ; jump if value is greater than
- *
- * @author gg 2017.03.08
  */
-public class JumpGt extends Op
+public class JumpGt
+        extends Op
     {
-    private final int f_nValue1;
-    private final int f_nValue2;
-    private final int f_nRelAddr;
-
+    /**
+     * Construct a JMP_GT op.
+     *
+     * @param nValue1   the first value to compare
+     * @param nValue2   the second value to compare
+     * @param nRelAddr  the relative address to jump to.
+     */
     public JumpGt(int nValue1, int nValue2, int nRelAddr)
         {
-        f_nValue1 = nValue1;
-        f_nValue2 = nValue2;
+        f_nValue1  = nValue1;
+        f_nValue2  = nValue2;
         f_nRelAddr = nRelAddr;
         }
 
-    public JumpGt(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public JumpGt(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue1 = in.readInt();
-        f_nValue2 = in.readInt();
-        f_nRelAddr = in.readInt();
+        f_nValue1  = readPackedInt(in);
+        f_nValue2  = readPackedInt(in);
+        f_nRelAddr = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP_GT);
-        out.writeInt(f_nValue1);
-        out.writeInt(f_nValue2);
-        out.writeInt(f_nRelAddr);
+        out.writeByte(OP_JMP_GT);
+        writePackedLong(out, f_nValue1);
+        writePackedLong(out, f_nValue2);
+        writePackedLong(out, f_nRelAddr);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_JMP_GT;
         }
 
     @Override
@@ -58,7 +76,6 @@ public class JumpGt extends Op
             {
             ObjectHandle hTest1 = frame.getArgument(f_nValue1);
             ObjectHandle hTest2 = frame.getArgument(f_nValue2);
-
             if (hTest1 == null || hTest2 == null)
                 {
                 return R_REPEAT;
@@ -66,10 +83,9 @@ public class JumpGt extends Op
 
             TypeComposition clz1 = frame.getArgumentClass(f_nValue1);
             TypeComposition clz2 = frame.getArgumentClass(f_nValue2);
-
             if (clz1 != clz2)
                 {
-                // this should've not compiled
+                // this shouldn't have compiled
                 throw new IllegalStateException();
                 }
 
@@ -97,4 +113,8 @@ public class JumpGt extends Op
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue1;
+    private final int f_nValue2;
+    private final int f_nRelAddr;
     }

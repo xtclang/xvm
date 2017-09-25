@@ -21,7 +21,7 @@ public abstract class OpCallable extends Op
         {
         assert nFunctionConstantId >= 0;
 
-        // there is no need to cache the id, since it's a constant for a give op-code
+        // there is no need to cache the id, since it's a constant for a given op-code
         if (m_function != null)
             {
             return m_function;

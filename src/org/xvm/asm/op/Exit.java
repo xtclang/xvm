@@ -1,30 +1,44 @@
 package org.xvm.asm.op;
 
 
-import java.io.DataOutput;
+import java.io.DataInput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
 
 /**
  * EXIT (variable scope end)
- *
- * @author gg 2017.03.08
  */
-public class Exit extends Op
+public class Exit
+        extends Op
     {
+    /**
+     * Constructor.
+     */
     public Exit()
         {
         }
 
-    @Override
-    public void write(DataOutput out)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Exit(DataInput in, Constant[] aconst)
             throws IOException
         {
-        out.write(OP_EXIT);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_EXIT;
         }
 
     @Override
@@ -33,5 +47,11 @@ public class Exit extends Op
         frame.exitScope();
 
         return iPC + 1;
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.exit();
         }
     }

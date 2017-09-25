@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
@@ -18,45 +19,62 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xClass.ClassHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * NEW_1G CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
- *
- * @author gg 2017.03.08
  */
-public class New_1G extends OpCallable
+public class New_1G
+        extends OpCallable
     {
-    private final int f_nConstructId;
-    private final int f_nTypeValue;
-    private final int f_nArgValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a NEW_1G op.
+     *
+     * @param nConstructorId  identifies the constructor
+     * @param nType           the type of the object being created
+     * @param nArg            the constructor argument
+     * @param nRet            the location to store the new object
+     */
     public New_1G(int nConstructorId, int nType, int nArg, int nRet)
         {
         f_nConstructId = nConstructorId;
-        f_nTypeValue = nType;
-        f_nArgValue = nArg;
-        f_nRetValue = nRet;
+        f_nTypeValue   = nType;
+        f_nArgValue    = nArg;
+        f_nRetValue    = nRet;
         }
 
-    public New_1G(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public New_1G(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nConstructId = in.readInt();
-        f_nTypeValue = in.readInt();
-        f_nArgValue = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nConstructId = readPackedInt(in);
+        f_nTypeValue   = readPackedInt(in);
+        f_nArgValue    = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_NEW_1G);
-        out.writeInt(f_nConstructId);
-        out.writeInt(f_nTypeValue);
-        out.writeInt(f_nArgValue);
-        out.writeInt(f_nRetValue);
+        out.writeByte(OP_NEW_1G);
+        writePackedLong(out, f_nConstructId);
+        writePackedLong(out, f_nTypeValue);
+        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_NEW_1G;
         }
 
     @Override
@@ -99,4 +117,9 @@ public class New_1G extends OpCallable
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nConstructId;
+    private final int f_nTypeValue;
+    private final int f_nArgValue;
+    private final int f_nRetValue;
     }

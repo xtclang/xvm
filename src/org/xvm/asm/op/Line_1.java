@@ -11,15 +11,17 @@ import org.xvm.runtime.Frame;
 
 
 /**
- * HANDLER ; begin an exception handler (implicit ENTER)
+ * LINE_1 - a runtime "no-op" that indicates that the next op-code is from the next line of source
+ * code. Used by the debugger, stack trace generation, etc. to determine line numbers from the
+ * current location within the op-code stream.
  */
-public class HandlerStart
+public class Line_1
         extends Op
     {
     /**
-     * Construct a HANDLER op.
+     * Construct a LINE_1 op.
      */
-    public HandlerStart()
+    public Line_1()
         {
         }
 
@@ -29,7 +31,7 @@ public class HandlerStart
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public HandlerStart(DataInput in, Constant[] aconst)
+    public Line_1(DataInput in, Constant[] aconst)
             throws IOException
         {
         }
@@ -37,13 +39,12 @@ public class HandlerStart
     @Override
     public int getOpCode()
         {
-        return OP_HANDLER;
+        return OP_LINE_1;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        // all the logic is actually implemented by Frame.findGuard()
         return iPC + 1;
         }
     }

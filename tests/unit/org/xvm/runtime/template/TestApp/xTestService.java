@@ -47,7 +47,6 @@ public class xTestService extends Service
             new Call_01(Op.A_SUPER, 0),
             new Return_1(0),
             });
-        mtGetCounter.setMaxVars(1);
 
         MethodStructure mtSetCounter = ensureSetter("counter");
         mtSetCounter.setOps(new Op[]
@@ -58,7 +57,6 @@ public class xTestService extends Service
             new Call_10(Op.A_SUPER, 0),
             new Return_0(),
             });
-        mtSetCounter.setMaxVars(1);
 
         MethodStructure ftDefault = ensureMethodStructure("default", VOID, VOID);
         ftDefault.setOps(new Op[]
@@ -67,7 +65,6 @@ public class xTestService extends Service
                     -adapter.ensureValueConstantId(5)),
             new Return_0(),
             });
-        ftDefault.setMaxVars(1);
 
         MethodStructure constructor = ensureMethodStructure("construct", INT);
         constructor.setOps(new Op[]
@@ -75,7 +72,6 @@ public class xTestService extends Service
             new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
             new Return_0(),
             });
-        constructor.setMaxVars(2);
 
         MethodStructure mtIncrement = ensureMethodStructure("increment", VOID, INT);
         mtIncrement.setOps(new Op[]
@@ -86,7 +82,6 @@ public class xTestService extends Service
                     0),
             new Return_1(0),
             });
-        mtIncrement.setMaxVars(1);
 
         MethodStructure ftLambda$1 = ensureMethodStructure("lambda_1",
                 new String[] {"Ref<Int64>", "Int64"});
@@ -95,7 +90,6 @@ public class xTestService extends Service
             new Invoke_10(0, adapter.getMethodConstId("Ref", "set"), 1),
             new Return_0()
             });
-        ftLambda$1.setMaxVars(2);
 
         MethodStructure mtExceptional = ensureMethodStructure("exceptional", INT, INT);
         mtExceptional.setOps(new Op[]
@@ -129,8 +123,6 @@ public class xTestService extends Service
             new Return_1(2),
             new Exit(), // optimized out; unreachable
             });
-        mtExceptional.setMaxVars(6);
-        mtExceptional.setMaxScopes(2);
 
         MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
@@ -147,6 +139,5 @@ public class xTestService extends Service
             new Add(0, 2, 0),
             new Return_1(0),
             });
-        mtTo.setMaxVars(3);
         }
     }

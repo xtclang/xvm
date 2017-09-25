@@ -44,7 +44,6 @@ public class xTestApp extends xModule
             {
             new Return_1(-adapter.ensureValueConstantId(42)),
             });
-        ftGetInt.setMaxVars(1);
 
         // --- test1()
         MethodStructure ftTest1 = ensureMethodStructure("test1", VOID, VOID);
@@ -94,8 +93,6 @@ public class xTestApp extends xModule
 
             new Return_0(),
             });
-        ftTest1.setMaxScopes(2);
-        ftTest1.setMaxVars(8);
 
         // --- test2()
 
@@ -151,8 +148,6 @@ public class xTestApp extends xModule
 
             new Return_0(),
             });
-        ftTest2.setMaxVars(10);
-        ftTest2.setMaxScopes(2);
 
         // --- testService()
 
@@ -167,7 +162,6 @@ public class xTestApp extends xModule
             new X_Print(2),
             new Return_0(),
             });
-        ftLambda$1.setMaxVars(3);
 
         MethodStructure ftTestService = ensureMethodStructure("testService", VOID);
         ftTestService.setOps(new Op[]
@@ -268,8 +262,6 @@ public class xTestApp extends xModule
                     -adapter.ensureValueConstantId(0)),
             new Return_0(),
             });
-        ftTestService.setMaxVars(10);
-        ftTestService.setMaxScopes(2);
 
         // --- testService2 ---
 
@@ -282,7 +274,6 @@ public class xTestApp extends xModule
                     adapter.getMethodConstId("TestApp.TestService", "increment"), 1),
             new Return_1(1),
             });
-        ftTestReturn.setMaxVars(2);
 
         MethodStructure ftTestService2 = ensureMethodStructure("testService2", VOID);
         ftTestService2.setOps(new Op[]
@@ -352,8 +343,6 @@ public class xTestApp extends xModule
             new FinallyEnd(),
             new Return_0(),
             });
-        ftTestService2.setMaxVars(5);
-        ftTestService2.setMaxScopes(3);
 
         // --- testRef()
 
@@ -402,8 +391,6 @@ public class xTestApp extends xModule
 
             new Return_0()
             });
-        ftTestRef.setMaxVars(7);
-        ftTestRef.setMaxScopes(2);
 
         // --- testArray()
 
@@ -418,7 +405,6 @@ public class xTestApp extends xModule
             new Add(1, 2, 1),
             new Return_1(1)
             });
-        ftLambda$2.setMaxVars(3);
 
         MethodStructure ftTestArray = ensureMethodStructure("testArray", VOID);
         ftTestArray.setOps(new Op[]
@@ -468,7 +454,6 @@ public class xTestApp extends xModule
 
             new Return_0()
             });
-        ftTestArray.setMaxVars(5);
 
         // ----- testTuple()
 
@@ -480,10 +465,10 @@ public class xTestApp extends xModule
             new JumpFalse(1, 2),
             new Return_N(new int[] {
                     -adapter.ensureValueConstantId(true),
-                    -adapter.ensureValueConstantId("positive")}),
+                    -adapter.ensureValueConstantId("positive")
+            }),
             new Return_1(-adapter.ensureValueConstantId(false))
             });
-        ftTestCond.setMaxVars(2);
 
         MethodStructure ftTestTuple = ensureMethodStructure("testTuple", VOID);
         ftTestTuple.setOps(new Op[]
@@ -553,8 +538,6 @@ public class xTestApp extends xModule
 
             new Return_0()
             });
-        ftTestTuple.setMaxVars(8);
-        ftTestTuple.setMaxScopes(2);
 
         // ----- testConst()
 
@@ -568,7 +551,6 @@ public class xTestApp extends xModule
             new LSet(adapter.getPropertyConstId("TestApp.Point", "y"), 1),
             new Return_0()
             });
-        mtConst.setMaxVars(2);
 
         // Point.to<String>()
         MethodStructure mtTo = ctPoint.ensureMethodStructure("to", VOID, STRING);
@@ -588,7 +570,6 @@ public class xTestApp extends xModule
             new Add(0, -adapter.ensureValueConstantId(")"), 0),
             new Return_1(0),
             });
-        mtTo.setMaxVars(3);
 
         // Point.hash.get()
         ctPoint.markCalculated("hash");
@@ -602,7 +583,6 @@ public class xTestApp extends xModule
             new Add(0, 1, 0),
             new Return_1(0),
             });
-        mtGetHash.setMaxVars(2);
 
         ClassTemplate ctRectangle = f_types.getTemplate("TestApp.Rectangle");
         adapter.addMethod(ctRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point"}, VOID);
@@ -614,7 +594,6 @@ public class xTestApp extends xModule
             new LSet(adapter.getPropertyConstId("TestApp.Rectangle", "br"), 1),
             new Return_0()
             });
-        mtRectangle.setMaxVars(2);
 
         MethodStructure ftTestConst = ensureMethodStructure("testConst", VOID);
         ftTestConst.setOps(new Op[]
@@ -623,16 +602,20 @@ public class xTestApp extends xModule
             new NVar(adapter.getClassTypeConstId("TestApp.Point"),
                     adapter.ensureValueConstantId("p1")), // #0 (p1)
             new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
-                    new int[] {-adapter.ensureValueConstantId(0),
-                               -adapter.ensureValueConstantId(1)},
+                    new int[] {
+                            -adapter.ensureValueConstantId(0),
+                            -adapter.ensureValueConstantId(1)
+                    },
                     0),
             new X_Print(0),
 
             new NVar(adapter.getClassTypeConstId("TestApp.Point"),
                     adapter.ensureValueConstantId("p2")), // #1 (p2)
             new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
-                    new int[] {-adapter.ensureValueConstantId(1),
-                               -adapter.ensureValueConstantId(0)},
+                    new int[] {
+                            -adapter.ensureValueConstantId(1),
+                            -adapter.ensureValueConstantId(0)
+                    },
                     1),
             new X_Print(1),
 
@@ -670,7 +653,6 @@ public class xTestApp extends xModule
 
             new Return_0()
             });
-        ftTestConst.setMaxVars(9);
 
         ClassTemplate ctFormatter = f_types.getTemplate("TestApp.Formatter");
         adapter.addMethod(ctFormatter.f_struct, "construct", STRING, VOID);
@@ -681,7 +663,6 @@ public class xTestApp extends xModule
             new LSet(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0),
             new Return_0()
             });
-        mtFormatter.setMaxVars(1);
 
         MethodStructure mtToString = ctFormatter.ensureMethodStructure("to", VOID, STRING);
         mtToString.setOps(new Op[]
@@ -693,7 +674,6 @@ public class xTestApp extends xModule
             new Add(0, 1, 0),
             new Return_1(0)
             });
-        mtToString.setMaxVars(2);
 
         ClassTemplate ctPrPoint = f_types.getTemplate("TestApp.PrettyPoint");
         MethodStructure mtPrPConst = ctPrPoint.ensureMethodStructure("construct",
@@ -706,7 +686,6 @@ public class xTestApp extends xModule
                     2),
             new Return_0()
             });
-        mtPrPConst.setMaxVars(3);
 
         ClassTemplate ctPrRectangle = f_types.getTemplate("TestApp.PrettyRectangle");
         MethodStructure mtPrRConst = ctPrRectangle.ensureMethodStructure("construct",
@@ -719,7 +698,6 @@ public class xTestApp extends xModule
                     2),
             new Return_0()
             });
-        mtPrRConst.setMaxVars(3);
 
         MethodStructure ftTestMixin = ensureMethodStructure("testMixin", VOID);
         ftTestMixin.setOps(new Op[]
@@ -752,7 +730,6 @@ public class xTestApp extends xModule
 
             new Return_0(),
             });
-        ftTestMixin.setMaxVars(3);
 
         // --- run()
         MethodStructure mtRun = ensureMethodStructure("run", VOID, VOID);
@@ -770,6 +747,5 @@ public class xTestApp extends xModule
             new Call_00(-adapter.getMethodConstId("TestApp", "testMixin")),
             new Return_0()
             });
-        mtRun.setMaxVars(2);
         }
     }

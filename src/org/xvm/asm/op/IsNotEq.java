@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -15,18 +16,23 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * IS_NEQ rvalue, rvalue, lvalue-return ; T != T -> Boolean
- *
- * @author gg 2017.03.08
  */
-public class IsNotEq extends Op
+public class IsNotEq
+        extends Op
     {
-    private final int f_nValue1;
-    private final int f_nValue2;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an IS_NEQ op.
+     *
+     * @param nValue1  the first value to compare
+     * @param nValue2  the second value to compare
+     * @param nRet     the location to store the Boolean result
+     */
     public IsNotEq(int nValue1, int nValue2, int nRet)
         {
         f_nValue1 = nValue1;
@@ -34,22 +40,34 @@ public class IsNotEq extends Op
         f_nRetValue = nRet;
         }
 
-    public IsNotEq(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public IsNotEq(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue1 = in.readInt();
-        f_nValue2 = in.readInt();
-        f_nRetValue = in.readInt();
+        f_nValue1   = readPackedInt(in);
+        f_nValue2   = readPackedInt(in);
+        f_nRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_IS_NEQ);
-        out.writeInt(f_nValue1);
-        out.writeInt(f_nValue2);
-        out.writeInt(f_nRetValue);
+        out.writeByte(OP_IS_NEQ);
+        writePackedLong(out, f_nValue1);
+        writePackedLong(out, f_nValue2);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_IS_NEQ;
         }
 
     @Override
@@ -59,7 +77,6 @@ public class IsNotEq extends Op
             {
             ObjectHandle hValue1 = frame.getArgument(f_nValue1);
             ObjectHandle hValue2 = frame.getArgument(f_nValue2);
-
             if (hValue1 == null || hValue2 == null)
                 {
                 return R_REPEAT;
@@ -69,7 +86,7 @@ public class IsNotEq extends Op
             TypeComposition clz2 = frame.getArgumentClass(f_nValue2);
             if (clz1 != clz2)
                 {
-                // this should've not compiled
+                // this shouldn't have compiled
                 throw new IllegalStateException();
                 }
 
@@ -101,4 +118,8 @@ public class IsNotEq extends Op
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue1;
+    private final int f_nValue2;
+    private final int f_nRetValue;
     }

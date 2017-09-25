@@ -1,9 +1,10 @@
 package org.xvm.asm.op;
 
 
-import java.io.DataOutput;
+import java.io.DataInput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -11,22 +12,32 @@ import org.xvm.runtime.Frame;
 
 /**
  * RETURN_0 ; (no return value)
- *
- * @author gg 2017.03.08
  */
-public class Return_0 extends Op
+public class Return_0
+        extends Op
     {
-    public static final Return_0 INSTANCE = new Return_0();
-
+    /**
+     * Construct a RETURN_0 op.
+     */
     public Return_0()
         {
         }
 
-    @Override
-    public void write(DataOutput out)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Return_0(DataInput in, Constant[] aconst)
             throws IOException
         {
-        out.write(OP_RETURN_0);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_RETURN_0;
         }
 
     @Override
@@ -34,4 +45,6 @@ public class Return_0 extends Op
         {
         return R_RETURN;
         }
+
+    public static final Return_0 INSTANCE = new Return_0();
     }

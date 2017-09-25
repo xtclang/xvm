@@ -18,16 +18,19 @@ import org.xvm.runtime.template.xString;
 
 /**
  * Debugging only.
- *
- * @author gg 2017.03.08
  */
-public class X_Print extends OpInvocable
+public class X_Print
+        extends OpInvocable
     {
-    private final int f_nValue;
-
     public X_Print(int nValue)
         {
         f_nValue = nValue;
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_X_PRINT;
         }
 
     @Override
@@ -124,4 +127,6 @@ public class X_Print extends OpInvocable
 
         return iPC + 1;
         }
+
+    private final int f_nValue;
     }

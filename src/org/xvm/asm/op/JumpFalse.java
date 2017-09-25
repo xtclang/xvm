@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -12,37 +13,54 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * JMP_FALSE rvalue-bool, rel-addr ; jump if value is false
- *
- * @author gg 2017.03.08
  */
-public class JumpFalse extends Op
+public class JumpFalse
+        extends Op
     {
-    private final int f_nValue;
-    private final int f_nRelAddr;
-
+    /**
+     * Construct a JMP_FALSE op.
+     *
+     * @param nValue    the Boolean value to test
+     * @param nRelAddr  the relative address to jump to.
+     */
     public JumpFalse(int nValue, int nRelAddr)
         {
-        f_nValue = nValue;
+        f_nValue   = nValue;
         f_nRelAddr = nRelAddr;
         }
 
-    public JumpFalse(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public JumpFalse(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = in.readInt();
-        f_nRelAddr = in.readInt();
+        f_nValue   = readPackedInt(in);
+        f_nRelAddr = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_JMP_FALSE);
-        out.writeInt(f_nValue);
-        out.writeInt(f_nRelAddr);
+        out.writeByte(OP_JMP_FALSE);
+        writePackedLong(out, f_nValue);
+        writePackedLong(out, f_nRelAddr);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_JMP_FALSE;
         }
 
     @Override
@@ -63,4 +81,7 @@ public class JumpFalse extends Op
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue;
+    private final int f_nRelAddr;
     }

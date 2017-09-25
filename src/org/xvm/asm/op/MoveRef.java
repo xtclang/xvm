@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import java.util.Collections;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.runtime.Frame;
@@ -14,37 +15,54 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * MOV_REF lvalue-src, lvalue-dest ; move reference-to-source to destination
- *
- * @author gg 2017.03.08
  */
-public class MoveRef extends OpInvocable
+public class MoveRef
+        extends OpInvocable
     {
-    private final int f_nSrcValue;
-    private final int f_nDestValue;
-
+    /**
+     * Construct a MOV_REF op.
+     *
+     * @param nSource  the source location
+     * @param nDest    the destination location
+     */
     public MoveRef(int nSource, int nDest)
         {
-        f_nSrcValue = nSource;
+        f_nSrcValue  = nSource;
         f_nDestValue = nDest;
         }
 
-    public MoveRef(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public MoveRef(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nSrcValue = in.readInt();
-        f_nDestValue = in.readInt();
+        f_nSrcValue  = readPackedInt(in);
+        f_nDestValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
             throws IOException
         {
-        out.write(OP_MOV_REF);
-        out.writeInt(f_nSrcValue);
-        out.writeInt(f_nDestValue);
+        out.writeByte(OP_MOV_REF);
+        writePackedLong(out, f_nSrcValue);
+        writePackedLong(out, f_nDestValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_MOV_REF;
         }
 
     @Override
@@ -70,4 +88,7 @@ public class MoveRef extends OpInvocable
 
         return iPC + 1;
         }
+
+    private final int f_nSrcValue;
+    private final int f_nDestValue;
     }

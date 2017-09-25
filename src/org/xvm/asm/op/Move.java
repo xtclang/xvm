@@ -5,43 +5,61 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * MOV rvalue-src, lvalue-dest
- *
- * @author gg 2017.03.08
  */
-public class Move extends Op
+public class Move
+        extends Op
     {
-    final private int f_nFromValue;
-    final private int f_nToValue;
-
+    /**
+     * Construct a MOV op.
+     *
+     * @param nFrom  the source location
+     * @param nTo    the destination location
+     */
     public Move(int nFrom, int nTo)
         {
-        f_nToValue = nTo;
+        f_nToValue   = nTo;
         f_nFromValue = nFrom;
         }
 
-    public Move(DataInput in)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Move(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFromValue = in.readInt();
-        f_nToValue = in.readInt();
+        f_nFromValue = readPackedInt(in);
+        f_nToValue   = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out)
-            throws IOException
+    throws IOException
         {
-        out.write(OP_MOV);
-        out.writeInt(f_nFromValue);
-        out.writeInt(f_nToValue);
+        out.writeByte(OP_MOV);
+        writePackedLong(out, f_nFromValue);
+        writePackedLong(out, f_nToValue);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_MOV;
         }
 
     @Override
@@ -62,4 +80,7 @@ public class Move extends Op
             return frame.raiseException(e);
             }
         }
+
+    final private int f_nFromValue;
+    final private int f_nToValue;
     }

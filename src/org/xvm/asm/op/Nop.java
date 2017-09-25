@@ -1,30 +1,42 @@
 package org.xvm.asm.op;
 
 
-import java.io.DataOutput;
+import java.io.DataInput;
 import java.io.IOException;
 
-import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 
 
 /**
- * NOP
- *
- * @author gg 2017.03.08
+ * NOP - a "no op".
  */
-public class Nop extends OpInvocable
+public class Nop extends Op
     {
+    /**
+     * Construct a NOP op.
+     */
     public Nop()
         {
         }
 
-    @Override
-    public void write(DataOutput out)
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public Nop(DataInput in, Constant[] aconst)
             throws IOException
         {
-        out.write(OP_NOP);
+        }
+
+    @Override
+    public int getOpCode()
+        {
+        return OP_NOP;
         }
 
     @Override

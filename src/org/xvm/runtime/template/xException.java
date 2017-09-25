@@ -46,12 +46,11 @@ public class xException
 
         MethodStructure ct = ensureMethodStructure("construct", new String[] {"String", "Exception"});
         ct.setOps(new Op[] // #0 - text, #1 - cause
-                {
-                        new LSet(getProperty("text").getIdentityConstant().getPosition(), 0),
-                        new LSet(getProperty("cause").getIdentityConstant().getPosition(), 1),
-                        new Return_0(),
-                });
-        ct.setMaxVars(2);
+            {
+            new LSet(getProperty("text").getIdentityConstant().getPosition(), 0),
+            new LSet(getProperty("cause").getIdentityConstant().getPosition(), 1),
+            new Return_0(),
+            });
         }
 
     @Override

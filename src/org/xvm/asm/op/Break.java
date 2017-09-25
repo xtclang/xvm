@@ -11,15 +11,15 @@ import org.xvm.runtime.Frame;
 
 
 /**
- * HANDLER ; begin an exception handler (implicit ENTER)
+ * BREAK - a "no op" at runtime, but a breakpoint in the debugger.
  */
-public class HandlerStart
+public class Break
         extends Op
     {
     /**
-     * Construct a HANDLER op.
+     * Construct a BREAK op.
      */
-    public HandlerStart()
+    public Break()
         {
         }
 
@@ -29,7 +29,7 @@ public class HandlerStart
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public HandlerStart(DataInput in, Constant[] aconst)
+    public Break(DataInput in, Constant[] aconst)
             throws IOException
         {
         }
@@ -37,13 +37,12 @@ public class HandlerStart
     @Override
     public int getOpCode()
         {
-        return OP_HANDLER;
+        return OP_BREAK;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        // all the logic is actually implemented by Frame.findGuard()
         return iPC + 1;
         }
     }

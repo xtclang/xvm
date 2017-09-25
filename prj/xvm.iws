@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="BookmarkManager">
-    <bookmark url="file://$PROJECT_DIR$/../xsrc/system/Type.x" line="181" />
+    <bookmark url="file://$PROJECT_DIR$/../src/org/xvm/runtime/TypeComposition.java" line="401" />
   </component>
   <component name="CCaseConfig">
     <option name="checkoutReserved" value="false" />
@@ -31,17 +31,141 @@
     <option name="USER" value="" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="089daf37-4135-4233-8c95-9072611e2895" name="Default" comment="Merge branch 'master' of https://bitbucket.org/xtclang/src&#10;&#10;# Conflicts:&#10;#&#9;src/org/xvm/asm/MethodStructure.java&#10;">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/Component.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/Component.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/ConstantPool.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/ConstantPool.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../xsrc/examples/Ecstasy.x" afterPath="$PROJECT_DIR$/../xsrc/examples/Ecstasy.x" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/Parameter.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/Parameter.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/constants/SignatureConstant.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/constants/SignatureConstant.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../xsrc/examples/Test.x" afterPath="$PROJECT_DIR$/../xsrc/examples/Test.x" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/constants/TypeConstant.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/constants/TypeConstant.java" />
+    <list default="true" id="089daf37-4135-4233-8c95-9072611e2895" name="Default" comment="">
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Break.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Line_1.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Line_N.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/Scope.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/runtime/Adapter.java" afterPath="$PROJECT_DIR$/../src/org/xvm/runtime/Adapter.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Add.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Add.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Assert.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Assert.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/AssertT.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/AssertT.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/AssertV.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/AssertV.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_00.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_00.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_01.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_01.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_0N.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_0N.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_0T.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_0T.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_10.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_10.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_11.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_11.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_1N.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_1N.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_1T.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_1T.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_N0.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_N0.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_N1.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_N1.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_NN.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_NN.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_NT.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_NT.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_T0.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_T0.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_T1.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_T1.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_TN.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_TN.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_TT.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Call_TT.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/Constant.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/Constant.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Construct_1.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Construct_1.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Construct_N.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Construct_N.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/runtime/Container.java" afterPath="$PROJECT_DIR$/../src/org/xvm/runtime/Container.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/DNVar.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/DNVar.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/DVar.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/DVar.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Enter.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Enter.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../xsrc/examples/Example10.x" afterPath="$PROJECT_DIR$/../xsrc/examples/Example10.x" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Exit.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Exit.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/FBind.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/FBind.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/FinallyEnd.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/FinallyEnd.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/FinallyStart.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/FinallyStart.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/runtime/Frame.java" afterPath="$PROJECT_DIR$/../src/org/xvm/runtime/Frame.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/GoTo.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/GoTo.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/GuardAll.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/GuardAll.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/GuardEnd.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/GuardEnd.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/GuardStart.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/GuardStart.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/HandlerEnd.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/HandlerEnd.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/HandlerStart.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/HandlerStart.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/util/Handy.java" afterPath="$PROJECT_DIR$/../src/org/xvm/util/Handy.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IGet.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IGet.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/INVar.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/INVar.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IPreInc.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IPreInc.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IRef.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IRef.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/ISet.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/ISet.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IVar.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IVar.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Inc.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Inc.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_00.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_00.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_01.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_01.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_0N.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_0N.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_0T.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_0T.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_10.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_10.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_11.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_11.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_1N.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_1N.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_1T.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_1T.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_N0.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_N0.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_N1.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_N1.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_NN.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_NN.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_NT.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_NT.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_T0.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_T0.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_T1.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_T1.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_TN.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_TN.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_TT.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_TT.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsEq.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsEq.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsGt.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsGt.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsGte.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsGte.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsLt.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsLt.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsLte.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsLte.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNot.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNot.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNotEq.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNotEq.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNotNull.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNotNull.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNotZero.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNotZero.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNull.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsNull.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsType.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsType.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsZero.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/IsZero.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Jump.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Jump.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpEq.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpEq.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpFalse.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpFalse.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpGt.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpGt.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpGte.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpGte.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpLt.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpLt.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpLte.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpLte.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpNotEq.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpNotEq.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpNotNull.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpNotNull.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpNotZero.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpNotZero.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpNull.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpNull.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpTrue.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpTrue.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpZero.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/JumpZero.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/LGet.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/LGet.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/LSet.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/LSet.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/MBind.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/MBind.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/MethodStructure.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/MethodStructure.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Move.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Move.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/MoveRef.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/MoveRef.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/NVar.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/NVar.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Neg.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Neg.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_0G.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_0G.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_1.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_1.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_1G.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_1G.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_N.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_N.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_NG.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/New_NG.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Nop.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Nop.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/Op.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/Op.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/OpCallable.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/OpCallable.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/OpInvocable.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/OpInvocable.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/PGet.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/PGet.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/PPostInc.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/PPostInc.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/PPreInc.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/PPreInc.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/PSet.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/PSet.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/PostInc.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/PostInc.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/PreInc.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/PreInc.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Ref.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Ref.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Return_0.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Return_0.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Return_1.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Return_1.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Return_N.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Return_N.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Return_T.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Return_T.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/SVar.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/SVar.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/TVar.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/TVar.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Throw.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Throw.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/Var.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/Var.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/asm/op/X_Print.java" afterPath="$PROJECT_DIR$/../src/org/xvm/asm/op/X_Print.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../doc/ops.txt" afterPath="$PROJECT_DIR$/../doc/ops.txt" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../src/org/xvm/runtime/template/xException.java" afterPath="$PROJECT_DIR$/../src/org/xvm/runtime/template/xException.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/xTestApp.java" afterPath="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/xTestApp.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestClass.java" afterPath="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestClass.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestClass2.java" afterPath="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestClass2.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestService.java" afterPath="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestService.java" />
     </list>
     <list id="ea13f143-b2d6-4536-9505-3d281b4dd23d" name="Synthetic changes" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/xvm.ipr" afterPath="$PROJECT_DIR$/xvm.ipr" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/xvm.iws" afterPath="$PROJECT_DIR$/xvm.iws" />
     </list>
     <ignored path="$USER_HOME$/.grails/" />
@@ -182,76 +306,59 @@
     <option name="myCurrentFavoritesList" value="xvm" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.43005416">
+    <splitter split-orientation="horizontal" split-proportion="0.44300765">
       <split-first>
         <leaf>
-          <file leaf-file-name="xTestApp.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/proto/template/xTestApp.java">
+          <file leaf-file-name="Adapter.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/Adapter.java">
               <provider selected="true" editor-type-id="text-editor">
                 <state vertical-scroll-proportion="0.0">
-                  <caret line="55" column="21" selection-start-line="55" selection-start-column="21" selection-end-line="55" selection-end-column="21" />
-                  <folding />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file leaf-file-name="Invoke_10.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/op/Invoke_10.java">
-              <provider selected="true" editor-type-id="text-editor">
-                <state vertical-scroll-proportion="0.0">
-                  <caret line="63" column="0" selection-start-line="63" selection-start-column="0" selection-end-line="63" selection-end-column="0" />
-                  <folding />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file leaf-file-name="OpInvocable.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/OpInvocable.java">
-              <provider selected="true" editor-type-id="text-editor">
-                <state vertical-scroll-proportion="0.0">
-                  <caret line="29" column="0" selection-start-line="29" selection-start-column="0" selection-end-line="29" selection-end-column="0" />
-                  <folding />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file leaf-file-name="MethodConstant.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/MethodConstant.java">
-              <provider selected="true" editor-type-id="text-editor">
-                <state vertical-scroll-proportion="0.0">
-                  <caret line="111" column="0" selection-start-line="111" selection-start-column="0" selection-end-line="111" selection-end-column="0" />
+                  <caret line="154" column="14" selection-start-line="154" selection-start-column="14" selection-end-line="154" selection-end-column="14" />
                   <folding>
-                    <element signature="e#3555#3556#0" expanded="true" />
+                    <element signature="e#1098#1099#0" expanded="true" />
+                    <element signature="e#1141#1142#0" expanded="true" />
+                    <element signature="e#1201#1202#0" expanded="true" />
+                    <element signature="e#1260#1261#0" expanded="true" />
                   </folding>
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="Method.x" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../xsrc/system/types/Method.x">
+          <file leaf-file-name="xTestService.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestService.java">
               <provider selected="true" editor-type-id="text-editor">
                 <state vertical-scroll-proportion="0.0">
-                  <caret line="206" column="81" selection-start-line="206" selection-start-column="25" selection-end-line="206" selection-end-column="25" />
+                  <caret line="117" column="0" selection-start-line="117" selection-start-column="0" selection-end-line="117" selection-end-column="0" />
                   <folding />
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="TestApp.x" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../xsrc/system/TestApp.x">
+          <file leaf-file-name="xTestApp.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/xTestApp.java">
               <provider selected="true" editor-type-id="text-editor">
                 <state vertical-scroll-proportion="0.0">
-                  <caret line="216" column="19" selection-start-line="216" selection-start-column="15" selection-end-line="216" selection-end-column="19" />
+                  <caret line="647" column="32" selection-start-line="647" selection-start-column="32" selection-end-line="647" selection-end-column="32" />
                   <folding />
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="TypeComposition.java" pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/TypeComposition.java">
+          <file leaf-file-name="ClassTemplate.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/ClassTemplate.java">
               <provider selected="true" editor-type-id="text-editor">
                 <state vertical-scroll-proportion="0.0">
-                  <caret line="501" column="0" selection-start-line="501" selection-start-column="0" selection-end-line="501" selection-end-column="0" />
+                  <caret line="51" column="22" selection-start-line="51" selection-start-column="22" selection-end-line="51" selection-end-column="22" />
+                  <folding />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="xvm.iws" pinned="false" current-in-tab="true">
+            <entry file="file://$PROJECT_DIR$/xvm.iws">
+              <provider selected="true" editor-type-id="text-editor">
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
                   <folding />
                 </state>
               </provider>
@@ -261,75 +368,145 @@
       </split-first>
       <split-second>
         <leaf>
-          <file leaf-file-name="MethodStructure.java" pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/MethodStructure.java">
+          <file leaf-file-name="ObjectHeap.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/ObjectHeap.java">
               <provider selected="true" editor-type-id="text-editor">
-                <state vertical-scroll-proportion="-0.2857143">
-                  <caret line="163" column="67" selection-start-line="163" selection-start-column="9" selection-end-line="163" selection-end-column="9" />
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="47" column="0" selection-start-line="47" selection-start-column="0" selection-end-line="47" selection-end-column="0" />
+                  <folding />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="Function.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/template/Function.java">
+              <provider selected="true" editor-type-id="text-editor">
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="483" column="30" selection-start-line="483" selection-start-column="30" selection-end-line="483" selection-end-column="30" />
+                  <folding />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="ServiceContext.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/ServiceContext.java">
+              <provider selected="true" editor-type-id="text-editor">
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="269" column="0" selection-start-line="269" selection-start-column="0" selection-end-line="269" selection-end-column="0" />
+                  <folding />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="Var.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Var.java">
+              <provider selected="true" editor-type-id="text-editor">
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="68" column="0" selection-start-line="68" selection-start-column="0" selection-end-line="68" selection-end-column="0" />
+                  <folding />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="Nop.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Nop.java">
+              <provider selected="true" editor-type-id="text-editor">
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="44" column="0" selection-start-line="44" selection-start-column="0" selection-end-line="44" selection-end-column="0" />
                   <folding>
-                    <element signature="e#7118#7119#0" expanded="true" />
-                    <element signature="e#7151#7152#0" expanded="true" />
-                    <element signature="e#7602#7603#0" expanded="true" />
-                    <element signature="e#7656#7657#0" expanded="true" />
-                    <element signature="e#8481#8482#0" expanded="true" />
-                    <element signature="e#8539#8540#0" expanded="true" />
-                    <element signature="e#8607#8608#0" expanded="true" />
-                    <element signature="e#8638#8639#0" expanded="true" />
-                    <element signature="e#8996#8997#0" expanded="true" />
-                    <element signature="e#9027#9028#0" expanded="true" />
-                    <element signature="e#9091#9092#0" expanded="true" />
-                    <element signature="e#9122#9123#0" expanded="true" />
+                    <element signature="e#770#771#0" expanded="true" />
                   </folding>
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="TypeConstant.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/TypeConstant.java">
+          <file leaf-file-name="Frame.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/Frame.java">
               <provider selected="true" editor-type-id="text-editor">
                 <state vertical-scroll-proportion="0.0">
-                  <caret line="324" column="0" selection-start-line="324" selection-start-column="0" selection-end-line="324" selection-end-column="0" />
+                  <caret line="681" column="96" selection-start-line="681" selection-start-column="51" selection-end-line="681" selection-end-column="51" />
+                  <folding>
+                    <element signature="e#7406#7407#0" expanded="true" />
+                    <element signature="e#7453#7454#0" expanded="true" />
+                    <element signature="e#12224#12225#0" expanded="true" />
+                    <element signature="e#12264#12265#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="ISet.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/ISet.java">
+              <provider selected="true" editor-type-id="text-editor">
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="78" column="44" selection-start-line="78" selection-start-column="44" selection-end-line="78" selection-end-column="44" />
                   <folding />
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="Adapter.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/Adapter.java">
+          <file leaf-file-name="Scope.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/Scope.java">
               <provider selected="true" editor-type-id="text-editor">
                 <state vertical-scroll-proportion="0.0">
-                  <caret line="141" column="0" selection-start-line="141" selection-start-column="0" selection-end-line="141" selection-end-column="0" />
+                  <caret line="162" column="0" selection-start-line="162" selection-start-column="0" selection-end-line="162" selection-end-column="0" />
                   <folding />
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="xTerminalConsole.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/template/io/Console/xTerminalConsole.java">
+          <file leaf-file-name="MethodStructure.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/MethodStructure.java">
               <provider selected="true" editor-type-id="text-editor">
                 <state vertical-scroll-proportion="0.0">
-                  <caret line="33" column="90" selection-start-line="33" selection-start-column="32" selection-end-line="33" selection-end-column="32" />
+                  <caret line="218" column="25" selection-start-line="218" selection-start-column="25" selection-end-line="218" selection-end-column="25" />
                   <folding />
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="ClassTemplate.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/ClassTemplate.java">
+          <file leaf-file-name="Op.java" pinned="false" current-in-tab="true">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/Op.java">
               <provider selected="true" editor-type-id="text-editor">
-                <state vertical-scroll-proportion="0.0">
-                  <caret line="994" column="0" selection-start-line="994" selection-start-column="0" selection-end-line="994" selection-end-column="0" />
+                <state vertical-scroll-proportion="0.33271718">
+                  <caret line="379" column="28" selection-start-line="379" selection-start-column="28" selection-end-line="379" selection-end-column="28" />
                   <folding />
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="Component.java" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/Component.java">
+          <file leaf-file-name="GuardStart.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/GuardStart.java">
               <provider selected="true" editor-type-id="text-editor">
                 <state vertical-scroll-proportion="0.0">
-                  <caret line="1229" column="17" selection-start-line="1229" selection-start-column="17" selection-end-line="1229" selection-end-column="17" />
+                  <caret line="113" column="16" selection-start-line="113" selection-start-column="16" selection-end-line="113" selection-end-column="16" />
+                  <folding>
+                    <element signature="e#3155#3156#0" expanded="true" />
+                    <element signature="e#3188#3189#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="GuardEnd.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/GuardEnd.java">
+              <provider selected="true" editor-type-id="text-editor">
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="20" column="13" selection-start-line="20" selection-start-column="13" selection-end-line="20" selection-end-column="13" />
                   <folding />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="HandlerStart.java" pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/HandlerStart.java">
+              <provider selected="true" editor-type-id="text-editor">
+                <state vertical-scroll-proportion="0.0">
+                  <caret line="24" column="0" selection-start-line="24" selection-start-column="0" selection-end-line="24" selection-end-column="0" />
+                  <folding>
+                    <element signature="e#1009#1010#0" expanded="true" />
+                    <element signature="e#1042#1043#0" expanded="true" />
+                  </folding>
                 </state>
               </provider>
             </entry>
@@ -370,36 +547,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/template/xBoolean.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/DNVar.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/DVar.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/INVar.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/IVar.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/NVar.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/SVar.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Var.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/New_1G.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/TVar.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/New_NG.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/template/Service.java" />
-        <option value="$PROJECT_DIR$/../xsrc/system/collections/Array.x" />
-        <option value="$PROJECT_DIR$/../xsrc/system/annotations/InjectedRef.x" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/template/xString.java" />
-        <option value="$PROJECT_DIR$/../xsrc/system/String.x" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/OpInvocable.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/TypeSet.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/Container.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/asm/constants/IdentityConstant.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/template/xObject.java" />
-        <option value="$PROJECT_DIR$/../doc/proto-plan.txt" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Call_T1.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Call_T0.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Call_TN.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Call_TT.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Invoke_T1.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Invoke_TN.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Invoke_TT.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/CallChain.java" />
         <option value="$PROJECT_DIR$/../src/org/xvm/proto/Utils.java" />
         <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Call_00.java" />
         <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Construct_1.java" />
@@ -412,15 +559,45 @@
         <option value="$PROJECT_DIR$/../src/org/xvm/compiler/CommandLine.java" />
         <option value="$PROJECT_DIR$/../src/org/xvm/asm/Constant.java" />
         <option value="$PROJECT_DIR$/../src/org/xvm/asm/ConstantPool.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/asm/MultiMethodStructure.java" />
         <option value="$PROJECT_DIR$/../src/org/xvm/proto/Adapter.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/Type.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/ClassTemplate.java" />
         <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/X_Print.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/asm/constants/TypeConstant.java" />
-        <option value="$PROJECT_DIR$/../src/org/xvm/proto/TypeComposition.java" />
         <option value="$PROJECT_DIR$/../src/org/xvm/asm/Component.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/MultiMethodStructure.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/template/collections/xTuple.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/template/xException.java" />
+        <option value="$PROJECT_DIR$/../tests/unit/org/xvm/proto/template/TestApp/xTestService.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/template/collections/xArray.java" />
+        <option value="$PROJECT_DIR$/../tests/unit/org/xvm/proto/template/xTestApp.java" />
+        <option value="$PROJECT_DIR$/../tests/unit/org/xvm/proto/template/TestApp/xTestClass2.java" />
+        <option value="$PROJECT_DIR$/../tests/unit/org/xvm/proto/template/TestApp/xTestClass.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/Type.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/TypeComposition.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/ClassTemplate.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/template/types/xMethod.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/TypeSet.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/constants/TypeConstant.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/proto/op/Match_2.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/runtime/TypeSet.java" />
+        <option value="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestClass2.java" />
+        <option value="$PROJECT_DIR$/../xsrc/examples/Example.x" />
+        <option value="$PROJECT_DIR$/../xsrc/examples/Example5.x" />
         <option value="$PROJECT_DIR$/../src/org/xvm/asm/MethodStructure.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/runtime/TypeComposition.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/runtime/Type.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/runtime/Container.java" />
+        <option value="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestClass.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/op/AssertT.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/op/AssertV.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/op/DNVar.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/op/NVar.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/op/INVar.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/op/X_Print.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/op/HandlerStart.java" />
+        <option value="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestService.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/runtime/Frame.java" />
+        <option value="$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/xTestApp.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/runtime/Adapter.java" />
+        <option value="$PROJECT_DIR$/../src/org/xvm/asm/op/Line_N.java" />
       </list>
     </option>
   </component>
@@ -694,6 +871,7 @@
     </navigator>
     <panes>
       <pane id="PackagesPane" />
+      <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -743,22 +921,12 @@
               <option name="myItemId" value="xvm" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
             </PATH_ELEMENT>
-          </PATH>
-          <PATH>
             <PATH_ELEMENT>
-              <option name="myItemId" value="xvm" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="xvm" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
+              <option name="myItemId" value="xsrc" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="xvm" />
+              <option name="myItemId" value="examples" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -772,7 +940,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
+              <option name="myItemId" value="unit" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -780,7 +948,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="proto" />
+              <option name="myItemId" value="util" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -794,7 +962,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
+              <option name="myItemId" value="unit" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -802,7 +970,29 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="proto" />
+              <option name="myItemId" value="runtime" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="unit" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="runtime" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -820,7 +1010,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
+              <option name="myItemId" value="unit" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -828,7 +1018,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="proto" />
+              <option name="myItemId" value="runtime" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -836,7 +1026,25 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="Clock" />
+              <option name="myItemId" value="TestApp" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="unit" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -857,8 +1065,22 @@
               <option name="myItemId" value="xvm" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
+          </PATH>
+          <PATH>
             <PATH_ELEMENT>
-              <option name="myItemId" value="proto" />
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -894,13 +1116,48 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="op" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="xvm" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
               <option name="myItemId" value="External" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleGroupNode" />
             </PATH_ELEMENT>
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scratches" />
       <pane id="Scope" />
       <pane id="Favorites" />
     </panes>
@@ -926,27 +1183,27 @@
     <property name="options.splitter.details.proportions" value="0.2" />
     <property name="options.searchVisible" value="true" />
     <property name="aspect.path.notification.shown" value="true" />
-    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
+    <property name="settings.editor.selected.configurable" value="fileTemplates" />
     <property name="settings.editor.splitter.proportion" value="0.2" />
     <property name="dynamic.classpath" value="false" />
     <property name="OverrideImplement.combined" value="true" />
     <property name="OverrideImplement.overriding.sorted" value="false" />
     <property name="restartRequiresConfirmation" value="true" />
-    <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth0" value="267" />
+    <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth0" value="458" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatOrder0" value="0" />
-    <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth1" value="271" />
+    <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth1" value="462" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatOrder1" value="1" />
-    <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth2" value="273" />
+    <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth2" value="464" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatOrder2" value="2" />
-    <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth3" value="553" />
+    <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth3" value="1112" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatOrder3" value="3" />
-    <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth0" value="298" />
+    <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth0" value="581" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeOrder0" value="0" />
-    <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth1" value="298" />
+    <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth1" value="581" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeOrder1" value="1" />
-    <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth2" value="301" />
+    <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth2" value="584" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeOrder2" value="2" />
-    <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth3" value="467" />
+    <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth3" value="750" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeOrder3" value="3" />
     <property name="last_directory_selection" value="$PROJECT_DIR$/../src/org/xvm/proto/template" />
     <property name="ToolWindowFavorites.ShowToolbar" value="false" />
@@ -1004,7 +1261,7 @@
     </configuration>
     <configuration default="false" name="TestDriver" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <extension name="coverage" enabled="false" merge="false" runner="idea" />
-      <option name="MAIN_CLASS_NAME" value="org.xvm.proto.TestDriver" />
+      <option name="MAIN_CLASS_NAME" value="org.xvm.runtime.TestDriver" />
       <option name="VM_PARAMETERS" value="-ea -Xms256m -Xmx512m" />
       <option name="PROGRAM_PARAMETERS" value="" />
       <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$/../xsrc/system" />
@@ -1169,8 +1426,8 @@
     </recent_temporary>
   </component>
   <component name="ShelveChangesManager" show_recycled="false">
-    <changelist date="1505855718306">
-      <option name="PATH" value="$APPLICATION_CONFIG_DIR$/shelf/temp3.patch" />
+    <changelist date="1506352209494">
+      <option name="PATH" value="$APPLICATION_CONFIG_DIR$/shelf/temp5.patch" />
       <option name="DESCRIPTION" value="temp" />
     </changelist>
     <recycled_changelist date="1487698388203">
@@ -1235,6 +1492,14 @@
     </recycled_changelist>
     <recycled_changelist date="1505855284883">
       <option name="PATH" value="$APPLICATION_CONFIG_DIR$/shelf/temp2.patch" />
+      <option name="DESCRIPTION" value="temp" />
+    </recycled_changelist>
+    <recycled_changelist date="1505914866499">
+      <option name="PATH" value="$APPLICATION_CONFIG_DIR$/shelf/temp4.patch" />
+      <option name="DESCRIPTION" value="temp" />
+    </recycled_changelist>
+    <recycled_changelist date="1506010212779">
+      <option name="PATH" value="$APPLICATION_CONFIG_DIR$/shelf/temp3.patch" />
       <option name="DESCRIPTION" value="temp" />
     </recycled_changelist>
   </component>
@@ -1315,17 +1580,20 @@
     <frame x="0" y="23" width="2560" height="1577" extended-state="6" />
     <editor active="false" />
     <layout>
-      <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.11973218" sideWeight="0.68521595" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3299595" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32321188" sideWeight="0.49547064" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Palette&#9;" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3785425" sideWeight="0.50452936" order="12" side_tool="true" content_ui="tabs" />
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="13" side_tool="false" content_ui="tabs" />
-      <window_info id="Version Control" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18758434" sideWeight="0.5" order="14" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.14218196" sideWeight="0.5757856" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25101215" sideWeight="0.5" order="14" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2840756" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32809612" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.11973218" sideWeight="0.31478405" order="5" side_tool="true" content_ui="tabs" x="193" y="1041" width="298" height="452" />
+      <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.177629" sideWeight="0.65225226" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.27867746" sideWeight="0.4986215" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.14218196" sideWeight="0.5757856" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.177629" sideWeight="0.34774774" order="5" side_tool="true" content_ui="tabs" x="193" y="1041" width="298" height="452" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2982456" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="CVS" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="15" side_tool="false" content_ui="tabs" />
@@ -1335,19 +1603,16 @@
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="CDI" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="16" side_tool="false" content_ui="tabs" />
-      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.1584591" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.24717286" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Module Dependencies" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32962668" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2982456" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2840756" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="JetGradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Web" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="IDEtalk Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.280027" sideWeight="0.4986215" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="EJB" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="File View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
     </layout>
@@ -1367,25 +1632,25 @@
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.1584591" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Module Dependencies" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32962668" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.14296967" sideWeight="0.5802969" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.14218196" sideWeight="0.5757856" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.29944548" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2982456" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3299595" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32347503" sideWeight="0.49547064" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32321188" sideWeight="0.49547064" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Palette&#9;" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.26617375" sideWeight="0.5" order="14" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.29574862" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.45847178" sideWeight="0.5" order="14" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2840756" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32809612" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="JetGradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.13350923" sideWeight="0.7273954" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.24555735" sideWeight="0.6564417" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Web" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="IDEtalk Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.20609981" sideWeight="0.4986215" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.280027" sideWeight="0.4986215" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="EJB" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.17684127" sideWeight="0.27260458" order="5" side_tool="true" content_ui="tabs" x="193" y="1041" width="298" height="452" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24555735" sideWeight="0.34355828" order="5" side_tool="true" content_ui="tabs" x="193" y="1041" width="298" height="452" />
       <window_info id="File View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
     </layout-to-restore>
   </component>
@@ -1421,10 +1686,6 @@
     <ignored-roots>
       <path value="$PROJECT_DIR$/../.." />
     </ignored-roots>
-    <MESSAGE value="Refactored PGet/PSet op-codes" />
-    <MESSAGE value="Refactored PreInc/PostInc op-codes" />
-    <MESSAGE value="Added Mixin test" />
-    <MESSAGE value="Another Mixin test" />
     <MESSAGE value="Added some native Ref and FutureRef methods (w/o tests)" />
     <MESSAGE value="Reworked Pre/PostInc; added Inc op code" />
     <MESSAGE value="Reworked equals/compare use in op-codes" />
@@ -1441,12 +1702,16 @@
     <MESSAGE value="Moved some helpers to MethodStructure" />
     <MESSAGE value="Moved an additional helper to MethodStructure" />
     <MESSAGE value="Fixed and optimized the &quot;optimize&quot; algorithm" />
-    <MESSAGE value="trivial" />
     <MESSAGE value="return type &quot;Void&quot; has changed to &quot;Tuple&quot;" />
     <MESSAGE value="prep for type comparison - TypeConstant.isA()" />
     <MESSAGE value="Merge" />
+    <MESSAGE value="Integration with changes related to &quot;construct&quot; and &quot;finally&quot;" />
+    <MESSAGE value="improved type resolution" />
+    <MESSAGE value="post-move fixes" />
+    <MESSAGE value="trivial" />
     <MESSAGE value="temp" />
-    <option name="LAST_COMMIT_MESSAGE" value="temp" />
+    <MESSAGE value="Post-merge" />
+    <option name="LAST_COMMIT_MESSAGE" value="Post-merge" />
   </component>
   <component name="VssConfiguration">
     <option name="CLIENT_PATH" value="" />
@@ -1486,55 +1751,16 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/../src/org/xvm/proto/op/Nop.java</url>
-          <line>29</line>
-          <properties />
-          <option name="timeStamp" value="296" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/../src/org/xvm/proto/template/xClass.java</url>
-          <line>40</line>
-          <properties />
-          <option name="timeStamp" value="1258" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/../src/org/xvm/proto/template/types/xMethod.java</url>
-          <line>61</line>
-          <properties />
-          <option name="timeStamp" value="1260" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <condition expression="child == null" language="JAVA" custom="" />
-          <url>file://$PROJECT_DIR$/../src/org/xvm/asm/Component.java</url>
-          <line>1229</line>
-          <properties />
-          <option name="timeStamp" value="1341" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <condition expression="sMethName.equals(&quot;print&quot;)" language="JAVA" custom="" />
-          <url>file://$PROJECT_DIR$/../src/org/xvm/proto/Adapter.java</url>
-          <line>141</line>
-          <properties />
-          <option name="timeStamp" value="1342" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <condition expression="f_nMethodId==2518" language="JAVA" custom="" />
-          <url>file://$PROJECT_DIR$/../src/org/xvm/proto/op/Invoke_10.java</url>
-          <line>54</line>
-          <properties />
-          <option name="timeStamp" value="1343" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/../src/org/xvm/proto/template/io/Console/xTerminalConsole.java</url>
+          <url>file://$PROJECT_DIR$/../src/org/xvm/asm/op/Nop.java</url>
           <line>44</line>
           <properties />
-          <option name="timeStamp" value="1344" />
+          <option name="timeStamp" value="1381" />
         </line-breakpoint>
       </breakpoints>
       <breakpoints-dialog>
         <breakpoints-dialog />
       </breakpoints-dialog>
-      <option name="time" value="1345" />
+      <option name="time" value="1384" />
     </breakpoint-manager>
     <watches-manager>
       <configuration name="JUnit">
@@ -1544,6 +1770,7 @@
         <watch expression="abOp[iPC]" language="JAVA" custom="" />
         <watch expression="frame.f_ahVar" />
         <watch expression="frame.m_frameNext" />
+        <watch expression="getParent().getParent()" language="JAVA" custom="" />
       </configuration>
     </watches-manager>
   </component>
@@ -1552,296 +1779,10 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/compiler/ast/AstNode.java">
+    <entry file="file://$PROJECT_DIR$/../xsrc/system/Object.x">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="340" column="0" selection-start-line="340" selection-start-column="0" selection-end-line="340" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/compiler/ast/TypeExpression.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="44" column="0" selection-start-line="44" selection-start-column="0" selection-end-line="44" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../xsrc/system/Class.x">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33301252">
-          <caret line="56" column="59" selection-start-line="56" selection-start-column="59" selection-end-line="56" selection-end-column="59" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/compiler/ast/NamedTypeExpression.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="268" column="0" selection-start-line="268" selection-start-column="0" selection-end-line="268" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/Frame.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="138" column="0" selection-start-line="138" selection-start-column="0" selection-end-line="138" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/op/Call_00.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="65" column="0" selection-start-line="65" selection-start-column="0" selection-end-line="65" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/proto/template/TestApp/xTestService.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="1.0561576">
-          <caret line="97" column="55" selection-start-line="97" selection-start-column="0" selection-end-line="97" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/NamedConstant.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="95" column="0" selection-start-line="95" selection-start-column="0" selection-end-line="95" selection-end-column="0" />
-          <folding>
-            <element signature="e#2722#2723#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/UnresolvedNameConstant.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="177" column="0" selection-start-line="177" selection-start-column="0" selection-end-line="177" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/Container.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="136" column="0" selection-start-line="136" selection-start-column="0" selection-end-line="136" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/Runtime.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="28" column="0" selection-start-line="28" selection-start-column="0" selection-end-line="28" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/SignatureConstant.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="91" column="0" selection-start-line="91" selection-start-column="0" selection-end-line="91" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/compiler/CommandLine.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="728" column="35" selection-start-line="728" selection-start-column="0" selection-end-line="728" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/proto/TestDriver.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="20" column="0" selection-start-line="20" selection-start-column="0" selection-end-line="20" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/TypeSet.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="61" column="0" selection-start-line="61" selection-start-column="0" selection-end-line="61" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/ServiceContext.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33300492">
-          <caret line="265" column="0" selection-start-line="265" selection-start-column="0" selection-end-line="265" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../xsrc/system/TestApp.x">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="216" column="19" selection-start-line="216" selection-start-column="15" selection-end-line="216" selection-end-column="19" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/template/collections/xTuple.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="59" column="0" selection-start-line="59" selection-start-column="0" selection-end-line="59" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_92.jdk/Contents/Home/src.zip!/java/lang/Enum.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="102" column="0" selection-start-line="102" selection-start-column="0" selection-end-line="102" selection-end-column="0" />
-          <folding>
-            <element signature="e#3009#3010#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/TypedefStructure.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33300492">
-          <caret line="54" column="0" selection-start-line="54" selection-start-column="0" selection-end-line="54" selection-end-column="0" />
-          <folding>
-            <element signature="e#1697#1698#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/XvmStructure.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33300492">
-          <caret line="143" column="0" selection-start-line="143" selection-start-column="0" selection-end-line="143" selection-end-column="0" />
-          <folding>
-            <element signature="e#6835#6836#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/TerminalTypeConstant.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="190" column="0" selection-start-line="190" selection-start-column="0" selection-end-line="190" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/proto/template/TestApp/xTestClass.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="29" column="0" selection-start-line="29" selection-start-column="0" selection-end-line="29" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_92.jdk/Contents/Home/src.zip!/java/util/ArrayList.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="1453" column="16" selection-start-line="1453" selection-start-column="16" selection-end-line="1453" selection-end-column="16" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_92.jdk/Contents/Home/src.zip!/java/util/Arrays.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="1502" column="27" selection-start-line="1502" selection-start-column="27" selection-end-line="1502" selection-end-column="27" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/Constant.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.28656462">
-          <caret line="214" column="0" selection-start-line="214" selection-start-column="0" selection-end-line="214" selection-end-column="0" />
-          <folding>
-            <element signature="e#5546#5547#0" expanded="true" />
-            <element signature="e#5577#5578#0" expanded="true" />
-            <element signature="e#10597#10598#0" expanded="true" />
-            <element signature="e#10654#10655#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/IdentityConstant.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.24489796">
-          <caret line="18" column="22" selection-start-line="18" selection-start-column="22" selection-end-line="18" selection-end-column="22" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/ConstantPool.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="1.2633108">
-          <caret line="1851" column="0" selection-start-line="1851" selection-start-column="0" selection-end-line="1851" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/Type.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="94" column="31" selection-start-line="94" selection-start-column="31" selection-end-line="94" selection-end-column="31" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/template/Enum.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.3176131">
-          <caret line="56" column="51" selection-start-line="56" selection-start-column="28" selection-end-line="56" selection-end-column="28" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/template/Const.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="46" column="16" selection-start-line="46" selection-start-column="16" selection-end-line="46" selection-end-column="16" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/template/xInt64.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="41" column="0" selection-start-line="41" selection-start-column="0" selection-end-line="41" selection-end-column="0" />
-          <folding>
-            <element signature="e#919#920#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_92.jdk/Contents/Home/src.zip!/java/util/HashMap.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="1140" column="0" selection-start-line="1140" selection-start-column="0" selection-end-line="1140" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../doc/proto-plan.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
+        <state vertical-scroll-proportion="-0.06469501">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/Utils.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.7755102">
-          <caret line="67" column="43" selection-start-line="67" selection-start-column="43" selection-end-line="67" selection-end-column="43" />
           <folding />
         </state>
       </provider>
@@ -1849,143 +1790,444 @@
     <entry file="file://$PROJECT_DIR$/../xsrc/system/types/Method.x">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="206" column="81" selection-start-line="206" selection-start-column="25" selection-end-line="206" selection-end-column="25" />
+          <caret line="222" column="27" selection-start-line="222" selection-start-column="27" selection-end-line="222" selection-end-column="27" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/MultiMethodStructure.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.8577075">
-          <caret line="108" column="0" selection-start-line="108" selection-start-column="0" selection-end-line="108" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/Component.java">
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/template/xType.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="1229" column="17" selection-start-line="1229" selection-start-column="17" selection-end-line="1229" selection-end-column="17" />
+          <caret line="47" column="9" selection-start-line="47" selection-start-column="9" selection-end-line="47" selection-end-column="9" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/ClassTemplate.java">
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/Type.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="994" column="0" selection-start-line="994" selection-start-column="0" selection-end-line="994" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/template/Service.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33300394">
-          <caret line="48" column="0" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/op/X_Print.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33300394">
-          <caret line="69" column="0" selection-start-line="69" selection-start-column="0" selection-end-line="69" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/CallChain.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33300394">
-          <caret line="71" column="0" selection-start-line="71" selection-start-column="0" selection-end-line="71" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/TypeConstant.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="324" column="0" selection-start-line="324" selection-start-column="0" selection-end-line="324" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/proto/template/xTestApp.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="55" column="21" selection-start-line="55" selection-start-column="21" selection-end-line="55" selection-end-column="21" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/op/Invoke_10.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="63" column="0" selection-start-line="63" selection-start-column="0" selection-end-line="63" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/constants/MethodConstant.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="111" column="0" selection-start-line="111" selection-start-column="0" selection-end-line="111" selection-end-column="0" />
+          <caret line="169" column="0" selection-start-line="169" selection-start-column="0" selection-end-line="169" selection-end-column="0" />
           <folding>
-            <element signature="e#3555#3556#0" expanded="true" />
+            <element signature="e#1300#1301#0" expanded="true" />
+            <element signature="e#1332#1333#0" expanded="true" />
+            <element signature="e#1474#1475#0" expanded="true" />
+            <element signature="e#1513#1514#0" expanded="true" />
+            <element signature="e#1556#1557#0" expanded="true" />
+            <element signature="e#1595#1596#0" expanded="true" />
+            <element signature="e#4553#4554#0" expanded="true" />
+            <element signature="e#4631#4632#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/OpInvocable.java">
+    <entry file="file://$PROJECT_DIR$/../xsrc/examples/MyApp.x">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="29" column="0" selection-start-line="29" selection-start-column="0" selection-end-line="29" selection-end-column="0" />
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/TypeComposition.java">
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/TypeComposition.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="501" column="0" selection-start-line="501" selection-start-column="0" selection-end-line="501" selection-end-column="0" />
+          <caret line="611" column="60" selection-start-line="611" selection-start-column="13" selection-end-line="611" selection-end-column="13" />
+          <folding>
+            <element signature="e#3651#3652#0" expanded="true" />
+            <element signature="e#3699#3700#0" expanded="true" />
+            <element signature="e#12837#12838#0" expanded="true" />
+            <element signature="e#12884#12885#0" expanded="true" />
+            <element signature="e#20148#20149#0" expanded="true" />
+            <element signature="e#20195#20196#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Call_11.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="25" column="13" selection-start-line="25" selection-start-column="13" selection-end-line="25" selection-end-column="13" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/Adapter.java">
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Call_TT.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="141" column="0" selection-start-line="141" selection-start-column="0" selection-end-line="141" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.33300394">
+          <caret line="28" column="13" selection-start-line="28" selection-start-column="13" selection-end-line="28" selection-end-column="13" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../src/org/xvm/proto/template/io/Console/xTerminalConsole.java">
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Call_N0.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.20652173">
+          <caret line="25" column="13" selection-start-line="25" selection-start-column="13" selection-end-line="25" selection-end-column="13" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/Container.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="33" column="90" selection-start-line="33" selection-start-column="32" selection-end-line="33" selection-end-column="32" />
+          <caret line="118" column="82" selection-start-line="118" selection-start-column="82" selection-end-line="118" selection-end-column="82" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/DaemonPool.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.8863636">
+          <caret line="128" column="0" selection-start-line="128" selection-start-column="0" selection-end-line="128" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../xsrc/system/TestApp.x">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="12" column="13" selection-start-line="12" selection-start-column="13" selection-end-line="12" selection-end-column="13" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_0T.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.61575407">
+          <caret line="86" column="51" selection-start-line="86" selection-start-column="17" selection-end-line="86" selection-end-column="17" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestClass.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.28473178">
+          <caret line="42" column="20" selection-start-line="42" selection-start-column="20" selection-end-line="42" selection-end-column="20" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestClass2.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.85832185">
+          <caret line="78" column="0" selection-start-line="78" selection-start-column="0" selection-end-line="78" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/PreInc.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.6926033">
+          <caret line="99" column="47" selection-start-line="99" selection-start-column="47" selection-end-line="99" selection-end-column="47" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/PSet.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.259366">
+          <caret line="27" column="69" selection-start-line="27" selection-start-column="28" selection-end-line="27" selection-end-column="28" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/AssertT.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.12295869">
+          <caret line="8" column="48" selection-start-line="8" selection-start-column="22" selection-end-line="8" selection-end-column="22" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/AssertV.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.15369837">
+          <caret line="10" column="51" selection-start-line="10" selection-start-column="29" selection-end-line="10" selection-end-column="29" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/DNVar.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.19980788">
+          <caret line="13" column="36" selection-start-line="13" selection-start-column="36" selection-end-line="13" selection-end-column="36" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/INVar.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.19980788">
+          <caret line="13" column="37" selection-start-line="13" selection-start-column="37" selection-end-line="13" selection-end-column="37" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/X_Print.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="113" column="64" selection-start-line="113" selection-start-column="64" selection-end-line="113" selection-end-column="64" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/NVar.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.8141336">
+          <caret line="81" column="0" selection-start-line="81" selection-start-column="0" selection-end-line="81" selection-end-column="0" />
+          <folding>
+            <element signature="e#1975#1976#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/ConstantPool.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.33591482">
+          <caret line="109" column="20" selection-start-line="109" selection-start-column="20" selection-end-line="109" selection-end-column="20" />
+          <folding>
+            <element signature="e#3926#3927#0" expanded="true" />
+            <element signature="e#3988#3989#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/TypeSet.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="221" column="43" selection-start-line="221" selection-start-column="0" selection-end-line="221" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/Scope.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="162" column="0" selection-start-line="162" selection-start-column="0" selection-end-line="162" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/MethodStructure.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-0.2857143">
-          <caret line="163" column="67" selection-start-line="163" selection-start-column="9" selection-end-line="163" selection-end-column="9" />
+        <state vertical-scroll-proportion="0.0">
+          <caret line="218" column="25" selection-start-line="218" selection-start-column="25" selection-end-line="218" selection-end-column="25" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/GuardStart.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="113" column="16" selection-start-line="113" selection-start-column="16" selection-end-line="113" selection-end-column="16" />
           <folding>
-            <element signature="e#7118#7119#0" expanded="true" />
-            <element signature="e#7151#7152#0" expanded="true" />
-            <element signature="e#7602#7603#0" expanded="true" />
-            <element signature="e#7656#7657#0" expanded="true" />
-            <element signature="e#8481#8482#0" expanded="true" />
-            <element signature="e#8539#8540#0" expanded="true" />
-            <element signature="e#8607#8608#0" expanded="true" />
-            <element signature="e#8638#8639#0" expanded="true" />
-            <element signature="e#8996#8997#0" expanded="true" />
-            <element signature="e#9027#9028#0" expanded="true" />
-            <element signature="e#9091#9092#0" expanded="true" />
-            <element signature="e#9122#9123#0" expanded="true" />
+            <element signature="e#3155#3156#0" expanded="true" />
+            <element signature="e#3188#3189#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/GuardEnd.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="20" column="13" selection-start-line="20" selection-start-column="13" selection-end-line="20" selection-end-column="13" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/HandlerStart.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="24" column="0" selection-start-line="24" selection-start-column="0" selection-end-line="24" selection-end-column="0" />
+          <folding>
+            <element signature="e#1009#1010#0" expanded="true" />
+            <element signature="e#1042#1043#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/ObjectHeap.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="47" column="0" selection-start-line="47" selection-start-column="0" selection-end-line="47" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Call_00.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.541502">
+          <caret line="83" column="0" selection-start-line="83" selection-start-column="0" selection-end-line="83" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/template/Function.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="483" column="30" selection-start-line="483" selection-start-column="30" selection-end-line="483" selection-end-column="30" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/template/Service.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="77" column="0" selection-start-line="77" selection-start-column="0" selection-end-line="77" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Invoke_00.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="89" column="40" selection-start-line="89" selection-start-column="40" selection-end-line="89" selection-end-column="40" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Call_01.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="85" column="48" selection-start-line="85" selection-start-column="48" selection-end-line="85" selection-end-column="48" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/IVar.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="31" column="11" selection-start-line="31" selection-start-column="11" selection-end-line="31" selection-end-column="11" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/TestApp/xTestService.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="117" column="0" selection-start-line="117" selection-start-column="0" selection-end-line="117" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/ISet.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="78" column="44" selection-start-line="78" selection-start-column="44" selection-end-line="78" selection-end-column="44" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/Frame.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="681" column="96" selection-start-line="681" selection-start-column="51" selection-end-line="681" selection-end-column="51" />
+          <folding>
+            <element signature="e#7406#7407#0" expanded="true" />
+            <element signature="e#7453#7454#0" expanded="true" />
+            <element signature="e#12224#12225#0" expanded="true" />
+            <element signature="e#12264#12265#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Nop.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="44" column="0" selection-start-line="44" selection-start-column="0" selection-end-line="44" selection-end-column="0" />
+          <folding>
+            <element signature="e#770#771#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Var.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="68" column="0" selection-start-line="68" selection-start-column="0" selection-end-line="68" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../tests/unit/org/xvm/runtime/template/xTestApp.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="647" column="32" selection-start-line="647" selection-start-column="32" selection-end-line="647" selection-end-column="32" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Line_1.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.2513863">
+          <caret line="17" column="13" selection-start-line="17" selection-start-column="13" selection-end-line="17" selection-end-column="13" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/Adapter.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="154" column="14" selection-start-line="154" selection-start-column="14" selection-end-line="154" selection-end-column="14" />
+          <folding>
+            <element signature="e#1098#1099#0" expanded="true" />
+            <element signature="e#1141#1142#0" expanded="true" />
+            <element signature="e#1201#1202#0" expanded="true" />
+            <element signature="e#1260#1261#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/ServiceContext.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="269" column="0" selection-start-line="269" selection-start-column="0" selection-end-line="269" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/Op.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.33271718">
+          <caret line="379" column="28" selection-start-line="379" selection-start-column="28" selection-end-line="379" selection-end-column="28" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/New_NG.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-0.3012939">
+          <caret line="39" column="11" selection-start-line="39" selection-start-column="11" selection-end-line="39" selection-end-column="11" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/asm/op/Line_N.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.8724584">
+          <caret line="65" column="4" selection-start-line="65" selection-start-column="4" selection-end-line="65" selection-end-column="4" />
+          <folding>
+            <element signature="e#729#730#0" expanded="true" />
+            <element signature="e#766#767#0" expanded="true" />
+            <element signature="e#1418#1419#0" expanded="true" />
+            <element signature="e#1452#1453#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../src/org/xvm/runtime/ClassTemplate.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="51" column="22" selection-start-line="51" selection-start-column="22" selection-end-line="51" selection-end-column="22" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/xvm.iws">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
