@@ -22,8 +22,6 @@ import org.xvm.runtime.template.xString;
 public class X_Print
         extends OpInvocable
     {
-    private final int f_nValue;
-
     public X_Print(int nValue)
         {
         f_nValue = nValue;
@@ -129,4 +127,6 @@ public class X_Print
 
         return iPC + 1;
         }
+
+    private final int f_nValue;
     }

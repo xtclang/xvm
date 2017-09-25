@@ -23,12 +23,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class JumpFalse
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nRelAddr;
-
+    /**
+     * Construct a JMP_FALSE op.
+     *
+     * @param nValue    the Boolean value to test
+     * @param nRelAddr  the relative address to jump to.
+     */
     public JumpFalse(int nValue, int nRelAddr)
         {
-        f_nValue = nValue;
+        f_nValue   = nValue;
         f_nRelAddr = nRelAddr;
         }
 
@@ -41,7 +44,7 @@ public class JumpFalse
     public JumpFalse(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
+        f_nValue   = readPackedInt(in);
         f_nRelAddr = readPackedInt(in);
         }
 
@@ -78,4 +81,7 @@ public class JumpFalse
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue;
+    private final int f_nRelAddr;
     }

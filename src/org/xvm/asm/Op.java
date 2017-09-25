@@ -23,6 +23,19 @@ public abstract class Op
     // ----- Op interface ----------------------------------------------------------------------------------------------
 
     /**
+     * Write the op-code.
+     *
+     * @param out  the DataOutput to write to
+     *
+     * @throws IOException  if an error occurs while writing the op
+     */
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(getOpCode());
+        }
+
+    /**
      * @return the byte value that identifies the op-code, in the range 0-255
      */
     public int getOpCode()
@@ -47,19 +60,6 @@ public abstract class Op
      */
     public void simulate(Scope scope)
         {
-        }
-
-    /**
-     * Write the op-code.
-     * 
-     * @param out  the DataOutput to write to
-     * 
-     * @throws IOException  if an error occurs while writing the op
-     */
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(getOpCode());
         }
 
 

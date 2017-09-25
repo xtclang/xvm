@@ -7,10 +7,10 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.AllGuard;
-import org.xvm.runtime.Frame.Guard;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -22,6 +22,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class GuardAll
         extends Op
     {
+    /**
+     * Construct a GUARD_ALL op.
+     *
+     * @param nRelAddress  the relative address of the finally block
+     */
     public GuardAll(int nRelAddress)
         {
         f_nFinallyRelAddress = nRelAddress;
@@ -40,6 +45,14 @@ public class GuardAll
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_GUARD_ALL);
+        writePackedLong(out, f_nFinallyRelAddress);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_GUARD_ALL;
@@ -50,10 +63,10 @@ public class GuardAll
         {
         int iScope = frame.enterScope();
 
-        Guard guard = m_guard;
+        AllGuard guard = m_guard;
         if (guard == null)
             {
-            guard = m_guard = new AllGuard(iPC, iScope, f_nFinallyRelAddress);
+            m_guard = guard = new AllGuard(iPC, iScope, f_nFinallyRelAddress);
             }
         frame.pushGuard(guard);
 
@@ -61,11 +74,9 @@ public class GuardAll
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public void simulate(Scope scope)
         {
-        out.writeByte(OP_GUARD_ALL);
-        writePackedLong(out, f_nFinallyRelAddress);
+        scope.enter();
         }
 
     private final int f_nFinallyRelAddress;

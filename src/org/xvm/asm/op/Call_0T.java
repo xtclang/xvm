@@ -53,6 +53,15 @@ public class Call_0T
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CALL_0T);
+        writePackedLong(out, f_nFunctionValue);
+        writePackedLong(out, f_nTupleRetValue);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_CALL_0T;
@@ -95,15 +104,6 @@ public class Call_0T
             {
             return frame.raiseException(e);
             }
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_CALL_0T);
-        writePackedLong(out, f_nFunctionValue);
-        writePackedLong(out, f_nTupleRetValue);
         }
 
     private final int f_nFunctionValue;

@@ -2,7 +2,6 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
@@ -17,8 +16,9 @@ import org.xvm.runtime.Frame;
 public class Return_0
         extends Op
     {
-    public static final Return_0 INSTANCE = new Return_0();
-
+    /**
+     * Construct a RETURN_0 op.
+     */
     public Return_0()
         {
         }
@@ -45,4 +45,6 @@ public class Return_0
         {
         return R_RETURN;
         }
+
+    public static final Return_0 INSTANCE = new Return_0();
     }

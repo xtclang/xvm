@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
@@ -16,6 +17,9 @@ import org.xvm.runtime.Frame;
 public class FinallyStart
         extends Op
     {
+    /**
+     * Construct a FINALLY op.
+     */
     public FinallyStart()
         {
         }
@@ -52,5 +56,14 @@ public class FinallyStart
         frame.f_anNextVar[iScope]++;
 
         return iPC + 1;
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        // TODO which scope gets the exception var? (GG review)
+        scope.exit();
+        scope.allocVar();
+        scope.enter();
         }
     }

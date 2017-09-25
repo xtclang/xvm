@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -22,13 +23,16 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IVar
         extends Op
     {
-    final private int f_nClassConstId;
-    final private int f_nArgValue;
-
-    public IVar(int nClassConstId, int nValue)
+    /**
+     * Construct an IVAR op.
+     *
+     * @param nTypeConstId  the type of the variable
+     * @param nValue        the initial value
+     */
+    public IVar(int nTypeConstId, int nValue)
         {
-        f_nClassConstId = nClassConstId;
-        f_nArgValue = nValue;
+        f_nClassConstId = nTypeConstId;
+        f_nArgValue     = nValue;
         }
 
     /**
@@ -41,7 +45,7 @@ public class IVar
             throws IOException
         {
         f_nClassConstId = readPackedInt(in);
-        f_nArgValue = readPackedInt(in);
+        f_nArgValue     = readPackedInt(in);
         }
 
     @Override
@@ -72,6 +76,7 @@ public class IVar
                 {
                 return R_REPEAT;
                 }
+
             frame.introduceVar(clazz, null, Frame.VAR_STANDARD, hArg);
 
             return iPC + 1;
@@ -82,4 +87,12 @@ public class IVar
             }
         }
 
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    final private int f_nClassConstId;
+    final private int f_nArgValue;
     }

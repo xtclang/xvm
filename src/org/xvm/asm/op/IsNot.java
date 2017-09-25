@@ -24,12 +24,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IsNot
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an IS_NOT op.
+     *
+     * @param nValue  the input Boolean value
+     * @param nRet    the location to store the Boolean result
+     */
     public IsNot(int nValue, int nRet)
         {
-        f_nValue = nValue;
+        f_nValue    = nValue;
         f_nRetValue = nRet;
         }
 
@@ -42,7 +45,7 @@ public class IsNot
     public IsNot(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
+        f_nValue    = readPackedInt(in);
         f_nRetValue = readPackedInt(in);
         }
 
@@ -67,7 +70,6 @@ public class IsNot
         try
             {
             BooleanHandle hValue = (BooleanHandle) frame.getArgument(f_nValue);
-
             if (hValue == null)
                 {
                 return R_REPEAT;
@@ -82,4 +84,7 @@ public class IsNot
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue;
+    private final int f_nRetValue;
     }

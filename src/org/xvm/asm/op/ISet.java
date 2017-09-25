@@ -24,15 +24,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class ISet
         extends Op
     {
-    private final int f_nTargetValue;
-    private final int f_nIndexValue;
-    private final int f_nValue;
-
+    /**
+     * Construct an I_SET op.
+     *
+     * @param nTarget  the target indexed object
+     * @param nIndex   the index
+     * @param nValue   the value to store
+     */
     public ISet(int nTarget, int nIndex, int nValue)
         {
         f_nTargetValue = nTarget;
-        f_nIndexValue = nIndex;
-        f_nValue = nValue;
+        f_nIndexValue  = nIndex;
+        f_nValue       = nValue;
         }
 
     /**
@@ -45,8 +48,8 @@ public class ISet
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
-        f_nIndexValue = readPackedInt(in);
-        f_nValue = readPackedInt(in);
+        f_nIndexValue  = readPackedInt(in);
+        f_nValue       = readPackedInt(in);
         }
 
     @Override
@@ -73,9 +76,8 @@ public class ISet
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            long lIndex = frame.getIndex(f_nIndexValue);
-            ObjectHandle hArg = frame.getArgument(f_nValue);
-
+            long         lIndex  = frame.getIndex(f_nIndexValue);
+            ObjectHandle hArg    = frame.getArgument(f_nValue);
             if (hTarget == null || hArg == null || lIndex == -1)
                 {
                 return R_REPEAT;
@@ -92,4 +94,8 @@ public class ISet
 
         return hException == null ? iPC + 1 : frame.raiseException(hException);
         }
+
+    private final int f_nTargetValue;
+    private final int f_nIndexValue;
+    private final int f_nValue;
     }

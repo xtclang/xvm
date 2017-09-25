@@ -20,8 +20,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class GoTo
         extends Op
     {
-    private final int f_nAbsAddr;
-
+    /**
+     * Construct a GOTO op.
+     *
+     * @param nAbsAddr  the index of the op (the location in the op array) to go to
+     */
     public GoTo(int nAbsAddr)
         {
         f_nAbsAddr = nAbsAddr;
@@ -47,7 +50,6 @@ public class GoTo
         writePackedLong(out, f_nAbsAddr);
         }
 
-
     @Override
     public int getOpCode()
         {
@@ -59,4 +61,6 @@ public class GoTo
         {
         return f_nAbsAddr;
         }
+
+    private final int f_nAbsAddr;
     }

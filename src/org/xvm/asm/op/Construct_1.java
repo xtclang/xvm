@@ -49,6 +49,15 @@ public class Construct_1
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_CONSTR_1);
+        writePackedLong(out, f_nConstructId);
+        writePackedLong(out, f_nArgValue);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_CONSTR_1;
@@ -79,15 +88,6 @@ public class Construct_1
             {
             return frame.raiseException(e);
             }
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_CONSTR_1);
-        writePackedLong(out, f_nConstructId);
-        writePackedLong(out, f_nArgValue);
         }
 
     private final int f_nConstructId;

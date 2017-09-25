@@ -19,7 +19,7 @@ public class Line_1
         extends Op
     {
     /**
-     * Constructor.
+     * Construct a LINE_1 op.
      */
     public Line_1()
         {

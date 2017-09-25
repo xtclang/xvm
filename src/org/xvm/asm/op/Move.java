@@ -22,12 +22,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Move
         extends Op
     {
-    final private int f_nFromValue;
-    final private int f_nToValue;
-
+    /**
+     * Construct a MOV op.
+     *
+     * @param nFrom  the source location
+     * @param nTo    the destination location
+     */
     public Move(int nFrom, int nTo)
         {
-        f_nToValue = nTo;
+        f_nToValue   = nTo;
         f_nFromValue = nFrom;
         }
 
@@ -41,7 +44,7 @@ public class Move
             throws IOException
         {
         f_nFromValue = readPackedInt(in);
-        f_nToValue = readPackedInt(in);
+        f_nToValue   = readPackedInt(in);
         }
 
     @Override
@@ -77,4 +80,7 @@ public class Move
             return frame.raiseException(e);
             }
         }
+
+    final private int f_nFromValue;
+    final private int f_nToValue;
     }

@@ -24,15 +24,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IPreInc
         extends Op
     {
-    private final int f_nTargetValue;
-    private final int f_nIndexValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an I_PREINC op.
+     *
+     * @param nTarget  the target array
+     * @param nIndex   the index of the value to increment
+     * @param nRet     the location to store the pre-incremented value
+     */
     public IPreInc(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nIndexValue = nIndex;
-        f_nRetValue = nRet;
+        f_nIndexValue  = nIndex;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -45,8 +48,8 @@ public class IPreInc
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
-        f_nIndexValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        f_nIndexValue  = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -87,4 +90,8 @@ public class IPreInc
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nTargetValue;
+    private final int f_nIndexValue;
+    private final int f_nRetValue;
     }

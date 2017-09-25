@@ -27,8 +27,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Return_T
         extends Op
     {
-    private final int f_nArgValue;
-
+    /**
+     * Construct a RETURN_T op.
+     *
+     * @param nValue  the tuple value to return
+     */
     public Return_T(int nValue)
         {
         f_nArgValue = nValue;
@@ -114,4 +117,6 @@ public class Return_T
             }
         return R_RETURN;
         }
+
+    private final int f_nArgValue;
     }

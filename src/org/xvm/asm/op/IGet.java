@@ -24,15 +24,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IGet
         extends Op
     {
-    private final int f_nTargetValue;
-    private final int f_nIndexValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an I_GET op.
+     *
+     * @param nTarget  the target indexed object
+     * @param nIndex   the index
+     * @param nRet     the location to store the resulting reference
+     */
     public IGet(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nIndexValue = nIndex;
-        f_nRetValue = nRet;
+        f_nIndexValue  = nIndex;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -45,8 +48,8 @@ public class IGet
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
-        f_nIndexValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        f_nIndexValue  = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -71,8 +74,7 @@ public class IGet
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            long lIndex = frame.getIndex(f_nIndexValue);
-
+            long         lIndex  = frame.getIndex(f_nIndexValue);
             if (hTarget == null || lIndex == -1)
                 {
                 return R_REPEAT;
@@ -88,4 +90,8 @@ public class IGet
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nTargetValue;
+    private final int f_nIndexValue;
+    private final int f_nRetValue;
     }

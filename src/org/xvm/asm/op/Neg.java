@@ -49,6 +49,15 @@ public class Neg
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_NEG);
+        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, f_nRetValue);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_NEG;
@@ -73,15 +82,6 @@ public class Neg
             {
             return frame.raiseException(e);
             }
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_NEG);
-        writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
         }
 
     private final int f_nArgValue;

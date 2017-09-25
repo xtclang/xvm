@@ -22,12 +22,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class JumpZero
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nRelAddr;
-
+    /**
+     * Construct a JMP_ZERO op.
+     *
+     * @param nValue    the value to test
+     * @param nRelAddr  the relative address to jump to.
+     */
     public JumpZero(int nValue, int nRelAddr)
         {
-        f_nValue = nValue;
+        f_nValue   = nValue;
         f_nRelAddr = nRelAddr;
         }
 
@@ -40,7 +43,7 @@ public class JumpZero
     public JumpZero(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
+        f_nValue   = readPackedInt(in);
         f_nRelAddr = readPackedInt(in);
         }
 
@@ -65,7 +68,6 @@ public class JumpZero
         try
             {
             JavaLong hTest = (JavaLong) frame.getArgument(f_nValue);
-
             if (hTest == null)
                 {
                 return R_REPEAT;
@@ -78,4 +80,7 @@ public class JumpZero
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue;
+    private final int f_nRelAddr;
     }

@@ -24,9 +24,12 @@ import static org.xvm.util.Handy.writePackedLong;
 public class PreInc
         extends OpProperty
     {
-    private final int f_nArgValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a PRE_INC op.
+     *
+     * @param nArg  the location to increment
+     * @param nRet  the location to store the pre-incremented value
+     */
     public PreInc(int nArg, int nRet)
         {
         f_nArgValue = nArg;
@@ -105,4 +108,7 @@ public class PreInc
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nArgValue;
+    private final int f_nRetValue;
     }

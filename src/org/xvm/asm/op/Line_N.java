@@ -23,7 +23,9 @@ public class Line_N
         extends Op
     {
     /**
-     * Constructor.
+     * Construct a LINE_N op.
+     *
+     * @param cLines  the number of lines to advance
      */
     public Line_N(int cLines)
         {

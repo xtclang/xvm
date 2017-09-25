@@ -24,12 +24,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class JumpNotNull
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nRelAddr;
-
+    /**
+     * Construct a JMP_NNULL op.
+     *
+     * @param nValue    the Nullable value to test
+     * @param nRelAddr  the relative address to jump to.
+     */
     public JumpNotNull(int nValue, int nRelAddr)
         {
-        f_nValue = nValue;
+        f_nValue   = nValue;
         f_nRelAddr = nRelAddr;
         }
 
@@ -42,7 +45,7 @@ public class JumpNotNull
     public JumpNotNull(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
+        f_nValue   = readPackedInt(in);
         f_nRelAddr = readPackedInt(in);
         }
 
@@ -75,4 +78,7 @@ public class JumpNotNull
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue;
+    private final int f_nRelAddr;
     }

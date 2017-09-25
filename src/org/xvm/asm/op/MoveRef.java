@@ -25,12 +25,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class MoveRef
         extends OpInvocable
     {
-    private final int f_nSrcValue;
-    private final int f_nDestValue;
-
+    /**
+     * Construct a MOV_REF op.
+     *
+     * @param nSource  the source location
+     * @param nDest    the destination location
+     */
     public MoveRef(int nSource, int nDest)
         {
-        f_nSrcValue = nSource;
+        f_nSrcValue  = nSource;
         f_nDestValue = nDest;
         }
 
@@ -43,7 +46,7 @@ public class MoveRef
     public MoveRef(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nSrcValue = readPackedInt(in);
+        f_nSrcValue  = readPackedInt(in);
         f_nDestValue = readPackedInt(in);
         }
 
@@ -85,4 +88,7 @@ public class MoveRef
 
         return iPC + 1;
         }
+
+    private final int f_nSrcValue;
+    private final int f_nDestValue;
     }

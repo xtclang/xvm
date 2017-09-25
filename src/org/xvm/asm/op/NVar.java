@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.StringConstant;
 
@@ -24,12 +25,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class NVar
         extends Op
     {
-    private final int f_nClassConstId;
-    private final int f_nNameConstId;
-
-    public NVar(int nClassConstId, int nNameConstId)
+    /**
+     * Construct an NVAR op.
+     *
+     * @param nTypeConstId  the type of the var
+     * @param nNameConstId  the name of the var
+     */
+    public NVar(int nTypeConstId, int nNameConstId)
         {
-        f_nClassConstId = nClassConstId;
+        f_nTypeConstId = nTypeConstId;
         f_nNameConstId = nNameConstId;
         }
 
@@ -42,7 +46,7 @@ public class NVar
     public NVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = readPackedInt(in);
+        f_nTypeConstId = readPackedInt(in);
         f_nNameConstId = readPackedInt(in);
         }
 
@@ -51,7 +55,7 @@ public class NVar
     throws IOException
         {
         out.writeByte(OP_NVAR);
-        writePackedLong(out, f_nClassConstId);
+        writePackedLong(out, f_nTypeConstId);
         writePackedLong(out, f_nNameConstId);
         }
 
@@ -67,7 +71,7 @@ public class NVar
         ServiceContext context = frame.f_context;
 
         TypeComposition clazz = context.f_types.ensureComposition(
-                f_nClassConstId, frame.getActualTypes());
+                f_nTypeConstId, frame.getActualTypes());
         StringConstant constName = (StringConstant)
                 context.f_pool.getConstant(f_nNameConstId);
 
@@ -75,4 +79,13 @@ public class NVar
 
         return iPC + 1;
         }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    private final int f_nTypeConstId;
+    private final int f_nNameConstId;
     }

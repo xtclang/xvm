@@ -7,8 +7,8 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
-
 import org.xvm.asm.Scope;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 
@@ -45,6 +45,14 @@ public class Var
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_VAR);
+        writePackedLong(out, f_nType);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_VAR;
@@ -65,14 +73,6 @@ public class Var
     public void simulate(Scope scope)
         {
         scope.allocVar();
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_VAR);
-        writePackedLong(out, f_nType);
         }
 
     private final int f_nType;

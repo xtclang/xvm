@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.StringConstant;
 
@@ -29,16 +30,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class DNVar
         extends Op
     {
-    final private int f_nClassConstId;
-    final private int f_nNameConstId;
-
-    // cached InjectedRef
-    // NOTE: the injected ref must be named, so this caching is not needed at DVAR op
-    transient private RefHandle m_ref;
-
-    public DNVar(int nClassConstId, int nNameConstId)
+    /**
+     * Construct a DNVAR.
+     *
+     * @param nTypeConstId   the index of the constant containing the type of the variable
+     * @param nNameConstId   the index of the constant containing the name of the variable
+     */
+    public DNVar(int nTypeConstId, int nNameConstId)
         {
-        f_nClassConstId = nClassConstId;
+        f_nTypeConstId = nTypeConstId;
         f_nNameConstId = nNameConstId;
         }
 
@@ -51,8 +51,8 @@ public class DNVar
     public DNVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = readPackedInt(in);
-        f_nNameConstId = readPackedInt(in);
+        f_nTypeConstId = readPackedInt(in);
+        f_nNameConstId  = readPackedInt(in);
         }
 
     @Override
@@ -60,7 +60,7 @@ public class DNVar
     throws IOException
         {
         out.writeByte(OP_DNVAR);
-        writePackedLong(out, f_nClassConstId);
+        writePackedLong(out, f_nTypeConstId);
         writePackedLong(out, f_nNameConstId);
         }
 
@@ -75,15 +75,14 @@ public class DNVar
         {
         ServiceContext context = frame.f_context;
 
-        StringConstant constName =
-                (StringConstant) context.f_pool.getConstant(f_nNameConstId);
+        StringConstant constName = (StringConstant) context.f_pool.getConstant(f_nNameConstId);
         String sName = constName.getValue();
 
         RefHandle hRef = m_ref;
         if (hRef == null)
             {
             TypeComposition clz = context.f_types.ensureComposition(
-                    f_nClassConstId, frame.getActualTypes());
+                    f_nTypeConstId, frame.getActualTypes());
 
             hRef = clz.f_template.createRefHandle(clz, sName);
 
@@ -107,4 +106,19 @@ public class DNVar
 
         return iPC + 1;
         }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    final private int f_nTypeConstId;
+    final private int f_nNameConstId;
+
+    /**
+     * cached InjectedRef.
+     * NOTE: the injected ref must be named, so this caching is not needed on the DVAR op
+     */
+    transient private RefHandle m_ref;
     }

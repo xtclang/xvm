@@ -23,13 +23,16 @@ import static org.xvm.util.Handy.writePackedLong;
 public class LGet
         extends OpProperty
     {
-    private final int f_nPropConstId;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an L_GET op.
+     *
+     * @param nPropId  the property id
+     * @param nRet     the location to store the result
+     */
     public LGet(int nPropId, int nRet)
         {
         f_nPropConstId = nPropId;
-        f_nRetValue = nRet;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -42,7 +45,7 @@ public class LGet
             throws IOException
         {
         f_nPropConstId = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -71,4 +74,7 @@ public class LGet
         return hTarget.f_clazz.f_template.getPropertyValue(
                 frame, hTarget, constProperty.getName(), f_nRetValue);
         }
+
+    private final int f_nPropConstId;
+    private final int f_nRetValue;
     }

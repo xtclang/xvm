@@ -15,13 +15,16 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * JUMP rel-addr
+ * JMP rel-addr
  */
 public class Jump
         extends Op
     {
-    private final int f_nRelAddr;
-
+    /**
+     * Construct a JMP op.
+     *
+     * @param nRelAddr  the relative address to jump to.
+     */
     public Jump(int nRelAddr)
         {
         f_nRelAddr = nRelAddr;
@@ -58,4 +61,6 @@ public class Jump
         {
         return iPC + f_nRelAddr;
         }
+
+    private final int f_nRelAddr;
     }

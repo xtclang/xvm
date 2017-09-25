@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.StringConstant;
 
@@ -26,15 +27,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class INVar
         extends Op
     {
-    final private int f_nClassConstId;
-    final private int f_nNameConstId;
-    final private int f_nArgValue;
-
-    public INVar(int nClassConstId, int nNamedConstId, int nValue)
+    /**
+     * Construct an INVAR op.
+     *
+     * @param nTypeConstId  the type of the variable
+     * @param nNameConstId  the name of the variable
+     * @param nValue        the initial value for the variable
+     */
+    public INVar(int nTypeConstId, int nNameConstId, int nValue)
         {
-        f_nClassConstId = nClassConstId;
-        f_nNameConstId = nNamedConstId;
-        f_nArgValue = nValue;
+        f_nClassConstId = nTypeConstId;
+        f_nNameConstId  = nNameConstId;
+        f_nArgValue     = nValue;
         }
 
     /**
@@ -47,8 +51,8 @@ public class INVar
             throws IOException
         {
         f_nClassConstId = readPackedInt(in);
-        f_nNameConstId = readPackedInt(in);
-        f_nArgValue = readPackedInt(in);
+        f_nNameConstId  = readPackedInt(in);
+        f_nArgValue     = readPackedInt(in);
         }
 
     @Override
@@ -95,4 +99,14 @@ public class INVar
             return frame.raiseException(e);
             }
         }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    final private int f_nClassConstId;
+    final private int f_nNameConstId;
+    final private int f_nArgValue;
     }

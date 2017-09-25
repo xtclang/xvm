@@ -2,7 +2,6 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
@@ -17,6 +16,9 @@ import org.xvm.runtime.Frame;
 public class HandlerStart
         extends Op
     {
+    /**
+     * Construct a HANDLER op.
+     */
     public HandlerStart()
         {
         }

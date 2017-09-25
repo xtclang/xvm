@@ -9,9 +9,6 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * NOP - a "no op".
@@ -19,7 +16,7 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Nop extends Op
     {
     /**
-     * Constructor.
+     * Construct a NOP op.
      */
     public Nop()
         {

@@ -24,13 +24,16 @@ import static org.xvm.util.Handy.writePackedLong;
 public class LSet
         extends OpProperty
     {
-    private final int f_nPropConstId;
-    private final int f_nValue;
-
+    /**
+     * Construct an L_SET op.
+     *
+     * @param nPropId  the property id
+     * @param nValue   the value to set
+     */
     public LSet(int nPropId, int nValue)
         {
         f_nPropConstId = nPropId;
-        f_nValue = nValue;
+        f_nValue       = nValue;
         }
 
     /**
@@ -84,4 +87,7 @@ public class LSet
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nPropConstId;
+    private final int f_nValue;
     }

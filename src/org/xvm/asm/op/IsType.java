@@ -21,14 +21,17 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IsType
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nType;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an IS_TYPE op.
+     *
+     * @param nValue  the value to test
+     * @param nType   the type to test for
+     * @param nRet    the location to store the Boolean result
+     */
     public IsType(int nValue, int nType, int nRet)
         {
-        f_nValue = nValue;
-        f_nType = nType;
+        f_nValue    = nValue;
+        f_nType     = nType;
         f_nRetValue = nRet;
         }
 
@@ -41,8 +44,8 @@ public class IsType
     public IsType(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
-        f_nType = readPackedInt(in);
+        f_nValue    = readPackedInt(in);
+        f_nType     = readPackedInt(in);
         f_nRetValue = readPackedInt(in);
         }
 
@@ -69,7 +72,6 @@ public class IsType
             {
             ObjectHandle hValue1 = frame.getArgument(f_nValue);
             ObjectHandle hValue2 = frame.getArgument(f_nType);
-
             if (hValue1 == null || hValue2 == null)
                 {
                 return R_REPEAT;
@@ -83,4 +85,8 @@ public class IsType
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue;
+    private final int f_nType;
+    private final int f_nRetValue;
     }

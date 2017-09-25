@@ -24,15 +24,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class PGet
         extends OpProperty
     {
-    private final int f_nTarget;
-    private final int f_nPropConstId;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a P_GET op.
+     *
+     * @param nTarget  the target object
+     * @param nPropId  the property to get
+     * @param nRet     the location to store the result
+     */
     public PGet(int nTarget, int nPropId, int nRet)
         {
-        f_nTarget = nTarget;
+        f_nTarget      = nTarget;
         f_nPropConstId = nPropId;
-        f_nRetValue = nRet;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -44,9 +47,9 @@ public class PGet
     public PGet(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTarget = readPackedInt(in);
+        f_nTarget      = readPackedInt(in);
         f_nPropConstId = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -87,4 +90,8 @@ public class PGet
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nTarget;
+    private final int f_nPropConstId;
+    private final int f_nRetValue;
     }

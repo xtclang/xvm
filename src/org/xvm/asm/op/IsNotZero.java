@@ -24,12 +24,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IsNotZero
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an IS_NZERO op.
+     *
+     * @param nValue  the value to test
+     * @param nRet    the location to store the Boolean result
+     */
     public IsNotZero(int nValue, int nRet)
         {
-        f_nValue = nValue;
+        f_nValue    = nValue;
         f_nRetValue = nRet;
         }
 
@@ -42,7 +45,7 @@ public class IsNotZero
     public IsNotZero(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
+        f_nValue    = readPackedInt(in);
         f_nRetValue = readPackedInt(in);
         }
 
@@ -67,7 +70,6 @@ public class IsNotZero
         try
             {
             JavaLong hValue = (JavaLong) frame.getArgument(f_nValue);
-
             if (hValue == null)
                 {
                 return R_REPEAT;
@@ -81,4 +83,7 @@ public class IsNotZero
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue;
+    private final int f_nRetValue;
     }

@@ -24,20 +24,23 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NEW_1G CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
+ * NEW_0G CONST-CONSTRUCT, rvalue-type, lvalue-return                             ; generic "new"
  */
 public class New_0G
         extends OpCallable
     {
-    private final int f_nConstructId;
-    private final int f_nTypeValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a OP_NEW_0G op.
+     *
+     * @param nConstructorId  identifies the constructor
+     * @param nType           the type of the object being created
+     * @param nRet            the location to store the new object
+     */
     public New_0G(int nConstructorId, int nType, int nRet)
         {
         f_nConstructId = nConstructorId;
-        f_nTypeValue = nType;
-        f_nRetValue = nRet;
+        f_nTypeValue   = nType;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -50,8 +53,8 @@ public class New_0G
             throws IOException
         {
         f_nConstructId = readPackedInt(in);
-        f_nTypeValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        f_nTypeValue   = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -105,4 +108,8 @@ public class New_0G
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nConstructId;
+    private final int f_nTypeValue;
+    private final int f_nRetValue;
     }

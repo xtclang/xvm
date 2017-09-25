@@ -24,10 +24,13 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IRef
         extends Op
     {
-    private final int f_nTargetValue;
-    private final int f_nIndexValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an I_REF op.
+     *
+     * @param nTarget  the target array
+     * @param nIndex   the index of the value in the array
+     * @param nRet     the location to store the reference to the value in the array
+     */
     public IRef(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
@@ -45,8 +48,8 @@ public class IRef
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
-        f_nIndexValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        f_nIndexValue  = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -87,4 +90,8 @@ public class IRef
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nTargetValue;
+    private final int f_nIndexValue;
+    private final int f_nRetValue;
     }

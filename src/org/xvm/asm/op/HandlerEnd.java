@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
@@ -20,6 +21,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class HandlerEnd
         extends Op
     {
+    /**
+     * Construct an END_HANDLER op.
+     *
+     * @param iRelAddr  the relative address to jump to when the handler completes
+     */
     public HandlerEnd(int iRelAddr)
         {
         f_nRelAddr = iRelAddr;
@@ -38,6 +44,14 @@ public class HandlerEnd
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_END_HANDLER);
+        writePackedLong(out, f_nRelAddr);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_END_HANDLER;
@@ -51,11 +65,9 @@ public class HandlerEnd
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public void simulate(Scope scope)
         {
-        out.writeByte(OP_END_HANDLER);
-        writePackedLong(out, f_nRelAddr);
+        scope.exit();
         }
 
     private final int f_nRelAddr;

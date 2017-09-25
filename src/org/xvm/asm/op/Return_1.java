@@ -20,8 +20,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Return_1
         extends Op
     {
-    private final int f_nArgValue;
-
+    /**
+     * Construct a RETURN_1 op.
+     *
+     * @param nValue  the value to return
+     */
     public Return_1(int nValue)
         {
         f_nArgValue = nValue;
@@ -75,4 +78,6 @@ public class Return_1
                 return frame.returnTuple(-iRet - 1, new int[] {f_nArgValue});
             }
         }
+
+    private final int f_nArgValue;
     }

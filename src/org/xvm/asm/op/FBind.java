@@ -24,17 +24,20 @@ import static org.xvm.util.Handy.writePackedLong;
 public class FBind
         extends OpInvocable
     {
-    private final int f_nFunctionValue;
-    private final int[] f_anParamIx;
-    private final int[] f_anParamValue;
-    private final int f_nResultValue;
-
+    /**
+     * Construct an FBIND op.
+     *
+     * @param nFunction    identifies the function to bind
+     * @param nParamIx     identifies the parameter(s) to bind
+     * @param nParamValue  identifies the values to use corresponding to those parameters
+     * @param nRet         identifies where to place the bound function
+     */
     public FBind(int nFunction, int[] nParamIx, int[] nParamValue, int nRet)
         {
         f_nFunctionValue = nFunction;
-        f_anParamIx = nParamIx;
-        f_anParamValue = nParamValue;
-        f_nResultValue = nRet;
+        f_anParamIx      = nParamIx;
+        f_anParamValue   = nParamValue;
+        f_nResultValue   = nRet;
         }
 
     /**
@@ -48,12 +51,12 @@ public class FBind
         {
         f_nFunctionValue = readPackedInt(in);
 
-        int c = in.readUnsignedByte();
+        int c = readPackedInt(in);
         f_anParamIx = new int[c];
         f_anParamValue = new int[c];
         for (int i = 0; i < c; i++)
             {
-            f_anParamIx[i] = readPackedInt(in);
+            f_anParamIx[i]    = readPackedInt(in);
             f_anParamValue[i] = readPackedInt(in);
             }
         f_nResultValue = readPackedInt(in);
@@ -67,7 +70,7 @@ public class FBind
         writePackedLong(out, f_nFunctionValue);
 
         int c = f_anParamIx.length;
-        out.write(c);
+        writePackedLong(out, c);
         for (int i = 0; i < c; i++)
             {
             writePackedLong(out, f_anParamIx[i]);
@@ -110,4 +113,9 @@ public class FBind
             return frame.raiseException(e);
             }
         }
+
+    private final int   f_nFunctionValue;
+    private final int[] f_anParamIx;
+    private final int[] f_anParamValue;
+    private final int   f_nResultValue;
     }

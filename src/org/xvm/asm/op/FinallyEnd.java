@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -17,6 +18,9 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 public class FinallyEnd
         extends Op
     {
+    /**
+     * Construct an END_FINALLY op.
+     */
     public FinallyEnd()
         {
         }
@@ -55,5 +59,11 @@ public class FinallyEnd
 
         // re-throw
         return frame.raiseException(hException);
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.exit();
         }
     }

@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
@@ -23,11 +24,14 @@ import static org.xvm.util.Handy.writePackedLong;
 public class DVar
         extends Op
     {
-    final private int f_nClassConstId;
-
-    public DVar(int nClassConstId)
+    /**
+     * Construct a DVAR.
+     *
+     * @param nTypeConstId   the index of the constant containing the type of the variable
+     */
+    public DVar(int nTypeConstId)
         {
-        f_nClassConstId = nClassConstId;
+        f_nTypeConstId = nTypeConstId;
         }
 
     /**
@@ -39,7 +43,7 @@ public class DVar
     public DVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = readPackedInt(in);
+        f_nTypeConstId = readPackedInt(in);
         }
 
     @Override
@@ -47,7 +51,7 @@ public class DVar
     throws IOException
         {
         out.writeByte(OP_DVAR);
-        writePackedLong(out, f_nClassConstId);
+        writePackedLong(out, f_nTypeConstId);
         }
 
     @Override
@@ -60,7 +64,7 @@ public class DVar
     public int process(Frame frame, int iPC)
         {
         TypeComposition clz = frame.f_context.f_types.ensureComposition(
-                    f_nClassConstId, frame.getActualTypes());
+                f_nTypeConstId, frame.getActualTypes());
 
         RefHandle hRef = clz.f_template.createRefHandle(clz, null);
 
@@ -68,4 +72,12 @@ public class DVar
 
         return iPC + 1;
         }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    final private int f_nTypeConstId;
     }

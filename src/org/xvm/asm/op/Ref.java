@@ -9,6 +9,7 @@ import java.util.Collections;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
@@ -25,8 +26,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Ref
         extends OpInvocable
     {
-    private final int f_nSrcValue;
-
+    /**
+     * Construct a REF op.
+     *
+     * @param nSrc  the item to obtain a ref of
+     */
     public Ref(int nSrc)
         {
         f_nSrcValue = nSrc;
@@ -83,4 +87,12 @@ public class Ref
 
         return iPC + 1;
         }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    private final int f_nSrcValue;
     }

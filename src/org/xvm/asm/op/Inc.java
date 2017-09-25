@@ -24,8 +24,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Inc
         extends OpProperty
     {
-    private final int f_nArgValue;
-
+    /**
+     * Construct an INC op.
+     *
+     * @param nArg  indicates the incrementable object to increment
+     */
     public Inc(int nArg)
         {
         f_nArgValue = nArg;
@@ -90,4 +93,6 @@ public class Inc
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nArgValue;
     }

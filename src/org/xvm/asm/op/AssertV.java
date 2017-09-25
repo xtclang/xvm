@@ -56,6 +56,16 @@ public class AssertV
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_ASSERT_V);
+        writePackedLong(out, f_nValue);
+        writePackedLong(out, f_nTextConstId);
+        writeIntArray(out, f_anValue);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_ASSERT_V;
@@ -107,16 +117,6 @@ public class AssertV
             {
             return frame.raiseException(e);
             }
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_ASSERT_V);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nTextConstId);
-        writeIntArray(out, f_anValue);
         }
 
     private final int   f_nValue;

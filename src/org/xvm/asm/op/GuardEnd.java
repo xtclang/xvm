@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
@@ -20,6 +21,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class GuardEnd
         extends Op
     {
+    /**
+     * Construct an END_GUARD op.
+     *
+     * @param iRelAddr  the address of the next op to execute after the guarded block
+     */
     public GuardEnd(int iRelAddr)
         {
         f_nRelAddr = iRelAddr;
@@ -38,6 +44,14 @@ public class GuardEnd
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_END_GUARD);
+        writePackedLong(out, f_nRelAddr);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_END_GUARD;
@@ -52,11 +66,9 @@ public class GuardEnd
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public void simulate(Scope scope)
         {
-        out.writeByte(OP_END_GUARD);
-        writePackedLong(out, f_nRelAddr);
+        scope.exit();
         }
 
     private final int f_nRelAddr;

@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -25,10 +26,16 @@ import static org.xvm.util.Handy.writePackedLong;
 public class SVar
         extends Op
     {
-    public SVar(int nClassConstId, int[] anValue)
+    /**
+     * Construct an SVAR op.
+     *
+     * @param nTypeConstId  the type of the sequence TODO is this Type<ElementType> or ElementType itself?
+     * @param anValue       the values for the sequence
+     */
+    public SVar(int nTypeConstId, int[] anValue)
         {
-        f_nClassConstId = nClassConstId;
-        f_anArgValue    = anValue;
+        f_nTypeConstId = nTypeConstId;
+        f_anArgValue   = anValue;
         }
 
     /**
@@ -40,8 +47,17 @@ public class SVar
     public SVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = readPackedInt(in);
-        f_anArgValue    = readIntArray(in);
+        f_nTypeConstId = readPackedInt(in);
+        f_anArgValue   = readIntArray(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_SVAR);
+        writePackedLong(out, f_nTypeConstId);
+        writeIntArray(out, f_anArgValue);
         }
 
     @Override
@@ -54,7 +70,7 @@ public class SVar
     public int process(Frame frame, int iPC)
         {
         TypeComposition clazzEl = frame.f_context.f_types.ensureComposition(
-                f_nClassConstId, frame.getActualTypes());
+                f_nTypeConstId, frame.getActualTypes());
 
         try
             {
@@ -78,14 +94,11 @@ public class SVar
         }
 
     @Override
-    public void write(DataOutput out)
-            throws IOException
+    public void simulate(Scope scope)
         {
-        out.writeByte(OP_SVAR);
-        writePackedLong(out, f_nClassConstId);
-        writeIntArray(out, f_anArgValue);
+        scope.allocVar();
         }
 
-    final private int   f_nClassConstId;
+    final private int   f_nTypeConstId;
     final private int[] f_anArgValue;
     }

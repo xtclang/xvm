@@ -24,9 +24,12 @@ import static org.xvm.util.Handy.writePackedLong;
 public class PostInc
         extends OpProperty
     {
-    private final int f_nArgValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a POST_INC op.
+     *
+     * @param nArg  the location to increment
+     * @param nRet  the location to store the post-incremented value
+     */
     public PostInc(int nArg, int nRet)
         {
         f_nArgValue = nArg;
@@ -105,4 +108,7 @@ public class PostInc
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nArgValue;
+    private final int f_nRetValue;
     }

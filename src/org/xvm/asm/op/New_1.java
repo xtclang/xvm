@@ -26,15 +26,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class New_1
         extends OpCallable
     {
-    private final int f_nConstructId;
-    private final int f_nArgValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct a NEW_1 op.
+     *
+     * @param nConstructorId  identifies the constructor
+     * @param nArg            the constructor argument
+     * @param nRet            the location to store the new object
+     */
     public New_1(int nConstructorId, int nArg, int nRet)
         {
         f_nConstructId = nConstructorId;
-        f_nArgValue = nArg;
-        f_nRetValue = nRet;
+        f_nArgValue    = nArg;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -47,8 +50,8 @@ public class New_1
             throws IOException
         {
         f_nConstructId = readPackedInt(in);
-        f_nArgValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        f_nArgValue    = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -92,4 +95,8 @@ public class New_1
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nConstructId;
+    private final int f_nArgValue;
+    private final int f_nRetValue;
     }

@@ -21,6 +21,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Throw
         extends Op
     {
+    /**
+     * Construct a THROW op.
+     *
+     * @param nValue  the exception to throw
+     */
     public Throw(int nValue)
         {
         f_nArgValue = nValue;
@@ -36,6 +41,14 @@ public class Throw
             throws IOException
         {
         f_nArgValue = readPackedInt(in);
+        }
+
+    @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_THROW);
+        writePackedLong(out, f_nArgValue);
         }
 
     @Override
@@ -62,14 +75,6 @@ public class Throw
             {
             return frame.raiseException(e);
             }
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_THROW);
-        writePackedLong(out, f_nArgValue);
         }
 
     private final int f_nArgValue;

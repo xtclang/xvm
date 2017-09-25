@@ -26,14 +26,17 @@ import static org.xvm.util.Handy.writePackedLong;
 public class MBind
         extends OpInvocable
     {
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nResultValue;
-
+    /**
+     * Construct an MBIND op.
+     *
+     * @param nTarget    the target object containing the method
+     * @param nMethodId  the method id
+     * @param nRet       the location to store the resulting function
+     */
     public MBind(int nTarget, int nMethodId, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nMethodId = nMethodId;
+        f_nMethodId    = nMethodId;
         f_nResultValue = nRet;
         }
 
@@ -47,7 +50,7 @@ public class MBind
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
-        f_nMethodId = readPackedInt(in);
+        f_nMethodId    = readPackedInt(in);
         f_nResultValue = readPackedInt(in);
         }
 
@@ -90,4 +93,8 @@ public class MBind
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nTargetValue;
+    private final int f_nMethodId;
+    private final int f_nResultValue;
     }

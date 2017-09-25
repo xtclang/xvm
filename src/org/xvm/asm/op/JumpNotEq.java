@@ -25,14 +25,17 @@ import static org.xvm.util.Handy.writePackedLong;
 public class JumpNotEq
         extends Op
     {
-    private final int f_nValue1;
-    private final int f_nValue2;
-    private final int f_nRelAddr;
-
+    /**
+     * Construct a JMP_NEQ op.
+     *
+     * @param nValue1   the first value to compare
+     * @param nValue2   the second value to compare
+     * @param nRelAddr  the relative address to jump to.
+     */
     public JumpNotEq(int nValue1, int nValue2, int nRelAddr)
         {
-        f_nValue1 = nValue1;
-        f_nValue2 = nValue2;
+        f_nValue1  = nValue1;
+        f_nValue2  = nValue2;
         f_nRelAddr = nRelAddr;
         }
 
@@ -45,8 +48,8 @@ public class JumpNotEq
     public JumpNotEq(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue1 = readPackedInt(in);
-        f_nValue2 = readPackedInt(in);
+        f_nValue1  = readPackedInt(in);
+        f_nValue2  = readPackedInt(in);
         f_nRelAddr = readPackedInt(in);
         }
 
@@ -73,7 +76,6 @@ public class JumpNotEq
             {
             ObjectHandle hTest1 = frame.getArgument(f_nValue1);
             ObjectHandle hTest2 = frame.getArgument(f_nValue2);
-
             if (hTest1 == null || hTest2 == null)
                 {
                 return R_REPEAT;
@@ -81,10 +83,9 @@ public class JumpNotEq
 
             TypeComposition clz1 = frame.getArgumentClass(f_nValue1);
             TypeComposition clz2 = frame.getArgumentClass(f_nValue2);
-
             if (clz1 != clz2)
                 {
-                // this should've not compiled
+                // this shouldn't have compiled
                 throw new IllegalStateException();
                 }
 
@@ -117,4 +118,8 @@ public class JumpNotEq
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue1;
+    private final int f_nValue2;
+    private final int f_nRelAddr;
     }

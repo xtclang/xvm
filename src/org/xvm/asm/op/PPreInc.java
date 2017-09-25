@@ -24,15 +24,18 @@ import static org.xvm.util.Handy.writePackedLong;
 public class PPreInc
         extends OpProperty
     {
-    private final int f_nTarget;
-    private final int f_nPropConstId;
-    private final int f_nRetValue;
-
-    public PPreInc(int nTarget, int nArg, int nRet)
+    /**
+     * Construct a P_PREINC op.
+     *
+     * @param nTarget  the object on which the property exists
+     * @param nPropId  the property to increment
+     * @param nRet     the location to store the pre-incremented value
+     */
+    public PPreInc(int nTarget, int nPropId, int nRet)
         {
-        f_nTarget = nTarget;
-        f_nPropConstId = nArg;
-        f_nRetValue = nRet;
+        f_nTarget      = nTarget;
+        f_nPropConstId = nPropId;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -44,9 +47,9 @@ public class PPreInc
     public PPreInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTarget = readPackedInt(in);
+        f_nTarget      = readPackedInt(in);
         f_nPropConstId = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -87,4 +90,8 @@ public class PPreInc
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nTarget;
+    private final int f_nPropConstId;
+    private final int f_nRetValue;
     }

@@ -25,12 +25,15 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IsNotNull
         extends Op
     {
-    private final int f_nValue;
-    private final int f_nRetValue;
-
+    /**
+     * Construct an IS_NNULL op.
+     *
+     * @param nValue  the Nullable value to test
+     * @param nRet    the location to store the Boolean result
+     */
     public IsNotNull(int nValue, int nRet)
         {
-        f_nValue = nValue;
+        f_nValue    = nValue;
         f_nRetValue = nRet;
         }
 
@@ -43,7 +46,7 @@ public class IsNotNull
     public IsNotNull(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
+        f_nValue    = readPackedInt(in);
         f_nRetValue = readPackedInt(in);
         }
 
@@ -68,7 +71,6 @@ public class IsNotNull
         try
             {
             ObjectHandle hValue = frame.getArgument(f_nValue);
-
             if (hValue == null)
                 {
                 return R_REPEAT;
@@ -82,4 +84,7 @@ public class IsNotNull
             return frame.raiseException(e);
             }
         }
+
+    private final int f_nValue;
+    private final int f_nRetValue;
     }

@@ -10,9 +10,6 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * RETURN_N #vals:(rvalue)
@@ -20,8 +17,11 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Return_N
         extends Op
     {
-    private final int[] f_anArgValue;
-
+    /**
+     * Construct a RETURN_N op.
+     *
+     * @param anValue  the values to return
+     */
     public Return_N(int[] anValue)
         {
         f_anArgValue = anValue;
@@ -104,4 +104,6 @@ public class Return_N
             }
         return R_RETURN;
         }
+
+    private final int[] f_anArgValue;
     }

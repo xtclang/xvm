@@ -56,6 +56,17 @@ public class Invoke_NT
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_INVOKE_NT);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nMethodId);
+        writeIntArray(out, f_anArgValue);
+        writePackedLong(out, f_nTupleRetValue);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_INVOKE_NT;
@@ -93,17 +104,6 @@ public class Invoke_NT
             {
             return frame.raiseException(e);
             }
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_INVOKE_NT);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writeIntArray(out, f_anArgValue);
-        writePackedLong(out, f_nTupleRetValue);
         }
 
     private final int   f_nTargetValue;

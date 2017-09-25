@@ -47,6 +47,14 @@ public class Assert
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_ASSERT);
+        writePackedLong(out, f_nValue);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_ASSERT;
@@ -74,14 +82,6 @@ public class Assert
             {
             return frame.raiseException(e);
             }
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_ASSERT);
-        writePackedLong(out, f_nValue);
         }
 
     private final int f_nValue;
