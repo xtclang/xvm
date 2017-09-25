@@ -20,7 +20,6 @@ import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Service.ServiceHandle;
-
 import org.xvm.runtime.template.annotations.xFutureRef;
 
 
