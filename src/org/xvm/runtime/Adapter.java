@@ -13,6 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
@@ -135,7 +136,13 @@ public class Adapter
     public int ensureEnumConstId(String sEnum)
         {
         ClassConstant constClass = f_container.f_types.getClassConstant(sEnum);
-        return f_container.f_pool.ensureSingletonConstConstant(constClass).getPosition();
+        return Op.CONSTANT_OFFSET -
+            f_container.f_pool.ensureSingletonConstConstant(constClass).getPosition();
+        }
+
+    public int getMethodVarId(String sClassName, String sMethName)
+        {
+        return Op.CONSTANT_OFFSET - getMethodConstId(sClassName, sMethName, null, null);
         }
 
     public int getMethodConstId(String sClassName, String sMethName)
@@ -215,7 +222,7 @@ public class Adapter
 
     public int ensureValueConstantId(Object oValue)
         {
-        return ensureValueConstant(oValue).getPosition();
+        return Op.CONSTANT_OFFSET - ensureValueConstant(oValue).getPosition();
         }
 
     public TypeConstant[] getTypeConstants(ClassTemplate template, String[] asType)

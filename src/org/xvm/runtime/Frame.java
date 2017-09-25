@@ -71,6 +71,7 @@ public class Frame
     // positive return values indicate a caller's frame register
     // negative value above RET_LOCAL indicate an automatic tuple conversion
     public final static int RET_LOCAL  = -65000;
+
     // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI  = -65002;   // an indicator for "multiple return values"
@@ -173,7 +174,7 @@ public class Frame
     public int invokeN(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         Frame frameNext = m_frameNext = f_context.createFrameN(this,
-                chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
+            chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
         return Op.R_CALL;
@@ -586,6 +587,14 @@ public class Frame
         return hException == null ? Op.R_NEXT : raiseException(hException);
         }
 
+    // return a string value of the specified constant
+    public String getString(int iArg)
+        {
+        assert iArg < Op.CONSTANT_OFFSET;
+
+        StringConstant constText = (StringConstant)f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
+        return constText.getValue();
+        }
     // return the class of the specified argument
     public TypeComposition getArgumentClass(int iArg)
         {
@@ -669,7 +678,7 @@ public class Frame
             }
         else
             {
-            IntConstant constant = (IntConstant) f_context.f_pool.getConstant(-iArg);
+            IntConstant constant = (IntConstant) f_context.f_pool.getConstant(Op.CONSTANT_OFFSET-iArg);
             lIndex = constant.getValue().getLong();
             }
 
@@ -950,7 +959,7 @@ public class Frame
                 if (clzException.isA(clzCatch))
                     {
                     StringConstant constVarName = (StringConstant)
-                            context.f_pool.getConstant(f_anNameConstId[iCatch]);
+                            context.f_pool.getConstant(-f_anNameConstId[iCatch]);
 
                     introduceException(frame, iGuard, hException, constVarName.getValue());
 

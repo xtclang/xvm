@@ -45,6 +45,14 @@ public class Line_N
         }
 
     @Override
+    public void write(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(OP_LINE_N);
+        writePackedLong(out, f_cLines);
+        }
+
+    @Override
     public int getOpCode()
         {
         return OP_LINE_N;
@@ -54,14 +62,6 @@ public class Line_N
     public int process(Frame frame, int iPC)
         {
         return iPC + 1;
-        }
-
-    @Override
-    public void write(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(OP_LINE_N);
-        writePackedLong(out, f_cLines);
         }
 
     private final int f_cLines;

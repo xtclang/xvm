@@ -40,7 +40,7 @@ public class xTestClass extends ClassTemplate
         construct.setOps(new Op[]
             { // #0 = s
             new X_Print(
-                    -adapter.ensureValueConstantId("\n# in constructor: TestClass #")),
+                    adapter.ensureValueConstantId("\n# in constructor: TestClass #")),
             new LSet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
             new Return_0(),
             });
@@ -48,7 +48,7 @@ public class xTestClass extends ClassTemplate
 
         ftFinally.setOps(new Op[]
             { // #0  = s
-            new X_Print(-adapter.ensureValueConstantId("# in finally: TestClass #")),
+            new X_Print(adapter.ensureValueConstantId("# in finally: TestClass #")),
             new X_Print(0),
             new Return_0(),
             });
@@ -57,14 +57,14 @@ public class xTestClass extends ClassTemplate
         MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
         mtMethod1.setOps(new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
+            new X_Print(adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
             new NVar(adapter.getClassTypeConstId("String"),
                     adapter.ensureValueConstantId("s")), // #0 (s)
             new LGet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
             new NVar(adapter.getClassTypeConstId("Int64"),
                     adapter.ensureValueConstantId("of")), // #1 (of)
             new IVar(adapter.getClassTypeConstId("String"),
-                    -adapter.ensureValueConstantId("world")), // #2
+                    adapter.ensureValueConstantId("world")), // #2
             new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"), 2, 1),
             new Var(adapter.getClassTypeConstId("Int64")), // #3
             new PGet(0, adapter.getPropertyConstId("String", "size"), 3),
@@ -79,7 +79,7 @@ public class xTestClass extends ClassTemplate
             { // #0 = s
             new Var(adapter.getClassTypeConstId("Exception")), // #1
             new New_N(adapter.getMethodConstId("Exception", "construct"),
-                    new int[] {0, -adapter.ensureValueConstantId(null)}, 1),
+                    new int[] {0, adapter.ensureValueConstantId(null)}, 1),
             new Throw(1),
             });
 
@@ -89,7 +89,7 @@ public class xTestClass extends ClassTemplate
             {
             new Var(adapter.getClassTypeConstId("String")), // #0
             new Call_01(Op.A_SUPER, 0),
-            new Add(0, -adapter.ensureValueConstantId(": prop1="), 0),
+            new Add(0, adapter.ensureValueConstantId(": prop1="), 0),
             new Var(adapter.getClassTypeConstId("String")), // #1
             new LGet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
             new Var(adapter.getClassTypeConstId("String")), // #2

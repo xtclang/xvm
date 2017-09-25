@@ -9,8 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
-import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -79,9 +77,6 @@ public class INVar
         TypeComposition clazz = context.f_types.ensureComposition(
                 f_nClassConstId, frame.getActualTypes());
 
-        StringConstant constName = (StringConstant)
-                context.f_pool.getConstant(f_nNameConstId);
-
         try
             {
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
@@ -90,7 +85,7 @@ public class INVar
                 return R_REPEAT;
                 }
 
-            frame.introduceVar(clazz, constName.getValue(), Frame.VAR_STANDARD, hArg);
+            frame.introduceVar(clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, hArg);
 
             return iPC + 1;
             }

@@ -42,7 +42,7 @@ public class xTestService extends Service
         mtGetCounter.setOps(new Op[]
             {
             new X_Print(
-                    -adapter.ensureValueConstantId("# in TestService.counter.get #")),
+                adapter.ensureValueConstantId("# in TestService.counter.get #")),
             new Var(adapter.getClassTypeConstId("Int64")), // (#0)
             new Call_01(Op.A_SUPER, 0),
             new Return_1(0),
@@ -52,7 +52,7 @@ public class xTestService extends Service
         mtSetCounter.setOps(new Op[]
             { // #0 = newValue
             new X_Print(
-                    -adapter.ensureValueConstantId("# in TestService.counter.set #")),
+                    adapter.ensureValueConstantId("# in TestService.counter.set #")),
             new X_Print(0),
             new Call_10(Op.A_SUPER, 0),
             new Return_0(),
@@ -62,7 +62,7 @@ public class xTestService extends Service
         ftDefault.setOps(new Op[]
             {
             new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
-                    -adapter.ensureValueConstantId(5)),
+                adapter.ensureValueConstantId(5)),
             new Return_0(),
             });
 
@@ -76,10 +76,10 @@ public class xTestService extends Service
         MethodStructure mtIncrement = ensureMethodStructure("increment", VOID, INT);
         mtIncrement.setOps(new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId("# in TestService.increment #")),
+            new X_Print(adapter.ensureValueConstantId("# in TestService.increment #")),
             new Var(adapter.getClassTypeConstId("Int64")), // #0
             new PreInc(-adapter.getPropertyConstId("TestApp.TestService", "counter"),
-                    0),
+                0),
             new Return_1(0),
             });
 
@@ -102,20 +102,21 @@ public class xTestService extends Service
             new Var(this.adapter.getClassTypeConstId("Exception")), // #2
             new New_N(adapter.getMethodConstId("Exception", "construct"),
                     new int[] {
-                            -adapter.ensureValueConstantId("test"),
-                            -adapter.ensureValueConstantId(null)
+                            adapter.ensureValueConstantId("test"),
+                            adapter.ensureValueConstantId(null)
                     }, 2),
             new Throw(2),
             new Exit(), // optimize out; unreachable
 
             new Enter(),
             new DNVar(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
-                    adapter.ensureValueConstantId("iRet")), // #2 (iRet)
+                     adapter.ensureValueConstantId("iRet")), // #2 (iRet)
             new Var(adapter.getClassTypeConstId("Clock")), // #3
             new LGet(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"),
                     3),
+
             new IVar(adapter.getClassTypeConstId("Function"),
-                    -adapter.getMethodConstId("TestApp.TestService", "lambda_1")), // #4
+                    adapter.getMethodVarId("TestApp.TestService", "lambda_1")), // #4
             new Ref(2), // #5
             new FBind(4, new int[] {0, 1}, new int[] {5, 0}, 4),
             new Invoke_N0(3, adapter.getMethodConstId("Clock", "scheduleAlarm"),
@@ -127,11 +128,11 @@ public class xTestService extends Service
         MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
             {
-            new X_Print(-adapter.ensureValueConstantId(
-                    "\n# in TestService.to<String>() #")),
+            new X_Print(adapter.ensureValueConstantId(
+                "\n# in TestService.to<String>() #")),
             new Var(adapter.getClassTypeConstId("String")), // #0
             new Call_01(Op.A_SUPER, 0),
-            new Add(0, -adapter.ensureValueConstantId(": counter2="), 0),
+            new Add(0, adapter.ensureValueConstantId(": counter2="), 0),
             new Var(adapter.getClassTypeConstId("Int64")), // #1
             new LGet(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 1),
             new Var(adapter.getClassTypeConstId("String")), // #2

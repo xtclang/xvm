@@ -9,11 +9,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
-import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.Ref.RefHandle;
@@ -73,15 +70,12 @@ public class DNVar
     @Override
     public int process(Frame frame, int iPC)
         {
-        ServiceContext context = frame.f_context;
-
-        StringConstant constName = (StringConstant) context.f_pool.getConstant(f_nNameConstId);
-        String sName = constName.getValue();
+        String sName = frame.getString(f_nNameConstId);
 
         RefHandle hRef = m_ref;
         if (hRef == null)
             {
-            TypeComposition clz = context.f_types.ensureComposition(
+            TypeComposition clz = frame.f_context.f_types.ensureComposition(
                     f_nTypeConstId, frame.getActualTypes());
 
             hRef = clz.f_template.createRefHandle(clz, sName);
