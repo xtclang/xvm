@@ -554,7 +554,31 @@ public class MethodStructure
             param.registerConstants(pool);
             }
 
-        // TODO local constants!!!
+        // local constants:
+        // (1) if the ops array exists (which would be the result either of deserialization of the
+        //     ops, or the ops being specified to the method structure), then ask the ops to
+        //     contribute constants, otherwise
+        // (2) if the local constants array exists (which would be the result from deserialization
+        //     of the method without deserialization of the ops), then use it, otherwise
+        // (3) assume there are no local constants
+        if (m_aop != null)
+            {
+            // TODO collect constants into m_aconstLocal
+            }
+
+        Constant[] aconst = m_aconstLocal;
+        if (aconst != null)
+            {
+            for (int i = 0, c = aconst.length; i < c; ++i)
+                {
+                Constant constOld = aconst[i];
+                Constant constNew = pool.register(constOld);
+                if (constNew != constOld)
+                    {
+                    aconst[i] = constNew;
+                    }
+                }
+            }
         }
 
     @Override
@@ -574,10 +598,26 @@ public class MethodStructure
             param.assemble(out);
             }
 
-        // TODO local constants
-        writePackedLong(out, 0);
-        // TODO code
-        writePackedLong(out, 0);
+        Constant[] aconst  = m_aconstLocal;
+        int        cConsts = aconst == null ? 0 : aconst.length;
+        writePackedLong(out, cConsts);
+        for (int i = 0; i < cConsts; ++i)
+            {
+            writePackedLong(out, aconst[i].getPosition());
+            }
+
+        if (m_aop != null)
+            {
+            // TODO assemble into m_abOps
+            }
+
+        byte[] abOps = m_abOps;
+        int    cbOps = abOps == null ? 0 : abOps.length;
+        writePackedLong(out, cbOps);
+        if (cbOps > 0)
+            {
+            out.write(abOps);
+            }
         }
 
 

@@ -52,7 +52,7 @@ public class Neg
     public void write(DataOutput out)
             throws IOException
         {
-        out.writeByte(OP_NEG);
+        out.writeByte(OP_MOV_NEG);
         writePackedLong(out, f_nArgValue);
         writePackedLong(out, f_nRetValue);
         }
@@ -60,7 +60,7 @@ public class Neg
     @Override
     public int getOpCode()
         {
-        return OP_NEG;
+        return OP_MOV_NEG;
         }
 
     @Override
