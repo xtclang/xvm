@@ -2792,6 +2792,8 @@ class FakePCofString
 
 C<String>      x = new C<Object>();  // ok
 C<Object>      x = new PC<String>(); // fails
+P<Object>      x = new P<String>();  // ok
+P<String>      x = new P<Object>();  // fails
 PC<Object>     x = new PC<String>(); // ok, but the RT needs to "safe-wrap" the consuming methods
 FakePCofObject x = new PC<String>(); // fails
 PC<String>     x = new PC<Object>(); // fails

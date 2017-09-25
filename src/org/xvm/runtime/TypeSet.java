@@ -305,7 +305,7 @@ public class TypeSet
             case ImmutableType:
                 {
                 Type type = resolveType(constType.getUnderlyingType(), mapActual);
-                type.makeImmutable();
+                type.markImmutable();
                 return type;
                 }
 

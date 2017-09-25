@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
@@ -45,5 +46,11 @@ public class HandlerStart
         {
         // all the logic is actually implemented by Frame.findGuard()
         return iPC + 1;
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.enter();
         }
     }

@@ -298,7 +298,7 @@ public class MethodStructure
     public boolean isSuperCalled()
         {
         // TODO: the compiler would supply this information
-        return true;
+        return getAccess() != Access.PRIVATE;
         }
 
     /**

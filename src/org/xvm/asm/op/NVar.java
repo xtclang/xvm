@@ -9,8 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
-import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
@@ -72,10 +70,8 @@ public class NVar
 
         TypeComposition clazz = context.f_types.ensureComposition(
                 f_nTypeConstId, frame.getActualTypes());
-        StringConstant constName = (StringConstant)
-                context.f_pool.getConstant(f_nNameConstId);
 
-        frame.introduceVar(clazz, constName.getValue(), Frame.VAR_STANDARD, null);
+        frame.introduceVar(clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, null);
 
         return iPC + 1;
         }

@@ -74,45 +74,6 @@ public class Container
         f_heapGlobal = new ObjectHeap(f_pool, f_types);
         }
 
-    protected void initResources()
-        {
-        // +++ RuntimeClock
-        ClassTemplate templateClock = f_types.getTemplate("Clock");
-        if (templateClock != null)
-            {
-            f_types.getTemplate("Clock.RuntimeClock"); // to init xRuntimeClock.INSTANCE
-
-            Supplier<ObjectHandle> supplierClock = () ->
-                {
-                ServiceContext ctxClock = createServiceContext("RuntimeClock");
-                return Service.makeHandle(ctxClock,
-                        xRuntimeClock.INSTANCE.f_clazzCanonical,
-                        templateClock.f_clazzCanonical.ensurePublicType());
-                };
-
-            f_mapResources.put(
-                    new InjectionKey("runtimeClock", templateClock.f_clazzCanonical), supplierClock);
-            }
-
-        // +++ Console
-        ClassTemplate templateConsole = f_types.getTemplate("io.Console");
-        if (templateConsole != null)
-            {
-            f_types.getTemplate("io.Console.TerminalConsole"); // to init xTerminalConsole.INSTANCE
-
-            Supplier<ObjectHandle> supplierConsole = () ->
-                {
-                ServiceContext ctxConsole = createServiceContext("Console");
-                return Service.makeHandle(ctxConsole,
-                        xTerminalConsole.INSTANCE.f_clazzCanonical,
-                        templateConsole.f_clazzCanonical.ensurePublicType());
-                };
-
-            f_mapResources.put(
-                    new InjectionKey("console", templateConsole.f_clazzCanonical), supplierConsole);
-            }
-        }
-
     public void start()
         {
         if (m_contextMain != null)
@@ -155,11 +116,50 @@ public class Container
             // m_hModule = (ModuleHandle) app.createConstHandle(f_constModule, f_heapGlobal);
             m_hApp = app.createConstHandle(null, app.f_struct.getIdentityConstant());
 
-            m_contextMain.callLater(Function.makeHandle(mtRun), new ObjectHandle[]{m_hApp});
+            m_contextMain.callLater(Function.makeHandle(mtRun), Utils.OBJECTS_NONE);
             }
         catch (Exception e)
             {
             throw new RuntimeException("failed to run: " + f_constModule, e);
+            }
+        }
+
+    protected void initResources()
+        {
+        // +++ RuntimeClock
+        ClassTemplate templateClock = f_types.getTemplate("Clock");
+        if (templateClock != null)
+            {
+            f_types.getTemplate("Clock.RuntimeClock"); // to init xRuntimeClock.INSTANCE
+
+            Supplier<ObjectHandle> supplierClock = () ->
+                {
+                ServiceContext ctxClock = createServiceContext("RuntimeClock");
+                return Service.makeHandle(ctxClock,
+                        xRuntimeClock.INSTANCE.f_clazzCanonical,
+                        templateClock.f_clazzCanonical.ensurePublicType());
+                };
+
+            f_mapResources.put(
+                    new InjectionKey("runtimeClock", templateClock.f_clazzCanonical), supplierClock);
+            }
+
+        // +++ Console
+        ClassTemplate templateConsole = f_types.getTemplate("io.Console");
+        if (templateConsole != null)
+            {
+            f_types.getTemplate("io.Console.TerminalConsole"); // to init xTerminalConsole.INSTANCE
+
+            Supplier<ObjectHandle> supplierConsole = () ->
+                {
+                ServiceContext ctxConsole = createServiceContext("Console");
+                return Service.makeHandle(ctxConsole,
+                        xTerminalConsole.INSTANCE.f_clazzCanonical,
+                        templateConsole.f_clazzCanonical.ensurePublicType());
+                };
+
+            f_mapResources.put(
+                    new InjectionKey("console", templateConsole.f_clazzCanonical), supplierConsole);
             }
         }
 

@@ -8,8 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
@@ -82,11 +80,8 @@ public class AssertT
                 return iPC + 1;
                 }
 
-            StringConstant constText = (StringConstant)
-                    frame.f_context.f_pool.getConstant(-f_nTextConstId);
-
             return frame.raiseException(
-                    xException.makeHandle("Assertion failed: " + constText.getValueString()));
+                    xException.makeHandle("Assertion failed: " + frame.getString(f_nTextConstId)));
             }
         catch (ExceptionHandle.WrapperException e)
             {

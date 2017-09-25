@@ -65,7 +65,7 @@ public class Type
         return m_fImmutable;
         }
 
-    public void makeImmutable()
+    public void markImmutable()
         {
         m_fImmutable = true;
         }
