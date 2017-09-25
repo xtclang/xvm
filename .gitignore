@@ -24,6 +24,8 @@
 # User specific tool settings
 #############################
 *.iws
+*.ipr
+*.iml
 
 # Logs and databases #
 ######################
@@ -43,3 +45,7 @@ Thumbs.db
 
 # build directory
 classes/
+
+# project files (temporary hack to avoid Gene overwriting the project files from IDEA :)
+prj/
+

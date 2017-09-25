@@ -66,14 +66,15 @@
  OR         rvalue-target, rvalue-second, lvalue-return                             ; T | T -> T
  XOR        rvalue-target, rvalue-second, lvalue-return                             ; T ^ T -> T
  DIVMOD     rvalue-target, rvalue-second, lvalue-div-return, lvalue-mod-return      ; T /% T -> T, T
- POS        rvalue-target, lvalue-return                                            ; +T -> T                ; TODO make this reserved? (it’s a no-op for built-in types)
-+NEG        rvalue-target, lvalue-return                                            ; -T -> T
- COMPL      rvalue-target, lvalue-return                                            ; ~T -> T                ; WHY DOES THIS EXIST?
+ NEG        lvalue-target                                                           ; -T -> T
+ COMPL      lvalue-target                                                           ; ~T -> T
++MOV_NEG    rvalue-target, lvalue-return                                            ; -T -> T
+ MOV_COMPL  rvalue-target, lvalue-return                                            ; ~T -> T
 
 // in this group, the lvalue-target could be either a positive number, representing
 // a register, or a negative - representing a local CONST_PROPERTY
-+INC        rvalue-target                                                           ; in-place increment; no result
- DEC        rvalue-target                                                           ; ditto
++INC        lvalue-target                                                           ; in-place increment; no result
+ DEC        lvalue-target                                                           ; ditto
 +POSTINC    lvalue-target, lvalue-return                                            ; T++ -> T
  POSTDEC    lvalue-target, lvalue-return                                            ; T-— -> T
 +PREINC     lvalue-target, lvalue-return                                            ; ++T -> T
@@ -101,17 +102,17 @@
  P_POSTDEC    rvalue-target, CONST_PROPERTY, lvalue-return  ; ditto
 +P_PREINC     rvalue-target, CONST_PROPERTY, lvalue-return
  P_PREDEC     rvalue-target, CONST_PROPERTY, lvalue-return
- P_ADD_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
- P_SUB_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
- P_MUL_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
- P_DIV_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
- P_MOD_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
- P_SHL_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
- P_SHR_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
- P_USHR_ASGN  lvalue-target, CONST_PROPERTY, rvalue-second
- P_AND_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
- P_OR_ASGN    lvalue-target, CONST_PROPERTY, rvalue-second
- P_XOR_ASGN   lvalue-target, CONST_PROPERTY, rvalue-second
+ P_ADD_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_SUB_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_MUL_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_DIV_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_MOD_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_SHL_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_SHR_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_USHR_ASGN  rvalue-target, CONST_PROPERTY, rvalue-second
+ P_AND_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_OR_ASGN    rvalue-target, CONST_PROPERTY, rvalue-second
+ P_XOR_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
 
 // local property based
 +L_GET      CONST_PROPERTY, lvalue   ; local get property (target=this)
@@ -264,3 +265,8 @@ pre-defined variables/constants:
 + 8: this:module    Module + ..
   9: this:type      Type
 + A: super          Function
+  B: *reserved
+  C: *reserved
+  D: *reserved
+  E: *reserved
+  F: *reserved
