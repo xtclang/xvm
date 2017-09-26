@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public abstract class Op
     {
-    // ----- Op interface ----------------------------------------------------------------------------------------------
+    // ----- Op interface --------------------------------------------------------------------------
 
     /**
      * Write the op-code.
@@ -103,228 +103,118 @@ public abstract class Op
         {
         switch (nOp)
             {
-            case OP_NOP:
-                return new Nop(in, aconst);
-            case OP_LINE_1:
-                return new Line_1(in, aconst);
-            case OP_LINE_N:
-                return new Line_N(in, aconst);
-            case OP_BREAK:
-                return new Break(in, aconst);
-            case OP_ENTER:
-                return new Enter(in, aconst);
-            case OP_EXIT:
-                return new Exit(in, aconst);
-            case OP_GUARD:
-                return new GuardStart(in, aconst);
-            case OP_END_GUARD:
-                return new GuardEnd(in, aconst);
-            case OP_HANDLER:
-                return new HandlerStart(in, aconst);
-            case OP_END_HANDLER:
-                return new HandlerEnd(in, aconst);
-            case OP_GUARD_ALL:
-                return new GuardAll(in, aconst);
-            case OP_FINALLY:
-                return new FinallyStart(in, aconst);
-            case OP_END_FINALLY:
-                return new FinallyEnd(in, aconst);
-            case OP_THROW:
-                return new Throw(in, aconst);
-            case OP_ADD:
-                return new Add(in, aconst);
-            case OP_GOTO:
-                return new GoTo(in, aconst);
-            case OP_JMP:
-                return new Jump(in, aconst);
-            case OP_JMP_TRUE:
-                return new JumpTrue(in, aconst);
-            case OP_JMP_FALSE:
-                return new JumpFalse(in, aconst);
-            case OP_JMP_ZERO:
-                return new JumpZero(in, aconst);
-            case OP_JMP_NZERO:
-                return new JumpNotZero(in, aconst);
-            case OP_JMP_NULL:
-                return new JumpNull(in, aconst);
-            case OP_JMP_NNULL:
-                return new JumpNotNull(in, aconst);
-            case OP_JMP_EQ:
-                return new JumpEq(in, aconst);
-            case OP_JMP_NEQ:
-                return new JumpNotEq(in, aconst);
-            case OP_JMP_LT:
-                return new JumpLt(in, aconst);
-            case OP_JMP_LTE:
-                return new JumpLte(in, aconst);
-            case OP_JMP_GT:
-                return new JumpGt(in, aconst);
-            case OP_JMP_GTE:
-                return new JumpGte(in, aconst);
-            case OP_VAR:
-                return new Var(in, aconst);
-            case OP_IVAR:
-                return new IVar(in, aconst);
-            case OP_NVAR:
-                return new NVar(in, aconst);
-            case OP_INVAR:
-                return new INVar(in, aconst);
-            case OP_DVAR:
-                return new DVar(in, aconst);
-            case OP_DNVAR:
-                return new DNVar(in, aconst);
-            case OP_SVAR:
-                return new SVar(in, aconst);
-            case OP_TVAR:
-                return new TVar(in, aconst);
-            case OP_REF:
-                return new Ref(in, aconst);
-            case OP_MOV:
-                return new Move(in, aconst);
-            case OP_MOV_REF:
-                return new MoveRef(in, aconst);
-            case OP_NEG:
-                return new Neg(in, aconst);
-            case OP_INC:
-                return new Inc(in, aconst);
-            case OP_POSTINC:
-                return new PostInc(in, aconst);
-            case OP_PREINC:
-                return new PreInc(in, aconst);
-            case OP_P_GET:
-                return new PGet(in, aconst);
-            case OP_P_SET:
-                return new PSet(in, aconst);
-            case OP_P_POSTINC:
-                return new PPostInc(in, aconst);
-            case OP_P_PREINC:
-                return new PPreInc(in, aconst);
-            case OP_L_GET:
-                return new LGet(in, aconst);
-            case OP_L_SET:
-                return new LSet(in, aconst);
-            case OP_CALL_00:
-                return new Call_00(in, aconst);
-            case OP_CALL_01:
-                return new Call_01(in, aconst);
-            case OP_CALL_0N:
-                return new Call_0N(in, aconst);
-            case OP_CALL_0T:
-                return new Call_0T(in, aconst);
-            case OP_CALL_10:
-                return new Call_10(in, aconst);
-            case OP_CALL_11:
-                return new Call_11(in, aconst);
-            case OP_CALL_1N:
-                return new Call_1N(in, aconst);
-            case OP_CALL_1T:
-                return new Call_1T(in, aconst);
-            case OP_CALL_N0:
-                return new Call_N0(in, aconst);
-            case OP_CALL_N1:
-                return new Call_N1(in, aconst);
-            case OP_CALL_NN:
-                return new Call_NN(in, aconst);
-            case OP_CALL_NT:
-                return new Call_NT(in, aconst);
-            case OP_CALL_T0:
-                return new Call_T0(in, aconst);
-            case OP_CALL_T1:
-                return new Call_T1(in, aconst);
-            case OP_CALL_TN:
-                return new Call_TN(in, aconst);
-            case OP_CALL_TT:
-                return new Call_TT(in, aconst);
-            case OP_INVOKE_00:
-                return new Invoke_00(in, aconst);
-            case OP_INVOKE_01:
-                return new Invoke_01(in, aconst);
-            case OP_INVOKE_0N:
-                return new Invoke_0N(in, aconst);
-            case OP_INVOKE_0T:
-                return new Invoke_0T(in, aconst);
-            case OP_INVOKE_10:
-                return new Invoke_10(in, aconst);
-            case OP_INVOKE_11:
-                return new Invoke_11(in, aconst);
-            case OP_INVOKE_1N:
-                return new Invoke_1N(in, aconst);
-            case OP_INVOKE_1T:
-                return new Invoke_1T(in, aconst);
-            case OP_INVOKE_N0:
-                return new Invoke_N0(in, aconst);
-            case OP_INVOKE_N1:
-                return new Invoke_N1(in, aconst);
-            case OP_INVOKE_NN:
-                return new Invoke_NN(in, aconst);
-            case OP_INVOKE_NT:
-                return new Invoke_NT(in, aconst);
-            case OP_INVOKE_T0:
-                return new Invoke_T0(in, aconst);
-            case OP_INVOKE_T1:
-                return new Invoke_T1(in, aconst);
-            case OP_INVOKE_TN:
-                return new Invoke_TN(in, aconst);
-            case OP_INVOKE_TT:
-                return new Invoke_TT(in, aconst);
-            case OP_I_GET:
-                return new IGet(in, aconst);
-            case OP_I_SET:
-                return new ISet(in, aconst);
-            case OP_I_REF:
-                return new IRef(in, aconst);
-            case OP_NEW_1:
-                return new New_1(in, aconst);
-            case OP_NEW_N:
-                return new New_N(in, aconst);
-            case OP_NEW_0G:
-                return new New_0G(in, aconst);
-            case OP_NEW_1G:
-                return new New_1G(in, aconst);
-            case OP_NEW_NG:
-                return new New_NG(in, aconst);
-            case OP_CONSTR_1:
-                return new Construct_1(in, aconst);
-            case OP_CONSTR_N:
-                return new Construct_N(in, aconst);
-            case OP_ASSERT:
-                return new Assert(in, aconst);
-            case OP_ASSERT_T:
-                return new AssertT(in, aconst);
-            case OP_MBIND:
-                return new MBind(in, aconst);
-            case OP_FBIND:
-                return new FBind(in, aconst);
-            case OP_RETURN_0:
-                return new Return_0(in, aconst);
-            case OP_RETURN_1:
-                return new Return_1(in, aconst);
-            case OP_RETURN_N:
-                return new Return_N(in, aconst);
-            case OP_RETURN_T:
-                return new Return_T(in, aconst);
-            case OP_IS_ZERO:
-                return new IsZero(in, aconst);
-            case OP_IS_NZERO:
-                return new IsNotZero(in, aconst);
-            case OP_IS_NULL:
-                return new IsNull(in, aconst);
-            case OP_IS_NNULL:
-                return new IsNotNull(in, aconst);
-            case OP_IS_EQ:
-                return new IsEq(in, aconst);
-            case OP_IS_NEQ:
-                return new IsNotEq(in, aconst);
-            case OP_IS_LT:
-                return new IsLt(in, aconst);
-            case OP_IS_LTE:
-                return new IsLte(in, aconst);
-            case OP_IS_GT:
-                return new IsGt(in, aconst);
-            case OP_IS_GTE:
-                return new IsGte(in, aconst);
-            case OP_IS_NOT:
-                return new IsNot(in, aconst);
+            case OP_NOP:         return new Nop         (in, aconst);
+            case OP_LINE_1:      return new Line_1      (in, aconst);
+            case OP_LINE_N:      return new Line_N      (in, aconst);
+            case OP_BREAK:       return new Break       (in, aconst);
+            case OP_ENTER:       return new Enter       (in, aconst);
+            case OP_EXIT:        return new Exit        (in, aconst);
+            case OP_GUARD:       return new GuardStart  (in, aconst);
+            case OP_END_GUARD:   return new GuardEnd    (in, aconst);
+            case OP_HANDLER:     return new HandlerStart(in, aconst);
+            case OP_END_HANDLER: return new HandlerEnd  (in, aconst);
+            case OP_GUARD_ALL:   return new GuardAll    (in, aconst);
+            case OP_FINALLY:     return new FinallyStart(in, aconst);
+            case OP_END_FINALLY: return new FinallyEnd  (in, aconst);
+            case OP_THROW:       return new Throw       (in, aconst);
+            case OP_ADD:         return new Add         (in, aconst);
+            case OP_GOTO:        return new GoTo        (in, aconst);
+            case OP_JMP:         return new Jump        (in, aconst);
+            case OP_JMP_TRUE:    return new JumpTrue    (in, aconst);
+            case OP_JMP_FALSE:   return new JumpFalse   (in, aconst);
+            case OP_JMP_ZERO:    return new JumpZero    (in, aconst);
+            case OP_JMP_NZERO:   return new JumpNotZero (in, aconst);
+            case OP_JMP_NULL:    return new JumpNull    (in, aconst);
+            case OP_JMP_NNULL:   return new JumpNotNull (in, aconst);
+            case OP_JMP_EQ:      return new JumpEq      (in, aconst);
+            case OP_JMP_NEQ:     return new JumpNotEq   (in, aconst);
+            case OP_JMP_LT:      return new JumpLt      (in, aconst);
+            case OP_JMP_LTE:     return new JumpLte     (in, aconst);
+            case OP_JMP_GT:      return new JumpGt      (in, aconst);
+            case OP_JMP_GTE:     return new JumpGte     (in, aconst);
+            case OP_VAR:         return new Var         (in, aconst);
+            case OP_IVAR:        return new IVar        (in, aconst);
+            case OP_NVAR:        return new NVar        (in, aconst);
+            case OP_INVAR:       return new INVar       (in, aconst);
+            case OP_DVAR:        return new DVar        (in, aconst);
+            case OP_DNVAR:       return new DNVar       (in, aconst);
+            case OP_SVAR:        return new SVar        (in, aconst);
+            case OP_TVAR:        return new TVar        (in, aconst);
+            case OP_REF:         return new Ref         (in, aconst);
+            case OP_MOV:         return new Move        (in, aconst);
+            case OP_MOV_REF:     return new MoveRef     (in, aconst);
+            case OP_NEG:         return new Neg         (in, aconst);
+            case OP_INC:         return new Inc         (in, aconst);
+            case OP_POSTINC:     return new PostInc     (in, aconst);
+            case OP_PREINC:      return new PreInc      (in, aconst);
+            case OP_P_GET:       return new PGet        (in, aconst);
+            case OP_P_SET:       return new PSet        (in, aconst);
+            case OP_P_POSTINC:   return new PPostInc    (in, aconst);
+            case OP_P_PREINC:    return new PPreInc     (in, aconst);
+            case OP_L_GET:       return new LGet        (in, aconst);
+            case OP_L_SET:       return new LSet        (in, aconst);
+            case OP_CALL_00:     return new Call_00     (in, aconst);
+            case OP_CALL_01:     return new Call_01     (in, aconst);
+            case OP_CALL_0N:     return new Call_0N     (in, aconst);
+            case OP_CALL_0T:     return new Call_0T     (in, aconst);
+            case OP_CALL_10:     return new Call_10     (in, aconst);
+            case OP_CALL_11:     return new Call_11     (in, aconst);
+            case OP_CALL_1N:     return new Call_1N     (in, aconst);
+            case OP_CALL_1T:     return new Call_1T     (in, aconst);
+            case OP_CALL_N0:     return new Call_N0     (in, aconst);
+            case OP_CALL_N1:     return new Call_N1     (in, aconst);
+            case OP_CALL_NN:     return new Call_NN     (in, aconst);
+            case OP_CALL_NT:     return new Call_NT     (in, aconst);
+            case OP_CALL_T0:     return new Call_T0     (in, aconst);
+            case OP_CALL_T1:     return new Call_T1     (in, aconst);
+            case OP_CALL_TN:     return new Call_TN     (in, aconst);
+            case OP_CALL_TT:     return new Call_TT     (in, aconst);
+            case OP_INVOKE_00:   return new Invoke_00   (in, aconst);
+            case OP_INVOKE_01:   return new Invoke_01   (in, aconst);
+            case OP_INVOKE_0N:   return new Invoke_0N   (in, aconst);
+            case OP_INVOKE_0T:   return new Invoke_0T   (in, aconst);
+            case OP_INVOKE_10:   return new Invoke_10   (in, aconst);
+            case OP_INVOKE_11:   return new Invoke_11   (in, aconst);
+            case OP_INVOKE_1N:   return new Invoke_1N   (in, aconst);
+            case OP_INVOKE_1T:   return new Invoke_1T   (in, aconst);
+            case OP_INVOKE_N0:   return new Invoke_N0   (in, aconst);
+            case OP_INVOKE_N1:   return new Invoke_N1   (in, aconst);
+            case OP_INVOKE_NN:   return new Invoke_NN   (in, aconst);
+            case OP_INVOKE_NT:   return new Invoke_NT   (in, aconst);
+            case OP_INVOKE_T0:   return new Invoke_T0   (in, aconst);
+            case OP_INVOKE_T1:   return new Invoke_T1   (in, aconst);
+            case OP_INVOKE_TN:   return new Invoke_TN   (in, aconst);
+            case OP_INVOKE_TT:   return new Invoke_TT   (in, aconst);
+            case OP_I_GET:       return new IGet        (in, aconst);
+            case OP_I_SET:       return new ISet        (in, aconst);
+            case OP_I_REF:       return new IRef        (in, aconst);
+            case OP_NEW_1:       return new New_1       (in, aconst);
+            case OP_NEW_N:       return new New_N       (in, aconst);
+            case OP_NEW_0G:      return new New_0G      (in, aconst);
+            case OP_NEW_1G:      return new New_1G      (in, aconst);
+            case OP_NEW_NG:      return new New_NG      (in, aconst);
+            case OP_CONSTR_1:    return new Construct_1 (in, aconst);
+            case OP_CONSTR_N:    return new Construct_N (in, aconst);
+            case OP_ASSERT:      return new Assert      (in, aconst);
+            case OP_ASSERT_T:    return new AssertT     (in, aconst);
+            case OP_MBIND:       return new MBind       (in, aconst);
+            case OP_FBIND:       return new FBind       (in, aconst);
+            case OP_RETURN_0:    return new Return_0    (in, aconst);
+            case OP_RETURN_1:    return new Return_1    (in, aconst);
+            case OP_RETURN_N:    return new Return_N    (in, aconst);
+            case OP_RETURN_T:    return new Return_T    (in, aconst);
+            case OP_IS_ZERO:     return new IsZero      (in, aconst);
+            case OP_IS_NZERO:    return new IsNotZero   (in, aconst);
+            case OP_IS_NULL:     return new IsNull      (in, aconst);
+            case OP_IS_NNULL:    return new IsNotNull   (in, aconst);
+            case OP_IS_EQ:       return new IsEq        (in, aconst);
+            case OP_IS_NEQ:      return new IsNotEq     (in, aconst);
+            case OP_IS_LT:       return new IsLt        (in, aconst);
+            case OP_IS_LTE:      return new IsLte       (in, aconst);
+            case OP_IS_GT:       return new IsGt        (in, aconst);
+            case OP_IS_GTE:      return new IsGte       (in, aconst);
+            case OP_IS_NOT:      return new IsNot       (in, aconst);
+            
             default:
                 throw new IllegalStateException("op=" + byteToHexString(nOp));
             }
@@ -373,7 +263,7 @@ public abstract class Op
         }
 
 
-    // ----- op-codes --------------------------------------------------------------------------------------------------
+    // ----- op-codes ------------------------------------------------------------------------------
 
     public static final int OP_NOP          = 0x00;
     public static final int OP_LINE_1       = 0x01;
@@ -629,11 +519,11 @@ public abstract class Op
     public static final int OP_X_PRINT      = 0xFF;
 
 
-    // ----- pre-defined arguments -------------------------------------------------------------------------------------
+    // ----- pre-defined arguments -----------------------------------------------------------------
 
     /**
-     * Pre-defined argument mask. Pre-defined arguments are in the range -1 to -16, with any unused values in that
-     * range reserved for use in a future revision of the XVM.
+     * Pre-defined argument mask. Pre-defined arguments are in the range -1 to -16, with any unused
+     * values in that range reserved for use in a future revision of the XVM.
      */
     public static final int A_MASK = 0xFFFFFFF0;
 
@@ -693,7 +583,7 @@ public abstract class Op
     public static final int A_SUPER = -11;
 
 
-    // ----- return values from the Op.process() method ----------------------------------------------------------------
+    // ----- return values from the Op.process() method --------------------------------------------
 
     /**
      * Result from process() method: execute the next op-code.
@@ -721,18 +611,21 @@ public abstract class Op
     public static final int R_CALL = -5;
 
     /**
-     * Result from process() method: some registers are not ready for a read; yield and repeat the same op-code.
+     * Result from process() method: some registers are not ready for a read; yield and repeat the
+     * same op-code.
      */
     public static final int R_REPEAT = -6;
 
     /**
-     * Result from process() method: some assignments were deferred; yield and check the "waiting" registers before
+     * Result from process() method: some assignments were deferred; yield and check the "waiting"
+     * registers before
      * executing the next op-code.
      */
     public static final int R_BLOCK = -7;
 
     /**
-     * Result from process() method: some assignments were deferred; yield and check the "waiting" registers before
+     * Result from process() method: some assignments were deferred; yield and check the "waiting"
+     * registers before
      * returning.
      */
     public static final int R_BLOCK_RETURN = -8;
@@ -743,7 +636,7 @@ public abstract class Op
     public static final int R_YIELD = -9;
 
 
-    // ----- other constants -------------------------------------------------------------------------------------------
+    // ----- other constants -----------------------------------------------------------------------
 
     /**
      * An empty array of ops.
@@ -751,8 +644,8 @@ public abstract class Op
     public static final Op[] NO_OPS = new Op[0];
 
     /**
-     * The first constant, constant #0, is at this index (which is a negative). For a constant whose index is {@code i},
-     * it is encoded as: {@code CONSTANT_OFFSET - i}
+     * The first constant, constant #0, is at this index (which is a negative). For a constant whose
+     * index is {@code i}, it is encoded as: {@code CONSTANT_OFFSET - i}
      */
     public static final int CONSTANT_OFFSET = -17;
 
