@@ -473,11 +473,11 @@ public abstract class Op
     public static final int OP_MBIND        = 0xC8;
     public static final int OP_FBIND        = 0xC9;
     public static final int OP_FBINDN       = 0xCA;
-    public static final int OP_RETURN_0     = 0xCB;
-    public static final int OP_RETURN_1     = 0xCC;
-    public static final int OP_RETURN_N     = 0xCD;
-    public static final int OP_RETURN_T     = 0xCE;
-    public static final int RESERVED_CF     = 0xCF;
+    public static final int RESERVED_CB     = 0xCB;
+    public static final int OP_RETURN_0     = 0xCC;
+    public static final int OP_RETURN_1     = 0xCD;
+    public static final int OP_RETURN_N     = 0xCE;
+    public static final int OP_RETURN_T     = 0xCF;
 
     public static final int OP_IS_ZERO      = 0xD0;
     public static final int OP_IS_NZERO     = 0xD1;
