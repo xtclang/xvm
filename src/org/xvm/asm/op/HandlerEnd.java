@@ -44,7 +44,7 @@ public class HandlerEnd
         }
 
     @Override
-    public void write(DataOutput out)
+    public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
         out.writeByte(OP_END_HANDLER);

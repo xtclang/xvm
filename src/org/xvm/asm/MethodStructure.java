@@ -2,14 +2,19 @@ package org.xvm.asm;
 
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.List;
 
+import org.xvm.asm.Op.Prefix;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -152,29 +157,61 @@ public class MethodStructure
         }
 
     /**
+     * Ensure that a Code object exists. If the MethodStructure was disassembled, then the Code will
+     * hold the deserialized Ops. If the MethodStructure has been created but no Code has already
+     * been created, then the Code will be empty. If the Code was already created, then that
+     * previous Code will be returned.
+     *
+     * @return a Code object, or null iff this MethodStructure has been marked as native
+     */
+    public Code ensureCode()
+        {
+        if (isNative())
+            {
+            return null;
+            }
+
+        Code code = m_code;
+        if (code == null)
+            {
+            m_code = code = new Code();
+            }
+        return code;
+        }
+
+    /**
+     * Create an empty Code object.
+     *
+     * @return a new and empty Code object
+     */
+    public Code createCode()
+        {
+        Code code;
+
+        resetRuntimeInfo();
+        m_aconstLocal = null;
+        m_abOps       = null;
+        m_code = code = new Code();
+
+        markModified();
+
+        return code;
+        }
+
+    /**
      * @return the op-code array for this method
      */
     public Op[] getOps()
         {
-        Op[] aop = m_aop;
-        if (aop == null && !m_fNative)
+        Op[] aop = null;
+
+        Code code = ensureCode();
+        if (code != null)
             {
-            byte[] abOps = m_abOps;
-            if (abOps != null)
-                {
-                try
-                    {
-                    m_aop = aop = abOps.length == 0
-                            ? Op.NO_OPS
-                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), m_aconstLocal);
-                    }
-                catch (IOException e)
-                    {
-                    throw new RuntimeException(e);
-                    }
-                }
+            aop = code.getOps();
             }
-        return m_aop;
+
+        return aop;
         }
 
     public Constant[] getLocalConstants()
@@ -186,16 +223,33 @@ public class MethodStructure
      * Specify the ops for this method.
      *
      * @param aop  the op-code array for this method
+     *
+     * @deprecated
      */
     public void setOps(Op[] aop)
         {
-        m_aop = aop;
         resetRuntimeInfo();
+        m_aconstLocal = null;
+        m_abOps       = null;
+        m_code        = new Code(aop);
         markModified();
         }
 
 
     // ----- run-time support ----------------------------------------------------------------------
+
+    /**
+     * @return a scope containing just the parameters to the method
+     */
+    Scope createInitialScope()
+        {
+        Scope scope = new Scope();
+        for (int i = 0, c = getParamCount(); i < c; ++i)
+            {
+            scope.allocVar();
+            }
+        return scope;
+        }
 
     /**
      * Initialize the runtime information. This is done automatically.
@@ -204,27 +258,17 @@ public class MethodStructure
         {
         if (m_cScopes == 0)
             {
-            Scope scope = new Scope();
-            for (int i = 0, c = getParamCount(); i < c; ++i)
+            if (m_fNative)
                 {
-                scope.allocVar();
+                Scope scope = createInitialScope();
+                m_cVars   = scope.getMaxVars();
+                m_cScopes = scope.getMaxDepth();
                 }
-
-            if (!m_fNative)
+            else
                 {
-                // calc scopes and vars using ops
-                Op[] aop = getOps();
-                if (aop != null)
-                    {
-                    for (Op op : aop)
-                        {
-                        op.simulate(scope);
-                        }
-                    }
+                ensureCode().ensureAssembled();
+                assert m_cScopes > 0;
                 }
-
-            m_cVars   = scope.getMaxVars();
-            m_cScopes = scope.getMaxDepth();
             }
         }
 
@@ -233,6 +277,7 @@ public class MethodStructure
      */
     public void resetRuntimeInfo()
         {
+        m_code    = null;
         m_cVars   = 0;
         m_cScopes = 0;
         m_fNative = false;
@@ -280,12 +325,18 @@ public class MethodStructure
         m_fNative = fNative;
         }
 
+    /**
+     * @deprecated
+     */
     public MethodStructure getConstructFinally()
         {
         // TODO this method must calculate the value
         return m_structFinally;
         }
 
+    /**
+     * @deprecated
+     */
     public void setConstructFinally(MethodStructure structFinally)
         {
         // TODO this method must die (eventually)
@@ -555,29 +606,30 @@ public class MethodStructure
             }
 
         // local constants:
-        // (1) if the ops array exists (which would be the result either of deserialization of the
-        //     ops, or the ops being specified to the method structure), then ask the ops to
-        //     contribute constants, otherwise
-        // (2) if the local constants array exists (which would be the result from deserialization
-        //     of the method without deserialization of the ops), then use it, otherwise
-        // (3) assume there are no local constants
-        if (m_aop != null)
+        // (1) if code was created for this method, then it needs to register the constanats;
+        // (2) otherwise, if the local constants are present (because we read them in), then make
+        //     sure they're all registered;
+        // (3) otherwise, assume there are no local constants
+        Code code = m_code;
+        if (code == null)
             {
-            // TODO collect constants into m_aconstLocal
-            }
-
-        Constant[] aconst = m_aconstLocal;
-        if (aconst != null)
-            {
-            for (int i = 0, c = aconst.length; i < c; ++i)
+            Constant[] aconst = m_aconstLocal;
+            if (aconst != null)
                 {
-                Constant constOld = aconst[i];
-                Constant constNew = pool.register(constOld);
-                if (constNew != constOld)
+                for (int i = 0, c = aconst.length; i < c; ++i)
                     {
-                    aconst[i] = constNew;
+                    Constant constOld = aconst[i];
+                    Constant constNew = pool.register(constOld);
+                    if (constNew != constOld)
+                        {
+                        aconst[i] = constNew;
+                        }
                     }
                 }
+            }
+        else
+            {
+            code.ensureAssembled();
             }
         }
 
@@ -598,6 +650,7 @@ public class MethodStructure
             param.assemble(out);
             }
 
+        // write out the "local constant pool"
         Constant[] aconst  = m_aconstLocal;
         int        cConsts = aconst == null ? 0 : aconst.length;
         writePackedLong(out, cConsts);
@@ -606,11 +659,7 @@ public class MethodStructure
             writePackedLong(out, aconst[i].getPosition());
             }
 
-        if (m_aop != null)
-            {
-            // TODO assemble into m_abOps
-            }
-
+        // write out the bytes (if there are any)
         byte[] abOps = m_abOps;
         int    cbOps = abOps == null ? 0 : abOps.length;
         writePackedLong(out, cbOps);
@@ -625,6 +674,7 @@ public class MethodStructure
     public String getDescription()
         {
         return new StringBuilder()
+
                 .append("id=\"")
                 .append(getIdentityConstant().getValueString())
                 .append("\", sig=")
@@ -636,6 +686,219 @@ public class MethodStructure
                 .append(", type-param-count=")
                 .append(m_cTypeParams)
                 .toString();
+        }
+
+
+    // ----- inner class: Code ---------------------------------------------------------------------
+
+    /**
+     * TODO
+     */
+    public class Code
+        {
+        // ----- constructors -----------------------------------------------------------------
+
+        /**
+         * TODO temporary
+         *
+         * @param aop   array of ops
+         */
+        Code(Op[] aop)
+            {
+            m_aop = aop;
+            calcVars();
+            }
+
+        Code()
+            {
+            byte[] abOps = m_abOps;
+            if (abOps != null)
+                {
+                try
+                    {
+                    m_aop = abOps.length == 0
+                            ? Op.NO_OPS
+                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), m_aconstLocal);
+                    }
+                catch (IOException e)
+                    {
+                    throw new RuntimeException(e);
+                    }
+                }
+            }
+
+        // ----- Code methods -----------------------------------------------------------------
+
+        /**
+         * Add the specified op to the end of the code.
+         *
+         * @param op  the Op to add
+         */
+        public void add(Op op)
+            {
+            ensureAppending();
+
+            ArrayList<Op> listOps = m_listOps;
+            if (m_fTrailingPrefix)
+                {
+                // get the last op and append this op to it
+                ((Prefix) listOps.get(listOps.size()-1)).append(op);
+                }
+            else
+                {
+                listOps.add(op);
+                }
+
+            m_fTrailingPrefix = op instanceof Prefix;
+            m_mapIndex        = null;
+            }
+
+        /**
+         * Find the specified op in the sequence of op codes.
+         *
+         * @param op  the op to find
+         *
+         * @return the index (aka the PC) within the method) of the op, or -1 if the op could not be
+         *         found
+         */
+        public int addressOf(Op op)
+            {
+            IdentityHashMap<Op, Integer> mapIndex = m_mapIndex;
+            if (mapIndex == null)
+                {
+                ArrayList<Op> listOps = m_listOps;
+                int           cOps    = listOps.size();
+                if (cOps < 50)
+                    {
+                    // brute force search a small list of ops
+                    for (int i = 0; i < cOps; ++i)
+                        {
+                        if (listOps.get(i).contains(op))
+                            {
+                            return i;
+                            }
+                        }
+                    return -1;
+                    }
+
+                m_mapIndex = mapIndex = new IdentityHashMap<>();
+                for (int i = 0; i < cOps; ++i)
+                    {
+                    Op opEach = listOps.get(i);
+                    do
+                        {
+                        mapIndex.put(opEach, i);
+                        }
+                    while (opEach instanceof Prefix && (opEach = ((Prefix) opEach).getNextOp()) != null);
+                    }
+                }
+
+            Integer index = mapIndex.get(op);
+            return index == null ? -1 : index;
+            }
+
+        /**
+         * @return the array of Ops that make up the Code
+         */
+        public Op[] getOps()
+            {
+            ensureAssembled();
+            return m_aop;
+            }
+
+        // ----- internal ---------------------------------------------------------------------
+
+        private void ensureAppending()
+            {
+            if (m_abOps != null)
+                {
+                throw new IllegalStateException("not appendable");
+                }
+
+            if (m_listOps == null)
+                {
+                m_listOps =  new ArrayList<>();
+                }
+            }
+
+        private void ensureAssembled()
+            {
+            if (m_abOps == null)
+                {
+                // build the local constant array
+                Op[] aop = m_listOps.toArray(new Op[m_listOps.size()]);
+                Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
+                Scope scope = createInitialScope();
+                for (int i = 0, c = aop.length; i < c; ++i)
+                    {
+                    Op op = aop[i];
+                    op.registerConstants(registry);
+                    op.simulate(scope);
+                    op.resolveAddress(this, i);
+                    }
+
+                // assemble the ops into bytes
+                ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+                DataOutputStream outData = new DataOutputStream(outBytes);
+                try
+                    {
+                    for (Op op : aop)
+                        {
+                        op.write(outData, registry);
+                        }
+                    }
+                catch (IOException e)
+                    {
+                    throw new IllegalStateException(e);
+                    }
+
+                m_aop         = aop;
+                m_abOps       = outBytes.toByteArray();
+                m_aconstLocal = registry.getConstantArray();
+                m_cVars       = scope.getMaxVars();
+                m_cScopes     = scope.getMaxDepth();
+                markModified();
+                }
+            }
+
+        private void calcVars()
+            {
+            Scope scope = createInitialScope();
+
+            Op[] aop = getOps();
+            if (m_cScopes == 0)
+                {
+                for (Op op : aop)
+                    {
+                    op.simulate(scope);
+                    }
+
+                m_cVars   = scope.getMaxVars();
+                m_cScopes = scope.getMaxDepth();
+                }
+            }
+
+        // ----- fields -----------------------------------------------------------------------
+
+        /**
+         * List of ops being assembled.
+         */
+        private ArrayList<Op> m_listOps;
+
+        /**
+         * Lookup of op address by op.
+         */
+        private IdentityHashMap<Op, Integer> m_mapIndex;
+
+        /**
+         * True iff the last op added was a prefix.
+         */
+        private boolean m_fTrailingPrefix;
+
+        /**
+         * The array of ops.
+         */
+        private Op[] m_aop;
         }
 
 
@@ -669,27 +932,27 @@ public class MethodStructure
     /**
      * The constants used by the Ops.
      */
-    private transient Constant[] m_aconstLocal;
+    transient Constant[] m_aconstLocal;
 
     /**
      * The yet-to-be-deserialized ops.
      */
-    private transient byte[] m_abOps;
+    transient byte[] m_abOps;
 
     /**
-     * The instructions that make up the method's behavior. Calculated from the ops.
+     * The method's code (for assembling new code).
      */
-    private Op[] m_aop;
+    private transient Code m_code;
 
     /**
      * The max number of registers used by the method. Calculated from the ops.
      */
-    private transient int m_cVars;
+    transient int m_cVars;
 
     /**
-     * The max number of scopes used by the method.
+     * The max number of scopes used by the method. Calculated from the ops.
      */
-    private transient int m_cScopes;
+    transient int m_cScopes;
 
     /**
      * True iff the method has been marked as "native". This is not part of the persistent method

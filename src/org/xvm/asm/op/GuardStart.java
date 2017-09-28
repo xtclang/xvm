@@ -73,7 +73,7 @@ public class GuardStart
         }
 
     @Override
-    public void write(DataOutput out) throws IOException
+    public void write(DataOutput out, ConstantRegistry registry) throws IOException
         {
         out.writeByte(OP_GUARD);
 
