@@ -49,7 +49,7 @@ public class JumpTrue
         }
 
     @Override
-    public void write(DataOutput out)
+    public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
         out.writeByte(OP_JMP_TRUE);

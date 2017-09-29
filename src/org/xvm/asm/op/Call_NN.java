@@ -55,7 +55,7 @@ public class Call_NN
         }
 
     @Override
-    public void write(DataOutput out)
+    public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
         out.writeByte(OP_CALL_NN);

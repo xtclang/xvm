@@ -53,7 +53,7 @@ public class DNVar
         }
 
     @Override
-    public void write(DataOutput out)
+    public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
         out.writeByte(OP_DNVAR);

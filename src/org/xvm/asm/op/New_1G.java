@@ -61,7 +61,7 @@ public class New_1G
         }
 
     @Override
-    public void write(DataOutput out)
+    public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
         out.writeByte(OP_NEW_1G);

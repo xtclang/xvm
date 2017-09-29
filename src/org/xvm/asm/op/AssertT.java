@@ -50,7 +50,7 @@ public class AssertT
         }
 
     @Override
-    public void write(DataOutput out)
+    public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
         out.writeByte(OP_ASSERT_T);
