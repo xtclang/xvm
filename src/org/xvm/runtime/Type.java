@@ -15,12 +15,11 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
-
 import org.xvm.runtime.template.collections.xArray;
-
 import org.xvm.runtime.template.types.xMethod;
 import org.xvm.runtime.template.types.xMethod.MethodHandle;
 
@@ -42,6 +41,8 @@ public class Type
     private boolean m_fImmutable;
 
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
+
+    private List<CanonicalMethod> m_listMethods = new ArrayList<>();
 
     public Type(TypeComposition clazz, Constants.Access access)
         {
@@ -177,5 +178,24 @@ public class Type
             sb.append(" Name=").append(f_clazz);
             }
         return sb.toString();
+        }
+
+    protected void addMethod(SignatureConstant signature, TypeComposition clazzContext)
+        {
+
+        }
+
+    protected static class CanonicalMethod
+        {
+        public CanonicalMethod(String sName, Type[] atParam, Type[] atReturn)
+            {
+            f_sName = sName;
+            f_atParam = atParam;
+            f_atReturn = atReturn;
+            }
+
+        protected final String f_sName;
+        protected final Type[] f_atParam;
+        protected final Type[] f_atReturn;
         }
     }

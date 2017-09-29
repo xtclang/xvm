@@ -541,7 +541,6 @@ public class Frame
                 : iArg <= Op.CONSTANT_OFFSET
                         ? getConstant(iArg)
                         : getPredefinedArgument(iArg);
-
         }
 
     private ObjectHandle getConstant(int iArg)
@@ -589,7 +588,8 @@ public class Frame
         {
         assert iArg < Op.CONSTANT_OFFSET;
 
-        StringConstant constText = (StringConstant)f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
+        StringConstant constText = (StringConstant)
+            f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
         return constText.getValue();
         }
     // return the class of the specified argument
@@ -675,7 +675,8 @@ public class Frame
             }
         else
             {
-            IntConstant constant = (IntConstant) f_context.f_pool.getConstant(Op.CONSTANT_OFFSET-iArg);
+            IntConstant constant = (IntConstant) f_context.f_pool.
+                getConstant(Op.CONSTANT_OFFSET - iArg);
             lIndex = constant.getValue().getLong();
             }
 

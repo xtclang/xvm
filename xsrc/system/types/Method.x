@@ -116,7 +116,7 @@ const Method<TargetType,
      * 2. _m_ has a return type that _"produces T"_;
      * 3. _m_ has a parameter type that _"consumes T"_.
      */
-    Boolean produces(String typeName)
+    Boolean producesFormalType(String typeName)
         {
         returnLoop: for (Type returnType : ReturnTypes)
             {

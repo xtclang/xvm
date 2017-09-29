@@ -328,6 +328,34 @@ public abstract class TypeConstant
         return clzThis.isA(clzThat);
         }
 
+    /**
+     * Determine if this type consumes a formal type with the specified name in context
+     * of the given TypeComposition and access policy.
+     */
+    public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
+        {
+        return getUnderlyingType().consumesFormalType(sTypeName, types, access);
+        }
+
+    /**
+     * Determine if this type produces a formal type with the specified name in context
+     * of the given TypeComposition and access policy..
+     */
+    public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
+        {
+        return getUnderlyingType().producesFormalType(sTypeName, types, access);
+        }
+
+    public <T extends TypeConstant> T unwrapTo(Format format)
+        {
+        TypeConstant constant = this;
+        while (constant.getFormat() != format)
+            {
+            constant = constant.getUnderlyingType();
+            }
+        return (T) constant;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

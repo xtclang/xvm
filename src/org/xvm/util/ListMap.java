@@ -4,7 +4,6 @@ package org.xvm.util;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -20,6 +19,16 @@ import java.util.Set;
 public class ListMap<K,V>
         extends AbstractMap<K,V>
     {
+    public ListMap()
+        {
+        m_list = new ArrayList<>();
+        }
+
+    public ListMap(int cInitSize)
+        {
+        m_list = new ArrayList<>(cInitSize);
+        }
+
     @Override
     public V put(K key, V value)
         {
@@ -73,7 +82,7 @@ public class ListMap<K,V>
      * The contents of the map are stored in an ArrayList of SimpleEntry
      * objects.
      */
-    private final ArrayList<Entry<K, V>> m_list = new ArrayList<>();
+    private final ArrayList<Entry<K, V>> m_list;
 
     /**
      * The AbstractMap implementation needs an underlying "entry set" to be

@@ -425,6 +425,15 @@ class ObjectFileStream()
 
 new @ObjectStreaming FileStream()
 
+class C<ElementType, ListType extends List>
+    {
+    Void foo(ElementType elThis, ListType.ElementType elThat)
+        {
+        }
+
+    <T extends List> Void foo(T list, T.ElementType elExcept)
+    }
+
 // isSubstitutableFor most generic examples
 
 ===============
@@ -481,7 +490,43 @@ class D2
 
 class C<T>
     {
+    T prop1; // produces(T) ALWAYS
+             // consumes(T) iff !read-only
 
+    A<T> prop2; // produces(T) iff A.produces(A_Type) || (!read-only && A.consumes(A_Type))
+                // consumes(T) iff A.consumes(A_Type) || (!read-only && A.produces(A_Type))
+
+    A<B<T>> prop3; // B.produces(B_Type) -> B<T> produces T
+                   // A.produces(A_Type) -> A.produces(T)
+
+                   // B.consumes(B_Type) -> B<T> consumes T
+                   // A.consumes(A_Type) -> A.consumes(T)
+    }
+
+class A<A_Type> {}
+class B<B_Type> {}
+
+Theorem:
+
+C<T> = A<B<T>> produces T iff
+    p1) A produces A_Type && B produces B_Type, or
+    p2) A consumes A_Type && B consumes B_Type
+
+C<T> = A<B<T>> consumes T iff
+    c1) A consumes A_Type && B produces B_Type, or
+    c2) A produces A_Type && B consumes B_Type
+
+Proof:
+1. A produces A_Type, B produces B_Type -> C produces T
+2. A produces A_Type, B consumes B_Type -> C consumes T
+3. A consumes A_Type, B produces B_Type -> C consumes T
+4. A consumes A_Type, B consumes B_Type -> C produces T
+
+
++++++++++++++++++
+
+class C<T>
+    {
     (T, List<T>) f1(T p1, List<T> p2);
 
 //    <U> (U, List<U>)
@@ -512,4 +557,15 @@ class D<T>
     (Number n, List<Number> ln) = c1.f1<List<Int>>(1, new List<Int>());
 
     (Number n, List<Number> ln) = c1.f1<List<Number>>(1, new List<Int>());
+    }
+
+// invocation calls
+
+C<String> c = ...;
+c.f1("a", {"b", "c"}); // sig-const = ("f1", T, "List<T>")
+
+<U> Void bar(U u)
+    {
+    C<U> c = ...;
+    c.f1(u, {u}); // sig-const = ("f1", T, "List<T>")
     }

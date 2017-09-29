@@ -2,7 +2,6 @@ package org.xvm.runtime;
 
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +10,7 @@ import java.util.TreeMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
@@ -42,6 +41,7 @@ import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple;
+import org.xvm.util.ListMap;
 
 
 /**
@@ -57,12 +57,17 @@ public abstract class ClassTemplate
     public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.AtomicRef)
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized class
-    public final List<String> f_listGenericParams; // param names
+    public final ListMap<String, Type> f_mapGenericFormal; // formal types
 
     public final ClassTemplate f_templateSuper;
     public final ClassTemplate f_templateCategory; // a native category
 
     public final boolean f_fService; // is this a service
+
+    /**
+     * An empty ListMap; should never be mutated.
+     */
+    public static final ListMap EMPTY = new ListMap(0);
 
     // ----- caches ------
 
@@ -80,25 +85,26 @@ public abstract class ClassTemplate
         f_struct = structClass;
         f_sName = structClass.getIdentityConstant().getPathString();
 
-        List<Map.Entry<StringConstant, TypeConstant>> listFormalTypes =
-                structClass.getTypeParamsAsList();
-        int cParams = listFormalTypes.size();
+        Map<StringConstant, TypeConstant> mapParams = structClass.getTypeParams();
+        int cParams = mapParams.size();
 
-        List<String> listParams;
+        ListMap<String, Type> mapFormal;
         if (cParams == 0)
             {
-            listParams = Collections.EMPTY_LIST;
+            mapFormal = EMPTY;
             }
         else
             {
-            listParams = new ArrayList<>(cParams);
+            mapFormal = new ListMap<>(cParams);
 
-            for (int i = 0; i < cParams; i++)
+            // we know that mapParams is a ListMap as well;
+            // prepare it with "Object" types to be resolved by createCanonicalClass
+            for (StringConstant constName : mapParams.keySet())
                 {
-                listParams.add(listFormalTypes.get(i).getKey().getValue());
+                mapFormal.put(constName.getValue(), xObject.TYPE);
                 }
             }
-        f_listGenericParams = listParams;
+        f_mapGenericFormal = mapFormal;
 
         // calculate the parents (inheritance and "native")
         ClassStructure structSuper = null;
@@ -148,32 +154,22 @@ public abstract class ClassTemplate
 
     protected TypeComposition createCanonicalClass()
         {
-        Map<StringConstant, TypeConstant> mapParams = f_struct.getTypeParams();
-        Map<String, Type> mapParamsActual;
+        ListMap<String, Type> mapFormal = f_mapGenericFormal;
 
-        if (mapParams.isEmpty())
+        if (!mapFormal.isEmpty())
             {
-            mapParamsActual = Collections.EMPTY_MAP;
-            }
-        else
-            {
-            mapParamsActual = new HashMap<>(mapParams.size());
-
-            // first run; just introduce the names (if recursive)
-            for (StringConstant constName : mapParams.keySet())
+            // resolve generic constraints
+            for (Map.Entry<StringConstant, TypeConstant> entry :
+                    f_struct.getTypeParams().entrySet())
                 {
-                mapParamsActual.put(constName.getValue(), xObject.TYPE);
-                }
+                String sName = entry.getKey().getValue();
+                TypeConstant constType = entry.getValue();
 
-            for (StringConstant constName : mapParams.keySet())
-                {
-                TypeConstant constType = mapParams.get(constName);
-                Type typeObject = f_types.resolveType(constType, mapParamsActual);
-                mapParamsActual.put(constName.getValue(), typeObject);
+                mapFormal.put(sName, f_types.resolveType(constType, mapFormal));
                 }
             }
 
-        return new TypeComposition(this, mapParamsActual, true);
+        return new TypeComposition(this, mapFormal, true);
         }
 
     public boolean isRootObject()
@@ -188,6 +184,90 @@ public abstract class ClassTemplate
      */
     public void initDeclared()
         {
+        }
+
+    /**
+     * Determine if this template consumes a formal type with the specified name in context
+     * of the given TypeComposition and access policy.
+     */
+    public boolean consumesFormalType(String sName, TypeSet types, Access access)
+        {
+        for (Component child : f_struct.children())
+            {
+            if (child instanceof MultiMethodStructure)
+                {
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                    {
+                    if (method.isAccessible(access) &&
+                        method.consumesFormalType(sName, f_types))
+                        {
+                        return true;
+                        }
+                    }
+                }
+            else if (child instanceof PropertyStructure)
+                {
+                PropertyStructure property = (PropertyStructure) child;
+                TypeConstant constType = property.getType();
+
+                MethodStructure methodGet = Adapter.getGetter(property);
+                if (methodGet != null && methodGet.isAccessible(access) &&
+                    constType.consumesFormalType(sName, types, Access.PUBLIC))
+                    {
+                    return true;
+                    }
+
+                MethodStructure methodSet = Adapter.getGetter(property);
+                if (methodSet != null && methodSet.isAccessible(access) &&
+                    constType.producesFormalType(sName, types, Access.PUBLIC))
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
+    /**
+     * Determine if this template produces a formal type with the specified name in context
+     * of the given TypeComposition and access policy.
+     */
+    public boolean producesFormalType(String sName, TypeSet types, Access access)
+        {
+        for (Component child : f_struct.children())
+            {
+            if (child instanceof MultiMethodStructure)
+                {
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                    {
+                    if (method.isAccessible(access) &&
+                        method.producesFormalType(sName, f_types))
+                        {
+                        return true;
+                        }
+                    }
+                }
+            else if (child instanceof PropertyStructure)
+                {
+                PropertyStructure property = (PropertyStructure) child;
+                TypeConstant constType = property.getType();
+
+                MethodStructure methodGet = Adapter.getGetter(property);
+                if (methodGet != null && methodGet.isAccessible(access) &&
+                    constType.producesFormalType(sName, types, Access.PUBLIC))
+                    {
+                    return true;
+                    }
+
+                MethodStructure methodSet = Adapter.getGetter(property);
+                if (methodSet != null && methodSet.isAccessible(access) &&
+                    constType.consumesFormalType(sName, types, Access.PUBLIC))
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
         }
 
     // does this template extend that?
@@ -413,11 +493,11 @@ public abstract class ClassTemplate
             return f_clazzCanonical;
             }
 
-        assert f_listGenericParams.size() == listParams.size();
+        assert f_mapGenericFormal.size() == listParams.size();
 
         Map<String, Type> mapActualParams = new HashMap<>();
         int ix = 0;
-        for (String sParamName : f_listGenericParams)
+        for (String sParamName : f_mapGenericFormal.keySet())
             {
             mapActualParams.put(sParamName,
                     f_types.resolveType(listParams.get(ix++), mapActual));
@@ -428,7 +508,7 @@ public abstract class ClassTemplate
     // produce a TypeComposition for this template using the actual types for formal parameters
     public TypeComposition ensureClass(Map<String, Type> mapParams)
         {
-        assert mapParams.size() == f_listGenericParams.size() || this instanceof xTuple;
+        assert mapParams.size() == f_mapGenericFormal.size() || this instanceof xTuple;
 
         if (mapParams.isEmpty())
             {
@@ -519,7 +599,7 @@ public abstract class ClassTemplate
         // this:private -> this:public
         Frame.Continuation contAssign =
                 frameCaller -> frameCaller.assignValue(iReturn,
-                    hStruct.f_clazz.ensureAccess(hStruct, Constants.Access.PUBLIC));
+                    hStruct.f_clazz.ensureAccess(hStruct, Access.PUBLIC));
 
         Frame frameRC1 = frame.f_context.createFrame1(frame, constructor, hStruct, ahVar, Frame.RET_UNUSED);
 
@@ -539,7 +619,7 @@ public abstract class ClassTemplate
             FullyBoundHandle hF = frameRC1.m_hfnFinally;
 
             // this:struct -> this:private
-            return hF.callChain(frameCaller, Constants.Access.PRIVATE, contAssign);
+            return hF.callChain(frameCaller, Access.PRIVATE, contAssign);
             });
 
         return frame.call(frameDC0 == null ? frameRC1 : frameDC0);
@@ -969,7 +1049,7 @@ public abstract class ClassTemplate
 
     protected boolean isGenericType(String sProperty)
         {
-        return f_listGenericParams.contains(sProperty);
+        return f_mapGenericFormal.containsKey(sProperty);
         }
 
     // =========== TEMPORARY ========
