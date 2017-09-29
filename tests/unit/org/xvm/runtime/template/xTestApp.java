@@ -615,7 +615,6 @@ public class xTestApp extends xModule
             .add(new New_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
                     new int[] {1, 0}, 3))
             .add(new X_Print(3))
-            .add(new Nop())
             .add(new Var(adapter.getClassTypeConstId("Int64"))) // #4
             .add(new PGet(3, adapter.getPropertyConstId("Const", "hash"), 4))
             .add(new X_Print(4))
