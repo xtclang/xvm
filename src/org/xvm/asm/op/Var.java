@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
@@ -26,10 +27,26 @@ public class Var
      * Construct a VAR op.
      *
      * @param nType  the r-value specifying the type of the variable
+     *
+     * @deprecated
      */
     public Var(int nType)
         {
-        f_nType = nType;
+        m_nType = nType;
+        }
+
+    /**
+     * Construct a variable that corresponds to the passed Register.
+     *
+     * @param reg  the Register object
+     */
+    public Var(Register reg)
+        {
+        if (reg == null)
+            {
+            throw new IllegalArgumentException("register required");
+            }
+        m_reg = reg;
         }
 
     /**
@@ -41,15 +58,20 @@ public class Var
     public Var(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nType = readPackedInt(in);
+        m_nType = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_reg != null)
+            {
+            m_nType = encodeArgument(m_reg.getType(), registry);
+            }
+
         out.writeByte(OP_VAR);
-        writePackedLong(out, f_nType);
+        writePackedLong(out, m_nType);
         }
 
     @Override
@@ -58,11 +80,19 @@ public class Var
         return OP_VAR;
         }
 
+    /**
+     * @return the Register that this op was constructed with
+     */
+    public Register getRegister()
+        {
+        return m_reg;
+        }
+
     @Override
     public int process(Frame frame, int iPC)
         {
         TypeComposition clazz = frame.f_context.f_types.ensureComposition(
-                f_nType, frame.getActualTypes());
+                m_nType, frame.getActualTypes());
 
         frame.introduceVar(clazz, null, Frame.VAR_STANDARD, null);
 
@@ -72,8 +102,22 @@ public class Var
     @Override
     public void simulate(Scope scope)
         {
-        scope.allocVar();
+        int iReg = scope.allocVar();
+        if (m_reg != null)
+            {
+            m_reg.assignIndex(iReg);
+            }
         }
 
-    private final int f_nType;
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        if (m_reg != null)
+            {
+            m_reg.registerConstants(registry);
+            }
+        }
+
+    private int      m_nType;
+    private Register m_reg;
     }

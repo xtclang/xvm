@@ -737,8 +737,10 @@ public class MethodStructure
          * Add the specified op to the end of the code.
          *
          * @param op  the Op to add
+         *
+         * @return this
          */
-        public void add(Op op)
+        public Code add(Op op)
             {
             ensureAppending();
 
@@ -755,6 +757,8 @@ public class MethodStructure
 
             m_fTrailingPrefix = op instanceof Prefix;
             m_mapIndex        = null;
+
+            return this;
             }
 
         /**
@@ -809,6 +813,18 @@ public class MethodStructure
             ensureAssembled();
             return m_aop;
             }
+
+        // ----- helpers for building Ops -----------------------------------------------------
+
+        /**
+         * @return the ConstantPool
+         */
+        public ConstantPool getConstantPool()
+            {
+            return MethodStructure.this.getConstantPool();
+            }
+
+        // TODO public
 
         // ----- internal ---------------------------------------------------------------------
 

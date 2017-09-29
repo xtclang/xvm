@@ -223,9 +223,6 @@ public class Frame
         {
         switch (nArgId)
             {
-            case Op.A_LOCAL:
-                return m_hFrameLocal;
-
             case Op.A_SUPER:
                 ObjectHandle hThis = f_hTarget;
                 if (hThis == null)

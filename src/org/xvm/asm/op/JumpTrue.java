@@ -2,7 +2,6 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
@@ -13,26 +12,38 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
  * JMP_TRUE rvalue-bool, rel-addr ; jump if value is true
  */
 public class JumpTrue
-        extends Op
+        extends JumpCond
     {
     /**
      * Construct a JMP_TRUE op.
      *
      * @param nValue    the Boolean value to test
      * @param nRelAddr  the relative address to jump to.
+     *
+     * @deprecated
      */
     public JumpTrue(int nValue, int nRelAddr)
         {
-        f_nValue   = nValue;
-        f_nRelAddr = nRelAddr;
+        super((Argument) null, null);
+
+        m_nArg  = nValue;
+        m_ofJmp = nRelAddr;
+        }
+
+    /**
+     * Construct a JMP_TRUE op.
+     *
+     * @param arg  the argument to test
+     * @param op   the op to conditionally jump to
+     */
+    public JumpTrue(Argument arg, Op op)
+        {
+        super(arg, op);
         }
 
     /**
@@ -44,17 +55,7 @@ public class JumpTrue
     public JumpTrue(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue   = readPackedInt(in);
-        f_nRelAddr = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_JMP_TRUE);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nRelAddr);
+        super(in, aconst);
         }
 
     @Override
@@ -68,20 +69,17 @@ public class JumpTrue
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(f_nValue);
+            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nArg);
             if (hTest == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hTest.get() ? iPC + f_nRelAddr : iPC + 1;
+            return hTest.get() ? iPC + m_ofJmp : iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
         }
-
-    private final int f_nValue;
-    private final int f_nRelAddr;
     }

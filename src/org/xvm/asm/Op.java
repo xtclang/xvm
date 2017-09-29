@@ -101,6 +101,21 @@ public abstract class Op
         return this == that;
         }
 
+    /**
+     * Represents any argument for an op, including constants, registers, and pre-defined
+     * references like "this".
+     */
+    public interface Argument
+        {
+        }
+
+    protected int encodeArgument(Argument arg, ConstantRegistry registry)
+        {
+        return arg instanceof Constant
+                ? ((Constant) arg).getPosition()   // TODO eventually: registry.indexOf((Constant) arg)
+                : ((Register) arg).getIndex();
+        }
+
 
     // ----- inner class: Prefix Op ----------------------------------------------------------------
 
@@ -153,7 +168,7 @@ public abstract class Op
          */
         public void append(Op op)
             {
-            if (op == null)
+            if (m_op == null)
                 {
                 m_op = op;
                 }
@@ -812,65 +827,54 @@ public abstract class Op
     // ----- pre-defined arguments -----------------------------------------------------------------
 
     /**
-     * Pre-defined argument mask. Pre-defined arguments are in the range -1 to -16, with any unused
-     * values in that range reserved for use in a future revision of the XVM.
-     */
-    public static final int A_MASK = 0xFFFFFFF0;
-
-    /**
-     * Pre-defined argument: {@code frame.getFrameLocal()}
-     */
-    public static final int A_LOCAL = -1;
-
-    /**
      * Pre-defined argument: {@code this:target}
      */
-    public static final int A_TARGET = -2;
+    public static final int A_TARGET = -1;
 
     /**
      * Pre-defined argument: {@code this:public}
      */
-    public static final int A_PUBLIC = -3;
+    public static final int A_PUBLIC = -2;
 
     /**
      * Pre-defined argument: {@code this:protected}
      */
-    public static final int A_PROTECTED = -4;
+    public static final int A_PROTECTED = -3;
 
     /**
      * Pre-defined argument: {@code this:private}
      */
-    public static final int A_PRIVATE = -5;
+    public static final int A_PRIVATE = -4;
 
     /**
      * Pre-defined argument: {@code this:struct}
      */
-    public static final int A_STRUCT = -6;
+    public static final int A_STRUCT = -5;
 
     /**
      * Pre-defined argument: {@code this:frame}
      */
-    public static final int A_FRAME = -7;
+    public static final int A_FRAME = -6;
 
     /**
      * Pre-defined argument: {@code this:service}
      */
-    public static final int A_SERVICE = -8;
+    public static final int A_SERVICE = -7;
 
     /**
      * Pre-defined argument: {@code this:module}
      */
-    public static final int A_MODULE = -9;
+    public static final int A_MODULE = -8;
 
     /**
      * Pre-defined argument: {@code this:type}
      */
-    public static final int A_TYPE = -10;
+    public static final int A_TYPE = -9;
 
     /**
      * Pre-defined argument: {@code super} (function).
      */
-    public static final int A_SUPER = -11;
+    public static final int A_SUPER = -10;
 
 
     // ----- return values from the Op.process() method --------------------------------------------

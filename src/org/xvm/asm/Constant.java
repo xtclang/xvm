@@ -60,7 +60,7 @@ import org.xvm.asm.constants.ValueConstant;
  */
 public abstract class Constant
         extends XvmStructure
-        implements Comparable<Constant>, Cloneable
+        implements Comparable<Constant>, Cloneable, Op.Argument
     {
     // ----- constructors --------------------------------------------------------------------------
 
