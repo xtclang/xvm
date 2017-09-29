@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Frame;

@@ -826,7 +826,12 @@ public class MethodStructure
             if (m_abOps == null)
                 {
                 // build the local constant array
-                Op[] aop = m_listOps.toArray(new Op[m_listOps.size()]);
+                Op[] aop = m_aop;
+                if (aop == null)
+                    {
+                    m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
+                    }
+
                 Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
                 Scope scope = createInitialScope();
                 for (int i = 0, c = aop.length; i < c; ++i)
@@ -852,7 +857,6 @@ public class MethodStructure
                     throw new IllegalStateException(e);
                     }
 
-                m_aop         = aop;
                 m_abOps       = outBytes.toByteArray();
                 m_aconstLocal = registry.getConstantArray();
                 m_cVars       = scope.getMaxVars();
