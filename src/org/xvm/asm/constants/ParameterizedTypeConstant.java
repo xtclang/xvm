@@ -9,12 +9,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Type;
+import org.xvm.runtime.TypeSet;
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -148,8 +153,75 @@ public class ParameterizedTypeConstant
                 : this;
         }
 
+    @Override
+    public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
+        {
+        // C<T> = A<B<T>> consumes T iff
+        //  1) A consumes A_Type && B produces B_Type, or
+        //  2) A produces A_Type && B consumes B_Type
 
-    // ----- Constant methods ----------------------------------------------------------------------
+        ClassConstant constClass = (ClassConstant) m_constType.getIdentityConstant();
+        ClassTemplate template = types.getTemplate(constClass);
+        ListMap<String, Type> mapFormal = template.f_mapGenericFormal;
+
+        List<TypeConstant> list = m_listTypeParams;
+        assert  mapFormal.size() == list.size(); // what about Tuple?
+
+        Iterator<TypeConstant> iterParams = list.iterator();
+        Iterator<String> iterNames = mapFormal.keySet().iterator();
+        while (iterParams.hasNext())
+            {
+            TypeConstant constParam = iterParams.next();
+            String sFormal = iterNames.next();
+
+            if (template.consumesFormalType(sFormal, types, access)
+                    && constParam.producesFormalType(sTypeName, types, access)
+                ||
+                template.producesFormalType(sFormal, types, access)
+                    && constParam.consumesFormalType(sTypeName, types, access))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
+    public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
+        {
+        // C<T> = A<B<T>> produces T iff
+        //  1) A produces A_Type && B produces B_Type, or
+        //  2) A consumes A_Type && B consumes B_Type
+
+        ClassConstant constClass = (ClassConstant) m_constType.getIdentityConstant();
+        ClassTemplate template = types.getTemplate(constClass);
+        ListMap<String, Type> mapFormal = template.f_mapGenericFormal;
+
+        List<TypeConstant> list = m_listTypeParams;
+        assert  mapFormal.size() == list.size(); // what about Tuple?
+
+        Iterator<TypeConstant> iterParams = list.iterator();
+        Iterator<String> iterNames = mapFormal.keySet().iterator();
+        while (iterParams.hasNext())
+            {
+            TypeConstant constParam = iterParams.next();
+            String sFormal = iterNames.next();
+
+            if (template.producesFormalType(sFormal, types, access)
+                    && constParam.producesFormalType(sTypeName, types, access)
+                ||
+                template.consumesFormalType(sFormal, types, access)
+                    && constParam.consumesFormalType(sTypeName, types, access))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+// ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     public Format getFormat()

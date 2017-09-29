@@ -99,7 +99,7 @@ public class TypeComposition
             for (Map.Entry<StringConstant, TypeConstant> entryFormal : mapFormalTypes.entrySet())
                 {
                 String sParamName = entryFormal.getKey().getValue();
-                if (templateSuper.f_listGenericParams.contains(sParamName))
+                if (templateSuper.f_mapGenericFormal.containsKey(sParamName))
                     {
                     mapParams.put(sParamName, f_mapGenericActual.get(sParamName));
                     }
@@ -447,7 +447,7 @@ public class TypeComposition
             }
 
         Frame frameBase = frame.f_context.createFrame1(frame, chain.getMethod(cMethods - 1),
-                hStruct, ahVar, Frame.RET_UNUSED);
+            hStruct, ahVar, Frame.RET_UNUSED);
 
         if (cMethods > 1)
             {
@@ -602,6 +602,13 @@ public class TypeComposition
     public Set<String> getFieldNames()
         {
         return m_mapFields.keySet();
+        }
+
+    // return the set of Signature constants for all methods with the given access
+    // Note: there is a possibility that multiple signatures "point" to the same method
+    public Set<SignatureConstant> getMethodSignatures(Constants.Access access)
+        {
+        throw new UnsupportedOperationException();
         }
 
     // create unassigned (with a null value) entries for all fields

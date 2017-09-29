@@ -82,3 +82,12 @@ $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
 - TypeSet and TypeComposition could be mutated by different threads
     (hence the use of ConcurrentHashMap in TypeSet and synchronization in TypeComposition)
+
+########## TypeConstant assumptions
+
+- TerminalTC.getDefiningConstant() can only be a PropertyConstant or a non-parameterized type
+
+- ParameterizedTC.getDefiningConstant().getIdentityConstant() can only be a ClassConstant
+
+- the order:
+    [Immutable] [Access] [

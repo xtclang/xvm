@@ -12,10 +12,13 @@ import java.util.List;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.TypeSet;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -299,6 +302,72 @@ public class MethodStructure
         {
         // TODO: the compiler would supply this information
         return getAccess() != Access.PRIVATE;
+        }
+
+    /**
+     * Check if this method is accessible with the specified access policy.
+     */
+    public boolean isAccessible(Access access)
+        {
+        return getAccess().ordinal() <= access.ordinal();
+        }
+
+    /**
+     * Determine if this method consumes a formal type with the specified name.
+     *
+     * A method _m_ "consumes" type _T_ if any of the following holds true:
+     * 1. _m_ has a parameter type declared as _T_;
+     * 2. _m_ has a parameter type that _"produces T"_.
+     * 3. _m_ has a return type that _"consumes T"_;
+     */
+    public boolean consumesFormalType(String sTypeName, TypeSet types)
+        {
+        for (Parameter param : getParams())
+            {
+            if (param.getType().producesFormalType(sTypeName, types, Access.PUBLIC))
+                {
+                return true;
+                }
+            }
+
+        for (Parameter param : getReturns())
+            {
+            if (param.getType().consumesFormalType(sTypeName, types, Access.PUBLIC))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * Determine if this method produces a formal type with the specified name.
+     *
+     * A method _m_ "produces" type _T_ if any of the following holds true:
+     * 1. _m_ has a return type declared as _T_;
+     * 2. _m_ has a return type that _"produces T"_;
+     * 3. _m_ has a parameter type that _"consumes T"_.
+     */
+    public boolean producesFormalType(String sTypeName, TypeSet types)
+        {
+        for (Parameter param : getParams())
+            {
+            if (param.getType().consumesFormalType(sTypeName, types, Access.PUBLIC))
+                {
+                return true;
+                }
+            }
+
+        for (Parameter param : getReturns())
+            {
+            if (param.getType().producesFormalType(sTypeName, types, Access.PUBLIC))
+                {
+                return true;
+                }
+            }
+
+        return false;
         }
 
     /**
@@ -698,7 +767,7 @@ public class MethodStructure
     private transient boolean m_fNative;
 
     /**
-     * Cached method for the contruct-finally that goes with this method, iff this method is a
+     * Cached method for the construct-finally that goes with this method, iff this method is a
      * construct function that has a finally.
      */
     private transient MethodStructure m_structFinally;

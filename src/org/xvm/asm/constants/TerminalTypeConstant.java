@@ -13,6 +13,7 @@ import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.TypedefStructure;
+import org.xvm.runtime.TypeSet;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -158,6 +159,21 @@ public class TerminalTypeConstant
     public TypeConstant resolveTypedefs()
         {
         return (TypeConstant) simplify();
+        }
+
+    @Override
+    public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
+        {
+        return false;
+        }
+
+    @Override
+    public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
+        {
+        Constant constId = getDefiningConstant();
+
+        return constId.getFormat() == Format.Property &&
+            ((PropertyConstant) constId).getName().equals(sTypeName);
         }
 
 
