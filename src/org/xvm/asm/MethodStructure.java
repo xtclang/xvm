@@ -692,23 +692,16 @@ public class MethodStructure
     // ----- inner class: Code ---------------------------------------------------------------------
 
     /**
-     * TODO
+     * The Code class represents the op codes that make up a method's behavior.
      */
     public class Code
         {
         // ----- constructors -----------------------------------------------------------------
 
         /**
-         * TODO temporary
-         *
-         * @param aop   array of ops
+         * Construct a Code object. This disassembles the bytes of code from the MethodStructure if
+         * it was itself disassembled; otherwise this starts empty and allows ops to be added.
          */
-        Code(Op[] aop)
-            {
-            m_aop = aop;
-            calcVars();
-            }
-
         Code()
             {
             byte[] abOps = m_abOps;
@@ -725,6 +718,17 @@ public class MethodStructure
                     throw new RuntimeException(e);
                     }
                 }
+            }
+
+        /**
+         * TODO remove when deprecated setOps() is removed
+         *
+         * @param aop   array of ops
+         */
+        Code(Op[] aop)
+            {
+            m_aop = aop;
+            calcVars();
             }
 
         // ----- Code methods -----------------------------------------------------------------
