@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.MethodStructure;
+
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -54,6 +56,17 @@ public class ReturnStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public void emit(MethodStructure.Code code)
+        {
+        // first determine what the method declaration indicates the return value is (none, one,
+        // or multi)
+        // TODO code.g
         }
 
 

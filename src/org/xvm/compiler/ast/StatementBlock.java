@@ -7,6 +7,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.MethodStructure;
+
+import org.xvm.asm.op.Enter;
+import org.xvm.asm.op.Exit;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
@@ -151,7 +156,22 @@ public class StatementBlock
         }
 
 
-    // ----- compile phases ------------------------------------------------------------------------
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public void emit(MethodStructure.Code code)
+        {
+        List<Statement> stmts = this.stmts;
+        if (stmts != null && !stmts.isEmpty())
+            {
+            code.add(new Enter());
+            for (Statement stmt : stmts)
+                {
+                stmt.emit(code);
+                }
+            code.add(new Exit());
+            }
+        }
 
 
     // ----- name resolution -----------------------------------------------------------------------
