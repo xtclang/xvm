@@ -66,7 +66,12 @@ public class ReturnStatement
         {
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
-        // TODO code.g
+        MethodStructure structMethod = code.getMethodStructure();
+
+        // TODO have to make sure that types are resolved before we get to this stage, e.g. Void means 0 return values
+        // TODO what is the expected number of return values?
+        // TODO how to tell the expression the type(s) of the expected results?
+        // TODO how to report errors?
         }
 
 

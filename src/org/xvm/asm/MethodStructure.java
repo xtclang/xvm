@@ -893,7 +893,13 @@ public class MethodStructure
             return MethodStructure.this.getConstantPool();
             }
 
-        // TODO public
+        /**
+         * @return the enclosing MethodStructure
+         */
+        public MethodStructure getMethodStructure()
+            {
+            return MethodStructure.this;
+            }
 
         // ----- internal ---------------------------------------------------------------------
 
