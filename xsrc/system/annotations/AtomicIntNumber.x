@@ -1,8 +1,10 @@
 /**
  * The AtomicIntNumber mixin adds atomic capabilities such as increment and decrement to every
  * atomic reference to any of the integer number types.
+ *
+ * TODO this is AtomicIntNumber, but sub-pieces are needed, like AtomicSequential
  */
-@Auto mixin AtomicIntNumber<RefType extends IntNumber>
+mixin AtomicIntNumber<RefType extends IntNumber>
         into AtomicRef<IntNumber>
     {
     @Op Void increment()

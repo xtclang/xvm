@@ -2,6 +2,7 @@
  * An interval specifies a lower bound and an upper bound.
  */
 const Interval<ElementType extends Orderable>
+        incorporates conditional Range<ElementType extends Sequential>
     {
     construct Interval(ElementType first, ElementType last)
         {

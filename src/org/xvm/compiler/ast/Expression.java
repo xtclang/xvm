@@ -1,8 +1,14 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.Argument;
+
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
@@ -31,7 +37,7 @@ public abstract class Expression
     public Constant toConstant()
         {
         assert isConstant();
-        throw new UnsupportedOperationException();
+        throw notImplemented();
         }
 
     /**
@@ -40,6 +46,33 @@ public abstract class Expression
     public TypeExpression toTypeExpression()
         {
         return new BadTypeExpression(this);
+        }
+
+    public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
+        {
+        throw notImplemented();
+        }
+
+    /**
+     * Generate arguments of the specified types for this expression, or generate an error if that
+     * is not possible.
+     *
+     * TODO need to pass in Scope but one that knows name->Register association?
+     * TODO how to do captures?
+     * TODO how to do definite assignment?
+     * TODO a version of this for conditional? or just a boolean parameter that says this is asking for a conditional?
+     *
+     * @param listTypes
+     * @param errs
+     *
+     * @return
+     */
+    public List<Argument> generateArguments(Code code, List<TypeConstant> listTypes, ErrorListener errs)
+        {
+        // TODO if it's just one type, then call the generateArgument() method
+        // TODO if it's multiple types, then log a generic error "can't do multiple types"
+        // TODO then override this by anything that could be a tuple
+        throw notImplemented();
         }
 
     /**
@@ -68,7 +101,7 @@ public abstract class Expression
      */
     public ConditionalConstant toConditionalConstant()
         {
-        throw new UnsupportedOperationException("not implemented by: " + this.getClass().getSimpleName());
+        throw notImplemented();
         }
 
     /**
@@ -77,5 +110,14 @@ public abstract class Expression
     public boolean canComplete()
         {
         return true;
+        }
+
+    /**
+     * @return nothing, because the method always throws
+     * @throws UnsupportedOperationException this exception is always thrown by this method
+     */
+    private UnsupportedOperationException notImplemented()
+        {
+        throw new UnsupportedOperationException("not implemented by: " + this.getClass().getSimpleName());
         }
     }

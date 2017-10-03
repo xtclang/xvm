@@ -61,6 +61,7 @@
  */
 mixin AtomicRef<RefType>
         into Ref<RefType>
+        incorporates conditional AtomicIntNumber<RefType extends IntNumber>  // see TODO
     {
     Boolean replace(RefType oldValue, RefType newValue)
         {

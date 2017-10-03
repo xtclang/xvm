@@ -40,6 +40,15 @@ public class ReturnStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the expression(s) that the return statement returns, or null if there are no
+     *         expressions
+     */
+    public List<Expression> getExpressions()
+        {
+        return exprs;
+        }
+
     @Override
     public long getStartPosition()
         {

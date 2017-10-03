@@ -27,6 +27,22 @@ public class TupleExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return get the TypeExpression for the tuple, if any; otherwise return null
+     */
+    TypeExpression getTypeExpression()
+        {
+        return type;
+        }
+
+    /**
+     * @return the expressions making up the tuple value
+     */
+    public List<Expression> getExpressions()
+        {
+        return exprs;
+        }
+
     @Override
     public long getStartPosition()
         {
