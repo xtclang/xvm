@@ -369,6 +369,22 @@ public class Compiler
      * Cannot hide name.
      */
     public static final String NAME_UNHIDEABLE                    = "COMPILER-39";
+    /**
+     * Return is supposed to be void.
+     */
+    public static final String RETURN_VOID                        = "COMPILER-40";
+    /**
+     * Return is supposed to be non-void.
+     */
+    public static final String RETURN_EXPECTED                    = "COMPILER-41";
+    /**
+     * Return is supposed to be non-void.
+     */
+    public static final String RETURN_WRONG_COUNT                 = "COMPILER-42";
+    /**
+     * Return is supposed to be non-void.
+     */
+    public static final String RETURN_WRONG_TYPES                 = "COMPILER-43";
 
 
     // ----- data members --------------------------------------------------------------------------

@@ -2,6 +2,8 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.compiler.ErrorListener;
 
 
 /**
@@ -15,9 +17,10 @@ public abstract class Statement
     /**
      * Generate assembly code for the statement.
      *
-     * @param code
+     * @param code  the code object to which the assembly is added
+     * @param errs  the error listener to log to
      */
-    public void emit(MethodStructure.Code code)
+    public void emit(Code code, ErrorListener errs)
         {
         throw new UnsupportedOperationException("statement=" + getClass().getSimpleName());
         }

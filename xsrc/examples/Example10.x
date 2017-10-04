@@ -97,3 +97,40 @@ else
     {
     // error
     }
+
+// -- assignability
+
+class A
+    {
+    Void foo() {}
+    }
+
+class B
+    {
+    Void foo() {}
+    }
+
+A a1 = new A(); // ok
+B b1 = new B(); // ok
+A b2 = new B(); // NOT ok ...
+B a2 = new A(); // NOT ok ...
+
+class C
+    {
+    Void foo() {}
+    A[] to<A[]>() {return to<C[]>();}
+    Tuple<A> to<Tuple<A>>() {return to<Tuple<C>();}
+    @Auto function A() to<function A()>() {return ()->this;}
+    }
+
+C c1 = new C(); // ok
+C a3 = new A(); // NOT ok
+A c2 = new C(); // still NOT ok
+
+class D
+        impersonates A
+    {
+    Void foo() {}
+    }
+
+A d1 = new D(); // ok

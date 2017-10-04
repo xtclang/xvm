@@ -23,11 +23,23 @@ public class Return_1
     /**
      * Construct a RETURN_1 op.
      *
+     * @param arg  the value to return
+     */
+    public Return_1(Argument arg)
+        {
+        m_arg = arg;
+        }
+
+    /**
+     * Construct a RETURN_1 op.
+     *
      * @param nValue  the value to return
+     *
+     * @deprecated
      */
     public Return_1(int nValue)
         {
-        f_nArgValue = nValue;
+        m_nArg = nValue;
         }
 
     /**
@@ -39,15 +51,19 @@ public class Return_1
     public Return_1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nArgValue = readPackedInt(in);
+        m_nArg = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
+        if (m_arg != null)
+            {
+            m_nArg = m_arg
+            }
         out.writeByte(OP_RETURN_1);
-        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, m_nArg);
         }
 
     @Override
@@ -63,7 +79,7 @@ public class Return_1
 
         if (iRet >= 0 || iRet == Frame.RET_LOCAL)
             {
-            return frame.returnValue(iRet, f_nArgValue);
+            return frame.returnValue(iRet, m_nArg);
             }
 
         switch (iRet)
@@ -75,9 +91,10 @@ public class Return_1
                 throw new IllegalStateException();
 
             default:
-                return frame.returnTuple(-iRet - 1, new int[] {f_nArgValue});
+                return frame.returnTuple(-iRet - 1, new int[] {m_nArg});
             }
         }
 
-    private final int f_nArgValue;
+    private Argument m_arg;
+    private int      m_nArg;
     }

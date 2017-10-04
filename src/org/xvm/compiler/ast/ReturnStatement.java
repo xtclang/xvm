@@ -1,14 +1,24 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Parameter;
+import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.op.Return_0;
+
+import org.xvm.asm.op.Return_1;
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
 
 import java.util.Collections;
 import java.util.List;
+import org.xvm.util.Severity;
 
 
 /**
@@ -71,11 +81,46 @@ public class ReturnStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public void emit(MethodStructure.Code code)
+    public void emit(Code code, ErrorListener errs)
         {
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
-        MethodStructure structMethod = code.getMethodStructure();
+        MethodStructure  structMethod = code.getMethodStructure();
+        int              cReturns     = structMethod.getReturnCount();
+        List<Parameter>  listRets     = structMethod.getReturns();
+        List<Expression> listExprs    = this.exprs;
+        int              cExprs       = listExprs == null ? 0 : listExprs.size();
+        switch (cReturns)
+            {
+            case 0:
+                if (cExprs == 0) // TODO consider a Tuple<> also being ok?
+                    {
+                    code.add(new Return_0());
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.RETURN_VOID);
+                    }
+                break;
+
+            case 1:
+                if (cExprs == 1)
+                    {
+                    Argument arg = listExprs.get(0).generateArgument(
+                            code, listRets.get(0).getType(), false, errs);
+                    if (arg != null)
+                        {
+                        code.add(new Return_1(arg));
+                        }
+                    }
+
+            default:
+                if (cExprs == cReturns)
+                    {
+                    // TODO
+                    }
+
+            }
 
         // TODO have to make sure that types are resolved before we get to this stage, e.g. Void means 0 return values
         // TODO what is the expected number of return values?

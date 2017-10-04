@@ -7,8 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.MethodStructure;
-
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 
@@ -159,7 +158,7 @@ public class StatementBlock
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public void emit(MethodStructure.Code code)
+    public void emit(Code code, ErrorListener errs)
         {
         List<Statement> stmts = this.stmts;
         if (stmts != null && !stmts.isEmpty())
@@ -167,7 +166,7 @@ public class StatementBlock
             code.add(new Enter());
             for (Statement stmt : stmts)
                 {
-                stmt.emit(code);
+                stmt.emit(code, errs);
                 }
             code.add(new Exit());
             }

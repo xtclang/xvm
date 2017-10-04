@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Frame;
@@ -107,6 +108,25 @@ public abstract class Op
      */
     public interface Argument
         {
+        }
+
+    boolean isConstant(Argument arg)
+        {
+        return arg instanceof Constant;
+        }
+
+    boolean isRegister(Argument arg)
+        {
+        return arg instanceof Register;
+        }
+
+    protected TypeConstant typeOf(Argument arg)
+        {
+        return arg instanceof Constant
+                ? ((Constant) arg).
+                : ((Register) arg).getType();
+        // TODO
+        throw new UnsupportedOperationException("class=" + this.getClass().getSimpleName());
         }
 
     protected int encodeArgument(Argument arg, ConstantRegistry registry)
