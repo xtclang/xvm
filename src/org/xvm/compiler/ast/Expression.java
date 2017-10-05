@@ -67,7 +67,7 @@ public abstract class Expression
      *
      * @return
      */
-    public List<Argument> generateArguments(Code code, List<TypeConstant> listTypes, ErrorListener errs)
+    public List<Argument> generateArguments(Code code, List<TypeConstant> listTypes, boolean fTupleOk, ErrorListener errs)
         {
         // TODO if it's just one type, then call the generateArgument() method
         // TODO if it's multiple types, then log a generic error "can't do multiple types"

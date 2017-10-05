@@ -363,6 +363,14 @@ public abstract class TypeConstant
     public abstract Constant.Format getFormat();
 
     @Override
+    public TypeConstant getType()
+        {
+        ConstantPool pool = getConstantPool();
+        return pool.ensureParameterizedTypeConstant(pool.ensureEcstasyTypeConstant("Type"),
+                new TypeConstant[] {this});
+        }
+
+    @Override
     protected abstract int compareDetails(Constant that);
 
 

@@ -26,11 +26,7 @@ public abstract class ValueConstant
 
     // ----- type-specific functionality -----------------------------------------------------------
 
-    /**
-     * Obtain the TypeConstant that represents the runtime type of the value of this constant.
-     *
-     * @return a TypeConstant
-     */
+    @Override
     public TypeConstant getType()
         {
         // default implementation assumes that the Ecstasy class name is the same as the format name

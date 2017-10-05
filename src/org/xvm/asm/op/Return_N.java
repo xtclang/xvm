@@ -20,11 +20,23 @@ public class Return_N
     /**
      * Construct a RETURN_N op.
      *
+     * @param aArg  the arguments to return
+     */
+    public Return_N(Argument[] aArg)
+        {
+        m_aArg = aArg;
+        }
+
+    /**
+     * Construct a RETURN_N op.
+     *
      * @param anValue  the values to return
+     *
+     * @deprecated
      */
     public Return_N(int[] anValue)
         {
-        f_anArgValue = anValue;
+        m_anArg = anValue;
         }
 
     /**
@@ -36,15 +48,27 @@ public class Return_N
     public Return_N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_anArgValue = readIntArray(in);
+        m_anArg = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_aArg != null)
+            {
+            Argument[] aArg = m_aArg;
+            int        cArgs = aArg.length;
+            int[]      anArg = new int[cArgs];
+            for (int i = 0; i < cArgs; ++i)
+                {
+                anArg[i] = encodeArgument(aArg[i], registry);
+                }
+            m_anArg = anArg;
+            }
+
         out.writeByte(OP_RETURN_N);
-        writeIntArray(out, f_anArgValue);
+        writeIntArray(out, m_anArg);
         }
 
     @Override
@@ -74,7 +98,7 @@ public class Return_N
                 boolean fBlock = false;
                 for (int i = 0, c = aiRet.length; i < c; i++)
                     {
-                    int iResult = frame.returnValue(aiRet[i], f_anArgValue[i]);
+                    int iResult = frame.returnValue(aiRet[i], m_anArg[i]);
                     switch (iResult)
                         {
                         case Op.R_RETURN_EXCEPTION:
@@ -100,10 +124,11 @@ public class Return_N
 
             default:
                 // the caller needs a tuple
-                return frame.returnTuple(-iRet - 1, f_anArgValue);
+                return frame.returnTuple(-iRet - 1, m_anArg);
             }
         return R_RETURN;
         }
 
-    private final int[] f_anArgValue;
+    private Argument[] m_aArg;
+    private int[]      m_anArg;
     }

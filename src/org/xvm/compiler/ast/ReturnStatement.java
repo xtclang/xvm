@@ -2,6 +2,8 @@ package org.xvm.compiler.ast;
 
 
 
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Parameter;
@@ -10,6 +12,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.asm.op.Return_1;
+import org.xvm.asm.op.Return_N;
+import org.xvm.asm.op.Return_T;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -83,6 +87,8 @@ public class ReturnStatement
     @Override
     public void emit(Code code, ErrorListener errs)
         {
+        // TODO simplify() pass must already have been done before this!
+
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
         MethodStructure  structMethod = code.getMethodStructure();
@@ -93,7 +99,7 @@ public class ReturnStatement
         switch (cReturns)
             {
             case 0:
-                if (cExprs == 0) // TODO consider a Tuple<> also being ok?
+                if (cExprs == 0) // TODO consider a value of type Tuple<> also being ok? i.e. "|| isEmptyTuple(v))"
                     {
                     code.add(new Return_0());
                     }
@@ -113,19 +119,44 @@ public class ReturnStatement
                         code.add(new Return_1(arg));
                         }
                     }
+                else
+                    {
+                    // most of the time this is an error
+                    // TODO what if return type is tuple - do multiple expressions go into it?
+                    log(errs, Severity.ERROR, cExprs == 0
+                            ? Compiler.RETURN_EXPECTED
+                            : Compiler.RETURN_WRONG_COUNT);
+                    }
+                break;
 
             default:
                 if (cExprs == cReturns)
                     {
-                    // TODO
+                    Argument[] args = new Argument[cExprs];
+                    for (int i = 0; i < cExprs; ++i)
+                        {
+                        args[i] = listExprs.get(0).generateArgument(
+                                code, listRets.get(0).getType(), false, errs);
+                        }
+                    code.add(new Return_N(args));
                     }
-
+                else if (cExprs == 1)
+                    {
+                    // assume it's a tuple
+                    List<Argument> args = listExprs.get(0).generateArguments(code, listRets.stream()
+                            .map(p -> p.getType()).collect(Collectors.toList()), true, errs);
+                    int cArgs = args.size();
+                    if (cArgs == cReturns)
+                        {
+                        code.add(new Return_N(args.toArray(new Argument[cReturns])));
+                        }
+                    else if (cArgs == 1)
+                        {
+                        code.add(new Return_T(args.get(0)));
+                        }
+                    }
+                break;
             }
-
-        // TODO have to make sure that types are resolved before we get to this stage, e.g. Void means 0 return values
-        // TODO what is the expected number of return values?
-        // TODO how to tell the expression the type(s) of the expected results?
-        // TODO how to report errors?
         }
 
 

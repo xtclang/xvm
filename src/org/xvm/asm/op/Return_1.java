@@ -60,8 +60,9 @@ public class Return_1
         {
         if (m_arg != null)
             {
-            m_nArg = m_arg
+            m_nArg = encodeArgument(m_arg, registry);
             }
+
         out.writeByte(OP_RETURN_1);
         writePackedLong(out, m_nArg);
         }

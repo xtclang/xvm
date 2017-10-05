@@ -103,6 +103,16 @@ public abstract class Constant
         }
 
     /**
+     * Obtain the TypeConstant that represents the runtime type of the value of this constant.
+     *
+     * @return a TypeConstant
+     */
+    public TypeConstant getType()
+        {
+        throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());
+        }
+
+    /**
      * @return true iff this constant represents a class at runtime, whether or not the exact
      *         identity of the class is known at compile time
      */

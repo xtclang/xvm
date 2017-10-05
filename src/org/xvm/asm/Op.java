@@ -123,10 +123,8 @@ public abstract class Op
     protected TypeConstant typeOf(Argument arg)
         {
         return arg instanceof Constant
-                ? ((Constant) arg).
+                ? ((Constant) arg).getType()
                 : ((Register) arg).getType();
-        // TODO
-        throw new UnsupportedOperationException("class=" + this.getClass().getSimpleName());
         }
 
     protected int encodeArgument(Argument arg, ConstantRegistry registry)

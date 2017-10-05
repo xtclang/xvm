@@ -31,11 +31,25 @@ public class Return_T
     /**
      * Construct a RETURN_T op.
      *
+     * @param argT  the tuple value to return
+     *
+     * @deprecated
+     */
+    public Return_T(Argument argT)
+        {
+        m_argT = argT;
+        }
+
+    /**
+     * Construct a RETURN_T op.
+     *
      * @param nValue  the tuple value to return
+     *
+     * @deprecated
      */
     public Return_T(int nValue)
         {
-        f_nArgValue = nValue;
+        m_nArg = nValue;
         }
 
     /**
@@ -47,15 +61,20 @@ public class Return_T
     public Return_T(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nArgValue = readPackedInt(in);
+        m_nArg = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
+        if (m_argT != null)
+            {
+            m_nArg = encodeArgument(m_argT, registry);
+            }
+
         out.writeByte(OP_RETURN_T);
-        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, m_nArg);
         }
 
     @Override
@@ -82,7 +101,7 @@ public class Return_T
                 TupleHandle hTuple;
                 try
                     {
-                    hTuple = (TupleHandle) frame.getArgument(f_nArgValue);
+                    hTuple = (TupleHandle) frame.getArgument(m_nArg);
                     if (hTuple == null)
                         {
                         return R_REPEAT;
@@ -114,10 +133,11 @@ public class Return_T
 
             default:
                 // pass the tuple "as is"
-                return frame.returnValue(-iRet - 1, f_nArgValue);
+                return frame.returnValue(-iRet - 1, m_nArg);
             }
         return R_RETURN;
         }
 
-    private final int f_nArgValue;
+    private Argument m_argT;
+    private int      m_nArg;
     }
