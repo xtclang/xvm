@@ -87,8 +87,6 @@ public class ReturnStatement
     @Override
     public void emit(Code code, ErrorListener errs)
         {
-        // TODO simplify() pass must already have been done before this!
-
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
         MethodStructure  structMethod = code.getMethodStructure();

@@ -82,20 +82,21 @@ public abstract class Op
         }
 
     /**
-     * TODO
+     * Allows each op to know its location within the code.
      *
-     * @param code
-     * @param iPC
+     * @param code  the code containing the op
+     * @param iPC   the program counter (address)
      */
     public void resolveAddress(Code code, int iPC)
         {
         }
 
     /**
-     * TODO
+     * Determine if the specified op is contained within this op, or is this op.
      *
-     * @param that
-     * @return
+     * @param that  the op to search for
+     *
+     * @return true iff this op is the op being searched for, or contains the op being searched for
      */
     public boolean contains(Op that)
         {
@@ -108,25 +109,46 @@ public abstract class Op
      */
     public interface Argument
         {
+        /**
+         * @return the type of the argument
+         */
+        TypeConstant getType();
         }
 
+    /**
+     * Determine if the specified Argument is a Constant.
+     *
+     * @param arg  the argument
+     *
+     * @return true iff the argument is a Constant
+     */
     boolean isConstant(Argument arg)
         {
         return arg instanceof Constant;
         }
 
+    /**
+     * Determine if the specified Argument is a register (variable).
+     *
+     * @param arg  the argument
+     *
+     * @return true iff the argument is a register
+     */
     boolean isRegister(Argument arg)
         {
         return arg instanceof Register;
         }
 
-    protected TypeConstant typeOf(Argument arg)
-        {
-        return arg instanceof Constant
-                ? ((Constant) arg).getType()
-                : ((Register) arg).getType();
-        }
-
+    /**
+     * Convert the specified argument to an index that will be used in the persistent form of the op
+     * to identify the argument.
+     *
+     * @param arg       the argument
+     * @param registry  the ConstantRegistry that represents all of the constants used by the code
+     *                  containing the op
+     *
+     * @return the index of the argument
+     */
     protected int encodeArgument(Argument arg, ConstantRegistry registry)
         {
         return arg instanceof Constant

@@ -169,6 +169,10 @@ public class Compiler
         boolean fResolved = listDeferred.isEmpty();
         if (fResolved)
             {
+            // force the reregistration of constants after the names are resolved to eliminate
+            // cruft from earlier passes, such as Void return types
+            m_struct.reregisterConstants();
+
             m_listUnresolved = null;
             m_stage          = Stage.Resolved;
             }
@@ -196,17 +200,18 @@ public class Compiler
         }
 
     /**
-     * After the names are resolved, the tree can be validated. Once validated, the result can be
-     * emitted.
+     * This stage actually finally recurses into the methods, compiling their bodies. This phase
+     * generates the code ops, but it also builds any nested structures that are found within the
+     * methods, including inner classes, lambdas, and so on.
      */
-    public void validate()
+    public void generateCode()
         {
         if (m_stage != Stage.Resolved)
             {
             throw new IllegalStateException("Stage=" + m_stage + " (expected: Resolved)");
             }
 
-        m_module.validate(m_errs);
+        m_module.generateCode(m_errs);
         }
 
 

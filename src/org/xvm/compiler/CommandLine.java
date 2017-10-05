@@ -140,11 +140,11 @@ public class CommandLine
         checkTerminalFailure();
 
         // dependency resolution
-        validate();
+        generateCode();
         checkTerminalFailure();
 
         // write out the results
-        produceModules();
+        emitModules();
         checkTerminalFailure();
 
         if (opts.verbose)
@@ -683,21 +683,20 @@ public class CommandLine
             }
         }
 
-    /**
-     * After names/dependencies are resolved, determine if the result of compilation will be valid.
+    /*** After names/dependencies are resolved, generate the actual code.
      */
-    protected void validate()
+    protected void generateCode()
         {
         for (Compiler compiler : modulesByName.values())
             {
-            compiler.validate();
+            compiler.generateCode();
             }
         }
 
     /**
      * Emit the results of compilation.
      */
-    protected void produceModules()
+    protected void emitModules()
         {
         for (Node module : modules.values())
             {
