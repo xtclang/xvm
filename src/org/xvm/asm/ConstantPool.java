@@ -718,7 +718,7 @@ public class ConstantPool
 
             case "Auto":
                 sPkg = "annotations";
-                sClz = "Automagic";
+                sClz = "AutoConversion";
                 break;
 
             case "FutureRef":
