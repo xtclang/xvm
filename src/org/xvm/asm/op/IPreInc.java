@@ -83,7 +83,7 @@ public class IPreInc
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            return template.invokePreInc(frame, hTarget,lIndex, f_nRetValue);
+            return template.invokePreInc(frame, hTarget, lIndex, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

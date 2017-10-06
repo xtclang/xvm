@@ -11,7 +11,7 @@ import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
@@ -109,6 +109,11 @@ public class TypeComposition
             }
 
         return null;
+        }
+
+    public Type getActualParamType(String sName)
+        {
+        return f_mapGenericActual.get(sName);
         }
 
     public boolean isRoot()
@@ -302,7 +307,7 @@ public class TypeComposition
             }
         }
 
-    public ObjectHandle ensureAccess(ObjectHandle handle, Constants.Access access)
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
         {
         assert handle.f_clazz == this;
 
@@ -357,7 +362,7 @@ public class TypeComposition
         Type type = m_typePublic;
         if (type == null)
             {
-            m_typePublic = type = f_template.f_types.createType(this, Constants.Access.PUBLIC);
+            m_typePublic = type = f_template.f_types.createType(this, Access.PUBLIC);
             }
         return type;
         }
@@ -366,7 +371,7 @@ public class TypeComposition
         Type type = m_typeProtected;
         if (type == null)
             {
-            m_typeProtected = type = f_template.f_types.createType(this, Constants.Access.PROTECTED);
+            m_typeProtected = type = f_template.f_types.createType(this, Access.PROTECTED);
             }
         return type;
         }
@@ -376,7 +381,7 @@ public class TypeComposition
         Type type = m_typePrivate;
         if (type == null)
             {
-            m_typePrivate = type = f_template.f_types.createType(this, Constants.Access.PRIVATE);
+            m_typePrivate = type = f_template.f_types.createType(this, Access.PRIVATE);
             }
         return type;
         }
@@ -386,7 +391,7 @@ public class TypeComposition
         Type type = m_typeStruct;
         if (type == null)
             {
-            m_typeStruct = type = f_template.f_types.createType(this, Constants.Access.STRUCT);
+            m_typeStruct = type = f_template.f_types.createType(this, Access.STRUCT);
             }
         return type;
         }
@@ -396,16 +401,18 @@ public class TypeComposition
         return type == m_typeStruct;
         }
 
-    // is this class assignable to the specified class
+    // is this public interface of this class assignable to the specified class
     public boolean isA(TypeComposition that)
         {
-        if (this.f_template.extends_(that.f_template))
+        // check the most common (and cheap) case
+        if (f_mapGenericActual.isEmpty() &&
+                this.f_template.extends_(that.f_template))
             {
-            // TODO: check the generic type relationship
             return true;
             }
 
-        return false;
+        // go the long way
+        return this.ensurePublicType().isA(that.ensurePublicType());
         }
 
     // given a TypeConstant, return a corresponding TypeComposition within this class's context
@@ -438,7 +445,7 @@ public class TypeComposition
     public Frame callDefaultConstructors(Frame frame, ObjectHandle hStruct, ObjectHandle[] ahVar,
                                          Frame.Continuation continuation)
         {
-        CallChain chain = getMethodCallChain(Utils.SIG_DEFAULT);
+        CallChain chain = getMethodCallChain(Utils.SIG_DEFAULT, Access.PUBLIC);
 
         int cMethods = chain.getDepth();
         if (cMethods == 0)
@@ -479,25 +486,28 @@ public class TypeComposition
         }
 
     // retrieve the call chain for the specified method
-    public CallChain getMethodCallChain(SignatureConstant constSignature)
+    public CallChain getMethodCallChain(SignatureConstant constSignature, Access access)
         {
-        return m_mapMethods.computeIfAbsent(constSignature, this::collectMethodCallChain);
+        return m_mapMethods.computeIfAbsent(constSignature,
+            sig -> collectMethodCallChain(sig, access));
         }
 
     // find a matching method and add to the list
-    protected CallChain collectMethodCallChain(SignatureConstant constSignature)
+    protected CallChain collectMethodCallChain(SignatureConstant constSignature, Access access)
         {
         List<MethodStructure> list = new LinkedList<>();
 
         nextInChain:
         for (ClassTemplate template : getCallChain())
             {
-            MultiMethodStructure mms = (MultiMethodStructure) template.f_struct.getChild(constSignature.getName());
+            MultiMethodStructure mms = (MultiMethodStructure)
+                template.f_struct.getChild(constSignature.getName());
             if (mms != null)
                 {
                 for (MethodStructure method : mms.methods())
                     {
-                    if (method.isSubstitutableFor(constSignature, this))
+                    if (method.getAccess().compareTo(access) <= 0 &&
+                        method.isCallableFor(constSignature, this))
                         {
                         list.add(method);
 
@@ -604,13 +614,6 @@ public class TypeComposition
         return m_mapFields.keySet();
         }
 
-    // return the set of Signature constants for all methods with the given access
-    // Note: there is a possibility that multiple signatures "point" to the same method
-    public Set<SignatureConstant> getMethodSignatures(Constants.Access access)
-        {
-        throw new UnsupportedOperationException();
-        }
-
     // create unassigned (with a null value) entries for all fields
     protected void createFields(Map<String, ObjectHandle> mapFields)
         {
@@ -653,6 +656,36 @@ public class TypeComposition
             }
 
         mapFields.putAll(mapCached);
+        }
+
+    /**
+     * Determine if this class consumes a formal type with the specified name.
+     */
+    public boolean consumesFormalType(String sName, Access access)
+        {
+        for (ClassTemplate template : getCallChain())
+            {
+            if (!template.consumesFormalType(sName, access))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    /**
+     * Determine if this class produces a formal type with the specified name.
+     */
+    public boolean producesFormalType(String sName, Access access)
+        {
+        for (ClassTemplate template : getCallChain())
+            {
+            if (!template.producesFormalType(sName, access))
+                {
+                return false;
+                }
+            }
+        return true;
         }
 
     // ---- support for op-codes that require class specific information -----

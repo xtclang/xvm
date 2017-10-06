@@ -32,7 +32,16 @@ public abstract class OpInvocable extends Op
 
         m_nMethodId = nMethodConstId;
         m_clazz     = clazz;
-        m_chain     = clazz.getMethodCallChain(constMethod.getSignature());
+
+        Constants.Access access = constMethod.getAccess();
+        if (access == Constants.Access.PRIVATE)
+            {
+            m_chain = new CallChain((MethodStructure) constMethod.getComponent());
+            }
+        else
+            {
+            m_chain = clazz.getMethodCallChain(constMethod.getSignature(), access);
+            }
 
         return m_chain;
         }

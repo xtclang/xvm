@@ -296,36 +296,19 @@ public abstract class TypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     /**
-     * Determine if values of the specified type will be assignable to values of this type.
+     * Determine if the specified TypeConstant represents a type that is assignable to values of
+     * the type represented by this TypeConstant.
+     * <p/>
+     * Note: a negative answer doesn't guarantee non-assignability; it's simply an indication
+     *       that a "long-path" computation should be done to prove or disprove it.
      *
      * @param that   the type to match
-     * @param clazz  the TypeComposition in which context's the assignability is evaluated
      *
      * See Type.x # isA()
      */
-    public boolean isA(TypeConstant that, TypeComposition clazz)
+    public boolean isA(TypeConstant that)
         {
-        if (this.equals(that))
-            {
-            return true;
-            }
-
-        if (that.isImmutabilitySpecified() && !this.isImmutabilitySpecified())
-            {
-            return false;
-            }
-
-        if (that.isEcstasy("Object"))
-            {
-            return true;
-            }
-
-        TypeSet types = clazz.f_template.f_types;
-
-        TypeComposition clzThis = types.resolveClass(this, clazz.f_mapGenericActual);
-        TypeComposition clzThat = types.resolveClass(that, clazz.f_mapGenericActual);
-
-        return clzThis.isA(clzThat);
+        return this.equals(that);
         }
 
     /**
@@ -344,16 +327,6 @@ public abstract class TypeConstant
     public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
         {
         return getUnderlyingType().producesFormalType(sTypeName, types, access);
-        }
-
-    public <T extends TypeConstant> T unwrapTo(Format format)
-        {
-        TypeConstant constant = this;
-        while (constant.getFormat() != format)
-            {
-            constant = constant.getUnderlyingType();
-            }
-        return (T) constant;
         }
 
 

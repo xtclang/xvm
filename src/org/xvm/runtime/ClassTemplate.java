@@ -10,6 +10,7 @@ import java.util.TreeMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
@@ -40,7 +41,6 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.util.ListMap;
 
 
@@ -152,6 +152,13 @@ public abstract class ClassTemplate
         f_fService = fService;
         }
 
+    /**
+     * Create the canonical class for this template.
+     *
+     * Note that the actual parameters of the canonical class could exist even if there are no
+     * formal parameters. For example, the canonical class for String has an "ElementType" of Char
+     * since String implements Sequence<Char>.
+     */
     protected TypeComposition createCanonicalClass()
         {
         ListMap<String, Type> mapFormal = f_mapGenericFormal;
@@ -169,7 +176,64 @@ public abstract class ClassTemplate
                 }
             }
 
-        return new TypeComposition(this, mapFormal, true);
+        return new TypeComposition(this, addContributingTypes(mapFormal), true);
+        }
+
+    /**
+     * Produce a TypeComposition for this template using the actual types for formal parameters.
+     *
+     * The passed-in actual parameters are only used to resolve the formal parameters at this
+     * template level. However, there could be additional actual generic parameters for this
+     * class that come from the contributions (extends, implements, incorporates).
+     */
+    public TypeComposition ensureClass(Map<String, Type> mapActual)
+        {
+        if (mapActual.isEmpty())
+            {
+            return f_clazzCanonical;
+            }
+
+        // sort the parameters by name and use the list of sorted (by formal name) types as a key
+        Map<String, Type> mapSorted = mapActual.size() > 1 ?
+                new TreeMap<>(mapActual) : mapActual;
+        List<Type> key = new ArrayList<>(mapSorted.values());
+
+        return m_mapCompositions.computeIfAbsent(key,
+                (x) -> new TypeComposition(this, addContributingTypes(mapActual), false));
+        }
+
+    /**
+     * Add resolved formal types that are specified by the contributions
+     * (extends, implements, incorporates) to the passed-in map of the parameter types.
+     */
+    protected Map<String, Type> addContributingTypes(Map<String, Type> mapParams)
+        {
+        Map<String, Type> mapAllParams = null;
+
+        for (Component.Contribution contribution : f_struct.getContributionsAsList())
+            {
+            switch (contribution.getComposition())
+                {
+                case Incorporates:
+                    // TODO: how to detect a conditional incorporation?
+                case Implements:
+                case Extends:
+                    TypeConstant constContribution = contribution.getClassConstant();
+                    List<TypeConstant> listParams = constContribution.getParamTypes();
+                    if (!listParams.isEmpty())
+                        {
+                        if (mapAllParams == null)
+                            {
+                            mapAllParams = new HashMap<>(mapParams);
+                            }
+                        ClassTemplate templateContribution = f_types.getTemplate(
+                            (IdentityConstant) constContribution.getDefiningConstant());
+                        templateContribution.resolveFormalParameters(listParams, mapParams, mapAllParams);
+                        }
+                    break;
+                }
+            }
+        return mapAllParams == null ? mapParams : mapAllParams;
         }
 
     public boolean isRootObject()
@@ -187,10 +251,10 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Determine if this template consumes a formal type with the specified name in context
-     * of the given TypeComposition and access policy.
+     * Determine if this template consumes a formal type with the specified name for the specified
+     * access policy.
      */
-    public boolean consumesFormalType(String sName, TypeSet types, Access access)
+    public boolean consumesFormalType(String sName, Access access)
         {
         for (Component child : f_struct.children())
             {
@@ -212,14 +276,14 @@ public abstract class ClassTemplate
 
                 MethodStructure methodGet = Adapter.getGetter(property);
                 if (methodGet != null && methodGet.isAccessible(access) &&
-                    constType.consumesFormalType(sName, types, Access.PUBLIC))
+                    constType.consumesFormalType(sName, f_types, Access.PUBLIC))
                     {
                     return true;
                     }
 
                 MethodStructure methodSet = Adapter.getGetter(property);
                 if (methodSet != null && methodSet.isAccessible(access) &&
-                    constType.producesFormalType(sName, types, Access.PUBLIC))
+                    constType.producesFormalType(sName, f_types, Access.PUBLIC))
                     {
                     return true;
                     }
@@ -229,10 +293,10 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Determine if this template produces a formal type with the specified name in context
-     * of the given TypeComposition and access policy.
+     * Determine if this template produces a formal type with the specified name for the
+     * specified access policy.
      */
-    public boolean producesFormalType(String sName, TypeSet types, Access access)
+    public boolean producesFormalType(String sName, Access access)
         {
         for (Component child : f_struct.children())
             {
@@ -254,14 +318,14 @@ public abstract class ClassTemplate
 
                 MethodStructure methodGet = Adapter.getGetter(property);
                 if (methodGet != null && methodGet.isAccessible(access) &&
-                    constType.producesFormalType(sName, types, Access.PUBLIC))
+                    constType.producesFormalType(sName, f_types, Access.PUBLIC))
                     {
                     return true;
                     }
 
                 MethodStructure methodSet = Adapter.getGetter(property);
                 if (methodSet != null && methodSet.isAccessible(access) &&
-                    constType.consumesFormalType(sName, types, Access.PUBLIC))
+                    constType.consumesFormalType(sName, f_types, Access.PUBLIC))
                     {
                     return true;
                     }
@@ -309,6 +373,11 @@ public abstract class ClassTemplate
     public boolean isService()
         {
         return f_fService;
+        }
+
+    public boolean isInterface()
+        {
+        return f_struct.getFormat() == Component.Format.INTERFACE;
         }
 
     public boolean isConst()
@@ -377,7 +446,7 @@ public abstract class ClassTemplate
             }
 
         return f_struct.createProperty(false,
-                propSuper.getAccess(), propSuper.getType(), sPropName);
+            propSuper.getAccess(), propSuper.getType(), sPropName);
         }
 
     public TypeConstant getTypeConstant()
@@ -443,7 +512,7 @@ public abstract class ClassTemplate
     private boolean compareTypes(TypeConstant tTest, TypeConstant tParam)
         {
         while (tTest.isSingleDefiningConstant()
-                && tTest.getDefiningConstant().getFormat() == Constant.Format.Typedef)
+                && tTest.getDefiningConstant().getFormat() == Format.Typedef)
             {
             tTest = ((TypedefStructure)
                     ((IdentityConstant) tTest.getDefiningConstant()).getComponent()).getType();
@@ -486,42 +555,32 @@ public abstract class ClassTemplate
         assert ((IdentityConstant) constClassType.getDefiningConstant()).getPathString().equals(f_sName);
 
         List<TypeConstant> listParams = constClassType.getParamTypes();
-
-        int cParams = listParams.size();
-        if (cParams == 0)
+        if (listParams.isEmpty())
             {
             return f_clazzCanonical;
             }
 
-        assert f_mapGenericFormal.size() == listParams.size();
+        Map<String, Type> mapParams = new HashMap<>(listParams.size());
+        resolveFormalParameters(listParams, mapActual, mapParams);
 
-        Map<String, Type> mapActualParams = new HashMap<>();
+        return ensureClass(mapParams);
+        }
+
+    protected void resolveFormalParameters(List<TypeConstant> listParams,
+            Map<String, Type> mapActual, Map<String, Type> mapParams)
+        {
+        int cParams = f_mapGenericFormal.size();
+
+        assert cParams == listParams.size();
+
         int ix = 0;
         for (String sParamName : f_mapGenericFormal.keySet())
             {
-            mapActualParams.put(sParamName,
-                    f_types.resolveType(listParams.get(ix++), mapActual));
+            if (!mapParams.containsKey(sParamName))
+                {
+                mapParams.put(sParamName, f_types.resolveType(listParams.get(ix++), mapActual));
+                }
             }
-        return ensureClass(mapActualParams);
-        }
-
-    // produce a TypeComposition for this template using the actual types for formal parameters
-    public TypeComposition ensureClass(Map<String, Type> mapParams)
-        {
-        assert mapParams.size() == f_mapGenericFormal.size() || this instanceof xTuple;
-
-        if (mapParams.isEmpty())
-            {
-            return f_clazzCanonical;
-            }
-
-        // sort the parameters by name and use the list of sorted (by formal name) types as a key
-        Map<String, Type> mapSorted = mapParams.size() > 1 ?
-                new TreeMap<>(mapParams) : mapParams;
-        List<Type> key = new ArrayList<>(mapSorted.values());
-
-        return m_mapCompositions.computeIfAbsent(key,
-                (x) -> new TypeComposition(this, mapParams, false));
         }
 
     @Override

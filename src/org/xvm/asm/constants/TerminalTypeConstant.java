@@ -12,7 +12,9 @@ import org.xvm.asm.Component;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
+
 import org.xvm.runtime.TypeSet;
 
 import static org.xvm.util.Handy.readIndex;
@@ -159,6 +161,40 @@ public class TerminalTypeConstant
     public TypeConstant resolveTypedefs()
         {
         return (TypeConstant) simplify();
+        }
+
+
+    // ----- run-time support -------------------------------------------------------------------
+
+    @Override
+    public boolean isA(TypeConstant that)
+        {
+        if (super.isA(that))
+            {
+            return true;
+            }
+
+        // the only "extra" scenario we can cover at this layer is:
+        // that = T (formal parameter type)
+        // this = U (another formal parameter type), where U extends T
+        Constant constIdThis = this.getDefiningConstant();
+        Constant constIdThat = that.getDefiningConstant();
+
+        if (constIdThis.getFormat() == Format.Property &&
+            constIdThat.getFormat() == Format.Property)
+            {
+            PropertyConstant propThis = (PropertyConstant) constIdThis;
+            PropertyConstant propThat = (PropertyConstant) constIdThat;
+
+            PropertyStructure property = (PropertyStructure) propThis.getComponent();
+            Constant constTypeId = property.getType().getDefiningConstant();
+            if (constTypeId.getFormat() == Format.Property)
+                {
+                PropertyConstant propThisType = (PropertyConstant) constTypeId;
+                return propThisType.getName().equals(propThat.getName());
+                }
+            }
+        return false;
         }
 
     @Override

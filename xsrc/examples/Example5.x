@@ -525,7 +525,7 @@ Proof:
 
 +++++++++++++++++
 
-class C<T>
+class B<T>
     {
     (T, List<T>) f1(T p1, List<T> p2);
 
@@ -536,36 +536,48 @@ class C<T>
 //        f3(U.ElementType p1, List<U.ElementType> p2);
     }
 
-class D<T>
+class D<T, U>
     {
-    (Int n, List<T>) f1(Int p1, ArrayList<T> p2) {..}
+    (Int, ArrayList<U>) f1(Int p1, List<U> p2) {..}
 
     // note that the presence of this method would prevent
     // the type D<Int> from existing
-    (Int n, List<Int>) f1(Number p1, List<Int> p2) {..}
+    // (Int n, List<Int>) f1(Number p1, List<Int> p2) {..}
     }
 
 <El> Void test(El e)
     {
-    C<Number> c1 = new D<Int>();
-    C<El> c2 = ...;
+    B<Number> b1 = new D<Int, Number>();
 
-    (Number n, List<Number> ln) = c1.f1(1, new List<Int>);
+    (Number n, List<Number> ln) = b1.f1(1, new ArrayList<Int>); // sig = (T, List<T>)
 
-    (El e, List<El> ln) = c1.f2<El>(e, new List<El>);
+    (El e, List<El> ln) = b1.f2<El>(e, new List<El>);
 
-    (Number n, List<Number> ln) = c1.f1<List<Int>>(1, new List<Int>());
+    (Number n, List<Number> ln) = b1.f1<List<Int>>(1, new LinkList<Int>());
 
-    (Number n, List<Number> ln) = c1.f1<List<Number>>(1, new List<Int>());
+    (Number n, List<Number> ln) = b1.f1<List<Number>>(1, new LinkList<Int>());
     }
 
 // invocation calls
 
-C<String> c = ...;
-c.f1("a", {"b", "c"}); // sig-const = ("f1", T, "List<T>")
+B<String> b = ...;
+b.f1("a", {"b", "c"}); // sig-const = ("f1", T, "List<T>")
 
 <U> Void bar(U u)
     {
-    C<U> c = ...;
-    c.f1(u, {u}); // sig-const = ("f1", T, "List<T>")
+    B<U> b = ...;
+    b.f1(u, {u}); // sig-const = ("f1", T, "List<T>")
     }
+
+****
+
+class DPC<T> extends PC<T>
+    {
+    Void consume(Int n);
+    }
+PC<Object> pc = new PC<String>();
+pc.consume(42); // 1) resolve Void(T) with T=String and invoke PC.consume(String), which should blow
+                // 2) use the arguments' compile-time type to resolve the sig Void(Int); fail to find the match
+
+PC<Object> pc = new DPC<String>();
+pc.consume(42); // calls the "override"; not an exception; sig = Void(T); we'll find the method

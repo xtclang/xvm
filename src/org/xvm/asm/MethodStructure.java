@@ -13,15 +13,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.Op.Prefix;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
@@ -422,12 +422,12 @@ public class MethodStructure
         }
 
     /**
-     * Check if this method could act as a substitute for the specified method.
+     * Check if this method could be called via the specified signature.
      *
      * @param signature   the signature of the matching method
      * @param clazz       the TypeComposition in which context's the matching is evaluated
      */
-    public boolean isSubstitutableFor(SignatureConstant signature, TypeComposition clazz)
+    public boolean isCallableFor(SignatureConstant signature, TypeComposition clazz)
         {
         int cParams = getParamCount();
         int cReturns = getReturnCount();
@@ -437,6 +437,12 @@ public class MethodStructure
             {
             return false;
             }
+
+        TypeSet types = clazz.f_template.f_types;
+        Map<String, Type> mapActual = clazz.f_mapGenericActual;
+
+        // the signature comes from the compiler/assembler pointing to the compile-time
+        // method structure that should be used in the invocation in its most generic representation;
 
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
@@ -457,10 +463,20 @@ public class MethodStructure
          */
         for (int i = 0; i < cReturns; i++)
             {
-            TypeConstant typeR2 = getReturn(i).getType();
-            TypeConstant typeR1 = signature.getRawReturns()[i];
+            TypeConstant constR1 = getReturn(i).getType();
+            TypeConstant constR2 = signature.getRawReturns()[i];
 
-            if (!typeR2.isA(typeR1, clazz))
+            // perform a cheap comparison
+            if (constR2.isA(constR1))
+                {
+                continue;
+                }
+
+            // go the expensive way
+            Type typeR1 = types.resolveType(constR1, mapActual);
+            Type typeR2 = types.resolveType(constR2, mapActual);
+
+            if (!typeR2.isA(typeR1))
                 {
                 return false;
                 }
@@ -468,37 +484,21 @@ public class MethodStructure
 
         for (int i = 0; i < cParams; i++)
             {
-            TypeConstant typeP2 = getParam(i).getType();
-            TypeConstant typeP1 = signature.getRawParams()[i];
+            TypeConstant constP1 = getParam(i).getType();
+            TypeConstant constP2 = signature.getRawParams()[i];
 
-            if (typeP1.isA(typeP2, clazz))
+            if (constP1.isA(constP2))
                 {
                 continue;
                 }
 
-            if (!typeP2.isA(typeP1, clazz))
+            Type typeP1 = types.resolveType(constP1, mapActual);
+            Type typeP2 = types.resolveType(constP2, mapActual);
+
+            if (!typeP1.isA(typeP2))
                 {
                 return false;
                 }
-
-            // TODO:
-            // if there is an number of different formal names, then at least one of them must be
-            // produced by the type T1
-//            if (String[] namesThis : this.formalParamNames(loop.count))
-//                {
-//                if (String[] namesThat : that.formalParamNames(loop.count))
-//                    {
-//                    for (String name : nameThis.intersection(namesThat))
-//                        {
-//                        if (that.TargetType.produces(typeP1))
-//                            {
-//                            return true;
-//                            }
-//                        }
-//                    }
-//                }
-
-            return false;
             }
         return true;
         }
@@ -924,6 +924,11 @@ public class MethodStructure
                 Op[] aop = m_aop;
                 if (aop == null)
                     {
+                    if (m_listOps == null)
+                        {
+                        throw new UnsupportedOperationException("Method: " + MethodStructure.this
+                            + "\nis neither native nor compiled");
+                        }
                     m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
                     }
 

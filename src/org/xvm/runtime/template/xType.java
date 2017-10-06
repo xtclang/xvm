@@ -63,6 +63,8 @@ public class xType
         return new TypeHandle(INSTANCE.ensureClass(Collections.singletonMap("DataType", type)));
         }
 
+    // most of the time the TypeHandle is based on the underlying DataType (Type);
+    // however, it if created dynamically, it could be based on a set of methods and properties
     public static class TypeHandle
             extends ObjectHandle
         {

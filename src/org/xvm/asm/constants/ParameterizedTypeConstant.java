@@ -1,4 +1,3 @@
-
 package org.xvm.asm.constants;
 
 
@@ -174,10 +173,10 @@ public class ParameterizedTypeConstant
             TypeConstant constParam = iterParams.next();
             String sFormal = iterNames.next();
 
-            if (template.consumesFormalType(sFormal, types, access)
+            if (template.consumesFormalType(sFormal, access)
                     && constParam.producesFormalType(sTypeName, types, access)
                 ||
-                template.producesFormalType(sFormal, types, access)
+                template.producesFormalType(sFormal, access)
                     && constParam.consumesFormalType(sTypeName, types, access))
                 {
                 return true;
@@ -208,10 +207,10 @@ public class ParameterizedTypeConstant
             TypeConstant constParam = iterParams.next();
             String sFormal = iterNames.next();
 
-            if (template.producesFormalType(sFormal, types, access)
+            if (template.producesFormalType(sFormal, access)
                     && constParam.producesFormalType(sTypeName, types, access)
                 ||
-                template.consumesFormalType(sFormal, types, access)
+                template.consumesFormalType(sFormal, access)
                     && constParam.consumesFormalType(sTypeName, types, access))
                 {
                 return true;
