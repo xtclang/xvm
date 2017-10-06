@@ -10,12 +10,14 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
-
 import org.xvm.compiler.Token.Id;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
@@ -179,7 +181,28 @@ public class MethodDeclarationStatement
     @Override
     protected void generateCode(ErrorListener errs)
         {
-        // TODO this is where the method actually needs to create the Code object on the MethodStructdure, and call emit on the statement block
+        MethodStructure method = (MethodStructure) getComponent();
+        if (body == null)
+            {
+            // it's abstract
+            method.setAbstract(true); // TODO this should also set the enclosing class to abstract? and so on?
+            }
+        else
+            {
+            Code code = method.createCode();
+            try
+                {
+                body.emit(code, errs);
+                }
+            catch (UnsupportedOperationException e) // TODO temporary
+                {
+                String s = e.getMessage();
+                log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
+                        + method.getIdentityConstant() + (s == null ? "" : ": " + s));
+                method.setNative(true);
+                }
+            }
+
         super.generateCode(errs);
         }
 

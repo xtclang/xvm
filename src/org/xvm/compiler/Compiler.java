@@ -383,13 +383,13 @@ public class Compiler
      */
     public static final String RETURN_EXPECTED                    = "COMPILER-41";
     /**
-     * Return is supposed to be non-void.
+     * Return has the wrong number of arguments: {0} expected, {1} found.
      */
     public static final String RETURN_WRONG_COUNT                 = "COMPILER-42";
     /**
-     * Return is supposed to be non-void.
+     * Return has the wrong types: {0} expected, {1} found.
      */
-    public static final String RETURN_WRONG_TYPES                 = "COMPILER-43";
+    public static final String WRONG_TYPE                         = "COMPILER-43";
 
 
     // ----- data members --------------------------------------------------------------------------
