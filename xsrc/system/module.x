@@ -132,11 +132,6 @@ module Ecstasy.xtclang.org
         // TODO version number
 
         // TODO list of depends-on other modules
-
-        /**
-         * The set of auto-magic mixins that objects within the module are subject to.
-         */
-        @RO Iterable<Class> autoMixins;
         }
 
     /**

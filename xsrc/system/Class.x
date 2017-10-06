@@ -487,21 +487,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         // next, create the class that uses the new type parameters
         Class that = TODO
 
-        // now that the new class exists, see what Automagic mixins this module is exposed to, and
-        // select any that apply to the new class (that are not already mixed in to this class)
-        while (true)
-            {
-            for (Class mixin_ : this:module.autoMixins)
-                {
-                if (!that.incorporates_(mixin_) && that.PublicType.isAssignableTo(mixin_.appliesTo))
-                    {
-                    that = that.incorporate(mixin_);
-                    break;
-                    }
-                }
-
-            return that;
-            }
+        return that;
         }
 
     /**
