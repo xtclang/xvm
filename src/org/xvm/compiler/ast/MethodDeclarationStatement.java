@@ -176,6 +176,13 @@ public class MethodDeclarationStatement
         super.registerStructures(errs);
         }
 
+    @Override
+    protected void generateCode(ErrorListener errs)
+        {
+        // TODO this is where the method actually needs to create the Code object on the MethodStructdure, and call emit on the statement block
+        super.generateCode(errs);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

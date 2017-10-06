@@ -352,6 +352,8 @@ public abstract class AstNode
      */
     protected void generateCode(ErrorListener errs)
         {
+        stage = Stage.CodeGen;
+
         for (AstNode node : children())
             {
             node.generateCode(errs);

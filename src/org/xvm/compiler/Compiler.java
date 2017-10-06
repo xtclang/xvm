@@ -397,7 +397,7 @@ public class Compiler
     /**
      * The stages of compilation.
      */
-    public enum Stage {Initial, Registered, Resolved, Validated, };
+    public enum Stage {Initial, Registered, Resolved, CodeGen, };
 
     /**
      * Current compilation stage.

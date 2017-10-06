@@ -1189,7 +1189,7 @@ public class TypeCompositionStatement
     @Override
     public void generateCode(ErrorListener errs)
         {
-        // TODO
+        // TODO what things on the type require code gen? constructors? any other init work (e.g. prop vals)?
         super.generateCode(errs);
         }
 
