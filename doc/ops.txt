@@ -34,7 +34,7 @@
  JMP_TYPE   rvalue, rvalue-type, rel-addr           ; jump if type of the value is “instanceof" specified type
  JMP_NTYPE  rvalue, rvalue-type, rel-addr           ; jump if type of the value is NOT “instanceof" specified type
 
-// variables and refs
+// register creation (variables, including refs)
 +VAR        TYPE_CONST                              ; next register is an uninitialized anonymous variable
 +IVAR       TYPE_CONST, rvalue-src                  ; next register is an initialized anonymous variable
 +NVAR       TYPE_CONST, CONST_STRING                ; next register is an uninitialized named variable
@@ -43,81 +43,89 @@
 +DNVAR      CONST_REF_CLASS, CONST_STRING           ; next register is a named "dynamic reference" variable
 +SVAR       TYPE_CONST, #values:(rvalue-src)        ; next register is an initialized anonymous Sequence variable
 +TVAR       #values:(TYPE_CONST, rvalue-src)        ; next register is an initialized anonymous Tuple variable
-+REF        lvalue                                  ; next register represents the Variable ref for the specified variable
- CREF       rvalue                                  ; next register represents the @RO Variable ref for the specified variable
- CAST       rvalue, TYPE_CONST                      ; next register holds the type-casted value
-+MOV        rvalue-src, lvalue-dest                 ; move source value to destination
-+MOV_REF    lvalue-src, lvalue-dest                 ; move reference-to-source to destination
- MOV_CREF   rvalue-src, lvalue-dest                 ; move reference-to-source to destination
- MOV_CAST   rvalue-src, lvalue-dest, TYPE_CONST     ; move type-casted source reference to destination
- SWAP       lvalue, lvalue                          ; swap source and destination values
+ CVAR       TYPE_CONST, rvalue-src                  ; next register holds the type-casted value ("C"=cast)
+ LVAR       CONST_PROPERTY                          ; next register holds the value of the local property
+ PVAR       CONST_PROPERTY, rvalue-target           ; next register holds the value of the specified property 
++RVAR       lvalue                                  ; next register represents the Variable ref for the specified variable
+ LRVAR      CONST_PROPERTY                          ; next register represents the Property ref for the specified local property (target=this)
+ PRVAR      rvalue-target, CONST_PROPERTY           ; next register represents the Property ref for the specified property
+ CRVAR      rvalue                                  ; next register represents the @RO Variable ref for the specified variable ("C"=constant)
+ PCRVAR     rvalue-target, CONST_PROPERTY           ; next register represents the @RO Property ref for the specified property
+
+// "move" operations
++MOV        rvalue-src, lvalue-dest                 ; move source value to destination (note: types must be equal!)
+ SWAP       lvalue, lvalue                          ; swap source and destination values (note: types must be equal!)
+ CMOV       rvalue-src, lvalue-dest                 ; move source reference to destination, with a cast operation to the type of the destination
++RMOV       lvalue-src, lvalue-dest                 ; move reference-to-source to destination
+ CRMOV      rvalue-src, lvalue-dest                 ; move reference-to-source to destination ("C"=constant)
++L_GET      CONST_PROPERTY, lvalue                  ; local get property (target=this)
++L_SET      CONST_PROPERTY, rvalue                  ; local set property (target=this)
++P_GET      CONST_PROPERTY, rvalue-target, lvalue   ; get property
++P_SET      CONST_PROPERTY, rvalue-target, rvalue   ; set property
++MOV_NEG    rvalue, lvalue                          ; -T -> T
+ MOV_COMPL  rvalue, lvalue                          ; ~T -> T
 
 // register-based operations;
 // in this group either rvalue could be a constant
-+ADD        rvalue-target, rvalue-second, lvalue-return                             ; T + T -> T
- SUB        rvalue-target, rvalue-second, lvalue-return                             ; T - T -> T
- MUL        rvalue-target, rvalue-second, lvalue-return                             ; T * T -> T
- DIV        rvalue-target, rvalue-second, lvalue-return                             ; T / T -> T
- MOD        rvalue-target, rvalue-second, lvalue-return                             ; T % T -> T
- SHL        rvalue-target, rvalue-second, lvalue-return                             ; T << Int -> T
- SHR        rvalue-target, rvalue-second, lvalue-return                             ; T >> Int -> T
- USHR       rvalue-target, rvalue-second, lvalue-return                             ; T >>> Int -> T
- AND        rvalue-target, rvalue-second, lvalue-return                             ; T & T -> T
- OR         rvalue-target, rvalue-second, lvalue-return                             ; T | T -> T
- XOR        rvalue-target, rvalue-second, lvalue-return                             ; T ^ T -> T
- DIVMOD     rvalue-target, rvalue-second, lvalue-div-return, lvalue-mod-return      ; T /% T -> T, T
- NEG        lvalue-target                                                           ; -T -> T
- COMPL      lvalue-target                                                           ; ~T -> T
-+MOV_NEG    rvalue-target, lvalue-return                                            ; -T -> T
- MOV_COMPL  rvalue-target, lvalue-return                                            ; ~T -> T
+ NEG        lvalue                                  ; -T -> T
+ COMPL      lvalue                                  ; ~T -> T
++ADD        rvalue1, rvalue2, lvalue                ; T + T -> T
+ SUB        rvalue1, rvalue2, lvalue                ; T - T -> T
+ MUL        rvalue1, rvalue2, lvalue                ; T * T -> T
+ DIV        rvalue1, rvalue2, lvalue                ; T / T -> T
+ MOD        rvalue1, rvalue2, lvalue                ; T % T -> T
+ SHL        rvalue1, rvalue2, lvalue                ; T << Int -> T
+ SHR        rvalue1, rvalue2, lvalue                ; T >> Int -> T
+ USHR       rvalue1, rvalue2, lvalue                ; T >>> Int -> T
+ AND        rvalue1, rvalue2, lvalue                ; T & T -> T
+ OR         rvalue1, rvalue2, lvalue                ; T | T -> T
+ XOR        rvalue1, rvalue2, lvalue                ; T ^ T -> T
+ DIVMOD     rvalue1, rvalue2, lvalue-div, lvalue-mod; T /% T -> T, T
+ 
 
 // in this group, the lvalue-target could be either a positive number, representing
 // a register, or a negative - representing a local CONST_PROPERTY
-+INC        lvalue-target                                                           ; in-place increment; no result
- DEC        lvalue-target                                                           ; ditto
-+POSTINC    lvalue-target, lvalue-return                                            ; T++ -> T
- POSTDEC    lvalue-target, lvalue-return                                            ; T-— -> T
-+PREINC     lvalue-target, lvalue-return                                            ; ++T -> T
- PREDEC     lvalue-target, lvalue-return                                            ; --T -> T
- ADD_ASGN   lvalue-target, rvalue-second                                            ; T += T
- SUB_ASGN   lvalue-target, rvalue-second                                            ; T -= T
- MUL_ASGN   lvalue-target, rvalue-second                                            ; T *= T
- DIV_ASGN   lvalue-target, rvalue-second                                            ; T /= T
- MOD_ASGN   lvalue-target, rvalue-second                                            ; T %= T
- SHL_ASGN   lvalue-target, rvalue-second                                            ; T <<= Int
- SHR_ASGN   lvalue-target, rvalue-second                                            ; T >>= Int
- USHR_ASGN  lvalue-target, rvalue-second                                            ; T >>>= Int
- AND_ASGN   lvalue-target, rvalue-second                                            ; T &= T
- OR_ASGN    lvalue-target, rvalue-second                                            ; T |= T
- XOR_ASGN   lvalue-target, rvalue-second                                            ; T ^= T
++INC        lvalue-target                           ; in-place increment; no result
+ DEC        lvalue-target                           ; in-place increment; no result
++POSTINC    lvalue-target, lvalue-return            ; T++ -> T
+ POSTDEC    lvalue-target, lvalue-return            ; T-— -> T
++PREINC     lvalue-target, lvalue-return            ; ++T -> T
+ PREDEC     lvalue-target, lvalue-return            ; --T -> T
 
 // property ops
-+P_GET        rvalue-target, CONST_PROPERTY, lvalue-return  ; get property
-+P_SET        rvalue-target, CONST_PROPERTY, rvalue         ; set property
- P_REF        rvalue-target, CONST_PROPERTY                 ; next register represents the Property ref for the specified property
- P_CREF       rvalue-target, CONST_PROPERTY                 ; next register represents the @RO Property ref for the specified property
- P_INC        rvalue-target, CONST_PROPERTY                 ; in-place increment; no result
- P_DEC        rvalue-target, CONST_PROPERTY                 ; ditto
-+P_POSTINC    rvalue-target, CONST_PROPERTY, lvalue-return  ; same as POSTINC for a register
- P_POSTDEC    rvalue-target, CONST_PROPERTY, lvalue-return  ; ditto
-+P_PREINC     rvalue-target, CONST_PROPERTY, lvalue-return
- P_PREDEC     rvalue-target, CONST_PROPERTY, lvalue-return
- P_ADD_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
- P_SUB_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
- P_MUL_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
- P_DIV_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
- P_MOD_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
- P_SHL_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
- P_SHR_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
- P_USHR_ASGN  rvalue-target, CONST_PROPERTY, rvalue-second
- P_AND_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
- P_OR_ASGN    rvalue-target, CONST_PROPERTY, rvalue-second
- P_XOR_ASGN   rvalue-target, CONST_PROPERTY, rvalue-second
+ P_INC        CONST_PROPERTY, rvalue-target                 ; in-place increment; no result
+ P_DEC        CONST_PROPERTY, rvalue-target                 ; ditto
++P_POSTINC    CONST_PROPERTY, rvalue-target, lvalue-return  ; same as POSTINC for a register
+ P_POSTDEC    CONST_PROPERTY, rvalue-target, lvalue-return  ; ditto
++P_PREINC     CONST_PROPERTY, rvalue-target, lvalue-return
+ P_PREDEC     CONST_PROPERTY, rvalue-target, lvalue-return
 
-// local property based
-+L_GET      CONST_PROPERTY, lvalue   ; local get property (target=this)
-+L_SET      CONST_PROPERTY, rvalue   ; local set property (target=this)
- L_REF      CONST_PROPERTY           ; next register represents the Property ref for the specified local property (target=this)
+// "in place" ops: lvalues are registers or lprops, rvalues are registers lprops, or constant values 
+ IP_ADD   lvalue, rvalue2                           ; T += T
+ IP_SUB   lvalue, rvalue2                           ; T -= T
+ IP_MUL   lvalue, rvalue2                           ; T *= T
+ IP_DIV   lvalue, rvalue2                           ; T /= T
+ IP_MOD   lvalue, rvalue2                           ; T %= T
+ IP_SHL   lvalue, rvalue2                           ; T <<= Int
+ IP_SHR   lvalue, rvalue2                           ; T >>= Int
+ IP_USHR  lvalue, rvalue2                           ; T >>>= Int
+ IP_AND   lvalue, rvalue2                           ; T &= T
+ IP_OR    lvalue, rvalue2                           ; T |= T
+ IP_XOR   lvalue, rvalue2                           ; T ^= T
+
+// property ops
+ P_IP_ADD_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_SUB_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_MUL_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_DIV_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_MOD_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_SHL_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_SHR_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_USHR_ASGN  CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_AND_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_OR_ASGN    CONST_PROPERTY, rvalue-target, rvalue-second
+ P_IP_XOR_ASGN   CONST_PROPERTY, rvalue-target, rvalue-second
+
 
 // function calls
 +CALL_00    rvalue-function

@@ -13,6 +13,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Return_0;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -193,6 +194,11 @@ public class MethodDeclarationStatement
             try
                 {
                 body.emit(code, errs);
+                if (method.getReturns().isEmpty())
+                    {
+                    // a void method has an implicit "return;" at the end of it
+                    code.add(new Return_0());
+                    }
                 }
             catch (UnsupportedOperationException e) // TODO temporary
                 {

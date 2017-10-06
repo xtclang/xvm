@@ -652,13 +652,13 @@ public abstract class Op
     public static final int OP_DNVAR        = 0x25;
     public static final int OP_SVAR         = 0x26;
     public static final int OP_TVAR         = 0x27;
-    public static final int OP_REF          = 0x28;
-    public static final int OP_CREF         = 0x29;
-    public static final int OP_CAST         = 0x2A;
+    public static final int OP_CVAR         = 0x28;
+    public static final int OP_REF          = 0x29;
+    public static final int OP_CREF         = 0x2A;
     public static final int OP_MOV          = 0x2B;
-    public static final int OP_MOV_REF      = 0x2C;
-    public static final int OP_MOV_CREF     = 0x2D;
-    public static final int OP_MOV_CAST     = 0x2E;
+    public static final int OP_MOV_CAST     = 0x2C;
+    public static final int OP_MOV_REF      = 0x2D;
+    public static final int OP_MOV_CREF     = 0x2E;
     public static final int OP_SWAP         = 0x2F;
 
     public static final int OP_ADD          = 0x30;

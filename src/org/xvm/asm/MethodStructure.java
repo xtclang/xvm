@@ -675,7 +675,7 @@ public class MethodStructure
             }
 
         // local constants:
-        // (1) if code was created for this method, then it needs to register the constanats;
+        // (1) if code was created for this method, then it needs to register the constants;
         // (2) otherwise, if the local constants are present (because we read them in), then make
         //     sure they're all registered;
         // (3) otherwise, assume there are no local constants

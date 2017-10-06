@@ -75,6 +75,31 @@ public abstract class Expression
         throw notImplemented();
         }
 
+    // TODO document helper
+    protected Argument validateAndConvertSingle(Argument argIn, Code code, TypeConstant typeOut, ErrorListener errs)
+        {
+        // assume that the result is the same as what was passed in
+        Argument argOut = argIn;
+
+        TypeConstant typeIn = argIn.getType();
+        if (!typeIn.equals(typeOut))
+            {
+            // verify that a conversion is possible
+            if (typeIn.isA(typeOut))
+                {
+                // cast from the type-in to the type-out
+                code.add(new Cast)
+                // TODO
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
+                }
+            }
+
+        return argOut;
+        }
+
     /**
      * Validate that this expression is structurally correct to be a link-time condition.
      * <p/><code><pre>

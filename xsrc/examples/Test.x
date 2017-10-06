@@ -131,6 +131,11 @@ module Test
         return "hello", 0;
         }
 
+    (String, Int) foo5b()
+        {
+        return ("hello", 0);
+        }
+
     conditional String foo6()
         {
         return false;
@@ -139,5 +144,10 @@ module Test
     conditional String foo7()
         {
         return true, "hello";
+        }
+
+    Int foo8(Int a, Int b)
+        {
+        return a + b;
         }
     }
