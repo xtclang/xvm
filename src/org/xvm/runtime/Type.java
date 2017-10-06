@@ -14,9 +14,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 
+import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 import org.xvm.runtime.template.collections.xArray;
@@ -31,18 +31,22 @@ import org.xvm.runtime.template.types.xMethod.MethodHandle;
  */
 public class Type
     {
-    final public TypeComposition f_clazz; // optional
-    final public Constants.Access f_access; // only if f_clazz != null
+    final public TypeComposition f_clazz;
+    final protected Constants.Access f_access;
 
     private TypeHandle m_hType;
     private int m_nId;
 
-    private xArray.GenericArrayHandle m_methods = null;
+    private MethodStructure[] m_aMethods = null;
+    private xArray.GenericArrayHandle m_hMethods = null;
     private boolean m_fImmutable;
 
+    // SUPER == this Type is assignable from; SUB == this type is assignable to
+    public enum Relation {EQUAL, SUPER, SUB, INCOMPATIBLE};
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
 
-    private List<CanonicalMethod> m_listMethods = new ArrayList<>();
+    private List<CanonicalMethod> m_listMethods;
+    private List<CanonicalProperty> m_listProperties;
 
     public Type(TypeComposition clazz, Constants.Access access)
         {
@@ -81,68 +85,195 @@ public class Type
         return hType;
         }
 
-    public xArray.GenericArrayHandle getAllMethods()
+    private void collectAll(TypeSet types, Map<String, Type> mapActual)
         {
-        xArray.GenericArrayHandle methods = m_methods;
-        if (methods == null)
-            {
-            Set<MethodConstant> setMethods = new HashSet<>(); // replace w/ SignatureConstant
-            List<MethodHandle> listHandles = new ArrayList<>();
-            int nAccess = f_access.ordinal(); // 1=public, 2=protected, 3=private
+        List<CanonicalMethod> listMethods = m_listMethods = new ArrayList<>();
+        List<CanonicalProperty> listProperties = m_listProperties = new ArrayList<>();
 
-            for (ClassTemplate template : f_clazz.getCallChain())
+        Set<SignatureConstant> setSignatures = new HashSet<>();
+        Set<String> setNames = new HashSet<>();
+
+        int nAccess = f_access.ordinal(); // 1=public, 2=protected, 3=private
+
+        for (ClassTemplate template : f_clazz.getCallChain())
+            {
+            for (Component child : template.f_struct.children())
                 {
-                for (Component child : template.f_struct.children())
+                if (child instanceof MultiMethodStructure)
                     {
-                    if (child instanceof MultiMethodStructure)
+                    for (MethodStructure method : ((MultiMethodStructure) child).methods())
                         {
-                        for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                        if (method.getAccess().ordinal() <= nAccess &&
+                            setSignatures.add(method.getIdentityConstant().getSignature()))
                             {
-                            if (method.getAccess().ordinal() <= nAccess &&
-                                setMethods.add(method.getIdentityConstant()))
+                            Type[] atParam = new Type[method.getParamCount()];
+                            for (int i = 0, c = atParam.length; i < c; i++)
                                 {
-                                listHandles.add(xMethod.makeHandle(method, f_clazz, this));
+                                atParam[i] = types.resolveType(method.getParam(i).getType(), mapActual);
                                 }
+
+                            Type[] atReturn = new Type[method.getReturnCount()];
+                            for (int i = 0, c = atReturn.length; i < c; i++)
+                                {
+                                atParam[i] = types.resolveType(method.getReturn(i).getType(), mapActual);
+                                }
+                            listMethods.add(new CanonicalMethod(method, atParam, atReturn));
                             }
                         }
-                    else if (child instanceof PropertyStructure)
+                    }
+                else if (child instanceof PropertyStructure)
+                    {
+                    PropertyStructure property = (PropertyStructure) child;
+                    if ((Adapter.getGetter(property).getAccess().ordinal() <= nAccess ||
+                        Adapter.getSetter(property).getAccess().ordinal() <= nAccess) &&
+                        setNames.add(property.getName()))
                         {
-                        PropertyStructure property = (PropertyStructure) child;
-                        MethodStructure getter = Adapter.getGetter(property);
-                        MethodStructure setter = Adapter.getSetter(property);
-
+                        Type type = types.resolveType(property.getType(), mapActual);
+                        listProperties.add(new CanonicalProperty(property, type));
                         }
                     }
-
-                // private methods are only visible for the top class in the chain
-                nAccess = Math.min(2, nAccess);
                 }
-            methods = m_methods = xArray.makeHandle(xMethod.TYPE,
-                    listHandles.toArray(new ObjectHandle[listHandles.size()]));
+
+            // private methods are only visible for the top class in the chain
+            nAccess = Math.min(2, nAccess);
             }
-        return methods;
+        }
+
+    public xArray.GenericArrayHandle getAllMethods()
+        {
+        xArray.GenericArrayHandle hMethods = m_hMethods;
+        if (hMethods == null)
+            {
+            MethodStructure[] aMethods = m_aMethods;
+            MethodHandle[] ahMethods = new MethodHandle[aMethods.length];
+            for (int i = 0, c = aMethods.length; i < c; i++)
+                {
+                ahMethods[i] = xMethod.makeHandle(aMethods[i], f_clazz, this);
+                }
+            hMethods = m_hMethods = xArray.makeHandle(xMethod.TYPE, ahMethods);
+            }
+        return hMethods;
         }
 
     /**
-     * @return  Relation between this and that type
+     * Determine if values of the specified type will be assignable to values of this type.
+     *
+     * @param that   the type to match
+     *
+     * See Type.x # isA()
      */
-    public Relation calculateRelation(Type that)
+    public boolean isA(Type that)
         {
-        Relation relation = Relation.INCOMPATIBLE;
-
-        // TODO: compare
-
-        if (relation != Relation.EQUAL)
+        if (this.equals(that))
             {
-            // cache the results
-            m_relations.put(that.getId(), Relation.SUB);
+            return true;
             }
 
-        return relation;
+        if (that.isImmutable() && !this.isImmutable())
+            {
+            return false;
+            }
+
+        if (that == xObject.TYPE)
+            {
+            return true;
+            }
+
+        Relation relation = m_relations.get(that.getId());
+        if (relation != null)
+            {
+            return relation == Relation.EQUAL || relation == Relation.SUB;
+            }
+
+        TypeComposition clzThis = f_clazz;
+        TypeComposition clzThat = that.f_clazz;
+
+        boolean fIncompatible = false;
+        boolean fCheckMethods = false;
+
+        if (clzThat.f_template.isInterface())
+            {
+            // both are interfaces; need to check the methods
+            fCheckMethods = true;
+            }
+        else if (clzThis.f_template.isInterface())
+            {
+            // an interface cannot be assignable to a non-interface
+            fIncompatible = true;
+            }
+        else
+            {
+            if (this.f_access.compareTo(that.f_access) < 0)
+                {
+                // cannot assign a public "this" to protected "that"
+                fIncompatible = true;
+                }
+            else if (clzThis.getCallChain().contains(clzThat.f_template))
+                {
+                // "that" template is a part of "this" class composition;
+                // make sure the formal parameters are compatible
+                for (String sName : clzThat.f_mapGenericActual.keySet())
+                    {
+                    if (that.producesFormalType(sName))
+                        {
+                        // "that" is a producer of sName, therefore for "this" class to be assignable
+                        // to "that" the actual parameter type of "this" should be assignable to the
+                        // actual parameter type of "that"
+                        if (!clzThis.getActualParamType(sName).isA(clzThat.getActualParamType(sName)))
+                            {
+                            fIncompatible = true;
+                            break;
+                            }
+                        }
+                    else if (that.consumesFormalType(sName))
+                        {
+                        // "that" is not a producer of sName, but is a consumer, therefore
+                        // for "this" class to be assignable to it the actual parameter type of
+                        // "that" should be assignable to the actual parameter type of "this"
+                        if (!clzThat.getActualParamType(sName).isA(clzThis.getActualParamType(sName)))
+                            {
+                            fIncompatible = true;
+                            break;
+                            }
+                        }
+                    }
+                }
+            else
+                {
+                fIncompatible = true;
+                }
+            }
+
+        if (fIncompatible)
+            {
+            m_relations.put(that.getId(), Relation.INCOMPATIBLE);
+            return false;
+            }
+
+        if (fCheckMethods)
+            {
+            // TODO: compare the methods
+            }
+
+        m_relations.put(that.getId(), Relation.SUB);
+        return true;
         }
 
-    // SUPER == assignable from; SUB == assignable to
-    public enum Relation {EQUAL, SUPER, SUB, INCOMPATIBLE};
+    /**
+     * Determine if this type consumes a formal type with the specified name.
+     */
+    public boolean consumesFormalType(String sName)
+        {
+        return f_clazz.consumesFormalType(sName, f_access);
+        }
+
+    /**
+     * Determine if this type produces a formal type with the specified name.
+     */
+    public boolean producesFormalType(String sName)
+        {
+        return f_clazz.producesFormalType(sName, f_access);
+        }
 
     @Override
     public int hashCode()
@@ -164,8 +295,9 @@ public class Type
     @Override
     public String toString()
         {
-        return f_clazz == null ? "<no class>" : f_clazz.toString();
+        return f_clazz.toString();
         }
+
 
     // ----- debugging support ------
 
@@ -173,29 +305,33 @@ public class Type
         {
         StringBuilder sb = new StringBuilder();
         sb.append("Id=").append(m_nId);
-        if (f_clazz != null)
-            {
-            sb.append(" Name=").append(f_clazz);
-            }
+        sb.append(" Name=").append(f_clazz);
         return sb.toString();
-        }
-
-    protected void addMethod(SignatureConstant signature, TypeComposition clazzContext)
-        {
-
         }
 
     protected static class CanonicalMethod
         {
-        public CanonicalMethod(String sName, Type[] atParam, Type[] atReturn)
+        public CanonicalMethod(MethodStructure method, Type[] atParam, Type[] atReturn)
             {
-            f_sName = sName;
+            f_method = method;
             f_atParam = atParam;
             f_atReturn = atReturn;
             }
 
-        protected final String f_sName;
+        protected final MethodStructure f_method;
         protected final Type[] f_atParam;
         protected final Type[] f_atReturn;
+        }
+
+    protected static class CanonicalProperty
+        {
+        public CanonicalProperty(PropertyStructure property, Type type)
+            {
+            f_property = property;
+            f_type = type;
+            }
+
+        protected final PropertyStructure f_property;
+        protected final Type f_type;
         }
     }

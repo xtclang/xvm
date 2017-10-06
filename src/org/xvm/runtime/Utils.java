@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.sql.Timestamp;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.SignatureConstant;
@@ -99,7 +100,7 @@ public abstract class Utils
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
         TypeComposition clzValue = hValue.f_clazz;
-        CallChain chain = clzValue.getMethodCallChain(Utils.SIG_TO_STRING);
+        CallChain chain = clzValue.getMethodCallChain(Utils.SIG_TO_STRING, Constants.Access.PUBLIC);
 
         if (chain.isNative())
             {

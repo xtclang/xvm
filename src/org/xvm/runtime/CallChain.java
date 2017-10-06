@@ -26,7 +26,15 @@ public class CallChain
 
     private final int f_cDepth;
 
-    // a constructor for a method chain
+    // a constructor for a single-method chain
+    public CallChain(MethodStructure method)
+        {
+        f_method = method;
+        f_aMethods = null;
+        f_cDepth = 1;
+        }
+
+    // a generic constructor for a method chain
     public CallChain(List<MethodStructure> listMethods)
         {
         int cDepth = f_cDepth = listMethods.size();

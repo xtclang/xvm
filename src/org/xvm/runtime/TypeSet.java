@@ -370,19 +370,6 @@ public class TypeSet
         return nTypeId;
         }
 
-    public Type intern(Type type)
-        {
-        for (Type t : m_mapTypes.values())
-            {
-            if (type.calculateRelation(t) == Type.Relation.EQUAL)
-                {
-                return t;
-                }
-            }
-        addType(type);
-        return type;
-        }
-
     public Type createType(TypeComposition clazz, Constant.Access access)
         {
         Type type = new Type(clazz, access);

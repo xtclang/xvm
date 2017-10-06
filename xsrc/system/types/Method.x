@@ -220,7 +220,7 @@ const Method<TargetType,
                     {
                     for (String name : nameThis.intersection(namesThat))
                         {
-                        if (that.TargetType.produces(typeP1))
+                        if (that.TargetType.producesFormalType(name))
                             {
                             return true;
                             }
