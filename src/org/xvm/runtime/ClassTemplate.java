@@ -242,15 +242,6 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Initialize properties, methods and functions declared at the "top" layer.
-     *
-     * TODO: remove; should be called from constructors
-     */
-    public void initDeclared()
-        {
-        }
-
-    /**
      * Determine if this template consumes a formal type with the specified name for the specified
      * access policy.
      */
@@ -509,7 +500,7 @@ public abstract class ClassTemplate
         }
 
     // compare the specified types
-    private boolean compareTypes(TypeConstant tTest, TypeConstant tParam)
+    private static boolean compareTypes(TypeConstant tTest, TypeConstant tParam)
         {
         while (tTest.isSingleDefiningConstant()
                 && tTest.getDefiningConstant().getFormat() == Format.Typedef)
@@ -603,6 +594,15 @@ public abstract class ClassTemplate
         }
 
     // ---- OpCode support: construction and initialization -----
+
+    /**
+     * Initialize properties, methods and functions declared at the "top" layer.
+     *
+     * TODO: remove; should be called from constructors
+     */
+    public void initDeclared()
+        {
+        }
 
     // create a RefHandle for the specified class
     // sName is an optional ref name

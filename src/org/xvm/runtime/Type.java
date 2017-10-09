@@ -15,6 +15,7 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xType;
@@ -45,8 +46,8 @@ public class Type
     public enum Relation {EQUAL, SUPER, SUB, INCOMPATIBLE};
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
 
-    private List<CanonicalMethod> m_listMethods;
-    private List<CanonicalProperty> m_listProperties;
+    private Map<String, CanonicalMultiMethod> m_mapMultiMethods;
+    private Map<String, CanonicalProperty> m_mapProperties;
 
     public Type(TypeComposition clazz, Constants.Access access)
         {
@@ -85,13 +86,14 @@ public class Type
         return hType;
         }
 
-    private void collectAll(TypeSet types, Map<String, Type> mapActual)
+    private void collectAll(TypeSet types)
         {
-        List<CanonicalMethod> listMethods = m_listMethods = new ArrayList<>();
-        List<CanonicalProperty> listProperties = m_listProperties = new ArrayList<>();
+        Map<String, Type> mapActual = f_clazz.f_mapGenericActual;
+
+        Map<String, CanonicalMultiMethod> mapMultiMethods = m_mapMultiMethods = new HashMap<>();
+        Map<String, CanonicalProperty> mapProperties = m_mapProperties = new HashMap<>();
 
         Set<SignatureConstant> setSignatures = new HashSet<>();
-        Set<String> setNames = new HashSet<>();
 
         int nAccess = f_access.ordinal(); // 1=public, 2=protected, 3=private
 
@@ -109,15 +111,19 @@ public class Type
                             Type[] atParam = new Type[method.getParamCount()];
                             for (int i = 0, c = atParam.length; i < c; i++)
                                 {
-                                atParam[i] = types.resolveType(method.getParam(i).getType(), mapActual);
+                                TypeConstant constType = method.getParam(i).getType();
+                                atParam[i] = types.resolveType(constType, mapActual);
                                 }
 
                             Type[] atReturn = new Type[method.getReturnCount()];
                             for (int i = 0, c = atReturn.length; i < c; i++)
                                 {
-                                atParam[i] = types.resolveType(method.getReturn(i).getType(), mapActual);
+                                TypeConstant constType = method.getReturn(i).getType();
+                                atReturn[i] = types.resolveType(constType, mapActual);
                                 }
-                            listMethods.add(new CanonicalMethod(method, atParam, atReturn));
+                            CanonicalMultiMethod cmm = mapMultiMethods.computeIfAbsent(method.getName(),
+                                CanonicalMultiMethod::new);
+                            cmm.add(new CanonicalMethod(method, atParam, atReturn));
                             }
                         }
                     }
@@ -126,10 +132,10 @@ public class Type
                     PropertyStructure property = (PropertyStructure) child;
                     if ((Adapter.getGetter(property).getAccess().ordinal() <= nAccess ||
                         Adapter.getSetter(property).getAccess().ordinal() <= nAccess) &&
-                        setNames.add(property.getName()))
+                        !mapProperties.containsKey(property.getName()))
                         {
                         Type type = types.resolveType(property.getType(), mapActual);
-                        listProperties.add(new CanonicalProperty(property, type));
+                        mapProperties.put(property.getName(), new CanonicalProperty(property, type));
                         }
                     }
                 }
@@ -262,7 +268,7 @@ public class Type
     /**
      * Determine if this type consumes a formal type with the specified name.
      */
-    public boolean consumesFormalType(String sName)
+    protected boolean consumesFormalType(String sName)
         {
         return f_clazz.consumesFormalType(sName, f_access);
         }
@@ -270,7 +276,7 @@ public class Type
     /**
      * Determine if this type produces a formal type with the specified name.
      */
-    public boolean producesFormalType(String sName)
+    protected boolean producesFormalType(String sName)
         {
         return f_clazz.producesFormalType(sName, f_access);
         }
@@ -307,6 +313,21 @@ public class Type
         sb.append("Id=").append(m_nId);
         sb.append(" Name=").append(f_clazz);
         return sb.toString();
+        }
+
+    protected static class CanonicalMultiMethod
+        {
+        public CanonicalMultiMethod(String sName)
+            {
+            f_sName = sName;
+            }
+
+        public void add(CanonicalMethod method)
+            {
+            m_listMethods.add(method);
+            }
+        protected final String f_sName;
+        protected List<CanonicalMethod> m_listMethods = new ArrayList<>(1);
         }
 
     protected static class CanonicalMethod

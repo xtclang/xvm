@@ -581,3 +581,21 @@ pc.consume(42); // 1) resolve Void(T) with T=String and invoke PC.consume(String
 
 PC<Object> pc = new DPC<String>();
 pc.consume(42); // calls the "override"; not an exception; sig = Void(T); we'll find the method
+
+****
+
+// under no circumstances I1 and I2 are assignable to each other (property T vs U)
+interface I1<T> {void foo(T);}
+interface I2<U> {void foo(U);}
+
+// I1<Int> is assignable to I2
+interface I1<T> {void foo(T);}
+interface I2 {void foo(Int);}
+
+// C<Int> cannot be instantiated; should we allow it to compile? and who should check?
+// what about C<Number> c = ...; c.foo(42) should go to foo(Int)
+class C<T>
+    {
+    void foo(T t) {...};
+    void foo(Int i) {...};
+    }

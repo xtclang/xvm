@@ -443,6 +443,13 @@ public class MethodStructure
 
         // the signature comes from the compiler/assembler pointing to the compile-time
         // method structure that should be used in the invocation in its most generic representation;
+        // the rule 1.2.2.2 below (an exception clause) doesn't really apply in the case of the method
+        // callability. Its purpose to allow the following assignment:
+        //
+        //      List<Object> l = new ArrayList<String>();
+        //
+        // even though there is a method "Void add(ElementType el)" that violates the rule 1.2.1;
+        // however, our check would allow it (the type parameter is identical - ElementType property)
 
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
