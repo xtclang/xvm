@@ -203,7 +203,7 @@ public class MethodDeclarationStatement
             catch (UnsupportedOperationException e) // TODO temporary
                 {
                 String s = e.getMessage();
-                log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
+                log(errs, Severity.FATAL, Compiler.FATAL_ERROR, "could not compile "
                         + method.getIdentityConstant() + (s == null ? "" : ": " + s));
                 method.setNative(true);
                 }

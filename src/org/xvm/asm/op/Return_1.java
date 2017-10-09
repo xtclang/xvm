@@ -56,7 +56,7 @@ public class Return_1
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
         if (m_arg != null)
             {

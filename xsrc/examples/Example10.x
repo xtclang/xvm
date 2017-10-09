@@ -134,3 +134,60 @@ class D
     }
 
 A d1 = new D(); // ok
+
+// -- mixin assignable
+
+mixin M1
+    {
+    Void foo() {..};
+    }
+
+class C1
+        incorporates M1
+    {
+    }
+
+mixin M2
+        into C2
+    {
+    Void bar() {..};
+    }
+
+class C2
+    {
+    }
+
+M2 m2  = new C2();      // error
+M2 m2b = new @M2 C2();  // type is annotated(M2) of C2
+M2 m2  = (M2) c2;       // ok - might RTE
+C2 c2  = m2;            // ok - all M2's are C2's
+
+mixin M3
+        into C3
+    {
+    Void bar() {..};
+    }
+
+class C3
+        incorporates M3
+    {
+    }
+
+M3 m3  = ...
+C3 c3  = m3;
+M3 m3b = c3;
+
+@Serializable class Person {...}
+class Person incorporates Serializable {...}    // not identical to the above
+
+Kernel
+ - Account Mgmt
+ - I/O primitives
+ - DB
+ - Hosting
+   - Cust1
+     - cust1_DB -> injected with a "connection" that the Kernel newed from the DB sub-system
+     - cust1_FS -> injected with a FS that the Kernel newed it from the I/O primitives sub-system
+     - app1
+   - Cust2
+   - ...
