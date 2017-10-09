@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Constant;
@@ -48,6 +49,24 @@ public abstract class Expression
         return new BadTypeExpression(this);
         }
 
+    /**
+     * Generate an argument that represents the result of this expression.
+     *
+     * <p/>
+     * <ul> <li>TODO need to pass in Scope but one that knows name->Register association?
+     * </li><li>TODO how to do captures?
+     * </li><li>TODO how to do definite assignment?
+     * </li><li>TODO a version of this for conditional? or just a boolean parameter that says this is asking for a conditional?
+     * </li></ul>
+     *
+     * @param code       the code block
+     * @param constType  the type that the expression must evaluate to
+     * @param fTupleOk   true if the result can be a tuple of the the specified type
+     * @param errs       the error list to log any errors to
+     *
+     * @return a resulting argument of the specified type, or of a tuple of the specified type if
+     *         that is both allowed and "free" to produce
+     */
     public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
         {
         throw notImplemented();
@@ -57,25 +76,36 @@ public abstract class Expression
      * Generate arguments of the specified types for this expression, or generate an error if that
      * is not possible.
      *
-     * TODO need to pass in Scope but one that knows name->Register association?
-     * TODO how to do captures?
-     * TODO how to do definite assignment?
-     * TODO a version of this for conditional? or just a boolean parameter that says this is asking for a conditional?
+     * @param code       the code block
+     * @param listTypes  a list of types that the expression must evaluate to
+     * @param fTupleOk   true if the result can be a tuple of the the specified types
+     * @param errs       the error list to log any errors to
      *
-     * @param listTypes
-     * @param errs
-     *
-     * @return
+     * @return a list of resulting arguments, which will either be the same size as the passed list,
+     *         or size 1 for a tuple result if that is both allowed and "free" to produce
      */
     public List<Argument> generateArguments(Code code, List<TypeConstant> listTypes, boolean fTupleOk, ErrorListener errs)
         {
-        // TODO if it's just one type, then call the generateArgument() method
-        // TODO if it's multiple types, then log a generic error "can't do multiple types"
-        // TODO then override this by anything that could be a tuple
+        if (listTypes.size() == 1)
+            {
+            return Collections.singletonList(generateArgument(code, listTypes.get(0), fTupleOk, errs));
+            }
+
         throw notImplemented();
         }
 
-    // TODO document helper
+    /**
+     * Given an argument, verify that it can be assigned to (or somehow converted to) the specified
+     * type, and do so.
+     *
+     * @param argIn    the argument that needs to be validated as assignable
+     * @param code     the code block
+     * @param typeOut  the type that the argument must be assignable to
+     * @param errs     the error list to log any errors to, for example if the object cannot be
+     *                 coerced in a manner to make it assignable
+     *
+     * @return the argument to use
+     */
     protected Argument validateAndConvertSingle(Argument argIn, Code code, TypeConstant typeOut, ErrorListener errs)
         {
         // assume that the result is the same as what was passed in
@@ -85,13 +115,10 @@ public abstract class Expression
         if (!typeIn.equals(typeOut))
             {
             // verify that a conversion is possible
-            if (typeIn.isA(typeOut))
+            if (!typeIn.isA(typeOut))
                 {
-                // cast from the type-in to the type-out
-                // TODO code.add(new Cast)
-                }
-            else
-                {
+                // TODO isA() doesn't handle a lot of things that are actually assignable
+                // TODO for things provably not assignable, is an @Auto method available?
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
                 }
             }
