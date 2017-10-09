@@ -87,8 +87,6 @@ public class ReturnStatement
     @Override
     public void emit(Code code, ErrorListener errs)
         {
-        // TODO simplify() pass must already have been done before this!
-
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
         MethodStructure  structMethod = code.getMethodStructure();
@@ -135,8 +133,8 @@ public class ReturnStatement
                     Argument[] args = new Argument[cExprs];
                     for (int i = 0; i < cExprs; ++i)
                         {
-                        args[i] = listExprs.get(0).generateArgument(
-                                code, listRets.get(0).getType(), false, errs);
+                        args[i] = listExprs.get(i).generateArgument(
+                                code, listRets.get(i).getType(), false, errs);
                         }
                     code.add(new Return_N(args));
                     }
@@ -145,6 +143,7 @@ public class ReturnStatement
                     // assume it's a tuple
                     List<Argument> args = listExprs.get(0).generateArguments(code, listRets.stream()
                             .map(p -> p.getType()).collect(Collectors.toList()), true, errs);
+                    // TODO args empty or null means an error occurred; ignore
                     int cArgs = args.size();
                     if (cArgs == cReturns)
                         {

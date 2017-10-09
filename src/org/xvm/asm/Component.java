@@ -2165,7 +2165,6 @@ public abstract class Component
 
     // ----- inner class: Component Contribution ---------------------------------------------------
 
-
     /**
      * Represents one contribution to the definition of a class. A class (with the term used in the
      * abstract sense, meaning any class, interface, mixin, trait, value, enum, or service) can be

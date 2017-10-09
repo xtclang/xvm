@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -15,17 +16,18 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * RETURN_1 rvalue
+ * CAST rvalue
  */
-public class Return_1
+public class CVar
         extends Op
     {
     /**
-     * Construct a RETURN_1 op.
+     * Construct a CAST op.
      *
-     * @param arg  the value to return
+     * @param arg   the argument to cast
+     * @param type  the value to return
      */
-    public Return_1(Argument arg)
+    public CVar(Argument arg, TypeConstant type)
         {
         m_arg = arg;
         }
@@ -37,7 +39,7 @@ public class Return_1
      *
      * @deprecated
      */
-    public Return_1(int nValue)
+    public CVar(int nValue)
         {
         m_nArg = nValue;
         }
@@ -48,7 +50,7 @@ public class Return_1
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public Return_1(DataInput in, Constant[] aconst)
+    public CVar(DataInput in, Constant[] aconst)
             throws IOException
         {
         m_nArg = readPackedInt(in);
@@ -56,7 +58,7 @@ public class Return_1
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
+    throws IOException
         {
         if (m_arg != null)
             {
@@ -96,6 +98,8 @@ public class Return_1
             }
         }
 
-    private Argument m_arg;
-    private int      m_nArg;
+    private Argument     m_arg;
+    private TypeConstant m_type;
+    private int          m_nArg;
+    private int          m_nType;
     }

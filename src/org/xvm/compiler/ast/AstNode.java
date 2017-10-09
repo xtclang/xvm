@@ -350,11 +350,13 @@ public abstract class AstNode
      *
      * @param errs  the error list to log any errors etc. to
      */
-    protected void validate(ErrorListener errs)
+    protected void generateCode(ErrorListener errs)
         {
+        stage = Stage.CodeGen;
+
         for (AstNode node : children())
             {
-            node.validate(errs);
+            node.generateCode(errs);
             }
         }
 

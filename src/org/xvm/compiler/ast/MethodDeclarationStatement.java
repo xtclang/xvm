@@ -10,12 +10,15 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Return_0;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
-
 import org.xvm.compiler.Token.Id;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
@@ -174,6 +177,39 @@ public class MethodDeclarationStatement
             }
 
         super.registerStructures(errs);
+        }
+
+    @Override
+    protected void generateCode(ErrorListener errs)
+        {
+        MethodStructure method = (MethodStructure) getComponent();
+        if (body == null)
+            {
+            // it's abstract
+            method.setAbstract(true); // TODO this should also set the enclosing class to abstract? and so on?
+            }
+        else
+            {
+            Code code = method.createCode();
+            try
+                {
+                body.emit(code, errs);
+                if (method.getReturns().isEmpty())
+                    {
+                    // a void method has an implicit "return;" at the end of it
+                    code.add(new Return_0());
+                    }
+                }
+            catch (UnsupportedOperationException e) // TODO temporary
+                {
+                String s = e.getMessage();
+                log(errs, Severity.FATAL, Compiler.FATAL_ERROR, "could not compile "
+                        + method.getIdentityConstant() + (s == null ? "" : ": " + s));
+                method.setNative(true);
+                }
+            }
+
+        super.generateCode(errs);
         }
 
 

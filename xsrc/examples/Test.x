@@ -65,16 +65,16 @@ module Test
 //            }
 //        }
 //
-    mixin MyMixin<T>
-        {
-        // ...
-        }
-
-    class MyClass2<T>
-            incorporates conditional MyMixin<T extends Int>
-        {
-        // TODO
-        }
+//    mixin MyMixin<T>
+//        {
+//        // ...
+//        }
+//
+//    class MyClass2<T>
+//            incorporates conditional MyMixin<T extends Int>
+//        {
+//        // TODO
+//        }
 //
 //    typedef function Void Alarm();
 //
@@ -93,17 +93,61 @@ module Test
 //    Tuple<Tuple> fnTupleTuple();
 
 // problem: InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
-    @Inject String option;        // TODO figure out where the @Inject ended up
-
-    @Inject String option2.get()  // TODO sig is wrong (shows Void, should be String)
-        {
-        return super.get();
-        }
+//    @Inject String option;        // TODO figure out where the @Inject ended up
+//
+//    @Inject String option2.get()  // TODO sig is wrong (shows Void, should be String)
+//        {
+//        return super.get();
+//        }
 
 // problem: constructors are named after the class instead of "construct"
-    class ConstructorTest
+//    class ConstructorTest
+//        {
+//        construct ConstructorTest(Int i) {}
+//        construct ConstructorTest(String s) {} finally {}
+//        }
+
+    Void foo1()
         {
-        construct ConstructorTest(Int i) {}
-        construct ConstructorTest(String s) {} finally {}
+        }
+
+    Void foo2()
+        {
+        return;
+        }
+
+    String foo3()
+        {
+        return "hello";
+        }
+
+    Int foo4()
+        {
+        return 0;
+        }
+
+    (String, Int) foo5()
+        {
+        return "hello", 0;
+        }
+
+    (String, Int) foo5b()
+        {
+        return ("hello", 0);
+        }
+
+    conditional String foo6()
+        {
+        return false;
+        }
+
+    conditional String foo7()
+        {
+        return true, "hello";
+        }
+
+    Int foo8(Int a, Int b)
+        {
+        return a + b;
         }
     }
