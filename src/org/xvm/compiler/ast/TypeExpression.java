@@ -1,9 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.Constant;
-
-import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 

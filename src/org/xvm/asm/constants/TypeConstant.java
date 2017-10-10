@@ -292,6 +292,59 @@ public abstract class TypeConstant
                 : getConstantPool().ensureEcstasyTypeConstant("Object");
         }
 
+    /**
+     * @return true iff the type is a tuple type
+     */
+    public boolean isTuple()
+        {
+        TypeConstant constThis = (TypeConstant) this.simplify();
+        assert !constThis.containsUnresolved();
+        return constThis.isEcstasy("Tuple");
+        }
+
+    /**
+     * @return the number of tuple iff the type is a tuple type; otherwise -1
+     */
+    public int getTupleFieldCount()
+        {
+        TypeConstant constThis = (TypeConstant) this.simplify();
+        if (constThis.containsUnresolved()
+                || !constThis.isEcstasy("Tuple"))
+            {
+            throw new IllegalStateException();
+            }
+
+        return constThis.isParamsSpecified()
+                ? constThis.getParamTypes().size()
+                : 0;
+        }
+
+    /**
+     * Obtain the type of the specified tuple field.
+     *
+     * @param i  the 0-based tuple field index
+     *
+     * @return the type of the specified field
+     */
+    public TypeConstant getTupleFieldType(int i)
+        {
+        TypeConstant constThis = (TypeConstant) this.simplify();
+        if (constThis.containsUnresolved()
+                || !constThis.isEcstasy("Tuple")
+                || !constThis.isParamsSpecified())
+            {
+            throw new IllegalStateException();
+            }
+
+        List<TypeConstant> listParamTypes = constThis.getParamTypes();
+        if (i < 0 || i >= listParamTypes.size())
+            {
+            throw new IllegalArgumentException("i=" + i + ", size=" + listParamTypes.size());
+            }
+
+        return listParamTypes.get(i);
+        }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 

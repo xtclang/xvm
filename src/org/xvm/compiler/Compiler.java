@@ -387,9 +387,17 @@ public class Compiler
      */
     public static final String RETURN_WRONG_COUNT                 = "COMPILER-42";
     /**
-     * Return has the wrong types: {0} expected, {1} found.
+     * Type mismatch: {0} expected, {1} found.
      */
     public static final String WRONG_TYPE                         = "COMPILER-43";
+    /**
+     * Wrong number of values: {0} expected, {1} found.
+     */
+    public static final String WRONG_TYPE_ARITY                   = "COMPILER-44";
+    /**
+     * Value of type {0} is out of range: {1}.
+     */
+    public static final String VALUE_OUT_OF_RANGE                 = "COMPILER-45";
 
 
     // ----- data members --------------------------------------------------------------------------

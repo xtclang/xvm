@@ -2910,10 +2910,9 @@ s     *
      */
     TodoExpression parseTodoExpression()
         {
-        Token     keyword  = expect(Id.TODO);
-        String    sText    = (String) keyword.getValue();
-        Expression message = null;
-        if (sText == null)
+        Expression message  = null;
+        Token      keyword  = expect(Id.TODO);
+        if (keyword.getValue() == null)
             {
             if (match(Id.L_PAREN) != null)
                 {
@@ -2923,12 +2922,14 @@ s     *
             }
         else
             {
+            // the text is held in the String value of the "T0D0" keyword's token
             message = new LiteralExpression(keyword);
 
             // unfortunately, we have to pretend that the "end of line" T0D0 is followed by a
             // semicolon
             putBack(new Token(keyword.getEndPosition(), keyword.getEndPosition(), Id.SEMICOLON));
             }
+
         return new TodoExpression(keyword, message);
         }
 

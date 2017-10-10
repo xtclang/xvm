@@ -135,6 +135,12 @@ public class ClassConstant
         return Format.Class;
         }
 
+    @Override
+    public boolean isClass()
+        {
+        return true;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

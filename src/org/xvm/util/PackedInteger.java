@@ -150,6 +150,17 @@ public class PackedInteger
         }
 
     /**
+     * @return true iff the value is less than zero
+     */
+    public boolean isNegative()
+        {
+        verifyInitialized();
+        return m_fBig
+                ? m_bigint.signum() < 0
+                : m_lValue < 0;
+        }
+
+    /**
      * Helper to grab the value as an int, with a range check to be safe.
      *
      * @return the value as a 32-bit signed int

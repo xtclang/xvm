@@ -91,12 +91,7 @@ public abstract class Expression
             return Collections.singletonList(generateArgument(code, listTypes.get(0), fTupleOk, errs));
             }
 
-        if (fTupleOk)
-            {
-            // TODO
-            }
-
-        log(errs, Severity.ERROR, Compiler.)// TODO log error
+        log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, listTypes.size());
         return Collections.EMPTY_LIST;
         }
 

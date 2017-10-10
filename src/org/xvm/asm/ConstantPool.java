@@ -273,6 +273,49 @@ public class ConstantPool
         return constant;
         }
 
+    public LiteralConstant ensureLiteralConstant(Format format, String s)
+        {
+        switch (format)
+            {
+            case IntLiteral:
+            case FPLiteral:
+            case Date:
+            case Time:
+            case DateTime:
+            case Duration:
+            case TimeInterval:
+                LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
+                if (constant == null)
+                    {
+                    constant = (LiteralConstant) register(new LiteralConstant(this, format, s));
+                    }
+                return constant;
+
+            default:
+                throw new IllegalStateException("unsupported format: " + format);
+            }
+        }
+
+    public Int8Constant ensureInt8Constant(int n)
+        {
+        Int8Constant constant = (Int8Constant) ensureLocatorLookup(Format.Int8).get(n);
+        if (constant == null)
+            {
+            constant = (Int8Constant) register(new Int8Constant(this, n));
+            }
+        return constant;
+        }
+
+    public UInt8Constant ensureUInt8Constant(int n)
+        {
+        UInt8Constant constant = (UInt8Constant) ensureLocatorLookup(Format.UInt8).get(n);
+        if (constant == null)
+            {
+            constant = (UInt8Constant) register(new UInt8Constant(this, n));
+            }
+        return constant;
+        }
+
     /**
      * Given the specified {@code long} value, obtain a IntConstant that represents it.
      *
@@ -294,13 +337,110 @@ public class ConstantPool
      */
     public IntConstant ensureIntConstant(PackedInteger pint)
         {
-        // check the pre-existing constants first
-        IntConstant constant = (IntConstant) ensureLocatorLookup(Format.Int64).get(pint);
+        return ensureIntConstant(pint, Format.Int64);
+        }
+
+
+    /**
+     * Given the specified PackedInteger value and a format, obtain a IntConstant that represents it.
+     *
+     * @param pint    the PackedInteger value
+     * @param format  the format of the integer constant, one of {@link Format#Int16},
+     *                {@link Format#Int32}, {@link Format#Int64}, {@link Format#Int128},
+     *                {@link Format#VarInt}, {@link Format#UInt16}, {@link Format#UInt32},
+     *                {@link Format#UInt64}, {@link Format#UInt128}, or {@link Format#VarUInt}
+     *                
+     * @return an IntConstant for the passed PackedInteger value
+     */
+    public IntConstant ensureIntConstant(PackedInteger pint, Format format)
+        {
+        switch (format)
+            {
+            case Int16:
+            case Int32:
+            case Int64:
+            case Int128:
+            case VarInt:
+            case UInt16:
+            case UInt32:
+            case UInt64:
+            case UInt128:
+            case VarUInt:
+                // check the pre-existing constants first
+                IntConstant constant = (IntConstant) ensureLocatorLookup(format).get(pint);
+                if (constant == null)
+                    {
+                    constant = (IntConstant) register(new IntConstant(this, format, pint));
+                    }
+                return constant;
+
+            default:
+                throw new IllegalStateException("unsupported format: " + format);
+            }
+        }
+
+    /**
+     * Given the specified floating point value, obtain a Float16Constant that represents it.
+     *
+     * @param flVal  the floating point value
+     *
+     * @return a Float16Constant for the passed floating point value
+     */
+    public Float16Constant ensureFloat16Constant(float flVal)
+        {
+        Float16Constant constant = (Float16Constant) ensureLocatorLookup(Format.Float16).get(flVal);
         if (constant == null)
             {
-            constant = (IntConstant) register(new IntConstant(this, pint));
+            constant = new Float16Constant(this, flVal);
             }
         return constant;
+        }
+
+    /**
+     * Given the specified floating point value, obtain a Float32Constant that represents it.
+     *
+     * @param flVal  the floating point value
+     *
+     * @return a Float32Constant for the passed floating point value
+     */
+    public Float32Constant ensureFloat32Constant(float flVal)
+        {
+        Float32Constant constant = (Float32Constant) ensureLocatorLookup(Format.Float32).get(flVal);
+        if (constant == null)
+            {
+            constant = new Float32Constant(this, flVal);
+            }
+        return constant;
+        }
+
+    /**
+     * Given the specified floating point value, obtain a Float64Constant that represents it.
+     *
+     * @param flVal  the floating point value
+     *
+     * @return a Float64Constant for the passed floating point value
+     */
+    public Float64Constant ensureFloat64Constant(double flVal)
+        {
+        Float64Constant constant = (Float64Constant) ensureLocatorLookup(Format.Float64).get(flVal);
+        if (constant == null)
+            {
+            constant = new Float64Constant(this, flVal);
+            }
+        return constant;
+        }
+
+    /**
+     * Given the specified floating point value (stored in a byte array), obtain a Float128Constant
+     * that represents it.
+     *
+     * @param abVal  the floating point value encoded in 16 bytes (128 bits)
+     *
+     * @return a Float128Constant for the passed floating point value
+     */
+    public Float128Constant ensureFloat128Constant(byte[] abVal)
+        {
+        return new Float128Constant(this, abVal);
         }
 
     /**

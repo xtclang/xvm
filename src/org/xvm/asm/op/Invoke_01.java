@@ -8,6 +8,8 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
+import org.xvm.asm.constants.MethodConstant;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -25,18 +27,27 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Invoke_01
         extends OpInvocable
     {
+    public Invoke_01(Argument argTarget, MethodConstant constMethod, Argument argRet)
+        {
+        m_argTarget   = argTarget;
+        m_constMethod = constMethod;
+        m_argRet      = argRet;
+        }
+    
     /**
      * Construct an INVOKE_01 op.
      *
      * @param nTarget    r-value that specifies the object on which the method being invoked
      * @param nMethodId  r-value that specifies the method being invoked
      * @param nRet       the l-value location for the result
+     *                   
+     * @deprecated 
      */
     public Invoke_01(int nTarget, int nMethodId, int nRet)
         {
-        f_nTargetValue = nTarget;
-        f_nMethodId    = nMethodId;
-        f_nRetValue    = nRet;
+        m_nTargetValue = nTarget;
+        m_nMethodId    = nMethodId;
+        m_nRetValue    = nRet;
         }
 
     /**
@@ -48,19 +59,26 @@ public class Invoke_01
     public Invoke_01(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nMethodId    = readPackedInt(in);
-        f_nRetValue    = readPackedInt(in);
+        m_nTargetValue = readPackedInt(in);
+        m_nMethodId    = readPackedInt(in);
+        m_nRetValue    = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_argTarget != null)
+            {
+            m_nTargetValue = encodeArgument(m_argTarget  , registry);
+            m_nMethodId    = encodeArgument(m_constMethod, registry);
+            m_nRetValue    = encodeArgument(m_argRet     , registry);
+            }
+
         out.writeByte(OP_INVOKE_01);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nTargetValue);
+        writePackedLong(out, m_nMethodId);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -74,24 +92,24 @@ public class Invoke_01
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTargetValue);
             if (hTarget == null)
                 {
                 return R_REPEAT;
                 }
 
             TypeComposition clz = hTarget.f_clazz;
-            CallChain chain = getCallChain(frame, clz, f_nMethodId);
+            CallChain chain = getCallChain(frame, clz, m_nMethodId);
 
             if (chain.isNative())
                 {
                 return clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget,
-                        Utils.OBJECTS_NONE, f_nRetValue);
+                        Utils.OBJECTS_NONE, m_nRetValue);
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
 
-            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, f_nRetValue);
+            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -99,7 +117,11 @@ public class Invoke_01
             }
         }
 
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nRetValue;
+    private Argument       m_argTarget;
+    private MethodConstant m_constMethod;
+    private Argument       m_argRet;
+                                                    
+    private int m_nTargetValue;
+    private int m_nMethodId;
+    private int m_nRetValue;
     }

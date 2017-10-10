@@ -1287,7 +1287,8 @@ public class Lexer
             }
         else if (!mustBeBinary && mantissaRadix == 10)
             {
-            // TODO convert to IEEE-754 decimal floating point format
+            // convert to IEEE-754 decimal floating point format
+            // note: for now it is simply stored in the literal token as a BigDecimal
             BigDecimal dec;
             if (piFraction == null)
                 {
@@ -1321,13 +1322,12 @@ public class Lexer
                     dec = dec.scaleByPowerOfTen((int) lExp);
                     }
                 }
-            // TODO exponent
             return new Token(lPosStart, lPosEnd, Id.LIT_DEC, dec);
             }
         else
             {
             // convert to IEEE-754 binary floating point format
-            // TODO
+            // note: for now it is simply stored in the literal token as a String
             return new Token(lPosStart, lPosEnd, Id.LIT_BIN, source.toString(lPosStart, lPosEnd));
             }
         }
