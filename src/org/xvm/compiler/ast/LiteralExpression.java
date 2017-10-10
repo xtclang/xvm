@@ -3,6 +3,12 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
+import org.xvm.asm.Op.Argument;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -62,6 +68,12 @@ public class LiteralExpression
                 throw new UnsupportedOperationException(
                         "LiteralExpression.toConstant() not implemented for " + literal.getId());
             }
+        }
+
+    @Override
+    public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
+        {
+        return validateAndConvertSingle(toConstant(), code, constType, errs);
         }
 
     @Override

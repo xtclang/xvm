@@ -91,7 +91,13 @@ public abstract class Expression
             return Collections.singletonList(generateArgument(code, listTypes.get(0), fTupleOk, errs));
             }
 
-        throw notImplemented();
+        if (fTupleOk)
+            {
+            // TODO
+            }
+
+        log(errs, Severity.ERROR, Compiler.)// TODO log error
+        return Collections.EMPTY_LIST;
         }
 
     /**
@@ -167,7 +173,7 @@ public abstract class Expression
      * @return nothing, because the method always throws
      * @throws UnsupportedOperationException this exception is always thrown by this method
      */
-    private UnsupportedOperationException notImplemented()
+    protected UnsupportedOperationException notImplemented()
         {
         throw new UnsupportedOperationException("not implemented by: " + this.getClass().getSimpleName());
         }
