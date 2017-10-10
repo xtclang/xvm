@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * JMP_NEQ rvalue, rvalue, rel-addr ; jump if value is NOT equal
+ * JMP_NEQ rvalue1, rvalue2, addr ; jump if value1 is NOT equal to value2
  */
 public class JumpNotEq
         extends Op
@@ -30,7 +30,7 @@ public class JumpNotEq
      *
      * @param nValue1   the first value to compare
      * @param nValue2   the second value to compare
-     * @param nRelAddr  the relative address to jump to.
+     * @param nRelAddr  the relative address to jump to
      */
     public JumpNotEq(int nValue1, int nValue2, int nRelAddr)
         {

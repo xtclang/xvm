@@ -933,8 +933,9 @@ public class MethodStructure
                     {
                     if (m_listOps == null)
                         {
-                        throw new UnsupportedOperationException("Method: " + MethodStructure.this
-                            + "\nis neither native nor compiled");
+                        MethodStructure method = MethodStructure.this;
+                        throw new UnsupportedOperationException("Class=" + method.getParent().getParent().getName() +
+                            "; method=" + method.getIdentityConstant().getSignature() + "\nis neither native nor compiled");
                         }
                     m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
                     }

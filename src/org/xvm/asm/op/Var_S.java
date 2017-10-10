@@ -11,28 +11,31 @@ import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.collections.xArray;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * IVAR CONST_CLASS, rvalue-src ; (next register is an initialized anonymous variable)
+ * VAR_S TYPE, #values:(rvalue-src) ; next register is an initialized anonymous Sequence variable
  */
-public class IVar
+public class Var_S
         extends Op
     {
     /**
-     * Construct an IVAR op.
+     * Construct a VAR_S op.
      *
-     * @param nTypeConstId  the type of the variable
-     * @param nValue        the initial value
+     * @param nTypeConstId  the type of the sequence
+     * @param anValue       the values for the sequence
      */
-    public IVar(int nTypeConstId, int nValue)
+    public Var_S(int nTypeConstId, int[] anValue)
         {
-        f_nClassConstId = nTypeConstId;
-        f_nArgValue     = nValue;
+        f_nTypeConstId = nTypeConstId;
+        f_anArgValue   = anValue;
         }
 
     /**
@@ -41,43 +44,46 @@ public class IVar
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IVar(DataInput in, Constant[] aconst)
+    public Var_S(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = readPackedInt(in);
-        f_nArgValue     = readPackedInt(in);
+        f_nTypeConstId = readPackedInt(in);
+        f_anArgValue   = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_IVAR);
-        writePackedLong(out, f_nClassConstId);
-        writePackedLong(out, f_nArgValue);
+        out.writeByte(OP_VAR_S);
+        writePackedLong(out, f_nTypeConstId);
+        writeIntArray(out, f_anArgValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_IVAR;
+        return OP_VAR_S;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clazz = frame.f_context.f_types.ensureComposition(
-                f_nClassConstId, frame.getActualTypes());
+        TypeComposition clazzEl = frame.f_context.f_types.ensureComposition(
+                f_nTypeConstId, frame.getActualTypes());
 
         try
             {
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
-            if (hArg == null)
+            ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
+            if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            frame.introduceVar(clazz, null, Frame.VAR_STANDARD, hArg);
+            ArrayHandle hArray = xArray.makeHandle(clazzEl.ensurePublicType(), ahArg);
+            hArray.makeImmutable();
+
+            frame.introduceVar(hArray.f_clazz, null, Frame.VAR_STANDARD, hArray);
 
             return iPC + 1;
             }
@@ -93,6 +99,6 @@ public class IVar
         scope.allocVar();
         }
 
-    final private int f_nClassConstId;
-    final private int f_nArgValue;
+    final private int   f_nTypeConstId;
+    final private int[] f_anArgValue;
     }

@@ -2,42 +2,36 @@
 +NOP                                                ; traditional no-op (i.e. it does nothing)
 +LINE_1                                             ; advance source code line counter by 1 line
 +LINE_N     #lines                                  ; advance source code line counter by n lines
++BREAK                                              ; explicit break-point for a debugger
 +ENTER                                              ; variable scope begin
 +EXIT                                               ; variable scope end
 +GUARD      #handlers:(TYPE, STRING, addr)          ; try { (+ “catch” class, var name, handler address) (implicit ENTER)
-+EGUARD     addr                                    ; } ... // ("E"=) end guarded block with a jump (implicit EXIT)
++GUARD_E    addr                                    ; } ... // ("E"=) end guarded block with a jump (implicit EXIT)
 +CATCH                                              ; begin an exception handler (implicit ENTER and INVAR for exception)
-+ECATCH     addr                                    ; ("E"=) end an exception handler with a jump (implicit EXIT)
-+FGUARD     addr                                    ; try { (+ "finally" address (implicit ENTER)
++CATCH_E    addr                                    ; ("E"=) end an exception handler with a jump (implicit EXIT)
++GUARDALL   addr                                    ; try { (+ "finally" address (implicit ENTER)
 +FINALLY                                            ; begin a "finally" handler (implicit EXIT/ENTER and an exception var)
-+EFINALLY                                           ; ("E"=) end  a "finally" handler (implicit EXIT)
++FINALLY_E                                          ; ("E"=) end  a "finally" handler (implicit EXIT)
 +THROW      rvalue                                  ; raise exception
-+BREAK                                              ; explicit break-point for a debugger
+
+// asserts
 +ASSERT     rvalue                                  ; assert boolean
-+TASSERT    rvalue, STRING                          ; assert with assertion text (e.g. assertion expression)
-+VASSERT    rvalue, STRING, #vals(rvalue)           ; assert with assertion text and variables to print
++ASSERT_M   rvalue, STRING                          ; assert with a ("M"=) message (e.g. assertion expression)
++ASSERT_V   rvalue, STRING, #vals(rvalue)           ; assert with a message and ("V"=) values to print
+
+// returns
 +RETURN_0                                           ; return (no return value)
 +RETURN_1   rvalue                                  ; return (single return value)
 +RETURN_N   #vals:(rvalue)                          ; return (multiple return value)
 +RETURN_T   rvalue-tuple                            ; return (multiple return from a tuple)
 
-// Boolean checks
-+IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
-+IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
-+IS_NULL    rvalue, lvalue-return                   ; T == null -> Boolean
-+IS_NNULL   rvalue, lvalue-return                   ; T != null -> Boolean
-+IS_EQ      rvalue, rvalue, lvalue-return           ; T == T -> Boolean
-+IS_NEQ     rvalue, rvalue, lvalue-return           ; T != T -> Boolean
-+IS_LT      rvalue, rvalue, lvalue-return           ; T < T -> Boolean
-+IS_LTE     rvalue, rvalue, lvalue-return           ; T <= T -> Boolean
-+IS_GT      rvalue, rvalue, lvalue-return           ; T > T -> Boolean
-+IS_GTE     rvalue, rvalue, lvalue-return           ; T >= T -> Boolean
-+IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
- IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
- IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
- IS_SVC     rvalue                                  ; (T is a service) -> Boolean
- IS_CONST   rvalue                                  ; (T is a const) -> Boolean
- IS_IMMUT   rvalue                                  ; (T is an immutable) -> Boolean
+// method and function binding
++BIND_M      rvalue-target, METHOD, lvalue-fn-result
++BIND_F      rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
+
+// generic type resolution
+ RTYPE_1    TYPE, rvalue-type, lvalue               ; resolve generic type; lvalue - a Type object
+ RTYPE_N    TYPE, #type-params:(rvalue-type), lvalue
 
 // jumps (all addresses are relative to the PC of the jump op)
 +JMP        addr                                    ; unconditional relative jump
@@ -60,152 +54,169 @@
  JMP_INT    rvalue, #:(addr), addr-default          ; if value equals (0,1,2,...), jump to address, otherwise default
  JMP_VAL    rvalue, #:(CONST, addr), addr-default   ; if value equals a constant, jump to address, otherwise default
 
+// Boolean checks
++IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
++IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
++IS_NULL    rvalue, lvalue-return                   ; T == null -> Boolean
++IS_NNULL   rvalue, lvalue-return                   ; T != null -> Boolean
++IS_EQ      rvalue, rvalue, lvalue-return           ; T == T -> Boolean
++IS_NEQ     rvalue, rvalue, lvalue-return           ; T != T -> Boolean
++IS_LT      rvalue, rvalue, lvalue-return           ; T < T -> Boolean
++IS_LTE     rvalue, rvalue, lvalue-return           ; T <= T -> Boolean
++IS_GT      rvalue, rvalue, lvalue-return           ; T > T -> Boolean
++IS_GTE     rvalue, rvalue, lvalue-return           ; T >= T -> Boolean
++IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
+ IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
+ IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
+ IS_SVC     rvalue                                  ; (T is a service) -> Boolean
+ IS_CONST   rvalue                                  ; (T is a const) -> Boolean
+ IS_IMMUT   rvalue                                  ; (T is an immutable) -> Boolean
+
 // next register allocation (variables, including refs)
 // - does NOT support "local property" mode
 +VAR        TYPE                                    ; uninitialized anonymous variable
-+IVAR       TYPE, rvalue-src                        ; ("I"=) initialized anonymous variable
-+NVAR       TYPE, STRING                            ; uninitialized ("N"=) named variable
-+INVAR      TYPE, STRING, rvalue-src                ; ("I"=) initialized ("N"=) named variable
-+DVAR       TYPE                                    ; anonymous ("D"=) dynamic reference
-+DNVAR      TYPE, STRING                            ; ("N"=) named ("D"=) dynamic reference
-+SVAR       TYPE, #values:(rvalue)                  ; initialized anonymous ("S"=) Sequence variable
- SNVAR      TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("S"=) Sequence variable
-+TVAR       TYPE, #values:(rvalue)                  ; initialized anonymous ("T"=) Tuple variable
- TNVAR      TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("T"=) Tuple variable
-+RVAR       lvalue                                  ; ("R"=) reference for the specified variable
- CRVAR      rvalue                                  ; ("C"=) constant ("R"=) reference for the specifed rvalue
++VAR_I      TYPE, rvalue-src                        ; ("I"=) initialized anonymous variable
++VAR_N      TYPE, STRING                            ; uninitialized ("N"=) named variable
++VAR_IN     TYPE, STRING, rvalue-src                ; ("I"=) initialized ("N"=) named variable
++VAR_D      TYPE                                    ; anonymous ("D"=) dynamic reference
++VAR_DN     TYPE, STRING                            ; ("N"=) named ("D"=) dynamic reference
++VAR_S      TYPE, #values:(rvalue)                  ; initialized anonymous ("S"=) Sequence variable
++VAR_SN     TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("S"=) Sequence variable
++VAR_T      #values:(TYPE, rvalue)                  ; initialized anonymous ("T"=) Tuple variable
++VAR_TN     STRING, #values:(TYPE, rvalue)          ; initialized ("N"=) named ("T"=) Tuple variable
 
 // "move" operations
-// - does NOT support "local property" mode
-+MOV        rvalue-src, lvalue-dest                 ; copy source to destination (cast implied if types differ)
-+REF        rvalue-src, lvalue-dest                 ; move ("R"=) reference-to-source to destination
- CREF       rvalue-src, lvalue-dest                 ; move ("C"=) constant ("R"=) reference-to-source to destination
+// - does NOT support "local property" mode;
+// - lvalue-dest can be a next unallocated register
+-MOV        rvalue-src, lvalue-dest                 ; copy source to destination (cast implied if types differ)
+-REF        rvalue-src, lvalue-dest                 ; move ("R"=) reference-to-source to destination
 
-// register/local-property operations:
+// ("GP"=) general purpose register/local-property operations:
 // - rvalues could be a register or a constant value or a local-property indicator (PROPERTY)
 // - the lvalue(s) can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
-+ADD        rvalue1, rvalue2, lvalue                ; T + T -> T
- SUB        rvalue1, rvalue2, lvalue                ; T - T -> T
- MUL        rvalue1, rvalue2, lvalue                ; T * T -> T
- DIV        rvalue1, rvalue2, lvalue                ; T / T -> T
- MOD        rvalue1, rvalue2, lvalue                ; T % T -> T
- SHL        rvalue1, rvalue2, lvalue                ; T << Int -> T
- SHR        rvalue1, rvalue2, lvalue                ; T >> Int -> T
- USHR       rvalue1, rvalue2, lvalue                ; T >>> Int -> T
- AND        rvalue1, rvalue2, lvalue                ; T & T -> T
- OR         rvalue1, rvalue2, lvalue                ; T | T -> T
- XOR        rvalue1, rvalue2, lvalue                ; T ^ T -> T
- DIVMOD     rvalue1, rvalue2, lvalue-div, lvalue-mod; T /% T -> T, T
-+NEG        rvalue, lvalue                          ; -T -> T
- COMPL      rvalue, lvalue                          ; ~T -> T
++GP_ADD     rvalue1, rvalue2, lvalue                ; T + T -> T
+ GP_SUB     rvalue1, rvalue2, lvalue                ; T - T -> T
+ GP_MUL     rvalue1, rvalue2, lvalue                ; T * T -> T
+ GP_DIV     rvalue1, rvalue2, lvalue                ; T / T -> T
+ GP_MOD     rvalue1, rvalue2, lvalue                ; T % T -> T
+ GP_SHL     rvalue1, rvalue2, lvalue                ; T << Int -> T
+ GP_SHR     rvalue1, rvalue2, lvalue                ; T >> Int -> T
+ GP_USHR    rvalue1, rvalue2, lvalue                ; T >>> Int -> T
+ GP_AND     rvalue1, rvalue2, lvalue                ; T & T -> T
+ GP_OR      rvalue1, rvalue2, lvalue                ; T | T -> T
+ GP_XOR     rvalue1, rvalue2, lvalue                ; T ^ T -> T
+ GP_DIVMOD  rvalue1, rvalue2, lvalue-div, lvalue-mod; T /% T -> T, T
++GP_NEG     rvalue, lvalue                          ; -T -> T
+ GP_COMPL   rvalue, lvalue                          ; ~T -> T
+
+// ("L"=) local property and ("P"=) property load/store operations
+// - lvalue return values can specify the "next register" to allocate
++L_GET       PROPERTY, lvalue                        ; get local property (move local property value to register)
++L_SET       PROPERTY, rvalue                        ; set local property (move register value to local property)
++P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
++P_SET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
+ P_REF       PROPERTY, rvalue-target, lvalue-dest    ; move reference-to-property to destination
 
 // register/local-property inc/dec ("A"=after, aka "post" / "B"=before, aka "pre"):
 // - the lvalue-target indicates the register or the local-property indicator (PROPERTY)
 // - the lvalue-return can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
-+IPINC      lvalue-target                           ; in-place increment; no result
- IPDEC      lvalue-target                           ; in-place decrement; no result
-+IPAINC     lvalue-target, lvalue                   ; T++ -> T
- IPADEC     lvalue-target, lvalue                   ; T-— -> T
-+IPBINC     lvalue-target, lvalue                   ; ++T -> T
- IPBDEC     lvalue-target, lvalue                   ; --T -> T
++IP_INC      lvalue-target                           ; in-place increment; no result
+ IP_DEC      lvalue-target                           ; in-place decrement; no result
++IP_INCA     lvalue-target, lvalue                   ; T++ -> T
+ IP_DECA     lvalue-target, lvalue                   ; T-— -> T
++IP_INCB     lvalue-target, lvalue                   ; ++T -> T
+ IP_DECB     lvalue-target, lvalue                   ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ops:
 // - the lvalue can be a register or a local-property indicator (PROPERTY)
 // - the rvalue can be a register or a constant value or a local-property indicator (PROPERTY)
- IPADD      lvalue, rvalue2                         ; T += T
- IPSUB      lvalue, rvalue2                         ; T -= T
- IPMUL      lvalue, rvalue2                         ; T *= T
- IPDIV      lvalue, rvalue2                         ; T /= T
- IPMOD      lvalue, rvalue2                         ; T %= T
- IPSHL      lvalue, rvalue2                         ; T <<= Int
- IPSHR      lvalue, rvalue2                         ; T >>= Int
- IPUSHR     lvalue, rvalue2                         ; T >>>= Int
- IPAND      lvalue, rvalue2                         ; T &= T
- IPOR       lvalue, rvalue2                         ; T |= T
- IPXOR      lvalue, rvalue2                         ; T ^= T
+ IP_ADD      lvalue, rvalue2                         ; T += T
+ IP_SUB      lvalue, rvalue2                         ; T -= T
+ IP_MUL      lvalue, rvalue2                         ; T *= T
+ IP_DIV      lvalue, rvalue2                         ; T /= T
+ IP_MOD      lvalue, rvalue2                         ; T %= T
+ IP_SHL      lvalue, rvalue2                         ; T <<= Int
+ IP_SHR      lvalue, rvalue2                         ; T >>= Int
+ IP_USHR     lvalue, rvalue2                         ; T >>>= Int
+ IP_AND      lvalue, rvalue2                         ; T &= T
+ IP_OR       lvalue, rvalue2                         ; T |= T
+ IP_XOR      lvalue, rvalue2                         ; T ^= T
 
-// ("L"=) local property and ("P"=) property load/store operations
-// - lvalue return values can specify the "next register" to allocate
-+LGET       PROPERTY, lvalue                        ; get local property (move local property value to register)
-+LSET       PROPERTY, rvalue                        ; set local property (move register value to local property)
-+PGET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
-+PSET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
- PREF       PROPERTY, rvalue-target, lvalue-dest    ; move ("R"=) reference-to-property to destination
- PCREF      PROPERTY, rvalue-target, lvalue-dest    ; move ("C"=) constant ("R"=) reference-to-property to destination
-
-// ("P"=) property inc/dec:
+// ("P"=) property ("IP"=) in-place inc/dec:
 // - the rvalue indicates the object on which to get/set the property value
 // - the lvalue-return can be a register or a local-property indicator (PROPERTY)
 // - lvalue return values can specify the "next register" to allocate
- PIPINC     PROPERTY, rvalue                        ; in-place increment; no result
- PIPDEC     PROPERTY, rvalue                        ; in-place decrement; no result
-+PIPAINC    PROPERTY, rvalue, lvalue                ; T++ -> T
- PIPADEC    PROPERTY, rvalue, lvalue                ; T-- -> T
-+PIPBINC    PROPERTY, rvalue, lvalue                ; ++T -> T
- PIPBDEC    PROPERTY, rvalue, lvalue                ; --T -> T
+ PIP_INC     PROPERTY, rvalue                        ; in-place increment; no result
+ PIP_DEC     PROPERTY, rvalue                        ; in-place decrement; no result
++PIP_INCA    PROPERTY, rvalue, lvalue                ; T++ -> T
+ PIP_DECA    PROPERTY, rvalue, lvalue                ; T-- -> T
++PIP_INCB    PROPERTY, rvalue, lvalue                ; ++T -> T
+ PIP_DECB    PROPERTY, rvalue, lvalue                ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ("P"=) property ops:
 // - the rvalue-target indicates the object on which to get/set the property value
 // - the rvalue2 can be a register or a constant value or a local-property indicator (PROPERTY)
- PIPADD     PROPERTY, rvalue-target, rvalue2        ; T += T
- PIPSUB     PROPERTY, rvalue-target, rvalue2        ; T -= T
- PIPMUL     PROPERTY, rvalue-target, rvalue2        ; T *= T
- PIPDIV     PROPERTY, rvalue-target, rvalue2        ; T /= T
- PIPMOD     PROPERTY, rvalue-target, rvalue2        ; T %= T
- PIPSHL     PROPERTY, rvalue-target, rvalue2        ; T <<= Int
- PIPSHR     PROPERTY, rvalue-target, rvalue2        ; T >>= Int
- PIPUSHR    PROPERTY, rvalue-target, rvalue2        ; T >>>= Int
- PIPAND     PROPERTY, rvalue-target, rvalue2        ; T &= T
- PIPOR      PROPERTY, rvalue-target, rvalue2        ; T |= T
- PIPXOR     PROPERTY, rvalue-target, rvalue2        ; T ^= T
+ PIP_ADD     PROPERTY, rvalue-target, rvalue2        ; T += T
+ PIP_SUB     PROPERTY, rvalue-target, rvalue2        ; T -= T
+ PIP_MUL     PROPERTY, rvalue-target, rvalue2        ; T *= T
+ PIP_DIV     PROPERTY, rvalue-target, rvalue2        ; T /= T
+ PIP_MOD     PROPERTY, rvalue-target, rvalue2        ; T %= T
+ PIP_SHL     PROPERTY, rvalue-target, rvalue2        ; T <<= Int
+ PIP_SHR     PROPERTY, rvalue-target, rvalue2        ; T >>= Int
+ PIP_USHR    PROPERTY, rvalue-target, rvalue2        ; T >>>= Int
+ PIP_AND     PROPERTY, rvalue-target, rvalue2        ; T &= T
+ PIP_OR      PROPERTY, rvalue-target, rvalue2        ; T |= T
+ PIP_XOR     PROPERTY, rvalue-target, rvalue2        ; T ^= T
 
 // ("I"=) index-based (tuple and single-dimensioned array) ops
-+IGET       rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
-+ISET       rvalue-target, rvalue-ix, rvalue        ; T[ix] = T
-+IREF       rvalue-target, rvalue-ix, lvalue        ; Ref<T> = &T[Ti]
- ICREF      rvalue-target, rvalue-ix, lvalue        ; @RO Ref<T> = &T[Ti]
- IIPINC     rvalue-target, rvalue-ix                ; ++T[ix] (no result)
- IIPDEC     rvalue-target, rvalue-ix                ; --T[ix] (no result)
- IIPAINC    rvalue-target, rvalue-ix, lvalue        ; T[ix]++ -> T
- IIPADEC    rvalue-target, rvalue-ix, lvalue        ; T[ix]-— -> T
-+IIPBINC    rvalue-target, rvalue-ix, lvalue        ; ++T[ix] -> T
- IIPBDEC    rvalue-target, rvalue-ix, lvalue        ; --T[ix] -> T
- IIPADD     rvalue-target, rvalue-ix, rvalue2
- IIPSUB     rvalue-target, rvalue-ix, rvalue2
- IIPMUL     rvalue-target, rvalue-ix, rvalue2
- IIPDIV     rvalue-target, rvalue-ix, rvalue2
- IIPMOD     rvalue-target, rvalue-ix, rvalue2
- IIPSHL     rvalue-target, rvalue-ix, rvalue2
- IIPSHR     rvalue-target, rvalue-ix, rvalue2
- IIPUSHR    rvalue-target, rvalue-ix, rvalue2
- IIPAND     rvalue-target, rvalue-ix, rvalue2
- IIPOR      rvalue-target, rvalue-ix, rvalue2
- IIPXOR     rvalue-target, rvalue-ix, rvalue2
++I_GET       rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
++I_SET       rvalue-target, rvalue-ix, rvalue        ; T[ix] = T
++I_REF       rvalue-target, rvalue-ix, lvalue        ; Ref<T> = &T[ix]
+
+// ("I"=) index-based ("IP"=) in-place ops:
+ IIP_INC     rvalue-target, rvalue-ix                ; ++T[ix] (no result)
+ IIP_DEC     rvalue-target, rvalue-ix                ; --T[ix] (no result)
+ IIP_INCA    rvalue-target, rvalue-ix, lvalue        ; T[ix]++ -> T
+ IIP_DECA    rvalue-target, rvalue-ix, lvalue        ; T[ix]-— -> T
++IIP_INCB    rvalue-target, rvalue-ix, lvalue        ; ++T[ix] -> T
+ IIP_DECB    rvalue-target, rvalue-ix, lvalue        ; --T[ix] -> T
+ IIP_ADD     rvalue-target, rvalue-ix, rvalue2
+ IIP_SUB     rvalue-target, rvalue-ix, rvalue2
+ IIP_MUL     rvalue-target, rvalue-ix, rvalue2
+ IIP_DIV     rvalue-target, rvalue-ix, rvalue2
+ IIP_MOD     rvalue-target, rvalue-ix, rvalue2
+ IIP_SHL     rvalue-target, rvalue-ix, rvalue2
+ IIP_SHR     rvalue-target, rvalue-ix, rvalue2
+ IIP_USHR    rvalue-target, rvalue-ix, rvalue2
+ IIP_AND     rvalue-target, rvalue-ix, rvalue2
+ IIP_OR      rvalue-target, rvalue-ix, rvalue2
+ IIP_XOR     rvalue-target, rvalue-ix, rvalue2
 
 // ("M"=) multi-dimensioned array ops
- MGET       rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
- MSET       rvalue-target, #:(rvalue-ix), rvalue    ; T[ix*] = T
- MREF       rvalue-target, #:(rvalue-ix), lvalue    ; Ref<T> = &T[ix*]
- MCREF      rvalue-target, #:(rvalue-ix), lvalue    ; @RO Ref<T> = &T[Ti]
- MIPINC     rvalue-target, #:(rvalue-ix)            ; ++T[ix] (no result)
- MIPDEC     rvalue-target, #:(rvalue-ix)            ; --T[ix] (no result)
- MIPAINC    rvalue-target, #:(rvalue-ix), lvalue    ; T[ix]++ -> T
- MIPADEC    rvalue-target, #:(rvalue-ix), lvalue    ; T[ix]-— -> T
- MIPBINC    rvalue-target, #:(rvalue-ix), lvalue    ; ++T[ix] -> T
- MIPBDEC    rvalue-target, #:(rvalue-ix), lvalue    ; --T[ix] -> T
- MIPADD     rvalue-target, #:(rvalue-ix), rvalue2
- MIPSUB     rvalue-target, #:(rvalue-ix), rvalue2
- MIPMUL     rvalue-target, #:(rvalue-ix), rvalue2
- MIPDIV     rvalue-target, #:(rvalue-ix), rvalue2
- MIPMOD     rvalue-target, #:(rvalue-ix), rvalue2
- MIPSHL     rvalue-target, #:(rvalue-ix), rvalue2
- MIPSHR     rvalue-target, #:(rvalue-ix), rvalue2
- MIPUSHR    rvalue-target, #:(rvalue-ix), rvalue2
- MIPAND     rvalue-target, #:(rvalue-ix), rvalue2
- MIPOR      rvalue-target, #:(rvalue-ix), rvalue2
- MIPXOR     rvalue-target, #:(rvalue-ix), rvalue2
+ M_GET       rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
+ M_SET       rvalue-target, #:(rvalue-ix), rvalue    ; T[ix*] = T
+ M_REF       rvalue-target, #:(rvalue-ix), lvalue    ; Ref<T> = &T[ix*]
+
+// ("M"=) multi-dimensioned array ("IP"=) in-place ops:
+ MIP_INC     rvalue-target, #:(rvalue-ix)            ; ++T[ix] (no result)
+ MIP_DEC     rvalue-target, #:(rvalue-ix)            ; --T[ix] (no result)
+ MIP_INCA    rvalue-target, #:(rvalue-ix), lvalue    ; T[ix]++ -> T
+ MIP_DECA    rvalue-target, #:(rvalue-ix), lvalue    ; T[ix]-— -> T
+ MIP_INCB    rvalue-target, #:(rvalue-ix), lvalue    ; ++T[ix] -> T
+ MIP_DECB    rvalue-target, #:(rvalue-ix), lvalue    ; --T[ix] -> T
+ MIP_ADD     rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_SUB     rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_MUL     rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_DIV     rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_MOD     rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_SHL     rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_SHR     rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_USHR    rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_AND     rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_OR      rvalue-target, #:(rvalue-ix), rvalue2
+ MIP_XOR     rvalue-target, #:(rvalue-ix), rvalue2
 
 // function calls
 // - first digit is # params: 0, 1, n, or "t"=tuple
@@ -247,15 +258,8 @@
 +NVOK_TN    rvalue-target, METHOD, rvalue-tparams, #:(lvalue)
 +NVOK_TT    rvalue-target, METHOD, rvalue-tparams, lvalue-treturn
 
-// method and function binding
-+MBIND      rvalue-target, CONST-METHOD, lvalue-fn-result
-+FBIND      rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
-
-// generic type resolution
- RTYPE_1    TYPE, rvalue-type, lvalue               ; resolve generic type; lvalue - a Type object
- RTYPE_N    TYPE, #type-params:(rvalue-type), lvalue
-
 // construction
+// ("G"=) generic types; ("C"=) child classes;
 // - rvalue parameters can be registers, constant values, or local-property indicators (PROPERTY)
 // - lvalue will hold the newly constructed object
 // - the lvalue can be a register or a local-property indicator (PROPERTY)
@@ -264,18 +268,20 @@
 +NEW_1      CONSTRUCT, rvalue-param, lvalue
 +NEW_N      CONSTRUCT, #:(rvalue), lvalue
  NEW_T      CONSTRUCT, rvalue-tparams, lvalue
-+GNEW_0     CONSTRUCT, TYPE, lvalue                                 ; generic-type "new"
-+GNEW_1     CONSTRUCT, TYPE, rvalue-param, lvalue
-+GNEW_N     CONSTRUCT, TYPE, #:(rvalue), lvalue
- GNEW_T     CONSTRUCT, TYPE, rvalue-params-tuple, lvalue
- CNEW_0     CONSTRUCT, rvalue-parent, lvalue                        ; virtual "new" for child classes
- CNEW_1     CONSTRUCT, rvalue-parent, rvalue-param, lvalue
- CNEW_N     CONSTRUCT, rvalue-parent, #:(rvalue), lvalue
- CNEW_T     CONSTRUCT, rvalue-parent, rvalue-tparams, lvalue
- CGNEW_0    CONSTRUCT, rvalue-parent, TYPE, lvalue                  ; virtual generic-type "new" for child classes
- CGNEW_1    CONSTRUCT, rvalue-parent, TYPE, rvalue-param, lvalue
- CGNEW_N    CONSTRUCT, rvalue-parent, TYPE, #:(rvalue), lvalue
- CGNEW_T    CONSTRUCT, rvalue-parent, TYPE, rvalue-tparams, lvalue
++NEWG_0     CONSTRUCT, TYPE, lvalue                                 ; generic-type "new"
++NEWG_1     CONSTRUCT, TYPE, rvalue-param, lvalue
++NEWG_N     CONSTRUCT, TYPE, #:(rvalue), lvalue
+ NEWG_T     CONSTRUCT, TYPE, rvalue-params-tuple, lvalue
+ NEWC_0     CONSTRUCT, rvalue-parent, lvalue                        ; virtual "new" for child classes
+ NEWC_1     CONSTRUCT, rvalue-parent, rvalue-param, lvalue
+ NEWC_N     CONSTRUCT, rvalue-parent, #:(rvalue), lvalue
+ NEWC_T     CONSTRUCT, rvalue-parent, rvalue-tparams, lvalue
+ NEWCG_0    CONSTRUCT, rvalue-parent, TYPE, lvalue                  ; virtual generic-type "new" for child classes
+ NEWCG_1    CONSTRUCT, rvalue-parent, TYPE, rvalue-param, lvalue
+ NEWCG_N    CONSTRUCT, rvalue-parent, TYPE, #:(rvalue), lvalue
+ NEWCG_T    CONSTRUCT, rvalue-parent, TYPE, rvalue-tparams, lvalue
+
+// construct calls
  CONSTR_0   CONSTRUCT                                               ; "super" construct call
 +CONSTR_1   CONSTRUCT, rvalue-param
 +CONSTR_N   CONSTRUCT, #params:(rvalue)
@@ -286,18 +292,18 @@
 pre-defined variables/constants:
 index  r/w  name            type        description
 -----  ---  --------------  ----------  ------------------------------------------------
-+ 0:                                    blackhole (basically the /dev/null of registers)
-+ 1:        this                        TODO can we eliminate this "this" and always use one of the below explicit forms?
-+ 2:        this:public
-+ 3:        this:protected
-+ 4:        this:private
-+ 5:        this:target                 the "this" that was used to invoke the method
-  6:        this:struct                 type is TODO
-+ 7:        this:frame      Frame
-+ 8:        this:service	Service
-  9:        this:module     Module      type is the actual compile-time module
-+ A:        this:type       Type
-  B:        super           Function    type is the appropriate compile-time generic form
++ 0:     w                              black hole (basically the /dev/null of registers)
++ 1:   r    this:public
++ 2:   r    this:protected
++ 3:   r    this:private
++ 4:   r    this:target                 the "this" that was used to invoke the method
++ 5:   r    this:struct                 type is TODO
+  6:   r    this:frame      Frame
++ 7:   r    this:service	Service
++ 8:   r    this:module     Module      type is the actual compile-time module
+  9:   r    this:type       Type
++ A:   r    super           Function    type is the appropriate compile-time generic form
+  B: *reserved
   C: *reserved
   D: *reserved
   E: *reserved

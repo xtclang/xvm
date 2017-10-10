@@ -61,7 +61,7 @@ public class xTestService extends Service
         MethodStructure ftDefault = ensureMethodStructure("default", VOID, VOID);
         ftDefault.setOps(new Op[]
             {
-            new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
+            new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
                 adapter.ensureValueConstantId(5)),
             new Return_0(),
             });
@@ -69,7 +69,7 @@ public class xTestService extends Service
         MethodStructure constructor = ensureMethodStructure("construct", INT);
         constructor.setOps(new Op[]
             { // #0 - counter
-            new LSet(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
+            new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
             new Return_0(),
             });
 
@@ -78,8 +78,7 @@ public class xTestService extends Service
             {
             new X_Print(adapter.ensureValueConstantId("# in TestService.increment #")),
             new Var(adapter.getClassTypeConstId("Int64")), // #0
-            new PreInc(-adapter.getPropertyConstId("TestApp.TestService", "counter"),
-                0),
+            new IP_PreInc(-adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
             new Return_1(0),
             });
 
@@ -109,15 +108,15 @@ public class xTestService extends Service
             new Exit(), // optimize out; unreachable
 
             new Enter(),
-            new DNVar(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
+            new Var_DN(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
                      adapter.ensureValueConstantId("iRet")), // #2 (iRet)
             new Var(adapter.getClassTypeConstId("Clock")), // #3
-            new LGet(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"),
+            new L_Get(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"),
                     3),
 
-            new IVar(adapter.getClassTypeConstId("Function"),
+            new Var_I(adapter.getClassTypeConstId("Function"),
                     adapter.getMethodVarId("TestApp.TestService", "lambda_1")), // #4
-            new Ref(2), // #5
+            new MoveRef(2, 5),
             new FBind(4, new int[] {0, 1}, new int[] {5, 0}, 4),
             new Invoke_N0(3, adapter.getMethodConstId("Clock", "scheduleAlarm"),
                     new int[] {4, 0}),
@@ -132,12 +131,12 @@ public class xTestService extends Service
                 "\n# in TestService.to<String>() #")),
             new Var(adapter.getClassTypeConstId("String")), // #0
             new Call_01(Op.A_SUPER, 0),
-            new Add(0, adapter.ensureValueConstantId(": counter2="), 0),
+            new GP_Add(0, adapter.ensureValueConstantId(": counter2="), 0),
             new Var(adapter.getClassTypeConstId("Int64")), // #1
-            new LGet(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 1),
+            new L_Get(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 1),
             new Var(adapter.getClassTypeConstId("String")), // #2
             new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
-            new Add(0, 2, 0),
+            new GP_Add(0, 2, 0),
             new Return_1(0),
             });
         }

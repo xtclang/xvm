@@ -10,29 +10,28 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.Ref.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NVAR CONST_CLASS, CONST_STRING ; (next register is an uninitialized named variable)
+ * VAR_D TYPE ; next register is an anonymous "dynamic reference" variable
  */
-public class NVar
+public class Var_D
         extends Op
     {
     /**
-     * Construct an NVAR op.
+     * Construct a VAR_D.
      *
-     * @param nTypeConstId  the type of the var
-     * @param nNameConstId  the name of the var
+     * @param nTypeConstId   the index of the constant containing the type of the variable
      */
-    public NVar(int nTypeConstId, int nNameConstId)
+    public Var_D(int nTypeConstId)
         {
         f_nTypeConstId = nTypeConstId;
-        f_nNameConstId = nNameConstId;
         }
 
     /**
@@ -41,37 +40,35 @@ public class NVar
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public NVar(DataInput in, Constant[] aconst)
+    public Var_D(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nTypeConstId = readPackedInt(in);
-        f_nNameConstId = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
-        out.writeByte(OP_NVAR);
+        out.writeByte(OP_VAR_D);
         writePackedLong(out, f_nTypeConstId);
-        writePackedLong(out, f_nNameConstId);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_NVAR;
+        return OP_VAR_D;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        ServiceContext context = frame.f_context;
-
-        TypeComposition clazz = context.f_types.ensureComposition(
+        TypeComposition clz = frame.f_context.f_types.ensureComposition(
                 f_nTypeConstId, frame.getActualTypes());
 
-        frame.introduceVar(clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, null);
+        RefHandle hRef = clz.f_template.createRefHandle(clz, null);
+
+        frame.introduceVar(clz, null, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }
@@ -82,6 +79,5 @@ public class NVar
         scope.allocVar();
         }
 
-    private final int f_nTypeConstId;
-    private final int f_nNameConstId;
+    final private int f_nTypeConstId;
     }

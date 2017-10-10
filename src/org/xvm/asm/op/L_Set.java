@@ -6,34 +6,34 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpProperty;
+
+import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
-import org.xvm.runtime.template.xBoolean.BooleanHandle;
-import org.xvm.runtime.template.xException;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * ASSERT rvalue, CONST_STRING
+ * L_SET PROPERTY, rvalue ; set local property
  */
-public class AssertT
-        extends Op
+public class L_Set
+        extends OpProperty
     {
     /**
-     * Construct an ASSERT_T op.
+     * Construct a L_SET op.
      *
-     * @param nValue   the r-value to test
-     * @param nTextId  the text to display on assertion failure
+     * @param nPropId  the property id
+     * @param nValue   the value to set
      */
-    public AssertT(int nValue, int nTextId)
+    public L_Set(int nPropId, int nValue)
         {
-        f_nValue = nValue;
-        f_nTextConstId = nTextId;
+        f_nPropConstId = nPropId;
+        f_nValue       = nValue;
         }
 
     /**
@@ -42,26 +42,26 @@ public class AssertT
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public AssertT(DataInput in, Constant[] aconst)
+    public L_Set(DataInput in, Constant[] aconst)
             throws IOException
         {
+        f_nPropConstId = readPackedInt(in);
         f_nValue = readPackedInt(in);
-        f_nTextConstId = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_ASSERT_T);
+        out.writeByte(OP_L_SET);
+        writePackedLong(out, f_nPropConstId);
         writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nTextConstId);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_ASSERT_T;
+        return OP_L_SET;
         }
 
     @Override
@@ -69,19 +69,18 @@ public class AssertT
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(f_nValue);
-            if (hTest == null)
+            ObjectHandle hTarget = frame.getThis();
+            ObjectHandle hValue = frame.getArgument(f_nValue);
+            if (hTarget == null || hValue == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (hTest.get())
-                {
-                return iPC + 1;
-                }
+            PropertyConstant constProperty = (PropertyConstant)
+                    frame.f_context.f_pool.getConstant(f_nPropConstId);
 
-            return frame.raiseException(
-                    xException.makeHandle("Assertion failed: " + frame.getString(f_nTextConstId)));
+            return hTarget.f_clazz.f_template.setPropertyValue(
+                    frame, hTarget, constProperty.getName(), hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -89,6 +88,6 @@ public class AssertT
             }
         }
 
+    private final int f_nPropConstId;
     private final int f_nValue;
-    private final int f_nTextConstId;
     }

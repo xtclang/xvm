@@ -16,17 +16,17 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * END_HANDLER rel-addr ; finish an exception handler with a jump
+ * CATCH_END addr ; finish an exception handler with a jump
  */
-public class HandlerEnd
+public class CatchEnd
         extends Op
     {
     /**
-     * Construct an END_HANDLER op.
+     * Construct a CATCH_END op.
      *
      * @param iRelAddr  the relative address to jump to when the handler completes
      */
-    public HandlerEnd(int iRelAddr)
+    public CatchEnd(int iRelAddr)
         {
         f_nRelAddr = iRelAddr;
         }
@@ -37,7 +37,7 @@ public class HandlerEnd
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public HandlerEnd(DataInput in, Constant[] aconst)
+    public CatchEnd(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nRelAddr = readPackedInt(in);
@@ -47,14 +47,14 @@ public class HandlerEnd
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_END_HANDLER);
+        out.writeByte(OP_CATCH_END);
         writePackedLong(out, f_nRelAddr);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_END_HANDLER;
+        return OP_CATCH_END;
         }
 
     @Override

@@ -58,7 +58,7 @@ const Char
 
     @Auto String to<String>()
         {
-        // TODO
+        TODO
         }
 
     Int calcUtf8Length()

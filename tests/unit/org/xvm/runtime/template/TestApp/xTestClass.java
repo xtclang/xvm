@@ -41,7 +41,7 @@ public class xTestClass extends ClassTemplate
             { // #0 = s
             new X_Print(
                     adapter.ensureValueConstantId("\n# in constructor: TestClass #")),
-            new LSet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
+            new L_Set(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
             new Return_0(),
             });
         construct.setConstructFinally(ftFinally);
@@ -58,17 +58,17 @@ public class xTestClass extends ClassTemplate
         mtMethod1.setOps(new Op[]
             {
             new X_Print(adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
-            new NVar(adapter.getClassTypeConstId("String"),
+            new Var_N(adapter.getClassTypeConstId("String"),
                     adapter.ensureValueConstantId("s")), // #0 (s)
-            new LGet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
-            new NVar(adapter.getClassTypeConstId("Int64"),
+            new L_Get(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
+            new Var_N(adapter.getClassTypeConstId("Int64"),
                     adapter.ensureValueConstantId("of")), // #1 (of)
-            new IVar(adapter.getClassTypeConstId("String"),
+            new Var_I(adapter.getClassTypeConstId("String"),
                     adapter.ensureValueConstantId("world")), // #2
             new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"), 2, 1),
             new Var(adapter.getClassTypeConstId("Int64")), // #3
-            new PGet(0, adapter.getPropertyConstId("String", "size"), 3),
-            new Add(3, 1, 3),
+            new P_Get(adapter.getPropertyConstId("String", "size"), 0, 3),
+            new GP_Add(3, 1, 3),
             new Return_1(3),
             });
 
@@ -89,12 +89,12 @@ public class xTestClass extends ClassTemplate
             {
             new Var(adapter.getClassTypeConstId("String")), // #0
             new Call_01(Op.A_SUPER, 0),
-            new Add(0, adapter.ensureValueConstantId(": prop1="), 0),
+            new GP_Add(0, adapter.ensureValueConstantId(": prop1="), 0),
             new Var(adapter.getClassTypeConstId("String")), // #1
-            new LGet(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
+            new L_Get(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
             new Var(adapter.getClassTypeConstId("String")), // #2
             new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
-            new Add(0, 2, 0),
+            new GP_Add(0, 2, 0),
             new Return_1(0),
             });
         }

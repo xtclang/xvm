@@ -164,7 +164,7 @@ public class Frame
     public int invoke1(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         Frame frameNext = m_frameNext = f_context.createFrame1(this,
-                chain.getMethod(nDepth), hTarget, ahVar, iReturn);
+            chain.getMethod(nDepth), hTarget, ahVar, iReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
         return Op.R_CALL;
@@ -231,7 +231,7 @@ public class Frame
                     }
                 return Function.makeHandle(m_chain, m_nDepth).bind(0, f_hTarget);
 
-            case Op.A_TARGET: // same as this:private; never used
+            case Op.A_TARGET: // TODO: return what we were called as
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
@@ -592,6 +592,7 @@ public class Frame
             f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
         return constText.getValue();
         }
+
     // return the class of the specified argument
     public TypeComposition getArgumentClass(int iArg)
         {
@@ -687,6 +688,21 @@ public class Frame
         return lIndex;
         }
 
+    // check if the specified index points to a next available register
+    public boolean isNextRegister(int nVar)
+        {
+        int nNext = f_anNextVar[m_iScope];
+        if (nVar < nNext)
+            {
+            return false;
+            }
+        if (nVar == nNext)
+            {
+            return true;
+            }
+        throw new IllegalStateException("Invalid register index");
+        }
+
     // Note: this method increments up the "nextVar" index
     public void introduceVar(TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)
         {
@@ -698,6 +714,16 @@ public class Frame
             {
             f_ahVar[nVar] = hValue;
             }
+        }
+
+    // Note: this method increments up the "nextVar" index
+    public void copyVarInfo(int nVarFrom)
+        {
+        VarInfo infoFrom = f_aInfo[nVarFrom];
+
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(infoFrom.f_clazz, null, infoFrom.m_nStyle);
         }
 
     public VarInfo getVarInfo(int nVar)

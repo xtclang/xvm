@@ -17,7 +17,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * JMP_ZERO rvalue-int, rel-addr ; jump if value is zero
+ * JMP_ZERO rvalue, addr ; jump if value is zero
  */
 public class JumpZero
         extends Op
@@ -26,7 +26,7 @@ public class JumpZero
      * Construct a JMP_ZERO op.
      *
      * @param nValue    the value to test
-     * @param nRelAddr  the relative address to jump to.
+     * @param nRelAddr  the relative address to jump to
      */
     public JumpZero(int nValue, int nRelAddr)
         {

@@ -19,18 +19,18 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * PREINC lvalue-target, lvalue-return  ; ++T -> T
+ * IP_INCB lvalue-target, lvalue  ; ++T -> T
  */
-public class PreInc
+public class IP_PreInc
         extends OpProperty
     {
     /**
-     * Construct a PRE_INC op.
+     * Construct an IP_INCB op.
      *
      * @param nArg  the location to increment
      * @param nRet  the location to store the pre-incremented value
      */
-    public PreInc(int nArg, int nRet)
+    public IP_PreInc(int nArg, int nRet)
         {
         f_nArgValue = nArg;
         f_nRetValue = nRet;
@@ -42,7 +42,7 @@ public class PreInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public PreInc(DataInput in, Constant[] aconst)
+    public IP_PreInc(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nArgValue = readPackedInt(in);
@@ -53,7 +53,7 @@ public class PreInc
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
-        out.writeByte(OP_PREINC);
+        out.writeByte(OP_IP_INCB);
         writePackedLong(out, f_nArgValue);
         writePackedLong(out, f_nRetValue);
         }
@@ -61,7 +61,7 @@ public class PreInc
     @Override
     public int getOpCode()
         {
-        return OP_PREINC;
+        return OP_IP_INCB;
         }
 
     @Override

@@ -19,23 +19,23 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * I_PREINC rvalue-target, rvalue-index, lvalue-return ; T = T[Ti]
+ * I_REF rvalue-target, rvalue-ix, lvalue ; Ref<T> = &T[ix]
  */
-public class IPreInc
+public class I_Ref
         extends Op
     {
     /**
-     * Construct an I_PREINC op.
+     * Construct an I_REF op.
      *
      * @param nTarget  the target array
-     * @param nIndex   the index of the value to increment
-     * @param nRet     the location to store the pre-incremented value
+     * @param nIndex   the index of the value in the array
+     * @param nRet     the location to store the reference to the value in the array
      */
-    public IPreInc(int nTarget, int nIndex, int nRet)
+    public I_Ref(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
-        f_nIndexValue  = nIndex;
-        f_nRetValue    = nRet;
+        f_nIndexValue = nIndex;
+        f_nRetValue = nRet;
         }
 
     /**
@@ -44,7 +44,7 @@ public class IPreInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IPreInc(DataInput in, Constant[] aconst)
+    public I_Ref(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
@@ -56,7 +56,7 @@ public class IPreInc
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_I_PREINC);
+        out.writeByte(OP_I_REF);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nIndexValue);
         writePackedLong(out, f_nRetValue);
@@ -65,7 +65,7 @@ public class IPreInc
     @Override
     public int getOpCode()
         {
-        return OP_I_PREINC;
+        return OP_I_REF;
         }
 
     @Override
@@ -83,7 +83,7 @@ public class IPreInc
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            return template.invokePreInc(frame, hTarget, lIndex, f_nRetValue);
+            return template.makeRef(frame, hTarget, lIndex, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

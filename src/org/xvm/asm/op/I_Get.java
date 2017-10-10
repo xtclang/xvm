@@ -19,23 +19,23 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * A_SET rvalue-target, rvalue-index, rvalue-new-value ; T[Ti] = T
+ * I_GET rvalue-target, rvalue-ix, lvalue ; T = T[ix]
  */
-public class ISet
+public class I_Get
         extends Op
     {
     /**
-     * Construct an I_SET op.
+     * Construct an I_GET op.
      *
      * @param nTarget  the target indexed object
      * @param nIndex   the index
-     * @param nValue   the value to store
+     * @param nRet     the location to store the resulting reference
      */
-    public ISet(int nTarget, int nIndex, int nValue)
+    public I_Get(int nTarget, int nIndex, int nRet)
         {
         f_nTargetValue = nTarget;
         f_nIndexValue  = nIndex;
-        f_nValue       = nValue;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -44,58 +44,54 @@ public class ISet
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public ISet(DataInput in, Constant[] aconst)
+    public I_Get(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nTargetValue = readPackedInt(in);
         f_nIndexValue  = readPackedInt(in);
-        f_nValue       = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
-        out.writeByte(OP_I_SET);
+        out.writeByte(OP_I_GET);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nIndexValue);
-        writePackedLong(out, f_nValue);
+        writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_I_SET;
+        return OP_I_GET;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        ExceptionHandle hException;
-
         try
             {
             ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
             long         lIndex  = frame.getIndex(f_nIndexValue);
-            ObjectHandle hArg    = frame.getArgument(f_nValue);
-            if (hTarget == null || hArg == null || lIndex == -1)
+            if (hTarget == null || lIndex == -1)
                 {
                 return R_REPEAT;
                 }
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            hException = template.assignArrayValue(hTarget, lIndex, hArg);
+            return frame.assignValue(f_nRetValue,
+                    template.extractArrayValue(hTarget, lIndex));
             }
         catch (ExceptionHandle.WrapperException e)
             {
-            hException = e.getExceptionHandle();
+            return frame.raiseException(e);
             }
-
-        return hException == null ? iPC + 1 : frame.raiseException(hException);
         }
 
     private final int f_nTargetValue;
     private final int f_nIndexValue;
-    private final int f_nValue;
+    private final int f_nRetValue;
     }

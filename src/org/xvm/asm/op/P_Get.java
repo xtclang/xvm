@@ -19,22 +19,22 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * P_PREINC rvalue-target, CONST_PROPERTY, lvalue ; same as PREINC for a register
+ * P_GET PROPERTY, rvalue-target, lvalue
  */
-public class PPreInc
+public class P_Get
         extends OpProperty
     {
     /**
-     * Construct a P_PREINC op.
+     * Construct a P_GET op.
      *
-     * @param nTarget  the object on which the property exists
-     * @param nPropId  the property to increment
-     * @param nRet     the location to store the pre-incremented value
+     * @param nPropId  the property to get
+     * @param nTarget  the target object
+     * @param nRet     the location to store the result
      */
-    public PPreInc(int nTarget, int nPropId, int nRet)
+    public P_Get(int nPropId, int nTarget, int nRet)
         {
-        f_nTarget      = nTarget;
         f_nPropConstId = nPropId;
+        f_nTarget      = nTarget;
         f_nRetValue    = nRet;
         }
 
@@ -44,11 +44,11 @@ public class PPreInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public PPreInc(DataInput in, Constant[] aconst)
+    public P_Get(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTarget      = readPackedInt(in);
         f_nPropConstId = readPackedInt(in);
+        f_nTarget      = readPackedInt(in);
         f_nRetValue    = readPackedInt(in);
         }
 
@@ -56,16 +56,16 @@ public class PPreInc
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
-        out.writeByte(OP_P_PREINC);
-        writePackedLong(out, f_nTarget);
+        out.writeByte(OP_P_GET);
         writePackedLong(out, f_nPropConstId);
+        writePackedLong(out, f_nTarget);
         writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_P_PREINC;
+        return OP_P_GET;
         }
 
     @Override
@@ -82,7 +82,7 @@ public class PPreInc
             PropertyConstant constProperty = (PropertyConstant)
                     frame.f_context.f_pool.getConstant(f_nPropConstId);
 
-            return hTarget.f_clazz.f_template.invokePreInc(
+            return hTarget.f_clazz.f_template.getPropertyValue(
                     frame, hTarget, constProperty.getName(), f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
@@ -91,7 +91,7 @@ public class PPreInc
             }
         }
 
-    private final int f_nTarget;
     private final int f_nPropConstId;
+    private final int f_nTarget;
     private final int f_nRetValue;
     }

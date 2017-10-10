@@ -12,15 +12,15 @@ import org.xvm.runtime.Frame;
 
 
 /**
- * HANDLER ; begin an exception handler (implicit ENTER)
+ * CATCH ; begin an exception handler (implicit ENTER)
  */
-public class HandlerStart
+public class CatchStart
         extends Op
     {
     /**
-     * Construct a HANDLER op.
+     * Construct a CATCH op.
      */
-    public HandlerStart()
+    public CatchStart()
         {
         }
 
@@ -30,7 +30,7 @@ public class HandlerStart
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public HandlerStart(DataInput in, Constant[] aconst)
+    public CatchStart(DataInput in, Constant[] aconst)
             throws IOException
         {
         }
@@ -38,7 +38,7 @@ public class HandlerStart
     @Override
     public int getOpCode()
         {
-        return OP_HANDLER;
+        return OP_CATCH;
         }
 
     @Override

@@ -6,35 +6,35 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpProperty;
-
-import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.IndexSupport;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * P_GET rvalue-target, CONST_PROPERTY, lvalue-return
+ * IIP_INCB rvalue-target, rvalue-ix, lvalue ; ++T[ix] -> T
  */
-public class PGet
-        extends OpProperty
+public class IIP_PreInc
+        extends Op
     {
     /**
-     * Construct a P_GET op.
+     * Construct an IIP_INCB op.
      *
-     * @param nTarget  the target object
-     * @param nPropId  the property to get
-     * @param nRet     the location to store the result
+     * @param nTarget  the target array
+     * @param nIndex   the index of the value to increment
+     * @param nRet     the location to store the pre-incremented value
      */
-    public PGet(int nTarget, int nPropId, int nRet)
+    public IIP_PreInc(int nTarget, int nIndex, int nRet)
         {
-        f_nTarget      = nTarget;
-        f_nPropConstId = nPropId;
+        f_nTargetValue = nTarget;
+        f_nIndexValue  = nIndex;
         f_nRetValue    = nRet;
         }
 
@@ -44,28 +44,28 @@ public class PGet
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public PGet(DataInput in, Constant[] aconst)
+    public IIP_PreInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTarget      = readPackedInt(in);
-        f_nPropConstId = readPackedInt(in);
+        f_nTargetValue = readPackedInt(in);
+        f_nIndexValue  = readPackedInt(in);
         f_nRetValue    = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
-        out.writeByte(OP_P_GET);
-        writePackedLong(out, f_nTarget);
-        writePackedLong(out, f_nPropConstId);
+        out.writeByte(OP_IIP_INCB);
+        writePackedLong(out, f_nTargetValue);
+        writePackedLong(out, f_nIndexValue);
         writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_P_GET;
+        return OP_IIP_INCB;
         }
 
     @Override
@@ -73,17 +73,17 @@ public class PGet
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTarget);
-            if (hTarget == null)
+            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            long lIndex = frame.getIndex(f_nIndexValue);
+
+            if (hTarget == null || lIndex == -1)
                 {
                 return R_REPEAT;
                 }
 
-            PropertyConstant constProperty = (PropertyConstant)
-                    frame.f_context.f_pool.getConstant(f_nPropConstId);
+            IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            return hTarget.f_clazz.f_template.getPropertyValue(
-                    frame, hTarget, constProperty.getName(), f_nRetValue);
+            return template.invokePreInc(frame, hTarget, lIndex, f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -91,7 +91,7 @@ public class PGet
             }
         }
 
-    private final int f_nTarget;
-    private final int f_nPropConstId;
+    private final int f_nTargetValue;
+    private final int f_nIndexValue;
     private final int f_nRetValue;
     }

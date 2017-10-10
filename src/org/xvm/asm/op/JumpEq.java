@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * JMP_EQ rvalue, rvalue, rel-addr ; jump if value is equal
+ * JMP_EQ rvalue1, rvalue2, addr ; jump if value1 is equal to value2
  */
 public class JumpEq
         extends Op
@@ -30,7 +30,7 @@ public class JumpEq
      *
      * @param nValue1   the first value to compare
      * @param nValue2   the second value to compare
-     * @param nRelAddr  the relative address to jump to.
+     * @param nRelAddr  the relative address to jump to
      */
     public JumpEq(int nValue1, int nValue2, int nRelAddr)
         {

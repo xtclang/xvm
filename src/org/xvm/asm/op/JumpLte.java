@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * JMP_LTE rvalue, rvalue, rel-addr ; jump if value is less than or equal
+ * JMP_LTE rvalue1, rvalue2, addr ; jump if value1 is less than or equal than value2
  */
 public class JumpLte
         extends Op
@@ -30,7 +30,7 @@ public class JumpLte
      *
      * @param nValue1   the first value to compare
      * @param nValue2   the second value to compare
-     * @param nRelAddr  the relative address to jump to.
+     * @param nRelAddr  the relative address to jump to
      */
     public JumpLte(int nValue1, int nValue2, int nRelAddr)
         {

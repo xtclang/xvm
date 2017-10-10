@@ -795,6 +795,7 @@ public class CommandLine
             }
 
         // determine if the errors are bad enough to quit
+if (false) // TODO: remove
         if (error || (!deferred.isEmpty() && opts.strictLevel == Options.Strictness.Stickler))
             {
             out("xtc: Terminating.");

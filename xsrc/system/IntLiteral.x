@@ -126,7 +126,7 @@ const IntLiteral(String text)
     Int minIntBits.get()
         {
         Int count;
-        
+
         if (magnitude == 0)
             {
             // it doesn't take much to store a zero
@@ -158,7 +158,7 @@ const IntLiteral(String text)
             //   128  +0x80  -> 16 bits
             count = magnitude.leftmostBit.trailingZeroCount + 2;
             }
-        
+
         // round up to nearest power of 2 (at least 8)
         return (count * 2 - 1).leftmostBit.maxOf(8);
         }
@@ -169,7 +169,7 @@ const IntLiteral(String text)
      */
     @RO Int minUIntBits.get()
         {
-// TODO review        
+// TODO review
         assert:always explicitSign != Signum.Negative;
 
         if (magnitude == 0)
@@ -205,14 +205,14 @@ const IntLiteral(String text)
             {
             return 0;
             }
-        
+
         assert:always magnitude == 1 && explicitSign != Signum.Negative;
         return 1;
         }
 
     @Auto Nibble to<Nibble>()
         {
-        // TODO
+        TODO
         }
 
     /**

@@ -47,14 +47,14 @@ public class GuardEnd
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_END_GUARD);
+        out.writeByte(OP_GUARD_END);
         writePackedLong(out, f_nRelAddr);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_END_GUARD;
+        return OP_GUARD_END;
         }
 
     @Override

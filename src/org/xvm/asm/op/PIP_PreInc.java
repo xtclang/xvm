@@ -19,21 +19,23 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * LSET CONST_PROPERTY, rvalue ; local set (target=this)
+ * PIP_INCB PROPERTY, rvalue, lvalue ; same as IP_INCB for a register
  */
-public class LSet
+public class PIP_PreInc
         extends OpProperty
     {
     /**
-     * Construct an L_SET op.
+     * Construct a PIP_INCB op.
      *
-     * @param nPropId  the property id
-     * @param nValue   the value to set
+     * @param nPropId  the property to increment
+     * @param nTarget  the object on which the property exists
+     * @param nRet     the location to store the pre-incremented value
      */
-    public LSet(int nPropId, int nValue)
+    public PIP_PreInc(int nPropId, int nTarget, int nRet)
         {
         f_nPropConstId = nPropId;
-        f_nValue       = nValue;
+        f_nTarget      = nTarget;
+        f_nRetValue    = nRet;
         }
 
     /**
@@ -42,26 +44,28 @@ public class LSet
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public LSet(DataInput in, Constant[] aconst)
+    public PIP_PreInc(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nPropConstId = readPackedInt(in);
-        f_nValue = readPackedInt(in);
+        f_nTarget      = readPackedInt(in);
+        f_nRetValue    = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
+    throws IOException
         {
-        out.writeByte(OP_L_SET);
+        out.writeByte(OP_PIP_INCB);
         writePackedLong(out, f_nPropConstId);
-        writePackedLong(out, f_nValue);
+        writePackedLong(out, f_nTarget);
+        writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_L_SET;
+        return OP_PIP_INCB;
         }
 
     @Override
@@ -69,9 +73,8 @@ public class LSet
         {
         try
             {
-            ObjectHandle hTarget = frame.getThis();
-            ObjectHandle hValue = frame.getArgument(f_nValue);
-            if (hTarget == null || hValue == null)
+            ObjectHandle hTarget = frame.getArgument(f_nTarget);
+            if (hTarget == null)
                 {
                 return R_REPEAT;
                 }
@@ -79,8 +82,8 @@ public class LSet
             PropertyConstant constProperty = (PropertyConstant)
                     frame.f_context.f_pool.getConstant(f_nPropConstId);
 
-            return hTarget.f_clazz.f_template.setPropertyValue(
-                    frame, hTarget, constProperty.getName(), hValue);
+            return hTarget.f_clazz.f_template.invokePreInc(
+                    frame, hTarget, constProperty.getName(), f_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -89,5 +92,6 @@ public class LSet
         }
 
     private final int f_nPropConstId;
-    private final int f_nValue;
+    private final int f_nTarget;
+    private final int f_nRetValue;
     }

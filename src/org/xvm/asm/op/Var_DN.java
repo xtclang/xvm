@@ -22,18 +22,18 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * DNVAR CONST_REF_CLASS, CONST_STRING ; next register is a named "dynamic reference" variable
+ * VAR_DN TYPE, STRING ; next register is a named "dynamic reference" variable
  */
-public class DNVar
+public class Var_DN
         extends Op
     {
     /**
-     * Construct a DNVAR.
+     * Construct a VAR_DN.
      *
      * @param nTypeConstId   the index of the constant containing the type of the variable
      * @param nNameConstId   the index of the constant containing the name of the variable
      */
-    public DNVar(int nTypeConstId, int nNameConstId)
+    public Var_DN(int nTypeConstId, int nNameConstId)
         {
         f_nTypeConstId = nTypeConstId;
         f_nNameConstId = nNameConstId;
@@ -45,7 +45,7 @@ public class DNVar
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public DNVar(DataInput in, Constant[] aconst)
+    public Var_DN(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nTypeConstId = readPackedInt(in);
@@ -56,7 +56,7 @@ public class DNVar
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
-        out.writeByte(OP_DNVAR);
+        out.writeByte(OP_VAR_DN);
         writePackedLong(out, f_nTypeConstId);
         writePackedLong(out, f_nNameConstId);
         }
@@ -64,7 +64,7 @@ public class DNVar
     @Override
     public int getOpCode()
         {
-        return OP_DNVAR;
+        return OP_VAR_DN;
         }
 
     @Override
@@ -112,7 +112,7 @@ public class DNVar
 
     /**
      * cached InjectedRef.
-     * NOTE: the injected ref must be named, so this caching is not needed on the DVAR op
+     * NOTE: the injected ref must be named, so this caching is not needed on the VAR_D op
      */
     transient private RefHandle m_ref;
     }

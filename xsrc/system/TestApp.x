@@ -188,7 +188,10 @@ class TestApp
         svc.exceptional(0);
         }
 
-    static Int testBlockingReturn(Service svc) {} // TODO: remove
+    static Int testBlockingReturn(Service svc)
+        {
+        TODO // TODO remove
+        }
 
     static Void testService2()
         {
@@ -259,7 +262,10 @@ class TestApp
             return ++counter;
             }
 
-        static Void lambda_1(Ref<Int> iRet, Int cDelay) {} // TODO: remove
+        static Void lambda_1(Ref<Int> iRet, Int cDelay)
+            {
+            TODO // TODO remove
+            }
 
         // exceptional
         Int exceptional(Int cDelay)
@@ -319,7 +325,11 @@ class TestApp
         print(ari.replace(1, 2));
         }
 
-    static String lambda_2(Ref<Int> i) {} // TODO: remove
+    static String lambda_2(Ref<Int> i)
+        {
+        TODO // TODO remove
+        }
+
     static Void testArray()
         {
         Int[] ai = new Int[]; // mutable Array<Int>
@@ -340,7 +350,11 @@ class TestApp
         print(as1[0]);
         }
 
-     static conditional String testConditional(Int i) {} // TODO: remove
+     static conditional String testConditional(Int i)
+        {
+        TODO // TODO remove
+        }
+
      static Void testTuple()
         {
         Tuple t = ("zero", 0); // literal, therefore constant

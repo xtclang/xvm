@@ -24,24 +24,24 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- *  NEW_NG CONST-CONSTRUCT, rvalue-type, #params:(rvalue), lvalue-return
+ * NEWG_1 CONSTRUCT, TYPE, rvalue-param, lvalue
  */
-public class New_NG
+public class NewG_1
         extends OpCallable
     {
     /**
-     * Construct a NEW_NG op.
+     * Construct a NEWG_1 op.
      *
      * @param nConstructorId  identifies the constructor
      * @param nType           the type of the object being created
-     * @param anArg           the constructor arguments
+     * @param nArg            the constructor argument
      * @param nRet            the location to store the new object
      */
-    public New_NG(int nConstructorId, int nType, int[] anArg, int nRet)
+    public NewG_1(int nConstructorId, int nType, int nArg, int nRet)
         {
         f_nConstructId = nConstructorId;
         f_nTypeValue   = nType;
-        f_anArgValue   = anArg;
+        f_nArgValue    = nArg;
         f_nRetValue    = nRet;
         }
 
@@ -51,12 +51,12 @@ public class New_NG
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public New_NG(DataInput in, Constant[] aconst)
+    public NewG_1(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nConstructId = readPackedInt(in);
         f_nTypeValue   = readPackedInt(in);
-        f_anArgValue   = readIntArray(in);
+        f_nArgValue    = readPackedInt(in);
         f_nRetValue    = readPackedInt(in);
         }
 
@@ -64,17 +64,17 @@ public class New_NG
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
-        out.writeByte(OP_NEW_NG);
+        out.writeByte(OP_NEWG_1);
         writePackedLong(out, f_nConstructId);
         writePackedLong(out, f_nTypeValue);
-        writeIntArray(out, f_anArgValue);
+        writePackedLong(out, f_nArgValue);
         writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_NEW_NG;
+        return OP_NEWG_1;
         }
 
     @Override
@@ -101,7 +101,8 @@ public class New_NG
                         -f_nTypeValue, frame.getActualTypes());
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getMaxVars());
+            ObjectHandle[] ahVar = frame.getArguments(
+                    new int[] {f_nArgValue}, constructor.getMaxVars());
             if (ahVar == null)
                 {
                 return R_REPEAT;
@@ -117,8 +118,8 @@ public class New_NG
             }
         }
 
-    private final int   f_nConstructId;
-    private final int   f_nTypeValue;
-    private final int[] f_anArgValue;
-    private final int   f_nRetValue;
+    private final int f_nConstructId;
+    private final int f_nTypeValue;
+    private final int f_nArgValue;
+    private final int f_nRetValue;
     }

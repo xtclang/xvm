@@ -35,6 +35,9 @@ interface Clock
     static class RuntimeClock
             implements Clock
         {
-        Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp) {} // TODO: remove
+        Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp)
+            {
+            TODO // TODO remove
+            }
         }
     }

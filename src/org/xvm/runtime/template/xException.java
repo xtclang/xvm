@@ -6,7 +6,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.op.LSet;
+import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.runtime.Frame;
@@ -47,8 +47,8 @@ public class xException
         MethodStructure ct = ensureMethodStructure("construct", new String[] {"String", "Exception"});
         ct.setOps(new Op[] // #0 - text, #1 - cause
             {
-            new LSet(getProperty("text").getIdentityConstant().getPosition(), 0),
-            new LSet(getProperty("cause").getIdentityConstant().getPosition(), 1),
+            new L_Set(getProperty("text").getIdentityConstant().getPosition(), 0),
+            new L_Set(getProperty("cause").getIdentityConstant().getPosition(), 1),
             new Return_0(),
             });
         }

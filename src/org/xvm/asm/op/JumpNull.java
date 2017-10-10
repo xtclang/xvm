@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * JMP_NULL rvalue, rel-addr ; jump if value is null
+ * JMP_NULL rvalue, addr ; jump if value is null
  */
 public class JumpNull
         extends Op
@@ -28,7 +28,7 @@ public class JumpNull
      * Construct a JMP_NULL op.
      *
      * @param nValue    the Nullable value to test
-     * @param nRelAddr  the relative address to jump to.
+     * @param nRelAddr  the relative address to jump to
      */
     public JumpNull(int nValue, int nRelAddr)
         {

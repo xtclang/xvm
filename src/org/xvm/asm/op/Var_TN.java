@@ -25,19 +25,20 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * TVAR #values:(TYPE_CONST, rvalue-src) ; next register is an initialized anonymous Tuple variable
+ * VAR_TN STRING, #values:(TYPE, rvalue-src) ; next register is an initialized anonymous Tuple variable
  */
-public class TVar
+public class Var_TN
         extends Op
     {
     /**
-     * Construct a TVAR op.
+     * Construct a VAR_TN op.
      *
      * @param anTypeConstId  the types of the tuple fields
      * @param anValue        the values for the tuple fields
      */
-    public TVar(int[] anTypeConstId, int[] anValue)
+    public Var_TN(int nNameConstId, int[] anTypeConstId, int[] anValue)
         {
+        f_nNameConstId  = nNameConstId;
         f_anTypeConstId = anTypeConstId;
         f_anArgValue    = anValue;
         }
@@ -48,9 +49,11 @@ public class TVar
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public TVar(DataInput in, Constant[] aconst)
+    public Var_TN(DataInput in, Constant[] aconst)
             throws IOException
         {
+        f_nNameConstId  = readPackedInt(in);
+
         int c = readPackedInt(in);
 
         f_anTypeConstId = new int[c];
@@ -66,7 +69,9 @@ public class TVar
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_TVAR);
+        out.writeByte(OP_VAR_TN);
+
+        writePackedLong(out, f_nNameConstId);
 
         int c = f_anArgValue.length;
         writePackedLong(out, c);
@@ -80,7 +85,7 @@ public class TVar
     @Override
     public int getOpCode()
         {
-        return OP_TVAR;
+        return OP_VAR_TN;
         }
 
     @Override
@@ -112,7 +117,7 @@ public class TVar
 
             TupleHandle hTuple = xTuple.makeHandle(aType, ahArg);
 
-            frame.introduceVar(hTuple.f_clazz, null, Frame.VAR_STANDARD, hTuple);
+            frame.introduceVar(hTuple.f_clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, hTuple);
 
             return iPC + 1;
             }
@@ -128,6 +133,7 @@ public class TVar
         scope.allocVar();
         }
 
+    final private int   f_nNameConstId;
     final private int[] f_anTypeConstId;
     final private int[] f_anArgValue;
     }

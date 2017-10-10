@@ -17,7 +17,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * GUARD_ALL rel_addr ; ENTER
+ * GUARD_ALL addr ; (implicit ENTER)
  */
 public class GuardAll
         extends Op

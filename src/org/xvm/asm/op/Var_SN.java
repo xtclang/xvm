@@ -21,20 +21,21 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * SVAR TYPE_CONST, #values:(rvalue-src) ; next register is an initialized anonymous Sequence variable
+ * VAR_SN TYPE, STRING, #values:(rvalue-src) ; next register is a named initialized anonymous Sequence variable
  */
-public class SVar
+public class Var_SN
         extends Op
     {
     /**
-     * Construct an SVAR op.
+     * Construct a VAR_SN op.
      *
      * @param nTypeConstId  the type of the sequence
      * @param anValue       the values for the sequence
      */
-    public SVar(int nTypeConstId, int[] anValue)
+    public Var_SN(int nTypeConstId, int nNameConstId, int[] anValue)
         {
         f_nTypeConstId = nTypeConstId;
+        f_nNameConstId = nNameConstId;
         f_anArgValue   = anValue;
         }
 
@@ -44,10 +45,11 @@ public class SVar
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public SVar(DataInput in, Constant[] aconst)
+    public Var_SN(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nTypeConstId = readPackedInt(in);
+        f_nNameConstId  = readPackedInt(in);
         f_anArgValue   = readIntArray(in);
         }
 
@@ -55,15 +57,16 @@ public class SVar
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_SVAR);
+        out.writeByte(OP_VAR_SN);
         writePackedLong(out, f_nTypeConstId);
+        writePackedLong(out, f_nNameConstId);
         writeIntArray(out, f_anArgValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_SVAR;
+        return OP_VAR_SN;
         }
 
     @Override
@@ -83,7 +86,7 @@ public class SVar
             ArrayHandle hArray = xArray.makeHandle(clazzEl.ensurePublicType(), ahArg);
             hArray.makeImmutable();
 
-            frame.introduceVar(hArray.f_clazz, null, Frame.VAR_STANDARD, hArray);
+            frame.introduceVar(hArray.f_clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, hArray);
 
             return iPC + 1;
             }
@@ -100,5 +103,6 @@ public class SVar
         }
 
     final private int   f_nTypeConstId;
+    final private int   f_nNameConstId;
     final private int[] f_anArgValue;
     }

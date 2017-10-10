@@ -65,6 +65,13 @@
 
 + use of the MethodSignature instead of MethodConstant
 
+- re-work ops:
+    + Merge Ref and MoveRef
+    - Move, Ref - allow next unallocated register; cast logic
+    - allow next register and local property for GP_Add, GP_NEG
+    - allow local property for IP_*
+    - allow next register for *GET/*SET
+
 - a test for auto-narrowing method invocation
 
 - createConst() processing for Array, Set, Map etc.
@@ -90,4 +97,4 @@ $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 - ParameterizedTC.getDefiningConstant().getIdentityConstant() can only be a ClassConstant
 
 - the order:
-    [Immutable] [Access] [
+    [Immutable] [Access]

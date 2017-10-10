@@ -18,18 +18,18 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * LGET CONST_PROPERTY, lvalue ; local get (target=this)
+ * L_GET PROPERTY, lvalue ; get local property
  */
-public class LGet
+public class L_Get
         extends OpProperty
     {
     /**
-     * Construct an L_GET op.
+     * Construct a L_GET op.
      *
      * @param nPropId  the property id
      * @param nRet     the location to store the result
      */
-    public LGet(int nPropId, int nRet)
+    public L_Get(int nPropId, int nRet)
         {
         f_nPropConstId = nPropId;
         f_nRetValue    = nRet;
@@ -41,7 +41,7 @@ public class LGet
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public LGet(DataInput in, Constant[] aconst)
+    public L_Get(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nPropConstId = readPackedInt(in);

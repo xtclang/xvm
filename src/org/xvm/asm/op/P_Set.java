@@ -19,22 +19,22 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * P_SET rvalue-target, CONST_PROPERTY, rvalue
+ * P_SET PROPERTY, rvalue-target, rvalue
  */
-public class PSet
+public class P_Set
         extends OpProperty
     {
     /**
      * Construct a P_SET op.
      *
-     * @param nTarget  the target object
      * @param nPropId  the property to set
+     * @param nTarget  the target object
      * @param nValue   the value to store in the property
      */
-    public PSet(int nTarget, int nPropId, int nValue)
+    public P_Set(int nPropId, int nTarget, int nValue)
         {
-        f_nTarget      = nTarget;
         f_nPropConstId = nPropId;
+        f_nTarget      = nTarget;
         f_nValue       = nValue;
         }
 
@@ -44,11 +44,11 @@ public class PSet
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public PSet(DataInput in, Constant[] aconst)
+    public P_Set(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTarget      = readPackedInt(in);
         f_nPropConstId = readPackedInt(in);
+        f_nTarget      = readPackedInt(in);
         f_nValue       = readPackedInt(in);
         }
 
@@ -57,8 +57,8 @@ public class PSet
             throws IOException
         {
         out.writeByte(OP_P_SET);
-        writePackedLong(out, f_nTarget);
         writePackedLong(out, f_nPropConstId);
+        writePackedLong(out, f_nTarget);
         writePackedLong(out, f_nValue);
         }
 
@@ -92,7 +92,7 @@ public class PSet
             }
         }
 
-    private final int f_nTarget;
     private final int f_nPropConstId;
+    private final int f_nTarget;
     private final int f_nValue;
     }

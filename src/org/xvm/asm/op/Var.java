@@ -18,7 +18,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * VAR CONST_CLASS  ; (next register is an uninitialized anonymous variable)
+ * VAR TYPE ; (next register is an uninitialized anonymous variable)
  */
 public class Var
         extends Op
@@ -36,7 +36,7 @@ public class Var
         }
 
     /**
-     * Construct a variable that corresponds to the passed Register.
+     * Construct a VAR op for the passed Register.
      *
      * @param reg  the Register object
      */
@@ -78,14 +78,6 @@ public class Var
     public int getOpCode()
         {
         return OP_VAR;
-        }
-
-    /**
-     * @return the Register that this op was constructed with
-     */
-    public Register getRegister()
-        {
-        return m_reg;
         }
 
     @Override

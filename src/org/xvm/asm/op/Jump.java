@@ -16,10 +16,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * The unconditional "jump" op code: JMP. (Also assembles to the GOTO op code if the absolute
- * address value for GOTO is smaller than the relative address value for JMP.)
- * <p/>
- * {@code JMP rel-addr}
+ * JMP addr ; unconditional relative jump
  */
 public class Jump
         extends Op
@@ -27,7 +24,7 @@ public class Jump
     /**
      * Construct a JMP op.
      *
-     * @param nRelAddr  the relative address to jump to.
+     * @param nRelAddr  the relative address to jump to
      */
     public Jump(int nRelAddr)
         {
@@ -67,17 +64,13 @@ public class Jump
     @Override
     public int getOpCode()
         {
-        return m_fUseAbsolute
-                ? OP_GOTO
-                : OP_JMP;
+        return OP_JMP;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
-        return m_fUseAbsolute
-                ? m_ofJmp
-                : iPC + m_ofJmp;
+        return iPC + m_ofJmp;
         }
 
     @Override
@@ -97,17 +90,9 @@ public class Jump
                 {
                 throw new IllegalStateException("infinite loop: " + this);
                 }
-
-            // see if absolute offset is smaller (and if so, use GOTO)
-            if (iPCThat < Math.abs(m_ofJmp))
-                {
-                m_ofJmp        = iPCThat;
-                m_fUseAbsolute = true;
-                }
             }
         }
 
-    private Op      m_opDest;
-    private int     m_ofJmp;
-    private boolean m_fUseAbsolute;
+    private Op   m_opDest;
+    private int  m_ofJmp;
     }

@@ -12,7 +12,7 @@ import org.xvm.runtime.Frame;
 
 
 /**
- * EXIT (variable scope end)
+ * EXIT ; (variable scope end)
  */
 public class Exit
         extends Op

@@ -19,22 +19,22 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * P_POSTINC rvalue-target, CONST_PROPERTY, lvalue ; same as POSTINC for a register
+ * PIP_INCA PROPERTY, rvalue, lvalue ; same as IP_INCA for a register
  */
-public class PPostInc
+public class PIP_PostInc
         extends OpProperty
     {
     /**
-     * Construct a P_POSTINC op.
+     * Construct a PIP_INCA op.
      *
-     * @param nTarget  the object on which the property exists
      * @param nPropId  the property to increment
+     * @param nTarget  the object on which the property exists
      * @param nRet     the location to store the post-incremented value
      */
-    public PPostInc(int nTarget, int nPropId, int nRet)
+    public PIP_PostInc(int nPropId, int nTarget, int nRet)
         {
-        f_nTarget      = nTarget;
         f_nPropConstId = nPropId;
+        f_nTarget      = nTarget;
         f_nRetValue    = nRet;
         }
 
@@ -44,11 +44,11 @@ public class PPostInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public PPostInc(DataInput in, Constant[] aconst)
+    public PIP_PostInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTarget      = readPackedInt(in);
         f_nPropConstId = readPackedInt(in);
+        f_nTarget      = readPackedInt(in);
         f_nRetValue    = readPackedInt(in);
         }
 
@@ -56,16 +56,16 @@ public class PPostInc
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
-        out.writeByte(OP_P_POSTINC);
-        writePackedLong(out, f_nTarget);
+        out.writeByte(OP_PIP_INCA);
         writePackedLong(out, f_nPropConstId);
+        writePackedLong(out, f_nTarget);
         writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_P_POSTINC;
+        return OP_PIP_INCA;
         }
 
     @Override
@@ -91,7 +91,7 @@ public class PPostInc
             }
         }
 
-    private final int f_nTarget;
     private final int f_nPropConstId;
+    private final int f_nTarget;
     private final int f_nRetValue;
     }

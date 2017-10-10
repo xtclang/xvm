@@ -7,33 +7,32 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * ADD rvalue-target, rvalue-second, lvalue-return   ; T + T -> T
+ * VAR_I TYPE, rvalue-src ; (next register is an initialized anonymous variable)
  */
-public class Add
+public class Var_I
         extends Op
     {
     /**
-     * Construct an ADD op.
+     * Construct an VAR_I op.
      *
-     * @param nTarget  the first r-value, which will implement the add
-     * @param nArg     the second r-value
-     * @param nRet     the l-value to store the result into
+     * @param nTypeConstId  the type of the variable
+     * @param nValue        the initial value
      */
-    public Add(int nTarget, int nArg, int nRet)
+    public Var_I(int nTypeConstId, int nValue)
         {
-        f_nTargetValue = nTarget;
-        f_nArgValue    = nArg;
-        f_nRetValue    = nRet;
+        f_nClassConstId = nTypeConstId;
+        f_nArgValue     = nValue;
         }
 
     /**
@@ -42,52 +41,58 @@ public class Add
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public Add(DataInput in, Constant[] aconst)
+    public Var_I(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nArgValue    = readPackedInt(in);
-        f_nRetValue    = readPackedInt(in);
+        f_nClassConstId = readPackedInt(in);
+        f_nArgValue     = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_ADD);
-        writePackedLong(out, f_nTargetValue);
+        out.writeByte(OP_VAR_I);
+        writePackedLong(out, f_nClassConstId);
         writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_ADD;
+        return OP_VAR_I;
         }
 
     @Override
     public int process(Frame frame, int iPC)
         {
+        TypeComposition clazz = frame.f_context.f_types.ensureComposition(
+                f_nClassConstId, frame.getActualTypes());
+
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
             ObjectHandle hArg = frame.getArgument(f_nArgValue);
-
-            if (hTarget == null || hArg == null)
+            if (hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, f_nRetValue);
+            frame.introduceVar(clazz, null, Frame.VAR_STANDARD, hArg);
+
+            return iPC + 1;
             }
-        catch (ExceptionHandle.WrapperException e)
+        catch (ObjectHandle.ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
         }
 
-    private final int f_nTargetValue;
-    private final int f_nArgValue;
-    private final int f_nRetValue;
+    @Override
+    public void simulate(Scope scope)
+        {
+        scope.allocVar();
+        }
+
+    final private int f_nClassConstId;
+    final private int f_nArgValue;
     }

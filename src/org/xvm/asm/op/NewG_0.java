@@ -24,19 +24,19 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NEW_0G CONST-CONSTRUCT, rvalue-type, lvalue-return                             ; generic "new"
+ * NEWG_0 CONSTRUCT, TYPE, lvalue ; generic-type "new"
  */
-public class New_0G
+public class NewG_0
         extends OpCallable
     {
     /**
-     * Construct a OP_NEW_0G op.
+     * Construct a NEWG_0 op.
      *
      * @param nConstructorId  identifies the constructor
      * @param nType           the type of the object being created
      * @param nRet            the location to store the new object
      */
-    public New_0G(int nConstructorId, int nType, int nRet)
+    public NewG_0(int nConstructorId, int nType, int nRet)
         {
         f_nConstructId = nConstructorId;
         f_nTypeValue   = nType;
@@ -49,7 +49,7 @@ public class New_0G
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public New_0G(DataInput in, Constant[] aconst)
+    public NewG_0(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nConstructId = readPackedInt(in);
@@ -61,7 +61,7 @@ public class New_0G
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_NEW_0G);
+        out.writeByte(OP_NEWG_0);
         writePackedLong(out, f_nConstructId);
         writePackedLong(out, f_nTypeValue);
         writePackedLong(out, f_nRetValue);
@@ -70,7 +70,7 @@ public class New_0G
     @Override
     public int getOpCode()
         {
-        return OP_NEW_0G;
+        return OP_NEWG_0;
         }
 
     @Override

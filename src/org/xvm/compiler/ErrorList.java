@@ -76,7 +76,7 @@ public class ErrorList
         }
 
     /**
-     * @return maximum number of serious errors enountered before attempting to
+     * @return maximum number of serious errors encountered before attempting to
      *         abort the process reporting the errors
      */
     public int getSeriousErrorMax()

@@ -9,6 +9,7 @@ interface Const
         {
         // TODO check if the same const class; if not, make up a predictable answer
         // TODO same class, so either use the struct, or much better yet delegate somehow to const compare() impl
+        TODO -- native
         }
 
     /**
@@ -19,6 +20,7 @@ interface Const
         {
         // TODO check if the same const class; if not, return false
         // TODO same class, so either use the struct or somehow delegate to the const equals() impl
+        TODO -- native
         }
 
     /**
@@ -30,7 +32,7 @@ interface Const
      */
     String to<String>()
         {
-        // TODO return something JSON like for complex const types
+        TODO -- native
         }
 
     /**
@@ -39,7 +41,7 @@ interface Const
     Byte[] to<Byte[]>()
         {
         Property[] fields = meta.struct.to<Property[]>();
-        // TODO use meta.struct
+        TODO use meta.struct
         }
 
     /**
@@ -48,6 +50,6 @@ interface Const
     @Lazy Int hash.get()
         {
         Ref[] fields = meta.struct.to<Property[]>();
-        // TODO use meta.struct
+        TODO use meta.struct
         }
     }

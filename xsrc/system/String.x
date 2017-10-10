@@ -12,7 +12,7 @@ const String
 
     Iterator<Char> iterator()
         {
-        return TODO new TODO
+        TODO -- native
         }
 
     String reify()
@@ -27,17 +27,20 @@ const String
 
     StringAscii to<StringAscii>()
         {
-
+        TODO -- native
         }
 
     StringUtf8 to<StringUtf8>()
         {
+        TODO -- native
         }
     StringUtf16 to<StringUtf16>()
         {
+        TODO -- native
         }
     StringUtf32 to<StringUtf32>()
         {
+        TODO -- native
         }
 
     // TODO Sequence<Char>

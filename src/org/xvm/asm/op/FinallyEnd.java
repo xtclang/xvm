@@ -13,13 +13,13 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 
 /**
- * END_FINALLY ; finish a "finally" handler // note: EXIT
+ * FINALLY_END ; finish a "finally" handler (Implicit EXIT)
  */
 public class FinallyEnd
         extends Op
     {
     /**
-     * Construct an END_FINALLY op.
+     * Construct an FINALLY_END op.
      */
     public FinallyEnd()
         {
@@ -39,7 +39,7 @@ public class FinallyEnd
     @Override
     public int getOpCode()
         {
-        return OP_END_FINALLY;
+        return OP_FINALLY_END;
         }
 
     @Override

@@ -9,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
@@ -20,23 +19,21 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * ASSERT_V rvalue, STRING, #vals(rvalue)
+ * ASSERT_M rvalue, STRING
  */
-public class AssertV
+public class AssertM
         extends Op
     {
     /**
-     * Construct an ASSERT_V op.
+     * Construct an ASSERT_T op.
      *
      * @param nValue   the r-value to test
-     * @param nTextId  the text to print on assertion failure
-     * @param anValue  the values to print on assertion failure
+     * @param nTextId  the text to display on assertion failure
      */
-    public AssertV(int nValue, int nTextId, int[] anValue)
+    public AssertM(int nValue, int nTextId)
         {
-        f_nValue       = nValue;
+        f_nValue = nValue;
         f_nTextConstId = nTextId;
-        f_anValue      = anValue;
         }
 
     /**
@@ -45,28 +42,26 @@ public class AssertV
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public AssertV(DataInput in, Constant[] aconst)
+    public AssertM(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue       = readPackedInt(in);
+        f_nValue = readPackedInt(in);
         f_nTextConstId = readPackedInt(in);
-        f_anValue      = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_ASSERT_V);
+        out.writeByte(OP_ASSERT_M);
         writePackedLong(out, f_nValue);
         writePackedLong(out, f_nTextConstId);
-        writeIntArray(out, f_anValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_ASSERT_V;
+        return OP_ASSERT_M;
         }
 
     @Override
@@ -85,28 +80,8 @@ public class AssertV
                 return iPC + 1;
                 }
 
-            StringBuilder sb = new StringBuilder("Assertion failed: ");
-            sb.append(frame.getString(f_nTextConstId))
-              .append(" (");
-
-            for (int i = 0, c = f_anValue.length; i < c; i++)
-                {
-                if (i > 0)
-                    {
-                    sb.append(", ");
-                    }
-                int nValue = f_anValue[i];
-
-                Frame.VarInfo info = frame.getVarInfo(nValue);
-                ObjectHandle hValue = frame.getArgument(nValue);
-
-                sb.append(info.f_sVarName)
-                  .append('=')
-                  .append(hValue);
-                }
-            sb.append(')');
-
-            return frame.raiseException(xException.makeHandle(sb.toString()));
+            return frame.raiseException(
+                    xException.makeHandle("Assertion failed: " + frame.getString(f_nTextConstId)));
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -114,7 +89,6 @@ public class AssertV
             }
         }
 
-    private final int   f_nValue;
-    private final int   f_nTextConstId;
-    private final int[] f_anValue;
+    private final int f_nValue;
+    private final int f_nTextConstId;
     }

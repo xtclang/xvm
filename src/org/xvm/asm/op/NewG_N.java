@@ -24,24 +24,24 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NEW_1G CONST-CONSTRUCT, rvalue-type, rvalue-param, lvalue-return
+ * NEWG_N CONSTRUCT, TYPE, #:(rvalue) lvalue
  */
-public class New_1G
+public class NewG_N
         extends OpCallable
     {
     /**
-     * Construct a NEW_1G op.
+     * Construct a NEWG_N op.
      *
      * @param nConstructorId  identifies the constructor
      * @param nType           the type of the object being created
-     * @param nArg            the constructor argument
+     * @param anArg           the constructor arguments
      * @param nRet            the location to store the new object
      */
-    public New_1G(int nConstructorId, int nType, int nArg, int nRet)
+    public NewG_N(int nConstructorId, int nType, int[] anArg, int nRet)
         {
         f_nConstructId = nConstructorId;
         f_nTypeValue   = nType;
-        f_nArgValue    = nArg;
+        f_anArgValue   = anArg;
         f_nRetValue    = nRet;
         }
 
@@ -51,12 +51,12 @@ public class New_1G
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public New_1G(DataInput in, Constant[] aconst)
+    public NewG_N(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nConstructId = readPackedInt(in);
         f_nTypeValue   = readPackedInt(in);
-        f_nArgValue    = readPackedInt(in);
+        f_anArgValue   = readIntArray(in);
         f_nRetValue    = readPackedInt(in);
         }
 
@@ -64,17 +64,17 @@ public class New_1G
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
-        out.writeByte(OP_NEW_1G);
+        out.writeByte(OP_NEWG_N);
         writePackedLong(out, f_nConstructId);
         writePackedLong(out, f_nTypeValue);
-        writePackedLong(out, f_nArgValue);
+        writeIntArray(out, f_anArgValue);
         writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_NEW_1G;
+        return OP_NEWG_N;
         }
 
     @Override
@@ -101,8 +101,7 @@ public class New_1G
                         -f_nTypeValue, frame.getActualTypes());
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(
-                    new int[] {f_nArgValue}, constructor.getMaxVars());
+            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, constructor.getMaxVars());
             if (ahVar == null)
                 {
                 return R_REPEAT;
@@ -118,8 +117,8 @@ public class New_1G
             }
         }
 
-    private final int f_nConstructId;
-    private final int f_nTypeValue;
-    private final int f_nArgValue;
-    private final int f_nRetValue;
+    private final int   f_nConstructId;
+    private final int   f_nTypeValue;
+    private final int[] f_anArgValue;
+    private final int   f_nRetValue;
     }

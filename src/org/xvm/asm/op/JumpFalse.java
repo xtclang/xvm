@@ -14,7 +14,7 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 
 /**
- * JMP_FALSE rvalue-bool, rel-addr ; jump if value is false
+ * JMP_FALSE rvalue, addr ; jump if value is Boolean.False
  */
 public class JumpFalse
         extends JumpCond
@@ -23,7 +23,7 @@ public class JumpFalse
      * Construct a JMP_FALSE op.
      *
      * @param nValue    the Boolean value to test
-     * @param nRelAddr  the relative address to jump to.
+     * @param nRelAddr  the relative address to jump to
      *
      * @deprecated
      */

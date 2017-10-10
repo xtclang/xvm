@@ -19,21 +19,19 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * POSTINC lvalue-target, lvalue-return ; T++ -> T
+ * IP_INC lvalue-target ; in-place increment; no result
  */
-public class PostInc
+public class IP_Inc
         extends OpProperty
     {
     /**
-     * Construct a POST_INC op.
+     * Construct an IP_INC op.
      *
-     * @param nArg  the location to increment
-     * @param nRet  the location to store the post-incremented value
+     * @param nArg  indicates the incrementable target
      */
-    public PostInc(int nArg, int nRet)
+    public IP_Inc(int nArg)
         {
         f_nArgValue = nArg;
-        f_nRetValue = nRet;
         }
 
     /**
@@ -42,26 +40,24 @@ public class PostInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public PostInc(DataInput in, Constant[] aconst)
+    public IP_Inc(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nArgValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
+    throws IOException
         {
-        out.writeByte(OP_POSTINC);
+        out.writeByte(OP_IP_INC);
         writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_POSTINC;
+        return OP_IP_INC;
         }
 
     @Override
@@ -78,18 +74,7 @@ public class PostInc
                     return R_REPEAT;
                     }
 
-                if (hValue.f_clazz.f_template.invokeNext(frame, hValue, Frame.RET_LOCAL) == R_EXCEPTION)
-                    {
-                    return R_EXCEPTION;
-                    }
-
-                ObjectHandle hValueNew = frame.getFrameLocal();
-                if (frame.assignValue(f_nRetValue, hValue) == R_EXCEPTION ||
-                    frame.assignValue(f_nArgValue, hValueNew) == R_EXCEPTION)
-                    {
-                    return R_EXCEPTION;
-                    }
-                return iPC + 1;
+                return hValue.f_clazz.f_template.invokeNext(frame, hValue, f_nArgValue);
                 }
             else
                 {
@@ -100,7 +85,7 @@ public class PostInc
                         frame.f_context.f_pool.getConstant(-f_nArgValue);
 
                 return hTarget.f_clazz.f_template.invokePostInc(
-                        frame, hTarget, constProperty.getName(), f_nRetValue);
+                        frame, hTarget, constProperty.getName(), Frame.RET_UNUSED);
                 }
             }
         catch (ExceptionHandle.WrapperException e)
@@ -110,5 +95,4 @@ public class PostInc
         }
 
     private final int f_nArgValue;
-    private final int f_nRetValue;
     }

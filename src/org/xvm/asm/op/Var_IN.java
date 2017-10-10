@@ -20,19 +20,19 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * INVAR CONST_CLASS, CONST_STRING, rvalue-src ; (next register is an initialized named variable)
+ * VAR_IN TYPE, STRING, rvalue-src ; (next register is an initialized named variable)
  */
-public class INVar
+public class Var_IN
         extends Op
     {
     /**
-     * Construct an INVAR op.
+     * Construct a VAR_IN op.
      *
      * @param nTypeConstId  the type of the variable
      * @param nNameConstId  the name of the variable
      * @param nValue        the initial value for the variable
      */
-    public INVar(int nTypeConstId, int nNameConstId, int nValue)
+    public Var_IN(int nTypeConstId, int nNameConstId, int nValue)
         {
         f_nClassConstId = nTypeConstId;
         f_nNameConstId  = nNameConstId;
@@ -45,7 +45,7 @@ public class INVar
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public INVar(DataInput in, Constant[] aconst)
+    public Var_IN(DataInput in, Constant[] aconst)
             throws IOException
         {
         f_nClassConstId = readPackedInt(in);
@@ -57,7 +57,7 @@ public class INVar
     public void write(DataOutput out, ConstantRegistry registry)
     throws IOException
         {
-        out.writeByte(OP_INVAR);
+        out.writeByte(OP_VAR_IN);
         writePackedLong(out, f_nClassConstId);
         writePackedLong(out, f_nNameConstId);
         writePackedLong(out, f_nArgValue);
@@ -66,7 +66,7 @@ public class INVar
     @Override
     public int getOpCode()
         {
-        return OP_INVAR;
+        return OP_VAR_IN;
         }
 
     @Override
