@@ -3,7 +3,14 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
+import org.xvm.asm.Op.Argument;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Handy;
 import org.xvm.util.PackedInteger;
@@ -27,6 +34,13 @@ public class LiteralExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff the LiteralExpression is the result of an empty T0D0 expression
+     */
+    public boolean isTODO()
+        {
+        return literal.getId() == Id.TODO;
+        }
 
     @Override
     public boolean isConstant()
@@ -45,11 +59,21 @@ public class LiteralExpression
             case LIT_STRING:
                 return getConstantPool().ensureCharStringConstant((String) literal.getValue());
 
+            case LIT_CHAR:
+            case LIT_DEC:
+            case LIT_BIN:
+            case TODO:
             default:
                 // TODO
                 throw new UnsupportedOperationException(
                         "LiteralExpression.toConstant() not implemented for " + literal.getId());
             }
+        }
+
+    @Override
+    public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
+        {
+        return validateAndConvertSingle(toConstant(), code, constType, errs);
         }
 
     @Override
