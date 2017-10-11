@@ -1,5 +1,5 @@
 const Char
-// TODO dooes Char extend String, or have an "@Auto to<String>()"
+        implements Sequential
     {
     construct Char(UInt32 codepoint)
         {

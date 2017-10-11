@@ -232,7 +232,7 @@ public abstract class Constant
      * the choice must be consistent. The purpose of the locator is to avoid having to create a new
      * Constant instance just to see if there is already an old Constant index; for example, if the
      * constant for the character string "Hello World!" is requested by calling the {@link
-     * ConstantPool#ensureCharStringConstant(String)} method, it would use the string "Hello World!"
+     * ConstantPool#ensureStringConstant(String)} method, it would use the string "Hello World!"
      * as the locator object to see if that constant already exists; if it could not do so, it would
      * have to create a new CharStringConstant and register it just to find out if such a constant
      * already exists! Some constants would spend as much time and memory creating a locator as it

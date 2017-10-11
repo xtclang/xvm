@@ -2348,7 +2348,7 @@ public abstract class Component
                 ListMap<StringConstant, TypeConstant> map = new ListMap<>();
                 for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
                     {
-                    map.put(getConstantPool().ensureCharStringConstant(entry.getKey()), entry.getValue());
+                    map.put(getConstantPool().ensureStringConstant(entry.getKey()), entry.getValue());
                     }
                 m_mapParams = map;
                 }

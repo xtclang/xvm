@@ -72,7 +72,7 @@ public class ChildClassConstant
             }
 
         m_constParent = constParent;
-        m_constName   = pool.ensureCharStringConstant(sName);
+        m_constName   = pool.ensureStringConstant(sName);
         }
 
 

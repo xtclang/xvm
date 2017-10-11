@@ -78,7 +78,7 @@ public class Parameter
             }
 
         m_constType    = constType;
-        m_constName    = sName == null ? null : pool.ensureCharStringConstant(sName);
+        m_constName    = sName == null ? null : pool.ensureStringConstant(sName);
         m_constDefault = constDefault;
 
         m_iParam       = fReturn ? -1 - index : index;

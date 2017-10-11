@@ -56,7 +56,7 @@ public class ModuleConstant
         {
         super(pool);
 
-        m_constName = pool.ensureCharStringConstant(sName);
+        m_constName = pool.ensureStringConstant(sName);
         }
 
 

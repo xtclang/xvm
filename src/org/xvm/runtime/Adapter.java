@@ -274,7 +274,7 @@ public class Adapter
 
         if (oValue instanceof String)
             {
-            return f_container.f_pool.ensureCharStringConstant((String) oValue);
+            return f_container.f_pool.ensureStringConstant((String) oValue);
             }
 
         if (oValue instanceof Character)

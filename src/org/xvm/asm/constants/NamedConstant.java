@@ -63,7 +63,7 @@ public abstract class NamedConstant
             }
 
         m_constParent = constParent;
-        m_constName   = pool.ensureCharStringConstant(sName);
+        m_constName   = pool.ensureStringConstant(sName);
         }
 
     /**

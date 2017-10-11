@@ -257,6 +257,7 @@ public class TerminalTypeConstant
                 {
                 constType = (TypeConstant) ((TypedefStructure) typedef).getType().simplify();
                 }
+            assert constType != null;
             return constType;
             }
 

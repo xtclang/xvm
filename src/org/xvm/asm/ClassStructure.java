@@ -94,7 +94,7 @@ public class ClassStructure
             m_mapParams = map = new ListMap<>();
             }
 
-        map.put(getConstantPool().ensureCharStringConstant(sName), clz);
+        map.put(getConstantPool().ensureStringConstant(sName), clz);
         markModified();
         }
 

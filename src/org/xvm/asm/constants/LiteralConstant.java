@@ -107,6 +107,8 @@ public class LiteralConstant
             default:
                 throw new IllegalStateException("unsupported format: " + format);
             }
+
+        m_constStr = pool.ensureStringConstant(sVal);
         }
 
     private LiteralConstant(ConstantPool pool, Format format)
@@ -199,12 +201,14 @@ public class LiteralConstant
         {
         final ConstantPool pool = getConstantPool();
         m_constStr = (StringConstant) pool.getConstant(m_iStr);
+        assert m_constStr != null;
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
         m_constStr = (StringConstant) pool.register(m_constStr);
+        assert m_constStr != null;
         }
 
     @Override

@@ -19,8 +19,6 @@ import org.xvm.util.Severity;
 
 /**
  * Base class for all Ecstasy expressions.
- *
- * @author cp 2017.03.28
  */
 public abstract class Expression
         extends AstNode

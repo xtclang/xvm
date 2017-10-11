@@ -96,7 +96,7 @@ public class SignatureConstant
             throw new IllegalArgumentException("name required");
             }
 
-        m_constName     = pool.ensureCharStringConstant(sName);
+        m_constName     = pool.ensureStringConstant(sName);
         m_aconstReturns = validateTypes(returns);
         m_aconstParams  = validateTypes(params);
         }

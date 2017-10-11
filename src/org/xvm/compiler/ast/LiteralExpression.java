@@ -1,17 +1,16 @@
 package org.xvm.compiler.ast;
 
 
-import java.math.BigDecimal;
 import java.util.List;
-import org.xvm.asm.Constant;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
-
 import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -19,6 +18,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.Var;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -31,8 +31,6 @@ import org.xvm.util.Severity;
 
 /**
  * A literal expression specifies a literal value.
- *
- * @author cp 2017.03.28
  */
 public class LiteralExpression
         extends Expression
@@ -62,7 +60,7 @@ public class LiteralExpression
         }
 
     @Override
-    public Constant toConstant() // TODO consider removing this method .. trace back to AnnotatedTypeExpression
+    public Constant toConstant()
         {
         ConstantPool pool = getConstantPool();
         switch (literal.getId())
@@ -70,27 +68,37 @@ public class LiteralExpression
             case LIT_CHAR:
                 return pool.ensureCharConstant(((Character) literal.getValue()).charValue());
 
-            case TODO:              // the T0D0 keyword can have a String text for the token's value
+            case TODO:              // the T0D0 keyword has a String text for the token's value
             case LIT_STRING:
-                return pool.ensureCharStringConstant((String) literal.getValue());
+                return pool.ensureStringConstant((String) literal.getValue());
 
             case LIT_INT:
-                // any int up to 64-bit signed int range is assumed to be a 64-bit signed int
+                PackedInteger piVal = (PackedInteger) literal.getValue();
                 if (isIntInRange(Long.MIN_VALUE, Long.MAX_VALUE))
                     {
-                    return pool.ensureIntConstant((PackedInteger) literal.getValue());
+                    // any int up to 64-bit signed int range is assumed to be a 64-bit signed int
+                    return pool.ensureIntConstant(piVal);
+                    }
+                else if (piVal.getSignedByteSize() <= 16)
+                    {
+                    // if it doesn't fit in 64-bits, any int value up to 128-bit signed int range is
+                    // assumed to be a 128-bit signed int
+                    return pool.ensureIntConstant(piVal, Format.Int128);
                     }
                 else
                     {
-                    // TODO
+                    // if it doesn't fit in 128-bit signed int, then use var-int
+                    return pool.ensureIntConstant(piVal, Format.VarInt);
                     }
 
             case LIT_DEC:
-            case LIT_BIN:
-            default:
                 // TODO
-                throw new UnsupportedOperationException(
-                        "LiteralExpression.toConstant() not yet implemented for " + literal.getId());
+
+            case LIT_BIN:
+                // TODO
+
+            default:
+                throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
         }
 
@@ -122,83 +130,146 @@ public class LiteralExpression
                 // these are all of the super-classes and interfaces that could be represented by
                 // a literal expression
                 case "Object":
-                case "Number":
-                case "IntNumber":
-                case "UIntNumber":
-                case "FPNumber":
-                case "DecimalFPNumber":
-                case "BinaryFPNumber":
                 case "Const":
                 case "Orderable":
-                case "Sequential":
                 case "collections.Hashable":
-                    throw new UnsupportedOperationException(constClz.getName());
+                    return toConstant();
 
-                case "Function":
-                {
-                // determine the constant value returned from the function (which is the value
-                // of this expression)
-                Argument argVal;
-                if (constType.isParamsSpecified())
-                    {
-                    // it has type params, so it must be a Function; see:
-                    //      "@Auto function Object() to<function Object()>()"
-                    List<TypeConstant> listParamTypes = constType.getParamTypes();
-                    if (listParamTypes.size() == 2)
+                case "Sequential":
+                    // char and the various ints are sequential
+                    if (literal.getId() == Id.LIT_CHAR && literal.getId() == Id.LIT_INT)
                         {
-                        TypeConstant typeTParams = listParamTypes.get(0);
-                        TypeConstant typeTReturn = listParamTypes.get(1);
-                        if (typeTParams.isTuple()
-                                && typeTParams.getTupleFieldCount() == 0
-                                && typeTReturn.isTuple()
-                                && typeTReturn.getTupleFieldCount() == 1)
+                        return toConstant();
+                        }
+                    break;
+
+                case "Number":
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                        case LIT_BIN:
+                            return toConstant();
+                        }
+                    break;
+
+                case "IntNumber":
+                    if (literal.getId() == Id.LIT_INT)
+                        {
+                        return toConstant();
+                        }
+                    break;
+
+                case "UIntNumber":
+                    if (literal.getId() == Id.LIT_INT)
+                        {
+                        // unsigned value must be >= 0
+                        PackedInteger piVal = (PackedInteger) literal.getValue();
+                        if (piVal.isNegative())
                             {
-                            // call back into this expression and ask it to render itself as the
-                            // return type from that function (a constant value), and then we'll
-                            // wrap that with the conversion function (from Object)
-                            argVal = generateArgument(
-                                    code, typeTReturn.getTupleFieldType(0), false, errs);
+                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                                    sName, literal.getString(getSource()));
+                            piVal = PackedInteger.ZERO;
+                            }
+
+                        int cBytes = piVal.getUnsignedByteSize();
+                        if (cBytes <= 8)
+                            {
+                            // as with "int", assume any unsigned int that fits in 64 bits is a
+                            // 64-bit unsigned int
+                            return pool.ensureIntConstant(piVal, Format.UInt64);
+                            }
+                        else if (cBytes <= 16)
+                            {
+                            // as with "int", if it doesn't fit in 64-bits, any int value up to
+                            // 128-bit unsigned int range is assumed to be a 128-bit unsigned int
+                            return pool.ensureIntConstant(piVal, Format.UInt128);
                             }
                         else
                             {
-                            // error: function must take no parameters and return one value;
+                            // if it doesn't fit in 128-bit unsigned int, then use var-uint
+                            return pool.ensureIntConstant(piVal, Format.VarUInt);
+                            }
+                        }
+                    break;
+
+                case "FPNumber":
+                    // TODO
+                    break;
+
+                case "DecimalFPNumber":
+                    // TODO
+                    break;
+
+                case "BinaryFPNumber":
+                    // TODO
+                    break;
+
+                case "Function":
+                    {
+                    // determine the constant value returned from the function (which is the value
+                    // of this expression)
+                    Argument argVal;
+                    if (constType.isParamsSpecified())
+                        {
+                        // it has type params, so it must be a Function; see:
+                        //      "@Auto function Object() to<function Object()>()"
+                        List<TypeConstant> listParamTypes = constType.getParamTypes();
+                        if (listParamTypes.size() == 2)
+                            {
+                            TypeConstant typeTParams = listParamTypes.get(0);
+                            TypeConstant typeTReturn = listParamTypes.get(1);
+                            if (typeTParams.isTuple()
+                                    && typeTParams.getTupleFieldCount() == 0
+                                    && typeTReturn.isTuple()
+                                    && typeTReturn.getTupleFieldCount() == 1)
+                                {
+                                // call back into this expression and ask it to render itself as the
+                                // return type from that function (a constant value), and then we'll
+                                // wrap that with the conversion function (from Object)
+                                argVal = generateArgument(
+                                        code, typeTReturn.getTupleFieldType(0), false, errs);
+                                }
+                            else
+                                {
+                                // error: function must take no parameters and return one value;
+                                // drop into the generic handling of the request for error handling
+                                break;
+                                }
+                            }
+                        else
+                            {
+                            // error: function must have 2 parameters (t-params & t-returns);
                             // drop into the generic handling of the request for error handling
                             break;
                             }
                         }
                     else
                         {
-                        // error: function must have 2 parameters (t-params & t-returns);
-                        // drop into the generic handling of the request for error handling
-                        break;
+                        argVal = toConstant();
                         }
-                    }
-                else
-                    {
-                    argVal = toConstant();
-                    }
 
-                // create a constant for this method on Object:
-                //      "@Auto function Object() to<function Object()>()"
-                TypeConstant typeTuple = pool.ensureEcstasyTypeConstant("collections.Tuple");
-                TypeConstant typeTParams = pool.ensureParameterizedTypeConstant(
-                        typeTuple, SignatureConstant.NO_TYPES);
-                TypeConstant typeTReturn = pool.ensureParameterizedTypeConstant(
-                        typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(null)});
-                TypeConstant typeFn = pool.ensureParameterizedTypeConstant(
-                        pool.ensureEcstasyTypeConstant("Function"),
-                        new TypeConstant[] {typeTParams, typeTReturn});
-                MethodConstant methodTo = pool.ensureMethodConstant(
-                        pool.ensureEcstasyClassConstant("Object"), "to", Access.PUBLIC,
-                        new TypeConstant[] {typeFn}, SignatureConstant.NO_TYPES);
+                    // create a constant for this method on Object:
+                    //      "@Auto function Object() to<function Object()>()"
+                    TypeConstant   typeTuple   = pool.ensureEcstasyTypeConstant("collections.Tuple");
+                    TypeConstant   typeTParams = pool.ensureParameterizedTypeConstant(
+                            typeTuple, SignatureConstant.NO_TYPES);
+                    TypeConstant   typeTReturn = pool.ensureParameterizedTypeConstant(
+                            typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(null)});
+                    TypeConstant   typeFn      = pool.ensureParameterizedTypeConstant(
+                            pool.ensureEcstasyTypeConstant("Function"),
+                            new TypeConstant[] {typeTParams, typeTReturn});
+                    MethodConstant methodTo    = pool.ensureMethodConstant(
+                            pool.ensureEcstasyClassConstant("Object"), "to", Access.PUBLIC,
+                            new TypeConstant[] {typeFn}, SignatureConstant.NO_TYPES);
 
-                // generate the code that turns the constant value from this expression into a
-                // function object that returns that value
-                Register argResult = new Register(typeFn);
-                code.add(new Var(argResult));
-                code.add(new Invoke_01(argVal, methodTo, argResult));
-                return argResult;
-                }
+                    // generate the code that turns the constant value from this expression into a
+                    // function object that returns that value
+                    Register argResult = new Register(typeFn);
+                    code.add(new Var(argResult));
+                    code.add(new Invoke_01(argVal, methodTo, argResult));
+                    return argResult;
+                    }
 
                 // untyped literals
                 case "IntLiteral":
@@ -249,7 +320,7 @@ public class LiteralExpression
                         {
                         case LIT_CHAR:
                         case LIT_STRING:
-                            return pool.ensureCharStringConstant(literal.getValue().toString());
+                            return pool.ensureStringConstant(literal.getValue().toString());
                         }
                     break;
 
@@ -284,9 +355,20 @@ public class LiteralExpression
                     break;
 
                 case "Dec32":
+                    // TODO
+                    break;
+
                 case "Dec64":
+                    // TODO
+                    break;
+
                 case "Dec128":
+                    // TODO
+                    break;
+
                 case "VarDec":
+                    // TODO
+                    break;
 
                 case "Int8":
                     if (literal.getId() == Id.LIT_INT)
@@ -541,14 +623,18 @@ public class LiteralExpression
         switch (literal.getId())
             {
             case LIT_INT:
+            case LIT_DEC:
+            case LIT_BIN:
                 return String.valueOf(literal.getValue());
+
+            case LIT_CHAR:
+                 return Handy.quotedChar((Character) literal.getValue());
 
             case LIT_STRING:
                  return Handy.quotedString(String.valueOf(literal.getValue()));
 
             default:
-                // TODO
-                return "LiteralExpression.toString() not implemented for " + literal.getId();
+                throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
         }
 

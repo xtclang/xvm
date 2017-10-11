@@ -262,7 +262,7 @@ public class ConstantPool
      *
      * @return a CharStringConstant for the passed String value
      */
-    public StringConstant ensureCharStringConstant(String s)
+    public StringConstant ensureStringConstant(String s)
         {
         // check the pre-existing constants first
         StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
@@ -488,7 +488,7 @@ public class ConstantPool
         NamedCondition cond = (NamedCondition) ensureLocatorLookup(Format.ConditionNamed).get(sName);
         if (cond == null)
             {
-            cond = new NamedCondition(this, ensureCharStringConstant(sName));
+            cond = new NamedCondition(this, ensureStringConstant(sName));
             }
         return cond;
         }
