@@ -6,8 +6,10 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-import org.xvm.asm.Scope;
+import org.xvm.asm.OpVar;
+
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -24,19 +26,40 @@ import static org.xvm.util.Handy.writePackedLong;
  * VAR_SN TYPE, STRING, #values:(rvalue-src) ; next register is a named initialized anonymous Sequence variable
  */
 public class Var_SN
-        extends Op
+        extends OpVar
     {
     /**
      * Construct a VAR_SN op.
      *
-     * @param nTypeConstId  the type of the sequence
-     * @param anValue       the values for the sequence
+     * @param nType      the variable type id
+     * @param nNameId    the name of the variable id
+     * @param anValueId  the value ids for the sequence
      */
-    public Var_SN(int nTypeConstId, int nNameConstId, int[] anValue)
+    public Var_SN(int nType, int nNameId, int[] anValueId)
         {
-        f_nTypeConstId = nTypeConstId;
-        f_nNameConstId = nNameConstId;
-        f_anArgValue   = anValue;
+        super(nType);
+
+        m_nNameId = nNameId;
+        m_anArgValue = anValueId;
+        }
+
+    /**
+     * Construct a VAR_SN op for the specified type, name and arguments.
+     *
+     * @param constType the variable type
+     * @param constName  the name constant
+     * @param aArgValue  the value argument
+     */
+    public Var_SN(TypeConstant constType, StringConstant constName, Argument[] aArgValue)
+        {
+        super(constType);
+
+        if (constName == null || aArgValue == null)
+            {
+            throw new IllegalArgumentException("name and values required");
+            }
+        m_constName = constName;
+        m_aArgValue = aArgValue;
         }
 
     /**
@@ -48,19 +71,26 @@ public class Var_SN
     public Var_SN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTypeConstId = readPackedInt(in);
-        f_nNameConstId  = readPackedInt(in);
-        f_anArgValue   = readIntArray(in);
+        super(readPackedInt(in));
+
+        m_nNameId = readPackedInt(in);
+        m_anArgValue = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_VAR_SN);
-        writePackedLong(out, f_nTypeConstId);
-        writePackedLong(out, f_nNameConstId);
-        writeIntArray(out, f_anArgValue);
+        super.write(out, registry);
+
+        if (m_constName != null)
+            {
+            m_nNameId = encodeArgument(m_constName, registry);
+            m_anArgValue = encodeArguments(m_aArgValue, registry);
+            }
+
+        writePackedLong(out, m_nNameId);
+        writeIntArray(out, m_anArgValue);
         }
 
     @Override
@@ -73,11 +103,11 @@ public class Var_SN
     public int process(Frame frame, int iPC)
         {
         TypeComposition clazzEl = frame.f_context.f_types.ensureComposition(
-                f_nTypeConstId, frame.getActualTypes());
+                m_nType, frame.getActualTypes());
 
         try
             {
-            ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
             if (ahArg == null)
                 {
                 return R_REPEAT;
@@ -86,7 +116,7 @@ public class Var_SN
             ArrayHandle hArray = xArray.makeHandle(clazzEl.ensurePublicType(), ahArg);
             hArray.makeImmutable();
 
-            frame.introduceVar(hArray.f_clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, hArray);
+            frame.introduceVar(hArray.m_type, frame.getString(m_nNameId), Frame.VAR_STANDARD, hArray);
 
             return iPC + 1;
             }
@@ -97,12 +127,17 @@ public class Var_SN
         }
 
     @Override
-    public void simulate(Scope scope)
+    public void registerConstants(ConstantRegistry registry)
         {
-        scope.allocVar();
+        super.registerConstants(registry);
+
+        registerArgument(m_constName, registry);
+        registerArguments(m_aArgValue, registry);
         }
 
-    final private int   f_nTypeConstId;
-    final private int   f_nNameConstId;
-    final private int[] f_anArgValue;
+    private int m_nNameId;
+    private int[] m_anArgValue;
+
+    private StringConstant m_constName;
+    private Argument[] m_aArgValue;
     }

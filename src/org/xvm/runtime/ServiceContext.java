@@ -445,7 +445,7 @@ public class ServiceContext
 
         for (int nVar = 0; nVar < cReturns; nVar++)
             {
-            frame.f_aInfo[nVar] = new Frame.VarInfo(xObject.CLASS, null, Frame.VAR_STANDARD);
+            frame.f_aInfo[nVar] = frame.new VarInfo(xObject.TYPE, null, Frame.VAR_STANDARD);
             }
         return frame;
         }

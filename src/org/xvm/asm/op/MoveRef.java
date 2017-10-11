@@ -14,6 +14,7 @@ import org.xvm.asm.Scope;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -95,14 +96,14 @@ public class MoveRef
         {
         Frame.VarInfo infoSrc = frame.getVarInfo(m_nSrcValue);
 
-        if (infoSrc.m_nStyle == Frame.VAR_DYNAMIC_REF)
+        if (infoSrc.getStyle() == Frame.VAR_DYNAMIC_REF)
             {
             // the "dynamic ref" register must contain a RefHandle itself
             RefHandle hRef = (RefHandle) frame.f_ahVar[m_nSrcValue];
 
             if (frame.isNextRegister(m_nDestValue))
                 {
-                frame.introduceVar(infoSrc.f_clazz, null, Frame.VAR_STANDARD, hRef);
+                frame.introduceVar(infoSrc.getType(), null, Frame.VAR_STANDARD, hRef);
                 }
             else
                 {
@@ -111,14 +112,14 @@ public class MoveRef
             }
         else
             {
-            TypeComposition clzRef = org.xvm.runtime.template.Ref.INSTANCE.ensureClass(
-                    Collections.singletonMap("RefType", infoSrc.f_clazz.ensurePublicType()));
+            TypeComposition clzRef = Ref.INSTANCE.ensureClass(
+                    Collections.singletonMap("RefType", infoSrc.getType()));
 
             RefHandle hRef = new RefHandle(clzRef, frame, m_nSrcValue);
 
             if (frame.isNextRegister(m_nDestValue))
                 {
-                frame.introduceVar(clzRef, null, Frame.VAR_STANDARD, hRef);
+                frame.introduceVar(clzRef.ensurePublicType(), null, Frame.VAR_STANDARD, hRef);
                 }
             else
                 {

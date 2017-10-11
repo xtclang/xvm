@@ -6,12 +6,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-import org.xvm.asm.Scope;
+import org.xvm.asm.OpVar;
 
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -21,18 +20,36 @@ import static org.xvm.util.Handy.writePackedLong;
  * VAR_N TYPE, STRING ; (next register is an uninitialized named variable)
  */
 public class Var_N
-        extends Op
+        extends OpVar
     {
     /**
      * Construct a VAR_N op.
      *
-     * @param nTypeConstId  the type of the var
-     * @param nNameConstId  the name of the var
+     * @param nType     the variable type id
+     * @param nNameId   the name of the variable id
      */
-    public Var_N(int nTypeConstId, int nNameConstId)
+    public Var_N(int nType, int nNameId)
         {
-        f_nTypeConstId = nTypeConstId;
-        f_nNameConstId = nNameConstId;
+        super(nType);
+
+        m_nNameId = nNameId;
+        }
+
+    /**
+     * Construct a VAR_N op for the specified type and name.
+     *
+     * @param constType  the variable type
+     * @param constName  the name constant
+     */
+    public Var_N(TypeConstant constType, StringConstant constName)
+        {
+        super(constType);
+
+        if (constName == null)
+            {
+            throw new IllegalArgumentException("name required");
+            }
+        m_constName = constName;
         }
 
     /**
@@ -44,17 +61,22 @@ public class Var_N
     public Var_N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTypeConstId = readPackedInt(in);
-        f_nNameConstId = readPackedInt(in);
+        super(readPackedInt(in));
+
+        m_nNameId = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
-        out.writeByte(OP_VAR_N);
-        writePackedLong(out, f_nTypeConstId);
-        writePackedLong(out, f_nNameConstId);
+        super.write(out, registry);
+
+        if (m_constName != null)
+            {
+            m_nNameId = encodeArgument(m_constName, registry);
+            }
+        writePackedLong(out, m_nNameId);
         }
 
     @Override
@@ -66,22 +88,20 @@ public class Var_N
     @Override
     public int process(Frame frame, int iPC)
         {
-        ServiceContext context = frame.f_context;
-
-        TypeComposition clazz = context.f_types.ensureComposition(
-                f_nTypeConstId, frame.getActualTypes());
-
-        frame.introduceVar(clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, null);
+        frame.introduceVar(m_nType, m_nNameId, Frame.VAR_STANDARD, null);
 
         return iPC + 1;
         }
 
     @Override
-    public void simulate(Scope scope)
+    public void registerConstants(ConstantRegistry registry)
         {
-        scope.allocVar();
+        super.registerConstants(registry);
+
+        registerArgument(m_constName, registry);
         }
 
-    private final int f_nTypeConstId;
-    private final int f_nNameConstId;
+    private int m_nNameId;
+
+    private StringConstant m_constName;
     }

@@ -22,32 +22,39 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * INVOKE_01 rvalue-target, rvalue-method, lvalue-return
+ * NVOK_01 rvalue-target, rvalue-method, lvalue-return
  */
 public class Invoke_01
         extends OpInvocable
     {
+    /**
+     * Construct an NVOK_01 op.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     * @param nRet       the l-value location for the result
+     *
+     * @deprecated
+     */
+    public Invoke_01(int nTarget, int nMethodId, int nRet)
+        {
+        m_nTarget   = nTarget;
+        m_nMethodId = nMethodId;
+        m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct an NVOKE_01 op for the specified Tuple type and arguments.
+     *
+     * @param argTarget    the target argument
+     * @param constMethod  the method constant
+     * @param argRet       the return value argument
+     */
     public Invoke_01(Argument argTarget, MethodConstant constMethod, Argument argRet)
         {
         m_argTarget   = argTarget;
         m_constMethod = constMethod;
         m_argRet      = argRet;
-        }
-    
-    /**
-     * Construct an INVOKE_01 op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     * @param nRet       the l-value location for the result
-     *                   
-     * @deprecated 
-     */
-    public Invoke_01(int nTarget, int nMethodId, int nRet)
-        {
-        m_nTargetValue = nTarget;
-        m_nMethodId    = nMethodId;
-        m_nRetValue    = nRet;
         }
 
     /**
@@ -59,9 +66,9 @@ public class Invoke_01
     public Invoke_01(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nTargetValue = readPackedInt(in);
-        m_nMethodId    = readPackedInt(in);
-        m_nRetValue    = readPackedInt(in);
+        m_nTarget   = readPackedInt(in);
+        m_nMethodId = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -70,13 +77,13 @@ public class Invoke_01
         {
         if (m_argTarget != null)
             {
-            m_nTargetValue = encodeArgument(m_argTarget  , registry);
-            m_nMethodId    = encodeArgument(m_constMethod, registry);
-            m_nRetValue    = encodeArgument(m_argRet     , registry);
+            m_nTarget   = encodeArgument(m_argTarget  , registry);
+            m_nMethodId = encodeArgument(m_constMethod, registry);
+            m_nRetValue = encodeArgument(m_argRet     , registry);
             }
 
-        out.writeByte(OP_INVOKE_01);
-        writePackedLong(out, m_nTargetValue);
+        out.writeByte(OP_NVOK_01);
+        writePackedLong(out, m_nTarget);
         writePackedLong(out, m_nMethodId);
         writePackedLong(out, m_nRetValue);
         }
@@ -84,7 +91,7 @@ public class Invoke_01
     @Override
     public int getOpCode()
         {
-        return OP_INVOKE_01;
+        return OP_NVOK_01;
         }
 
     @Override
@@ -92,7 +99,7 @@ public class Invoke_01
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(m_nTargetValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
             if (hTarget == null)
                 {
                 return R_REPEAT;
@@ -117,11 +124,17 @@ public class Invoke_01
             }
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArgument(m_argTarget, registry);
+        }
+
     private Argument       m_argTarget;
     private MethodConstant m_constMethod;
     private Argument       m_argRet;
-                                                    
-    private int m_nTargetValue;
+
+    private int m_nTarget;
     private int m_nMethodId;
     private int m_nRetValue;
     }

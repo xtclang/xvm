@@ -241,7 +241,7 @@ public class TypeSet
 
     // ----- TypeCompositions -----
 
-    // ensure a TypeComposition for a type referred by a ClassConstant in the ConstantPool
+    // ensure a TypeComposition for a type referred by a TypeConstant in the ConstantPool
     public TypeComposition ensureComposition(int nTypeConstId, Map<String, Type> mapActual)
         {
         TypeComposition typeComposition = f_mapConstCompositions.get(nTypeConstId);

@@ -100,7 +100,7 @@ public class AssertV
                 Frame.VarInfo info = frame.getVarInfo(nValue);
                 ObjectHandle hValue = frame.getArgument(nValue);
 
-                sb.append(info.f_sVarName)
+                sb.append(info.getName())
                   .append('=')
                   .append(hValue);
                 }

@@ -82,8 +82,8 @@
 +VAR_DN     TYPE, STRING                            ; ("N"=) named ("D"=) dynamic reference
 +VAR_S      TYPE, #values:(rvalue)                  ; initialized anonymous ("S"=) Sequence variable
 +VAR_SN     TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("S"=) Sequence variable
-+VAR_T      #values:(TYPE, rvalue)                  ; initialized anonymous ("T"=) Tuple variable
-+VAR_TN     STRING, #values:(TYPE, rvalue)          ; initialized ("N"=) named ("T"=) Tuple variable
++VAR_T      TYPE. #values:(rvalue)                  ; initialized anonymous ("T"=) Tuple variable
++VAR_TN     TYPE, #values:(rvalue)                  ; initialized ("N"=) named ("T"=) Tuple variable
 
 // "move" operations
 // - does NOT support "local property" mode;

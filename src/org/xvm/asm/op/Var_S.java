@@ -6,36 +6,56 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-import org.xvm.asm.Scope;
+import org.xvm.asm.OpVar;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Type;
 
 import org.xvm.runtime.template.collections.xArray;
 
 import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * VAR_S TYPE, #values:(rvalue-src) ; next register is an initialized anonymous Sequence variable
  */
 public class Var_S
-        extends Op
+        extends OpVar
     {
     /**
      * Construct a VAR_S op.
      *
-     * @param nTypeConstId  the type of the sequence
-     * @param anValue       the values for the sequence
+     * @param nType       the variable type id
+     * @param anValueId   the value ids for the sequence
+     *
+     * @deprecated
      */
-    public Var_S(int nTypeConstId, int[] anValue)
+    public Var_S(int nType, int[] anValueId)
         {
-        f_nTypeConstId = nTypeConstId;
-        f_anArgValue   = anValue;
+        super(nType);
+
+        m_anArgValue = anValueId;
+        }
+
+    /**
+     * Construct a VAR_S op for the specified type and arguments.
+     *
+     * @param constType the variable type
+     * @param aArgValue  the value argument
+     */
+    public Var_S(TypeConstant constType, Argument[] aArgValue)
+        {
+        super(constType);
+
+        if (aArgValue == null)
+            {
+            throw new IllegalArgumentException("values required");
+            }
+        m_aArgValue = aArgValue;
         }
 
     /**
@@ -47,17 +67,23 @@ public class Var_S
     public Var_S(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTypeConstId = readPackedInt(in);
-        f_anArgValue   = readIntArray(in);
+        super(readPackedInt(in));
+
+        m_anArgValue = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_VAR_S);
-        writePackedLong(out, f_nTypeConstId);
-        writeIntArray(out, f_anArgValue);
+        super.write(out, registry);
+
+        if (m_aArgValue != null)
+            {
+            m_anArgValue = encodeArguments(m_aArgValue, registry);
+            }
+
+        writeIntArray(out, m_anArgValue);
         }
 
     @Override
@@ -69,21 +95,21 @@ public class Var_S
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clazzEl = frame.f_context.f_types.ensureComposition(
-                f_nTypeConstId, frame.getActualTypes());
+        Type typeEl = frame.f_context.f_types.ensureComposition(
+            m_nType, frame.getActualTypes()).ensurePublicType();
 
         try
             {
-            ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, f_anArgValue.length);
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
             if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            ArrayHandle hArray = xArray.makeHandle(clazzEl.ensurePublicType(), ahArg);
+            ArrayHandle hArray = xArray.makeHandle(typeEl, ahArg);
             hArray.makeImmutable();
 
-            frame.introduceVar(hArray.f_clazz, null, Frame.VAR_STANDARD, hArray);
+            frame.introduceVar(hArray.m_type, null, Frame.VAR_STANDARD, hArray);
 
             return iPC + 1;
             }
@@ -94,11 +120,14 @@ public class Var_S
         }
 
     @Override
-    public void simulate(Scope scope)
+    public void registerConstants(ConstantRegistry registry)
         {
-        scope.allocVar();
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgValue, registry);
         }
 
-    final private int   f_nTypeConstId;
-    final private int[] f_anArgValue;
+    private int[] m_anArgValue;
+
+    private Argument[] m_aArgValue;
     }

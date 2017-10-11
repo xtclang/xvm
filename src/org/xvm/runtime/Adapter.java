@@ -51,6 +51,8 @@ public class Adapter
 
     // get a type id for the specified name in the context of the
     // specified template
+    // if sName is a semicolon delimited array of names, the resulting type
+    // is a tuple
     public int getClassTypeConstId(String sName, ClassTemplate template)
         {
         if (m_mapClasses.containsKey(sName))
@@ -58,10 +60,30 @@ public class Adapter
             return m_mapClasses.get(sName);
             }
 
-        TypeConstant constType = getClassType(sName, template);
+        TypeConstant constType;
+
+        if (sName.indexOf(';') < 0)
+            {
+            constType = getClassType(sName, template);
+            }
+        else
+            {
+            String[] asName = Handy.parseDelimitedString(sName, ';');
+            int cNames = asName.length;
+
+            TypeConstant[] aconstTypes = new TypeConstant[cNames];
+            for (int i = 0; i < cNames; ++i)
+                {
+                aconstTypes[i] = getClassType(asName[i], template);
+                }
+
+            ConstantPool pool = f_container.f_pool;
+
+            constType = pool.ensureParameterizedTypeConstant(
+                pool.ensureEcstasyTypeConstant("collections.Tuple"), aconstTypes);
+            }
 
         int nTypeId = constType.getPosition();
-
         m_mapClasses.put(sName, nTypeId);
 
         return nTypeId;

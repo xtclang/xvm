@@ -2,51 +2,43 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-import org.xvm.asm.Register;
-import org.xvm.asm.Scope;
+import org.xvm.asm.OpVar;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * VAR TYPE ; (next register is an uninitialized anonymous variable)
  */
 public class Var
-        extends Op
+        extends OpVar
     {
     /**
      * Construct a VAR op.
      *
-     * @param nType  the r-value specifying the type of the variable
+     * @param nType  the variable type id
      *
      * @deprecated
      */
     public Var(int nType)
         {
-        m_nType = nType;
+        super(nType);
         }
 
     /**
-     * Construct a VAR op for the passed Register.
+     * Construct a VAR op for the specified type.
      *
-     * @param reg  the Register object
+     * @param constType  the variable type
      */
-    public Var(Register reg)
+    public Var(TypeConstant constType)
         {
-        if (reg == null)
-            {
-            throw new IllegalArgumentException("register required");
-            }
-        m_reg = reg;
+        super(constType);
         }
 
     /**
@@ -58,20 +50,7 @@ public class Var
     public Var(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nType = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        if (m_reg != null)
-            {
-            m_nType = encodeArgument(m_reg.getType(), registry);
-            }
-
-        out.writeByte(OP_VAR);
-        writePackedLong(out, m_nType);
+        super(readPackedInt(in));
         }
 
     @Override
@@ -83,33 +62,8 @@ public class Var
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clazz = frame.f_context.f_types.ensureComposition(
-                m_nType, frame.getActualTypes());
-
-        frame.introduceVar(clazz, null, Frame.VAR_STANDARD, null);
+        frame.introduceVar(m_nType, 0, Frame.VAR_STANDARD, null);
 
         return iPC + 1;
         }
-
-    @Override
-    public void simulate(Scope scope)
-        {
-        int iReg = scope.allocVar();
-        if (m_reg != null)
-            {
-            m_reg.assignIndex(iReg);
-            }
-        }
-
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        if (m_reg != null)
-            {
-            m_reg.registerConstants(registry);
-            }
-        }
-
-    private int      m_nType;
-    private Register m_reg;
     }

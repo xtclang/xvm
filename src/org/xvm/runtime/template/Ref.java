@@ -231,10 +231,10 @@ public class Ref
 
             Frame.VarInfo infoSrc = frame.getVarInfo(iVar);
 
-            RefHandle refCurrent = infoSrc.m_ref;
+            RefHandle refCurrent = infoSrc.getRef();
             if (refCurrent == null)
                 {
-                infoSrc.m_ref = this;
+                infoSrc.setRef(this);
                 }
             else
                 {
