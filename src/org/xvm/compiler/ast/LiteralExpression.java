@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.xvm.asm.Constant;
@@ -12,6 +13,8 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DecimalConstant;
+import org.xvm.asm.constants.Float16Constant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -23,6 +26,10 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+
+import org.xvm.type.Decimal32;
+import org.xvm.type.Decimal64;
+import org.xvm.type.Decimal128;
 
 import org.xvm.util.Handy;
 import org.xvm.util.PackedInteger;
@@ -92,10 +99,22 @@ public class LiteralExpression
                     }
 
             case LIT_DEC:
-                // TODO
+                BigDecimal bigdec = (BigDecimal) literal.getValue();
+                try
+                    {
+                    return pool.ensureDecimalConstant(new Decimal64(bigdec));
+                    }
+                catch (ArithmeticException e) {}
+                try
+                    {
+                    return pool.ensureDecimalConstant(new Decimal128(bigdec));
+                    }
+                catch (ArithmeticException e) {}
+                return toVarLenDecimalConstant(bigdec);
 
             case LIT_BIN:
-                // TODO
+                // TODO this should first try 64-bit, then 128-bit, then use the var-len format
+                return pool.ensureFloat64Constant(Double.parseDouble(literal.getValue().toString()));
 
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
@@ -111,6 +130,32 @@ public class LiteralExpression
 
         PackedInteger piVal = (PackedInteger) literal.getValue();
         return !piVal.isBig() && piVal.getLong() >= lLower && piVal.getLong() <= lUpper;
+        }
+
+    private DecimalConstant toVarLenDecimalConstant(BigDecimal bigdec)
+        {
+        throw new UnsupportedOperationException("var-len decimal not implemented");
+        }
+
+    @Override
+    public long getStartPosition()
+        {
+        return literal.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return literal.getEndPosition();
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getImplicitType()
+        {
+        return toConstant().getType();
         }
 
     @Override
@@ -194,16 +239,44 @@ public class LiteralExpression
                     break;
 
                 case "FPNumber":
-                    // TODO
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            return generateArgument(code, pool.ensureEcstasyTypeConstant(
+                                    "DecimalFPNumber"), fTupleOk, errs);
+
+                        case LIT_BIN:
+                            return generateArgument(code, pool.ensureEcstasyTypeConstant(
+                                    "BinaryFPNumber"), fTupleOk, errs);
+                        }
                     break;
 
                 case "DecimalFPNumber":
-                    // TODO
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            try
+                                {
+                                return pool.ensureDecimalConstant(new Decimal64(bigdec));
+                                }
+                            catch (ArithmeticException e) {}
+                            try
+                                {
+                                return pool.ensureDecimalConstant(new Decimal128(bigdec));
+                                }
+                            catch (ArithmeticException e) {}
+                            return toVarLenDecimalConstant(bigdec);
+                        }
                     break;
 
                 case "BinaryFPNumber":
-                    // TODO
-                    break;
+                    // TODO the idea is the same as int: 64-bit if it fits, otherwise 128-bit, otherwise var-len
+                    return generateArgument(code, pool.ensureEcstasyTypeConstant("Float64"), fTupleOk, errs);
 
                 case "Function":
                     {
@@ -355,19 +428,63 @@ public class LiteralExpression
                     break;
 
                 case "Dec32":
-                    // TODO
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            try
+                                {
+                                return pool.ensureDecimalConstant(new Decimal32(bigdec));
+                                }
+                            catch (ArithmeticException e) {}
+                        }
                     break;
 
                 case "Dec64":
-                    // TODO
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            try
+                                {
+                                return pool.ensureDecimalConstant(new Decimal64(bigdec));
+                                }
+                            catch (ArithmeticException e) {}
+                        }
                     break;
 
                 case "Dec128":
-                    // TODO
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            try
+                                {
+                                return pool.ensureDecimalConstant(new Decimal128(bigdec));
+                                }
+                            catch (ArithmeticException e) {}
+                        }
                     break;
 
                 case "VarDec":
-                    // TODO
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            return toVarLenDecimalConstant(bigdec);
+                        }
                     break;
 
                 case "Int8":
@@ -530,7 +647,31 @@ public class LiteralExpression
                         }
 
                 case "Float16":
-                    // TODO
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                        case LIT_BIN: // TODO add support for *purposeful* NaN/infinity
+                            float   flVal = 0;
+                            boolean fErr  = false;
+                            try
+                                {
+                                flVal = Float.parseFloat(literal.getValue().toString());
+                                }
+                            catch (NumberFormatException e)
+                                {
+                                fErr = true;
+                                }
+                            // convert to/from 16-bit to test for overflow/underflow
+                            if (fErr || !Float.isFinite(flVal) || !Float.isFinite(
+                                    Float16Constant.toFloat(Float16Constant.toHalf(flVal))))
+                                {
+                                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                                        sName, literal.getString(getSource()));
+                                flVal = 0;
+                                }
+                            return pool.ensureFloat16Constant(flVal);
+                        }
                     break;
 
                 case "Float32":
@@ -538,7 +679,7 @@ public class LiteralExpression
                         {
                         case LIT_INT:
                         case LIT_DEC:
-                        case LIT_BIN:           // TODO need to support *purposeful* NaN/infinity
+                        case LIT_BIN: // TODO add support for *purposeful* NaN/infinity
                             float   flVal = 0;
                             boolean fErr  = false;
                             try
@@ -564,7 +705,7 @@ public class LiteralExpression
                         {
                         case LIT_INT:
                         case LIT_DEC:
-                        case LIT_BIN:           // TODO need to support *purposeful* NaN/infinity
+                        case LIT_BIN: // TODO add support for *purposeful* NaN/infinity
                             double  flVal = 0;
                             boolean fErr  = false;
                             try
@@ -586,12 +727,12 @@ public class LiteralExpression
                     break;
 
                 case "Float128":
-                    // TODO
-                    break;
+                    // TODO - how to support 128-bit float?
+                    throw new UnsupportedOperationException("128-bit binary floating point not implemented");
 
                 case "VarFloat":
-                    // TODO
-                    break;
+                    // TODO - how to support var-len float?
+                    throw new UnsupportedOperationException("var-len binary floating point not implemented");
 
                 default:
                     // just let it fall through to the generic handling
@@ -600,18 +741,6 @@ public class LiteralExpression
             }
 
         return validateAndConvertSingle(toConstant(), code, constType, errs);
-        }
-
-    @Override
-    public long getStartPosition()
-        {
-        return literal.getStartPosition();
-        }
-
-    @Override
-    public long getEndPosition()
-        {
-        return literal.getEndPosition();
         }
 
 

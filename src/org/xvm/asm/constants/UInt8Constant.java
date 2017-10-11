@@ -9,10 +9,11 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import static org.xvm.util.Handy.byteToHexString;
+import static org.xvm.util.Handy.nibbleToChar;
 
 
 /**
- * Represent an octet (unsigned 8-bit byte) constant.
+ * Represent a bit (1-bit), nibble (4-bit), and octet (unsigned 8-bit byte) constant.
  */
 public class UInt8Constant
         extends ValueConstant
@@ -32,7 +33,9 @@ public class UInt8Constant
             throws IOException
         {
         super(pool);
-        m_nVal = in.readUnsignedByte();
+
+        m_format = format;
+        m_nVal   = in.readUnsignedByte();
         }
 
     /**
@@ -43,8 +46,40 @@ public class UInt8Constant
      */
     public UInt8Constant(ConstantPool pool, int bVal)
         {
+        this(pool, Format.UInt8, bVal);
+        }
+
+    /**
+     * Construct a constant whose value is a bit, nibble, or octet.
+     *
+     * @param pool   the ConstantPool that will contain this Constant
+     * @param format one of: Bit, Nibble, UInt8
+     * @param bVal   the bit, nibble, or octet value
+     */
+    public UInt8Constant(ConstantPool pool, Format format, int bVal)
+        {
         super(pool);
-        m_nVal = bVal & 0xFF;
+
+        switch (format)
+            {
+            case Bit:
+                bVal = bVal == 0 ? 0 : 1;
+                break;
+
+            case Nibble:
+                bVal &= 0x0F;
+                break;
+
+            case UInt8:
+                bVal &= 0xFF;
+                break;
+
+            default:
+                throw new IllegalArgumentException("format=" + format);
+            }
+
+        m_format = format;
+        m_nVal   = bVal;
         }
 
 
@@ -52,7 +87,8 @@ public class UInt8Constant
 
     /**
      * {@inheritDoc}
-     * @return  the constant's unsigned byte value as a Java Integer in the range 0-255
+     * @return  the constant's unsigned byte value as a Java Integer in the range 0-255 (or smaller
+     *          for Nibble and Bit values)
      */
     @Override
     public Integer getValue()
@@ -66,7 +102,7 @@ public class UInt8Constant
     @Override
     public Format getFormat()
         {
-        return Format.UInt8;
+        return m_format;
         }
 
     @Override
@@ -85,7 +121,18 @@ public class UInt8Constant
     @Override
     public String getValueString()
         {
-        return byteToHexString(m_nVal);
+        switch (m_format)
+            {
+            case Bit:
+                return String.valueOf(m_nVal);
+
+            case Nibble:
+                return "0x" + nibbleToChar(m_nVal);
+
+            default:
+            case UInt8:
+                return byteToHexString(m_nVal);
+            }
         }
 
 
@@ -95,14 +142,14 @@ public class UInt8Constant
     protected void assemble(DataOutput out)
             throws IOException
         {
-        out.writeByte(getFormat().ordinal());
+        out.writeByte(m_format.ordinal());
         out.writeByte(m_nVal);
         }
 
     @Override
     public String getDescription()
         {
-        return "byte=" + getValueString();
+        return m_format.name() + '=' + getValueString();
         }
 
 
@@ -116,6 +163,11 @@ public class UInt8Constant
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The format of the constant; one of: Bit, Nibble, UInt8.
+     */
+    private final Format m_format;
 
     /**
      * The constant octet value stored here as an integer in the range 0-255.

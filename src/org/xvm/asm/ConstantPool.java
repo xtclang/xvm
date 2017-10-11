@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -65,6 +66,8 @@ import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
 
+import org.xvm.type.Decimal;
+import org.xvm.type.Decimal32;
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
@@ -306,14 +309,38 @@ public class ConstantPool
         return constant;
         }
 
+    public UInt8Constant ensureBitConstant(int n)
+        {
+        return ensureUInt8Constant(Format.Bit, n);
+        }
+
+    public UInt8Constant ensureNibbleConstant(int n)
+        {
+        return ensureUInt8Constant(Format.Nibble, n);
+        }
+
     public UInt8Constant ensureUInt8Constant(int n)
         {
-        UInt8Constant constant = (UInt8Constant) ensureLocatorLookup(Format.UInt8).get(n);
-        if (constant == null)
+        return ensureUInt8Constant(Format.UInt8, n);
+        }
+
+    public UInt8Constant ensureUInt8Constant(Format format, int n)
+        {
+        switch (format)
             {
-            constant = (UInt8Constant) register(new UInt8Constant(this, n));
+            case Bit:
+            case Nibble:
+            case UInt8:
+                UInt8Constant constant = (UInt8Constant) ensureLocatorLookup(format).get(n);
+                if (constant == null)
+                    {
+                    constant = (UInt8Constant) register(new UInt8Constant(this, n));
+                    }
+                return constant;
+
+            default:
+                throw new IllegalArgumentException("format=" + format);
             }
-        return constant;
         }
 
     /**
@@ -380,6 +407,39 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified decimal value, obtain a DecimalConstant that represents it.
+     *
+     * @param dec  the decimal value
+     *
+     * @return a DecimalConstant for the passed decimal value
+     */
+    public DecimalConstant ensureDecimalConstant(Decimal dec)
+        {
+        Format format;
+        switch (dec.getBitLength())
+            {
+            case 32:
+                format = Format.Dec32;
+                break;
+            case 64:
+                format = Format.Dec64;
+                break;
+            case 128:
+                format = Format.Dec128;
+                break;
+            default:
+                throw new IllegalArgumentException("unsupported decimal type: " + dec.getClass().getSimpleName());
+            }
+
+        DecimalConstant constant = (DecimalConstant) ensureLocatorLookup(format).get(dec);
+        if (constant == null)
+            {
+            constant = (DecimalConstant) register(new DecimalConstant(this, dec));
+            }
+        return constant;
+        }
+
+    /**
      * Given the specified floating point value, obtain a Float16Constant that represents it.
      *
      * @param flVal  the floating point value
@@ -391,7 +451,7 @@ public class ConstantPool
         Float16Constant constant = (Float16Constant) ensureLocatorLookup(Format.Float16).get(flVal);
         if (constant == null)
             {
-            constant = new Float16Constant(this, flVal);
+            constant = (Float16Constant) register(new Float16Constant(this, flVal));
             }
         return constant;
         }
@@ -408,7 +468,7 @@ public class ConstantPool
         Float32Constant constant = (Float32Constant) ensureLocatorLookup(Format.Float32).get(flVal);
         if (constant == null)
             {
-            constant = new Float32Constant(this, flVal);
+            constant = (Float32Constant) register(new Float32Constant(this, flVal));
             }
         return constant;
         }
@@ -425,7 +485,7 @@ public class ConstantPool
         Float64Constant constant = (Float64Constant) ensureLocatorLookup(Format.Float64).get(flVal);
         if (constant == null)
             {
-            constant = new Float64Constant(this, flVal);
+            constant = (Float64Constant) register(new Float64Constant(this, flVal));
             }
         return constant;
         }
@@ -440,7 +500,7 @@ public class ConstantPool
      */
     public Float128Constant ensureFloat128Constant(byte[] abVal)
         {
-        return new Float128Constant(this, abVal);
+        return (Float128Constant) register(new Float128Constant(this, abVal));
         }
 
     /**
@@ -455,7 +515,7 @@ public class ConstantPool
         VersionConstant constant = (VersionConstant) ensureLocatorLookup(Format.Version).get(ver.toString());
         if (constant == null)
             {
-            constant = new VersionConstant(this, ver);
+            constant = (VersionConstant) register(new VersionConstant(this, ver));
             }
         return constant;
         }
@@ -488,7 +548,7 @@ public class ConstantPool
         NamedCondition cond = (NamedCondition) ensureLocatorLookup(Format.ConditionNamed).get(sName);
         if (cond == null)
             {
-            cond = new NamedCondition(this, ensureStringConstant(sName));
+            cond = (NamedCondition) register(new NamedCondition(this, ensureStringConstant(sName)));
             }
         return cond;
         }
@@ -506,7 +566,7 @@ public class ConstantPool
         PresentCondition cond = (PresentCondition) ensureLocatorLookup(Format.ConditionPresent).get(constId);
         if (cond == null)
             {
-            cond = new PresentCondition(this, constId);
+            cond = (PresentCondition) register(new PresentCondition(this, constId));
             }
         return cond;
         }
@@ -522,7 +582,7 @@ public class ConstantPool
      */
     public VersionMatchesCondition ensureImportVersionCondition(ModuleConstant constModule, VersionConstant constVer)
         {
-        return new VersionMatchesCondition(this, constModule, constVer);
+        return (VersionMatchesCondition) register(new VersionMatchesCondition(this, constModule, constVer));
         }
 
     /**
@@ -551,7 +611,7 @@ public class ConstantPool
         VersionedCondition cond = (VersionedCondition) ensureLocatorLookup(Format.ConditionVersioned).get(constVer);
         if (cond == null)
             {
-            cond = new VersionedCondition(this, constVer);
+            cond = (VersionedCondition) register(new VersionedCondition(this, constVer));
             }
         return cond;
         }
@@ -574,7 +634,7 @@ public class ConstantPool
         NotCondition condNot = (NotCondition) ensureLocatorLookup(Format.ConditionNot).get(cond);
         if (condNot == null)
             {
-            condNot = new NotCondition(this, cond);
+            condNot = (NotCondition) register(new NotCondition(this, cond));
             }
         return condNot;
         }

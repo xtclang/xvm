@@ -483,6 +483,8 @@ public abstract class Constant
          * Values.
          */
         IntLiteral,
+        Bit,
+        Nibble,
         Int8,
         Int16,
         Int32,
