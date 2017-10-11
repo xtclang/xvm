@@ -83,14 +83,14 @@ public class MethodConstant
      * @param pool         the ConstantPool that will contain this Constant
      * @param constParent  specifies the MultiMethodConstant that contains this method
      * @param access       the accessibility of the method, public/private etc.
-     * @param returns      the return types
      * @param params       the param types
+     * @param returns      the return types
      */
     public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, Access access,
-                          TypeConstant[] returns, TypeConstant[] params)
+            TypeConstant[] params, TypeConstant[] returns)
         {
         this(pool, constParent, access,
-                pool.ensureSignatureConstant(constParent.getName(), returns, params));
+                pool.ensureSignatureConstant(constParent.getName(), params, returns));
         }
 
 
@@ -113,19 +113,11 @@ public class MethodConstant
         }
 
     /**
-     * @return the method's return types
+     * @return the method's parameter types
      */
-    public List<TypeConstant> getReturns()
+    public TypeConstant[] getRawParams()
         {
-        return getSignature().getReturns();
-        }
-
-    /**
-     * @return the method's return types
-     */
-    public TypeConstant[] getRawReturns()
-        {
-        return getSignature().getRawReturns();
+        return getSignature().getRawParams();
         }
 
     /**
@@ -137,11 +129,19 @@ public class MethodConstant
         }
 
     /**
-     * @return the method's parameter types
+     * @return the method's return types
      */
-    public TypeConstant[] getRawParams()
+    public TypeConstant[] getRawReturns()
         {
-        return getSignature().getRawParams();
+        return getSignature().getRawReturns();
+        }
+
+    /**
+     * @return the method's return types
+     */
+    public List<TypeConstant> getReturns()
+        {
+        return getSignature().getReturns();
         }
 
 

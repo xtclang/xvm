@@ -84,10 +84,10 @@ public class SignatureConstant
      *
      * @param pool     the ConstantPool that will contain this Constant
      * @param sName    the name of the method
-     * @param returns  the return types
      * @param params   the param types
+     * @param returns  the return types
      */
-    public SignatureConstant(ConstantPool pool, String sName, TypeConstant[] returns, TypeConstant[] params)
+    public SignatureConstant(ConstantPool pool, String sName, TypeConstant[] params, TypeConstant[] returns)
         {
         super(pool);
 
@@ -97,8 +97,8 @@ public class SignatureConstant
             }
 
         m_constName     = pool.ensureStringConstant(sName);
-        m_aconstReturns = validateTypes(returns);
         m_aconstParams  = validateTypes(params);
+        m_aconstReturns = validateTypes(returns);
         }
 
 
@@ -113,19 +113,11 @@ public class SignatureConstant
         }
 
     /**
-     * @return the method's return types
+     * @return the method's parameter types
      */
-    public List<TypeConstant> getReturns()
+    public TypeConstant[] getRawParams()
         {
-        return Arrays.asList(m_aconstReturns);
-        }
-
-    /**
-     * @return the method's return types
-     */
-    public TypeConstant[] getRawReturns()
-        {
-        return m_aconstReturns;
+        return m_aconstParams;
         }
 
     /**
@@ -137,11 +129,19 @@ public class SignatureConstant
         }
 
     /**
-     * @return the method's parameter types
+     * @return the method's return types
      */
-    public TypeConstant[] getRawParams()
+    public TypeConstant[] getRawReturns()
         {
-        return m_aconstParams;
+        return m_aconstReturns;
+        }
+
+    /**
+     * @return the method's return types
+     */
+    public List<TypeConstant> getReturns()
+        {
+        return Arrays.asList(m_aconstReturns);
         }
 
 
@@ -160,14 +160,14 @@ public class SignatureConstant
             {
             return true;
             }
-        for (Constant constant : m_aconstReturns)
+        for (Constant constant : m_aconstParams)
             {
             if (constant.containsUnresolved())
                 {
                 return true;
                 }
             }
-        for (Constant constant : m_aconstParams)
+        for (Constant constant : m_aconstReturns)
             {
             if (constant.containsUnresolved())
                 {
@@ -181,8 +181,8 @@ public class SignatureConstant
     public Constant simplify()
         {
         m_constName = (StringConstant) m_constName.simplify();
-        simplifyTypes(m_aconstReturns);
         simplifyTypes(m_aconstParams);
+        simplifyTypes(m_aconstReturns);
 
         // replace a void return with no return
         if (m_aconstReturns.length == 1)
@@ -200,11 +200,11 @@ public class SignatureConstant
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constName);
-        for (Constant constant : m_aconstReturns)
+        for (Constant constant : m_aconstParams)
             {
             visitor.accept(constant);
             }
-        for (Constant constant : m_aconstParams)
+        for (Constant constant : m_aconstReturns)
             {
             visitor.accept(constant);
             }
@@ -217,10 +217,10 @@ public class SignatureConstant
         int n = this.m_constName.compareTo(that.m_constName);
         if (n == 0)
             {
-            n = compareTypes(this.m_aconstReturns, that.m_aconstReturns);
+            n = compareTypes(this.m_aconstParams, that.m_aconstParams);
             if (n == 0)
                 {
-                n = compareTypes(this.m_aconstParams, that.m_aconstParams);
+                n = compareTypes(this.m_aconstReturns, that.m_aconstReturns);
                 }
             }
         return n;
@@ -291,8 +291,8 @@ public class SignatureConstant
         {
         ConstantPool pool = getConstantPool();
         m_constName     = (StringConstant) pool.getConstant(m_iName);
-        m_aconstReturns = lookupTypes(pool, m_aiReturns);
         m_aconstParams  = lookupTypes(pool, m_aiParams);
+        m_aconstReturns = lookupTypes(pool, m_aiReturns);
 
         m_aiReturns = null;
         m_aiParams  = null;
@@ -302,8 +302,8 @@ public class SignatureConstant
     protected void registerConstants(ConstantPool pool)
         {
         m_constName = (StringConstant) pool.register(m_constName);
-        registerTypes(pool, m_aconstReturns);
         registerTypes(pool, m_aconstParams);
+        registerTypes(pool, m_aconstReturns);
         }
 
     @Override
@@ -312,8 +312,8 @@ public class SignatureConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constName.getPosition());
-        writeTypes(out, m_aconstReturns);
         writeTypes(out, m_aconstParams);
+        writeTypes(out, m_aconstReturns);
         }
 
     @Override
@@ -511,14 +511,14 @@ public class SignatureConstant
     private int m_iName;
 
     /**
-     * During disassembly, this holds the indexes of the type constants for the return values.
-     */
-    private int[] m_aiReturns;
-
-    /**
      * During disassembly, this holds the indexes of the type constants for the parameters.
      */
     private int[] m_aiParams;
+
+    /**
+     * During disassembly, this holds the indexes of the type constants for the return values.
+     */
+    private int[] m_aiReturns;
 
     /**
      * The constant that represents the parent of this method.
@@ -526,12 +526,12 @@ public class SignatureConstant
     private StringConstant m_constName;
 
     /**
-     * The return values from the method.
-     */
-    TypeConstant[] m_aconstReturns;
-
-    /**
      * The invocation parameters of the method.
      */
     TypeConstant[] m_aconstParams;
+
+    /**
+     * The return values from the method.
+     */
+    TypeConstant[] m_aconstReturns;
     }

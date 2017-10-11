@@ -71,7 +71,7 @@ public abstract class Utils
         TypeConstant[] atVoid = new TypeConstant[0];
         TypeConstant[] atString = new TypeConstant[] {tString};
         SIG_DEFAULT = pool.ensureSignatureConstant("default", atVoid, atVoid);
-        SIG_TO_STRING = pool.ensureSignatureConstant("to", atString, atVoid);
+        SIG_TO_STRING = pool.ensureSignatureConstant("to", atVoid, atString);
         }
 
     // ----- hash.get() support -----

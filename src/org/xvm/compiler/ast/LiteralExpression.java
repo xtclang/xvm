@@ -261,7 +261,7 @@ public class LiteralExpression
                             new TypeConstant[] {typeTParams, typeTReturn});
                     MethodConstant methodTo    = pool.ensureMethodConstant(
                             pool.ensureEcstasyClassConstant("Object"), "to", Access.PUBLIC,
-                            new TypeConstant[] {typeFn}, SignatureConstant.NO_TYPES);
+                            SignatureConstant.NO_TYPES, new TypeConstant[] {typeFn});
 
                     // generate the code that turns the constant value from this expression into a
                     // function object that returns that value
@@ -346,7 +346,7 @@ public class LiteralExpression
                         Register argResult = new Register(typeResult);
                         MethodConstant methodTo = pool.ensureMethodConstant(
                                 pool.ensureEcstasyClassConstant("IntLiteral"), "to", Access.PUBLIC,
-                                new TypeConstant[] {typeResult}, SignatureConstant.NO_TYPES);
+                                SignatureConstant.NO_TYPES, new TypeConstant[] {typeResult});
 
                         code.add(new Var(argResult));
                         code.add(new Invoke_01(argLit, methodTo, argResult));

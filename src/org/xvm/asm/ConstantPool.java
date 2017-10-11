@@ -1011,13 +1011,13 @@ public class ConstantPool
      *                       that contains the method
      * @param sName          the method name
      * @param access         the method accessibility
-     * @param aconstReturns  the return values from the method
      * @param aconstParams   the invocation parameters for the method
+     * @param aconstReturns  the return values from the method
      *
      * @return the MethodConstant
      */
-    public MethodConstant ensureMethodConstant(IdentityConstant constParent, String sName, Access access,
-            TypeConstant[] aconstReturns, TypeConstant[] aconstParams)
+    public MethodConstant ensureMethodConstant(IdentityConstant constParent, String sName,
+            Access access, TypeConstant[] aconstParams, TypeConstant[] aconstReturns)
         {
         assert constParent != null;
 
@@ -1042,7 +1042,7 @@ public class ConstantPool
             }
 
         return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access,
-                aconstReturns, aconstParams));
+                aconstParams, aconstReturns));
         }
 
     /**
@@ -1086,14 +1086,16 @@ public class ConstantPool
      * Obtain a constant that represents a method signature.
      *
      * @param sName          the method name
-     * @param aconstReturns  the return value types
      * @param aconstParams   the parameter types
+     * @param aconstReturns  the return value types
      *
      * @return the SignatureConstant
      */
-    public SignatureConstant ensureSignatureConstant(String sName, TypeConstant[] aconstReturns, TypeConstant[] aconstParams)
+    public SignatureConstant ensureSignatureConstant(String sName, TypeConstant[] aconstParams,
+            TypeConstant[] aconstReturns)
         {
-        return (SignatureConstant) register(new SignatureConstant(this, sName, aconstReturns, aconstParams));
+        return (SignatureConstant) register(new SignatureConstant(this, sName, aconstParams,
+                aconstReturns));
         }
 
     /**

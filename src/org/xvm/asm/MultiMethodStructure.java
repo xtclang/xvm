@@ -95,7 +95,7 @@ public class MultiMethodStructure
             }
 
         MethodConstant constId = getConstantPool().ensureMethodConstant(
-                getIdentityConstant(), getName(), access, aconstReturns, aconstParams);
+                getIdentityConstant(), getName(), access, aconstParams, aconstReturns);
         MethodStructure struct = new MethodStructure(this, nFlags, constId, null, aReturns, aParams);
         addChild(struct);
         return struct;
