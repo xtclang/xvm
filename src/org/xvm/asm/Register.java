@@ -1,7 +1,6 @@
 package org.xvm.asm;
 
 
-import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.constants.TypeConstant;
 
 
@@ -126,16 +125,6 @@ public class Register
             default:
                 return false;
             }
-        }
-
-    /**
-     * Register all of the constants being used by the Register.
-     *
-     * @param registry  the ConstantRegistry to use to register any constants
-     */
-    public void registerConstants(ConstantRegistry registry)
-        {
-        m_type = (TypeConstant) registry.register(m_type);
         }
 
 

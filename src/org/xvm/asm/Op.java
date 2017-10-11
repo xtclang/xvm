@@ -140,6 +140,38 @@ public abstract class Op
         }
 
     /**
+     * Register the specified argument if it's a constant.
+     *
+     * @param arg       the argument or null
+     * @param registry  the ConstantRegistry to use to register any constants used by this op
+     */
+    public void registerArgument(Argument arg, ConstantRegistry registry)
+        {
+        if (arg instanceof Constant)
+            {
+            registry.register((Constant) arg);
+            }
+        }
+
+    /**
+     * Register the specified arguments if they are constants.
+     *
+     * @param aArg      the argument array
+     * @param registry  the ConstantRegistry that represents all of the constants used by the code
+     *                  containing the op
+     */
+    public void registerArguments(Argument[] aArg, ConstantRegistry registry)
+        {
+        if (aArg != null)
+            {
+            for (Argument arg : aArg)
+                {
+                registerArgument(arg, registry);
+                }
+            }
+        }
+
+    /**
      * Convert the specified argument to an index that will be used in the persistent form of the op
      * to identify the argument.
      *
@@ -154,6 +186,27 @@ public abstract class Op
         return arg instanceof Constant
                 ? ((Constant) arg).getPosition()   // TODO eventually: registry.indexOf((Constant) arg)
                 : ((Register) arg).getIndex();
+        }
+
+    /**
+     * Convert the specified argument array to an an array if indexes that will be used in the
+     * persistent form of the op to identify the arguments.
+     *
+     * @param aArg      the argument array
+     * @param registry  the ConstantRegistry that represents all of the constants used by the code
+     *                  containing the op
+     *
+     * @return the array of the arguments' indexes
+     */
+    protected int[] encodeArguments(Argument[] aArg, ConstantRegistry registry)
+        {
+        int c = aArg.length;
+        int[] anArg = new int[c];
+        for (int i = 0; i < c; i++)
+            {
+            anArg[i] = encodeArgument(aArg[i], registry);
+            }
+        return anArg;
         }
 
 
@@ -184,7 +237,7 @@ public abstract class Op
             final Op opNext = m_op;
             if (opNext == null)
                 {
-                throw new IllegalStateException("prefix requries a suffix");
+                throw new IllegalStateException("prefix requires a suffix");
                 }
             return opNext;
             }
@@ -551,22 +604,22 @@ public abstract class Op
             case OP_CALL_TN:     return new Call_TN     (in, aconst);
             case OP_CALL_TT:     return new Call_TT     (in, aconst);
 
-            case OP_INVOKE_00:   return new Invoke_00   (in, aconst);
-            case OP_INVOKE_01:   return new Invoke_01   (in, aconst);
-            case OP_INVOKE_0N:   return new Invoke_0N   (in, aconst);
-            case OP_INVOKE_0T:   return new Invoke_0T   (in, aconst);
-            case OP_INVOKE_10:   return new Invoke_10   (in, aconst);
-            case OP_INVOKE_11:   return new Invoke_11   (in, aconst);
-            case OP_INVOKE_1N:   return new Invoke_1N   (in, aconst);
-            case OP_INVOKE_1T:   return new Invoke_1T   (in, aconst);
-            case OP_INVOKE_N0:   return new Invoke_N0   (in, aconst);
-            case OP_INVOKE_N1:   return new Invoke_N1   (in, aconst);
-            case OP_INVOKE_NN:   return new Invoke_NN   (in, aconst);
-            case OP_INVOKE_NT:   return new Invoke_NT   (in, aconst);
-            case OP_INVOKE_T0:   return new Invoke_T0   (in, aconst);
-            case OP_INVOKE_T1:   return new Invoke_T1   (in, aconst);
-            case OP_INVOKE_TN:   return new Invoke_TN   (in, aconst);
-            case OP_INVOKE_TT:   return new Invoke_TT   (in, aconst);
+            case OP_NVOK_00:     return new Invoke_00   (in, aconst);
+            case OP_NVOK_01:     return new Invoke_01   (in, aconst);
+            case OP_NVOK_0N:     return new Invoke_0N   (in, aconst);
+            case OP_NVOK_0T:     return new Invoke_0T   (in, aconst);
+            case OP_NVOK_10:     return new Invoke_10   (in, aconst);
+            case OP_NVOK_11:     return new Invoke_11   (in, aconst);
+            case OP_NVOK_1N:     return new Invoke_1N   (in, aconst);
+            case OP_NVOK_1T:     return new Invoke_1T   (in, aconst);
+            case OP_NVOK_N0:     return new Invoke_N0   (in, aconst);
+            case OP_NVOK_N1:     return new Invoke_N1   (in, aconst);
+            case OP_NVOK_NN:     return new Invoke_NN   (in, aconst);
+            case OP_NVOK_NT:     return new Invoke_NT   (in, aconst);
+            case OP_NVOK_T0:     return new Invoke_T0   (in, aconst);
+            case OP_NVOK_T1:     return new Invoke_T1   (in, aconst);
+            case OP_NVOK_TN:     return new Invoke_TN   (in, aconst);
+            case OP_NVOK_TT:     return new Invoke_TT   (in, aconst);
 
             case OP_NEW_1:       return new New_1       (in, aconst);
             case OP_NEW_N:       return new New_N       (in, aconst);
@@ -823,22 +876,22 @@ public abstract class Op
     public static final int OP_CALL_TN      = 0xBE;
     public static final int OP_CALL_TT      = 0xBF;
 
-    public static final int OP_INVOKE_00    = 0xC0;
-    public static final int OP_INVOKE_01    = 0xC1;
-    public static final int OP_INVOKE_0N    = 0xC2;
-    public static final int OP_INVOKE_0T    = 0xC3;
-    public static final int OP_INVOKE_10    = 0xC4;
-    public static final int OP_INVOKE_11    = 0xC5;
-    public static final int OP_INVOKE_1N    = 0xC6;
-    public static final int OP_INVOKE_1T    = 0xC7;
-    public static final int OP_INVOKE_N0    = 0xC8;
-    public static final int OP_INVOKE_N1    = 0xC9;
-    public static final int OP_INVOKE_NN    = 0xCA;
-    public static final int OP_INVOKE_NT    = 0xCB;
-    public static final int OP_INVOKE_T0    = 0xCC;
-    public static final int OP_INVOKE_T1    = 0xCD;
-    public static final int OP_INVOKE_TN    = 0xCE;
-    public static final int OP_INVOKE_TT    = 0xCF;
+    public static final int OP_NVOK_00      = 0xC0;
+    public static final int OP_NVOK_01      = 0xC1;
+    public static final int OP_NVOK_0N      = 0xC2;
+    public static final int OP_NVOK_0T      = 0xC3;
+    public static final int OP_NVOK_10      = 0xC4;
+    public static final int OP_NVOK_11      = 0xC5;
+    public static final int OP_NVOK_1N      = 0xC6;
+    public static final int OP_NVOK_1T      = 0xC7;
+    public static final int OP_NVOK_N0      = 0xC8;
+    public static final int OP_NVOK_N1      = 0xC9;
+    public static final int OP_NVOK_NN      = 0xCA;
+    public static final int OP_NVOK_NT      = 0xCB;
+    public static final int OP_NVOK_T0      = 0xCC;
+    public static final int OP_NVOK_T1      = 0xCD;
+    public static final int OP_NVOK_TN      = 0xCE;
+    public static final int OP_NVOK_TT      = 0xCF;
 
     public static final int OP_NEW_0        = 0xD0;
     public static final int OP_NEW_1        = 0xD1;

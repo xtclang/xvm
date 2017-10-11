@@ -6,7 +6,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.Register;
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
@@ -448,12 +447,12 @@ public class xTestApp extends xModule
             Code code = ftTestCond.createCode();
 
             // #0 - i
-            Register reg_i = new Register(adapter.getClassType("Boolean", null));
-            code.add(new Var(reg_i)); // #1
+            Var var_i = new Var(adapter.getClassType("Boolean", null));
+            code.add(var_i); // #1
             code.add(new IsGt(0, adapter.ensureValueConstantId(0), 1));
 
             Label labelFalse = new Label();
-            code.add(new JumpFalse(reg_i, labelFalse));
+            code.add(new JumpFalse(var_i.getRegister(), labelFalse));
             code.add(new Return_N(new int[] {
                     adapter.ensureValueConstantId(true),
                     adapter.ensureValueConstantId("positive")}));
@@ -486,9 +485,7 @@ public class xTestApp extends xModule
                     adapter.ensureValueConstantId(0))) // #1 (i)
             .add(new Var_N(adapter.getClassTypeConstId("collections.Tuple<String,Int64>"),
                     adapter.ensureValueConstantId("t2"))) // #2 (t2)
-            .add(new Var_T(new int[] {
-                    adapter.getClassTypeConstId("String"),
-                    adapter.getClassTypeConstId("Int64")},
+            .add(new Var_T(adapter.getClassTypeConstId("String;Int64"),
                     new int[] {adapter.ensureValueConstantId(""), 1})) // #3
             .add(new NewG_1(adapter.getMethodConstId("collections.Tuple", "construct"),
                     -adapter.getClassTypeConstId("collections.Tuple<String,Int64>"), 3,

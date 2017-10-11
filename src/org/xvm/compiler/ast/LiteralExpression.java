@@ -265,10 +265,10 @@ public class LiteralExpression
 
                     // generate the code that turns the constant value from this expression into a
                     // function object that returns that value
-                    Register argResult = new Register(typeFn);
-                    code.add(new Var(argResult));
-                    code.add(new Invoke_01(argVal, methodTo, argResult));
-                    return argResult;
+                    Var varResult = new Var(typeFn);
+                    code.add(varResult);
+                    code.add(new Invoke_01(argVal, methodTo, varResult.getRegister()));
+                    return varResult.getRegister();
                     }
 
                 // untyped literals
@@ -343,14 +343,14 @@ public class LiteralExpression
                         // Bit    = IntLiteral.to<Bit>()
                         // Nibble = IntLiteral.to<Nibble>()
                         TypeConstant typeResult = pool.ensureEcstasyTypeConstant(sName);
-                        Register argResult = new Register(typeResult);
                         MethodConstant methodTo = pool.ensureMethodConstant(
-                                pool.ensureEcstasyClassConstant("IntLiteral"), "to", Access.PUBLIC,
-                                SignatureConstant.NO_TYPES, new TypeConstant[] {typeResult});
+                            pool.ensureEcstasyClassConstant("IntLiteral"), "to", Access.PUBLIC,
+                            SignatureConstant.NO_TYPES, new TypeConstant[]{typeResult});
 
-                        code.add(new Var(argResult));
-                        code.add(new Invoke_01(argLit, methodTo, argResult));
-                        return argResult;
+                        Var varResult = new Var(typeResult);
+                        code.add(varResult);
+                        code.add(new Invoke_01(argLit, methodTo, varResult.getRegister()));
+                        return varResult.getRegister();
                         }
                     break;
 

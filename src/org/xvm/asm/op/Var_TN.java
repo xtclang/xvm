@@ -5,16 +5,18 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-import org.xvm.asm.Scope;
+import org.xvm.asm.OpVar;
+
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Type;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
 import org.xvm.runtime.template.collections.xTuple;
@@ -28,19 +30,42 @@ import static org.xvm.util.Handy.writePackedLong;
  * VAR_TN STRING, #values:(TYPE, rvalue-src) ; next register is an initialized anonymous Tuple variable
  */
 public class Var_TN
-        extends Op
+        extends OpVar
     {
     /**
      * Construct a VAR_TN op.
      *
-     * @param anTypeConstId  the types of the tuple fields
-     * @param anValue        the values for the tuple fields
+     * @param nType      the type id of the Tuple variable
+     * @param nNameId    the name of the variable id
+     * @param anValueId  the value ids for the sequence
+     *
+     * @deprecated
      */
-    public Var_TN(int nNameConstId, int[] anTypeConstId, int[] anValue)
+    public Var_TN(int nType, int nNameId, int[] anValueId)
         {
-        f_nNameConstId  = nNameConstId;
-        f_anTypeConstId = anTypeConstId;
-        f_anArgValue    = anValue;
+        super(nType);
+
+        m_nNameId = nNameId;
+        m_anArgValue = anValueId;
+        }
+
+    /**
+     * Construct a VAR_TN op for the specified type, name and arguments.
+     *
+     * @param constType the variable type
+     * @param constName  the name constant
+     * @param aArgValue  the value argument
+     */
+    public Var_TN(TypeConstant constType, StringConstant constName, Argument[] aArgValue)
+        {
+        super(constType);
+
+        if (constName == null || aArgValue == null)
+            {
+            throw new IllegalArgumentException("name and values required");
+            }
+        m_constName = constName;
+        m_aArgValue = aArgValue;
         }
 
     /**
@@ -52,34 +77,26 @@ public class Var_TN
     public Var_TN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nNameConstId  = readPackedInt(in);
+        super(readPackedInt(in));
 
-        int c = readPackedInt(in);
-
-        f_anTypeConstId = new int[c];
-        f_anArgValue    = new int[c];
-        for (int i = 0; i < c; i++)
-            {
-            f_anTypeConstId[i] = readPackedInt(in);
-            f_anArgValue   [i] = readPackedInt(in);
-            }
+        m_nNameId = readPackedInt(in);
+        m_anArgValue = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_VAR_TN);
+        super.write(out, registry);
 
-        writePackedLong(out, f_nNameConstId);
-
-        int c = f_anArgValue.length;
-        writePackedLong(out, c);
-        for (int i = 0; i < c; i++)
+        if (m_constName != null)
             {
-            writePackedLong(out, f_anTypeConstId[i]);
-            writePackedLong(out, f_anArgValue[i]);
+            m_nNameId = encodeArgument(m_constName, registry);
+            m_anArgValue = encodeArguments(m_aArgValue, registry);
             }
+
+        writePackedLong(out, m_nNameId);
+        writeIntArray(out, m_anArgValue);
         }
 
     @Override
@@ -91,14 +108,17 @@ public class Var_TN
     @Override
     public int process(Frame frame, int iPC)
         {
-        int[] anClassId = f_anTypeConstId;
+        TypeConstant constType = (TypeConstant)
+                frame.f_context.f_pool.getConstant(m_nType);
+        assert constType.isParamsSpecified();
 
-        int cArgs = anClassId.length;
-        assert cArgs == f_anArgValue.length;
+        int cArgs = m_anArgValue.length;
+        List<TypeConstant> listTypes = constType.getParamTypes();
+        assert listTypes.size() == cArgs;
 
         try
             {
-            ObjectHandle[] ahArg = frame.getArguments(f_anArgValue, cArgs);
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, cArgs);
             if (ahArg == null)
                 {
                 return R_REPEAT;
@@ -110,14 +130,12 @@ public class Var_TN
             Type[] aType = new Type[cArgs];
             for (int i = 0; i < cArgs; i++)
                 {
-                TypeComposition clazz = types.ensureComposition(anClassId[i], mapActual);
-
-                aType[i] = clazz.ensurePublicType();
+                aType[i] = types.resolveType(listTypes.get(i), mapActual);
                 }
 
             TupleHandle hTuple = xTuple.makeHandle(aType, ahArg);
 
-            frame.introduceVar(hTuple.f_clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, hTuple);
+            frame.introduceVar(m_nType, m_nNameId, Frame.VAR_STANDARD, hTuple);
 
             return iPC + 1;
             }
@@ -128,12 +146,16 @@ public class Var_TN
         }
 
     @Override
-    public void simulate(Scope scope)
+    public void registerConstants(ConstantRegistry registry)
         {
-        scope.allocVar();
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgValue, registry);
         }
 
-    final private int   f_nNameConstId;
-    final private int[] f_anTypeConstId;
-    final private int[] f_anArgValue;
+    private int m_nNameId;
+    private int[] m_anArgValue;
+
+    private StringConstant m_constName;
+    private Argument[] m_aArgValue;
     }

@@ -24,13 +24,13 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * INVOKE_TN rvalue-target, CONST-METHOD, rvalue-params-tuple, #returns:(lvalue)
+ * NVOK_TN rvalue-target, CONST-METHOD, rvalue-params-tuple, #returns:(lvalue)
  */
 public class Invoke_TN
         extends OpInvocable
     {
     /**
-     * Construct an INVOKE_TN op.
+     * Construct an NVOK_TN op.
      *
      * @param nTarget    r-value that specifies the object on which the method being invoked
      * @param nMethodId  r-value that specifies the method being invoked
@@ -64,7 +64,7 @@ public class Invoke_TN
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_INVOKE_TN);
+        out.writeByte(OP_NVOK_TN);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nMethodId);
         writePackedLong(out, f_nArgTupleValue);
@@ -74,7 +74,7 @@ public class Invoke_TN
     @Override
     public int getOpCode()
         {
-        return OP_INVOKE_TN;
+        return OP_NVOK_TN;
         }
 
     @Override

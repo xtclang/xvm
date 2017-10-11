@@ -2,12 +2,12 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-import org.xvm.asm.Scope;
+import org.xvm.asm.OpVar;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
@@ -15,23 +15,34 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.Ref.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * VAR_D TYPE ; next register is an anonymous "dynamic reference" variable
  */
 public class Var_D
-        extends Op
+        extends OpVar
     {
     /**
      * Construct a VAR_D.
      *
-     * @param nTypeConstId   the index of the constant containing the type of the variable
+     * @param nType  the variable type id
+     *
+     * @deprecated
      */
-    public Var_D(int nTypeConstId)
+    public Var_D(int nType)
         {
-        f_nTypeConstId = nTypeConstId;
+        super(nType);
+        }
+
+    /**
+     * Construct a VAR_D op for the specified type.
+     *
+     * @param constType  the variable type
+     */
+    public Var_D(TypeConstant constType)
+        {
+        super(constType);
         }
 
     /**
@@ -43,15 +54,7 @@ public class Var_D
     public Var_D(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTypeConstId = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
-        {
-        out.writeByte(OP_VAR_D);
-        writePackedLong(out, f_nTypeConstId);
+        super(readPackedInt(in));
         }
 
     @Override
@@ -63,21 +66,12 @@ public class Var_D
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clz = frame.f_context.f_types.ensureComposition(
-                f_nTypeConstId, frame.getActualTypes());
+        TypeComposition clz = frame.f_context.f_types.ensureComposition(m_nType, frame.getActualTypes());
 
         RefHandle hRef = clz.f_template.createRefHandle(clz, null);
 
-        frame.introduceVar(clz, null, Frame.VAR_DYNAMIC_REF, hRef);
+        frame.introduceVar(clz.ensurePublicType(), null, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }
-
-    @Override
-    public void simulate(Scope scope)
-        {
-        scope.allocVar();
-        }
-
-    final private int f_nTypeConstId;
     }

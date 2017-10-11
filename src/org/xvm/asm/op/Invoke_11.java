@@ -19,13 +19,13 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * INVOKE_11 rvalue-target, rvalue-method, rvalue-param, lvalue-return
+ * NVOK_11 rvalue-target, rvalue-method, rvalue-param, lvalue-return
  */
 public class Invoke_11
         extends OpInvocable
     {
     /**
-     * Construct an INVOKE_11 op.
+     * Construct an NVOK_11 op.
      *
      * @param nTarget    r-value that specifies the object on which the method being invoked
      * @param nMethodId  r-value that specifies the method being invoked
@@ -59,7 +59,7 @@ public class Invoke_11
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_INVOKE_11);
+        out.writeByte(OP_NVOK_11);
         writePackedLong(out, f_nTargetValue);
         writePackedLong(out, f_nMethodId);
         writePackedLong(out, f_nArgValue);
@@ -69,7 +69,7 @@ public class Invoke_11
     @Override
     public int getOpCode()
         {
-        return OP_INVOKE_11;
+        return OP_NVOK_11;
         }
 
     @Override

@@ -46,7 +46,7 @@ public class X_Print
                 {
                 Frame.VarInfo info = frame.getVarInfo(nValue);
 
-                switch (info.m_nStyle)
+                switch (info.getStyle())
                     {
                     case Frame.VAR_DYNAMIC_REF:
                         sb.append("<dynamic> ");
@@ -57,10 +57,7 @@ public class X_Print
                         throw new IllegalStateException();
                     }
 
-                if (info.f_sVarName != null)
-                    {
-                    sb.append(info.f_sVarName).append("=");
-                    }
+                sb.append(info.getName()).append("=");
 
                 ObjectHandle hValue = frame.getArgument(nValue);
                 if (hValue == null)

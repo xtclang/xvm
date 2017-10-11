@@ -6,14 +6,14 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-import org.xvm.asm.Scope;
+import org.xvm.asm.OpVar;
+
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -23,20 +23,40 @@ import static org.xvm.util.Handy.writePackedLong;
  * VAR_IN TYPE, STRING, rvalue-src ; (next register is an initialized named variable)
  */
 public class Var_IN
-        extends Op
+        extends OpVar
     {
     /**
      * Construct a VAR_IN op.
      *
-     * @param nTypeConstId  the type of the variable
-     * @param nNameConstId  the name of the variable
-     * @param nValue        the initial value for the variable
+     * @param nType     the variable type id
+     * @param nNameId   the name of the variable id
+     * @param nValueId  the initial value ide
      */
-    public Var_IN(int nTypeConstId, int nNameConstId, int nValue)
+    public Var_IN(int nType, int nNameId, int nValueId)
         {
-        f_nClassConstId = nTypeConstId;
-        f_nNameConstId  = nNameConstId;
-        f_nArgValue     = nValue;
+        super(nType);
+
+        m_nNameId = nNameId;
+        m_nValueId = nValueId;
+        }
+
+    /**
+     * Construct a VAR_IN op for the specified type, name and argument.
+     *
+     * @param constType  the variable type
+     * @param constName  the name constant
+     * @param argValue   the value argument
+     */
+    public Var_IN(TypeConstant constType, StringConstant constName, Argument argValue)
+        {
+        super(constType);
+
+        if (argValue == null || constName == null)
+            {
+            throw new IllegalArgumentException("name and value required");
+            }
+        m_constName = constName;
+        m_argValue = argValue;
         }
 
     /**
@@ -48,19 +68,25 @@ public class Var_IN
     public Var_IN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nClassConstId = readPackedInt(in);
-        f_nNameConstId  = readPackedInt(in);
-        f_nArgValue     = readPackedInt(in);
+        super(readPackedInt(in));
+
+        m_nNameId = readPackedInt(in);
+        m_nValueId = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
-        out.writeByte(OP_VAR_IN);
-        writePackedLong(out, f_nClassConstId);
-        writePackedLong(out, f_nNameConstId);
-        writePackedLong(out, f_nArgValue);
+        super.write(out, registry);
+
+        if (m_argValue != null)
+            {
+            m_nNameId = encodeArgument(m_constName, registry);
+            m_nValueId = encodeArgument(m_argValue, registry);
+            }
+        writePackedLong(out, m_nNameId);
+        writePackedLong(out, m_nValueId);
         }
 
     @Override
@@ -72,20 +98,15 @@ public class Var_IN
     @Override
     public int process(Frame frame, int iPC)
         {
-        ServiceContext context = frame.f_context;
-
-        TypeComposition clazz = context.f_types.ensureComposition(
-                f_nClassConstId, frame.getActualTypes());
-
         try
             {
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            ObjectHandle hArg = frame.getArgument(m_nValueId);
             if (hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            frame.introduceVar(clazz, frame.getString(f_nNameConstId), Frame.VAR_STANDARD, hArg);
+            frame.introduceVar(m_nType, m_nNameId, Frame.VAR_STANDARD, hArg);
 
             return iPC + 1;
             }
@@ -96,12 +117,17 @@ public class Var_IN
         }
 
     @Override
-    public void simulate(Scope scope)
+    public void registerConstants(ConstantRegistry registry)
         {
-        scope.allocVar();
+        super.registerConstants(registry);
+
+        registerArgument(m_constName, registry);
+        registerArgument(m_argValue, registry);
         }
 
-    final private int f_nClassConstId;
-    final private int f_nNameConstId;
-    final private int f_nArgValue;
+    private int m_nNameId;
+    private int m_nValueId;
+
+    private StringConstant m_constName;
+    private Argument m_argValue;
     }

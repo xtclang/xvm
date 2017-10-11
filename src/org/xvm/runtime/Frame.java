@@ -16,6 +16,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.IntConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
@@ -374,7 +375,7 @@ public class Frame
                 case VAR_STANDARD:
                     if (hValue instanceof FutureHandle)
                         {
-                        if (info.f_clazz == hValue.f_clazz)
+                        if (info.getType() == hValue.m_type)
                             {
                             // TODO: allow hValue to be a subclass?
                             // this can only be a trivial assignment, for example:
@@ -503,7 +504,7 @@ public class Frame
             ahValue[i] = getReturnValue(aiArg[i]);
             }
 
-        TypeComposition clazz = f_framePrev.getVarInfo(iReturn).f_clazz;
+        TypeComposition clazz = f_framePrev.getVarInfo(iReturn).getType().f_clazz;
         int iResult = f_framePrev.assignValue(iReturn, xTuple.makeHandle(clazz, ahValue));
         switch (iResult)
             {
@@ -597,7 +598,7 @@ public class Frame
     public TypeComposition getArgumentClass(int iArg)
         {
         return iArg >= 0
-                ? getVarInfo(iArg).f_clazz
+                ? getVarInfo(iArg).getType().f_clazz
                 : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg).f_clazzCanonical;
         }
 
@@ -704,11 +705,24 @@ public class Frame
         }
 
     // Note: this method increments up the "nextVar" index
-    public void introduceVar(TypeComposition clz, String sName, int nStyle, ObjectHandle hValue)
+    public void introduceVar(int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        f_aInfo[nVar] = new VarInfo(clz, sName, nStyle);
+        f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
+
+        if (hValue != null)
+            {
+            f_ahVar[nVar] = hValue;
+            }
+        }
+
+    // Note: this method increments up the "nextVar" index
+    public void introduceVar(Type type, String sName, int nStyle, ObjectHandle hValue)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(type, sName, nStyle);
 
         if (hValue != null)
             {
@@ -723,7 +737,7 @@ public class Frame
 
         int nVar = f_anNextVar[m_iScope]++;
 
-        f_aInfo[nVar] = new VarInfo(infoFrom.f_clazz, null, infoFrom.m_nStyle);
+        f_aInfo[nVar] = new VarInfo(infoFrom.m_type, null, infoFrom.m_nStyle);
         }
 
     public VarInfo getVarInfo(int nVar)
@@ -739,8 +753,8 @@ public class Frame
                 throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
                 }
 
-            // TODO: the class info should come from the signature (compile-time info)
-            info = f_aInfo[nVar] = new VarInfo(f_ahVar[nVar].f_clazz, sName, VAR_STANDARD);
+            info = f_aInfo[nVar] = new VarInfo(
+                f_function.getParam(nVar).getType().getPosition(), sName, VAR_STANDARD);
             }
         return info;
         }
@@ -928,7 +942,7 @@ public class Frame
 
             frame.f_anNextVar[nScope] = frame.f_anNextVar[nScope - 1];
 
-            frame.introduceVar(hException.f_clazz, sVarName, VAR_STANDARD, hException);
+            frame.introduceVar(hException.m_type, sVarName, VAR_STANDARD, hException);
 
             frame.m_hException = null;
             }
@@ -948,7 +962,7 @@ public class Frame
 
         public int handle(Frame frame, ExceptionHandle hException, int iGuard)
             {
-            introduceException(frame, iGuard, hException, null);
+            introduceException(frame, iGuard, hException, "");
 
             return f_nStartAddress + f_nFinallyRelAddress;
             }
@@ -982,10 +996,8 @@ public class Frame
                         ensureComposition(f_anClassConstId[iCatch], frame.getActualTypes());
                 if (clzException.isA(clzCatch))
                     {
-                    StringConstant constVarName = (StringConstant)
-                            context.f_pool.getConstant(-f_anNameConstId[iCatch]);
-
-                    introduceException(frame, iGuard, hException, constVarName.getValue());
+                    introduceException(frame, iGuard, hException,
+                        frame.getString(f_anNameConstId[iCatch]));
 
                     return f_nStartAddress + f_anCatchRelAddress[iCatch];
                     }
@@ -995,18 +1007,71 @@ public class Frame
         }
 
     // variable into (support for Refs and debugger)
-    public static class VarInfo
+    public class VarInfo
         {
-        public final TypeComposition f_clazz;
-        public final String f_sVarName;
-        public int m_nStyle; // one of the VAR_* values
-        public RefHandle m_ref; // an "active" reference to this register
+        private int m_nTypeId;
+        private Type m_type;
+        private int m_nNameId;
+        private String m_sVarName;
+        private int m_nStyle; // one of the VAR_* values
+        private RefHandle m_ref; // an "active" reference to this register
 
-        public VarInfo(TypeComposition clazz, String sName, int nStyle)
+        public VarInfo(int nTypeId, int nNameId, int nStyle)
             {
-            f_clazz = clazz;
-            f_sVarName = sName;
+            m_nTypeId = nTypeId;
+            m_nNameId = nNameId;
             m_nStyle = nStyle;
+            }
+
+        public VarInfo(int nTypeId, String sName, int nStyle)
+            {
+            m_nTypeId = nTypeId;
+            m_sVarName = sName;
+            m_nStyle = nStyle;
+            }
+
+        public VarInfo(Type type, String sName, int nStyle)
+            {
+            m_type = type;
+            m_sVarName = sName;
+            m_nStyle = nStyle;
+            }
+
+        public String getName()
+            {
+            String sName = m_sVarName;
+            if (sName == null)
+                {
+                sName = m_sVarName = m_nNameId < 0 ? getString(m_nNameId) : "";
+                }
+            return sName;
+            }
+
+        public Type getType()
+            {
+            Type type = m_type;
+            if (type == null)
+                {
+                TypeConstant constType = (TypeConstant) f_context.f_pool.getConstant(m_nTypeId);
+
+                type = m_type = f_context.f_types.resolveType(constType, getActualTypes());
+                }
+            return type;
+            }
+
+        public int getStyle()
+            {
+            return m_nStyle;
+            }
+
+        public RefHandle getRef()
+            {
+            return m_ref;
+            }
+
+        public void setRef(RefHandle ref)
+            {
+            m_ref = ref;
             }
 
         // this VarInfo goes out of scope
@@ -1016,6 +1081,11 @@ public class Frame
                 {
                 m_ref.dereference();
                 }
+            }
+
+        public String toString()
+            {
+            return getName() + ": " + getType();
             }
         }
 
