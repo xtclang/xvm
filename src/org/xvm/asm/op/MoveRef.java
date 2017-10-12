@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.Collections;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpInvocable;
 import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
@@ -42,18 +43,18 @@ public class MoveRef
         }
 
     /**
-     * Construct a REF op for the passed Registers.
+     * Construct a REF op for the passed arguments.
      *
-     * @param regSrc   the source Register
+     * @param argSrc   the source Register
      * @param regDest  the destination Register
      */
-    public MoveRef(Register regSrc, Register regDest)
+    public MoveRef(Argument argSrc, Register regDest)
         {
-        if (regSrc == null || regDest == null)
+        if (argSrc == null || regDest == null)
             {
-            throw new IllegalArgumentException("registers required");
+            throw new IllegalArgumentException("arguments required");
             }
-        m_regSrc  = regSrc;
+        m_argSrc = argSrc;
         m_regDest = regDest;
         }
 
@@ -74,10 +75,10 @@ public class MoveRef
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        if (m_regSrc != null)
+        if (m_argSrc != null)
             {
-            m_nSrcValue  = encodeArgument(m_regSrc.getType(), registry);
-            m_nDestValue = encodeArgument(m_regDest.getType(), registry);
+            m_nSrcValue  = encodeArgument(m_argSrc, registry);
+            m_nDestValue = encodeArgument(m_regDest, registry);
             }
 
         out.writeByte(OP_REF);
@@ -107,6 +108,7 @@ public class MoveRef
                 }
             else
                 {
+                // the destination type must be the same as the source
                 frame.f_ahVar[m_nDestValue] = hRef;
                 }
             }
@@ -123,6 +125,7 @@ public class MoveRef
                 }
             else
                 {
+                // the destination type must be the same as the source
                 frame.f_ahVar[m_nDestValue] = hRef;
                 }
             }
@@ -139,9 +142,15 @@ public class MoveRef
             }
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArgument(m_argSrc, registry);
+        }
+
     private int m_nSrcValue;
     private int m_nDestValue;
 
-    private Register m_regSrc;
+    private Argument m_argSrc;
     private Register m_regDest;
     }

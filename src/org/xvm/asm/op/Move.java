@@ -13,6 +13,7 @@ import org.xvm.asm.Scope;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Type;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -39,18 +40,18 @@ public class Move
         }
 
     /**
-     * Construct a MOV op for the passed Registers.
+     * Construct a MOV op for the passed arguments.
      *
-     * @param regFrom  the Register to move from
+     * @param argFrom  the Register to move from
      * @param regTo  the Register to move to
      */
-    public Move(Register regFrom, Register regTo)
+    public Move(Argument argFrom, Register regTo)
         {
-        if (regFrom == null || regTo == null)
+        if (argFrom == null || regTo == null)
             {
-            throw new IllegalArgumentException("registers required");
+            throw new IllegalArgumentException("arguments required");
             }
-        m_regFrom = regFrom;
+        m_argFrom = argFrom;
         m_regTo   = regTo;
         }
 
@@ -71,10 +72,10 @@ public class Move
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        if (m_regFrom != null)
+        if (m_argFrom != null)
             {
-            m_nFromValue = encodeArgument(m_regFrom.getType(), registry);
-            m_nToValue   = encodeArgument(m_regTo.getType(), registry);
+            m_nFromValue = encodeArgument(m_argFrom, registry);
+            m_nToValue   = encodeArgument(m_regTo, registry);
             }
 
         out.writeByte(OP_MOV);
@@ -93,17 +94,47 @@ public class Move
         {
         try
             {
-            ObjectHandle hValue = frame.getArgument(m_nFromValue);
+            int nFrom = m_nFromValue;
+            int nTo   = m_nToValue;
+
+            ObjectHandle hValue = frame.getArgument(nFrom);
             if (hValue == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (frame.isNextRegister(m_nToValue))
+            if (frame.isNextRegister(nTo))
                 {
-                frame.copyVarInfo(m_nFromValue);
+                frame.copyVarInfo(nFrom);
                 }
-            return frame.assignValue(m_nToValue, hValue);
+            else
+                {
+                Type typeFrom = hValue.m_type;
+                Type typeTo   = frame.getArgumentType(nTo);
+
+                switch (typeFrom.calculateRelation(typeTo))
+                    {
+                    case EQUAL:
+                    case SUB:
+                        // no need to do anything
+                        break;
+
+                    case SUB_WEAK:
+                        // the types are assignable, but we need to inject a "safe-wrapper" proxy;
+                        // for example, in the case of:
+                        //      List<Object> lo;
+                        //      List<String> ls = ...;
+                        //      lo = ls;
+                        // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
+                        // run-time type of "String"
+                        throw new UnsupportedOperationException("TODO - wrap"); // TODO: wrap the handle
+
+                    default:
+                        // the compiler/verifier shouldn't have allowed this
+                        throw new IllegalStateException();
+                    }
+                }
+            return frame.assignValue(nTo, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -120,9 +151,15 @@ public class Move
             }
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArgument(m_argFrom, registry);
+        }
+
     private int m_nFromValue;
     private int m_nToValue;
 
-    private Register m_regFrom;
+    private Argument m_argFrom;
     private Register m_regTo;
     }

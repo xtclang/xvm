@@ -67,7 +67,7 @@
 
 - re-work ops:
     + Merge Ref and MoveRef
-    - Move, Ref - allow next unallocated register; cast logic
+    + Move, Ref - allow next unallocated register;
     - allow next register and local property for GP_Add, GP_NEG
     - allow local property for IP_*
     - allow next register for *GET/*SET
@@ -80,9 +80,12 @@
 
 - Class, Type
 
-- a new DVAR like op-code to provide additional parameters (e.g. injection name)
+- a new VAR_D like op-code to provide additional parameters (e.g. injection name)
 
 - introduce stock exception (Bounds, IllegalState, etc.)
+
+- Type: by-method comparison
+- Move: "safe wrapper" logic
 
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$

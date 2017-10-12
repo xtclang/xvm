@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -17,7 +18,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * GP_ADD rvalue1, rvalue2, lvalue   ; T + T -> T
+ * GP_ADD rvalue1, rvalue2, lvalue ; T + T -> T
  */
 public class GP_Add
         extends Op
@@ -28,12 +29,33 @@ public class GP_Add
      * @param nTarget  the first r-value, which will implement the add
      * @param nArg     the second r-value
      * @param nRet     the l-value to store the result into
+     *
+     * @deprecated
      */
     public GP_Add(int nTarget, int nArg, int nRet)
         {
-        f_nTargetValue = nTarget;
-        f_nArgValue    = nArg;
-        f_nRetValue    = nRet;
+        m_nTarget   = nTarget;
+        m_nArgValue = nArg;
+        m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct a GP_ADD op for the passed arguments.
+     *
+     * @param argTarget  the target Argument
+     * @param argValue   the second value Argument
+     * @param regReturn  the Register to move the result into
+     */
+    public GP_Add(Argument argTarget, Argument argValue, Register regReturn)
+        {
+        if (argTarget == null || argValue == null || regReturn == null)
+            {
+            throw new IllegalArgumentException("arguments required");
+            }
+
+        m_argTarget = argTarget;
+        m_argValue  = argValue;
+        m_regReturn = regReturn;
         }
 
     /**
@@ -45,19 +67,26 @@ public class GP_Add
     public GP_Add(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nArgValue    = readPackedInt(in);
-        f_nRetValue    = readPackedInt(in);
+        m_nTarget   = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_argTarget != null)
+            {
+            m_nTarget   = encodeArgument(m_argTarget, registry);
+            m_nArgValue = encodeArgument(m_argValue,  registry);
+            m_nRetValue = encodeArgument(m_regReturn, registry);
+            }
+
         out.writeByte(OP_GP_ADD);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nTarget);
+        writePackedLong(out, m_nArgValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -71,15 +100,15 @@ public class GP_Add
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
+            ObjectHandle hArg = frame.getArgument(m_nArgValue);
 
             if (hTarget == null || hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, f_nRetValue);
+            return hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -87,7 +116,18 @@ public class GP_Add
             }
         }
 
-    private final int f_nTargetValue;
-    private final int f_nArgValue;
-    private final int f_nRetValue;
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArgument(m_argTarget, registry);
+        registerArgument(m_argValue, registry);
+        }
+
+    private int m_nTarget;
+    private int m_nArgValue;
+    private int m_nRetValue;
+
+    private Argument m_argTarget;
+    private Argument m_argValue;
+    private Register m_regReturn;
     }
