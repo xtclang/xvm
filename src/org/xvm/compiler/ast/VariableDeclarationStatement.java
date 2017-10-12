@@ -1,6 +1,15 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.Var_IN;
+import org.xvm.asm.op.Var_N;
+
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -11,8 +20,6 @@ import java.lang.reflect.Field;
  * optional initial value.
  *
  * Additionally, this can represent the combination of a variable "conditional declaration".
- *
- * @author cp 2017.04.04
  */
 public class VariableDeclarationStatement
         extends Statement
@@ -62,6 +69,46 @@ public class VariableDeclarationStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        // TODO verify conditional usage (right hand side must have a conditional return?)
+        // TODO peel ref-specific annotations off of the type (e.g. "@Future")
+
+        boolean fValid = type.validate(ctx, errs);
+        if (value != null)
+            {
+            fValid &= value.validate(ctx, errs);
+            }
+        return fValid;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        // TODO conditional support
+        // TODO DVAR support
+
+        TypeConstant   typeV     = type.ensureTypeConstant();
+        StringConstant constName = getConstantPool().ensureStringConstant((String) name.getValue());
+        if (value == null)
+            {
+            code.add(new Var_N(typeV, constName));
+            }
+        else
+            {
+            // TODO type-specific handling
+            // +VAR_SN     TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("S"=) Sequence variable
+            // +VAR_TN     TYPE, #values:(rvalue)                  ; initialized ("N"=) named ("T"=) Tuple variable
+            code.add(new Var_IN(typeV, constName, value.generateArgument(code, typeV, false, errs)));
+            }
+
+        return value.canComplete();
         }
 
 

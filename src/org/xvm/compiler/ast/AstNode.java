@@ -23,6 +23,8 @@ import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 
+import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -31,8 +33,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * Common base class for all statements and expressions.
- *
- * @author cp 2017.04.11
  */
 public abstract class AstNode
         implements Iterable<AstNode>
@@ -410,6 +410,23 @@ public abstract class AstNode
         }
 
 
+    // ----- method compilation --------------------------------------------------------------------
+
+    /**
+     * Before generating the code for the method body, resolve names and verify definite assignment,
+     * etc.
+     *
+     * @param ctx    the compilation context for the statement
+     * @param errs   the error listener to log to
+     *
+     * @return true iff the compilation can proceed
+     */
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        throw notImplemented();
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -635,6 +652,15 @@ public abstract class AstNode
 
 
     // ----- internal -------------------------------------------------------------------
+
+    /**
+     * @return nothing, because the method always throws
+     * @throws UnsupportedOperationException this exception is always thrown by this method
+     */
+    protected UnsupportedOperationException notImplemented()
+        {
+        throw new UnsupportedOperationException("not implemented by: " + this.getClass().getSimpleName());
+        }
 
     protected static Field[] fieldsForNames(Class clz, String... names)
         {

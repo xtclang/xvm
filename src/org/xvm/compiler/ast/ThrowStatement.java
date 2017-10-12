@@ -1,15 +1,22 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
+
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.Argument;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.Throw;
+
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Token;
 
 
 /**
  * A throw statement throws an exception.
- *
- * @author cp 2017.04.09
  */
 public class ThrowStatement
         extends Statement
@@ -24,7 +31,6 @@ public class ThrowStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
 
     @Override
     public long getStartPosition()
@@ -42,6 +48,28 @@ public class ThrowStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        // validate the throw value expressions
+        return expr.validate(ctx, errs);
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        ConstantPool pool  = getConstantPool();
+        TypeConstant typeE = pool.ensureEcstasyTypeConstant("Exception");
+        Argument     argE  = expr.generateArgument(code, typeE, false, errs);
+        code.add(new Throw(argE));
+
+        // throw never completes
+        return false;
         }
 
 

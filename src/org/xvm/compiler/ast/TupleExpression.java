@@ -1,7 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.io.DataInput;
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -21,8 +20,6 @@ import org.xvm.util.Severity;
 
 /**
  * A tuple expression is an expression containing some number (0 or more) expressions.
- *
- * @author cp 2017.04.07
  */
 public class TupleExpression
         extends Expression
@@ -43,7 +40,7 @@ public class TupleExpression
     /**
      * @return get the TypeExpression for the tuple, if any; otherwise return null
      */
-    TypeExpression getTypeExpression()
+    public TypeExpression getTypeExpression()
         {
         return m_type;
         }
@@ -54,44 +51,6 @@ public class TupleExpression
     public List<Expression> getExpressions()
         {
         return m_exprs;
-        }
-
-    @Override
-    public boolean isConstant()
-        {
-        List<Expression> exprs = getExpressions();
-        if (exprs != null)
-            {
-            // the tuple is constant if its members are constants
-            for (Expression expr : getExpressions())
-                {
-                if (!expr.isConstant())
-                    {
-                    return false;
-                    }
-                }
-            }
-        return true;
-        }
-
-    @Override
-    public Constant toConstant()
-        {
-        // TODO current design does not allow conformance to the tuple type that was specified
-        TypeConstant     constTType = getImplicitType();
-        assert constTType.isTuple();
-        int              cFields    = constTType.getTupleFieldCount();
-        List<Expression> listExprs  = m_exprs;
-        int              cExprs     = listExprs.size();
-        Constant[]       aconst     = new Constant[cExprs];
-        for (int i = 0; i < cExprs; ++i)
-            {
-            TypeConstant constFType = i < cFields
-                    ? constTType.getTupleFieldType(i)
-                    : getConstantPool().ensureEcstasyTypeConstant("Object");
-            aconst[i] = listExprs.get(i).toConstant();
-            }
-        return getConstantPool().ensureTupleConstant(constTType, aconst);
         }
 
     @Override
@@ -114,6 +73,24 @@ public class TupleExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public boolean isConstant()
+        {
+        List<Expression> exprs = getExpressions();
+        if (exprs != null)
+            {
+            // the tuple is constant if its members are constants
+            for (Expression expr : getExpressions())
+                {
+                if (!expr.isConstant())
+                    {
+                    return false;
+                    }
+                }
+            }
+        return true;
+        }
 
     @Override
     public TypeConstant getImplicitType()
@@ -156,6 +133,26 @@ public class TupleExpression
         }
 
     @Override
+    public Constant generateConstant(TypeConstant constType, ErrorListener errs)
+        {
+        // TODO current design does not allow conformance to the tuple type that was specified
+        TypeConstant     constTType = getImplicitType();
+        assert constTType.isTuple();
+        int              cFields    = constTType.getTupleFieldCount();
+        List<Expression> listExprs  = m_exprs;
+        int              cExprs     = listExprs.size();
+        Constant[]       aconst     = new Constant[cExprs];
+        for (int i = 0; i < cExprs; ++i)
+            {
+            TypeConstant constFType = i < cFields
+                    ? constTType.getTupleFieldType(i)
+                    : getConstantPool().ensureEcstasyTypeConstant("Object");
+            aconst[i] = listExprs.get(i).toConstant();
+            }
+        return getConstantPool().ensureTupleConstant(constTType, aconst);
+        }
+
+    @Override
     public Op.Argument generateArgument(MethodStructure.Code code, TypeConstant constType,
             boolean fTupleOk, ErrorListener errs)
         {
@@ -166,8 +163,10 @@ public class TupleExpression
             }
         else
             {
-            log(errs, Severity.ERROR, Compiler)
+            // TODO log(errs, Severity.ERROR, Compiler)
             }
+        // TODO
+        return null;
         }
 
     @Override
@@ -219,10 +218,10 @@ public class TupleExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private TypeExpression   m_type;
-    private List<Expression> m_exprs;
-    private long             m_lStartPos;
-    private long             m_lEndPos;
+    protected TypeExpression   m_type;
+    protected List<Expression> m_exprs;
+    protected long             m_lStartPos;
+    protected long             m_lEndPos;
 
     /**
      * Cached type of the tuple.

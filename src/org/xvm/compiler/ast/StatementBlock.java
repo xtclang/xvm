@@ -8,8 +8,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
+import org.xvm.asm.op.Return_0;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
@@ -21,8 +23,6 @@ import org.xvm.util.Severity;
 
 /**
  * An block statement specifies a series of statements.
- *
- * @author cp 2017.03.28
  */
 public class StatementBlock
         extends Statement
@@ -157,19 +157,74 @@ public class StatementBlock
 
     // ----- compilation ---------------------------------------------------------------------------
 
-    @Override
+    /**
+     * Generate assembly code for a method. This is the entry point for the compilation of a method.
+     *
+     * @param code  the code object to which the assembly is added
+     * @param errs  the error listener to log to
+     */
     public void emit(Code code, ErrorListener errs)
         {
+        Context ctx = new Context(code.getMethodStructure());
+
+        if (validate(ctx, errs))
+            {
+            boolean fCompletes = completes(ctx, true, code, errs);
+
+            if (fCompletes && code.getMethodStructure().getReturns().isEmpty())
+                {
+                // a void method has an implicit "return;" at the end of it
+                code.add(new Return_0());
+                }
+            }
+        }
+
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        int cErrs = 0;
+
+        List<Statement> stmts = this.stmts;
+        if (stmts != null && !stmts.isEmpty())
+            {
+            ctx.enterScope();
+            for (Statement stmt : stmts)
+                {
+                if (!stmt.validate(ctx, errs) && ++cErrs > 10)
+                    {
+                    break;
+                    }
+                }
+            ctx.exitScope();
+            }
+
+        return cErrs == 0;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        boolean fCompletable = fReachable;
+
         List<Statement> stmts = this.stmts;
         if (stmts != null && !stmts.isEmpty())
             {
             code.add(new Enter());
             for (Statement stmt : stmts)
                 {
-                stmt.emit(code, errs);
+                if (fReachable && !fCompletable)
+                    {
+                    // this statement is the first statement that cannot be reached
+                    fReachable = false;
+                    stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
+                    }
+
+                fCompletable &= stmt.completes(ctx, fReachable, code, errs);
                 }
             code.add(new Exit());
             }
+
+        return fCompletable;
         }
 
 

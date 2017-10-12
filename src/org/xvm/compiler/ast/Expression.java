@@ -11,6 +11,10 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.JumpTrue;
+import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
@@ -25,20 +29,8 @@ public abstract class Expression
     {
     // ----- accessors -----------------------------------------------------------------------------
 
-    /**
-     * @return true iff the Expression is a constant value
-     */
-    public boolean isConstant()
-        {
-        return false;
-        }
-
+    // TODO remove
     public Constant toConstant()
-        {
-        return toConstant(null);
-        }
-
-    public Constant toConstant(TypeConstant constType)
         {
         assert isConstant();
         throw notImplemented();
@@ -81,6 +73,49 @@ public abstract class Expression
         throw notImplemented();
         }
 
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    /**
+     * @return true iff the Expression represents an "L-value" to which a value can be assigned
+     */
+    public boolean isAssignable()
+        {
+        return false;
+        }
+
+    public boolean isAssignableTo(TypeConstant type)
+        {
+        // TODO this should be an abstract method
+        throw notImplemented();
+        }
+
+    /**
+     * @return true iff the Expression is a constant value
+     */
+    public boolean isConstant()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff the Expression is the constant value "false"
+     */
+    public boolean isConstantFalse()
+        {
+        // TODO
+        return false;
+        }
+
+    /**
+     * @return true iff the Expression is the constant value "false"
+     */
+    public boolean isConstantTrue()
+        {
+        // TODO
+        return false;
+        }
+
     /**
      * @return true iff the expression is capable of completing normally
      */
@@ -88,18 +123,6 @@ public abstract class Expression
         {
         return true;
         }
-
-    /**
-     * @return nothing, because the method always throws
-     * @throws UnsupportedOperationException this exception is always thrown by this method
-     */
-    protected UnsupportedOperationException notImplemented()
-        {
-        throw new UnsupportedOperationException("not implemented by: " + this.getClass().getSimpleName());
-        }
-
-
-    // ----- compilation ---------------------------------------------------------------------------
 
     /**
      * Determine the implicit (or "natural") type of the expression, which is the type that the
@@ -139,6 +162,7 @@ public abstract class Expression
      */
     public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
         {
+        // TODO should be abstract
         throw notImplemented();
         }
 
@@ -163,6 +187,23 @@ public abstract class Expression
 
         log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, listTypes.size());
         return Collections.EMPTY_LIST;
+        }
+
+    public void generateAssignment(Code code, Expression exprLValue, ErrorListener errs)
+        {
+        // TODO should be abstract
+        assert isAssignable();
+        throw notImplemented();
+        }
+
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+        {
+        // this is just a generic implementation; sub-classes should override this simplify the
+        // generated code (e.g. by not having to always generate a separate boolean value)
+        Argument arg = generateArgument(code, getConstantPool().ensureEcstasyTypeConstant("Boolean"), false, errs);
+        code.add(fWhenTrue
+                ? new JumpTrue(arg, label)
+                : new JumpFalse(arg, label));
         }
 
     /**
