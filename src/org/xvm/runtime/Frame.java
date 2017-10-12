@@ -594,6 +594,15 @@ public class Frame
         return constText.getValue();
         }
 
+    // return the type of the specified argument
+    public Type getArgumentType(int iArg)
+        {
+        return iArg >= 0
+                ? getVarInfo(iArg).getType()
+                : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg)
+                    .f_clazzCanonical.ensurePublicType();
+        }
+
     // return the class of the specified argument
     public TypeComposition getArgumentClass(int iArg)
         {

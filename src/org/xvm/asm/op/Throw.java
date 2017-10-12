@@ -25,12 +25,28 @@ public class Throw
      * Construct a THROW op.
      *
      * @param nValue  the exception to throw
+     *
+     * @deprecated
      */
     public Throw(int nValue)
         {
-        f_nArgValue = nValue;
+        m_nArgValue = nValue;
         }
 
+    /**
+     * Construct a THROW op for the passed argument.
+     *
+     * @param argValue  the throw value Argument
+     */
+    public Throw(Argument argValue)
+        {
+        if (argValue == null)
+            {
+            throw new IllegalArgumentException("argument required");
+            }
+
+        m_argValue  = argValue;
+        }
     /**
      * Deserialization constructor.
      *
@@ -40,15 +56,20 @@ public class Throw
     public Throw(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nArgValue = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_argValue != null)
+            {
+            m_nArgValue = encodeArgument(m_argValue, registry);
+            }
+
         out.writeByte(OP_THROW);
-        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, m_nArgValue);
         }
 
     @Override
@@ -63,7 +84,7 @@ public class Throw
         try
             {
             // there are no "const" exceptions
-            ExceptionHandle hException = (ExceptionHandle) frame.getArgument(f_nArgValue);
+            ExceptionHandle hException = (ExceptionHandle) frame.getArgument(m_nArgValue);
             if (hException == null)
                 {
                 return R_REPEAT;
@@ -77,5 +98,7 @@ public class Throw
             }
         }
 
-    private final int f_nArgValue;
+    private int m_nArgValue;
+
+    private Argument m_argValue; // never a Constant
     }

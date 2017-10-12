@@ -13,6 +13,7 @@ import java.util.Map;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Frame;
@@ -145,7 +146,7 @@ public abstract class Op
      * @param arg       the argument or null
      * @param registry  the ConstantRegistry to use to register any constants used by this op
      */
-    public void registerArgument(Argument arg, ConstantRegistry registry)
+    protected static void registerArgument(Argument arg, ConstantRegistry registry)
         {
         if (arg instanceof Constant)
             {
@@ -160,7 +161,7 @@ public abstract class Op
      * @param registry  the ConstantRegistry that represents all of the constants used by the code
      *                  containing the op
      */
-    public void registerArguments(Argument[] aArg, ConstantRegistry registry)
+    protected static void registerArguments(Argument[] aArg, ConstantRegistry registry)
         {
         if (aArg != null)
             {
@@ -181,7 +182,7 @@ public abstract class Op
      *
      * @return the index of the argument
      */
-    protected int encodeArgument(Argument arg, ConstantRegistry registry)
+    protected static int encodeArgument(Argument arg, ConstantRegistry registry)
         {
         return arg instanceof Constant
                 ? ((Constant) arg).getPosition()   // TODO eventually: registry.indexOf((Constant) arg)
@@ -198,7 +199,7 @@ public abstract class Op
      *
      * @return the array of the arguments' indexes
      */
-    protected int[] encodeArguments(Argument[] aArg, ConstantRegistry registry)
+    protected static int[] encodeArguments(Argument[] aArg, ConstantRegistry registry)
         {
         int c = aArg.length;
         int[] anArg = new int[c];
@@ -567,6 +568,7 @@ public abstract class Op
 
             case OP_MOV:         return new Move        (in, aconst);
             case OP_REF:         return new MoveRef     (in, aconst);
+            case OP_CAST:        return new MoveCast    (in, aconst);
 
             case OP_GP_ADD:      return new GP_Add      (in, aconst);
             case OP_GP_NEG:      return new GP_Neg      (in, aconst);
@@ -682,18 +684,20 @@ public abstract class Op
 
     public static final int OP_NOP          = 0x00;
     public static final int OP_LINE_1       = 0x01;
-    public static final int OP_LINE_N       = 0x02;
-    public static final int OP_BREAK        = 0x03;
-    public static final int OP_ENTER        = 0x04;
-    public static final int OP_EXIT         = 0x05;
-    public static final int OP_GUARD        = 0x06;
-    public static final int OP_GUARD_END    = 0x07;
-    public static final int OP_CATCH        = 0x08;
-    public static final int OP_CATCH_END    = 0x09;
-    public static final int OP_GUARD_ALL    = 0x0A;
-    public static final int OP_FINALLY      = 0x0B;
-    public static final int OP_FINALLY_END  = 0x0C;
-    public static final int OP_THROW        = 0x0D;
+    public static final int OP_LINE_2       = 0x02;
+    public static final int OP_LINE_3       = 0x03;
+    public static final int OP_LINE_N       = 0x04;
+    public static final int OP_BREAK        = 0x05;
+    public static final int OP_ENTER        = 0x06;
+    public static final int OP_EXIT         = 0x07;
+    public static final int OP_GUARD        = 0x08;
+    public static final int OP_GUARD_END    = 0x09;
+    public static final int OP_CATCH        = 0x0A;
+    public static final int OP_CATCH_END    = 0x0B;
+    public static final int OP_GUARD_ALL    = 0x0C;
+    public static final int OP_FINALLY      = 0x0D;
+    public static final int OP_FINALLY_END  = 0x0E;
+    public static final int OP_THROW        = 0x0F;
 
     public static final int OP_ASSERT       = 0x10;
     public static final int OP_ASSERT_M     = 0x11;
@@ -759,6 +763,7 @@ public abstract class Op
     public static final int OP_VAR_TN       = 0x49;
     public static final int OP_MOV          = 0x4A;
     public static final int OP_REF          = 0x4B;
+    public static final int OP_CAST         = 0x4C;
 
     public static final int OP_GP_ADD       = 0x50;
     public static final int OP_GP_SUB       = 0x51;

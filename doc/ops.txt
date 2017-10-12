@@ -26,6 +26,7 @@
 +RETURN_T   rvalue-tuple                            ; return (multiple return from a tuple)
 
 // method and function binding
+// - does NOT support "local property" mode
 +BIND_M      rvalue-target, METHOD, lvalue-fn-result
 +BIND_F      rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
 
@@ -87,15 +88,16 @@
 
 // "move" operations
 // - does NOT support "local property" mode;
-// - lvalue-dest can be a next unallocated register
--MOV        rvalue-src, lvalue-dest                 ; copy source to destination (cast implied if types differ)
--REF        rvalue-src, lvalue-dest                 ; move ("R"=) reference-to-source to destination
+// - for MOV and REF the lvalue-dest can be a next unallocated register
++MOV        rvalue-src, lvalue-dest                 ; copy source to destination ("protection" proxy may be generated)
++REF        rvalue-src, lvalue-dest                 ; move ("R"=) reference-to-source to destination
+-CAST       rvalue-src, lvalue-dest                 ; copy source to destination with cast
 
 // ("GP"=) general purpose register/local-property operations:
 // - rvalues could be a register or a constant value or a local-property indicator (PROPERTY)
 // - the lvalue(s) can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
-+GP_ADD     rvalue1, rvalue2, lvalue                ; T + T -> T
+-GP_ADD     rvalue1, rvalue2, lvalue                ; T + T -> T
  GP_SUB     rvalue1, rvalue2, lvalue                ; T - T -> T
  GP_MUL     rvalue1, rvalue2, lvalue                ; T * T -> T
  GP_DIV     rvalue1, rvalue2, lvalue                ; T / T -> T
@@ -107,26 +109,26 @@
  GP_OR      rvalue1, rvalue2, lvalue                ; T | T -> T
  GP_XOR     rvalue1, rvalue2, lvalue                ; T ^ T -> T
  GP_DIVMOD  rvalue1, rvalue2, lvalue-div, lvalue-mod; T /% T -> T, T
-+GP_NEG     rvalue, lvalue                          ; -T -> T
+-GP_NEG     rvalue, lvalue                          ; -T -> T
  GP_COMPL   rvalue, lvalue                          ; ~T -> T
 
 // ("L"=) local property and ("P"=) property load/store operations
 // - lvalue return values can specify the "next register" to allocate
-+L_GET       PROPERTY, lvalue                        ; get local property (move local property value to register)
-+L_SET       PROPERTY, rvalue                        ; set local property (move register value to local property)
-+P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
-+P_SET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
+-L_GET       PROPERTY, lvalue                        ; get local property (move local property value to register)
+-L_SET       PROPERTY, rvalue                        ; set local property (move register value to local property)
+-P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
+-P_SET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
  P_REF       PROPERTY, rvalue-target, lvalue-dest    ; move reference-to-property to destination
 
 // register/local-property inc/dec ("A"=after, aka "post" / "B"=before, aka "pre"):
 // - the lvalue-target indicates the register or the local-property indicator (PROPERTY)
 // - the lvalue-return can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
-+IP_INC      lvalue-target                           ; in-place increment; no result
+-IP_INC      lvalue-target                           ; in-place increment; no result
  IP_DEC      lvalue-target                           ; in-place decrement; no result
-+IP_INCA     lvalue-target, lvalue                   ; T++ -> T
+-IP_INCA     lvalue-target, lvalue                   ; T++ -> T
  IP_DECA     lvalue-target, lvalue                   ; T-— -> T
-+IP_INCB     lvalue-target, lvalue                   ; ++T -> T
+-IP_INCB     lvalue-target, lvalue                   ; ++T -> T
  IP_DECB     lvalue-target, lvalue                   ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ops:
@@ -150,9 +152,9 @@
 // - lvalue return values can specify the "next register" to allocate
  PIP_INC     PROPERTY, rvalue                        ; in-place increment; no result
  PIP_DEC     PROPERTY, rvalue                        ; in-place decrement; no result
-+PIP_INCA    PROPERTY, rvalue, lvalue                ; T++ -> T
+-PIP_INCA    PROPERTY, rvalue, lvalue                ; T++ -> T
  PIP_DECA    PROPERTY, rvalue, lvalue                ; T-- -> T
-+PIP_INCB    PROPERTY, rvalue, lvalue                ; ++T -> T
+-PIP_INCB    PROPERTY, rvalue, lvalue                ; ++T -> T
  PIP_DECB    PROPERTY, rvalue, lvalue                ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ("P"=) property ops:
@@ -180,7 +182,7 @@
  IIP_DEC     rvalue-target, rvalue-ix                ; --T[ix] (no result)
  IIP_INCA    rvalue-target, rvalue-ix, lvalue        ; T[ix]++ -> T
  IIP_DECA    rvalue-target, rvalue-ix, lvalue        ; T[ix]-— -> T
-+IIP_INCB    rvalue-target, rvalue-ix, lvalue        ; ++T[ix] -> T
+-IIP_INCB    rvalue-target, rvalue-ix, lvalue        ; ++T[ix] -> T
  IIP_DECB    rvalue-target, rvalue-ix, lvalue        ; --T[ix] -> T
  IIP_ADD     rvalue-target, rvalue-ix, rvalue2
  IIP_SUB     rvalue-target, rvalue-ix, rvalue2

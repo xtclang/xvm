@@ -43,7 +43,9 @@ public class Type
     private boolean m_fImmutable;
 
     // SUPER == this Type is assignable from; SUB == this type is assignable to
-    public enum Relation {EQUAL, SUPER, SUB, INCOMPATIBLE};
+    // *_WEAK == types are assignable, but there are methods that may be incompatible
+
+    public enum Relation {EQUAL, SUB, SUB_WEAK, SUPER, SUPER_WEAK, INCOMPATIBLE};
     private Map<Integer, Relation> m_relations = new HashMap<>(); // cached type relations
 
     private Map<String, CanonicalMultiMethod> m_mapMultiMethods;
@@ -170,25 +172,40 @@ public class Type
      */
     public boolean isA(Type that)
         {
+        Relation relation = calculateRelation(that);
+
+        // Relation.EQUAL || Relation.SUB || Relation.SUB_WEAK;
+        return relation.compareTo(Relation.SUB_WEAK) <= 0;
+        }
+
+    public Relation calculateRelation(Type that)
+        {
+        // quick check for trivial relationships that don't have to be cached
+
         if (this.equals(that))
             {
-            return true;
+            return Relation.EQUAL;
             }
 
         if (that.isImmutable() && !this.isImmutable())
             {
-            return false;
+            return Relation.INCOMPATIBLE;
             }
 
         if (that == xObject.TYPE)
             {
-            return true;
+            return Relation.SUB;
+            }
+
+        if (this == xObject.TYPE)
+            {
+            return Relation.SUPER;
             }
 
         Relation relation = m_relations.get(that.getId());
         if (relation != null)
             {
-            return relation == Relation.EQUAL || relation == Relation.SUB;
+            return relation;
             }
 
         TypeComposition clzThis = f_clazz;
@@ -252,8 +269,9 @@ public class Type
 
         if (fIncompatible)
             {
-            m_relations.put(that.getId(), Relation.INCOMPATIBLE);
-            return false;
+            this.m_relations.put(that.getId(), Relation.INCOMPATIBLE);
+            that.m_relations.put(this.getId(), Relation.INCOMPATIBLE);
+            return Relation.INCOMPATIBLE;
             }
 
         if (fCheckMethods)
@@ -261,8 +279,9 @@ public class Type
             // TODO: compare the methods
             }
 
-        m_relations.put(that.getId(), Relation.SUB);
-        return true;
+        this.m_relations.put(that.getId(), Relation.SUB);
+        that.m_relations.put(this.getId(), Relation.SUPER);
+        return Relation.SUB;
         }
 
     /**
