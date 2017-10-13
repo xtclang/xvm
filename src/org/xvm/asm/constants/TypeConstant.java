@@ -231,6 +231,19 @@ public abstract class TypeConstant
         }
 
     /**
+     * Determine if this TypeConstant represents the public type from the core Ecstasy module.
+     *
+     * @return true iff this TypeConstant is a public type from the Ecstasy core module
+     */
+    public boolean isPublicEcstasyType()
+        {
+        return isSingleDefiningConstant()
+                && getDefiningConstant() instanceof ClassConstant
+                && ((ClassConstant) this.getDefiningConstant()).getModuleConstant().isEcstasyModule()
+                && getAccess() == Access.PUBLIC;
+        }
+
+    /**
      * Determine if this TypeConstant represents a core, implicitly-imported Ecstasy type denoted
      * by the specified name.
      *

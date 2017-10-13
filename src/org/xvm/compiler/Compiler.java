@@ -402,6 +402,10 @@ public class Compiler
      * Statement is not reachable.
      */
     public static final String NOT_REACHABLE                      = "COMPILER-46";
+    /**
+     * Expression does not evaluate to a constant value.
+     */
+    public static final String CONSTANT_REQUIRED                  = "COMPILER-47";
 
 
     // ----- data members --------------------------------------------------------------------------

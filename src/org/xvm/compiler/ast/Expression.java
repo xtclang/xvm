@@ -6,14 +6,21 @@ import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.DifferenceTypeConstant;
+import org.xvm.asm.constants.ImmutableTypeConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
@@ -96,32 +103,6 @@ public abstract class Expression
         }
 
     /**
-     * @return true iff the Expression is the constant value "false"
-     */
-    public boolean isConstantFalse()
-        {
-        // TODO
-        return false;
-        }
-
-    /**
-     * @return true iff the Expression is the constant value "false"
-     */
-    public boolean isConstantTrue()
-        {
-        // TODO
-        return false;
-        }
-
-    /**
-     * @return true iff the expression is capable of completing normally
-     */
-    public boolean canComplete()
-        {
-        return true;
-        }
-
-    /**
      * Determine the implicit (or "natural") type of the expression, which is the type that the
      * expression would naturally compile to if no type were specified.
      *
@@ -133,16 +114,205 @@ public abstract class Expression
         throw notImplemented();
         }
 
-    public boolean isAssignableTo(TypeConstant type)
+    /**
+     * Determine if this expression can generate an argument of the specified type, or that can be
+     * assigned to the specified type.
+     *
+     * TODO - this is going to need some helpers for complex (union, intersection, difference) types
+     *
+     * @param typeThat  an argument type
+     *
+     * @return true iff this expression can be rendered as the specified argument type
+     */
+    public boolean isAssignableTo(TypeConstant typeThat)
         {
-        // TODO this should be an abstract method
-        throw notImplemented();
+        if (typeThat instanceof AccessTypeConstant)
+            {
+            if (typeThat.getAccess() == Access.PUBLIC)
+                {
+                return isAssignableTo(typeThat.getUnderlyingType());
+                }
+
+            // the non-public type needs to be flattened to an interface and evaluated
+            // TODO
+            return false;
+            }
+
+        if (typeThat instanceof ImmutableTypeConstant)
+            {
+            // all of the literal expression arguments are "const" objects, so immutable is OK
+            return isAssignableTo(typeThat.getUnderlyingType());
+            }
+
+        if (typeThat instanceof ParameterizedTypeConstant)
+            {
+            if (!isAssignableTo(typeThat.getUnderlyingType()))
+                {
+                return false;
+                }
+
+            // the non-parameterized type was assignable to; flatten the parameterized type into an
+            // interface and evaluate
+            // TODO
+            return false;
+            }
+
+        if (typeThat instanceof UnionTypeConstant)
+            {
+            if (!(  isAssignableTo(typeThat.getUnderlyingType()) &&
+                    isAssignableTo(typeThat.getUnderlyingType2())  ))
+                {
+                return false;
+                }
+
+            // even though each of the two types was individually assignable to, the combination
+            // must be tested together; flatten the type into an interface and evaluate
+            // TODO
+            return false;
+            }
+
+        if (typeThat instanceof IntersectionTypeConstant)
+            {
+            return  isAssignableTo(typeThat.getUnderlyingType()) ||
+                    isAssignableTo(typeThat.getUnderlyingType2());
+            }
+
+        if (typeThat instanceof DifferenceTypeConstant)
+            {
+            // TODO - this needs to generate a resolved interface type from the difference and see if any of the possible results are assignable to that
+            notImplemented();
+            return false;
+            }
+
+        if (!typeThat.isSingleDefiningConstant())
+            {
+            // handle union, intersection, difference types
+            if (typeThat.)
+            }
+
+        // this will probably need to be overwitten by various expressions
+        TypeConstant typeThis = getImplicitType();
+        return typeThis.equals(typeThat) || typeThis.isA(typeThat);
+
+// TODO it is possible to provide a function that returns a type that this is assignable to (see @Auto method on Object)
+//                case "Function":
+//                {
+//                // determine the constant value returned from the function (which is the value
+//                // of this expression)
+//                Argument argVal;
+//                if (constType.isParamsSpecified())
+//                    {
+//                    // it has type params, so it must be a Function; see:
+//                    //      "@Auto function Object() to<function Object()>()"
+//                    List<TypeConstant> listParamTypes = constType.getParamTypes();
+//                    if (listParamTypes.size() == 2)
+//                        {
+//                        TypeConstant typeTParams = listParamTypes.get(0);
+//                        TypeConstant typeTReturn = listParamTypes.get(1);
+//                        if (typeTParams.isTuple()
+//                                && typeTParams.getTupleFieldCount() == 0
+//                                && typeTReturn.isTuple()
+//                                && typeTReturn.getTupleFieldCount() == 1)
+//                            {
+//                            // call back into this expression and ask it to render itself as the
+//                            // return type from that function (a constant value), and then we'll
+//                            // wrap that with the conversion function (from Object)
+//                            argVal = generateArgument(
+//                                    code, typeTReturn.getTupleFieldType(0), false, errs);
+//                            }
+//                        else
+//                            {
+//                            // error: function must take no parameters and return one value;
+//                            // drop into the generic handling of the request for error handling
+//                            break;
+//                            }
+//                        }
+//                    else
+//                        {
+//                        // error: function must have 2 parameters (t-params & t-returns);
+//                        // drop into the generic handling of the request for error handling
+//                        break;
+//                        }
+//                    }
+//                else
+//                    {
+//                    argVal = toConstant();
+//                    }
+//
+//                // create a constant for this method on Object:
+//                //      "@Auto function Object() to<function Object()>()"
+//                TypeConstant   typeTuple   = pool.ensureEcstasyTypeConstant("collections.Tuple");
+//                TypeConstant   typeTParams = pool.ensureParameterizedTypeConstant(
+//                        typeTuple, SignatureConstant.NO_TYPES);
+//                TypeConstant   typeTReturn = pool.ensureParameterizedTypeConstant(
+//                        typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(null)});
+//                TypeConstant   typeFn      = pool.ensureParameterizedTypeConstant(
+//                        pool.ensureEcstasyTypeConstant("Function"),
+//                        new TypeConstant[] {typeTParams, typeTReturn});
+//                MethodConstant methodTo    = pool.ensureMethodConstant(
+//                        pool.ensureEcstasyClassConstant("Object"), "to", Access.PUBLIC,
+//                        SignatureConstant.NO_TYPES, new TypeConstant[] {typeFn});
+//
+//                // generate the code that turns the constant value from this expression into a
+//                // function object that returns that value
+//                Var varResult = new Var(typeFn);
+//                code.add(varResult);
+//                code.add(new Invoke_01(argVal, methodTo, varResult.getRegister()));
+//                return varResult.getRegister();
+//                }
         }
 
-    public Constant generateConstant(TypeConstant constType, ErrorListener errs)
+    /**
+     * @return true iff the Expression is the constant value "false"
+     */
+    public boolean isTypeBoolean()
         {
-        assert isConstant();
-        throw notImplemented(); // TODO?
+        return getImplicitType().isEcstasy("Boolean");
+        }
+
+    /**
+     * @return true iff the Expression is the constant value "false"
+     */
+    public boolean isConstantFalse()
+        {
+        return getImplicitType().isEcstasy("Boolean.False");
+        }
+
+    /**
+     * @return true iff the Expression is the constant value "false"
+     */
+    public boolean isConstantTrue()
+        {
+        return getImplicitType().isEcstasy("Boolean.True");
+        }
+
+    /**
+     * @return true iff the expression is capable of completing normally
+     */
+    public boolean canComplete()
+        {
+        return true;
+        }
+
+    /**
+     * Convert this expression to a constant value, which is possible iff {@link #isConstant}
+     * returns true.
+     *
+     * @param constType  the constant type required
+     * @param errs       the error list to log any errors to if this expression cannot be made into
+     *                   a constant value of the specified type
+     *
+     * @return a constant of the specified type
+     */
+    public Argument generateConstant(TypeConstant constType, ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            throw notImplemented();
+            }
+
+        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+        return generateBlackHole(constType);
         }
 
     /**
@@ -233,7 +403,7 @@ public abstract class Expression
             if (!typeIn.isA(typeOut))
                 {
                 // TODO isA() doesn't handle a lot of things that are actually assignable
-                // TODO for things provably not assignable, is an @Auto method available?
+                // TODO for things provably not assignable, check for an @Auto method
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
                 }
             }
