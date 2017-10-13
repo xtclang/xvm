@@ -15,8 +15,6 @@ import org.xvm.compiler.ErrorListener;
 
 /**
  * An annotated type expression is a type expression preceded with an annotation.
- *
- * @author cp 2017.03.31
  */
 public class AnnotatedTypeExpression
         extends TypeExpression

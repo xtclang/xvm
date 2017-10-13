@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.math.BigDecimal;
+
 import java.util.List;
 
 import org.xvm.asm.Constant;
@@ -10,7 +11,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecimalConstant;

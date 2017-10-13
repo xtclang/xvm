@@ -1,12 +1,15 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -84,12 +87,6 @@ public abstract class Expression
         return false;
         }
 
-    public boolean isAssignableTo(TypeConstant type)
-        {
-        // TODO this should be an abstract method
-        throw notImplemented();
-        }
-
     /**
      * @return true iff the Expression is a constant value
      */
@@ -131,6 +128,12 @@ public abstract class Expression
      * @return the implicit type of the expression
      */
     public TypeConstant getImplicitType()
+        {
+        // TODO this should be an abstract method
+        throw notImplemented();
+        }
+
+    public boolean isAssignableTo(TypeConstant type)
         {
         // TODO this should be an abstract method
         throw notImplemented();
@@ -236,5 +239,32 @@ public abstract class Expression
             }
 
         return argOut;
+        }
+
+    /**
+     * When a register is needed to store a value that is never used, the "black hole" register is
+     * used. It is considered a "write only" register. This is also useful during compilation, when
+     * an expression cannot yield an actual argument; the expression should log an error, and return
+     * a black hole register instead (which will serve as a natural assertion later in the assembly
+     * cycle, in case someone forgets to log an error).
+     *
+     * @param type  the type of the register
+     *
+     * @return a black hole register of the specified type
+     */
+    protected Register generateBlackHole(TypeConstant type)
+        {
+        return new Register(type, Op.A_IGNORE);
+        }
+
+    protected List<Register> generateBlackHoles(List<TypeConstant> listTypes)
+        {
+        int       cTypes   = listTypes == null ? 0 : listTypes.size();
+        ArrayList listRegs = new ArrayList(cTypes);
+        for (int i = 0; i < cTypes; ++i)
+            {
+            listRegs.add(generateBlackHole(listTypes.get(i)));
+            }
+        return listRegs;
         }
     }

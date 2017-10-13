@@ -140,6 +140,10 @@ public abstract class Op
         return arg instanceof Register;
         }
 
+    boolean isReadable(Argument arg)
+        {
+        return arg instanceof Register && ((Register) arg).getIndex()
+        }
     /**
      * Register the specified argument if it's a constant.
      *
@@ -926,54 +930,59 @@ public abstract class Op
     // ----- pre-defined arguments -----------------------------------------------------------------
 
     /**
+     * Pre-defined argument: a write-only "black hole" register, akin to {@code /dev/null}
+     */
+    public static final int A_IGNORE = -1;
+
+    /**
      * Pre-defined argument: {@code this:public}
      */
-    public static final int A_PUBLIC = -1;
+    public static final int A_PUBLIC = -2;
 
     /**
      * Pre-defined argument: {@code this:protected}
      */
-    public static final int A_PROTECTED = -2;
+    public static final int A_PROTECTED = -3;
 
     /**
      * Pre-defined argument: {@code this:private}
      */
-    public static final int A_PRIVATE = -3;
+    public static final int A_PRIVATE = -4;
 
     /**
      * Pre-defined argument: {@code this:target}
      */
-    public static final int A_TARGET = -4;
+    public static final int A_TARGET = -5;
 
     /**
      * Pre-defined argument: {@code this:struct}
      */
-    public static final int A_STRUCT = -5;
+    public static final int A_STRUCT = -6;
 
     /**
      * Pre-defined argument: {@code this:frame}
      */
-    public static final int A_FRAME = -6;
+    public static final int A_FRAME = -7;
 
     /**
      * Pre-defined argument: {@code this:service}
      */
-    public static final int A_SERVICE = -7;
+    public static final int A_SERVICE = -8;
 
     /**
      * Pre-defined argument: {@code this:module}
      */
-    public static final int A_MODULE = -8;
+    public static final int A_MODULE = -9;
 
     /**
      * Pre-defined argument: {@code this:type}
      */
-    public static final int A_TYPE = -9;
+    public static final int A_TYPE = -10;
 
     /**
      * Pre-defined argument: {@code super} (function).
      */
-    public static final int A_SUPER = -10;
+    public static final int A_SUPER = -11;
 
 
     // ----- return values from the Op.process() method --------------------------------------------
