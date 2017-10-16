@@ -27,8 +27,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * A method declaration.
- *
- * @author cp 2017.04.03
  */
 public class MethodDeclarationStatement
         extends ComponentStatement
@@ -194,11 +192,6 @@ public class MethodDeclarationStatement
             try
                 {
                 body.emit(code, errs);
-                if (method.getReturns().isEmpty())
-                    {
-                    // a void method has an implicit "return;" at the end of it
-                    code.add(new Return_0());
-                    }
                 }
             catch (UnsupportedOperationException e) // TODO temporary
                 {

@@ -1,34 +1,33 @@
 package org.xvm.compiler.ast;
 
 
-
-import java.util.ArrayList;
-import java.util.stream.Collectors;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op.Argument;
-import org.xvm.asm.Parameter;
-import org.xvm.asm.MethodStructure.Code;
-
-import org.xvm.asm.op.Return_0;
-
-import org.xvm.asm.op.Return_1;
-import org.xvm.asm.op.Return_N;
-import org.xvm.asm.op.Return_T;
-import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
 
 import java.util.Collections;
 import java.util.List;
+
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Parameter;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.Return_0;
+import org.xvm.asm.op.Return_1;
+import org.xvm.asm.op.Return_N;
+import org.xvm.asm.op.Return_T;
+
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.ErrorListener;
+import org.xvm.compiler.Token;
+
 import org.xvm.util.Severity;
 
 
 /**
  * A return statement specifies a return with optional values.
- *
- * @author cp 2017.04.03
  */
 public class ReturnStatement
         extends Statement
@@ -85,51 +84,97 @@ public class ReturnStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public void emit(Code code, ErrorListener errs)
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        boolean fValid = true;
+
+        // validate the return value expressions
+        List<Expression> listExprs = this.exprs;
+        int              cExprs    = listExprs == null ? 0 : listExprs.size();
+        for (int i = 0; i < cExprs; ++i)
+            {
+            fValid &= listExprs.get(i).validate(ctx, errs);
+            }
+
+        // check for special return modes: tuple-returns and conditional-returns
+        MethodStructure structMethod = ctx.getMethod();
+        int             cReturns     = structMethod.getReturnCount();
+        List<Parameter> listRets     = structMethod.getReturns();
+        if (cExprs == 1 && (cReturns > 1 || cReturns == 1 && !listRets.get(0).getType().isTuple())
+                && listExprs.get(0).getImplicitType().isTuple())
+            {
+            // if there is exactly 1 expression, it results in a tuple type, and the return type of
+            // the method is NOT a single tuple, then the return will generate a RETURN_T op
+            m_fTupleReturn = true;
+            }
+        else if (cExprs == 1 && structMethod.isConditionalReturn() && exprs.get(0).isConstantFalse())
+            {
+            // if there is exactly 1 expression, and it is "false", then that is a valid return
+            // from a method with a conditional-return
+            m_fCondReturn = true;
+            }
+        else if (cExprs != cReturns)
+            {
+            // error: unexpected number of return value expressions
+            if (cExprs == 0)
+                {
+                log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+                }
+            else if (cReturns == 0)
+                {
+                log(errs, Severity.ERROR, Compiler.RETURN_VOID);
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cExprs);
+                }
+            fValid = false;
+            }
+
+        return fValid;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
-        MethodStructure  structMethod = code.getMethodStructure();
+        MethodStructure  structMethod = ctx.getMethod();
         int              cReturns     = structMethod.getReturnCount();
         List<Parameter>  listRets     = structMethod.getReturns();
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
-        switch (cReturns)
-            {
-            case 0:
-                if (cExprs == 0) // TODO consider a value of type Tuple<> also being ok? i.e. "|| isEmptyTuple(v))"
-                    {
-                    code.add(new Return_0());
-                    }
-                else
-                    {
-                    log(errs, Severity.ERROR, Compiler.RETURN_VOID);
-                    }
-                break;
 
-            case 1:
-                if (cExprs == 1)
-                    {
+        if (m_fTupleReturn)
+            {
+            // the type that the expression has to generate is "tuple of" all of the return types
+            TypeConstant[] atypeR = new TypeConstant[cReturns];
+            for (int i = 0; i < cReturns; ++i)
+                {
+                atypeR[i] = listRets.get(i).getType();
+                }
+
+            ConstantPool pool   = getConstantPool();
+            TypeConstant typeT  = pool.ensureParameterizedTypeConstant(
+                    pool.ensureEcstasyTypeConstant("collections.Tuple"), atypeR);
+            Argument     arg    = listExprs.get(0).generateArgument(code, typeT, false, errs);
+            code.add(new Return_T(arg));
+            }
+        else
+            {
+            switch (cReturns)
+                {
+                case 0:
+                    code.add(new Return_0());
+                    break;
+
+                case 1:
                     Argument arg = listExprs.get(0).generateArgument(
                             code, listRets.get(0).getType(), false, errs);
-                    if (arg != null)
-                        {
-                        code.add(new Return_1(arg));
-                        }
-                    }
-                else
-                    {
-                    // most of the time this is an error
-                    // TODO what if return type is tuple - do multiple expressions go into it?
-                    log(errs, Severity.ERROR, cExprs == 0
-                            ? Compiler.RETURN_EXPECTED
-                            : Compiler.RETURN_WRONG_COUNT);
-                    }
-                break;
+                    code.add(new Return_1(arg));
+                    break;
 
-            default:
-                if (cExprs == cReturns)
-                    {
+                default:
                     Argument[] args = new Argument[cExprs];
                     for (int i = 0; i < cExprs; ++i)
                         {
@@ -137,25 +182,12 @@ public class ReturnStatement
                                 code, listRets.get(i).getType(), false, errs);
                         }
                     code.add(new Return_N(args));
-                    }
-                else if (cExprs == 1)
-                    {
-                    // assume it's a tuple
-                    List<Argument> args = listExprs.get(0).generateArguments(code, listRets.stream()
-                            .map(p -> p.getType()).collect(Collectors.toList()), true, errs);
-                    // TODO args empty or null means an error occurred; ignore
-                    int cArgs = args.size();
-                    if (cArgs == cReturns)
-                        {
-                        code.add(new Return_N(args.toArray(new Argument[cReturns])));
-                        }
-                    else if (cArgs == 1)
-                        {
-                        code.add(new Return_T(args.get(0)));
-                        }
-                    }
-                break;
+                    break;
+                }
             }
+
+        // return never completes
+        return false;
         }
 
 
@@ -210,6 +242,8 @@ public class ReturnStatement
 
     protected Token            keyword;
     protected List<Expression> exprs;
+    protected boolean          m_fTupleReturn;
+    protected boolean          m_fCondReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
     }

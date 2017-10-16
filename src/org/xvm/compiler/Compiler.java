@@ -398,6 +398,10 @@ public class Compiler
      * Value of type {0} is out of range: {1}.
      */
     public static final String VALUE_OUT_OF_RANGE                 = "COMPILER-45";
+    /**
+     * Statement is not reachable.
+     */
+    public static final String NOT_REACHABLE                      = "COMPILER-46";
 
 
     // ----- data members --------------------------------------------------------------------------
