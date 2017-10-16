@@ -8,9 +8,12 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import java.util.Set;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.MethodStructure;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
@@ -142,9 +145,9 @@ public abstract class TypeConstant
             return false;
             }
 
-        return !isRelationalType() ||
-                getUnderlyingType2().isAccessSpecified() &&
-                getUnderlyingType().getAccess() == getUnderlyingType2().getAccess();
+        return !isRelationalType()
+                ||     getUnderlyingType2().isAccessSpecified()
+                    && getUnderlyingType().getAccess() == getUnderlyingType2().getAccess();
         }
 
     /**
@@ -395,6 +398,19 @@ public abstract class TypeConstant
         return getUnderlyingType().producesFormalType(sTypeName, types, access);
         }
 
+    public Set<MethodConstant> autoConverts()
+        {
+        // TODO this is temporary (it just finds the one @Auto that exists on Object itself)
+        for (MethodStructure method : getConstantPool().ensureEcstasyClassConstant("Object")
+                .getComponent().ensureMultiMethodStructure("to").methods())
+            {
+            if (method.getReturn(0).getType().isEcstasy("Function"))
+                {
+                return Collections.singleton(method.getIdentityConstant());
+                }
+            }
+        throw new IllegalStateException("no method found: \"to<function Object()>()\"");
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

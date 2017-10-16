@@ -64,6 +64,16 @@ interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<
      */
     @Future ReturnTypes invokeService(ParamTypes args);
 
+    /**
+     * Override the automatic conversion-to-function method from Object, removing the "@Auto"
+     * annotation, so that functions do not try to automatically convert themselves to functions.
+     */
+    @Override
+    function Function() to<function Function()>()
+        {
+        return super();
+        }
+
     // -----
 
     private class PartiallyBound<ReturnTypes extends Tuple<ReturnTypes...>, ParamTypes extends Tuple<ParamTypes...>>

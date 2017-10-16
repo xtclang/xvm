@@ -3,8 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
+import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
@@ -126,74 +128,141 @@ public abstract class Expression
      */
     public boolean isAssignableTo(TypeConstant typeThat)
         {
-        if (typeThat instanceof AccessTypeConstant)
+        TypeConstant typeImplicit = null;
+
+        // first, layer-by-layer peel the "type onion" down to the terminal(s)
+        switch (typeThat.getFormat())
             {
-            if (typeThat.getAccess() == Access.PUBLIC)
+            case UnionType:
                 {
-                return isAssignableTo(typeThat.getUnderlyingType());
+                if (!(  isAssignableTo(typeThat.getUnderlyingType()) &&
+                        isAssignableTo(typeThat.getUnderlyingType2())  ))
+                    {
+                    break;
+                    }
+
+                // even though each of the two types was individually assignable to, there are rare
+                // examples that are not allowable, such as the literal 0 being assignable to two
+                // different Int classes
+                // TODO - verify that none or only one of the underlying types is a class type
+                // TODO - (or make sure that the type contains not more than one distinct class)
+                // TODO - (or if it does, that one is a subclass of the other(s))
+
+                return true;
                 }
 
-            // the non-public type needs to be flattened to an interface and evaluated
-            // TODO
-            return false;
-            }
-
-        if (typeThat instanceof ImmutableTypeConstant)
-            {
-            // all of the literal expression arguments are "const" objects, so immutable is OK
-            return isAssignableTo(typeThat.getUnderlyingType());
-            }
-
-        if (typeThat instanceof ParameterizedTypeConstant)
-            {
-            if (!isAssignableTo(typeThat.getUnderlyingType()))
+            case IntersectionType:
                 {
-                return false;
+                if (    isAssignableTo(typeThat.getUnderlyingType()) ||
+                        isAssignableTo(typeThat.getUnderlyingType2()   ))
+                    {
+                    return true;
+                    }
+
+                // even though neither of the two types was individually assignable to, it is
+                // possible that the intersection represents a duck-type-able interface, assuming
+                // that none of the underlying types is a class
+                // TODO - verify that none of the underlying types is a class type
+                // TODO - resolve the intersection type into an interface type, and test assignability to that
+
+                break;
                 }
 
-            // the non-parameterized type was assignable to; flatten the parameterized type into an
-            // interface and evaluate
-            // TODO
-            return false;
-            }
-
-        if (typeThat instanceof UnionTypeConstant)
-            {
-            if (!(  isAssignableTo(typeThat.getUnderlyingType()) &&
-                    isAssignableTo(typeThat.getUnderlyingType2())  ))
+            case DifferenceType:
                 {
-                return false;
+                // TODO - resolve the difference type into an interface type, and test assignability to that
+
+                break;
                 }
 
-            // even though each of the two types was individually assignable to, the combination
-            // must be tested together; flatten the type into an interface and evaluate
-            // TODO
-            return false;
+            case ImmutableType:
+                {
+                // it is assumed that the expression is assignable to an immutable type if the
+                // expression can be assigned to the specified type (without immutability specified),
+                // and the expression is constant (which implies that the expression must be smart
+                // enough to know how to compile itself as an immutable-type expression)
+                if (isConstant() && isAssignableTo(typeThat.getUnderlyingType()))
+                    {
+                    return true;
+                    }
+
+                break;
+                }
+
+            case AccessType:
+                {
+                // regardless of the accessibility override, assignability to the non-overridden
+                // type is a pre-requisite
+                if (!isAssignableTo(typeThat.getUnderlyingType()))
+                    {
+                    break;
+                    }
+
+                if (typeThat.getAccess() != Access.PUBLIC)
+                    {
+                    // the non-public type needs to be flattened to an interface and evaluated
+                    // TODO - resolve the non-public type into an interface type, and test assignability to that
+
+                    break;
+                    }
+
+                return true;
+                }
+
+            case ParameterizedType:
+                {
+                if (!isAssignableTo(typeThat.getUnderlyingType()))
+                    {
+                    break;
+                    }
+
+                // either this expression evaluates implicitly to the same parameterized type (or a  itself, or we
+
+                // the non-parameterized type was assignable to; flatten the parameterized type into an
+                // interface and evaluate
+                // TODO
+
+                return true;
+                }
+
+            case AnnotatedType:
+                {
+                // TODO
+                notImplemented();
+                break;
+                }
+
+            case TerminalType:
+                {
+                if (typeThat.isEcstasy("Object"))
+                    {
+                    // everything is assignable to Object
+                    return true;
+                    }
+
+                // this will probably need to be overwritten by various expressions
+                typeImplicit = getImplicitType();
+                if (typeImplicit.isA(typeThat))
+                    {
+                    return true;
+                    }
+
+                break;
+                }
+
+            default:
+                throw new IllegalStateException("format=" + typeThat.getFormat());
             }
 
-        if (typeThat instanceof IntersectionTypeConstant)
+        // find all of the possible @Auto conversion functions for the type of the current
+        // expression, and for each one, test whether the result of the conversion is assignable to
+        // the specified type
+        if (typeImplicit == null)
             {
-            return  isAssignableTo(typeThat.getUnderlyingType()) ||
-                    isAssignableTo(typeThat.getUnderlyingType2());
+            typeImplicit = getImplicitType();
             }
-
-        if (typeThat instanceof DifferenceTypeConstant)
-            {
-            // TODO - this needs to generate a resolved interface type from the difference and see if any of the possible results are assignable to that
-            notImplemented();
-            return false;
-            }
-
-        if (!typeThat.isSingleDefiningConstant())
-            {
-            // handle union, intersection, difference types
-            if (typeThat.)
-            }
-
-        // this will probably need to be overwitten by various expressions
-        TypeConstant typeThis = getImplicitType();
-        return typeThis.equals(typeThat) || typeThis.isA(typeThat);
-
+        Set setEliminated = new HashSet<>();
+        Set setPossible   = typeImplicit.
 // TODO it is possible to provide a function that returns a type that this is assignable to (see @Auto method on Object)
 //                case "Function":
 //                {
@@ -260,6 +329,8 @@ public abstract class Expression
 //                code.add(new Invoke_01(argVal, methodTo, varResult.getRegister()));
 //                return varResult.getRegister();
 //                }
+
+        return false;
         }
 
     /**
