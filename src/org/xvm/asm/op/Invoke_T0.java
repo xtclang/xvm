@@ -9,16 +9,18 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
+import org.xvm.asm.constants.MethodConstant;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
-
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -38,9 +40,23 @@ public class Invoke_T0
      */
     public Invoke_T0(int nTarget, int nMethodId, int nArg)
         {
-        f_nTargetValue   = nTarget;
-        f_nMethodId      = nMethodId;
-        f_nArgTupleValue = nArg;
+        super(nTarget, nMethodId);
+
+        m_nArgTupleValue = nArg;
+        }
+
+    /**
+     * Construct an NVOK_T0 op based on the passed arguments.
+     *
+     * @param argTarget    the target Argument
+     * @param constMethod  the method constant
+     * @param argValue     the value Argument
+     */
+    public Invoke_T0(Argument argTarget, MethodConstant constMethod, Argument argValue)
+        {
+        super(argTarget, constMethod);
+
+        m_argValue = argValue;
         }
 
     /**
@@ -52,19 +68,23 @@ public class Invoke_T0
     public Invoke_T0(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue   = readPackedInt(in);
-        f_nMethodId      = readPackedInt(in);
-        f_nArgTupleValue = readPackedInt(in);
+        super(readPackedInt(in), readPackedInt(in));
+
+        m_nArgTupleValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_NVOK_T0);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writePackedLong(out, f_nArgTupleValue);
+        super.write(out, registry);
+
+        if (m_argValue != null)
+            {
+            m_nArgTupleValue = encodeArgument(m_argValue, registry);
+            }
+
+        writePackedLong(out, m_nArgTupleValue);
         }
 
     @Override
@@ -78,45 +98,26 @@ public class Invoke_T0
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            TupleHandle hArgTuple = (TupleHandle) frame.getArgument(f_nArgTupleValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
+            TupleHandle hArgTuple = (TupleHandle) frame.getArgument(m_nArgTupleValue);
 
             if (hTarget == null || hArgTuple == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeComposition clz = hTarget.f_clazz;
+            // Tuple values cannot be local properties
             ObjectHandle[] ahArg = hArgTuple.m_ahValue;
 
-            CallChain chain = getCallChain(frame, clz, f_nMethodId);
-            MethodStructure method = chain.getTop();
-
-            if (chain.isNative())
+            if (isProperty(hTarget))
                 {
-                return clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_UNUSED);
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepLast = frameCaller -> complete(frameCaller, ahTarget[0], ahArg);
+
+                return new Utils.GetTarget(ahTarget, stepLast).doNext(frame);
                 }
 
-            int cArgs = ahArg.length;
-            int cVars = method.getMaxVars();
-
-            if (cArgs != method.getParamCount())
-                {
-                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
-                }
-
-            ObjectHandle[] ahVar;
-            if (cVars > cArgs)
-                {
-                ahVar = new ObjectHandle[cVars];
-                System.arraycopy(ahArg, 0, ahVar, 0, cArgs);
-                }
-            else
-                {
-                ahVar = ahArg;
-                }
-
-            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);
+            return complete(frame, hTarget, ahArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -124,7 +125,33 @@ public class Invoke_T0
             }
         }
 
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nArgTupleValue;
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
+        {
+        TypeComposition clz = hTarget.f_clazz;
+
+        CallChain chain = getCallChain(frame, clz);
+        MethodStructure method = chain.getTop();
+
+        if (ahArg.length != method.getParamCount())
+            {
+            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            }
+
+        return chain.isNative()
+            ? clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_UNUSED)
+            : clz.f_template.invoke1(frame, chain, hTarget,
+                Utils.ensureSize(ahArg, method.getMaxVars()), Frame.RET_UNUSED);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argValue, registry);
+        }
+
+    private int m_nArgTupleValue;
+
+    private Argument m_argValue;
     }

@@ -7,12 +7,16 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function;
 
@@ -35,9 +39,23 @@ public class MBind
      */
     public MBind(int nTarget, int nMethodId, int nRet)
         {
-        f_nTargetValue = nTarget;
-        f_nMethodId    = nMethodId;
-        f_nResultValue = nRet;
+        super(nTarget, nMethodId);
+
+        m_nResultValue = nRet;
+        }
+
+    /**
+     * Construct an MBIND op based on the passed arguments.
+     *
+     * @param argTarget    the target argument
+     * @param constMethod  the method constant
+     * @param regReturn    the return value register
+     */
+    public MBind(Argument argTarget, MethodConstant constMethod, Register regReturn)
+        {
+        super(argTarget, constMethod);
+
+        m_regReturn = regReturn;
         }
 
     /**
@@ -49,19 +67,23 @@ public class MBind
     public MBind(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nMethodId    = readPackedInt(in);
-        f_nResultValue = readPackedInt(in);
+        super(readPackedInt(in), readPackedInt(in));
+
+        m_nResultValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
-        out.writeByte(OP_MBIND);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writePackedLong(out, f_nResultValue);
+        super.write(out, registry);
+
+        if (m_regReturn != null)
+            {
+            m_nResultValue = encodeArgument(m_regReturn, registry);
+            }
+
+        writePackedLong(out, m_nResultValue);
         }
 
     @Override
@@ -75,18 +97,21 @@ public class MBind
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
             if (hTarget == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeComposition clz = hTarget.f_clazz;
-            CallChain chain = getCallChain(frame, clz, f_nMethodId);
+            if (isProperty(hTarget))
+                {
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepLast = frameCaller -> proceed(frameCaller, ahTarget[0]);
 
-            return frame.assignValue(f_nResultValue, clz.f_template.isService() ?
-                    Function.makeAsyncHandle(chain, 0).bindTarget(hTarget) :
-                    Function.makeHandle(chain, 0).bindTarget(hTarget));
+                return new Utils.GetArguments(Utils.OBJECTS_NONE, new int[]{0}, stepLast).doNext(frame);
+                }
+
+            return proceed(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -94,7 +119,17 @@ public class MBind
             }
         }
 
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nResultValue;
+    protected int proceed(Frame frame, ObjectHandle hTarget)
+        {
+        TypeComposition clz = hTarget.f_clazz;
+        CallChain chain = getCallChain(frame, clz);
+
+        return frame.assignValue(m_nResultValue, clz.f_template.isService() ?
+                Function.makeAsyncHandle(chain, 0).bindTarget(hTarget) :
+                Function.makeHandle(chain, 0).bindTarget(hTarget));
+        }
+
+    private int m_nResultValue;
+
+    private Register m_regReturn;
     }

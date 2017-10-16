@@ -227,6 +227,11 @@ public class Adapter
         return method;
         }
 
+    public int getNegativePropertyConstId(String sClassName, String sPropName)
+        {
+        return Op.CONSTANT_OFFSET - getPropertyConstId(sClassName, sPropName);
+        }
+
     public int getPropertyConstId(String sClassName, String sPropName)
         {
         try

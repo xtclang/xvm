@@ -42,7 +42,7 @@ public class Move
     /**
      * Construct a MOV op for the passed arguments.
      *
-     * @param argFrom  the Register to move from
+     * @param argFrom  the Argument to move from
      * @param regTo  the Register to move to
      */
     public Move(Argument argFrom, Register regTo)
@@ -105,7 +105,7 @@ public class Move
 
             if (frame.isNextRegister(nTo))
                 {
-                frame.copyVarInfo(nFrom);
+                frame.introduceVarCopy(nFrom);
                 }
             else
                 {

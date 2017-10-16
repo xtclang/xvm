@@ -8,10 +8,12 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
+import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -108,11 +110,50 @@ public class GP_Add
                 return R_REPEAT;
                 }
 
-            return hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, m_nRetValue);
+            if (isProperty(hTarget))
+                {
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepNext = frameCaller ->
+                    resolveArg(frameCaller, ahTarget[0], hArg);
+
+                return new Utils.GetTarget(ahTarget, stepNext).doNext(frame);
+                }
+
+            return resolveArg(frame, hTarget, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
+            }
+        }
+
+    protected int resolveArg(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
+        {
+        if (isProperty(hArg))
+            {
+            ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+
+            Frame.Continuation stepLast = frameCaller -> complete(frame, hTarget, ahArg[0]);
+            return new Utils.GetArguments(ahArg, new int[]{0}, stepLast).doNext(frame);
+            }
+        return complete(frame, hTarget, hArg);
+        }
+
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
+        {
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceVarCopy(m_nTarget);
+            }
+        return hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, m_nRetValue);
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        if (scope.isNextRegister(m_nRetValue))
+            {
+            scope.allocVar();
             }
         }
 

@@ -1,37 +1,81 @@
 package org.xvm.asm;
 
 
+import java.io.DataOutput;
+import java.io.IOException;
+
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
- * Common base for INVOKE_ ops.
+ * Common base for NVOK_ ops.
  *
  * @author gg 2017.02.21
  */
 public abstract class OpInvocable extends Op
     {
-    private TypeComposition m_clazz;        // cached class
-    private int             m_nMethodId;    // cached method id
-    private CallChain       m_chain;        // cached call chain
-
-    protected CallChain getCallChain(Frame frame, TypeComposition clazz, int nMethodConstId)
+    /**
+     * Construct an pp.
+     *
+     * @param nTarget    r-value that specifies the object on which the method being invoked
+     * @param nMethodId  r-value that specifies the method being invoked
+     *
+     * @deprecated
+     */
+    protected OpInvocable(int nTarget, int nMethodId)
         {
-        assert (nMethodConstId >= 0);
+        m_nTarget   = nTarget;
+        m_nMethodId = nMethodId;
+        }
 
-        if (m_chain != null && nMethodConstId == m_nMethodId && m_clazz == clazz)
+    /**
+     * Construct an op based on the passed arguments.
+     *
+     * @param argTarget    the target Argument
+     * @param constMethod  the method constant
+     */
+    public OpInvocable(Argument argTarget, MethodConstant constMethod)
+        {
+        m_argTarget   = argTarget;
+        m_constMethod = constMethod;
+        }
+
+    @Override
+    public void write(DataOutput out, ConstantRegistry registry)
+            throws IOException
+        {
+        out.writeByte(getOpCode());
+
+        writePackedLong(out, m_nTarget);
+        writePackedLong(out, m_nMethodId);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArgument(m_argTarget, registry);
+        registerArgument(m_constMethod, registry);
+        }
+
+    // helper method
+    protected CallChain getCallChain(Frame frame, TypeComposition clazz)
+        {
+        assert (m_nMethodId >= 0);
+
+        if (m_chain != null && m_clazz == clazz)
             {
             return m_chain;
             }
 
-        MethodConstant constMethod = (MethodConstant) frame.f_context.f_pool.getConstant(nMethodConstId);
+        MethodConstant constMethod = (MethodConstant) frame.f_context.f_pool.getConstant(m_nMethodId);
 
-        m_nMethodId = nMethodConstId;
-        m_clazz     = clazz;
+        m_clazz = clazz;
 
         Constants.Access access = constMethod.getAccess();
         if (access == Constants.Access.PRIVATE)
@@ -45,4 +89,13 @@ public abstract class OpInvocable extends Op
 
         return m_chain;
         }
+
+    protected int m_nTarget;
+    protected int m_nMethodId;
+
+    private Argument       m_argTarget;
+    private MethodConstant m_constMethod;
+
+    private TypeComposition m_clazz;        // cached class
+    private CallChain       m_chain;        // cached call chain
     }

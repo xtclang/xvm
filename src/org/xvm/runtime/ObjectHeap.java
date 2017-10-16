@@ -16,6 +16,8 @@ import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xType;
 
+import org.xvm.runtime.template.types.xProperty;
+
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple;
 
@@ -135,8 +137,10 @@ public class ObjectHeap
                 return xModule.INSTANCE;
 
             case Package:
-            case Property:
                 throw new UnsupportedOperationException("TODO" + constValue);
+
+            case Property:
+                return xProperty.INSTANCE;
 
             case Method:
                 return Function.INSTANCE;

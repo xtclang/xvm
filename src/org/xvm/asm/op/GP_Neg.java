@@ -6,12 +6,14 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Op;
+import org.xvm.asm.Register;
+import org.xvm.asm.Scope;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -21,18 +23,36 @@ import static org.xvm.util.Handy.writePackedLong;
  * GP_NEG rvalue, lvalue   ; -T -> T
  */
 public class GP_Neg
-        extends OpInvocable
+        extends Op
     {
     /**
      * Construct a GP_NEG op.
      *
      * @param nArg  the r-value target to negate
      * @param nRet  the l-value to store the result in
+     *
+     * @deprecated
      */
     public GP_Neg(int nArg, int nRet)
         {
-        f_nArgValue = nArg;
-        f_nRetValue = nRet;
+        m_nArgValue = nArg;
+        m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct a GP_NEG op for the passed arguments.
+     *
+     * @param argValue  the Argument to negate
+     * @param regResult  the Register to put the result in
+     */
+    public GP_Neg(Argument argValue, Register regResult)
+        {
+        if (argValue == null || regResult == null)
+            {
+            throw new IllegalArgumentException("arguments required");
+            }
+        m_argValue = argValue;
+        m_regResult = regResult;
         }
 
     /**
@@ -44,17 +64,24 @@ public class GP_Neg
     public GP_Neg(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nArgValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_argValue != null)
+            {
+            m_nArgValue = encodeArgument(m_argValue, registry);
+            m_nRetValue = encodeArgument(m_regResult, registry);
+            }
+
         out.writeByte(OP_GP_NEG);
-        writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
+
+        writePackedLong(out, m_nArgValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -68,15 +95,21 @@ public class GP_Neg
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nArgValue);
+            ObjectHandle hTarget = frame.getArgument(m_nArgValue);
             if (hTarget == null)
                 {
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = hTarget.f_clazz.f_template;
+            if (isProperty(hTarget))
+                {
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahTarget[0]);
 
-            return template.invokeNeg(frame, hTarget, f_nRetValue);
+                return new Utils.GetTarget(ahTarget, stepNext).doNext(frame);
+                }
+
+            return complete(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -84,6 +117,34 @@ public class GP_Neg
             }
         }
 
-    private final int f_nArgValue;
-    private final int f_nRetValue;
+    protected int complete(Frame frame, ObjectHandle hTarget)
+        {
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceVarCopy(m_nArgValue);
+            }
+        return hTarget.f_clazz.f_template.invokeNeg(frame, hTarget, m_nRetValue);
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        if (scope.isNextRegister(m_nRetValue))
+            {
+            scope.allocVar();
+            }
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArgument(m_argValue, registry);
+        }
+
+    private int m_nArgValue;
+    private int m_nRetValue;
+
+    private Argument m_argValue;
+    private Register m_regResult;
+
     }

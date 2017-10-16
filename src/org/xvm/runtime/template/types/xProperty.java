@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.types;
 
 
 import org.xvm.asm.ClassStructure;
@@ -48,7 +48,7 @@ public class xProperty
 
     public static class PropertyHandle extends ObjectHandle
         {
-        PropertyConstant m_constProperty;
+        public PropertyConstant m_constProperty;
 
         protected PropertyHandle(TypeComposition clazz, PropertyConstant constProperty)
             {

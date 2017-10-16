@@ -122,34 +122,7 @@ public class Function
 
         protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
             {
-            int cArgs = ahArg.length;
-            int cVars = getVarCount();
-
-            assert cArgs <= cVars;
-
-            ObjectHandle[] ahVar;
-            if (cVars > cArgs)
-                {
-                ahVar = new ObjectHandle[cVars];
-
-                if (cArgs > 0)
-                    {
-                    if (cArgs == 1)
-                        {
-                        ahVar[0] = ahArg[0];
-                        }
-                    else
-                        {
-                        System.arraycopy(ahArg, 0, ahVar, 0, cArgs);
-                        }
-                    }
-                }
-            else
-                {
-                ahVar = ahArg;
-                }
-
-            return ahVar;
+            return Utils.ensureSize(ahArg, getVarCount());
             }
 
         // invoke with zero or one return to be placed into the specified register;

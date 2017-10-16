@@ -12,6 +12,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.Const;
 
+import org.xvm.runtime.template.types.xProperty.PropertyHandle;
+
 
 /**
  * Various helpers.
@@ -61,7 +63,7 @@ public abstract class Utils
             sMsg = sMsg.substring(1);
             }
         System.out.println(new Timestamp(System.currentTimeMillis())
-                + " " + ServiceContext.getCurrentContext() + ": " + sMsg);
+            + " " + ServiceContext.getCurrentContext() + ": " + sMsg);
         }
 
     public static void registerGlobalSignatures(ConstantPool pool)
@@ -73,6 +75,34 @@ public abstract class Utils
         SIG_DEFAULT = pool.ensureSignatureConstant("default", atVoid, atVoid);
         SIG_TO_STRING = pool.ensureSignatureConstant("to", atVoid, atString);
         }
+
+    /**
+     * Ensure that the specified array of arguments is of the specified size.
+     *
+     * @param ahArg  the array of arguments
+     * @param cVars  the desired array size
+     *
+     * @return the array of the desired size containing all the arguments
+     */
+    public static ObjectHandle[] ensureSize(ObjectHandle[] ahArg, int cVars)
+        {
+        int cArgs = ahArg.length;
+        if (cArgs == cVars)
+            {
+            return ahArg;
+            }
+
+        if (cArgs < cVars)
+            {
+            ObjectHandle[] ahVar = new ObjectHandle[cVars];
+            System.arraycopy(ahArg, 0, ahVar, 0, cArgs);
+            return ahVar;
+            }
+
+        throw new IllegalArgumentException("Requested size " + cVars +
+            " is less than the array size " + cArgs);
+        }
+
 
     // ----- hash.get() support -----
 
@@ -111,7 +141,7 @@ public abstract class Utils
         return clzValue.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
 
-    // ----- PostInc support -----
+    // ----- Pre/PostInc support -----
 
     public static class PreInc
             implements Frame.Continuation
@@ -182,5 +212,115 @@ public abstract class Utils
             return hTarget.f_clazz.f_template.
                     setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
             }
+        }
+
+    // ----- "local property as argument" support -----
+
+    static public class GetTarget
+                implements Frame.Continuation
+        {
+        public GetTarget(ObjectHandle[] ahTarget, Frame.Continuation continuation)
+            {
+            this.ahTarget = ahTarget;
+            this.continuation = continuation;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ahTarget[0] = frameCaller.getFrameLocal();
+
+            return continuation.proceed(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            ObjectHandle handle = ahTarget[0];
+            if (handle instanceof PropertyHandle)
+                {
+                ObjectHandle hThis = frameCaller.getThis();
+                String sProp = ((PropertyHandle) handle).m_constProperty.getName();
+
+                switch (hThis.f_clazz.f_template.getPropertyValue(
+                        frameCaller, hThis, sProp, Frame.RET_LOCAL))
+                    {
+                    case Op.R_NEXT:
+                        // replace the property handle with the value
+                        ahTarget[0] = frameCaller.getFrameLocal();
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+                    }
+                }
+            return continuation.proceed(frameCaller);
+            }
+
+        private final ObjectHandle[] ahTarget;
+        private final Frame.Continuation continuation;
+        }
+
+    static public class GetArguments
+                implements Frame.Continuation
+        {
+        public GetArguments(ObjectHandle[] ahVar, int[] holderIx,
+                            Frame.Continuation continuation)
+            {
+            this.ahVar = ahVar;
+            this.holderIx = holderIx;
+            this.continuation = continuation;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            // replace a property handle with the value
+            ahVar[holderIx[0]] = frameCaller.getFrameLocal();
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            for (int iStep = holderIx[0]++; iStep < ahVar.length; )
+                {
+                ObjectHandle handle = ahVar[iStep];
+                if (handle instanceof PropertyHandle)
+                    {
+                    ObjectHandle hThis = frameCaller.getThis();
+                    String sProp = ((PropertyHandle) handle).m_constProperty.getName();
+
+                    switch (hThis.f_clazz.f_template.getPropertyValue(
+                            frameCaller, hThis, sProp, Frame.RET_LOCAL))
+                        {
+                        case Op.R_NEXT:
+                            // replace the property handle with the value
+                            updateResult(frameCaller);
+                            break;
+
+                        case Op.R_CALL:
+                            frameCaller.m_frameNext.setContinuation(this);
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+                        }
+                    }
+                }
+            return continuation.proceed(frameCaller);
+            }
+
+        private final ObjectHandle[] ahVar;
+        private final int[] holderIx;
+        private final Frame.Continuation continuation;
         }
     }
