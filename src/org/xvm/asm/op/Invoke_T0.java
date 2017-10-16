@@ -114,7 +114,7 @@ public class Invoke_T0
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepLast = frameCaller -> complete(frameCaller, ahTarget[0], ahArg);
 
-                return new Utils.GetTarget(ahTarget, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepLast).doNext(frame);
                 }
 
             return complete(frame, hTarget, ahArg);

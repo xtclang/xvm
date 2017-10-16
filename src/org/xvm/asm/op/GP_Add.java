@@ -116,7 +116,7 @@ public class GP_Add
                 Frame.Continuation stepNext = frameCaller ->
                     resolveArg(frameCaller, ahTarget[0], hArg);
 
-                return new Utils.GetTarget(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
             return resolveArg(frame, hTarget, hArg);
@@ -134,7 +134,7 @@ public class GP_Add
             ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
 
             Frame.Continuation stepLast = frameCaller -> complete(frame, hTarget, ahArg[0]);
-            return new Utils.GetArguments(ahArg, new int[]{0}, stepLast).doNext(frame);
+            return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
             }
         return complete(frame, hTarget, hArg);
         }

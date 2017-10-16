@@ -106,7 +106,7 @@ public class GP_Neg
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahTarget[0]);
 
-                return new Utils.GetTarget(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
             return complete(frame, hTarget);

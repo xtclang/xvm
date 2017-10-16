@@ -214,12 +214,12 @@ public abstract class Utils
             }
         }
 
-    // ----- "local property as argument" support -----
+    // ----- "local property as an argument" support -----
 
-    static public class GetTarget
+    static public class GetArgument
                 implements Frame.Continuation
         {
-        public GetTarget(ObjectHandle[] ahTarget, Frame.Continuation continuation)
+        public GetArgument(ObjectHandle[] ahTarget, Frame.Continuation continuation)
             {
             this.ahTarget = ahTarget;
             this.continuation = continuation;
@@ -255,6 +255,9 @@ public abstract class Utils
 
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
                     }
                 }
             return continuation.proceed(frameCaller);
@@ -267,8 +270,7 @@ public abstract class Utils
     static public class GetArguments
                 implements Frame.Continuation
         {
-        public GetArguments(ObjectHandle[] ahVar, int[] holderIx,
-                            Frame.Continuation continuation)
+        public GetArguments(ObjectHandle[] ahVar, int[] holderIx, Frame.Continuation continuation)
             {
             this.ahVar = ahVar;
             this.holderIx = holderIx;
@@ -313,6 +315,9 @@ public abstract class Utils
 
                         case Op.R_EXCEPTION:
                             return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
                         }
                     }
                 }

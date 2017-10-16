@@ -22,7 +22,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
-import org.xvm.runtime.template.types.xProperty;
+
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -124,7 +124,7 @@ public class Invoke_TN
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepLast = frameCaller -> complete(frameCaller, ahTarget[0], ahArg);
 
-                return new Utils.GetTarget(ahTarget, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepLast).doNext(frame);
                 }
 
             return complete(frame, hTarget, ahArg);

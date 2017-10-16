@@ -19,7 +19,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.types.xProperty;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
@@ -123,7 +122,7 @@ public class Invoke_T1
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepLast = frameCaller -> complete(frameCaller, ahTarget[0], ahArg);
 
-                return new Utils.GetTarget(ahTarget, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepLast).doNext(frame);
                 }
 
             return complete(frame, hTarget, ahArg);
@@ -149,7 +148,7 @@ public class Invoke_T1
         return chain.isNative()
             ? clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, m_nRetValue)
             : clz.f_template.invoke1(frame, chain, hTarget,
-                Utils.ensureSize(ahArg, method.getMaxVars()), m_nRetValue);
+            Utils.ensureSize(ahArg, method.getMaxVars()), m_nRetValue);
         }
 
     @Override

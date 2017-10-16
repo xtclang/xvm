@@ -108,7 +108,7 @@ public class MBind
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepLast = frameCaller -> proceed(frameCaller, ahTarget[0]);
 
-                return new Utils.GetArguments(Utils.OBJECTS_NONE, new int[]{0}, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepLast).doNext(frame);
                 }
 
             return proceed(frame, hTarget);
@@ -122,6 +122,7 @@ public class MBind
     protected int proceed(Frame frame, ObjectHandle hTarget)
         {
         TypeComposition clz = hTarget.f_clazz;
+
         CallChain chain = getCallChain(frame, clz);
 
         return frame.assignValue(m_nResultValue, clz.f_template.isService() ?

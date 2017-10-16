@@ -21,12 +21,10 @@ import static org.xvm.util.Handy.writePackedLong;
 public abstract class OpInvocable extends Op
     {
     /**
-     * Construct an pp.
+     * Construct an op.
      *
      * @param nTarget    r-value that specifies the object on which the method being invoked
      * @param nMethodId  r-value that specifies the method being invoked
-     *
-     * @deprecated
      */
     protected OpInvocable(int nTarget, int nMethodId)
         {
@@ -50,6 +48,12 @@ public abstract class OpInvocable extends Op
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_argTarget != null)
+            {
+            m_nTarget = encodeArgument(m_argTarget, registry);
+            m_nMethodId = encodeArgument(m_constMethod, registry);
+            }
+
         out.writeByte(getOpCode());
 
         writePackedLong(out, m_nTarget);
@@ -73,7 +77,8 @@ public abstract class OpInvocable extends Op
             return m_chain;
             }
 
-        MethodConstant constMethod = (MethodConstant) frame.f_context.f_pool.getConstant(m_nMethodId);
+        MethodConstant constMethod = (MethodConstant)
+            frame.f_context.f_pool.getConstant(m_nMethodId);
 
         m_clazz = clazz;
 

@@ -116,7 +116,7 @@ public class Invoke_1N
                 Frame.Continuation stepNext = frameCaller ->
                     resolveArg(frameCaller, ahTarget[0], hArg);
 
-                return new Utils.GetTarget(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
             return resolveArg(frame, hTarget, hArg);
@@ -129,22 +129,25 @@ public class Invoke_1N
 
     protected int resolveArg(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
+        if (isProperty(hArg))
+            {
+            ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+            Frame.Continuation stepLast = frameCaller -> complete(frameCaller, hTarget, ahArg[0]);
+
+            return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+            }
+
+        return complete(frame, hTarget, hArg);
+        }
+
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
+        {
+        TypeComposition clz = hTarget.f_clazz;
+
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
         ahVar[0] = hArg;
-
-        if (isProperty(hArg))
-            {
-            Frame.Continuation stepLast = frameCaller -> complete(frameCaller, chain, hTarget, ahVar);
-            return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
-            }
-        return complete(frame, chain, hTarget, ahVar);
-        }
-
-    protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
-        {
-        TypeComposition clz = hTarget.f_clazz;
 
         return chain.isNative()
             ? clz.f_template.invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)

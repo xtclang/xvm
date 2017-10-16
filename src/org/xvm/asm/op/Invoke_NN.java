@@ -119,7 +119,7 @@ public class Invoke_NN
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0], ahArg);
 
-                return new Utils.GetTarget(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
             return resolveArgs(frame, hTarget, null);
