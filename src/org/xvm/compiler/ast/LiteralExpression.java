@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.math.BigDecimal;
+
 import java.util.List;
 
 import org.xvm.asm.Constant;
@@ -10,15 +11,20 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
-import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecimalConstant;
+import org.xvm.asm.constants.DifferenceTypeConstant;
 import org.xvm.asm.constants.Float16Constant;
+import org.xvm.asm.constants.ImmutableTypeConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.Var;
 
@@ -27,6 +33,7 @@ import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.type.Decimal;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 import org.xvm.type.Decimal128;
@@ -58,12 +65,6 @@ public class LiteralExpression
     public boolean isTODO()
         {
         return literal.getId() == Id.TODO;
-        }
-
-    @Override
-    public boolean isConstant()
-        {
-        return true;
         }
 
     @Override
@@ -153,9 +154,204 @@ public class LiteralExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    public boolean isConstant()
+        {
+        return true;
+        }
+
+    @Override
     public TypeConstant getImplicitType()
         {
         return toConstant().getType();
+        }
+
+    @Override
+    public boolean isAssignableTo(TypeConstant typeThat)
+        {
+        if (typeThat instanceof ImmutableTypeConstant)
+            {
+            // all of the literal expression arguments are "const" objects, so immutable is OK
+            return isAssignableTo(typeThat.getUnderlyingType());
+            }
+
+        if (typeThat.isSingleDefiningConstant()
+                && typeThat.getDefiningConstant() instanceof ClassConstant
+                && ((ClassConstant) typeThat.getDefiningConstant()).getModuleConstant().isEcstasyModule()
+                && typeThat.getAccess() == Access.PUBLIC)
+            {
+            Id            id    = literal.getId();
+            PackedInteger piVal;
+            String        sName = ((ClassConstant) typeThat.getDefiningConstant()).getPathString();
+            switch (sName)
+                {
+                // these are all of the super-classes and interfaces that could be represented by
+                // a literal expression
+                case "Object":
+                case "Const":
+                case "Orderable":
+                case "collections.Hashable":
+                    return true;
+
+                case "Sequential":
+                    // char and the various ints are sequential
+                    return id == Id.LIT_CHAR || id == Id.LIT_INT;
+
+                case "Char":
+                    // char and the various ints are sequential
+                    return id == Id.LIT_CHAR || id == Id.LIT_INT && isIntInRange(0, 0x10FFFF);
+
+                case "String":
+                    return id == Id.LIT_CHAR || id == Id.LIT_STRING;
+
+                case "Number":
+                case "FPNumber":
+                case "FPLiteral":
+                case "BinaryFPNumber":
+                case "VarFloat":
+                    return id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN;
+
+                case "IntNumber":
+                case "IntLiteral":
+                case "VarInt":
+                case "annotations.UncheckedInt":
+                    return id == Id.LIT_INT;
+
+                case "UIntNumber":
+                case "VarUInt":
+                    // unsigned value must be >= 0
+                    return id == Id.LIT_INT && !((PackedInteger) literal.getValue()).isNegative();
+
+                case "DecimalFPNumber":
+                case "VarDec":
+                    return id == Id.LIT_INT || id == Id.LIT_DEC;
+
+                case "Bit":
+                    return isIntInRange(0, 1);
+
+                case "Nibble":
+                    return isIntInRange(0, 0xF);
+
+                case "Int8":
+                    return isIntInRange(Byte.MIN_VALUE, Byte.MAX_VALUE);
+
+                case "Int16":
+                    return isIntInRange(Short.MIN_VALUE, Short.MAX_VALUE);
+
+                case "Int32":
+                    return isIntInRange(Integer.MIN_VALUE, Integer.MAX_VALUE);
+
+                case "Int64":
+                    return isIntInRange(Long.MIN_VALUE, Long.MAX_VALUE);
+
+                case "Int128":
+                    return id == Id.LIT_INT && ((PackedInteger) literal.getValue()).getSignedByteSize() <= 16;
+
+                case "UInt8":
+                    return isIntInRange(0x00, 0xFF);
+
+                case "UInt16":
+                    return isIntInRange(0x0000, 0xFFFF);
+
+                case "UInt32":
+                    return isIntInRange(0x00000000L, 0xFFFFFFFFL);
+
+                case "UInt64":
+                    return id == Id.LIT_INT
+                            && !(piVal = ((PackedInteger) literal.getValue())).isNegative()
+                            && piVal.getUnsignedByteSize() <= 8;
+
+                case "UInt128":
+                    return id == Id.LIT_INT
+                            && !(piVal = ((PackedInteger) literal.getValue())).isNegative()
+                            && piVal.getUnsignedByteSize() <= 16;
+
+                case "Dec32":
+                    if (id == Id.LIT_INT || id == Id.LIT_DEC)
+                        {
+                        BigDecimal bigdec = id == Id.LIT_INT
+                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                : (BigDecimal) literal.getValue();
+                        try
+                            {
+                            return new Decimal32(bigdec).isFinite();
+                            }
+                        catch (ArithmeticException e) {}
+                        }
+                    return false;
+
+                case "Dec64":
+                    if (id == Id.LIT_INT || id == Id.LIT_DEC)
+                        {
+                        BigDecimal bigdec = id == Id.LIT_INT
+                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                : (BigDecimal) literal.getValue();
+                        try
+                            {
+                            return new Decimal64(bigdec).isFinite();
+                            }
+                        catch (ArithmeticException e) {}
+                        }
+                    return false;
+
+                case "Dec128":
+                    if (id == Id.LIT_INT || id == Id.LIT_DEC)
+                        {
+                        BigDecimal bigdec = id == Id.LIT_INT
+                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                : (BigDecimal) literal.getValue();
+                        try
+                            {
+                            return new Decimal128(bigdec).isFinite();
+                            }
+                        catch (ArithmeticException e) {}
+                        }
+                    return false;
+
+                case "Float16":
+                    if (id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN)
+                        {
+                        try
+                            {
+                            // convert to/from 16-bit to test for overflow/underflow
+                            Float flVal = Float.parseFloat(literal.getValue().toString());
+                            return Float.isFinite(flVal) && Float.isFinite(
+                                    Float16Constant.toFloat(Float16Constant.toHalf(flVal)));
+                            }
+                        catch (RuntimeException e) {}
+                        }
+                    return false;
+
+                case "Float32":
+                    if (id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN)
+                        {
+                        try
+                            {
+                            // TODO add support for *purposeful* NaN/infinity
+                            return Float.isFinite(Float.parseFloat(literal.getValue().toString()));
+                            }
+                        catch (RuntimeException e) {}
+                        }
+                    return false;
+
+                case "Float64":
+                    if (id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN)
+                        {
+                        try
+                            {
+                            // TODO add support for *purposeful* NaN/infinity
+                            return Double.isFinite(Double.parseDouble(literal.getValue().toString()));
+                            }
+                        catch (RuntimeException e) {}
+                        }
+                    return false;
+
+                case "Float128":
+                    // TODO - how to support 128-bit float?
+                    throw new UnsupportedOperationException("128-bit binary floating point not implemented");
+                }
+            }
+
+        return super.isAssignableTo(typeThat);
         }
 
     @Override
@@ -328,7 +524,8 @@ public class LiteralExpression
                     TypeConstant   typeTParams = pool.ensureParameterizedTypeConstant(
                             typeTuple, SignatureConstant.NO_TYPES);
                     TypeConstant   typeTReturn = pool.ensureParameterizedTypeConstant(
-                            typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(null)});
+                            typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(
+                                    pool.ensureEcstasyClassConstant("Object"), null)});
                     TypeConstant   typeFn      = pool.ensureParameterizedTypeConstant(
                             pool.ensureEcstasyTypeConstant("Function"),
                             new TypeConstant[] {typeTParams, typeTReturn});

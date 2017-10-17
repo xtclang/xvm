@@ -54,19 +54,12 @@ public class TypeSet
     // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
     final private Map<Integer, TypeComposition> f_mapConstCompositions = new TreeMap<>(Integer::compare);
 
-    public final TypeConstant THIS;
-    public final TypeConstant[] THIS_1;
-    public final TypeConstant[] THIS_2;
     public final static TypeConstant[] VOID = new TypeConstant[0];
 
     TypeSet(Container container)
         {
         f_container = container;
         f_adapter = container.f_adapter;
-
-        THIS = container.f_pool.ensureThisTypeConstant(Constants.Access.PUBLIC);
-        THIS_1 = new TypeConstant[] {THIS};
-        THIS_2 = new TypeConstant[] {THIS, THIS};
 
         loadNativeTemplates();
         }

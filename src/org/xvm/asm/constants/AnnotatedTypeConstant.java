@@ -23,8 +23,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * A TypeConstant that represents the annotation of another type constant.
- *
- * @author cp 2017.06.26
  */
 public class AnnotatedTypeConstant
         extends TypeConstant

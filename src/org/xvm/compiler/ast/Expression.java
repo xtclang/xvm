@@ -1,16 +1,29 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
+import java.util.Set;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.DifferenceTypeConstant;
+import org.xvm.asm.constants.ImmutableTypeConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
@@ -84,44 +97,12 @@ public abstract class Expression
         return false;
         }
 
-    public boolean isAssignableTo(TypeConstant type)
-        {
-        // TODO this should be an abstract method
-        throw notImplemented();
-        }
-
     /**
      * @return true iff the Expression is a constant value
      */
     public boolean isConstant()
         {
         return false;
-        }
-
-    /**
-     * @return true iff the Expression is the constant value "false"
-     */
-    public boolean isConstantFalse()
-        {
-        // TODO
-        return false;
-        }
-
-    /**
-     * @return true iff the Expression is the constant value "false"
-     */
-    public boolean isConstantTrue()
-        {
-        // TODO
-        return false;
-        }
-
-    /**
-     * @return true iff the expression is capable of completing normally
-     */
-    public boolean canComplete()
-        {
-        return true;
         }
 
     /**
@@ -136,10 +117,239 @@ public abstract class Expression
         throw notImplemented();
         }
 
-    public Constant generateConstant(TypeConstant constType, ErrorListener errs)
+    /**
+     * Determine if this expression can generate an argument of the specified type, or that can be
+     * assigned to the specified type.
+     *
+     * @param typeThat  an argument type
+     *
+     * @return true iff this expression can be rendered as the specified argument type
+     */
+    public boolean isAssignableTo(TypeConstant typeThat)
         {
-        assert isConstant();
-        throw notImplemented(); // TODO?
+        TypeConstant typeImplicit = null;
+
+        // first, layer-by-layer peel the "type onion" down to the terminal(s)
+        switch (typeThat.getFormat())
+            {
+            case UnionType:
+                {
+                TypeConstant typeThat1 = typeThat.getUnderlyingType();
+                TypeConstant typeThat2 = typeThat.getUnderlyingType2();
+                if (!(isAssignableTo(typeThat1) && isAssignableTo(typeThat2)))
+                    {
+                    break;
+                    }
+
+                // even though each of the two types was individually assignable to, there are rare
+                // examples that are NOT allowable, such as the literal 0 being assignable to two
+                // different Int classes
+                if (typeThat1.isClassType() && typeThat2.isClassType())
+                    {
+                    // TODO - (or make sure that the type contains not more than one distinct class)
+                    // TODO - (or if it does, that one is a subclass of the other(s))
+                    // TODO - or it impersonates the other(s)
+                    }
+
+                return true;
+                }
+
+            case IntersectionType:
+                {
+                if (    isAssignableTo(typeThat.getUnderlyingType()) ||
+                        isAssignableTo(typeThat.getUnderlyingType2()   ))
+                    {
+                    return true;
+                    }
+
+                // even though neither of the two types was individually assignable to, it is
+                // possible that the intersection represents a duck-type-able interface, assuming
+                // that none of the underlying types is a class
+                // TODO - verify that none of the underlying types is a class type
+                // TODO - resolve the intersection type into an interface type, and test assignability to that
+
+                break;
+                }
+
+            case DifferenceType:
+                {
+                // TODO - resolve the difference type into an interface type, and test assignability to that
+
+                break;
+                }
+
+            case ImmutableType:
+                {
+                // it is assumed that the expression is assignable to an immutable type if the
+                // expression can be assigned to the specified type (without immutability specified),
+                // and the expression is constant (which implies that the expression must be smart
+                // enough to know how to compile itself as an immutable-type expression)
+                if (isConstant() && isAssignableTo(typeThat.getUnderlyingType()))
+                    {
+                    return true;
+                    }
+
+                break;
+                }
+
+            case AccessType:
+                {
+                // regardless of the accessibility override, assignability to the non-overridden
+                // type is a pre-requisite
+                if (!isAssignableTo(typeThat.getUnderlyingType()))
+                    {
+                    break;
+                    }
+
+                if (typeThat.getAccess() != Access.PUBLIC)
+                    {
+                    // the non-public type needs to be flattened to an interface and evaluated
+                    // TODO - resolve the non-public type into an interface type, and test assignability to that
+
+                    break;
+                    }
+
+                return true;
+                }
+
+            case ParameterizedType:
+                {
+                if (!isAssignableTo(typeThat.getUnderlyingType()))
+                    {
+                    break;
+                    }
+
+                // either this expression evaluates implicitly to the same parameterized type (or a  itself, or we
+
+                // the non-parameterized type was assignable to; flatten the parameterized type into an
+                // interface and evaluate
+                // TODO
+
+                return true;
+                }
+
+            case AnnotatedType:
+                {
+                // TODO
+                notImplemented();
+                break;
+                }
+
+            case TerminalType:
+                {
+                if (typeThat.isEcstasy("Object"))
+                    {
+                    // everything is assignable to Object
+                    return true;
+                    }
+
+                // this will probably need to be overwritten by various expressions
+                typeImplicit = getImplicitType();
+                if (typeImplicit.isA(typeThat))
+                    {
+                    return true;
+                    }
+
+                break;
+                }
+
+            default:
+                throw new IllegalStateException("format=" + typeThat.getFormat());
+            }
+
+        // find all of the possible @Auto conversion functions for the type of the current
+        // expression, and for each one, test whether the result of the conversion is assignable to
+        // the specified type
+        if (typeImplicit == null)
+            {
+            typeImplicit = getImplicitType();
+            }
+
+        Set<MethodConstant> setPossible   = new HashSet<>(typeImplicit.autoConverts());
+        Set<TypeConstant>   setEliminated = new HashSet<>();
+        while (!setPossible.isEmpty())
+            {
+            MethodConstant constMethod = setPossible.iterator().next();
+            TypeConstant   typeReturn  = constMethod.getRawReturns()[0];
+
+            // make sure we don't try any more conversion methods that return the same type
+            setPossible.remove(constMethod);
+            if (!setEliminated.add(typeReturn))
+                {
+                // we already tested a conversion to this same type
+                continue;
+                }
+
+            // check to see if this conversion gets us where we want to go
+            // TODO this needs to be a full "is assignable to" test, not just an "isA" test
+            if (typeReturn.isA(typeThat))
+
+                {
+                // when we actually implement this, we will need a chain of conversions that got us
+                // here, but to answer this question, we just need to know that it is possible to
+                // get here at all
+                return true;
+                }
+
+            // it is possible that the type that we got to can be further converted to get us where
+            // we want to ultimately get to
+            setPossible.addAll(typeReturn.autoConverts());
+            }
+
+        return false;
+        }
+
+    /**
+     * @return true iff the Expression is the constant value "false"
+     */
+    public boolean isTypeBoolean()
+        {
+        return getImplicitType().isEcstasy("Boolean");
+        }
+
+    /**
+     * @return true iff the Expression is the constant value "false"
+     */
+    public boolean isConstantFalse()
+        {
+        return getImplicitType().isEcstasy("Boolean.False");
+        }
+
+    /**
+     * @return true iff the Expression is the constant value "false"
+     */
+    public boolean isConstantTrue()
+        {
+        return getImplicitType().isEcstasy("Boolean.True");
+        }
+
+    /**
+     * @return true iff the expression is capable of completing normally
+     */
+    public boolean canComplete()
+        {
+        return true;
+        }
+
+    /**
+     * Convert this expression to a constant value, which is possible iff {@link #isConstant}
+     * returns true.
+     *
+     * @param constType  the constant type required
+     * @param errs       the error list to log any errors to if this expression cannot be made into
+     *                   a constant value of the specified type
+     *
+     * @return a constant of the specified type
+     */
+    public Argument generateConstant(TypeConstant constType, ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            throw notImplemented();
+            }
+
+        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+        return generateBlackHole(constType);
         }
 
     /**
@@ -230,11 +440,38 @@ public abstract class Expression
             if (!typeIn.isA(typeOut))
                 {
                 // TODO isA() doesn't handle a lot of things that are actually assignable
-                // TODO for things provably not assignable, is an @Auto method available?
+                // TODO for things provably not assignable, check for an @Auto method
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
                 }
             }
 
         return argOut;
+        }
+
+    /**
+     * When a register is needed to store a value that is never used, the "black hole" register is
+     * used. It is considered a "write only" register. This is also useful during compilation, when
+     * an expression cannot yield an actual argument; the expression should log an error, and return
+     * a black hole register instead (which will serve as a natural assertion later in the assembly
+     * cycle, in case someone forgets to log an error).
+     *
+     * @param type  the type of the register
+     *
+     * @return a black hole register of the specified type
+     */
+    protected Register generateBlackHole(TypeConstant type)
+        {
+        return new Register(type, Op.A_IGNORE);
+        }
+
+    protected List<Register> generateBlackHoles(List<TypeConstant> listTypes)
+        {
+        int       cTypes   = listTypes == null ? 0 : listTypes.size();
+        ArrayList listRegs = new ArrayList(cTypes);
+        for (int i = 0; i < cTypes; ++i)
+            {
+            listRegs.add(generateBlackHole(listTypes.get(i)));
+            }
+        return listRegs;
         }
     }

@@ -31,6 +31,19 @@ public class Register
      */
     public Register(TypeConstant type, int iArg)
         {
+        this(type, iArg, false);
+        }
+
+    /**
+     * Construct a Register of the specified type.
+     *
+     * @param type       the TypeConstant specifying the Register type
+     * @param iArg       the argument index, which is either a pre-defined argument index, or a
+     *                   register ID
+     * @param fReadOnly  true if the register cannot be modified
+     */
+    public Register(TypeConstant type, int iArg, boolean fReadOnly)
+        {
         if (type == null)
             {
             throw new IllegalArgumentException("type required");
@@ -40,6 +53,7 @@ public class Register
 
         m_type = type;
         m_iArg = iArg;
+        m_fRO  = fReadOnly || iArg != UNKNOWN && isPredefinedRegister(iArg) && iArg != Op.A_IGNORE;
         }
 
 
@@ -93,27 +107,28 @@ public class Register
      */
     protected static void validateIndex(int iReg)
         {
-        if (!(iReg >= 0 || isPredefinedArgument(iReg) || iReg == UNKNOWN))
+        if (!(iReg >= 0 || iReg == UNKNOWN || isPredefinedRegister(iReg)))
             {
             throw new IllegalArgumentException("invalid register ID: " + iReg);
             }
         }
 
     /**
-     * Determine if the specified argument index is for a pre-defined argument.
+     * Determine if the specified argument index is for a pre-defined register.
      *
      * @param iArg  the argument index
      *
      * @return true iff the index specifies a pre-defined argument
      */
-    protected static boolean isPredefinedArgument(int iArg)
+    protected static boolean isPredefinedRegister(int iArg)
         {
         switch (iArg)
             {
-            case Op.A_TARGET:
+            case Op.A_IGNORE:
             case Op.A_PUBLIC:
             case Op.A_PROTECTED:
             case Op.A_PRIVATE:
+            case Op.A_TARGET:
             case Op.A_STRUCT:
             case Op.A_FRAME:
             case Op.A_SERVICE:
@@ -123,8 +138,36 @@ public class Register
                 return true;
 
             default:
+                if (iArg < 0)
+                    {
+                    throw new IllegalArgumentException("illegal argument index: " + iArg);
+                    }
                 return false;
             }
+        }
+
+    /**
+     * Determine if this register is readable. This is equivalent to the Ref for the register
+     * supporting the get() operation.
+     *
+     * @return true iff this register is readable
+     */
+    public boolean isReadable()
+        {
+        return m_iArg != Op.A_IGNORE;
+        }
+
+    /**
+     * Determine if this register is writable. This is equivalent to the Ref for the register
+     * supporting the set() operation.
+     *
+     * TODO the registers for the parameters need to use the special constructor with readonly=true (currently no registers are created for parameters)
+     *
+     * @return true iff this register is writable
+     */
+    public boolean isWritable()
+        {
+        return !m_fRO;
         }
 
 
@@ -144,4 +187,9 @@ public class Register
      * The register ID (>=0), or the pre-defined argument identifier in the range -1 to -16.
      */
     private int m_iArg;
+
+    /**
+     * Read-only flag.
+     */
+    private boolean m_fRO;
     }

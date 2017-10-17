@@ -1301,16 +1301,15 @@ public class ConstantPool
      *
      * @return an auto-narrowing constant that represents the class of "this"
      */
-    public ThisClassConstant ensureThisClassConstant()
+    public ThisClassConstant ensureThisClassConstant(IdentityConstant constClass)
         {
-        ThisClassConstant constant = (ThisClassConstant)
-                ensureLocatorLookup(Format.ThisClass).get(ThisClassConstant.THIS_CLASS);
+        ThisClassConstant constant = (ThisClassConstant) ensureLocatorLookup(Format.ThisClass).get(constClass);
         if (constant != null)
             {
             return constant;
             }
 
-        return (ThisClassConstant) register(new ThisClassConstant(this));
+        return (ThisClassConstant) register(new ThisClassConstant(this, constClass));
         }
 
     /**
@@ -1320,10 +1319,10 @@ public class ConstantPool
      *
      * @return an auto-narrowing class type constant that represents the type of "this"
      */
-    public TypeConstant ensureThisTypeConstant(Access access)
+    public TypeConstant ensureThisTypeConstant(IdentityConstant constClass, Access access)
         {
         // get the raw type
-        ThisClassConstant constId   = ensureThisClassConstant();
+        ThisClassConstant constId   = ensureThisClassConstant(constClass);
         TypeConstant      constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
         if (constType == null)
             {
