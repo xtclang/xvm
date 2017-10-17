@@ -391,6 +391,6 @@ public class Adapter
         Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
                 filter(contribution -> contribution.getComposition().equals(composition)).findFirst();
 
-        return opt.isPresent() ? opt.get().getClassConstant() : null;
+        return opt.isPresent() ? opt.get().getTypeConstant() : null;
         }
     }

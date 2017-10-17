@@ -86,6 +86,23 @@ public class ChildClassConstant
         return m_constName.getValue();
         }
 
+    @Override
+    public IdentityConstant getDeclarationLevelClass()
+        {
+        PseudoConstant constParent = m_constParent;
+        switch (constParent.getFormat())
+            {
+            case ParentClass:
+            case ChildClass:
+            case ThisClass:
+                IdentityConstant clzParent = constParent.getDeclarationLevelClass();
+                return clzParent.getComponent().getChild(m_constName.getValue()).getIdentityConstant();
+
+            default:
+                throw new IllegalStateException("constParent=" + constParent);
+            }
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

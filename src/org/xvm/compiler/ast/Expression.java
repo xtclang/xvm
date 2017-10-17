@@ -1,9 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import com.sun.tools.internal.jxc.ap.Const;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 
 import java.util.Set;
@@ -31,6 +33,7 @@ import org.xvm.asm.op.Label;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
+import org.xvm.util.LinkedIterator;
 import org.xvm.util.Severity;
 
 
@@ -146,9 +149,34 @@ public abstract class Expression
                 // different Int classes
                 if (typeThat1.isClassType() && typeThat2.isClassType())
                     {
-                    // TODO - (or make sure that the type contains not more than one distinct class)
-                    // TODO - (or if it does, that one is a subclass of the other(s))
-                    // TODO - or it impersonates the other(s)
+                    HashSet<Constant> setClasses = new HashSet<>(5);
+                    setClasses.addAll(typeThat1.underlyingClasses());
+                    setClasses.addAll(typeThat2.underlyingClasses());
+                    if (setClasses.size() > 1)
+                        {
+                        // first check if the implicit type is a sub-class and/or impersonator of
+                        // all of the classes implied by the union type
+                        typeImplicit = getImplicitType();
+                        if (typeImplicit.isA(typeThat))
+                            {
+                            return true;
+                            }
+
+                        // TODO - in progress
+                        // if (typeThat1.isA)
+
+                        // find a solution where there is one class that is a sub-class and/or
+                        // impersonator of all other classes
+                        boolean fSolution = false;
+                        for (Constant constTheOne : setClasses)
+                            {
+                            for (Constant constOther : setClasses)
+                                {
+                                // TODO - in progress
+                                // if (constTheOne != constOther)
+                                }
+                            }
+                        }
                     }
 
                 return true;

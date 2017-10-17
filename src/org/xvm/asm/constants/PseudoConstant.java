@@ -26,7 +26,20 @@ public abstract class PseudoConstant
         super(pool);
         }
 
+
     // ----- Constant methods ----------------------------------------------------------------------
+
+    /**
+     * Note: This only applies to {@link ThisClassConstant}, {@link ChildClassConstant}, and
+     * {@link ParentClassConstant}.
+     *
+     * @return the IdentityConstant for the structure that corresponds to the "this:class" at the
+     *         level at which the constant was declared for
+     */
+    public IdentityConstant getDeclarationLevelClass()
+        {
+        throw new UnsupportedOperationException();
+        }
 
     @Override
     protected Object getLocator()
@@ -35,6 +48,7 @@ public abstract class PseudoConstant
         // package
         return super.getLocator();
         }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

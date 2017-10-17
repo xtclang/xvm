@@ -96,6 +96,27 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public boolean extendsClass(IdentityConstant constClass)
+        {
+        // a difference type is NEVER a class type; it always resolves to an interface type
+        return false;
+        }
+
+    @Override
+    public boolean impersonatesClass(IdentityConstant constClass)
+        {
+        // a difference type is NEVER a class type; it always resolves to an interface type
+        return false;
+        }
+
+    @Override
+    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
+        {
+        // a difference type is NEVER a class type; it always resolves to an interface type
+        return false;
+        }
+
+    @Override
     public boolean isClassType()
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
@@ -105,18 +126,21 @@ public class DifferenceTypeConstant
     @Override
     public boolean isSingleUnderlyingClass()
         {
+        // a difference type is NEVER a class type; it always resolves to an interface type
         return false;
         }
 
     @Override
     public Constant getSingleUnderlyingClass()
         {
+        // a difference type is NEVER a class type; it always resolves to an interface type
         throw new IllegalStateException();
         }
 
     @Override
     public Set<Constant> underlyingClasses()
         {
+        // a difference type is NEVER a class type; it always resolves to an interface type
         return Collections.EMPTY_SET;
         }
 
