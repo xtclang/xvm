@@ -2,10 +2,16 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
+
+import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -29,6 +35,8 @@ public class ThisClassConstant
             throws IOException
         {
         super(pool);
+
+        m_iClass = readMagnitude(in);
         }
 
     /**
@@ -36,13 +44,24 @@ public class ThisClassConstant
      *
      * @param pool  the ConstantPool that will contain this Constant
      */
-    public ThisClassConstant(ConstantPool pool)
+    public ThisClassConstant(ConstantPool pool, IdentityConstant constClass)
         {
         super(pool);
+
+        m_constClass = constClass;
         }
 
 
     // ----- Constant methods ----------------------------------------------------------------------
+
+    /**
+     * @return the IdentityConstant for the structure that corresponds to the "this:class" at the
+     *         level at which the constant was declared for
+     */
+    public IdentityConstant getDeclarationLevelClass()
+        {
+        return m_constClass;
+        }
 
     @Override
     public Format getFormat()
@@ -69,10 +88,28 @@ public class ThisClassConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constClass.containsUnresolved();
+        }
+
+    @Override
+    public Constant simplify()
+        {
+        m_constClass = (IdentityConstant) m_constClass.simplify();
+        return this;
+        }
+
+    @Override
+    public void forEachUnderlying(Consumer<Constant> visitor)
+        {
+        visitor.accept(m_constClass);
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
-        assert that instanceof ThisClassConstant;
-        return 0;
+        return this.m_constClass.compareTo(((ThisClassConstant) that).m_constClass);
         }
 
     @Override
@@ -85,9 +122,31 @@ public class ThisClassConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    protected void disassemble(DataInput in)
+            throws IOException
+        {
+        m_constClass = (IdentityConstant) getConstantPool().getConstant(m_iClass);
+        }
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        m_constClass = (IdentityConstant) pool.register(m_constClass);
+        }
+
+    @Override
+    protected void assemble(DataOutput out)
+            throws IOException
+        {
+        out.writeByte(getFormat().ordinal());
+        writePackedLong(out, m_constClass.getPosition());
+        }
+
+    @Override
     public String getDescription()
         {
-        return "name=" + THIS_CLASS;
+        return "name=" + THIS_CLASS
+                + ", decl-level=" + m_constClass;
         }
 
 
@@ -96,7 +155,7 @@ public class ThisClassConstant
     @Override
     public int hashCode()
         {
-        return -99;
+        return -m_constClass.hashCode();
         }
 
 
@@ -106,4 +165,14 @@ public class ThisClassConstant
      * The source code identifier of the auto-narrowing "this class".
      */
     public static final String THIS_CLASS = "this:class";
+
+    /**
+     * During disassembly, this holds the index of the class constant.
+     */
+    private int m_iClass;
+
+    /**
+     * The declaration-level class that the this:class refers to (from which auto-narrowing occurs).
+     */
+    private IdentityConstant m_constClass;
     }

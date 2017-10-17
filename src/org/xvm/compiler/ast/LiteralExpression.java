@@ -524,7 +524,8 @@ public class LiteralExpression
                     TypeConstant   typeTParams = pool.ensureParameterizedTypeConstant(
                             typeTuple, SignatureConstant.NO_TYPES);
                     TypeConstant   typeTReturn = pool.ensureParameterizedTypeConstant(
-                            typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(null)});
+                            typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(
+                                    pool.ensureEcstasyClassConstant("Object"), null)});
                     TypeConstant   typeFn      = pool.ensureParameterizedTypeConstant(
                             pool.ensureEcstasyTypeConstant("Function"),
                             new TypeConstant[] {typeTParams, typeTReturn});

@@ -6,15 +6,15 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import java.util.Set;
-import org.xvm.asm.ClassStructure;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.MethodStructure;
-import org.xvm.runtime.TypeComposition;
+
 import org.xvm.runtime.TypeSet;
 
 
@@ -401,6 +401,7 @@ public abstract class TypeConstant
     public Set<MethodConstant> autoConverts()
         {
         // TODO this is temporary (it just finds the one @Auto that exists on Object itself)
+        // TODO make sure that @Override without @Auto hides the underlying @Auto method!!! (see Function.x)
         for (MethodStructure method : getConstantPool().ensureEcstasyClassConstant("Object")
                 .getComponent().ensureMultiMethodStructure("to").methods())
             {
@@ -411,6 +412,66 @@ public abstract class TypeConstant
             }
         throw new IllegalStateException("no method found: \"to<function Object()>()\"");
         }
+
+    /**
+     * @return true iff the TypeConstant represents a "class type", which is any type that is not an
+     *         "interface type"
+     */
+    public boolean isClassType()
+        {
+        // generally, a type is a class type if any of the underlying types is a class type
+        return getUnderlyingType().isClassType()
+                || isRelationalType() && getUnderlyingType2().isClassType();
+        }
+
+    /**
+     * @return true iff there is exactly one underlying class that makes this a class type
+     */
+    public boolean isSingleUnderlyingClass()
+        {
+        return getUnderlyingType().isSingleUnderlyingClass()
+                ^ (isRelationalType() && getUnderlyingType2().isSingleUnderlyingClass());
+        }
+
+    /**
+     * Note: Only use this method if {@link #isSingleUnderlyingClass()} returns true.
+     *
+     * @return the one underlying class that makes this a class type
+     */
+    public Constant getSingleUnderlyingClass()
+        {
+        assert isClassType() && isSingleUnderlyingClass();
+
+        Constant clz = getUnderlyingType().getSingleUnderlyingClass();
+        if (clz == null && isRelationalType())
+            {
+            clz = getUnderlyingType2().getSingleUnderlyingClass();
+            }
+        return clz;
+        }
+
+    /**
+     * @return the set of constants representing the classes that make this type a class type
+     */
+    public Set<Constant> underlyingClasses()
+        {
+        Set<Constant> set = getUnderlyingType().underlyingClasses();
+        if (isRelationalType())
+            {
+            Set<Constant> set2 = getUnderlyingType2().underlyingClasses();
+            if (set.isEmpty())
+                {
+                set = set2;
+                }
+            else if (!set2.isEmpty())
+                {
+                set = new HashSet<>(set);
+                set.addAll(set2);
+                }
+            }
+        return set;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -449,6 +510,7 @@ public abstract class TypeConstant
 
     @Override
     public abstract int hashCode();
+
 
     // ----- fields --------------------------------------------------------------------------------
 

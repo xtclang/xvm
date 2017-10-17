@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -91,6 +93,31 @@ public class DifferenceTypeConstant
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
                 : getConstantPool().ensureDifferenceTypeConstant(constResolved1, constResolved2);
+        }
+
+    @Override
+    public boolean isClassType()
+        {
+        // a difference type is NEVER a class type; it always resolves to an interface type
+        return false;
+        }
+
+    @Override
+    public boolean isSingleUnderlyingClass()
+        {
+        return false;
+        }
+
+    @Override
+    public Constant getSingleUnderlyingClass()
+        {
+        throw new IllegalStateException();
+        }
+
+    @Override
+    public Set<Constant> underlyingClasses()
+        {
+        return Collections.EMPTY_SET;
         }
 
 

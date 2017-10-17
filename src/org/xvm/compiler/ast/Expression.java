@@ -121,8 +121,6 @@ public abstract class Expression
      * Determine if this expression can generate an argument of the specified type, or that can be
      * assigned to the specified type.
      *
-     * TODO - this is going to need some helpers for complex (union, intersection, difference) types
-     *
      * @param typeThat  an argument type
      *
      * @return true iff this expression can be rendered as the specified argument type
@@ -136,18 +134,22 @@ public abstract class Expression
             {
             case UnionType:
                 {
-                if (!(  isAssignableTo(typeThat.getUnderlyingType()) &&
-                        isAssignableTo(typeThat.getUnderlyingType2())  ))
+                TypeConstant typeThat1 = typeThat.getUnderlyingType();
+                TypeConstant typeThat2 = typeThat.getUnderlyingType2();
+                if (!(isAssignableTo(typeThat1) && isAssignableTo(typeThat2)))
                     {
                     break;
                     }
 
                 // even though each of the two types was individually assignable to, there are rare
-                // examples that are not allowable, such as the literal 0 being assignable to two
+                // examples that are NOT allowable, such as the literal 0 being assignable to two
                 // different Int classes
-                // TODO - verify that none or only one of the underlying types is a class type
-                // TODO - (or make sure that the type contains not more than one distinct class)
-                // TODO - (or if it does, that one is a subclass of the other(s))
+                if (typeThat1.isClassType() && typeThat2.isClassType())
+                    {
+                    // TODO - (or make sure that the type contains not more than one distinct class)
+                    // TODO - (or if it does, that one is a subclass of the other(s))
+                    // TODO - or it impersonates the other(s)
+                    }
 
                 return true;
                 }
@@ -269,8 +271,12 @@ public abstract class Expression
             {
             MethodConstant constMethod = setPossible.iterator().next();
             TypeConstant   typeReturn  = constMethod.getRawReturns()[0];
+
+            // make sure we don't try any more conversion methods that return the same type
+            setPossible.remove(constMethod);
             if (!setEliminated.add(typeReturn))
                 {
+                // we already tested a conversion to this same type
                 continue;
                 }
 
