@@ -19,6 +19,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DifferenceTypeConstant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -261,74 +262,33 @@ public abstract class Expression
             {
             typeImplicit = getImplicitType();
             }
-        Set setEliminated = new HashSet<>();
-        Set setPossible   = typeImplicit.
-// TODO it is possible to provide a function that returns a type that this is assignable to (see @Auto method on Object)
-//                case "Function":
-//                {
-//                // determine the constant value returned from the function (which is the value
-//                // of this expression)
-//                Argument argVal;
-//                if (constType.isParamsSpecified())
-//                    {
-//                    // it has type params, so it must be a Function; see:
-//                    //      "@Auto function Object() to<function Object()>()"
-//                    List<TypeConstant> listParamTypes = constType.getParamTypes();
-//                    if (listParamTypes.size() == 2)
-//                        {
-//                        TypeConstant typeTParams = listParamTypes.get(0);
-//                        TypeConstant typeTReturn = listParamTypes.get(1);
-//                        if (typeTParams.isTuple()
-//                                && typeTParams.getTupleFieldCount() == 0
-//                                && typeTReturn.isTuple()
-//                                && typeTReturn.getTupleFieldCount() == 1)
-//                            {
-//                            // call back into this expression and ask it to render itself as the
-//                            // return type from that function (a constant value), and then we'll
-//                            // wrap that with the conversion function (from Object)
-//                            argVal = generateArgument(
-//                                    code, typeTReturn.getTupleFieldType(0), false, errs);
-//                            }
-//                        else
-//                            {
-//                            // error: function must take no parameters and return one value;
-//                            // drop into the generic handling of the request for error handling
-//                            break;
-//                            }
-//                        }
-//                    else
-//                        {
-//                        // error: function must have 2 parameters (t-params & t-returns);
-//                        // drop into the generic handling of the request for error handling
-//                        break;
-//                        }
-//                    }
-//                else
-//                    {
-//                    argVal = toConstant();
-//                    }
-//
-//                // create a constant for this method on Object:
-//                //      "@Auto function Object() to<function Object()>()"
-//                TypeConstant   typeTuple   = pool.ensureEcstasyTypeConstant("collections.Tuple");
-//                TypeConstant   typeTParams = pool.ensureParameterizedTypeConstant(
-//                        typeTuple, SignatureConstant.NO_TYPES);
-//                TypeConstant   typeTReturn = pool.ensureParameterizedTypeConstant(
-//                        typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(null)});
-//                TypeConstant   typeFn      = pool.ensureParameterizedTypeConstant(
-//                        pool.ensureEcstasyTypeConstant("Function"),
-//                        new TypeConstant[] {typeTParams, typeTReturn});
-//                MethodConstant methodTo    = pool.ensureMethodConstant(
-//                        pool.ensureEcstasyClassConstant("Object"), "to", Access.PUBLIC,
-//                        SignatureConstant.NO_TYPES, new TypeConstant[] {typeFn});
-//
-//                // generate the code that turns the constant value from this expression into a
-//                // function object that returns that value
-//                Var varResult = new Var(typeFn);
-//                code.add(varResult);
-//                code.add(new Invoke_01(argVal, methodTo, varResult.getRegister()));
-//                return varResult.getRegister();
-//                }
+
+        Set<MethodConstant> setPossible   = new HashSet<>(typeImplicit.autoConverts());
+        Set<TypeConstant>   setEliminated = new HashSet<>();
+        while (!setPossible.isEmpty())
+            {
+            MethodConstant constMethod = setPossible.iterator().next();
+            TypeConstant   typeReturn  = constMethod.getRawReturns()[0];
+            if (!setEliminated.add(typeReturn))
+                {
+                continue;
+                }
+
+            // check to see if this conversion gets us where we want to go
+            // TODO this needs to be a full "is assignable to" test, not just an "isA" test
+            if (typeReturn.isA(typeThat))
+
+                {
+                // when we actually implement this, we will need a chain of conversions that got us
+                // here, but to answer this question, we just need to know that it is possible to
+                // get here at all
+                return true;
+                }
+
+            // it is possible that the type that we got to can be further converted to get us where
+            // we want to ultimately get to
+            setPossible.addAll(typeReturn.autoConverts());
+            }
 
         return false;
         }

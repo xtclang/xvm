@@ -143,12 +143,28 @@ public abstract class Op
         return arg instanceof Register;
         }
 
-    boolean isReadable(Argument arg)
+    /**
+     * Determine if the specified Argument is readable. This is equivalent to the Ref for the
+     * argument supporting the get() operation.
+     *
+     * @param arg  the argument
+     *
+     * @return true iff the argument is readable
+     */
+    protected static boolean isReadable(Argument arg)
         {
         return !(arg instanceof Register) || ((Register) arg).isReadable();
         }
 
-    boolean isWritable(Argument arg)
+    /**
+     * Determine if the specified Argument is readable. This is equivalent to the Ref for the
+     * argument supporting the set() operation.
+     *
+     * @param arg  the argument
+     *
+     * @return true iff the argument is writable
+     */
+    protected static boolean isWritable(Argument arg)
         {
         return arg instanceof Register && ((Register) arg).isWritable();
         }

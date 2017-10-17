@@ -53,7 +53,7 @@ public class Register
 
         m_type = type;
         m_iArg = iArg;
-        m_fRO  = fReadOnly || isPredefinedRegister(iArg) && iArg != Op.A_IGNORE;
+        m_fRO  = fReadOnly || iArg != UNKNOWN && isPredefinedRegister(iArg) && iArg != Op.A_IGNORE;
         }
 
 
@@ -107,7 +107,7 @@ public class Register
      */
     protected static void validateIndex(int iReg)
         {
-        if (!(iReg >= 0 || isPredefinedRegister(iReg) || iReg == UNKNOWN))
+        if (!(iReg >= 0 || iReg == UNKNOWN || isPredefinedRegister(iReg)))
             {
             throw new IllegalArgumentException("invalid register ID: " + iReg);
             }
@@ -146,11 +146,25 @@ public class Register
             }
         }
 
+    /**
+     * Determine if this register is readable. This is equivalent to the Ref for the register
+     * supporting the get() operation.
+     *
+     * @return true iff this register is readable
+     */
     public boolean isReadable()
         {
         return m_iArg != Op.A_IGNORE;
         }
 
+    /**
+     * Determine if this register is writable. This is equivalent to the Ref for the register
+     * supporting the set() operation.
+     *
+     * TODO the registers for the parameters need to use the special constructor with readonly=true (currently no registers are created for parameters)
+     *
+     * @return true iff this register is writable
+     */
     public boolean isWritable()
         {
         return !m_fRO;
