@@ -153,6 +153,7 @@ public class Register
 
     public boolean isWritable()
         {
+        return !m_fRO;
         }
 
 

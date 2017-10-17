@@ -142,8 +142,14 @@ public abstract class Op
 
     boolean isReadable(Argument arg)
         {
-        return arg instanceof Register && ((Register) arg).getIndex()
+        return !(arg instanceof Register) || ((Register) arg).isReadable();
         }
+
+    boolean isWritable(Argument arg)
+        {
+        return arg instanceof Register && ((Register) arg).isWritable();
+        }
+
     /**
      * Register the specified argument if it's a constant.
      *
