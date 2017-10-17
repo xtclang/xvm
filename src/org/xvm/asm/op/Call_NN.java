@@ -8,16 +8,17 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -32,12 +33,30 @@ public class Call_NN
      * @param nFunction  the r-value indicating the function to call
      * @param anArg      the r-values indicating the arguments
      * @param anRet      the l-value locations for the result
+     *
+     * @deprecated
      */
     public Call_NN(int nFunction, int[] anArg, int[] anRet)
         {
-        f_nFunctionValue = nFunction;
-        f_anArgValue     = anArg;
-        f_anRetValue     = anRet;
+        super(nFunction);
+
+        m_anArgValue = anArg;
+        m_anRetValue = anRet;
+        }
+
+    /**
+     * Construct a CALL_NN op based on the passed arguments.
+     *
+     * @param argFunction  the function Argument
+     * @param aArgValue    the array of value Arguments
+     * @param aRegReturn   the return Register
+     */
+    public Call_NN(Argument argFunction, Argument[] aArgValue, Register[] aRegReturn)
+        {
+        super(argFunction);
+
+        m_aArgValue = aArgValue;
+        m_aRegReturn = aRegReturn;
         }
 
     /**
@@ -49,19 +68,26 @@ public class Call_NN
     public Call_NN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = readPackedInt(in);
-        f_anArgValue     = readIntArray(in);
-        f_anRetValue     = readIntArray(in);
+        super(readPackedInt(in));
+
+        m_anArgValue = readIntArray(in);
+        m_anRetValue = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_CALL_NN);
-        writePackedLong(out, f_nFunctionValue);
-        writeIntArray(out, f_anArgValue);
-        writeIntArray(out, f_anRetValue);
+        super.write(out, registry);
+
+        if (m_aArgValue != null)
+            {
+            m_anArgValue = encodeArguments(m_aArgValue, registry);
+            m_anRetValue = encodeArguments(m_aRegReturn, registry);
+            }
+
+        writeIntArray(out, m_anArgValue);
+        writeIntArray(out, m_anRetValue);
         }
 
     @Override
@@ -73,45 +99,74 @@ public class Call_NN
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (f_nFunctionValue == A_SUPER)
-            {
-            CallChain chain = frame.m_chain;
-            if (chain == null)
-                {
-                throw new IllegalStateException();
-                }
-
-            return chain.callSuperNN(frame, f_anArgValue, f_anRetValue);
-            }
-
         try
             {
-            if (f_nFunctionValue < 0)
+            if (m_nFunctionValue == A_SUPER)
                 {
-                MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
+                CallChain chain = frame.m_chain;
+                if (chain == null)
+                    {
+                    throw new IllegalStateException();
+                    }
 
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.getMaxVars());
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
                 if (ahVar == null)
                     {
                     return R_REPEAT;
                     }
 
-                return frame.callN(function, null, ahVar, f_anRetValue);
+                if (anyProperty(ahVar))
+                    {
+                    Frame.Continuation stepLast = frameCaller ->
+                        chain.callSuperNN(frame, ahVar, m_anRetValue);
+
+                    return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                    }
+
+                return chain.callSuperNN(frame, ahVar, m_anRetValue);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            if (m_nFunctionValue < 0)
+                {
+                MethodStructure function = getMethodStructure(frame);
+
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, function.getMaxVars());
+                if (ahVar == null)
+                    {
+                    return R_REPEAT;
+                    }
+
+                if (anyProperty(ahVar))
+                    {
+                    Frame.Continuation stepLast = frameCaller ->
+                        frame.callN(function, null, ahVar, m_anRetValue);
+
+                    return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                    }
+                return frame.callN(function, null, ahVar, m_anRetValue);
+                }
+
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
             if (hFunction == null)
                 {
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount());
+            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount());
             if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hFunction.callN(frame, null, ahVar, f_anRetValue);
+            if (anyProperty(ahVar))
+                {
+                Frame.Continuation stepLast = frameCaller ->
+                    hFunction.callN(frameCaller, null, ahVar, m_anRetValue);
+
+                return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                }
+
+            return hFunction.callN(frame, null, ahVar, m_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -119,7 +174,17 @@ public class Call_NN
             }
         }
 
-    private final int   f_nFunctionValue;
-    private final int[] f_anArgValue;
-    private final int[] f_anRetValue;
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgValue, registry);
+        }
+
+    private int[] m_anArgValue;
+    private int[] m_anRetValue;
+
+    private Argument[] m_aArgValue;
+    private Register[] m_aRegReturn;
     }

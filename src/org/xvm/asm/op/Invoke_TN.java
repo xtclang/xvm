@@ -51,7 +51,7 @@ public class Invoke_TN
         }
 
     /**
-     * Construct an NVOK_T1 op based on the passed arguments.
+     * Construct an NVOK_TN op based on the passed arguments.
      *
      * @param argTarget    the target Argument
      * @param constMethod  the method constant
@@ -109,30 +109,43 @@ public class Invoke_TN
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            TupleHandle hArgTuple = (TupleHandle) frame.getArgument(m_nArgTupleValue);
+            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
 
-            if (hTarget == null || hArgTuple == null)
+            if (hTarget == null || hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            // Tuple values cannot be local properties
-            ObjectHandle[] ahArg = hArgTuple.m_ahValue;
-
             if (isProperty(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepLast = frameCaller -> complete(frameCaller, ahTarget[0], ahArg);
+                Frame.Continuation stepNext = frameCaller ->
+                    resolveTuple(frameCaller, ahTarget[0], hArg);
 
-                return new Utils.GetArgument(ahTarget, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hTarget, ahArg);
+            return resolveTuple(frame, hTarget, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    protected int resolveTuple(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
+        {
+        // Tuple values cannot be local properties
+        if (isProperty(hArg))
+            {
+            ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+            Frame.Continuation stepLast = frameCaller ->
+                complete(frameCaller, hTarget, ((TupleHandle) ahArg[0]).m_ahValue);
+
+            return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+            }
+
+        return complete(frame, hTarget, ((TupleHandle) hArg).m_ahValue);
         }
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)

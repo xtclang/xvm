@@ -73,6 +73,8 @@ public class Invoke_0N
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_aRegReturn != null)
             {
             m_anRetValue = encodeArguments(m_aRegReturn, registry);

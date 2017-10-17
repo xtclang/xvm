@@ -54,7 +54,7 @@ public class PIP_PostInc
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
         out.writeByte(OP_PIP_INCA);
         writePackedLong(out, f_nPropConstId);

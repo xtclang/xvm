@@ -98,7 +98,7 @@ public class xTestApp extends xModule
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.test2() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.TestClass"),
                     adapter.ensureValueConstantId("t")))  // #0 (t)
-            .add(new New_1(adapter.getMethodConstId("TestApp.TestClass", "construct"),
+            .add(new New_1(-adapter.getMethodConstId("TestApp.TestClass", "construct"),
                     adapter.ensureValueConstantId("Hello World!"), 0))
             .add(new X_Print(0))
             .add(new Var(adapter.getClassTypeConstId("String")))   // #1
@@ -121,7 +121,7 @@ public class xTestApp extends xModule
 
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.TestClass"),
                     adapter.ensureValueConstantId("t2"))) // #3 (t2)
-            .add(new New_N(adapter.getMethodConstId("TestApp.TestClass2", "construct"),
+            .add(new New_N(-adapter.getMethodConstId("TestApp.TestClass2", "construct"),
                     new int[] {
                             adapter.ensureValueConstantId(42),
                             adapter.ensureValueConstantId("Goodbye")
@@ -163,7 +163,7 @@ public class xTestApp extends xModule
                     adapter.ensureValueConstantId("\n# in TestApp.testService() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.TestService"),
                     adapter.ensureValueConstantId("svc")))     // #0
-            .add(new New_1(adapter.getMethodConstId("TestApp.TestService", "construct"),
+            .add(new New_1(-adapter.getMethodConstId("TestApp.TestService", "construct"),
                     adapter.ensureValueConstantId(48), 0))
             .add(new X_Print(0))
 
@@ -272,7 +272,7 @@ public class xTestApp extends xModule
                     adapter.ensureValueConstantId("\n# in TestApp.testService2() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.TestService"),
                     adapter.ensureValueConstantId("svc")))     // #0
-            .add(new New_1(adapter.getMethodConstId("TestApp.TestService", "construct"),
+            .add(new New_1(-adapter.getMethodConstId("TestApp.TestService", "construct"),
                     adapter.ensureValueConstantId(48), 0))
 
             .add(new Var_I(adapter.getClassTypeConstId("Function"),
@@ -398,7 +398,7 @@ public class xTestApp extends xModule
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testArray() #")))
             .add(new Var_N(adapter.getClassTypeConstId("collections.Array<Int64>"),
                     adapter.ensureValueConstantId("ai")))   // #0 (ai)
-            .add(new NewG_1(adapter.getMethodConstId("collections.Array", "construct"),
+            .add(new NewG_1(-adapter.getMethodConstId("collections.Array", "construct"),
                     -adapter.getClassTypeConstId("collections.Array<Int64>"),
                     adapter.ensureValueConstantId(0), 0))
             .add(new I_Set(0, adapter.ensureValueConstantId(0),
@@ -416,7 +416,7 @@ public class xTestApp extends xModule
 
             .add(new Var_N(adapter.getClassTypeConstId("collections.Array<String>"),
                     adapter.ensureValueConstantId("as1")))   // #2 (as1)
-            .add(new NewG_N(adapter.getMethodConstId("collections.Array", "construct",
+            .add(new NewG_N(-adapter.getMethodConstId("collections.Array", "construct",
                     new String[] {"Int64", "Function"}, VOID),
                     -adapter.getClassTypeConstId("collections.Array<String>"),
                     new int[] {
@@ -487,7 +487,7 @@ public class xTestApp extends xModule
                     adapter.ensureValueConstantId("t2"))) // #2 (t2)
             .add(new Var_T(adapter.getClassTypeConstId("String;Int64"),
                     new int[] {adapter.ensureValueConstantId(""), 1})) // #3
-            .add(new NewG_1(adapter.getMethodConstId("collections.Tuple", "construct"),
+            .add(new NewG_1(-adapter.getMethodConstId("collections.Tuple", "construct"),
                     -adapter.getClassTypeConstId("collections.Tuple<String,Int64>"), 3,
                     2))
             .add(new X_Print(2))
@@ -580,7 +580,7 @@ public class xTestApp extends xModule
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testConst() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.Point"),
                     adapter.ensureValueConstantId("p1"))) // #0 (p1)
-            .add(new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+            .add(new New_N(-adapter.getMethodConstId("TestApp.Point", "construct"),
                     new int[] {
                             adapter.ensureValueConstantId(0),
                             adapter.ensureValueConstantId(1)
@@ -590,7 +590,7 @@ public class xTestApp extends xModule
 
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.Point"),
                     adapter.ensureValueConstantId("p2"))) // #1 (p2)
-            .add(new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+            .add(new New_N(-adapter.getMethodConstId("TestApp.Point", "construct"),
                     new int[] {
                             adapter.ensureValueConstantId(1),
                             adapter.ensureValueConstantId(0)
@@ -609,7 +609,7 @@ public class xTestApp extends xModule
 
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.Rectangle"),
                     adapter.ensureValueConstantId("r"))) // #3 (r)
-            .add(new New_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
+            .add(new New_N(-adapter.getMethodConstId("TestApp.Rectangle", "construct"),
                     new int[] {1, 0}, 3))
             .add(new X_Print(3))
             .add(new Var(adapter.getClassTypeConstId("Int64"))) // #4
@@ -654,9 +654,9 @@ public class xTestApp extends xModule
                 new String[] {"Int64", "Int64", "String"});
         mtPrPConst.createCode()
             // #0 = x; #1 = y; #2 = prefix
-            .add(new Construct_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+            .add(new Construct_N(-adapter.getMethodConstId("TestApp.Point", "construct"),
                     new int[] {0, 1}))
-            .add(new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"),
+            .add(new Construct_1(-adapter.getMethodConstId("TestApp.Formatter", "construct"),
                     2))
             .add(new Return_0());
 
@@ -665,9 +665,9 @@ public class xTestApp extends xModule
                 new String[] {"TestApp.Point", "TestApp.Point", "String"});
         mtPrRConst.createCode()
             // #0 = tl; #1 = br; #2 = prefix
-            .add(new Construct_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
+            .add(new Construct_N(-adapter.getMethodConstId("TestApp.Rectangle", "construct"),
                     new int[] {0, 1}))
-            .add(new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"),
+            .add(new Construct_1(-adapter.getMethodConstId("TestApp.Formatter", "construct"),
                     2))
             .add(new Return_0());
 
@@ -676,7 +676,7 @@ public class xTestApp extends xModule
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testMixin() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.PrettyPoint"),
                     adapter.ensureValueConstantId("prp"))) // #0 (prp)
-            .add(new New_N(adapter.getMethodConstId("TestApp.PrettyPoint", "construct"),
+            .add(new New_N(-adapter.getMethodConstId("TestApp.PrettyPoint", "construct"),
                     new int[] {
                             adapter.ensureValueConstantId(1),
                             adapter.ensureValueConstantId(2),
@@ -686,7 +686,7 @@ public class xTestApp extends xModule
 
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.Point"),
                     adapter.ensureValueConstantId("p2"))) // #1 (p2)
-            .add(new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
+            .add(new New_N(-adapter.getMethodConstId("TestApp.Point", "construct"),
                     new int[] {
                             adapter.ensureValueConstantId(2),
                             adapter.ensureValueConstantId(1)
@@ -695,7 +695,7 @@ public class xTestApp extends xModule
 
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.PrettyRectangle"),
                     adapter.ensureValueConstantId("prr"))) // #2 (prr)
-            .add(new New_N(adapter.getMethodConstId("TestApp.PrettyRectangle", "construct"),
+            .add(new New_N(-adapter.getMethodConstId("TestApp.PrettyRectangle", "construct"),
                     new int[] {0, 1, adapter.ensureValueConstantId("+++ ")}, 2))
             .add(new X_Print(2))
 

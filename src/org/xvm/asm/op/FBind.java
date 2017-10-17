@@ -6,12 +6,16 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
 
+import org.xvm.asm.OpCallable;
+import org.xvm.asm.Register;
+import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.Utils;
+import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.Function.FunctionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -22,22 +26,42 @@ import static org.xvm.util.Handy.writePackedLong;
  * FBIND rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
  */
 public class FBind
-        extends Op
+        extends OpCallable
     {
     /**
      * Construct an FBIND op.
      *
-     * @param nFunction    identifies the function to bind
-     * @param nParamIx     identifies the parameter(s) to bind
-     * @param nParamValue  identifies the values to use corresponding to those parameters
-     * @param nRet         identifies where to place the bound function
+     * @param nFunction     identifies the function to bind
+     * @param anParamIx     identifies the parameter(s) to bind
+     * @param anParamValue  identifies the values to use corresponding to those parameters
+     * @param nRet          identifies where to place the bound function
+     *
+     * @deprecated
      */
-    public FBind(int nFunction, int[] nParamIx, int[] nParamValue, int nRet)
+    public FBind(int nFunction, int[] anParamIx, int[] anParamValue, int nRet)
         {
-        f_nFunctionValue = nFunction;
-        f_anParamIx      = nParamIx;
-        f_anParamValue   = nParamValue;
-        f_nResultValue   = nRet;
+        super(nFunction);
+
+        m_anParamIx = anParamIx;
+        m_anParamValue = anParamValue;
+        m_nResultValue = nRet;
+        }
+
+    /**
+     * Construct a FBIND op based on the passed arguments.
+     *
+     * @param argFunction  the function Argument
+     * @param anParamIx    the indexes of parameter(s) to bind (sorted in ascending order)
+     * @param aArgValue    the array of Arguments to bind the values to
+     * @param regReturn    the return Register
+     */
+    public FBind(Argument argFunction, int[] anParamIx, Argument[] aArgValue, Register regReturn)
+        {
+        super(argFunction);
+
+        m_anParamIx = anParamIx;
+        m_aArgParam = aArgValue;
+        m_regReturn = regReturn;
         }
 
     /**
@@ -49,34 +73,41 @@ public class FBind
     public FBind(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = readPackedInt(in);
+        super(readPackedInt(in));
 
         int c = readPackedInt(in);
-        f_anParamIx = new int[c];
-        f_anParamValue = new int[c];
+
+        m_anParamIx = new int[c];
+        m_anParamValue = new int[c];
+
         for (int i = 0; i < c; i++)
             {
-            f_anParamIx[i]    = readPackedInt(in);
-            f_anParamValue[i] = readPackedInt(in);
+            m_anParamIx[i]    = readPackedInt(in);
+            m_anParamValue[i] = readPackedInt(in);
             }
-        f_nResultValue = readPackedInt(in);
+        m_nResultValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
-        out.writeByte(OP_FBIND);
-        writePackedLong(out, f_nFunctionValue);
+        super.write(out, registry);
 
-        int c = f_anParamIx.length;
+        if (m_aArgParam != null)
+            {
+            m_anParamValue = encodeArguments(m_aArgParam, registry);
+            m_nResultValue = encodeArgument(m_regReturn, registry);
+            }
+
+        int c = m_anParamIx.length;
         writePackedLong(out, c);
         for (int i = 0; i < c; i++)
             {
-            writePackedLong(out, f_anParamIx[i]);
-            writePackedLong(out, f_anParamValue[i]);
+            writePackedLong(out, m_anParamIx[i]);
+            writePackedLong(out, m_anParamValue[i]);
             }
-        writePackedLong(out, f_nResultValue);
+        writePackedLong(out, m_nResultValue);
         }
 
     @Override
@@ -90,23 +121,53 @@ public class FBind
         {
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
-            if (hFunction == null)
-                {
-                return R_REPEAT;
-                }
+            FunctionHandle hFunction;
 
-            for (int i = 0, c = f_anParamIx.length; i < c; i++)
+            if (m_nFunctionValue == A_SUPER)
                 {
-                ObjectHandle hArg = frame.getArgument(f_anParamValue[i]);
-                if (hArg == null)
+                CallChain chain = frame.m_chain;
+                if (chain == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                hFunction = Function.makeHandle(chain, frame.m_nDepth + 1);
+                }
+            else if (m_nFunctionValue < 0)
+                {
+                hFunction = Function.makeHandle(getMethodStructure(frame));
+                }
+            else
+                {
+                hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+                if (hFunction == null)
                     {
                     return R_REPEAT;
                     }
-                hFunction = hFunction.bind(f_anParamIx[i], hArg);
                 }
 
-            return frame.assignValue(f_nResultValue, hFunction);
+            int cParams = m_anParamIx.length;
+            ObjectHandle[] ahParam = new ObjectHandle[cParams];
+            boolean fAnyProperty = false;
+
+            for (int i = 0; i < cParams; i++)
+                {
+                ObjectHandle hParam = frame.getArgument(m_anParamValue[i]);
+                if (hParam == null)
+                    {
+                    return R_REPEAT;
+                    }
+                ahParam[i] = hParam;
+                fAnyProperty |= isProperty(hParam);
+                }
+
+            if (fAnyProperty)
+                {
+                Frame.Continuation stepLast = frameCaller -> complete(frameCaller, hFunction, ahParam);
+
+                return new Utils.GetArguments(ahParam, new int[]{0}, stepLast).doNext(frame);
+                }
+
+            return complete(frame, hFunction, ahParam);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -114,8 +175,29 @@ public class FBind
             }
         }
 
-    private final int   f_nFunctionValue;
-    private final int[] f_anParamIx;
-    private final int[] f_anParamValue;
-    private final int   f_nResultValue;
+    protected int complete(Frame frame, FunctionHandle hFunction, ObjectHandle[] ahParam)
+        {
+        // we assume that the indexes are sorted in the ascending order
+        for (int i = 0, c = m_anParamIx.length; i < c; i++)
+            {
+            hFunction = hFunction.bind(m_anParamIx[i], ahParam[i]);
+            }
+
+        return frame.assignValue(m_nResultValue, hFunction);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgParam, registry);
+        }
+
+    private int[] m_anParamIx;
+    private int[] m_anParamValue;
+    private int   m_nResultValue;
+
+    private Argument[] m_aArgParam;
+    private Register m_regReturn;
     }

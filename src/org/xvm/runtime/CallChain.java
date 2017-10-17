@@ -73,6 +73,11 @@ public class CallChain
         return f_method;
         }
 
+    public MethodStructure getSuper(Frame frame)
+        {
+        return getMethod(frame.m_nDepth + 1);
+        }
+
     public boolean isNative()
         {
         MethodStructure method = f_method;
@@ -120,24 +125,10 @@ public class CallChain
         throw new IllegalStateException();
         }
 
-    public int callSuper10(Frame frame, int nArgValue)
+    public int callSuper10(Frame frame, ObjectHandle hArg)
         {
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
-
-        ObjectHandle hArg;
-        try
-            {
-            hArg = frame.getArgument(nArgValue);
-            if (hArg == null)
-                {
-                return Op.R_REPEAT;
-                }
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
 
         MethodStructure methodSuper = getMethod(nDepth);
         if (methodSuper == null)
@@ -162,7 +153,7 @@ public class CallChain
         throw new IllegalStateException();
         }
 
-    public int callSuperN1(Frame frame, int[] anArgValue, int iReturn)
+    public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn)
         {
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
@@ -173,34 +164,18 @@ public class CallChain
             throw new IllegalStateException();
             }
 
-        try
+        if (Adapter.isNative(methodSuper))
             {
-            if (Adapter.isNative(methodSuper))
-                {
-                ObjectHandle[] ahArg = frame.getArguments(anArgValue, anArgValue.length);
-                if (ahArg == null)
-                    {
-                    return Op.R_REPEAT;
-                    }
-                return hThis.f_clazz.f_template.
-                        invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
-                }
-
-            ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.getMaxVars());
-            if (ahVar == null)
-                {
-                return Op.R_REPEAT;
-                }
-
-            return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
+            return hThis.f_clazz.f_template.
+                    invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
             }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
+
+        return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
         }
 
-    public int callSuperNN(Frame frame, int[] anArgValue, int[] aiReturn)
+    public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
         {
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
@@ -211,31 +186,15 @@ public class CallChain
             throw new IllegalStateException();
             }
 
-        try
+        if (Adapter.isNative(methodSuper))
             {
-            if (Adapter.isNative(methodSuper))
-                {
-                ObjectHandle[] ahArg = frame.getArguments(anArgValue, anArgValue.length);
-                if (ahArg == null)
-                    {
-                    return Op.R_REPEAT;
-                    }
-                return hThis.f_clazz.f_template.
-                        invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
-                }
-
-            ObjectHandle[] ahVar = frame.getArguments(anArgValue, methodSuper.getMaxVars());
-            if (ahVar == null)
-                {
-                return Op.R_REPEAT;
-                }
-
-            return frame.invokeN(this, nDepth, hThis, ahVar, aiReturn);
+            return hThis.f_clazz.f_template.
+                    invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
             }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
+
+        return frame.invokeN(this, nDepth, hThis, ahVar, aiReturn);
         }
 
     // ----- PropertyCallChain -----

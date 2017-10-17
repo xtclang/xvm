@@ -99,7 +99,7 @@ public class xTestService extends Service
 
             new Enter(),
             new Var(this.adapter.getClassTypeConstId("Exception")), // #2
-            new New_N(adapter.getMethodConstId("Exception", "construct"),
+            new New_N(-adapter.getMethodConstId("Exception", "construct"),
                     new int[] {
                             adapter.ensureValueConstantId("test"),
                             adapter.ensureValueConstantId(null)

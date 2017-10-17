@@ -12,6 +12,7 @@ import org.xvm.asm.OpCallable;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -24,15 +25,29 @@ public class Construct_1
         extends OpCallable
     {
     /**
-     * Construct a OP_CONSTR_1 op.
+     * Construct a CONSTR_1 op.
      *
      * @param nConstructorId  identifies the construct function
      * @param nArg            r-value for the construct function argument
      */
     public Construct_1(int nConstructorId, int nArg)
         {
-        f_nConstructId  = nConstructorId;
-        f_nArgValue     = nArg;
+        super(nConstructorId);
+
+        m_nArgValue = nArg;
+        }
+
+    /**
+     * Construct a CONSTR_1 op based on the passed arguments.
+     *
+     * @param argConstructor  the constructor Argument
+     * @param argValue        the value Argument
+     */
+    public Construct_1(Argument argConstructor, Argument argValue)
+        {
+        super(argConstructor);
+
+        m_argValue = argValue;
         }
 
     /**
@@ -44,17 +59,23 @@ public class Construct_1
     public Construct_1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nConstructId  = readPackedInt(in);
-        f_nArgValue     = readPackedInt(in);
+        super(readPackedInt(in));
+
+        m_nArgValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_CONSTR_1);
-        writePackedLong(out, f_nConstructId);
-        writePackedLong(out, f_nArgValue);
+        super.write(out, registry);
+
+        if (m_argValue != null)
+            {
+            m_nArgValue = encodeArgument(m_argValue, registry);
+            }
+
+        writePackedLong(out, m_nArgValue);
         }
 
     @Override
@@ -68,21 +89,25 @@ public class Construct_1
         {
         try
             {
-            MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
-
-            ObjectHandle hStruct = frame.getThis();
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            ObjectHandle hArg = frame.getArgument(m_nArgValue);
             if (hArg == null)
                 {
                 return R_REPEAT;
                 }
 
+            MethodStructure constructor = getMethodStructure(frame);
+
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
             ahVar[0] = hArg;
 
-            frame.chainFinalizer(hStruct.f_clazz.f_template.makeFinalizer(constructor, hStruct, ahVar));
+            if (isProperty(hArg))
+                {
+                Frame.Continuation stepLast = frameCaller ->
+                    complete(frameCaller, constructor, ahVar);
+                return new Utils.GetArgument(ahVar, stepLast).doNext(frame);
+                }
 
-            return frame.call1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
+            return complete(frame, constructor, ahVar);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -90,6 +115,24 @@ public class Construct_1
             }
         }
 
-    private final int f_nConstructId;
-    private final int f_nArgValue;
+    protected int complete(Frame frame, MethodStructure constructor, ObjectHandle[] ahVar)
+        {
+        ObjectHandle hStruct = frame.getThis();
+
+        frame.chainFinalizer(Utils.makeFinalizer(constructor, hStruct, ahVar));
+
+        return frame.call1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argValue, registry);
+        }
+
+    private int m_nArgValue;
+
+    private Argument m_argValue;
     }

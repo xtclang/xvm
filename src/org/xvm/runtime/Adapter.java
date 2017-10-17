@@ -364,11 +364,6 @@ public class Adapter
                 getTypeParameters(asRetType, true), getTypeParameters(asArgType, false));
         }
 
-    public MethodStructure getFinalizer(MethodStructure constructor)
-        {
-        return constructor.getConstructFinally();
-        }
-
     public static boolean isNative(MethodStructure method)
         {
         return method.isNative();

@@ -90,6 +90,11 @@ public class Function
             f_nDepth = nDepth;
             }
 
+        public int getParamCount()
+            {
+            return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getParamCount();
+            }
+
         public int getVarCount()
             {
             return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getMaxVars();

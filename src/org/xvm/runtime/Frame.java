@@ -74,7 +74,7 @@ public class Frame
 
     // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
-    public final static int RET_MULTI  = -65002;   // an indicator for "multiple return values"
+    public final static int RET_MULTI  = -65002;  // an indicator for "multiple return values"
 
     public final static Constant[] NO_CONSTS = Constant.NO_CONSTS;
 

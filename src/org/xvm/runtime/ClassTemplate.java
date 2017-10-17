@@ -30,7 +30,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.Const;
 import org.xvm.runtime.template.Enum;
 import org.xvm.runtime.template.Enum.EnumHandle;
-import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.Function.FullyBoundHandle;
 import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.Service;
@@ -666,7 +665,7 @@ public abstract class ClassTemplate
                 frameCaller -> frameCaller.call(frameRC1));
 
         // we need a non-null anchor (see Frame#chainFinalizer)
-        frameRC1.m_hfnFinally = makeFinalizer(constructor, hStruct, ahVar); // hF1
+        frameRC1.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
 
         frameRC1.setContinuation(frameCaller ->
             {
@@ -682,15 +681,6 @@ public abstract class ClassTemplate
             });
 
         return frame.call(frameDC0 == null ? frameRC1 : frameDC0);
-        }
-
-    public FullyBoundHandle makeFinalizer(MethodStructure constructor,
-                                          ObjectHandle hStruct, ObjectHandle[] ahArg)
-        {
-        MethodStructure methodFinally = f_types.f_adapter.getFinalizer(constructor);
-
-        return methodFinally == null ? FullyBoundHandle.NO_OP :
-                Function.makeHandle(methodFinally).bindAll(hStruct, ahArg);
         }
 
     protected boolean isConstructImmutable()

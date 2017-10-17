@@ -53,7 +53,7 @@ public class IsEq
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
         out.writeByte(OP_IS_EQ);
         writePackedLong(out, f_nValue1);

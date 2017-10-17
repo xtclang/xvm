@@ -8,11 +8,13 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.Function.FunctionHandle;
@@ -35,12 +37,30 @@ public class Call_T1
      * @param nFunction  the r-value indicating the function to call
      * @param nTupleArg  the r-value indicating the tuple holding the arguments
      * @param nRetValue  the l-value location for the result
+     *
+     * @deprecated
      */
     public Call_T1(int nFunction, int nTupleArg, int nRetValue)
         {
-        f_nFunctionValue = nFunction;
-        f_nArgTupleValue = nTupleArg;
-        f_nRetValue      = nRetValue;
+        super(nFunction);
+
+        m_nArgTupleValue = nTupleArg;
+        m_nRetValue      = nRetValue;
+        }
+
+    /**
+     * Construct a CALL_T1 op based on the passed arguments.
+     *
+     * @param argFunction  the function Argument
+     * @param argValue     the value Argument
+     * @param regReturn    the return Register
+     */
+    public Call_T1(Argument argFunction, Argument argValue, Register regReturn)
+        {
+        super(argFunction);
+
+        m_argValue = argValue;
+        m_regReturn = regReturn;
         }
 
     /**
@@ -52,19 +72,26 @@ public class Call_T1
     public Call_T1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = readPackedInt(in);
-        f_nArgTupleValue = readPackedInt(in);
-        f_nRetValue      = readPackedInt(in);
+        super(readPackedInt(in));
+
+        m_nArgTupleValue = readPackedInt(in);
+        m_nRetValue      = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_CALL_T1);
-        writePackedLong(out, f_nFunctionValue);
-        writePackedLong(out, f_nArgTupleValue);
-        writePackedLong(out, f_nRetValue);
+        super.write(out, registry);
+
+        if (m_argValue != null)
+            {
+            m_nArgTupleValue = encodeArgument(m_argValue, registry);
+            m_nRetValue = encodeArgument(m_regReturn, registry);
+            }
+
+        writePackedLong(out, m_nArgTupleValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -76,57 +103,67 @@ public class Call_T1
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (f_nFunctionValue == A_SUPER)
-            {
-            CallChain chain = frame.m_chain;
-            if (chain == null)
-                {
-                throw new IllegalStateException();
-                }
-
-            return chain.callSuperN1(frame, new int[]{f_nArgTupleValue}, f_nRetValue);
-            }
-
         try
             {
-            TupleHandle hArgTuple = (TupleHandle) frame.getArgument(f_nArgTupleValue);
-            if (hArgTuple == null)
+            // while the argument could be a local property holding a Tuple,
+            // the Tuple values cannot be local properties
+            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
+            if (hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahArg = hArgTuple.m_ahValue;
-
-            if (f_nFunctionValue < 0)
+            if (m_nFunctionValue == A_SUPER)
                 {
-                MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
-                if (ahArg.length != function.getParamCount())
+                CallChain chain = frame.m_chain;
+                if (chain == null)
                     {
-                    return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+                    throw new IllegalStateException();
                     }
 
-                ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
-                System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
+                if (isProperty(hArg))
+                    {
+                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                    Frame.Continuation stepLast = frameCaller ->
+                        chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, m_nRetValue);
 
-                return frame.call1(function, null, ahVar, f_nRetValue);
+                    return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                    }
+                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, m_nRetValue);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            if (m_nFunctionValue < 0)
+                {
+                MethodStructure function = getMethodStructure(frame);
+
+                if (isProperty(hArg))
+                    {
+                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                    Frame.Continuation stepLast = frameCaller ->
+                        complete(frameCaller, function, (TupleHandle) ahArg[0]);
+
+                    return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                    }
+
+                return complete(frame, function, (TupleHandle) hArg);
+                }
+
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
             if (hFunction == null)
                 {
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
-
-            if (ahArg.length != getMethodStructure(frame, f_nFunctionValue).getParamCount())
+            if (isProperty(hArg))
                 {
-                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                Frame.Continuation stepLast = frameCaller ->
+                    complete(frameCaller, hFunction, (TupleHandle) ahArg[0]);
+
+                return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
                 }
 
-            System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
-
-            return hFunction.call1(frame, null, ahVar, f_nRetValue);
+            return complete(frame, hFunction, (TupleHandle) hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -134,7 +171,43 @@ public class Call_T1
             }
         }
 
-    private final int f_nFunctionValue;
-    private final int f_nArgTupleValue;
-    private final int f_nRetValue;
+    protected int complete(Frame frame, MethodStructure function, TupleHandle hArg)
+        {
+        ObjectHandle[] ahArg = hArg.m_ahValue;
+        if (ahArg.length != function.getParamCount())
+            {
+            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
+
+        return frame.call1(function, null, ahVar, m_nRetValue);
+        }
+
+    protected int complete(Frame frame, FunctionHandle hFunction, TupleHandle hArg)
+        {
+        ObjectHandle[] ahArg = hArg.m_ahValue;
+        if (ahArg.length != hFunction.getParamCount())
+            {
+            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount());
+
+        return hFunction.call1(frame, null, ahVar, m_nRetValue);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argValue, registry);
+        }
+
+    private int m_nArgTupleValue;
+    private int m_nRetValue;
+
+    private Argument m_argValue;
+    private Register m_regReturn;
     }

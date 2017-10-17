@@ -5,6 +5,7 @@ import java.sql.Timestamp;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.SignatureConstant;
@@ -12,6 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.Const;
 
+import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.types.xProperty.PropertyHandle;
 
 
@@ -103,6 +105,24 @@ public abstract class Utils
             " is less than the array size " + cArgs);
         }
 
+    /**
+     * Create a FullyBoundHandle representing a finalizer of the specified constructor.
+     *
+     * @param constructor  the constructor
+     * @param hStruct      the struct handle
+     * @param ahArg        the arguments
+     *
+     * @return a FullyBoundHandle representing the finalizer
+     */
+    public static Function.FullyBoundHandle makeFinalizer(MethodStructure constructor,
+                                          ObjectHandle hStruct, ObjectHandle[] ahArg)
+        {
+        MethodStructure methodFinally = constructor.getConstructFinally();
+
+        return methodFinally == null ? Function.FullyBoundHandle.NO_OP :
+                Function.makeHandle(methodFinally).bindAll(hStruct, ahArg);
+        }
+
 
     // ----- hash.get() support -----
 
@@ -140,6 +160,7 @@ public abstract class Utils
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
         return clzValue.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
+
 
     // ----- Pre/PostInc support -----
 
@@ -296,6 +317,12 @@ public abstract class Utils
             for (int iStep = holderIx[0]++; iStep < ahVar.length; )
                 {
                 ObjectHandle handle = ahVar[iStep];
+                if (handle == null)
+                    {
+                    // nulls can only be at the tail of the array
+                    break;
+                    }
+
                 if (handle instanceof PropertyHandle)
                     {
                     ObjectHandle hThis = frameCaller.getThis();

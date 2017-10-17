@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -32,11 +33,27 @@ public class Call_0T
      *
      * @param nFunction  the r-value indicating the function to call
      * @param nRet       the l-value indicating the tuple result location
+     *
+     * @deprecated
      */
     public Call_0T(int nFunction, int nRet)
         {
-        f_nFunctionValue = nFunction;
-        f_nTupleRetValue = nRet;
+        super(nFunction);
+
+        m_nTupleRetValue = nRet;
+        }
+
+    /**
+     * Construct a CALL_0T op based on the passed arguments.
+     *
+     * @param argFunction  the function Argument
+     * @param regReturn    the return Register
+     */
+    public Call_0T(Argument argFunction, Register regReturn)
+        {
+        super(argFunction);
+
+        m_regReturn = regReturn;
         }
 
     /**
@@ -48,17 +65,23 @@ public class Call_0T
     public Call_0T(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = readPackedInt(in);
-        f_nTupleRetValue = readPackedInt(in);
+        super(readPackedInt(in));
+
+        m_nTupleRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_CALL_0T);
-        writePackedLong(out, f_nFunctionValue);
-        writePackedLong(out, f_nTupleRetValue);
+        super.write(out, registry);
+
+        if (m_regReturn != null)
+            {
+            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
+            }
+
+        writePackedLong(out, m_nTupleRetValue);
         }
 
     @Override
@@ -70,7 +93,7 @@ public class Call_0T
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (f_nFunctionValue == A_SUPER)
+        if (m_nFunctionValue == A_SUPER)
             {
             CallChain chain = frame.m_chain;
             if (chain == null)
@@ -78,27 +101,27 @@ public class Call_0T
                 throw new IllegalStateException();
                 }
 
-            return chain.callSuper01(frame, -f_nTupleRetValue - 1);
+            return chain.callSuper01(frame, -m_nTupleRetValue - 1);
             }
 
-        if (f_nFunctionValue < 0)
+        if (m_nFunctionValue < 0)
             {
-            MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
+            MethodStructure function = getMethodStructure(frame);
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
-            return frame.call1(function, null, ahVar, -f_nTupleRetValue - 1);
+            return frame.call1(function, null, ahVar, -m_nTupleRetValue - 1);
             }
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
             if (hFunction == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, -f_nTupleRetValue - 1);
+            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, -m_nTupleRetValue - 1);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -106,6 +129,7 @@ public class Call_0T
             }
         }
 
-    private final int f_nFunctionValue;
-    private final int f_nTupleRetValue;
+    private int m_nTupleRetValue;
+
+    private Register m_regReturn;
     }

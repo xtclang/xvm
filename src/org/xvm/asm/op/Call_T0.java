@@ -13,6 +13,7 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.Function.FunctionHandle;
@@ -34,11 +35,27 @@ public class Call_T0
      *
      * @param nFunction  the r-value indicating the function to call
      * @param nTupleArg  the r-value indicating the tuple holding the arguments
+     *
+     * @deprecated
      */
     public Call_T0(int nFunction, int nTupleArg)
         {
-        f_nFunctionValue = nFunction;
-        f_nArgTupleValue = nTupleArg;
+        super(nFunction);
+
+        m_nArgTupleValue = nTupleArg;
+        }
+
+    /**
+     * Construct a CALL_T0 op based on the passed arguments.
+     *
+     * @param argFunction  the function Argument
+     * @param argValue     the value Argument
+     */
+    public Call_T0(Argument argFunction, Argument argValue)
+        {
+        super(argFunction);
+
+        m_argValue = argValue;
         }
 
     /**
@@ -50,17 +67,23 @@ public class Call_T0
     public Call_T0(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = readPackedInt(in);
-        f_nArgTupleValue = readPackedInt(in);
+        super(readPackedInt(in));
+
+        m_nArgTupleValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_CALL_T0);
-        writePackedLong(out, f_nFunctionValue);
-        writePackedLong(out, f_nArgTupleValue);
+        super.write(out, registry);
+
+        if (m_argValue != null)
+            {
+            m_nArgTupleValue = encodeArgument(m_argValue, registry);
+            }
+
+        writePackedLong(out, m_nArgTupleValue);
         }
 
     @Override
@@ -72,57 +95,67 @@ public class Call_T0
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (f_nFunctionValue == A_SUPER)
-            {
-            CallChain chain = frame.m_chain;
-            if (chain == null)
-                {
-                throw new IllegalStateException();
-                }
-
-            return chain.callSuper10(frame, f_nArgTupleValue);
-            }
-
         try
             {
-            TupleHandle hArgTuple = (TupleHandle) frame.getArgument(f_nArgTupleValue);
-            if (hArgTuple == null)
+            // while the argument could be a local property holding a Tuple,
+            // the Tuple values cannot be local properties
+            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
+            if (hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahArg = hArgTuple.m_ahValue;
-
-            if (f_nFunctionValue < 0)
+            if (m_nFunctionValue == A_SUPER)
                 {
-                MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
-                if (ahArg.length != function.getParamCount())
+                CallChain chain = frame.m_chain;
+                if (chain == null)
                     {
-                    return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+                    throw new IllegalStateException();
                     }
 
-                ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
-                System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
+                if (isProperty(hArg))
+                    {
+                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                    Frame.Continuation stepLast = frameCaller ->
+                        chain.callSuperNN(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, Utils.ARGS_NONE);
 
-                return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+                    return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                    }
+                return chain.callSuperNN(frame, ((TupleHandle) hArg).m_ahValue, Utils.ARGS_NONE);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            if (m_nFunctionValue < 0)
+                {
+                MethodStructure function = getMethodStructure(frame);
+
+                if (isProperty(hArg))
+                    {
+                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                    Frame.Continuation stepLast = frameCaller ->
+                        complete(frameCaller, function, (TupleHandle) ahArg[0]);
+
+                    return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                    }
+
+                return complete(frame, function, (TupleHandle) hArg);
+                }
+
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
             if (hFunction == null)
                 {
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
-
-            if (ahArg.length != getMethodStructure(frame, f_nFunctionValue).getParamCount())
+            if (isProperty(hArg))
                 {
-                return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                Frame.Continuation stepLast = frameCaller ->
+                    complete(frameCaller, hFunction, (TupleHandle) ahArg[0]);
+
+                return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
                 }
 
-            System.arraycopy(ahArg, 0, ahVar, 0, ahArg.length);
-
-            return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
+            return complete(frame, hFunction, (TupleHandle) hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -130,6 +163,41 @@ public class Call_T0
             }
         }
 
-    private final int f_nFunctionValue;
-    private final int f_nArgTupleValue;
+    protected int complete(Frame frame, MethodStructure function, TupleHandle hArg)
+        {
+        ObjectHandle[] ahArg = hArg.m_ahValue;
+        if (ahArg.length != function.getParamCount())
+            {
+            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
+
+        return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+        }
+
+    protected int complete(Frame frame, FunctionHandle hFunction, TupleHandle hArg)
+        {
+        ObjectHandle[] ahArg = hArg.m_ahValue;
+        if (ahArg.length != hFunction.getParamCount())
+            {
+            return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount());
+
+        return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argValue, registry);
+        }
+
+    private int m_nArgTupleValue;
+
+    private Argument m_argValue;
     }

@@ -13,11 +13,11 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -31,11 +31,27 @@ public class Call_N0
      *
      * @param nFunction  the r-value indicating the function to call
      * @param anArg      the r-values indicating the arguments
+     *
+     * @deprecated
      */
     public Call_N0(int nFunction, int[] anArg)
         {
-        f_nFunctionValue = nFunction;
-        f_anArgValue     = anArg;
+        super(nFunction);
+
+        m_anArgValue = anArg;
+        }
+
+    /**
+     * Construct a CALL_N0 op based on the passed arguments.
+     *
+     * @param argFunction  the function Argument
+     * @param aArgValue     the array of value Arguments
+     */
+    public Call_N0(Argument argFunction, Argument[] aArgValue)
+        {
+        super(argFunction);
+
+        m_aArgValue = aArgValue;
         }
 
     /**
@@ -47,17 +63,23 @@ public class Call_N0
     public Call_N0(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = readPackedInt(in);
-        f_anArgValue     = readIntArray(in);
+        super(readPackedInt(in));
+
+        m_anArgValue = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_CALL_N0);
-        writePackedLong(out, f_nFunctionValue);
-        writeIntArray(out, f_anArgValue);
+        super.write(out, registry);
+
+        if (m_aArgValue != null)
+            {
+            m_anArgValue = encodeArguments(m_aArgValue, registry);
+            }
+
+        writeIntArray(out, m_anArgValue);
         }
 
     @Override
@@ -69,42 +91,71 @@ public class Call_N0
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (f_nFunctionValue == A_SUPER)
-            {
-            CallChain chain = frame.m_chain;
-            if (chain == null)
-                {
-                throw new IllegalStateException();
-                }
-
-            return chain.callSuperN1(frame, f_anArgValue, Frame.RET_UNUSED);
-            }
-
         try
             {
-            if (f_nFunctionValue < 0)
+            if (m_nFunctionValue == A_SUPER)
                 {
-                MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
+                CallChain chain = frame.m_chain;
+                if (chain == null)
+                    {
+                    throw new IllegalStateException();
+                    }
 
-                ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, function.getMaxVars());
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
                 if (ahVar == null)
                     {
                     return R_REPEAT;
                     }
 
+                if (anyProperty(ahVar))
+                    {
+                    Frame.Continuation stepLast = frameCaller ->
+                        chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED);
+
+                    return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                    }
+
+                return chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED);
+                }
+
+            if (m_nFunctionValue < 0)
+                {
+                MethodStructure function = getMethodStructure(frame);
+
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, function.getMaxVars());
+                if (ahVar == null)
+                    {
+                    return R_REPEAT;
+                    }
+
+                if (anyProperty(ahVar))
+                    {
+                    Frame.Continuation stepLast = frameCaller ->
+                        frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+
+                    return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                    }
                 return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
             if (hFunction == null)
                 {
                 return R_REPEAT;
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue, hFunction.getVarCount());
+            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount());
             if (ahVar == null)
                 {
                 return R_REPEAT;
+                }
+
+            if (anyProperty(ahVar))
+                {
+                Frame.Continuation stepLast = frameCaller ->
+                    hFunction.call1(frameCaller, null, ahVar, Frame.RET_UNUSED);
+
+                return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
                 }
 
             return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
@@ -115,6 +166,15 @@ public class Call_N0
             }
         }
 
-    private final int   f_nFunctionValue;
-    private final int[] f_anArgValue;
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgValue, registry);
+        }
+
+    private int[] m_anArgValue;
+
+    private Argument[] m_aArgValue;
     }

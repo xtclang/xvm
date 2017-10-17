@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IdentityConstant;
 
@@ -16,6 +17,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xClass.ClassHandle;
 
@@ -39,10 +41,28 @@ public class NewG_1
      */
     public NewG_1(int nConstructorId, int nType, int nArg, int nRet)
         {
-        f_nConstructId = nConstructorId;
-        f_nTypeValue   = nType;
-        f_nArgValue    = nArg;
-        f_nRetValue    = nRet;
+        super(nConstructorId);
+
+        m_nTypeValue = nType;
+        m_nArgValue  = nArg;
+        m_nRetValue  = nRet;
+        }
+
+    /**
+     * Construct a NEW_1 op based on the passed arguments.
+     *
+     * @param argConstructor  the constructor Argument
+     * @param argType         the type Argument
+     * @param argValue        the array of value Arguments
+     * @param regReturn       the return Register
+     */
+    public NewG_1(Argument argConstructor, Argument argType, Argument argValue, Register regReturn)
+        {
+        super(argConstructor);
+
+        m_argType = argType;
+        m_argValue = argValue;
+        m_regReturn = regReturn;
         }
 
     /**
@@ -54,21 +74,29 @@ public class NewG_1
     public NewG_1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nConstructId = readPackedInt(in);
-        f_nTypeValue   = readPackedInt(in);
-        f_nArgValue    = readPackedInt(in);
-        f_nRetValue    = readPackedInt(in);
+        super(readPackedInt(in));
+
+        m_nTypeValue = readPackedInt(in);
+        m_nArgValue  = readPackedInt(in);
+        m_nRetValue  = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
-        out.writeByte(OP_NEWG_1);
-        writePackedLong(out, f_nConstructId);
-        writePackedLong(out, f_nTypeValue);
-        writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
+        super.write(out, registry);
+
+        if (m_argType != null)
+            {
+            m_nTypeValue = encodeArgument(m_argType, registry);
+            m_nArgValue = encodeArgument(m_argValue, registry);
+            m_nRetValue = encodeArgument(m_regReturn, registry);
+            }
+
+        writePackedLong(out, m_nTypeValue);
+        writePackedLong(out, m_nArgValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -80,15 +108,12 @@ public class NewG_1
     @Override
     public int process(Frame frame, int iPC)
         {
-        MethodStructure constructor = getMethodStructure(frame, f_nConstructId);
-        IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
-
         try
             {
             TypeComposition clzTarget;
-            if (f_nTypeValue >= 0)
+            if (m_nTypeValue >= 0)
                 {
-                ClassHandle hClass = (ClassHandle) frame.getArgument(f_nTypeValue);
+                ClassHandle hClass = (ClassHandle) frame.getArgument(m_nTypeValue);
                 if (hClass == null)
                     {
                     return R_REPEAT;
@@ -98,19 +123,30 @@ public class NewG_1
             else
                 {
                 clzTarget = frame.f_context.f_types.ensureComposition(
-                        -f_nTypeValue, frame.getActualTypes());
+                        -m_nTypeValue, frame.getActualTypes());
                 }
 
+            MethodStructure constructor = getMethodStructure(frame);
+
             ObjectHandle[] ahVar = frame.getArguments(
-                    new int[] {f_nArgValue}, constructor.getMaxVars());
+                new int[]{m_nArgValue}, constructor.getMaxVars());
             if (ahVar == null)
                 {
                 return R_REPEAT;
                 }
 
+            IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
             ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
-            return template.construct(frame, constructor, clzTarget, ahVar, f_nRetValue);
+            if (isProperty(ahVar[0]))
+                {
+                Frame.Continuation stepLast = frameCaller ->
+                    template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
+
+                return new Utils.GetArgument(ahVar, stepLast).doNext(frame);
+                }
+
+            return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -118,8 +154,20 @@ public class NewG_1
             }
         }
 
-    private final int f_nConstructId;
-    private final int f_nTypeValue;
-    private final int f_nArgValue;
-    private final int f_nRetValue;
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argType, registry);
+        registerArgument(m_argValue, registry);
+        }
+
+    private int m_nTypeValue;
+    private int m_nArgValue;
+    private int m_nRetValue;
+
+    private Argument m_argType;
+    private Argument m_argValue;
+    private Register m_regReturn;
     }

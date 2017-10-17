@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -18,7 +19,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.Function.FunctionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -32,11 +32,27 @@ public class Call_0N
      *
      * @param nFunction  the r-value indicating the function to call
      * @param anRet      the l-values to store the function results in
+     *
+     * @deprecated
      */
     public Call_0N(int nFunction, int[] anRet)
         {
-        f_nFunctionValue = nFunction;
-        f_anRetValue     = anRet;
+        super(nFunction);
+
+        m_anRetValue = anRet;
+        }
+
+    /**
+     * Construct a CALL_0N op based on the passed arguments.
+     *
+     * @param argFunction  the function Argument
+     * @param aRegReturn    the return Registers
+     */
+    public Call_0N(Argument argFunction, Register[] aRegReturn)
+        {
+        super(argFunction);
+
+        m_aRegReturn = aRegReturn;
         }
 
     /**
@@ -48,17 +64,23 @@ public class Call_0N
     public Call_0N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = readPackedInt(in);
-        f_anRetValue     = readIntArray(in);
+        super(readPackedInt(in));
+
+        m_anRetValue = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_CALL_0N);
-        writePackedLong(out, f_nFunctionValue);
-        writeIntArray(out, f_anRetValue);
+        super.write(out, registry);
+
+        if (m_aRegReturn != null)
+            {
+            m_anRetValue = encodeArguments(m_aRegReturn, registry);
+            }
+
+        writeIntArray(out, m_anRetValue);
         }
 
     @Override
@@ -70,7 +92,7 @@ public class Call_0N
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (f_nFunctionValue == A_SUPER)
+        if (m_nFunctionValue == A_SUPER)
             {
             CallChain chain = frame.m_chain;
             if (chain == null)
@@ -78,27 +100,27 @@ public class Call_0N
                 throw new IllegalStateException();
                 }
 
-            return chain.callSuperNN(frame, Utils.ARGS_NONE, f_anRetValue);
+            return chain.callSuperNN(frame, Utils.OBJECTS_NONE, m_anRetValue);
             }
 
-        if (f_nFunctionValue < 0)
+        if (m_nFunctionValue < 0)
             {
-            MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
+            MethodStructure function = getMethodStructure(frame);
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
-            return frame.callN(function, null, ahVar, f_anRetValue);
+            return frame.callN(function, null, ahVar, m_anRetValue);
             }
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
             if (hFunction == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hFunction.callN(frame, null, Utils.OBJECTS_NONE, f_anRetValue);
+            return hFunction.callN(frame, null, Utils.OBJECTS_NONE, m_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -106,6 +128,7 @@ public class Call_0N
             }
         }
 
-    private final int   f_nFunctionValue;
-    private final int[] f_anRetValue;
+    private int[] m_anRetValue;
+
+    private Register[] m_aRegReturn;
     }

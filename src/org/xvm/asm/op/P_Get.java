@@ -54,7 +54,7 @@ public class P_Get
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
         out.writeByte(OP_P_GET);
         writePackedLong(out, f_nPropConstId);

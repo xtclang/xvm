@@ -2,7 +2,6 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
@@ -18,7 +17,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.Function.FunctionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -31,10 +29,22 @@ public class Call_00
      * Construct a CALL_00 op.
      *
      * @param nFunction  the r-value indicating the function to call
+     *
+     * @deprecated
      */
     public Call_00(int nFunction)
         {
-        f_nFunctionValue = nFunction;
+        super(nFunction);
+        }
+
+    /**
+     * Construct a CALL_00 op based on the passed arguments.
+     *
+     * @param argFunction the function Argument
+     */
+    public Call_00(Argument argFunction)
+        {
+        super(argFunction);
         }
 
     /**
@@ -46,15 +56,7 @@ public class Call_00
     public Call_00(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFunctionValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_CALL_00);
-        writePackedLong(out, f_nFunctionValue);
+        super(readPackedInt(in));
         }
 
     @Override
@@ -66,7 +68,7 @@ public class Call_00
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (f_nFunctionValue == A_SUPER)
+        if (m_nFunctionValue == A_SUPER)
             {
             CallChain chain = frame.m_chain;
             if (chain == null)
@@ -74,12 +76,12 @@ public class Call_00
                 throw new IllegalStateException();
                 }
 
-            return chain.callSuperNN(frame, Utils.ARGS_NONE, Utils.ARGS_NONE);
+            return chain.callSuperNN(frame, Utils.OBJECTS_NONE, Utils.ARGS_NONE);
             }
 
-        if (f_nFunctionValue < 0)
+        if (m_nFunctionValue < 0)
             {
-            MethodStructure function = getMethodStructure(frame, -f_nFunctionValue);
+            MethodStructure function = getMethodStructure(frame);
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
@@ -88,7 +90,7 @@ public class Call_00
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(f_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
             if (hFunction == null)
                 {
                 return R_REPEAT;
@@ -101,6 +103,4 @@ public class Call_00
             return frame.raiseException(e);
             }
         }
-
-    private final int f_nFunctionValue;
     }

@@ -64,7 +64,7 @@ public class Return_T
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
         if (m_argT != null)
             {

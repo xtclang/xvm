@@ -48,7 +48,7 @@ public class IP_Inc
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-    throws IOException
+            throws IOException
         {
         out.writeByte(OP_IP_INC);
         writePackedLong(out, f_nArgValue);
