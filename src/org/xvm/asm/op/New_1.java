@@ -34,6 +34,8 @@ public class New_1
      * @param nConstructorId  identifies the constructor
      * @param nArg            the constructor argument
      * @param nRet            the location to store the new object
+     *
+     * @deprecated
      */
     public New_1(int nConstructorId, int nArg, int nRet)
         {

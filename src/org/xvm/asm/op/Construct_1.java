@@ -29,6 +29,8 @@ public class Construct_1
      *
      * @param nConstructorId  identifies the construct function
      * @param nArg            r-value for the construct function argument
+     *
+     * @deprecated
      */
     public Construct_1(int nConstructorId, int nArg)
         {
