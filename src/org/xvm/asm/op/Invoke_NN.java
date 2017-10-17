@@ -7,15 +7,18 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
@@ -34,10 +37,26 @@ public class Invoke_NN
      */
     public Invoke_NN(int nTarget, int nMethodId, int[] anArg, int[] anRet)
         {
-        f_nTargetValue = nTarget;
-        f_nMethodId    = nMethodId;
-        f_anArgValue   = anArg;
-        f_anRetValue   = anRet;
+        super(nTarget, nMethodId);
+
+        m_anArgValue = anArg;
+        m_anRetValue = anRet;
+        }
+
+    /**
+     * Construct an NVOK_NN op based on the passed arguments.
+     *
+     * @param argTarget    the target Argument
+     * @param constMethod  the method constant
+     * @param aArgValue    the array of Argument values
+     * @param aRegReturn   the Register array to move the results into
+     */
+    public Invoke_NN(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Register[] aRegReturn)
+        {
+        super(argTarget, constMethod);
+
+        m_aArgValue = aArgValue;
+        m_aRegReturn = aRegReturn;
         }
 
     /**
@@ -49,21 +68,26 @@ public class Invoke_NN
     public Invoke_NN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nMethodId    = readPackedInt(in);
-        f_anArgValue   = readIntArray(in);
-        f_anRetValue   = readIntArray(in);
+        super(readPackedInt(in), readPackedInt(in));
+
+        m_anArgValue = readIntArray(in);
+        m_anRetValue = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_NVOK_NN);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writeIntArray(out, f_anArgValue);
-        writeIntArray(out, f_anRetValue);
+        super.write(out, registry);
+
+        if (m_aArgValue != null)
+            {
+            m_anArgValue = encodeArguments(m_aArgValue, registry);
+            m_anRetValue = encodeArguments(m_aRegReturn, registry);
+            }
+
+        writeIntArray(out, m_anArgValue);
+        writeIntArray(out, m_anRetValue);
         }
 
     @Override
@@ -77,29 +101,28 @@ public class Invoke_NN
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
             if (hTarget == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeComposition clz = hTarget.f_clazz;
-            CallChain chain = getCallChain(frame, clz, f_nMethodId);
-
-            ObjectHandle[] ahVar = frame.getArguments(f_anArgValue,
-                    chain.getTop().getMaxVars());
-            if (ahVar == null)
+            if (isProperty(hTarget))
                 {
-                return R_REPEAT;
+                ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
+                if (ahArg == null)
+                    {
+                    return R_REPEAT;
+                    }
+
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0], ahArg);
+
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
-            if (chain.isNative())
-                {
-                return clz.f_template.invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, f_anRetValue);
-                }
-
-            return clz.f_template.invokeN(frame, chain, hTarget, ahVar, f_anRetValue);
+            return resolveArgs(frame, hTarget, null);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -107,8 +130,59 @@ public class Invoke_NN
             }
         }
 
-    private final int   f_nTargetValue;
-    private final int   f_nMethodId;
-    private final int[] f_anArgValue;
-    private final int[] f_anRetValue;
+    protected int resolveArgs(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
+        {
+        CallChain chain = getCallChain(frame, hTarget.f_clazz);
+
+        ObjectHandle[] ahVar;
+        if (ahArg == null)
+            {
+            try
+                {
+                ahVar = frame.getArguments(m_anArgValue, chain.getTop().getMaxVars());
+                if (ahVar == null)
+                    {
+                    return R_REPEAT;
+                    }
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
+            }
+        else
+            {
+            ahVar = Utils.ensureSize(ahArg, chain.getTop().getMaxVars());
+            }
+
+        if (anyProperty(ahVar))
+            {
+            Frame.Continuation stepLast = frameCaller -> complete(frameCaller, chain, hTarget, ahVar);
+            return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+            }
+        return complete(frame, chain, hTarget, ahVar);
+        }
+
+    protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
+        {
+        TypeComposition clz = hTarget.f_clazz;
+
+        return chain.isNative()
+             ? clz.f_template.invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)
+             : clz.f_template.invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgValue, registry);
+        }
+
+    private int[] m_anArgValue;
+    private int[] m_anRetValue;
+
+    private Argument[] m_aArgValue;
+    private Register[] m_aRegReturn;
     }

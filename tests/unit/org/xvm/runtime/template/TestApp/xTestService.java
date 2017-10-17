@@ -110,16 +110,14 @@ public class xTestService extends Service
             new Enter(),
             new Var_DN(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
                      adapter.ensureValueConstantId("iRet")), // #2 (iRet)
-            new Var(adapter.getClassTypeConstId("Clock")), // #3
-            new L_Get(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"),
-                    3),
 
             new Var_I(adapter.getClassTypeConstId("Function"),
-                    adapter.getMethodVarId("TestApp.TestService", "lambda_1")), // #4
-            new MoveRef(2, 5),
-            new FBind(4, new int[] {0, 1}, new int[] {5, 0}, 4),
-            new Invoke_N0(3, adapter.getMethodConstId("Clock", "scheduleAlarm"),
-                    new int[] {4, 0}),
+                    adapter.getMethodVarId("TestApp.TestService", "lambda_1")), // #3
+            new MoveRef(2, 4), // #4 (&iRet)
+            new FBind(3, new int[] {0, 1}, new int[] {4, 0}, 3),
+            new Invoke_N0(adapter.getNegativePropertyConstId("TestApp.TestService", "runtimeClock"),
+                    adapter.getMethodConstId("Clock", "scheduleAlarm"),
+                    new int[] {3, 0}),
             new Return_1(2),
             new Exit(), // optimized out; unreachable
             });

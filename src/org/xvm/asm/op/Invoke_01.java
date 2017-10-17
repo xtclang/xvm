@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 
@@ -38,23 +39,23 @@ public class Invoke_01
      */
     public Invoke_01(int nTarget, int nMethodId, int nRet)
         {
-        m_nTarget   = nTarget;
-        m_nMethodId = nMethodId;
+        super(nTarget, nMethodId);
+
         m_nRetValue = nRet;
         }
 
     /**
-     * Construct an NVOKE_01 op for the specified Tuple type and arguments.
+     * Construct an NVOKE_01 op based on the passed arguments.
      *
      * @param argTarget    the target argument
      * @param constMethod  the method constant
-     * @param argRet       the return value argument
+     * @param regReturn    the return value register
      */
-    public Invoke_01(Argument argTarget, MethodConstant constMethod, Argument argRet)
+    public Invoke_01(Argument argTarget, MethodConstant constMethod, Register regReturn)
         {
-        m_argTarget   = argTarget;
-        m_constMethod = constMethod;
-        m_argRet      = argRet;
+        super(argTarget, constMethod);
+
+        m_regReturn = regReturn;
         }
 
     /**
@@ -66,8 +67,8 @@ public class Invoke_01
     public Invoke_01(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nTarget   = readPackedInt(in);
-        m_nMethodId = readPackedInt(in);
+        super(readPackedInt(in), readPackedInt(in));
+
         m_nRetValue = readPackedInt(in);
         }
 
@@ -75,16 +76,13 @@ public class Invoke_01
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        if (m_argTarget != null)
+        super.write(out, registry);
+
+        if (m_regReturn != null)
             {
-            m_nTarget   = encodeArgument(m_argTarget  , registry);
-            m_nMethodId = encodeArgument(m_constMethod, registry);
-            m_nRetValue = encodeArgument(m_argRet     , registry);
+            m_nRetValue = encodeArgument(m_regReturn, registry);
             }
 
-        out.writeByte(OP_NVOK_01);
-        writePackedLong(out, m_nTarget);
-        writePackedLong(out, m_nMethodId);
         writePackedLong(out, m_nRetValue);
         }
 
@@ -105,18 +103,15 @@ public class Invoke_01
                 return R_REPEAT;
                 }
 
-            TypeComposition clz = hTarget.f_clazz;
-            CallChain chain = getCallChain(frame, clz, m_nMethodId);
-
-            if (chain.isNative())
+            if (isProperty(hTarget))
                 {
-                return clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget,
-                        Utils.OBJECTS_NONE, m_nRetValue);
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepLast = frameCaller -> complete(frameCaller, ahTarget[0]);
+
+                return new Utils.GetArgument(ahTarget, stepLast).doNext(frame);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-
-            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
+            return complete(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -124,17 +119,23 @@ public class Invoke_01
             }
         }
 
-    @Override
-    public void registerConstants(ConstantRegistry registry)
+    protected int complete(Frame frame, ObjectHandle hTarget)
         {
-        registerArgument(m_argTarget, registry);
+        TypeComposition clz = hTarget.f_clazz;
+        CallChain chain = getCallChain(frame, clz);
+
+        if (chain.isNative())
+            {
+            return clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget,
+                    Utils.OBJECTS_NONE, m_nRetValue);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+
+        return clz.f_template.invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
-    private Argument       m_argTarget;
-    private MethodConstant m_constMethod;
-    private Argument       m_argRet;
-
-    private int m_nTarget;
-    private int m_nMethodId;
     private int m_nRetValue;
+
+    private Register m_regReturn;
     }

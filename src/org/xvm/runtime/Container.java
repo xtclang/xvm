@@ -94,6 +94,7 @@ public class Container
         f_types.getTemplate("Type");
         f_types.getTemplate("Ordered");
         f_types.getTemplate("types.Method");
+        f_types.getTemplate("types.Property");
 
         m_contextMain = createServiceContext("main");
         Service.makeHandle(m_contextMain,

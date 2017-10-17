@@ -48,17 +48,16 @@ public class Frame
     public final ObjectHandle[]  f_ahVar;        // arguments/local var registers
     public final VarInfo[]       f_aInfo;        // optional info for var registers
     public final int             f_iReturn;      // an index for a single return value;
-    // a negative value below RET_LOCAL indicates an
+    // any negative value below RET_LOCAL indicates an
     // automatic tuple conversion into a (-i-1) register
     public final int[]           f_aiReturn;     // indexes for multiple return values
     public final Frame           f_framePrev;    // the caller's frame
     public final int             f_iPCPrev;      // the caller's PC (used only for async reporting)
     public final int             f_iId;          // the frame's id (used only for async reporting)
-    public final int[]           f_anNextVar;
-    // at index i, the "next available" var register for scope i
+    public final int[]           f_anNextVar;    // at index i, the "next available" var register for scope i
 
-    public int m_iScope;       // current scope index (starts with 0)
-    public int m_iGuard = -1;  // current guard index (-1 if none)
+    public  int              m_iScope;       // current scope index (starts with 0)
+    public  int              m_iGuard = -1;  // current guard index (-1 if none)
     public  int              m_iPC;          // the program counter
     public  Guard[]          m_aGuard;       // at index i, the guard for the guard index i
     public  ExceptionHandle  m_hException;   // an exception
@@ -76,9 +75,6 @@ public class Frame
     // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI  = -65002;   // an indicator for "multiple return values"
-
-    // the first of the multiple return into the "frame local"
-    public final static int[] RET_FIRST_LOCAL = new int[] {RET_LOCAL};
 
     public final static Constant[] NO_CONSTS = Constant.NO_CONSTS;
 
@@ -128,7 +124,7 @@ public class Frame
         f_iPCPrev = iCallerPC;
         f_function = null;
         f_aOp = aopNative;
-        f_aconst = NO_CONSTS;       // TODO review
+        f_aconst = NO_CONSTS; // TODO review
 
         f_hTarget = null;
         f_ahVar = ahVar;
@@ -540,13 +536,19 @@ public class Frame
         return iArg >= 0
                 ? f_ahVar[iArg]
                 : iArg <= Op.CONSTANT_OFFSET
-                        ? getConstant(iArg)
+                        ? getConstHandle(iArg)
                         : getPredefinedArgument(iArg);
         }
 
-    private ObjectHandle getConstant(int iArg)
+    private ObjectHandle getConstHandle(int iArg)
         {
         return f_context.f_heapGlobal.ensureConstHandle(this, Op.CONSTANT_OFFSET - iArg);
+        }
+
+    private Constant getConstant(int iArg)
+        {
+        assert iArg < Op.CONSTANT_OFFSET;
+        return f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
         }
 
     public int checkWaitingRegisters()
@@ -587,10 +589,7 @@ public class Frame
     // return a string value of the specified constant
     public String getString(int iArg)
         {
-        assert iArg < Op.CONSTANT_OFFSET;
-
-        StringConstant constText = (StringConstant)
-            f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
+        StringConstant constText = (StringConstant) getConstant(iArg);
         return constText.getValue();
         }
 
@@ -640,7 +639,7 @@ public class Frame
             }
 
         return iArg <= Op.CONSTANT_OFFSET
-                ? getConstant(iArg)
+                ? getConstHandle(iArg)
                 : getPredefinedArgument(iArg);
         }
 
@@ -686,8 +685,7 @@ public class Frame
             }
         else
             {
-            IntConstant constant = (IntConstant) f_context.f_pool.
-                getConstant(Op.CONSTANT_OFFSET - iArg);
+            IntConstant constant = (IntConstant) getConstant(iArg);
             lIndex = constant.getValue().getLong();
             }
 
@@ -740,7 +738,7 @@ public class Frame
         }
 
     // Note: this method increments up the "nextVar" index
-    public void copyVarInfo(int nVarFrom)
+    public void introduceVarCopy(int nVarFrom)
         {
         VarInfo infoFrom = f_aInfo[nVarFrom];
 

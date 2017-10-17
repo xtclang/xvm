@@ -45,7 +45,7 @@ public class Throw
             throw new IllegalArgumentException("argument required");
             }
 
-        m_argValue  = argValue;
+        m_argValue = argValue;
         }
     /**
      * Deserialization constructor.

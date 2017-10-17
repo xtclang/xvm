@@ -6,7 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -22,7 +22,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * FBIND rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
  */
 public class FBind
-        extends OpInvocable
+        extends Op
     {
     /**
      * Construct an FBIND op.

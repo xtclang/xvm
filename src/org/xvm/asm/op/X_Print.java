@@ -24,6 +24,8 @@ public class X_Print
     {
     public X_Print(int nValue)
         {
+        super(nValue, 0);
+
         f_nValue = nValue;
         }
 
@@ -68,10 +70,10 @@ public class X_Print
                     }
 
                 // call the "to<String>()" method for the object to get the value
+                m_nMethodId = frame.f_adapter.getMethodConstId("Object", "to",
+                    ClassTemplate.VOID, ClassTemplate.STRING);
                 TypeComposition clz = hValue.f_clazz;
-                CallChain chain = getCallChain(frame, clz,
-                        frame.f_adapter.getMethodConstId("Object", "to",
-                                ClassTemplate.VOID, ClassTemplate.STRING));
+                CallChain chain = getCallChain(frame, clz);
 
                 int iResult;
                 if (chain.isNative())

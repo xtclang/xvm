@@ -7,6 +7,9 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -34,9 +37,23 @@ public class Invoke_0T
      */
     public Invoke_0T(int nTarget, int nMethodId, int nRet)
         {
-        f_nTargetValue   = nTarget;
-        f_nMethodId      = nMethodId;
-        f_nTupleRetValue = nRet;
+        super(nTarget, nMethodId);
+
+        m_nTupleRetValue = nRet;
+        }
+
+    /**
+     * Construct an NVOK_0T op based on the passed arguments.
+     *
+     * @param argTarget    the target Argument
+     * @param constMethod  the method constant
+     * @param regReturn    the Register to move the result into
+     */
+    public Invoke_0T(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Register regReturn)
+        {
+        super(argTarget, constMethod);
+
+        m_regReturn = regReturn;
         }
 
     /**
@@ -48,19 +65,23 @@ public class Invoke_0T
     public Invoke_0T(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue   = readPackedInt(in);
-        f_nMethodId      = readPackedInt(in);
-        f_nTupleRetValue = readPackedInt(in);
+        super(readPackedInt(in), readPackedInt(in));
+
+        m_nTupleRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_NVOK_0T);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writePackedLong(out, f_nTupleRetValue);
+        super.write(out, registry);
+
+        if (m_regReturn != null)
+            {
+            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
+            }
+
+        writePackedLong(out, m_nTupleRetValue);
         }
 
     @Override
@@ -74,24 +95,21 @@ public class Invoke_0T
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
             if (hTarget == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeComposition clz = hTarget.f_clazz;
-            CallChain chain = getCallChain(frame, clz, f_nMethodId);
-
-            if (chain.isNative())
+            if (isProperty(hTarget))
                 {
-                return clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget,
-                        Utils.OBJECTS_NONE, -f_nTupleRetValue - 1);
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepLast = frameCaller -> complete(frameCaller, ahTarget[0]);
+
+                return new Utils.GetArgument(ahTarget, stepLast).doNext(frame);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-
-            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, -f_nTupleRetValue - 1);
+            return complete(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -99,7 +117,23 @@ public class Invoke_0T
             }
         }
 
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nTupleRetValue;
+    protected int complete(Frame frame, ObjectHandle hTarget)
+        {
+        TypeComposition clz = hTarget.f_clazz;
+        CallChain chain = getCallChain(frame, clz);
+
+        if (chain.isNative())
+            {
+            return clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget,
+                    Utils.OBJECTS_NONE, -m_nTupleRetValue - 1);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+
+        return clz.f_template.invoke1(frame, chain, hTarget, ahVar, -m_nTupleRetValue - 1);
+        }
+
+    private int m_nTupleRetValue;
+
+    private Register m_regReturn;
     }

@@ -17,6 +17,9 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.template.types.xProperty;
+
 
 import static org.xvm.util.Handy.byteToHexString;
 import static org.xvm.util.Handy.readMagnitude;
@@ -123,7 +126,7 @@ public abstract class Op
      *
      * @return true iff the argument is a Constant
      */
-    boolean isConstant(Argument arg)
+    protected static boolean isConstant(Argument arg)
         {
         return arg instanceof Constant;
         }
@@ -135,7 +138,7 @@ public abstract class Op
      *
      * @return true iff the argument is a register
      */
-    boolean isRegister(Argument arg)
+    protected static boolean isRegister(Argument arg)
         {
         return arg instanceof Register;
         }
@@ -218,6 +221,37 @@ public abstract class Op
             anArg[i] = encodeArgument(aArg[i], registry);
             }
         return anArg;
+        }
+
+    /**
+     * Determine if the specified ObjectHandle represents a PropertyHandle.
+     *
+     * @param handle  the argument
+     *
+     * @return true iff the argument is a PropertyHandle
+     */
+    protected static boolean isProperty(ObjectHandle handle)
+        {
+        return handle instanceof xProperty.PropertyHandle;
+        }
+
+    /**
+     * Determine if any of the handles is a PropertyHandle.
+     *
+     * @param aHandle  an array of handles
+     *
+     * @return true iff any of the handles is a PropertyHandle
+     */
+    protected static boolean anyProperty(ObjectHandle[] aHandle)
+        {
+        for (ObjectHandle h : aHandle)
+            {
+            if (h instanceof xProperty.PropertyHandle)
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
 

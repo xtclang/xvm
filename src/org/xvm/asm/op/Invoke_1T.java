@@ -7,12 +7,16 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
+import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -34,10 +38,26 @@ public class Invoke_1T
      */
     public Invoke_1T(int nTarget, int nMethodId, int nArg, int nRet)
         {
-        f_nTargetValue   = nTarget;
-        f_nMethodId      = nMethodId;
-        f_nArgValue      = nArg;
-        f_nTupleRetValue = nRet;
+        super(nTarget, nMethodId);
+
+        m_nArgValue = nArg;
+        m_nTupleRetValue = nRet;
+        }
+
+    /**
+     * Construct an NVOK_1T op based on the passed arguments.
+     *
+     * @param argTarget    the target Argument
+     * @param constMethod  the method constant
+     * @param argValue     the value Argument
+     * @param regReturn    the Register to move the result into
+     */
+    public Invoke_1T(Argument argTarget, MethodConstant constMethod, Argument argValue, Register regReturn)
+        {
+        super(argTarget, constMethod);
+
+        m_argValue = argValue;
+        m_regReturn = regReturn;
         }
 
     /**
@@ -49,21 +69,26 @@ public class Invoke_1T
     public Invoke_1T(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue   = readPackedInt(in);
-        f_nMethodId      = readPackedInt(in);
-        f_nArgValue      = readPackedInt(in);
-        f_nTupleRetValue = readPackedInt(in);
+        super(readPackedInt(in), readPackedInt(in));
+
+        m_nArgValue = readPackedInt(in);
+        m_nTupleRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_NVOK_1T);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nMethodId);
-        writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nTupleRetValue);
+        super.write(out, registry);
+
+        if (m_argValue != null)
+            {
+            m_nArgValue = encodeArgument(m_argValue, registry);
+            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
+            }
+
+        writePackedLong(out, m_nArgValue);
+        writePackedLong(out, m_nTupleRetValue);
         }
 
     @Override
@@ -77,27 +102,24 @@ public class Invoke_1T
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            ObjectHandle hArg = frame.getArgument(f_nArgValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
+            ObjectHandle hArg = frame.getArgument(m_nArgValue);
 
             if (hTarget == null || hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeComposition clz = hTarget.f_clazz;
-            CallChain chain = getCallChain(frame, clz, f_nMethodId);
-
-            if (chain.isNative())
+            if (isProperty(hTarget))
                 {
-                return clz.f_template.invokeNative1(frame, chain.getTop(), hTarget,
-                        hArg, -f_nTupleRetValue - 1);
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepNext = frameCaller ->
+                    resolveArg(frameCaller, ahTarget[0], hArg);
+
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-            ahVar[0] = hArg;
-
-            return clz.f_template.invoke1(frame, chain, hTarget, ahVar, -f_nTupleRetValue - 1);
+            return resolveArg(frame, hTarget, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -105,8 +127,44 @@ public class Invoke_1T
             }
         }
 
-    private final int f_nTargetValue;
-    private final int f_nMethodId;
-    private final int f_nArgValue;
-    private final int f_nTupleRetValue;
+    protected int resolveArg(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
+        {
+        if (isProperty(hArg))
+            {
+            ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+            Frame.Continuation stepLast = frameCaller -> complete(frameCaller, hTarget, ahArg[0]);
+
+            return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+            }
+
+        return complete(frame, hTarget, hArg);
+        }
+
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
+        {
+        TypeComposition clz = hTarget.f_clazz;
+
+        CallChain chain = getCallChain(frame, hTarget.f_clazz);
+
+        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        ahVar[0] = hArg;
+
+        return chain.isNative()
+            ? clz.f_template.invokeNative1(frame, chain.getTop(), hTarget, ahVar[0], -m_nTupleRetValue - 1)
+            : clz.f_template.invoke1(frame, chain, hTarget, ahVar, -m_nTupleRetValue - 1);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argValue, registry);
+        }
+
+    private int m_nArgValue;
+    private int m_nTupleRetValue;
+
+    private Argument m_argValue;
+    private Register m_regReturn;
     }

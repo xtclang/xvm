@@ -8,7 +8,6 @@ import java.util.Collections;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpInvocable;
 import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
@@ -26,7 +25,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * REF rvalue-src, lvalue-dest ; move reference-to-source to destination
  */
 public class MoveRef
-        extends OpInvocable
+        extends Op
     {
     /**
      * Construct a MOV_REF op.
