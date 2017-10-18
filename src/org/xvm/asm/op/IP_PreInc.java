@@ -6,7 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpProperty;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 
@@ -22,7 +22,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * IP_INCB lvalue-target, lvalue  ; ++T -> T
  */
 public class IP_PreInc
-        extends OpProperty
+        extends Op
     {
     /**
      * Construct an IP_INCB op.
@@ -32,8 +32,8 @@ public class IP_PreInc
      */
     public IP_PreInc(int nArg, int nRet)
         {
-        f_nArgValue = nArg;
-        f_nRetValue = nRet;
+        m_nArgValue = nArg;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -45,8 +45,8 @@ public class IP_PreInc
     public IP_PreInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nArgValue = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -54,8 +54,8 @@ public class IP_PreInc
     throws IOException
         {
         out.writeByte(OP_IP_INCB);
-        writePackedLong(out, f_nArgValue);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nArgValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -69,10 +69,10 @@ public class IP_PreInc
         {
         try
             {
-            if (f_nArgValue >= 0)
+            if (m_nArgValue >= 0)
                 {
                 // operation on a register
-                ObjectHandle hValue = frame.getArgument(f_nArgValue);
+                ObjectHandle hValue = frame.getArgument(m_nArgValue);
                 if (hValue == null)
                     {
                     return R_REPEAT;
@@ -84,8 +84,8 @@ public class IP_PreInc
                     }
 
                 ObjectHandle hValueNew = frame.getFrameLocal();
-                if (frame.assignValue(f_nRetValue, hValueNew) == R_EXCEPTION ||
-                    frame.assignValue(f_nArgValue, hValueNew) == R_EXCEPTION)
+                if (frame.assignValue(m_nRetValue, hValueNew) == R_EXCEPTION ||
+                    frame.assignValue(m_nArgValue, hValueNew) == R_EXCEPTION)
                     {
                     return R_EXCEPTION;
                     }
@@ -97,10 +97,10 @@ public class IP_PreInc
                 ObjectHandle hTarget = frame.getThis();
 
                 PropertyConstant constProperty = (PropertyConstant)
-                        frame.f_context.f_pool.getConstant(-f_nArgValue);
+                        frame.f_context.f_pool.getConstant(-m_nArgValue);
 
                 return hTarget.f_clazz.f_template.invokePreInc(
-                        frame, hTarget, constProperty.getName(), f_nRetValue);
+                        frame, hTarget, constProperty.getName(), m_nRetValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)
@@ -109,6 +109,6 @@ public class IP_PreInc
             }
         }
 
-    private final int f_nArgValue;
-    private final int f_nRetValue;
+    private int m_nArgValue;
+    private int m_nRetValue;
     }

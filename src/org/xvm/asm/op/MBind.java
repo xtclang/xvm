@@ -106,9 +106,9 @@ public class MBind
             if (isProperty(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepLast = frameCaller -> proceed(frameCaller, ahTarget[0]);
+                Frame.Continuation stepNext = frameCaller -> proceed(frameCaller, ahTarget[0]);
 
-                return new Utils.GetArgument(ahTarget, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
             return proceed(frame, hTarget);

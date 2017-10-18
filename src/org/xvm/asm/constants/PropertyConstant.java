@@ -2,9 +2,11 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.PropertyStructure;
 
 
 /**
@@ -59,12 +61,56 @@ public class PropertyConstant
         return Format.Property;
         }
 
+    @Override
+    public TypeConstant getType()
+        {
+        TypeConstant type = m_type;
+        if (type == null)
+            {
+            m_type = type = ((PropertyStructure) getComponent()).getType();
+            }
+        return type;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+
+    @Override
+    protected void disassemble(DataInput in) throws IOException
+        {
+        super.disassemble(in);
+
+        m_type = null;
+        }
+
+    @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        m_type = null;
+
+        super.registerConstants(pool);
+        }
+
+    @Override
+    protected void assemble(DataOutput out) throws IOException
+        {
+        super.assemble(out);
+
+        m_type = null;
+        }
 
     @Override
     public String getDescription()
         {
         return "property=" + getValueString();
         }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Cached type.
+     */
+    private transient TypeConstant m_type;
     }

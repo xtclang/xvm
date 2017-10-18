@@ -115,10 +115,10 @@ public class New_N
 
             if (anyProperty(ahVar))
                 {
-                Frame.Continuation stepLast = frameCaller -> template.construct(frame, constructor,
+                Frame.Continuation stepNext = frameCaller -> template.construct(frame, constructor,
                     template.f_clazzCanonical, ahVar, m_nRetValue);
 
-                return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
                 }
             return template.construct(frame, constructor,
                     template.f_clazzCanonical, ahVar, m_nRetValue);

@@ -162,9 +162,10 @@ public class FBind
 
             if (fAnyProperty)
                 {
-                Frame.Continuation stepLast = frameCaller -> complete(frameCaller, hFunction, ahParam);
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frameCaller, hFunction, ahParam);
 
-                return new Utils.GetArguments(ahParam, new int[]{0}, stepLast).doNext(frame);
+                return new Utils.GetArguments(ahParam, new int[]{0}, stepNext).doNext(frame);
                 }
 
             return complete(frame, hFunction, ahParam);

@@ -116,10 +116,10 @@ public class Call_T0
                 if (isProperty(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepLast = frameCaller ->
+                    Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperNN(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, Utils.ARGS_NONE);
 
-                    return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
                 return chain.callSuperNN(frame, ((TupleHandle) hArg).m_ahValue, Utils.ARGS_NONE);
                 }
@@ -131,10 +131,10 @@ public class Call_T0
                 if (isProperty(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepLast = frameCaller ->
+                    Frame.Continuation stepNext = frameCaller ->
                         complete(frameCaller, function, (TupleHandle) ahArg[0]);
 
-                    return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
 
                 return complete(frame, function, (TupleHandle) hArg);
@@ -149,10 +149,10 @@ public class Call_T0
             if (isProperty(hArg))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                Frame.Continuation stepLast = frameCaller ->
+                Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, hFunction, (TupleHandle) ahArg[0]);
 
-                return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                 }
 
             return complete(frame, hFunction, (TupleHandle) hArg);

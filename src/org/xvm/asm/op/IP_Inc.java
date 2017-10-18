@@ -6,7 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpProperty;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 
@@ -22,7 +22,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * IP_INC lvalue-target ; in-place increment; no result
  */
 public class IP_Inc
-        extends OpProperty
+        extends Op
     {
     /**
      * Construct an IP_INC op.
@@ -31,7 +31,7 @@ public class IP_Inc
      */
     public IP_Inc(int nArg)
         {
-        f_nArgValue = nArg;
+        m_nArgValue = nArg;
         }
 
     /**
@@ -43,7 +43,7 @@ public class IP_Inc
     public IP_Inc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nArgValue = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
         }
 
     @Override
@@ -51,7 +51,7 @@ public class IP_Inc
             throws IOException
         {
         out.writeByte(OP_IP_INC);
-        writePackedLong(out, f_nArgValue);
+        writePackedLong(out, m_nArgValue);
         }
 
     @Override
@@ -65,16 +65,16 @@ public class IP_Inc
         {
         try
             {
-            if (f_nArgValue >= 0)
+            if (m_nArgValue >= 0)
                 {
                 // operation on a register
-                ObjectHandle hValue = frame.getArgument(f_nArgValue);
+                ObjectHandle hValue = frame.getArgument(m_nArgValue);
                 if (hValue == null)
                     {
                     return R_REPEAT;
                     }
 
-                return hValue.f_clazz.f_template.invokeNext(frame, hValue, f_nArgValue);
+                return hValue.f_clazz.f_template.invokeNext(frame, hValue, m_nArgValue);
                 }
             else
                 {
@@ -82,7 +82,7 @@ public class IP_Inc
                 ObjectHandle hTarget = frame.getThis();
 
                 PropertyConstant constProperty = (PropertyConstant)
-                        frame.f_context.f_pool.getConstant(-f_nArgValue);
+                        frame.f_context.f_pool.getConstant(-m_nArgValue);
 
                 return hTarget.f_clazz.f_template.invokePostInc(
                         frame, hTarget, constProperty.getName(), Frame.RET_UNUSED);
@@ -94,5 +94,5 @@ public class IP_Inc
             }
         }
 
-    private final int f_nArgValue;
+    private int m_nArgValue;
     }

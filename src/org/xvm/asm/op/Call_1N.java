@@ -119,10 +119,10 @@ public class Call_1N
                 if (isProperty(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepLast = frameCaller ->
+                    Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperNN(frame, ahArg, m_anRetValue);
 
-                    return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
 
                 return chain.callSuperNN(frame, new ObjectHandle[]{hArg}, m_anRetValue);
@@ -135,10 +135,10 @@ public class Call_1N
                 if (isProperty(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepLast = frameCaller ->
+                    Frame.Continuation stepNext = frameCaller ->
                         complete(frameCaller, ahArg[0], function);
 
-                    return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
 
                 return complete(frame, hArg, function);
@@ -153,10 +153,10 @@ public class Call_1N
             if (isProperty(hArg))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                Frame.Continuation stepLast = frameCaller ->
+                Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, ahArg[0], hFunction);
 
-                return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                 }
 
             return complete(frame, hArg, hFunction);

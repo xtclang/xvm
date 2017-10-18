@@ -157,8 +157,9 @@ public class Invoke_NT
 
         if (anyProperty(ahVar))
             {
-            Frame.Continuation stepLast = frameCaller -> complete(frameCaller, chain, hTarget, ahVar);
-            return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+            Frame.Continuation stepNext = frameCaller ->
+                complete(frameCaller, chain, hTarget, ahVar);
+            return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
             }
         return complete(frame, chain, hTarget, ahVar);
         }

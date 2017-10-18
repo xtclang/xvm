@@ -32,8 +32,8 @@ public class IsZero
      */
     public IsZero(int nValue, int nRet)
         {
-        f_nValue    = nValue;
-        f_nRetValue = nRet;
+        m_nValue    = nValue;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -45,8 +45,8 @@ public class IsZero
     public IsZero(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue    = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        m_nValue    = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -54,8 +54,8 @@ public class IsZero
             throws IOException
         {
         out.writeByte(OP_IS_ZERO);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -69,14 +69,13 @@ public class IsZero
         {
         try
             {
-            JavaLong hValue = (JavaLong) frame.getArgument(f_nValue);
+            JavaLong hValue = (JavaLong) frame.getArgument(m_nValue);
             if (hValue == null)
                 {
                 return R_REPEAT;
                 }
 
-            frame.assignValue(f_nRetValue, xBoolean.makeHandle(hValue.getValue() == 0));
-            return iPC + 1;
+            return frame.assignValue(m_nRetValue, xBoolean.makeHandle(hValue.getValue() == 0));
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -84,6 +83,6 @@ public class IsZero
             }
         }
 
-    private final int f_nValue;
-    private final int f_nRetValue;
+    private int m_nValue;
+    private int m_nRetValue;
     }

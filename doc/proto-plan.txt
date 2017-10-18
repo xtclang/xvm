@@ -71,6 +71,9 @@
     + allow local property for Invoke_*
     + allow next register and local property for GP_Add, GP_NEG
     + allow local property for Call_*
+    - allow local property for l-values (assignValue)
+    - allow local property for Call_* and Invoke_* returns
+    - allow local property for PIP_*
     - allow local property for IP_*
     - allow next register for *GET/*SET
 

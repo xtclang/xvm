@@ -116,10 +116,10 @@ public class New_1
 
             if (isProperty(ahVar[0]))
                 {
-                Frame.Continuation stepLast = frameCaller -> template.construct(frame, constructor,
-                    template.f_clazzCanonical, ahVar, m_nRetValue);
+                Frame.Continuation stepNext = frameCaller -> template.construct(frame, constructor,
+                        template.f_clazzCanonical, ahVar, m_nRetValue);
 
-                return new Utils.GetArgument(ahVar, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahVar, stepNext).doNext(frame);
                 }
 
             return template.construct(frame, constructor,

@@ -122,7 +122,7 @@
 
 // register/local-property inc/dec ("A"=after, aka "post" / "B"=before, aka "pre"):
 // - the lvalue-target indicates the register or the local-property indicator (PROPERTY)
-// - the lvalue-return can be a register or a local-property indicator (PROPERTY)
+// - the lvalue can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
 -IP_INC      lvalue-target                           ; in-place increment; no result
  IP_DEC      lvalue-target                           ; in-place decrement; no result
@@ -147,18 +147,20 @@
  IP_XOR      lvalue, rvalue2                         ; T ^= T
 
 // ("P"=) property ("IP"=) in-place inc/dec:
-// - the rvalue indicates the object on which to get/set the property value
-// - the lvalue-return can be a register or a local-property indicator (PROPERTY)
+// - the rvalue-target indicates the object on which to get/set the property value
+// - the rvalue-target supports the "local property" mode
+// - the lvalue return value can be a register or a local-property indicator (PROPERTY)
 // - lvalue return values can specify the "next register" to allocate
- PIP_INC     PROPERTY, rvalue                        ; in-place increment; no result
- PIP_DEC     PROPERTY, rvalue                        ; in-place decrement; no result
--PIP_INCA    PROPERTY, rvalue, lvalue                ; T++ -> T
- PIP_DECA    PROPERTY, rvalue, lvalue                ; T-- -> T
--PIP_INCB    PROPERTY, rvalue, lvalue                ; ++T -> T
- PIP_DECB    PROPERTY, rvalue, lvalue                ; --T -> T
+ PIP_INC     PROPERTY, rvalue-target                 ; in-place increment; no result
+ PIP_DEC     PROPERTY, rvalue-target                 ; in-place decrement; no result
+-PIP_INCA    PROPERTY, rvalue-target, lvalue         ; T++ -> T
+ PIP_DECA    PROPERTY, rvalue-target, lvalue         ; T-- -> T
+-PIP_INCB    PROPERTY, rvalue-target, lvalue         ; ++T -> T
+ PIP_DECB    PROPERTY, rvalue-target, lvalue         ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ("P"=) property ops:
 // - the rvalue-target indicates the object on which to get/set the property value
+// - the rvalue-target supports the "local property" mode
 // - the rvalue2 can be a register or a constant value or a local-property indicator (PROPERTY)
  PIP_ADD     PROPERTY, rvalue-target, rvalue2        ; T += T
  PIP_SUB     PROPERTY, rvalue-target, rvalue2        ; T -= T
@@ -221,7 +223,8 @@
  MIP_XOR     rvalue-target, #:(rvalue-ix), rvalue2
 
 // function calls
-// rvalue-fn DOES not support "local property" mode
+// rvalue-fn DOES not support "local property" mode, but
+// lvalue-param and lvalue-return does
 // - first digit is # params: 0, 1, n, or "t"=tuple
 // - second digit is # returns: 0, 1, n, or "t"=tuple
 +CALL_00    rvalue-fn

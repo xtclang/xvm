@@ -32,8 +32,8 @@ public class AssertM
      */
     public AssertM(int nValue, int nTextId)
         {
-        f_nValue = nValue;
-        f_nTextConstId = nTextId;
+        m_nValue = nValue;
+        m_nTextConstId = nTextId;
         }
 
     /**
@@ -45,8 +45,8 @@ public class AssertM
     public AssertM(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
-        f_nTextConstId = readPackedInt(in);
+        m_nValue = readPackedInt(in);
+        m_nTextConstId = readPackedInt(in);
         }
 
     @Override
@@ -54,8 +54,8 @@ public class AssertM
             throws IOException
         {
         out.writeByte(OP_ASSERT_M);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nTextConstId);
+        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nTextConstId);
         }
 
     @Override
@@ -69,7 +69,7 @@ public class AssertM
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(f_nValue);
+            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nValue);
             if (hTest == null)
                 {
                 return R_REPEAT;
@@ -81,7 +81,7 @@ public class AssertM
                 }
 
             return frame.raiseException(
-                    xException.makeHandle("Assertion failed: " + frame.getString(f_nTextConstId)));
+                    xException.makeHandle("Assertion failed: " + frame.getString(m_nTextConstId)));
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -89,6 +89,6 @@ public class AssertM
             }
         }
 
-    private final int f_nValue;
-    private final int f_nTextConstId;
+    private int m_nValue;
+    private int m_nTextConstId;
     }

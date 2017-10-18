@@ -100,6 +100,7 @@ class TestApp
             extends TestClass
         {
         Int prop2;
+        Int temp;
 
         construct TestClass2(Int i, String s)
             {

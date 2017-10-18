@@ -30,8 +30,8 @@ public class JumpNotZero
      */
     public JumpNotZero(int nValue, int nRelAddr)
         {
-        f_nValue   = nValue;
-        f_nRelAddr = nRelAddr;
+        m_nValue   = nValue;
+        m_nRelAddr = nRelAddr;
         }
 
     /**
@@ -43,8 +43,8 @@ public class JumpNotZero
     public JumpNotZero(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue   = readPackedInt(in);
-        f_nRelAddr = readPackedInt(in);
+        m_nValue   = readPackedInt(in);
+        m_nRelAddr = readPackedInt(in);
         }
 
     @Override
@@ -52,8 +52,8 @@ public class JumpNotZero
             throws IOException
         {
         out.writeByte(OP_JMP_NZERO);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nRelAddr);
+        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nRelAddr);
         }
 
     @Override
@@ -67,13 +67,13 @@ public class JumpNotZero
         {
         try
             {
-            JavaLong hTest = (JavaLong) frame.getArgument(f_nValue);
+            JavaLong hTest = (JavaLong) frame.getArgument(m_nValue);
             if (hTest == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hTest.getValue() == 0 ? iPC + 1 : iPC + f_nRelAddr;
+            return hTest.getValue() == 0 ? iPC + 1 : iPC + m_nRelAddr;
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -81,6 +81,6 @@ public class JumpNotZero
             }
         }
 
-    private final int f_nValue;
-    private final int f_nRelAddr;
+    private int m_nValue;
+    private int m_nRelAddr;
     }

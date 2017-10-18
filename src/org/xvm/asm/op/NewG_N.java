@@ -141,10 +141,10 @@ public class NewG_N
 
             if (anyProperty(ahVar))
                 {
-                Frame.Continuation stepLast = frameCaller ->
+                Frame.Continuation stepNext = frameCaller ->
                     template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
 
-                return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
                 }
             return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
             }

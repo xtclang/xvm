@@ -32,8 +32,8 @@ public class JumpNotNull
      */
     public JumpNotNull(int nValue, int nRelAddr)
         {
-        f_nValue   = nValue;
-        f_nRelAddr = nRelAddr;
+        m_nValue   = nValue;
+        m_nRelAddr = nRelAddr;
         }
 
     /**
@@ -45,8 +45,8 @@ public class JumpNotNull
     public JumpNotNull(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue   = readPackedInt(in);
-        f_nRelAddr = readPackedInt(in);
+        m_nValue   = readPackedInt(in);
+        m_nRelAddr = readPackedInt(in);
         }
 
     @Override
@@ -54,8 +54,8 @@ public class JumpNotNull
             throws IOException
         {
         out.writeByte(OP_JMP_NNULL);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nRelAddr);
+        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nRelAddr);
         }
 
     @Override
@@ -69,9 +69,9 @@ public class JumpNotNull
         {
         try
             {
-            ObjectHandle hTest = frame.getArgument(f_nValue);
+            ObjectHandle hTest = frame.getArgument(m_nValue);
 
-            return hTest == xNullable.NULL ? iPC + 1 : iPC + f_nRelAddr;
+            return hTest == xNullable.NULL ? iPC + 1 : iPC + m_nRelAddr;
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -79,6 +79,6 @@ public class JumpNotNull
             }
         }
 
-    private final int f_nValue;
-    private final int f_nRelAddr;
+    private int m_nValue;
+    private int m_nRelAddr;
     }

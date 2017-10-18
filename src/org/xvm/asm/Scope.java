@@ -86,7 +86,7 @@ public class Scope
     public boolean isNextRegister(int nVar)
         {
         int nNext = getCurVars();
-        if (nVar < nNext)
+        if (nVar < nNext) // this also covers all negative values ("local property" mode)
             {
             return false;
             }

@@ -45,9 +45,9 @@ public class GuardStart
         {
         assert anClassConstId.length == anCatch.length;
 
-        f_anClassConstId    = anClassConstId;
-        f_anNameConstId     = anNameConstId;
-        f_anCatchRelAddress = anCatch;
+        m_anClassConstId    = anClassConstId;
+        m_anNameConstId     = anNameConstId;
+        m_anCatchRelAddress = anCatch;
         }
 
     /**
@@ -61,14 +61,14 @@ public class GuardStart
         {
         int c = readPackedInt(in);
 
-        f_anClassConstId    = new int[c];
-        f_anNameConstId     = new int[c];
-        f_anCatchRelAddress = new int[c];
+        m_anClassConstId    = new int[c];
+        m_anNameConstId     = new int[c];
+        m_anCatchRelAddress = new int[c];
         for (int i = 0; i < c; i++)
             {
-            f_anClassConstId[i]    = readPackedInt(in);
-            f_anNameConstId[i]     = readPackedInt(in);
-            f_anCatchRelAddress[i] = readPackedInt(in);
+            m_anClassConstId[i]    = readPackedInt(in);
+            m_anNameConstId[i]     = readPackedInt(in);
+            m_anCatchRelAddress[i] = readPackedInt(in);
             }
         }
 
@@ -77,14 +77,14 @@ public class GuardStart
         {
         out.writeByte(OP_GUARD);
 
-        int c = f_anClassConstId.length;
+        int c = m_anClassConstId.length;
         writePackedLong(out, c);
 
         for (int i = 0; i < c; i++)
             {
-            writePackedLong(out, f_anClassConstId[i]);
-            writePackedLong(out, f_anNameConstId[i]);
-            writePackedLong(out, f_anCatchRelAddress[i]);
+            writePackedLong(out, m_anClassConstId[i]);
+            writePackedLong(out, m_anNameConstId[i]);
+            writePackedLong(out, m_anCatchRelAddress[i]);
             }
         }
 
@@ -103,7 +103,7 @@ public class GuardStart
         if (guard == null)
             {
             m_guard = guard = new MultiGuard(iPC, iScope,
-                    f_anClassConstId, f_anNameConstId, f_anCatchRelAddress);
+                    m_anClassConstId, m_anNameConstId, m_anCatchRelAddress);
             }
         frame.pushGuard(guard);
 
@@ -116,9 +116,9 @@ public class GuardStart
         scope.enter();
         }
 
-    private final int[] f_anClassConstId;
-    private final int[] f_anNameConstId;
-    private final int[] f_anCatchRelAddress;
+    private int[] m_anClassConstId;
+    private int[] m_anNameConstId;
+    private int[] m_anCatchRelAddress;
 
     private transient MultiGuard m_guard; // cached struct
     }

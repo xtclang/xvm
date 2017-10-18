@@ -32,8 +32,8 @@ public class IsNot
      */
     public IsNot(int nValue, int nRet)
         {
-        f_nValue    = nValue;
-        f_nRetValue = nRet;
+        m_nValue    = nValue;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -45,8 +45,8 @@ public class IsNot
     public IsNot(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue    = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        m_nValue    = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -54,8 +54,8 @@ public class IsNot
             throws IOException
         {
         out.writeByte(OP_IS_NOT);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -69,13 +69,13 @@ public class IsNot
         {
         try
             {
-            BooleanHandle hValue = (BooleanHandle) frame.getArgument(f_nValue);
+            BooleanHandle hValue = (BooleanHandle) frame.getArgument(m_nValue);
             if (hValue == null)
                 {
                 return R_REPEAT;
                 }
 
-            frame.assignValue(f_nRetValue, xBoolean.not(hValue));
+            frame.assignValue(m_nRetValue, xBoolean.not(hValue));
 
             return iPC + 1;
             }
@@ -85,6 +85,6 @@ public class IsNot
             }
         }
 
-    private final int f_nValue;
-    private final int f_nRetValue;
+    private int m_nValue;
+    private int m_nRetValue;
     }

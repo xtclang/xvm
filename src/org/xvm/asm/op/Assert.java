@@ -31,7 +31,7 @@ public class Assert
      */
     public Assert(int nValue)
         {
-        f_nValue = nValue;
+        m_nValue = nValue;
         }
 
     /**
@@ -43,7 +43,7 @@ public class Assert
     public Assert(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue = readPackedInt(in);
+        m_nValue = readPackedInt(in);
         }
 
     @Override
@@ -51,7 +51,7 @@ public class Assert
             throws IOException
         {
         out.writeByte(OP_ASSERT);
-        writePackedLong(out, f_nValue);
+        writePackedLong(out, m_nValue);
         }
 
     @Override
@@ -65,7 +65,7 @@ public class Assert
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(f_nValue);
+            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nValue);
             if (hTest == null)
                 {
                 return R_REPEAT;
@@ -84,5 +84,5 @@ public class Assert
             }
         }
 
-    private final int f_nValue;
+    private int m_nValue;
     }

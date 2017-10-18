@@ -64,5 +64,5 @@ public class Line_N
         return iPC + 1;
         }
 
-    private final int f_cLines;
+    private int f_cLines;
     }

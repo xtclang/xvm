@@ -26,7 +26,7 @@ public class X_Print
         {
         super(nValue, 0);
 
-        f_nValue = nValue;
+        m_nValue = nValue;
         }
 
     @Override
@@ -38,7 +38,7 @@ public class X_Print
     @Override
     public int process(Frame frame, int iPC)
         {
-        int nValue = f_nValue;
+        int nValue = m_nValue;
 
         StringBuilder sb = new StringBuilder();
 
@@ -127,5 +127,5 @@ public class X_Print
         return iPC + 1;
         }
 
-    private final int f_nValue;
+    private int m_nValue;
     }
