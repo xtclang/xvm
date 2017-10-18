@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -102,7 +103,6 @@ public class TerminalTypeConstant
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
-
     @Override
     public boolean isImmutabilitySpecified()
         {
@@ -166,114 +166,6 @@ public class TerminalTypeConstant
         return (TypeConstant) simplify();
         }
 
-    @Override
-    public boolean isClassType()
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Module:
-            case Package:
-                // these are always class types (not interface types)
-                return true;
-            
-            case Class:
-                // examine the structure to determine if it represents a class or interface
-                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent(); 
-                return clz.getFormat() != Component.Format.INTERFACE;
-
-            case Typedef:
-                return ((TypedefStructure) ((TypedefConstant) constant).getComponent()).getType().isClassType();
-            
-            case Property:
-                // the type points to a property, which means that the type is a parameterized type;
-                // the type of the property will be "Type<X>", and this is a class type iff X is a
-                // class type
-                // TODO
-                return false;
-            
-            case Register:
-                // the type points to a register, which means that the type is a parameterized type;
-                // the type of the register will be "Type<X>", and this is a class type iff X is a
-                // class type
-                // TODO
-                return false;
-
-            case ParentClass:
-            case ChildClass:
-            case ThisClass:
-                // TODO the type points to some "current class" -- how do we know what THAT even is? (context required!!!)
-                return false;
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
-    public boolean isSingleUnderlyingClass()
-        {
-        return isClassType();
-        }
-
-    @Override
-    public Constant getSingleUnderlyingClass()
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Module:
-            case Package:
-                // these are always class types (not interface types)
-                return constant;
-
-            case Class:
-                // must not be an interface
-                assert ((ClassStructure) ((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
-                return constant;
-
-            case Typedef:
-                return ((TypedefStructure) ((TypedefConstant) constant).getComponent()).getType().getSingleUnderlyingClass();
-
-            case Property:
-                // the type points to a property, which means that the type is a parameterized type;
-                // the type of the property will be "Type<X>", and this is a class type if X is a
-                // class type
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case Register:
-                // the type points to a register, which means that the type is a parameterized type;
-                // the type of the register will be "Type<X>", and this is a class type if X is a
-                // class type
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case ParentClass:
-            case ChildClass:
-            case ThisClass:
-                // TODO the type points to some "current class" -- how do we know what THAT even is? (context required!!!)
-                throw new UnsupportedOperationException();
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
-    public Set<Constant> underlyingClasses()
-        {
-        return isSingleUnderlyingClass()
-                ? Collections.singleton(getSingleUnderlyingClass())
-                : Collections.EMPTY_SET;
-        }
-
 
     // ----- run-time support -------------------------------------------------------------------
 
@@ -321,6 +213,286 @@ public class TerminalTypeConstant
 
         return constId.getFormat() == Format.Property &&
             ((PropertyConstant) constId).getName().equals(sTypeName);
+        }
+
+    @Override
+    public boolean extendsClass(IdentityConstant constClass)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return ((ClassStructure) ((IdentityConstant) constant)
+                        .getComponent()).extendsClass(constClass);
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).extendsClass(constClass);
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constant).extendsClass(constClass);
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constant).extendsClass(constClass);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
+                        .getComponent()).extendsClass(constClass);
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
+    public boolean impersonatesClass(IdentityConstant constClass)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return ((ClassStructure) ((IdentityConstant) constant)
+                        .getComponent()).impersonatesClass(constClass);
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).impersonatesClass(constClass);
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constant).impersonatesClass(constClass);
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constant).impersonatesClass(constClass);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
+                        .getComponent()).impersonatesClass(constClass);
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
+    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return ((ClassStructure) ((IdentityConstant) constant)
+                        .getComponent()).extendsOrImpersonatesClass(constClass);
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).extendsOrImpersonatesClass(
+                        constClass);
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constant).extendsOrImpersonatesClass(constClass);
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constant).extendsOrImpersonatesClass(constClass);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
+                        .getComponent()).extendsOrImpersonatesClass(constClass);
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
+    public boolean isClassType()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+                // these are always class types (not interface types)
+                return true;
+
+            case Class:
+                {
+                // examine the structure to determine if it represents a class or interface
+                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
+                return clz.getFormat() != Component.Format.INTERFACE;
+                }
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).isClassType();
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constant).isClassType();
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constant).isClassType();
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                {
+                ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
+                        .getDeclarationLevelClass().getComponent();
+                return clz.getFormat() != Component.Format.INTERFACE;
+                }
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
+    public boolean isSingleUnderlyingClass()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).isSingleUnderlyingClass();
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constant).isSingleUnderlyingClass();
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constant).isSingleUnderlyingClass();
+
+            default:
+                return isClassType();
+            }
+        }
+
+    @Override
+    public IdentityConstant getSingleUnderlyingClass()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+                // these are always class types (not interface types)
+                return (IdentityConstant) constant;
+
+            case Class:
+                // must not be an interface
+                assert ((ClassStructure) ((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
+                return (IdentityConstant) constant;
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).getSingleUnderlyingClass();
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constant).getSingleUnderlyingClass();
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constant).getSingleUnderlyingClass();
+
+            case ParentClass:
+            case ChildClass:
+            case ThisClass:
+                return ((PseudoConstant) constant).getDeclarationLevelClass();
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
+    public Set<IdentityConstant> underlyingClasses()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).underlyingClasses();
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constant).underlyingClasses();
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constant).underlyingClasses();
+
+            default:
+                return isSingleUnderlyingClass()
+                        ? Collections.singleton(getSingleUnderlyingClass())
+                        : Collections.EMPTY_SET;
+            }
+        }
+
+    /**
+     * Dereference a typedef constant to find the type to which it refers.
+     *
+     * @param constTypedef  a typedef constant
+     *
+     * @return the type that the typedef refers to
+     */
+    public static TypeConstant getTypedefTypeConstant(TypedefConstant constTypedef)
+        {
+        return ((TypedefStructure) constTypedef.getComponent()).getType();
+        }
+
+    /**
+     * Dereference a property constant that is used for a type parameter, to obtain the constraint
+     * type of that type parameter.
+     *
+     * @param constProp the property constant for the property that holds the type parameter type
+     *
+     * @return the constraint type of the type parameter
+     */
+    public static TypeConstant getPropertyTypeConstant(PropertyConstant constProp)
+        {
+        // the type points to a property, which means that the type is a parameterized type;
+        // the type of the property will be "Type<X>", so return X
+        TypeConstant typeProp = ((PropertyStructure) constProp.getComponent()).getType();
+        assert typeProp.isEcstasy("Type") && typeProp.isParamsSpecified();
+        return typeProp.getParamTypes().get(0);
+        }
+
+    /**
+     * Dereference a register constant that is used for a type parameter, to obtain the constraint
+     * type of that type parameter.
+     *
+     * @param constReg  the register constant for the register that holds the type parameter type
+     *
+     * @return the constraint type of the type parameter
+     */
+    public static TypeConstant getRegisterTypeConstant(RegisterConstant constReg)
+        {
+        // the type points to a register, which means that the type is a parameterized type;
+        // the type of the register will be "Type<X>", so return X
+        MethodConstant   constMethod = constReg.getMethod();
+        int              nReg        = constReg.getRegister();
+        TypeConstant[]   atypeParams = constMethod.getRawParams();
+        assert atypeParams.length > nReg;
+        TypeConstant     typeParam   = atypeParams[nReg];
+        assert typeParam.isEcstasy("Type") && typeParam.isParamsSpecified();
+        return typeParam.getParamTypes().get(0);
         }
 
 

@@ -217,7 +217,7 @@ public abstract class ClassTemplate
                     // TODO: how to detect a conditional incorporation?
                 case Implements:
                 case Extends:
-                    TypeConstant constContribution = contribution.getClassConstant();
+                    TypeConstant constContribution = contribution.getTypeConstant();
                     List<TypeConstant> listParams = constContribution.getParamTypes();
                     if (!listParams.isEmpty())
                         {

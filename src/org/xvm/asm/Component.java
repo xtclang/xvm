@@ -2076,7 +2076,7 @@ public abstract class Component
         /**
          * Represents an annotation.
          * <p/>
-         * The constant is a ClassTypeConstant. (It could be a ClassConstant, but ClassTypeConstant
+         * The constant is a TypeConstant. (It could be a ClassConstant, but TypeConstant
          * was selected to keep it compatible with the other compositions.) An annotation has
          * optional annotation parameters, each of which is also a constant from the ConstantPool.
          */
@@ -2084,40 +2084,46 @@ public abstract class Component
         /**
          * Represents class inheritance.
          * <p/>
-         * The constant is a ClassTypeConstant.
+         * The constant is a TypeConstant for the class.
          */
         Extends,
         /**
          * Represents interface inheritance.
          * <p/>
-         * The constant is a ClassTypeConstant.
+         * The constant is a TypeConstant.
          */
         Implements,
         /**
          * Represents interface inheritance plus default delegation of interface functionality.
          * <p/>
-         * The constant is a ClassTypeConstant. A delegates composition must specify a property that
+         * The constant is a TypeConstant. A delegates composition must specify a property that
          * provides the reference to which it delegates; this is represented by a PropertyConstant.
          */
         Delegates,
         /**
          * Represents that the class being composed is a mixin that applies to the specified type.
          * <p/>
-         * The constant is a ClassTypeConstant.
+         * The constant is a TypeConstant.
          */
         Into,
         /**
          * Represents the combining-in of a trait or mix-in.
          * <p/>
-         * The constant is a ClassTypeConstant.
+         * The constant is a TypeConstant.
          */
         Incorporates,
         /**
          * Represents that the class being composed is one of the enumeration of a specified type.
          * <p/>
-         * The constant is a ClassTypeConstant.
+         * The constant is a TypeConstant.
          */
         Enumerates,
+        /**
+         * Represents class impersonation.
+         * <p/>
+         * The constant is a ClassConstant.
+         */
+        Impersonates,
         /**
          * Represents that the package being composed represents an optional module.
          * <p/>
@@ -2232,6 +2238,7 @@ public abstract class Component
                 case Into:
                 case Incorporates:
                 case Enumerates:
+                case Impersonates:
                     if (constType == null)
                         {
                         throw new IllegalArgumentException("type is required");
@@ -2284,6 +2291,7 @@ public abstract class Component
                 case Into:
                 case Incorporates:
                 case Enumerates:
+                case Impersonates:
                     throw new IllegalArgumentException(composition + " uses the constructor with a TypeConstant");
 
                 case Delegates:
@@ -2380,9 +2388,9 @@ public abstract class Component
         /**
          * Obtain the constant identifying the class type being contributed by this contribution.
          *
-         * @return the ClassTypeConstant for this contribution
+         * @return the TypeConstant for this contribution
          */
-        public TypeConstant getClassConstant()
+        public TypeConstant getTypeConstant()
             {
             return m_constContrib instanceof TypeConstant
                     ? (TypeConstant) m_constContrib

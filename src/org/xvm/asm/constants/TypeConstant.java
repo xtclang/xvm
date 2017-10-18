@@ -398,6 +398,45 @@ public abstract class TypeConstant
         return getUnderlyingType().producesFormalType(sTypeName, types, access);
         }
 
+    /**
+     * Test for sub-classing.
+     *
+     * @param constClass  the class to test if this type represents an extension of
+     *
+     * @return true if this type represents a sub-classing of the specified class
+     */
+    public boolean extendsClass(IdentityConstant constClass)
+        {
+        return getUnderlyingType().extendsClass(constClass)
+                || isRelationalType() && getUnderlyingType2().extendsClass(constClass);
+        }
+
+    /**
+     * Test for fake sub-classing (impersonation).
+     *
+     * @param constClass  the class to test if this type represents an impersonation of
+     *
+     * @return true if this type represents a fake sub-classing of the specified class
+     */
+    public boolean impersonatesClass(IdentityConstant constClass)
+        {
+        return getUnderlyingType().impersonatesClass(constClass)
+                || isRelationalType() && getUnderlyingType2().impersonatesClass(constClass);
+        }
+
+    /**
+     * Test for real (extends) or fake (impersonation) sub-classing.
+     *
+     * @param constClass  the class to test if this type represents a sub-class of
+     *
+     * @return true if this type represents either real or fake sub-classing of the specified class
+     */
+    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
+        {
+        return getUnderlyingType().extendsOrImpersonatesClass(constClass)
+                || isRelationalType() && getUnderlyingType2().extendsOrImpersonatesClass(constClass);
+        }
+    
     public Set<MethodConstant> autoConverts()
         {
         // TODO this is temporary (it just finds the one @Auto that exists on Object itself)
@@ -438,11 +477,11 @@ public abstract class TypeConstant
      *
      * @return the one underlying class that makes this a class type
      */
-    public Constant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass()
         {
         assert isClassType() && isSingleUnderlyingClass();
 
-        Constant clz = getUnderlyingType().getSingleUnderlyingClass();
+        IdentityConstant clz = getUnderlyingType().getSingleUnderlyingClass();
         if (clz == null && isRelationalType())
             {
             clz = getUnderlyingType2().getSingleUnderlyingClass();
@@ -453,12 +492,12 @@ public abstract class TypeConstant
     /**
      * @return the set of constants representing the classes that make this type a class type
      */
-    public Set<Constant> underlyingClasses()
+    public Set<IdentityConstant> underlyingClasses()
         {
-        Set<Constant> set = getUnderlyingType().underlyingClasses();
+        Set<IdentityConstant> set = getUnderlyingType().underlyingClasses();
         if (isRelationalType())
             {
-            Set<Constant> set2 = getUnderlyingType2().underlyingClasses();
+            Set<IdentityConstant> set2 = getUnderlyingType2().underlyingClasses();
             if (set.isEmpty())
                 {
                 set = set2;

@@ -210,7 +210,7 @@ public class TypeComposition
                 {
                 case Incorporates:
                     // TODO: how to detect a conditional incorporation?
-                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    TypeComposition clzContribution = resolveClass(contribution.getTypeConstant());
                     addNoDupes(clzContribution.collectDeclaredCallChain(false), list, set);
                     break;
 
@@ -272,7 +272,7 @@ public class TypeComposition
                 case Incorporates:
                     // TODO: how to detect a conditional incorporation?
                 case Delegates:
-                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    TypeComposition clzContribution = resolveClass(contribution.getTypeConstant());
                     addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
                     break;
                 }
@@ -284,7 +284,7 @@ public class TypeComposition
             switch (contribution.getComposition())
                 {
                 case Implements:
-                    TypeComposition clzContribution = resolveClass(contribution.getClassConstant());
+                    TypeComposition clzContribution = resolveClass(contribution.getTypeConstant());
                     addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
                     break;
                 }

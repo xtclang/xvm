@@ -133,7 +133,6 @@ public abstract class IdentityConstant
         }
 
 
-
     // ----- constant methods ----------------------------------------------------------------------
 
     @Override

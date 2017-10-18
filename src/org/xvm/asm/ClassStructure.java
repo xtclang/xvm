@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -111,6 +112,106 @@ public class ClassStructure
     public boolean isMethodContainer()
         {
         return true;
+        }
+
+
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    /**
+     * Test for sub-classing.
+     *
+     * @param constClass  the class to test if this type represents an extension of
+     *
+     * @return true if this type represents a sub-classing of the specified class
+     */
+    public boolean extendsClass(IdentityConstant constClass)
+        {
+        if (constClass.equals(getIdentityConstant()))
+            {
+            // while a class cannot technically extend itself, this does satisfy the "is-a" test
+            return true;
+            }
+
+        if (constClass.equals(getConstantPool().ensureEcstasyClassConstant("Object")))
+            {
+            // everything is considered to extend Object (even interfaces)
+            return true;
+            }
+
+        if (getFormat() == Format.INTERFACE)
+            {
+            // interfaces do not extend; they implement
+            return false;
+            }
+
+        ClassStructure structCur = this;
+        NextSuper: while (true)
+            {
+            for (Contribution contrib : structCur.getContributionsAsList())
+                {
+                if (contrib.getComposition() == Composition.Extends)
+                    {
+                    // even though this class may be id'd using a ModuleConstant or PackageConstant,
+                    // the super will always be a class (because a Module and a Package cannot be
+                    // extended)
+                    ClassConstant constSuper = (ClassConstant) contrib.getTypeConstant().getSingleUnderlyingClass();
+                    if (constClass.equals(constSuper))
+                        {
+                        return true;
+                        }
+
+                    structCur = (ClassStructure) constSuper.getComponent();
+                    continue NextSuper;
+                    }
+                }
+
+            return false;
+            }
+        }
+
+// TODO need a more generic test that checks class assignability in general
+//            switch (contrib.getComposition())
+//                {
+//                case Extends:
+//                    // even though this class may be id'd using a ModuleConstant or PackageConstant, the
+//                    // super will always be a class (because a Module and a Package cannot be extended)
+//                    ClassConstant constSuper = (ClassConstant) contrib.getTypeConstant().getSingleUnderlyingClass();
+//                    if (constClass.equals(constSuper))
+//
+//                case Enumerates:
+//
+//                case Annotation:
+//                case Incorporates:
+//
+//                case Into:
+//                    // this is a mixin; if the type that this mixin mixes into is a class, then any
+//                    // instance of this mixin will extend the specified class
+//                }
+
+    /**
+     * Test for fake sub-classing (impersonation).
+     *
+     * @param constClass  the class to test if this type represents an impersonation of
+     *
+     * @return true if this type represents a fake sub-classing of the specified class
+     */
+    public boolean impersonatesClass(IdentityConstant constClass)
+        {
+        // TODO - in progress
+        return false;
+        }
+
+    /**
+     * Test for real (extends) or fake (impersonation) sub-classing.
+     *
+     * @param constClass  the class to test if this type represents a sub-class of
+     *
+     * @return true if this type represents either real or fake sub-classing of the specified class
+     */
+    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
+        {
+        // TODO - in progress
+        return false;
         }
 
 

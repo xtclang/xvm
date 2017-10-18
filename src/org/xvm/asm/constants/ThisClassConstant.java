@@ -54,10 +54,7 @@ public class ThisClassConstant
 
     // ----- Constant methods ----------------------------------------------------------------------
 
-    /**
-     * @return the IdentityConstant for the structure that corresponds to the "this:class" at the
-     *         level at which the constant was declared for
-     */
+    @Override
     public IdentityConstant getDeclarationLevelClass()
         {
         return m_constClass;
