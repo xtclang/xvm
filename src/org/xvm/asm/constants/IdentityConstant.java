@@ -13,8 +13,6 @@ import org.xvm.asm.ConstantPool;
 
 /**
  * An IdentityConstant identifies a Module, Package, Class, Property, MultiMethod, or Method.
- *
- * @author cp 2017.05.18
  */
 public abstract class IdentityConstant
         extends Constant

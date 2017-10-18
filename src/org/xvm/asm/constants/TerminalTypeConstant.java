@@ -41,8 +41,6 @@ import static org.xvm.util.Handy.writePackedLong;
  * <li>{@link ChildClassConstant} for a named auto-narrowing child of an auto-narrowing class</li>
  * <li>{@link UnresolvedNameConstant} for a definition that has not been resolved at this point</li>
  * </ul>
- *
- * @author cp 2017.04.25
  */
 public class TerminalTypeConstant
         extends TypeConstant

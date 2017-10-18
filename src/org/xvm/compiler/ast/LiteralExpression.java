@@ -184,18 +184,6 @@ public class LiteralExpression
             String        sName = ((ClassConstant) typeThat.getDefiningConstant()).getPathString();
             switch (sName)
                 {
-                // these are all of the super-classes and interfaces that could be represented by
-                // a literal expression
-                case "Object":
-                case "Const":
-                case "Orderable":
-                case "collections.Hashable":
-                    return true;
-
-                case "Sequential":
-                    // char and the various ints are sequential
-                    return id == Id.LIT_CHAR || id == Id.LIT_INT;
-
                 case "Char":
                     // char and the various ints are sequential
                     return id == Id.LIT_CHAR || id == Id.LIT_INT && isIntInRange(0, 0x10FFFF);
@@ -203,25 +191,18 @@ public class LiteralExpression
                 case "String":
                     return id == Id.LIT_CHAR || id == Id.LIT_STRING;
 
-                case "Number":
-                case "FPNumber":
                 case "FPLiteral":
-                case "BinaryFPNumber":
                 case "VarFloat":
                     return id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN;
 
-                case "IntNumber":
                 case "IntLiteral":
                 case "VarInt":
-                case "annotations.UncheckedInt":
                     return id == Id.LIT_INT;
 
-                case "UIntNumber":
                 case "VarUInt":
                     // unsigned value must be >= 0
                     return id == Id.LIT_INT && !((PackedInteger) literal.getValue()).isNegative();
 
-                case "DecimalFPNumber":
                 case "VarDec":
                     return id == Id.LIT_INT || id == Id.LIT_DEC;
 

@@ -147,7 +147,8 @@ public class ReturnStatement
 
         if (m_fTupleReturn)
             {
-            // the type that the expression has to generate is "tuple of" all of the return types
+            // the return statement has a single expression; the type that the expression has to
+            // generate is the "tuple of" all of the return types
             TypeConstant[] atypeR = new TypeConstant[cReturns];
             for (int i = 0; i < cReturns; ++i)
                 {

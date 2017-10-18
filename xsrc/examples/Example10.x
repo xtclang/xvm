@@ -191,3 +191,43 @@ Kernel
      - app1
    - Cust2
    - ...
+
+
+// -- more assignability
+
+interface Bag<ElementType>
+    {
+    Void add(ElementType e);
+    Iterator<ElementType> iterate();
+    }
+
+mixin Summer<ElementType extends Number>
+        into Iterable<ElementType>
+    {
+    ElementType sum(ElementType zero)       // note: there must be a better way to implement zero
+        {
+        ElementType nSum = zero;
+        for (ElementType n : this)
+            {
+            nSum += n;
+            }
+        return nSum;
+        }
+    }
+
+class SimpleBag<ElementType>
+        implements Bag<ElementType>
+        incorporates conditional Summer<ElementType extends Number>
+    {
+    // ...
+    }
+
+SimpleBag<String> bs = ...
+SimpleBag<Int>    bi = ...
+
+Bag         b0 = bs;            // ok
+Bag<String> b1 = bs;            // ok
+Summer      s0 = bs;            // compile-time error
+Summer      s1 = bs.as(Summer); // compile-time warning, run-time error
+Summer      s2 = bi;            // ok (type of bi is SimpleBag<Int>, which implies Summer<Int>)
+Summer<Int> s3 = bi;            // ok (same as above)

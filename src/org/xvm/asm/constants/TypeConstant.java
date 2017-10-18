@@ -30,8 +30,6 @@ import org.xvm.runtime.TypeSet;
  * <li>Type constants that relate two underlying types include {@link IntersectionTypeConstant},
  *     {@link UnionTypeConstant}, and {@link DifferenceTypeConstant}.</li>
  * </ul>
- *
- * @author cp 2017.04.24
  */
 public abstract class TypeConstant
         extends Constant

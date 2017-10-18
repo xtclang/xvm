@@ -54,9 +54,6 @@ import org.xvm.asm.constants.ValueConstant;
  * <li><b>{@link TypeConstant}</b> - </li>
  * <li><b>{@link ConditionalConstant}</b> - </li>
  * </ul>
- *
- *
- * @author cp  2015.12.08
  */
 public abstract class Constant
         extends XvmStructure
