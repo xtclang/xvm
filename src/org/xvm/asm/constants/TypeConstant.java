@@ -477,11 +477,11 @@ public abstract class TypeConstant
      *
      * @return the one underlying class that makes this a class type
      */
-    public Constant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass()
         {
         assert isClassType() && isSingleUnderlyingClass();
 
-        Constant clz = getUnderlyingType().getSingleUnderlyingClass();
+        IdentityConstant clz = getUnderlyingType().getSingleUnderlyingClass();
         if (clz == null && isRelationalType())
             {
             clz = getUnderlyingType2().getSingleUnderlyingClass();
@@ -492,12 +492,12 @@ public abstract class TypeConstant
     /**
      * @return the set of constants representing the classes that make this type a class type
      */
-    public Set<Constant> underlyingClasses()
+    public Set<IdentityConstant> underlyingClasses()
         {
-        Set<Constant> set = getUnderlyingType().underlyingClasses();
+        Set<IdentityConstant> set = getUnderlyingType().underlyingClasses();
         if (isRelationalType())
             {
-            Set<Constant> set2 = getUnderlyingType2().underlyingClasses();
+            Set<IdentityConstant> set2 = getUnderlyingType2().underlyingClasses();
             if (set.isEmpty())
                 {
                 set = set2;

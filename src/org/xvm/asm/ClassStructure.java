@@ -126,9 +126,15 @@ public class ClassStructure
      */
     public boolean extendsClass(IdentityConstant constClass)
         {
+        if (constClass.equals(getIdentityConstant()))
+            {
+            // while a class cannot technically extend itself, this does satisfy the "is-a" test
+            return true;
+            }
+
         if (constClass.equals(getConstantPool().ensureEcstasyClassConstant("Object")))
             {
-            // everything is considered to extend Object
+            // everything is considered to extend Object (even interfaces)
             return true;
             }
 
@@ -138,28 +144,49 @@ public class ClassStructure
             return false;
             }
 
-        for (Contribution contrib : getContributionsAsList())
+        ClassStructure structCur = this;
+        NextSuper: while (true)
             {
-            switch (contrib.getComposition())
+            for (Contribution contrib : structCur.getContributionsAsList())
                 {
-                case Extends:
-                    // even though this class may be id'd using a ModuleConstant or PackageConstant, the
-                    // super will always be a class (because a Module and a Package cannot be extended)
+                if (contrib.getComposition() == Composition.Extends)
+                    {
+                    // even though this class may be id'd using a ModuleConstant or PackageConstant,
+                    // the super will always be a class (because a Module and a Package cannot be
+                    // extended)
                     ClassConstant constSuper = (ClassConstant) contrib.getTypeConstant().getSingleUnderlyingClass();
+                    if (constClass.equals(constSuper))
+                        {
+                        return true;
+                        }
 
-                case Enumerates:
-
-                case Annotation:
-                case Incorporates:
-
-                case Into:
-                    // this is a mixin; if the type that this mixin mixes into is a class, then any
-                    // instance of this mixin will extend the specified class
+                    structCur = (ClassStructure) constSuper.getComponent();
+                    continue NextSuper;
+                    }
                 }
-            }
 
-        return false;
+            return false;
+            }
         }
+
+// TODO need a more generic test that checks class assignability in general
+//            switch (contrib.getComposition())
+//                {
+//                case Extends:
+//                    // even though this class may be id'd using a ModuleConstant or PackageConstant, the
+//                    // super will always be a class (because a Module and a Package cannot be extended)
+//                    ClassConstant constSuper = (ClassConstant) contrib.getTypeConstant().getSingleUnderlyingClass();
+//                    if (constClass.equals(constSuper))
+//
+//                case Enumerates:
+//
+//                case Annotation:
+//                case Incorporates:
+//
+//                case Into:
+//                    // this is a mixin; if the type that this mixin mixes into is a class, then any
+//                    // instance of this mixin will extend the specified class
+//                }
 
     /**
      * Test for fake sub-classing (impersonation).

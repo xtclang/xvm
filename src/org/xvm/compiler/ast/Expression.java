@@ -1,14 +1,13 @@
 package org.xvm.compiler.ast;
 
 
-import com.sun.tools.internal.jxc.ap.Const;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-
 import java.util.Set;
+
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
@@ -16,16 +15,11 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.DifferenceTypeConstant;
-import org.xvm.asm.constants.ImmutableTypeConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
@@ -33,7 +27,6 @@ import org.xvm.asm.op.Label;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
-import org.xvm.util.LinkedIterator;
 import org.xvm.util.Severity;
 
 
@@ -149,7 +142,7 @@ public abstract class Expression
                 // different Int classes
                 if (typeThat1.isClassType() && typeThat2.isClassType())
                     {
-                    HashSet<Constant> setClasses = new HashSet<>(5);
+                    HashSet<IdentityConstant> setClasses = new HashSet<>(5);
                     setClasses.addAll(typeThat1.underlyingClasses());
                     setClasses.addAll(typeThat2.underlyingClasses());
                     if (setClasses.size() > 1)
@@ -162,19 +155,58 @@ public abstract class Expression
                             return true;
                             }
 
-                        // TODO - in progress
-                        // if (typeThat1.isA)
-
                         // find a solution where there is one class that is a sub-class and/or
                         // impersonator of all other classes
-                        boolean fSolution = false;
-                        for (Constant constTheOne : setClasses)
+                        int              cClz = setClasses.size();
+                        ClassStructure[] aclz = new ClassStructure[cClz];
+                        int              iClz = 0;
+                        for (IdentityConstant constClz : setClasses)
                             {
-                            for (Constant constOther : setClasses)
+                            aclz[iClz++] = (ClassStructure) constClz.getComponent();
+                            }
+
+                        // TODO currently this checks "extendsClass", but it needs a broader check that includes mixins, impersonation, etc.
+                        ClassStructure clzSub = aclz[0];
+                        NextClass: for (iClz = 1; iClz < cClz; ++iClz)
+                            {
+                            ClassStructure clzCur = aclz[iClz];
+                            if (clzSub == null)
                                 {
-                                // TODO - in progress
-                                // if (constTheOne != constOther)
+                                // no current solution; see if the current class can be a sub to all
+                                // the previous classes
+                                for (int iSuper = 0; iSuper < iClz; ++iSuper)
+                                    {
+                                    if (!clzSub.extendsClass(aclz[iSuper].getIdentityConstant()))
+                                        {
+                                        // the current one is not a sub of all the previous ones
+                                        continue NextClass;
+                                        }
+                                    }
+
+                                // the current one IS a sub of all the previous ones!
+                                clzSub = clzCur;
                                 }
+                            else if (clzSub.extendsClass(clzCur.getIdentityConstant()))
+                                {
+                                // the current solution is still a good solution
+                                continue NextClass;
+                                }
+                            else if (clzCur.extendsClass(clzSub.getIdentityConstant()))
+                                {
+                                // the current one appears to be a better solution than the previous
+                                clzSub = clzCur;
+                                }
+                            else
+                                {
+                                // neither is a sub of the other
+                                clzSub = null;
+                                }
+                            }
+
+                        if (clzSub == null)
+                            {
+                            // no solution found
+                            break;
                             }
                         }
                     }

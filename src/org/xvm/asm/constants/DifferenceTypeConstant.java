@@ -131,14 +131,14 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public Constant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass()
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
         throw new IllegalStateException();
         }
 
     @Override
-    public Set<Constant> underlyingClasses()
+    public Set<IdentityConstant> underlyingClasses()
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
         return Collections.EMPTY_SET;

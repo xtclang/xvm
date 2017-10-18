@@ -386,7 +386,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public Constant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass()
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
@@ -394,12 +394,12 @@ public class TerminalTypeConstant
             case Module:
             case Package:
                 // these are always class types (not interface types)
-                return constant;
+                return (IdentityConstant) constant;
 
             case Class:
                 // must not be an interface
                 assert ((ClassStructure) ((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
-                return constant;
+                return (IdentityConstant) constant;
 
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constant).getSingleUnderlyingClass();
@@ -424,7 +424,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public Set<Constant> underlyingClasses()
+    public Set<IdentityConstant> underlyingClasses()
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
