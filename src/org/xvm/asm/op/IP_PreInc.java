@@ -69,10 +69,11 @@ public class IP_PreInc
         {
         try
             {
-            if (m_nArgValue >= 0)
+            int nArg = m_nArgValue;
+            if (nArg >= 0)
                 {
                 // operation on a register
-                ObjectHandle hValue = frame.getArgument(m_nArgValue);
+                ObjectHandle hValue = frame.getArgument(nArg);
                 if (hValue == null)
                     {
                     return R_REPEAT;
@@ -84,12 +85,9 @@ public class IP_PreInc
                     }
 
                 ObjectHandle hValueNew = frame.getFrameLocal();
-                if (frame.assignValue(m_nRetValue, hValueNew) == R_EXCEPTION ||
-                    frame.assignValue(m_nArgValue, hValueNew) == R_EXCEPTION)
-                    {
-                    return R_EXCEPTION;
-                    }
-                return iPC + 1;
+                return m_nRetValue == nArg
+                    ? frame.assignValue(nArg, hValueNew)
+                    : frame.assignValues(new int[]{m_nRetValue, nArg}, hValueNew, hValueNew);
                 }
             else
                 {
@@ -97,7 +95,7 @@ public class IP_PreInc
                 ObjectHandle hTarget = frame.getThis();
 
                 PropertyConstant constProperty = (PropertyConstant)
-                        frame.f_context.f_pool.getConstant(-m_nArgValue);
+                        frame.f_context.f_pool.getConstant(-nArg);
 
                 return hTarget.f_clazz.f_template.invokePreInc(
                         frame, hTarget, constProperty.getName(), m_nRetValue);

@@ -360,7 +360,8 @@ public class Frame
         return m_hFrameLocal;
         }
 
-    // return R_NEXT, R_EXCEPTION or R_BLOCK (only if hValue is a FutureRef)
+    // assign a specified register on this frame
+    // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if hValue is a FutureRef)
     public int assignValue(int nVar, ObjectHandle hValue)
         {
         if (nVar >= 0)
@@ -438,14 +439,23 @@ public class Frame
                 return Op.R_NEXT;
 
             default:
-                // the return value must point to a local property
-                PropertyConstant constProp = (PropertyConstant) getConstant(nVar);
+                try
+                    {
+                    // the return value must point to a local property
+                    PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
+                    ObjectHandle hThis = getThis();
 
-                throw new IllegalArgumentException("nVar=" + nVar);
+                    return hThis.f_clazz.f_template.setPropertyValue(
+                            this, hThis, constProperty.getName(), hValue);
+                    }
+                catch (ClassCastException e)
+                    {
+                    throw new IllegalArgumentException("nVar=" + nVar);
+                    }
             }
         }
 
-    // specialization of assignValue() that takes up to two return values
+    // specialization of assignValue() that takes two return values
     // return R_NEXT, R_EXCEPTION or R_BLOCK (only if any of the values is a FutureRef)
     public int assignValues(int[] anVar, ObjectHandle hValue1, ObjectHandle hValue2)
         {
@@ -455,21 +465,41 @@ public class Frame
             return Op.R_NEXT;
             }
 
-        int iResult1 = assignValue(anVar[0], hValue1);
-        if (iResult1 == Op.R_EXCEPTION || c == 1 || hValue2 == null)
+        if (c == 1)
             {
-            return iResult1;
+            return assignValue(anVar[0], hValue1);
             }
 
-        if (iResult1 == Op.R_BLOCK)
+        switch (assignValue(anVar[0], hValue1))
             {
-            int iResult2 = assignValue(anVar[1], hValue2);
-            return iResult2 == Op.R_EXCEPTION ? Op.R_EXCEPTION : Op.R_BLOCK;
-            }
+            case Op.R_BLOCK:
+                {
+                int iResult = assignValue(anVar[1], hValue2);
+                if (iResult == Op.R_CALL)
+                    {
+                    m_frameNext.setContinuation(frameCaller -> Op.R_BLOCK);
+                    return Op.R_CALL;
+                    }
+                return iResult;
+                }
 
-        return assignValue(anVar[1], hValue2);
+            case Op.R_NEXT:
+                return assignValue(anVar[1], hValue2);
+
+            case Op.R_CALL:
+                m_frameNext.setContinuation(
+                    frameCaller -> assignValue(anVar[1], hValue2));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
+    // assign the specified register on the caller's frame
     // return R_RETURN, R_RETURN_EXCEPTION or R_BLOCK_RETURN
     public int returnValue(int iReturn, int iArg)
         {

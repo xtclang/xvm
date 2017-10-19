@@ -118,7 +118,7 @@ public class New_N
                 Frame.Continuation stepNext = frameCaller -> template.construct(frame, constructor,
                     template.f_clazzCanonical, ahVar, m_nRetValue);
 
-                return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
             return template.construct(frame, constructor,
                     template.f_clazzCanonical, ahVar, m_nRetValue);

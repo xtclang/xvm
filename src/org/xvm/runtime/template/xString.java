@@ -148,12 +148,9 @@ public class xString
                                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                                 }
 
-                            int iResult = frame.assignValue(aiReturn[0], xBoolean.TRUE);
-                            if (iResult == Op.R_EXCEPTION || cReturns == 1)
-                                {
-                                return iResult;
-                                }
-                            return frame.assignValue(aiReturn[1], xInt64.makeHandle(of));
+                            return cReturns == 1
+                                ? frame.assignValue(aiReturn[0], xBoolean.TRUE)
+                                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(of));
                             }
                         else
                             {

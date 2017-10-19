@@ -458,12 +458,13 @@ public class TypeComposition
 
         if (cMethods > 1)
             {
-            int[] holder = new int[]{cMethods - 1};
-            Frame.Continuation cont = new Frame.Continuation()
+            frameBase.setContinuation(new Frame.Continuation()
                 {
+                private int index = cMethods - 2;
+
                 public int proceed(Frame frameCaller)
                     {
-                    int i = --holder[0];
+                    int i = index--;
                     if(i > 0)
                         {
                         frameCaller.call1(chain.getMethod(i), hStruct, ahVar, Frame.RET_UNUSED);
@@ -475,8 +476,7 @@ public class TypeComposition
                         return continuation.proceed(frameCaller);
                         }
                     }
-                };
-            frameBase.setContinuation(cont);
+                });
             }
         else
             {
@@ -691,25 +691,23 @@ public class TypeComposition
     // ---- support for op-codes that require class specific information -----
 
     // compare for equality (==) two object handles that both belong to this class
-    // return R_NEXT or R_EXCEPTION
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         if (hValue1 == hValue2)
             {
-            frame.assignValue(iReturn, xBoolean.TRUE);
-            return Op.R_NEXT;
+            return frame.assignValue(iReturn, xBoolean.TRUE);
             }
         return f_template.callEquals(frame, this, hValue1, hValue2, iReturn);
         }
 
     // compare for order (<=>) two object handles that both belong to this class
-    // return R_NEXT or R_EXCEPTION
+    // return R_NEXT, R_CALL or R_EXCEPTION
     public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         if (hValue1 == hValue2)
             {
-            frame.assignValue(iReturn, xOrdered.EQUAL);
-            return Op.R_NEXT;
+            return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
         return f_template.callCompare(frame, this, hValue1, hValue2, iReturn);
         }

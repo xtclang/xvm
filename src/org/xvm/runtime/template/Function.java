@@ -433,28 +433,46 @@ public class Function
             CompletableFuture<ObjectHandle[]> cfResult = hService.m_context.sendInvokeNRequest(
                     frame, this, ahVar, cReturns);
 
-            boolean fBlock = false;
-            if (cReturns > 0)
+            if (cReturns == 0)
                 {
-                for (int i = 0; i < cReturns; i++)
-                    {
-                    final int iRet = i;
-
-                    CompletableFuture<ObjectHandle> cfReturn =
-                            cfResult.thenApply(ahResult -> ahResult[iRet]);
-
-                    int nR = frame.assignValue(aiReturn[i], xFutureRef.makeHandle(cfReturn));
-                    if (nR == Op.R_EXCEPTION)
-                        {
-                        return Op.R_EXCEPTION;
-                        }
-
-                    // if any of the assignments block, we need to block it all
-                    fBlock |= nR == Op.R_BLOCK;
-                    }
+                return Op.R_NEXT;
                 }
 
-            return fBlock ? Op.R_BLOCK : Op.R_NEXT;
+            return new Frame.Continuation()
+                {
+                private boolean fBlock;
+                private int index;
+
+                public int proceed(Frame frameCaller)
+                    {
+                    while (index++ < cReturns)
+                        {
+                        CompletableFuture<ObjectHandle> cfReturn =
+                                cfResult.thenApply(ahResult -> ahResult[index]);
+
+                        switch (frame.assignValue(aiReturn[index], xFutureRef.makeHandle(cfReturn)))
+                            {
+                            case Op.R_BLOCK:
+                                fBlock = true;
+                                // fall through
+                            case Op.R_NEXT:
+                                break;
+
+                            case Op.R_CALL:
+                                frameCaller.m_frameNext.setContinuation(this);
+                                return Op.R_CALL;
+
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+                        }
+
+                    return fBlock ? Op.R_BLOCK : Op.R_NEXT;
+                    }
+                }.proceed(frame);
             }
         }
 

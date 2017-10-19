@@ -84,7 +84,6 @@ public class xArray
                 FunctionHandle hSupplier = (FunctionHandle) ahVar[1];
                 xArray array = (xArray) hArray.f_clazz.f_template;
 
-                int[] holder = new int[]{0}; // index holder; starts with zero
                 ObjectHandle[] ahArg = new ObjectHandle[hSupplier.getVarCount()];
                 ahArg[0] = xInt64.makeHandle(0);
 
@@ -93,19 +92,20 @@ public class xArray
 
                 frame.m_frameNext.setContinuation(new Frame.Continuation()
                     {
+                    private int index;
+
                     public int proceed(Frame frameCaller)
                         {
-                        int i = holder[0]++;
                         ExceptionHandle hException =
-                                array.assignArrayValue(hArray, i, frameCaller.getFrameLocal());
+                                array.assignArrayValue(hArray, index++, frameCaller.getFrameLocal());
                         if (hException != null)
                             {
                             return frameCaller.raiseException(hException);
                             }
 
-                        if (++i < cCapacity)
+                        if (index < cCapacity)
                             {
-                            ahArg[0] = xInt64.makeHandle(i);
+                            ahArg[0] = xInt64.makeHandle(index);
 
                             hSupplier.call1(frameCaller, null, ahArg, Frame.RET_LOCAL);
                             frameCaller.m_frameNext.setContinuation(this);
@@ -283,6 +283,9 @@ public class xArray
                     case Op.R_CALL:
                         frameCaller.m_frameNext.setContinuation(this);
                         return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
                     }
                 }
             return frameCaller.assignValue(iReturn, xBoolean.TRUE);
