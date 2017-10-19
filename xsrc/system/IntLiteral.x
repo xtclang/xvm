@@ -381,6 +381,16 @@ const IntLiteral(String text)
         return to<VarDec>().to<Dec128>();
         }
 
+    /**
+     * Convert the number to a 128-bit radix-10 (decimal) floating point number.
+     */
+    Char to<Char>()
+        {
+        // truncate out-of-range values to the original 16-bit Unicode range
+        UInt32 n = to<UInt32>();
+        return new Char(n <= 0x10FFFF ? n : n & 0xFFFF);
+        }
+
     @Override
     String to<String>()
         {

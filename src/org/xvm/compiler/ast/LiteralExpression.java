@@ -12,19 +12,14 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
-import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecimalConstant;
-import org.xvm.asm.constants.DifferenceTypeConstant;
 import org.xvm.asm.constants.Float16Constant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.Var;
 
@@ -33,7 +28,6 @@ import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.type.Decimal;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 import org.xvm.type.Decimal128;
@@ -65,61 +59,6 @@ public class LiteralExpression
     public boolean isTODO()
         {
         return literal.getId() == Id.TODO;
-        }
-
-    @Override
-    public Constant toConstant()
-        {
-        ConstantPool pool = getConstantPool();
-        switch (literal.getId())
-            {
-            case LIT_CHAR:
-                return pool.ensureCharConstant(((Character) literal.getValue()).charValue());
-
-            case TODO:              // the T0D0 keyword has a String text for the token's value
-            case LIT_STRING:
-                return pool.ensureStringConstant((String) literal.getValue());
-
-            case LIT_INT:
-                PackedInteger piVal = (PackedInteger) literal.getValue();
-                if (isIntInRange(Long.MIN_VALUE, Long.MAX_VALUE))
-                    {
-                    // any int up to 64-bit signed int range is assumed to be a 64-bit signed int
-                    return pool.ensureIntConstant(piVal);
-                    }
-                else if (piVal.getSignedByteSize() <= 16)
-                    {
-                    // if it doesn't fit in 64-bits, any int value up to 128-bit signed int range is
-                    // assumed to be a 128-bit signed int
-                    return pool.ensureIntConstant(piVal, Format.Int128);
-                    }
-                else
-                    {
-                    // if it doesn't fit in 128-bit signed int, then use var-int
-                    return pool.ensureIntConstant(piVal, Format.VarInt);
-                    }
-
-            case LIT_DEC:
-                BigDecimal bigdec = (BigDecimal) literal.getValue();
-                try
-                    {
-                    return pool.ensureDecimalConstant(new Decimal64(bigdec));
-                    }
-                catch (ArithmeticException e) {}
-                try
-                    {
-                    return pool.ensureDecimalConstant(new Decimal128(bigdec));
-                    }
-                catch (ArithmeticException e) {}
-                return toVarLenDecimalConstant(bigdec);
-
-            case LIT_BIN:
-                // TODO this should first try 64-bit, then 128-bit, then use the var-len format
-                return pool.ensureFloat64Constant(Double.parseDouble(literal.getValue().toString()));
-
-            default:
-                throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
-            }
         }
 
     private boolean isIntInRange(long lLower, long lUpper)
@@ -160,9 +99,60 @@ public class LiteralExpression
         }
 
     @Override
+    public Constant toConstant()
+        {
+        // the LiteralExpression produces literal constants:
+        // - Char
+        // - String
+        // - IntLiteral
+        // - FPLiteral
+        // other types are possible to obtain because there are conversion methods on the literal
+        // types that provide support for other constant types
+        ConstantPool pool = getConstantPool();
+        switch (literal.getId())
+            {
+            case LIT_CHAR:
+                return pool.ensureCharConstant(((Character) literal.getValue()).charValue());
+
+            case TODO:              // the T0D0 keyword has a String text for the token's value
+            case LIT_STRING:
+                return pool.ensureStringConstant((String) literal.getValue());
+
+            case LIT_INT:
+                return pool.ensureLiteralConstant(Format.IntLiteral, literal.getString(getSource()));
+
+            case LIT_DEC:
+            case LIT_BIN:
+                return pool.ensureLiteralConstant(Format.FPLiteral, literal.getString(getSource()));
+
+            default:
+                throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
+            }
+        }
+
+    @Override
     public TypeConstant getImplicitType()
         {
-        return toConstant().getType();
+        ConstantPool pool = getConstantPool();
+        switch (literal.getId())
+            {
+            case LIT_CHAR:
+                return pool.ensureEcstasyTypeConstant("Char");
+
+            case TODO:              // the T0D0 keyword has a String text for the token's value
+            case LIT_STRING:
+                return pool.ensureEcstasyTypeConstant("String");
+
+            case LIT_INT:
+                return pool.ensureEcstasyTypeConstant("IntLiteral");
+
+            case LIT_DEC:
+            case LIT_BIN:
+                return pool.ensureEcstasyTypeConstant("FPLiteral");
+
+            default:
+                throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
+            }
         }
 
     @Override
@@ -184,151 +174,66 @@ public class LiteralExpression
             String        sName = ((ClassConstant) typeThat.getDefiningConstant()).getPathString();
             switch (sName)
                 {
-                case "Char":
-                    // char and the various ints are sequential
-                    return id == Id.LIT_CHAR || id == Id.LIT_INT && isIntInRange(0, 0x10FFFF);
+                // all of the literal types are const objects
+                case "Object":
+                case "Const":
+                case "Orderable":
+                case "collections.Hashable":
+                    return true;
 
+                case "Char":
+                case "Sequential":                  // char implements Sequential
+                    return id == Id.LIT_CHAR;
+
+                case "Sequence":
+                    // TODO String implements Sequence<Char>; verify no type param, or 1 type param compatible with Char
+                    // if (typeThat.isParamsSpecified() && typeThat.getParamTypes().get(0) is assignable from Char)
                 case "String":
                     return id == Id.LIT_CHAR || id == Id.LIT_STRING;
 
-                case "FPLiteral":
-                case "VarFloat":
-                    return id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN;
-
                 case "IntLiteral":
+                case "Bit":
+                case "Nibble":
+                case "Int8":
+                case "Int16":
+                case "Int32":
+                case "Int64":
+                case "Int128":
                 case "VarInt":
+                case "UInt8":
+                case "UInt16":
+                case "UInt32":
+                case "UInt64":
+                case "UInt128":
+                case "VarUInt":
                     return id == Id.LIT_INT;
 
-                case "VarUInt":
-                    // unsigned value must be >= 0
-                    return id == Id.LIT_INT && !((PackedInteger) literal.getValue()).isNegative();
-
+                case "Dec32":
+                case "Dec64":
+                case "Dec128":
                 case "VarDec":
                     return id == Id.LIT_INT || id == Id.LIT_DEC;
 
-                case "Bit":
-                    return isIntInRange(0, 1);
-
-                case "Nibble":
-                    return isIntInRange(0, 0xF);
-
-                case "Int8":
-                    return isIntInRange(Byte.MIN_VALUE, Byte.MAX_VALUE);
-
-                case "Int16":
-                    return isIntInRange(Short.MIN_VALUE, Short.MAX_VALUE);
-
-                case "Int32":
-                    return isIntInRange(Integer.MIN_VALUE, Integer.MAX_VALUE);
-
-                case "Int64":
-                    return isIntInRange(Long.MIN_VALUE, Long.MAX_VALUE);
-
-                case "Int128":
-                    return id == Id.LIT_INT && ((PackedInteger) literal.getValue()).getSignedByteSize() <= 16;
-
-                case "UInt8":
-                    return isIntInRange(0x00, 0xFF);
-
-                case "UInt16":
-                    return isIntInRange(0x0000, 0xFFFF);
-
-                case "UInt32":
-                    return isIntInRange(0x00000000L, 0xFFFFFFFFL);
-
-                case "UInt64":
-                    return id == Id.LIT_INT
-                            && !(piVal = ((PackedInteger) literal.getValue())).isNegative()
-                            && piVal.getUnsignedByteSize() <= 8;
-
-                case "UInt128":
-                    return id == Id.LIT_INT
-                            && !(piVal = ((PackedInteger) literal.getValue())).isNegative()
-                            && piVal.getUnsignedByteSize() <= 16;
-
-                case "Dec32":
-                    if (id == Id.LIT_INT || id == Id.LIT_DEC)
-                        {
-                        BigDecimal bigdec = id == Id.LIT_INT
-                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                : (BigDecimal) literal.getValue();
-                        try
-                            {
-                            return new Decimal32(bigdec).isFinite();
-                            }
-                        catch (ArithmeticException e) {}
-                        }
-                    return false;
-
-                case "Dec64":
-                    if (id == Id.LIT_INT || id == Id.LIT_DEC)
-                        {
-                        BigDecimal bigdec = id == Id.LIT_INT
-                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                : (BigDecimal) literal.getValue();
-                        try
-                            {
-                            return new Decimal64(bigdec).isFinite();
-                            }
-                        catch (ArithmeticException e) {}
-                        }
-                    return false;
-
-                case "Dec128":
-                    if (id == Id.LIT_INT || id == Id.LIT_DEC)
-                        {
-                        BigDecimal bigdec = id == Id.LIT_INT
-                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                : (BigDecimal) literal.getValue();
-                        try
-                            {
-                            return new Decimal128(bigdec).isFinite();
-                            }
-                        catch (ArithmeticException e) {}
-                        }
-                    return false;
-
+                case "FPLiteral":
                 case "Float16":
-                    if (id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN)
-                        {
-                        try
-                            {
-                            // convert to/from 16-bit to test for overflow/underflow
-                            Float flVal = Float.parseFloat(literal.getValue().toString());
-                            return Float.isFinite(flVal) && Float.isFinite(
-                                    Float16Constant.toFloat(Float16Constant.toHalf(flVal)));
-                            }
-                        catch (RuntimeException e) {}
-                        }
-                    return false;
-
                 case "Float32":
-                    if (id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN)
-                        {
-                        try
-                            {
-                            // TODO add support for *purposeful* NaN/infinity
-                            return Float.isFinite(Float.parseFloat(literal.getValue().toString()));
-                            }
-                        catch (RuntimeException e) {}
-                        }
-                    return false;
-
                 case "Float64":
-                    if (id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN)
-                        {
-                        try
-                            {
-                            // TODO add support for *purposeful* NaN/infinity
-                            return Double.isFinite(Double.parseDouble(literal.getValue().toString()));
-                            }
-                        catch (RuntimeException e) {}
-                        }
-                    return false;
-
                 case "Float128":
-                    // TODO - how to support 128-bit float?
-                    throw new UnsupportedOperationException("128-bit binary floating point not implemented");
+                case "VarFloat":
+                    return id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN;
+
+                case "Number":
+                case "IntNumber":
+                case "UIntNumber":
+                case "FPNumber":
+                case "BinaryFPNumber":
+                case "DecimalFPNumber":
+                    // these types are ambiguous; while it's possible to covert to something that
+                    // implements the specified interface, the problem is that it's possible to
+                    // convert to _several_ different things that implement the same interface!
+                    // (we could let it fall through and let the default impl figure it out, but we
+                    // already know the answer)
+                    return false;
                 }
             }
 
