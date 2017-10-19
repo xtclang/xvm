@@ -35,9 +35,9 @@ public class IsGt
      */
     public IsGt(int nValue1, int nValue2, int nRet)
         {
-        f_nValue1   = nValue1;
-        f_nValue2   = nValue2;
-        f_nRetValue = nRet;
+        m_nValue1   = nValue1;
+        m_nValue2   = nValue2;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -49,9 +49,9 @@ public class IsGt
     public IsGt(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue1   = readPackedInt(in);
-        f_nValue2   = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        m_nValue1   = readPackedInt(in);
+        m_nValue2   = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -59,9 +59,9 @@ public class IsGt
     throws IOException
         {
         out.writeByte(OP_IS_GT);
-        writePackedLong(out, f_nValue1);
-        writePackedLong(out, f_nValue2);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nValue1);
+        writePackedLong(out, m_nValue2);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -75,15 +75,15 @@ public class IsGt
         {
         try
             {
-            ObjectHandle hValue1 = frame.getArgument(f_nValue1);
-            ObjectHandle hValue2 = frame.getArgument(f_nValue2);
+            ObjectHandle hValue1 = frame.getArgument(m_nValue1);
+            ObjectHandle hValue2 = frame.getArgument(m_nValue2);
             if (hValue1 == null || hValue2 == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeComposition clz1 = frame.getArgumentClass(f_nValue1);
-            TypeComposition clz2 = frame.getArgumentClass(f_nValue2);
+            TypeComposition clz1 = frame.getArgumentClass(m_nValue1);
+            TypeComposition clz2 = frame.getArgumentClass(m_nValue2);
             if (clz1 != clz2)
                 {
                 // this shouldn't have compiled
@@ -96,12 +96,12 @@ public class IsGt
                     return R_EXCEPTION;
 
                 case R_NEXT:
-                    return frame.assignValue(f_nRetValue, xBoolean.makeHandle(
+                    return frame.assignValue(m_nRetValue, xBoolean.makeHandle(
                             frame.getFrameLocal() == xOrdered.GREATER));
 
                 case R_CALL:
                     frame.m_frameNext.setContinuation(frameCaller ->
-                        frame.assignValue(f_nRetValue, xBoolean.makeHandle(
+                        frame.assignValue(m_nRetValue, xBoolean.makeHandle(
                                 frameCaller.getFrameLocal() == xOrdered.GREATER)));
                     return R_CALL;
 
@@ -115,7 +115,7 @@ public class IsGt
             }
         }
 
-    private final int f_nValue1;
-    private final int f_nValue2;
-    private final int f_nRetValue;
+    private int m_nValue1;
+    private int m_nValue2;
+    private int m_nRetValue;
     }

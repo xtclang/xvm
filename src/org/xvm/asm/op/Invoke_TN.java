@@ -139,10 +139,10 @@ public class Invoke_TN
         if (isProperty(hArg))
             {
             ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-            Frame.Continuation stepLast = frameCaller ->
+            Frame.Continuation stepNext = frameCaller ->
                 complete(frameCaller, hTarget, ((TupleHandle) ahArg[0]).m_ahValue);
 
-            return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+            return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
             }
 
         return complete(frame, hTarget, ((TupleHandle) hArg).m_ahValue);

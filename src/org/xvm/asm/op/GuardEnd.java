@@ -28,7 +28,7 @@ public class GuardEnd
      */
     public GuardEnd(int iRelAddr)
         {
-        f_nRelAddr = iRelAddr;
+        m_nRelAddr = iRelAddr;
         }
 
     /**
@@ -40,7 +40,7 @@ public class GuardEnd
     public GuardEnd(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nRelAddr = readPackedInt(in);
+        m_nRelAddr = readPackedInt(in);
         }
 
     @Override
@@ -48,7 +48,7 @@ public class GuardEnd
             throws IOException
         {
         out.writeByte(OP_GUARD_END);
-        writePackedLong(out, f_nRelAddr);
+        writePackedLong(out, m_nRelAddr);
         }
 
     @Override
@@ -62,7 +62,7 @@ public class GuardEnd
         {
         frame.popGuard();
         frame.exitScope();
-        return iPC + f_nRelAddr;
+        return iPC + m_nRelAddr;
         }
 
     @Override
@@ -71,5 +71,5 @@ public class GuardEnd
         scope.exit();
         }
 
-    private final int f_nRelAddr;
+    private int m_nRelAddr;
     }

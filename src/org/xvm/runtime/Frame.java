@@ -13,6 +13,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.IntConstant;
 
@@ -437,6 +438,9 @@ public class Frame
                 return Op.R_NEXT;
 
             default:
+                // the return value must point to a local property
+                PropertyConstant constProp = (PropertyConstant) getConstant(nVar);
+
                 throw new IllegalArgumentException("nVar=" + nVar);
             }
         }
@@ -518,6 +522,15 @@ public class Frame
             }
         }
 
+    private ObjectHandle getReturnValue(int iArg)
+        {
+        return iArg >= 0
+                ? f_ahVar[iArg]
+                : iArg <= Op.CONSTANT_OFFSET
+                        ? getConstHandle(iArg)
+                        : getPredefinedArgument(iArg);
+        }
+
     // return R_EXCEPTION
     public int raiseException(ExceptionHandle.WrapperException e)
         {
@@ -531,21 +544,12 @@ public class Frame
         return Op.R_EXCEPTION;
         }
 
-    private ObjectHandle getReturnValue(int iArg)
-        {
-        return iArg >= 0
-                ? f_ahVar[iArg]
-                : iArg <= Op.CONSTANT_OFFSET
-                        ? getConstHandle(iArg)
-                        : getPredefinedArgument(iArg);
-        }
-
     private ObjectHandle getConstHandle(int iArg)
         {
         return f_context.f_heapGlobal.ensureConstHandle(this, Op.CONSTANT_OFFSET - iArg);
         }
 
-    private Constant getConstant(int iArg)
+    public Constant getConstant(int iArg)
         {
         assert iArg < Op.CONSTANT_OFFSET;
         return f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);

@@ -33,9 +33,9 @@ public class P_Get
      */
     public P_Get(int nPropId, int nTarget, int nRet)
         {
-        f_nPropConstId = nPropId;
-        f_nTarget      = nTarget;
-        f_nRetValue    = nRet;
+        super(nPropId);
+        m_nTarget      = nTarget;
+        m_nRetValue    = nRet;
         }
 
     /**
@@ -47,9 +47,9 @@ public class P_Get
     public P_Get(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nPropConstId = readPackedInt(in);
-        f_nTarget      = readPackedInt(in);
-        f_nRetValue    = readPackedInt(in);
+        super(readPackedInt(in));
+        m_nTarget      = readPackedInt(in);
+        m_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -57,9 +57,9 @@ public class P_Get
             throws IOException
         {
         out.writeByte(OP_P_GET);
-        writePackedLong(out, f_nPropConstId);
-        writePackedLong(out, f_nTarget);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nPropId);
+        writePackedLong(out, m_nTarget);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -73,17 +73,17 @@ public class P_Get
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTarget);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
             if (hTarget == null)
                 {
                 return R_REPEAT;
                 }
 
             PropertyConstant constProperty = (PropertyConstant)
-                    frame.f_context.f_pool.getConstant(f_nPropConstId);
+                    frame.f_context.f_pool.getConstant(m_nPropId);
 
             return hTarget.f_clazz.f_template.getPropertyValue(
-                    frame, hTarget, constProperty.getName(), f_nRetValue);
+                    frame, hTarget, constProperty.getName(), m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -91,7 +91,6 @@ public class P_Get
             }
         }
 
-    private final int f_nPropConstId;
-    private final int f_nTarget;
-    private final int f_nRetValue;
+    private int m_nTarget;
+    private int m_nRetValue;
     }

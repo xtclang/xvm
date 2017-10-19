@@ -126,9 +126,9 @@ public class Invoke_10
         if (isProperty(hArg))
             {
             ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-            Frame.Continuation stepLast = frameCaller -> complete(frameCaller, hTarget, ahArg[0]);
+            Frame.Continuation stepNext = frameCaller -> complete(frameCaller, hTarget, ahArg[0]);
 
-            return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+            return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
             }
 
         return complete(frame, hTarget, hArg);

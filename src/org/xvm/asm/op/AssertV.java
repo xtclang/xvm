@@ -34,9 +34,9 @@ public class AssertV
      */
     public AssertV(int nValue, int nTextId, int[] anValue)
         {
-        f_nValue       = nValue;
-        f_nTextConstId = nTextId;
-        f_anValue      = anValue;
+        m_nValue       = nValue;
+        m_nTextConstId = nTextId;
+        m_anValue      = anValue;
         }
 
     /**
@@ -48,9 +48,9 @@ public class AssertV
     public AssertV(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue       = readPackedInt(in);
-        f_nTextConstId = readPackedInt(in);
-        f_anValue      = readIntArray(in);
+        m_nValue       = readPackedInt(in);
+        m_nTextConstId = readPackedInt(in);
+        m_anValue      = readIntArray(in);
         }
 
     @Override
@@ -58,9 +58,9 @@ public class AssertV
             throws IOException
         {
         out.writeByte(OP_ASSERT_V);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nTextConstId);
-        writeIntArray(out, f_anValue);
+        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nTextConstId);
+        writeIntArray(out, m_anValue);
         }
 
     @Override
@@ -74,7 +74,7 @@ public class AssertV
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(f_nValue);
+            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nValue);
             if (hTest == null)
                 {
                 return R_REPEAT;
@@ -86,16 +86,16 @@ public class AssertV
                 }
 
             StringBuilder sb = new StringBuilder("Assertion failed: ");
-            sb.append(frame.getString(f_nTextConstId))
+            sb.append(frame.getString(m_nTextConstId))
               .append(" (");
 
-            for (int i = 0, c = f_anValue.length; i < c; i++)
+            for (int i = 0, c = m_anValue.length; i < c; i++)
                 {
                 if (i > 0)
                     {
                     sb.append(", ");
                     }
-                int nValue = f_anValue[i];
+                int nValue = m_anValue[i];
 
                 Frame.VarInfo info = frame.getVarInfo(nValue);
                 ObjectHandle hValue = frame.getArgument(nValue);
@@ -114,7 +114,7 @@ public class AssertV
             }
         }
 
-    private final int   f_nValue;
-    private final int   f_nTextConstId;
-    private final int[] f_anValue;
+    private int   m_nValue;
+    private int   m_nTextConstId;
+    private int[] m_anValue;
     }

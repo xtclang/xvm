@@ -34,9 +34,9 @@ public class JumpLte
      */
     public JumpLte(int nValue1, int nValue2, int nRelAddr)
         {
-        f_nValue1  = nValue1;
-        f_nValue2  = nValue2;
-        f_nRelAddr = nRelAddr;
+        m_nValue1  = nValue1;
+        m_nValue2  = nValue2;
+        m_nRelAddr = nRelAddr;
         }
 
     /**
@@ -48,9 +48,9 @@ public class JumpLte
     public JumpLte(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue1  = readPackedInt(in);
-        f_nValue2  = readPackedInt(in);
-        f_nRelAddr = readPackedInt(in);
+        m_nValue1  = readPackedInt(in);
+        m_nValue2  = readPackedInt(in);
+        m_nRelAddr = readPackedInt(in);
         }
 
     @Override
@@ -58,9 +58,9 @@ public class JumpLte
             throws IOException
         {
         out.writeByte(OP_JMP_LTE);
-        writePackedLong(out, f_nValue1);
-        writePackedLong(out, f_nValue2);
-        writePackedLong(out, f_nRelAddr);
+        writePackedLong(out, m_nValue1);
+        writePackedLong(out, m_nValue2);
+        writePackedLong(out, m_nRelAddr);
         }
 
     @Override
@@ -74,15 +74,15 @@ public class JumpLte
         {
         try
             {
-            ObjectHandle hTest1 = frame.getArgument(f_nValue1);
-            ObjectHandle hTest2 = frame.getArgument(f_nValue2);
+            ObjectHandle hTest1 = frame.getArgument(m_nValue1);
+            ObjectHandle hTest2 = frame.getArgument(m_nValue2);
             if (hTest1 == null || hTest2 == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeComposition clz1 = frame.getArgumentClass(f_nValue1);
-            TypeComposition clz2 = frame.getArgumentClass(f_nValue2);
+            TypeComposition clz1 = frame.getArgumentClass(m_nValue1);
+            TypeComposition clz2 = frame.getArgumentClass(m_nValue2);
             if (clz1 != clz2)
                 {
                 // this shouldn't have compiled
@@ -96,12 +96,12 @@ public class JumpLte
 
                 case R_NEXT:
                     return frame.getFrameLocal() == xOrdered.GREATER ?
-                            iPC + 1 : iPC + f_nRelAddr;
+                            iPC + 1 : iPC + m_nRelAddr;
 
                 case R_CALL:
                     frame.m_frameNext.setContinuation(frameCaller ->
                         frame.getFrameLocal() == xOrdered.GREATER ?
-                            iPC + 1 : iPC + f_nRelAddr);
+                            iPC + 1 : iPC + m_nRelAddr);
                     return R_CALL;
 
                 default:
@@ -114,7 +114,7 @@ public class JumpLte
             }
         }
 
-    private final int f_nValue1;
-    private final int f_nValue2;
-    private final int f_nRelAddr;
+    private int m_nValue1;
+    private int m_nValue2;
+    private int m_nRelAddr;
     }

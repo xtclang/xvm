@@ -33,9 +33,9 @@ public class IIP_PreInc
      */
     public IIP_PreInc(int nTarget, int nIndex, int nRet)
         {
-        f_nTargetValue = nTarget;
-        f_nIndexValue  = nIndex;
-        f_nRetValue    = nRet;
+        m_nTargetValue = nTarget;
+        m_nIndexValue  = nIndex;
+        m_nRetValue    = nRet;
         }
 
     /**
@@ -47,9 +47,9 @@ public class IIP_PreInc
     public IIP_PreInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nIndexValue  = readPackedInt(in);
-        f_nRetValue    = readPackedInt(in);
+        m_nTargetValue = readPackedInt(in);
+        m_nIndexValue  = readPackedInt(in);
+        m_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -57,9 +57,9 @@ public class IIP_PreInc
             throws IOException
         {
         out.writeByte(OP_IIP_INCB);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nIndexValue);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nTargetValue);
+        writePackedLong(out, m_nIndexValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -73,8 +73,8 @@ public class IIP_PreInc
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            long lIndex = frame.getIndex(f_nIndexValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTargetValue);
+            long lIndex = frame.getIndex(m_nIndexValue);
 
             if (hTarget == null || lIndex == -1)
                 {
@@ -83,7 +83,7 @@ public class IIP_PreInc
 
             IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            return template.invokePreInc(frame, hTarget, lIndex, f_nRetValue);
+            return template.invokePreInc(frame, hTarget, lIndex, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -91,7 +91,7 @@ public class IIP_PreInc
             }
         }
 
-    private final int f_nTargetValue;
-    private final int f_nIndexValue;
-    private final int f_nRetValue;
+    private int m_nTargetValue;
+    private int m_nIndexValue;
+    private int m_nRetValue;
     }

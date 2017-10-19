@@ -33,9 +33,9 @@ public class I_Set
      */
     public I_Set(int nTarget, int nIndex, int nValue)
         {
-        f_nTargetValue = nTarget;
-        f_nIndexValue  = nIndex;
-        f_nValue       = nValue;
+        m_nTargetValue = nTarget;
+        m_nIndexValue  = nIndex;
+        m_nValue       = nValue;
         }
 
     /**
@@ -47,9 +47,9 @@ public class I_Set
     public I_Set(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nTargetValue = readPackedInt(in);
-        f_nIndexValue  = readPackedInt(in);
-        f_nValue       = readPackedInt(in);
+        m_nTargetValue = readPackedInt(in);
+        m_nIndexValue  = readPackedInt(in);
+        m_nValue       = readPackedInt(in);
         }
 
     @Override
@@ -57,9 +57,9 @@ public class I_Set
     throws IOException
         {
         out.writeByte(OP_I_SET);
-        writePackedLong(out, f_nTargetValue);
-        writePackedLong(out, f_nIndexValue);
-        writePackedLong(out, f_nValue);
+        writePackedLong(out, m_nTargetValue);
+        writePackedLong(out, m_nIndexValue);
+        writePackedLong(out, m_nValue);
         }
 
     @Override
@@ -75,9 +75,9 @@ public class I_Set
 
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTargetValue);
-            long         lIndex  = frame.getIndex(f_nIndexValue);
-            ObjectHandle hArg    = frame.getArgument(f_nValue);
+            ObjectHandle hTarget = frame.getArgument(m_nTargetValue);
+            long         lIndex  = frame.getIndex(m_nIndexValue);
+            ObjectHandle hArg    = frame.getArgument(m_nValue);
             if (hTarget == null || hArg == null || lIndex == -1)
                 {
                 return R_REPEAT;
@@ -95,7 +95,7 @@ public class I_Set
         return hException == null ? iPC + 1 : frame.raiseException(hException);
         }
 
-    private final int f_nTargetValue;
-    private final int f_nIndexValue;
-    private final int f_nValue;
+    private int m_nTargetValue;
+    private int m_nIndexValue;
+    private int m_nValue;
     }

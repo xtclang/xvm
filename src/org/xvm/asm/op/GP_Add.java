@@ -132,9 +132,9 @@ public class GP_Add
         if (isProperty(hArg))
             {
             ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+            Frame.Continuation stepNext = frameCaller -> complete(frame, hTarget, ahArg[0]);
 
-            Frame.Continuation stepLast = frameCaller -> complete(frame, hTarget, ahArg[0]);
-            return new Utils.GetArgument(ahArg, stepLast).doNext(frame);
+            return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
             }
         return complete(frame, hTarget, hArg);
         }

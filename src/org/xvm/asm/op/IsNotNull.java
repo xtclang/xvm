@@ -33,8 +33,8 @@ public class IsNotNull
      */
     public IsNotNull(int nValue, int nRet)
         {
-        f_nValue    = nValue;
-        f_nRetValue = nRet;
+        m_nValue    = nValue;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -46,8 +46,8 @@ public class IsNotNull
     public IsNotNull(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue    = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        m_nValue    = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -55,8 +55,8 @@ public class IsNotNull
             throws IOException
         {
         out.writeByte(OP_IS_NNULL);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -70,14 +70,13 @@ public class IsNotNull
         {
         try
             {
-            ObjectHandle hValue = frame.getArgument(f_nValue);
+            ObjectHandle hValue = frame.getArgument(m_nValue);
             if (hValue == null)
                 {
                 return R_REPEAT;
                 }
 
-            frame.assignValue(f_nRetValue, xBoolean.makeHandle(hValue != xNullable.NULL));
-            return iPC + 1;
+            return frame.assignValue(m_nRetValue, xBoolean.makeHandle(hValue != xNullable.NULL));
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -85,6 +84,6 @@ public class IsNotNull
             }
         }
 
-    private final int f_nValue;
-    private final int f_nRetValue;
+    private int m_nValue;
+    private int m_nRetValue;
     }

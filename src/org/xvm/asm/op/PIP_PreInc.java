@@ -7,19 +7,23 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
+import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.types.xProperty.PropertyHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * PIP_INCB PROPERTY, rvalue, lvalue ; same as IP_INCB for a register
+ * PIP_INCB PROPERTY, rvalue-target, lvalue ; same as IP_INCB for a register
  */
 public class PIP_PreInc
         extends OpProperty
@@ -33,9 +37,24 @@ public class PIP_PreInc
      */
     public PIP_PreInc(int nPropId, int nTarget, int nRet)
         {
-        f_nPropConstId = nPropId;
-        f_nTarget      = nTarget;
-        f_nRetValue    = nRet;
+        super(nPropId);
+        m_nTarget      = nTarget;
+        m_nRetValue    = nRet;
+        }
+
+    /**
+     * Construct a PIP_INCB op based on the passed arguments.
+     *
+     * @param argProperty  the property Argument
+     * @param argTarget    the target Argument
+     * @param argReturn    the Argument to move the result into (Register or local property)
+     */
+    public PIP_PreInc(Argument argProperty, Argument argTarget, Argument argReturn)
+        {
+        super(argProperty);
+
+        m_argTarget = argTarget;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -47,25 +66,32 @@ public class PIP_PreInc
     public PIP_PreInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nPropConstId = readPackedInt(in);
-        f_nTarget      = readPackedInt(in);
-        f_nRetValue    = readPackedInt(in);
+        super(readPackedInt(in));
+
+        m_nTarget   = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_PIP_INCB);
-        writePackedLong(out, f_nPropConstId);
-        writePackedLong(out, f_nTarget);
-        writePackedLong(out, f_nRetValue);
+        super.write(out, registry);
+
+        if (m_argTarget != null)
+            {
+            m_nTarget = encodeArgument(m_argTarget, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
+            }
+
+        writePackedLong(out, m_nTarget);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_PIP_INCB;
+        return OP_PIP_INCA;
         }
 
     @Override
@@ -73,17 +99,22 @@ public class PIP_PreInc
         {
         try
             {
-            ObjectHandle hTarget = frame.getArgument(f_nTarget);
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
             if (hTarget == null)
                 {
                 return R_REPEAT;
                 }
 
-            PropertyConstant constProperty = (PropertyConstant)
-                    frame.f_context.f_pool.getConstant(f_nPropConstId);
+            if (isProperty(hTarget))
+                {
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frameCaller, (PropertyHandle) hTarget, ahTarget[0]);
 
-            return hTarget.f_clazz.f_template.invokePreInc(
-                    frame, hTarget, constProperty.getName(), f_nRetValue);
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                }
+
+            return complete(frame, null, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -91,7 +122,47 @@ public class PIP_PreInc
             }
         }
 
-    private final int f_nPropConstId;
-    private final int f_nTarget;
-    private final int f_nRetValue;
-    }
+    protected int complete(Frame frame, PropertyHandle hProperty, ObjectHandle hTarget)
+        {
+        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            if (m_nTarget >= 0)
+                {
+                frame.introduceVarCopy(m_nTarget);
+                }
+            else // m_nTarget points to a local property, therefore hProperty is not null
+                {
+                int nTypeId = hProperty.m_constProperty.getType().getPosition();
+
+                frame.introduceVar(nTypeId, 0, Frame.VAR_STANDARD, null);
+                }
+            }
+
+        return hTarget.f_clazz.f_template.invokePreInc(
+                frame, hTarget, constProperty.getName(), m_nRetValue);
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        if (scope.isNextRegister(m_nRetValue))
+            {
+            scope.allocVar();
+            }
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argTarget, registry);
+        }
+
+    private int m_nTarget;
+    private int m_nRetValue;
+
+    private Argument m_argTarget;
+    private Argument m_argReturn;    }

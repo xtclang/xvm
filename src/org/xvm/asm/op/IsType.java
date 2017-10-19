@@ -30,9 +30,9 @@ public class IsType
      */
     public IsType(int nValue, int nType, int nRet)
         {
-        f_nValue    = nValue;
-        f_nType     = nType;
-        f_nRetValue = nRet;
+        m_nValue    = nValue;
+        m_nType     = nType;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -44,9 +44,9 @@ public class IsType
     public IsType(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nValue    = readPackedInt(in);
-        f_nType     = readPackedInt(in);
-        f_nRetValue = readPackedInt(in);
+        m_nValue    = readPackedInt(in);
+        m_nType     = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -54,9 +54,9 @@ public class IsType
             throws IOException
         {
         out.writeByte(OP_IS_TYPE);
-        writePackedLong(out, f_nValue);
-        writePackedLong(out, f_nType);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nType);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -70,8 +70,8 @@ public class IsType
         {
         try
             {
-            ObjectHandle hValue1 = frame.getArgument(f_nValue);
-            ObjectHandle hValue2 = frame.getArgument(f_nType);
+            ObjectHandle hValue1 = frame.getArgument(m_nValue);
+            ObjectHandle hValue2 = frame.getArgument(m_nType);
             if (hValue1 == null || hValue2 == null)
                 {
                 return R_REPEAT;
@@ -86,7 +86,7 @@ public class IsType
             }
         }
 
-    private final int f_nValue;
-    private final int f_nType;
-    private final int f_nRetValue;
+    private int m_nValue;
+    private int m_nType;
+    private int m_nRetValue;
     }

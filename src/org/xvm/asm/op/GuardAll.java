@@ -29,7 +29,7 @@ public class GuardAll
      */
     public GuardAll(int nRelAddress)
         {
-        f_nFinallyRelAddress = nRelAddress;
+        m_nFinallyRelAddress = nRelAddress;
         }
 
     /**
@@ -41,7 +41,7 @@ public class GuardAll
     public GuardAll(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nFinallyRelAddress = readPackedInt(in);
+        m_nFinallyRelAddress = readPackedInt(in);
         }
 
     @Override
@@ -49,7 +49,7 @@ public class GuardAll
             throws IOException
         {
         out.writeByte(OP_GUARD_ALL);
-        writePackedLong(out, f_nFinallyRelAddress);
+        writePackedLong(out, m_nFinallyRelAddress);
         }
 
     @Override
@@ -66,7 +66,7 @@ public class GuardAll
         AllGuard guard = m_guard;
         if (guard == null)
             {
-            m_guard = guard = new AllGuard(iPC, iScope, f_nFinallyRelAddress);
+            m_guard = guard = new AllGuard(iPC, iScope, m_nFinallyRelAddress);
             }
         frame.pushGuard(guard);
 
@@ -79,7 +79,7 @@ public class GuardAll
         scope.enter();
         }
 
-    private final int f_nFinallyRelAddress;
+    private int m_nFinallyRelAddress;
 
     private transient AllGuard m_guard; // cached struct
     }

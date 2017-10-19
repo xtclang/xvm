@@ -38,6 +38,8 @@ public class NewG_N
      * @param nType           the type of the object being created
      * @param anArg           the constructor arguments
      * @param nRet            the location to store the new object
+     *
+     * @deprecated
      */
     public NewG_N(int nConstructorId, int nType, int[] anArg, int nRet)
         {
@@ -139,10 +141,10 @@ public class NewG_N
 
             if (anyProperty(ahVar))
                 {
-                Frame.Continuation stepLast = frameCaller ->
+                Frame.Continuation stepNext = frameCaller ->
                     template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
 
-                return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
                 }
             return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
             }

@@ -34,6 +34,8 @@ public class New_N
      * @param nConstructorId  identifies the constructor
      * @param anArg           the constructor arguments
      * @param nRet            the location to store the new object
+     *
+     * @deprecated
      */
     public New_N(int nConstructorId, int[] anArg, int nRet)
         {
@@ -113,10 +115,10 @@ public class New_N
 
             if (anyProperty(ahVar))
                 {
-                Frame.Continuation stepLast = frameCaller -> template.construct(frame, constructor,
+                Frame.Continuation stepNext = frameCaller -> template.construct(frame, constructor,
                     template.f_clazzCanonical, ahVar, m_nRetValue);
 
-                return new Utils.GetArguments(ahVar, new int[]{0}, stepLast).doNext(frame);
+                return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
                 }
             return template.construct(frame, constructor,
                     template.f_clazzCanonical, ahVar, m_nRetValue);

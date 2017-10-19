@@ -29,6 +29,8 @@ public class Construct_1
      *
      * @param nConstructorId  identifies the construct function
      * @param nArg            r-value for the construct function argument
+     *
+     * @deprecated
      */
     public Construct_1(int nConstructorId, int nArg)
         {
@@ -102,9 +104,9 @@ public class Construct_1
 
             if (isProperty(hArg))
                 {
-                Frame.Continuation stepLast = frameCaller ->
+                Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, constructor, ahVar);
-                return new Utils.GetArgument(ahVar, stepLast).doNext(frame);
+                return new Utils.GetArgument(ahVar, stepNext).doNext(frame);
                 }
 
             return complete(frame, constructor, ahVar);

@@ -31,8 +31,8 @@ public class L_Get
      */
     public L_Get(int nPropId, int nRet)
         {
-        f_nPropConstId = nPropId;
-        f_nRetValue    = nRet;
+        super(nPropId);
+        m_nRetValue    = nRet;
         }
 
     /**
@@ -44,8 +44,8 @@ public class L_Get
     public L_Get(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nPropConstId = readPackedInt(in);
-        f_nRetValue    = readPackedInt(in);
+        super(readPackedInt(in));
+        m_nRetValue    = readPackedInt(in);
         }
 
     @Override
@@ -53,8 +53,8 @@ public class L_Get
             throws IOException
         {
         out.writeByte(OP_L_GET);
-        writePackedLong(out, f_nPropConstId);
-        writePackedLong(out, f_nRetValue);
+        writePackedLong(out, m_nPropId);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -69,12 +69,11 @@ public class L_Get
         ObjectHandle hTarget = frame.getThis();
 
         PropertyConstant constProperty = (PropertyConstant)
-                frame.f_context.f_pool.getConstant(f_nPropConstId);
+                frame.f_context.f_pool.getConstant(m_nPropId);
 
         return hTarget.f_clazz.f_template.getPropertyValue(
-                frame, hTarget, constProperty.getName(), f_nRetValue);
+                frame, hTarget, constProperty.getName(), m_nRetValue);
         }
 
-    private final int f_nPropConstId;
-    private final int f_nRetValue;
+    private int m_nRetValue;
     }

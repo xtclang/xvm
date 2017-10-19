@@ -36,6 +36,8 @@ public class NewG_0
      * @param nConstructorId  identifies the constructor
      * @param nType           the type of the object being created
      * @param nRet            the location to store the new object
+     *
+     * @deprecated
      */
     public NewG_0(int nConstructorId, int nType, int nRet)
         {

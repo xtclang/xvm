@@ -32,8 +32,8 @@ public class L_Set
      */
     public L_Set(int nPropId, int nValue)
         {
-        f_nPropConstId = nPropId;
-        f_nValue       = nValue;
+        super(nPropId);
+        m_nValue       = nValue;
         }
 
     /**
@@ -45,8 +45,8 @@ public class L_Set
     public L_Set(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_nPropConstId = readPackedInt(in);
-        f_nValue = readPackedInt(in);
+        super(readPackedInt(in));
+        m_nValue = readPackedInt(in);
         }
 
     @Override
@@ -54,8 +54,8 @@ public class L_Set
             throws IOException
         {
         out.writeByte(OP_L_SET);
-        writePackedLong(out, f_nPropConstId);
-        writePackedLong(out, f_nValue);
+        writePackedLong(out, m_nPropId);
+        writePackedLong(out, m_nValue);
         }
 
     @Override
@@ -70,14 +70,14 @@ public class L_Set
         try
             {
             ObjectHandle hTarget = frame.getThis();
-            ObjectHandle hValue = frame.getArgument(f_nValue);
+            ObjectHandle hValue = frame.getArgument(m_nValue);
             if (hTarget == null || hValue == null)
                 {
                 return R_REPEAT;
                 }
 
             PropertyConstant constProperty = (PropertyConstant)
-                    frame.f_context.f_pool.getConstant(f_nPropConstId);
+                    frame.f_context.f_pool.getConstant(m_nPropId);
 
             return hTarget.f_clazz.f_template.setPropertyValue(
                     frame, hTarget, constProperty.getName(), hValue);
@@ -88,6 +88,5 @@ public class L_Set
             }
         }
 
-    private final int f_nPropConstId;
-    private final int f_nValue;
+    private int m_nValue;
     }
