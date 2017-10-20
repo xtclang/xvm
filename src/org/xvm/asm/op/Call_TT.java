@@ -45,7 +45,7 @@ public class Call_TT
         super(nFunction);
 
         m_nArgTupleValue = nTupleArg;
-        m_nRetTupleValue = nRetTupleValue;
+        m_nTupleRetValue = nRetTupleValue;
         }
 
     /**
@@ -75,7 +75,7 @@ public class Call_TT
         super(readPackedInt(in));
 
         m_nArgTupleValue = readPackedInt(in);
-        m_nRetTupleValue = readPackedInt(in);
+        m_nTupleRetValue = readPackedInt(in);
         }
 
     @Override
@@ -87,11 +87,11 @@ public class Call_TT
         if (m_argValue != null)
             {
             m_nArgTupleValue = encodeArgument(m_argValue, registry);
-            m_nRetTupleValue = encodeArgument(m_regReturn, registry);
+            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
             }
 
         writePackedLong(out, m_nArgTupleValue);
-        writePackedLong(out, m_nRetTupleValue);
+        writePackedLong(out, m_nTupleRetValue);
         }
 
     @Override
@@ -125,11 +125,11 @@ public class Call_TT
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, -m_nRetTupleValue - 1);
+                        chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, m_nTupleRetValue, true);
 
                     return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
-                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, -m_nRetTupleValue - 1);
+                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, m_nTupleRetValue, true);
                 }
 
             if (m_nFunctionValue < 0)
@@ -181,7 +181,7 @@ public class Call_TT
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
 
-        return frame.call1(function, null, ahVar, -m_nRetTupleValue - 1);
+        return frame.callT(function, null, ahVar, m_nTupleRetValue);
         }
 
     protected int complete(Frame frame, FunctionHandle hFunction, TupleHandle hArg)
@@ -194,7 +194,7 @@ public class Call_TT
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount());
 
-        return hFunction.call1(frame, null, ahVar, -m_nRetTupleValue - 1);
+        return hFunction.callT(frame, null, ahVar, m_nTupleRetValue);
         }
 
     @Override
@@ -207,7 +207,7 @@ public class Call_TT
 
 
     private int m_nArgTupleValue;
-    private int m_nRetTupleValue;
+    private int m_nTupleRetValue;
 
     private Argument m_argValue;
     private Register m_regReturn;

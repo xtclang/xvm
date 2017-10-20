@@ -116,7 +116,8 @@ class TestApp
         @Override
         Int method1()
             {
-            return super() + prop2;
+            temp = super();
+            return temp + prop2;
             }
 
         String to<String>()

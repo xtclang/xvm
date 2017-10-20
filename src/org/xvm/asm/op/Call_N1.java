@@ -119,12 +119,12 @@ public class Call_N1
                 if (anyProperty(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frame, ahVar, m_nRetValue);
+                        chain.callSuperN1(frame, ahVar, m_nRetValue, false);
 
                     return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
 
-                return chain.callSuperN1(frame, ahVar, m_nRetValue);
+                return chain.callSuperN1(frame, ahVar, m_nRetValue, false);
                 }
 
             if (m_nFunctionValue < 0)

@@ -9,6 +9,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.Utils;
 
 
 /**
@@ -20,16 +22,6 @@ public class Return_N
     /**
      * Construct a RETURN_N op.
      *
-     * @param aArg  the arguments to return
-     */
-    public Return_N(Argument[] aArg)
-        {
-        m_aArg = aArg;
-        }
-
-    /**
-     * Construct a RETURN_N op.
-     *
      * @param anValue  the values to return
      *
      * @deprecated
@@ -37,6 +29,16 @@ public class Return_N
     public Return_N(int[] anValue)
         {
         m_anArg = anValue;
+        }
+
+    /**
+     * Construct a RETURN_N op.
+     *
+     * @param aArg  the arguments to return
+     */
+    public Return_N(Argument[] aArg)
+        {
+        m_aArg = aArg;
         }
 
     /**
@@ -80,55 +82,35 @@ public class Return_N
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iRet = frame.f_iReturn;
-        if (iRet >= 0 || iRet == Frame.RET_LOCAL)
+        int cArgs = m_anArg.length;
+        ObjectHandle[] ahArg = new ObjectHandle[cArgs];
+        boolean fAnyProp = false;
+
+        for (int i = 0; i < cArgs; i++)
             {
-            throw new IllegalStateException(); // assertion
+            ObjectHandle hArg = frame.getReturnValue(m_anArg[i]);
+
+            ahArg[i] = hArg;
+            fAnyProp |= isProperty(hArg);
             }
 
-        switch (iRet)
+        if (fAnyProp)
             {
-            case Frame.RET_UNUSED:
-                break;
+            Frame.Continuation stepNext = frameCaller -> frameCaller.returnValues(ahArg);
 
-            case Frame.RET_MULTI:
-                int[] aiRet = frame.f_aiReturn;
-
-                // it's possible that the caller doesn't care about some of the return values
-                boolean fBlock = false;
-                for (int i = 0, c = aiRet.length; i < c; i++)
-                    {
-                    int iResult = frame.returnValue(aiRet[i], m_anArg[i]);
-                    switch (iResult)
-                        {
-                        case Op.R_RETURN_EXCEPTION:
-                            return Op.R_RETURN_EXCEPTION;
-
-                        case Op.R_BLOCK_RETURN:
-                            fBlock = true;
-                            break;
-
-                        case Op.R_RETURN:
-                            continue;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-                    }
-
-                if (fBlock)
-                    {
-                    return R_BLOCK_RETURN;
-                    }
-                break;
-
-            default:
-                // the caller needs a tuple
-                return frame.returnTuple(-iRet - 1, m_anArg);
+            return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
             }
-        return R_RETURN;
+
+        return frame.returnValues(ahArg);
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArguments(m_aArg, registry);
+        }
+
+    private int[] m_anArg;
+
     private Argument[] m_aArg;
-    private int[]      m_anArg;
     }

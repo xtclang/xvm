@@ -119,12 +119,12 @@ public class Call_NT
                 if (anyProperty(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frame, ahVar, -m_nTupleRetValue - 1);
+                        chain.callSuperN1(frame, ahVar, m_nTupleRetValue, true);
 
                     return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
 
-                return chain.callSuperN1(frame, ahVar, -m_nTupleRetValue - 1);
+                return chain.callSuperN1(frame, ahVar, m_nTupleRetValue, true);
                 }
 
             if (m_nFunctionValue < 0)
@@ -140,11 +140,11 @@ public class Call_NT
                 if (anyProperty(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
-                        frame.call1(function, null, ahVar, -m_nTupleRetValue - 1);
+                        frame.callT(function, null, ahVar, m_nTupleRetValue);
 
                     return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
-                return frame.call1(function, null, ahVar, -m_nTupleRetValue - 1);
+                return frame.callT(function, null, ahVar, m_nTupleRetValue);
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
@@ -162,12 +162,12 @@ public class Call_NT
             if (anyProperty(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    hFunction.call1(frameCaller, null, ahVar, -m_nTupleRetValue - 1);
+                    hFunction.callT(frameCaller, null, ahVar, m_nTupleRetValue);
 
                 return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
 
-            return hFunction.call1(frame, null, ahVar, -m_nTupleRetValue - 1);
+            return hFunction.callT(frame, null, ahVar, m_nTupleRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

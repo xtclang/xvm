@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 
@@ -51,8 +50,8 @@ public class TypeSet
     // cache - ClassTemplates by name
     final private Map<String, ClassTemplate> f_mapTemplatesByName = new HashMap<>();
 
-    // cache - TypeCompositions for constants keyed by the ClassConstId from the ConstPool
-    final private Map<Integer, TypeComposition> f_mapConstCompositions = new TreeMap<>(Integer::compare);
+    // cache - non-parameterized TypeCompositions ClassConstId
+    final private Map<Integer, TypeComposition> f_mapConstCompositions = new HashMap<>();
 
     public final static TypeConstant[] VOID = new TypeConstant[0];
 
@@ -235,19 +234,26 @@ public class TypeSet
     // ----- TypeCompositions -----
 
     // ensure a TypeComposition for a type referred by a TypeConstant in the ConstantPool
-    public TypeComposition ensureComposition(int nTypeConstId, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(int nTypeConstId, Map<String, Type> mapActual)
         {
-        TypeComposition typeComposition = f_mapConstCompositions.get(nTypeConstId);
-        if (typeComposition == null)
+        if (mapActual.isEmpty())
             {
-            TypeConstant constType = (TypeConstant)
-                    f_container.f_pool.getConstant(nTypeConstId); // must exist
+            // cache non-parameterized classes
+            TypeComposition typeComposition = f_mapConstCompositions.get(nTypeConstId);
+            if (typeComposition == null)
+                {
+                TypeConstant constType = (TypeConstant)
+                        f_container.f_pool.getConstant(nTypeConstId); // must exist
 
-            typeComposition = resolveClass(constType, mapActual);
+                typeComposition = resolveClass(constType, mapActual);
 
-            f_mapConstCompositions.put(nTypeConstId, typeComposition);
+                f_mapConstCompositions.put(nTypeConstId, typeComposition);
+                }
+            return typeComposition;
             }
-        return typeComposition;
+
+        TypeConstant constType = (TypeConstant) f_container.f_pool.getConstant(nTypeConstId);
+        return resolveClass(constType, mapActual);
         }
 
     // produce a TypeComposition based on the specified TypeConstant

@@ -16,8 +16,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.IntConstant;
-
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
@@ -30,6 +30,7 @@ import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 
 /**
@@ -44,13 +45,11 @@ public class Frame
     public final ServiceContext  f_context;      // same as f_fiber.f_context
     public final MethodStructure f_function;
     public final Op[]            f_aOp;          // the op-codes
-    public final Constant[]      f_aconst;       // local constants
     public final ObjectHandle    f_hTarget;      // target
     public final ObjectHandle[]  f_ahVar;        // arguments/local var registers
     public final VarInfo[]       f_aInfo;        // optional info for var registers
     public final int             f_iReturn;      // an index for a single return value;
-    // any negative value below RET_LOCAL indicates an
-    // automatic tuple conversion into a (-i-1) register
+
     public final int[]           f_aiReturn;     // indexes for multiple return values
     public final Frame           f_framePrev;    // the caller's frame
     public final int             f_iPCPrev;      // the caller's PC (used only for async reporting)
@@ -76,8 +75,7 @@ public class Frame
     // an indicator for the "frame local single value"
     public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
     public final static int RET_MULTI  = -65002;  // an indicator for "multiple return values"
-
-    public final static Constant[] NO_CONSTS = Constant.NO_CONSTS;
+    public final static int RET_TUPLE  = -65003;  // an indicator for a "tuple return"
 
     public static final int VAR_STANDARD    = 0;
     public static final int VAR_DYNAMIC_REF = 1;
@@ -98,7 +96,6 @@ public class Frame
 
         f_function = function;
         f_aOp      = function == null ? Op.STUB : function.getOps();
-        f_aconst   = function == null ? NO_CONSTS : function.getLocalConstants();
 
         f_hTarget = hTarget;
 
@@ -125,7 +122,6 @@ public class Frame
         f_iPCPrev = iCallerPC;
         f_function = null;
         f_aOp = aopNative;
-        f_aconst = NO_CONSTS; // TODO review
 
         f_hTarget = null;
         f_ahVar = ahVar;
@@ -151,6 +147,13 @@ public class Frame
         return Op.R_CALL;
         }
 
+    // a convenience method; ahVar - prepared variables
+    public int callT(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        m_frameNext = f_context.createFrameT(this, method, hTarget, ahVar, iReturn);
+        return Op.R_CALL;
+        }
+
     // a convenience method
     public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
@@ -162,6 +165,16 @@ public class Frame
     public int invoke1(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         Frame frameNext = m_frameNext = f_context.createFrame1(this,
+            chain.getMethod(nDepth), hTarget, ahVar, iReturn);
+        frameNext.m_chain = chain;
+        frameNext.m_nDepth = nDepth;
+        return Op.R_CALL;
+        }
+
+    // a convenience method; ahVar - prepared variables
+    public int invokeT(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        Frame frameNext = m_frameNext = f_context.createFrameT(this,
             chain.getMethod(nDepth), hTarget, ahVar, iReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
@@ -456,7 +469,7 @@ public class Frame
         }
 
     // specialization of assignValue() that takes two return values
-    // return R_NEXT, R_EXCEPTION or R_BLOCK (only if any of the values is a FutureRef)
+    // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if any of the values is a FutureRef)
     public int assignValues(int[] anVar, ObjectHandle hValue1, ObjectHandle hValue2)
         {
         int c = anVar.length;
@@ -474,13 +487,22 @@ public class Frame
             {
             case Op.R_BLOCK:
                 {
-                int iResult = assignValue(anVar[1], hValue2);
-                if (iResult == Op.R_CALL)
+                switch (assignValue(anVar[1], hValue2))
                     {
-                    m_frameNext.setContinuation(frameCaller -> Op.R_BLOCK);
-                    return Op.R_CALL;
+                    case Op.R_NEXT:
+                    case Op.R_BLOCK:
+                        return Op.R_BLOCK;
+
+                    case Op.R_CALL:
+                        m_frameNext.setContinuation(frameCaller -> Op.R_BLOCK);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
                     }
-                return iResult;
                 }
 
             case Op.R_NEXT:
@@ -499,66 +521,118 @@ public class Frame
             }
         }
 
-    // assign the specified register on the caller's frame
-    // return R_RETURN, R_RETURN_EXCEPTION or R_BLOCK_RETURN
-    public int returnValue(int iReturn, int iArg)
+    // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK
+    public int assignTuple(int iVar, ObjectHandle[] ahValue)
         {
-        assert iReturn >= 0 || iReturn == RET_LOCAL;
+        TypeComposition clazz = getVarInfo(iVar).getType().f_clazz;
 
-        int iResult = f_framePrev.assignValue(iReturn, getReturnValue(iArg));
-        switch (iResult)
+        return assignValue(iVar, xTuple.makeHandle(clazz, ahValue));
+        }
+
+    // assign the return register on the caller's frame
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    public int returnValue(ObjectHandle hValue)
+        {
+        switch (f_iReturn)
             {
-            case Op.R_EXCEPTION:
-                return Op.R_RETURN_EXCEPTION;
-
-            case Op.R_BLOCK:
-                return Op.R_BLOCK_RETURN;
-
-            case Op.R_NEXT:
+            case RET_UNUSED:
                 return Op.R_RETURN;
 
+            case RET_MULTI:
+                throw new IllegalStateException();
+
+            case RET_TUPLE:
+                return returnAsTuple(new ObjectHandle[]{hValue});
+
             default:
-                throw new IllegalArgumentException("iResult=" + iResult);
+                return returnValue(f_iReturn, hValue);
             }
         }
 
-    // return R_RETURN, R_RETURN_EXCEPTION or R_BLOCK_RETURN
-    public int returnTuple(int iReturn, int[] aiArg)
+    // assign the return registers on the caller's frame
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    public int returnValues(ObjectHandle[] ahValue)
         {
-        assert iReturn >= 0;
-
-        int c = aiArg.length;
-        ObjectHandle[] ahValue = new ObjectHandle[c];
-        for (int i = 0; i < c; i++)
+        switch (f_iReturn)
             {
-            ahValue[i] = getReturnValue(aiArg[i]);
+            case RET_UNUSED:
+                return Op.R_RETURN;
+
+            case RET_MULTI:
+                switch (new Utils.AssignValues(f_aiReturn, ahValue).proceed(f_framePrev))
+                    {
+                    case Op.R_NEXT:
+                        return Op.R_RETURN;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_RETURN_EXCEPTION;
+
+                    case Op.R_BLOCK:
+                        return Op.R_BLOCK_RETURN;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+            case RET_TUPLE:
+                return returnAsTuple(ahValue);
+
+            default:
+                throw new IllegalArgumentException("iReturn=" + f_iReturn);
             }
+        }
+
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    private int returnAsTuple(ObjectHandle[] ahValue)
+        {
+        assert f_iReturn == RET_TUPLE;
+
+        int iReturn = f_aiReturn[0];
 
         TypeComposition clazz = f_framePrev.getVarInfo(iReturn).getType().f_clazz;
-        int iResult = f_framePrev.assignValue(iReturn, xTuple.makeHandle(clazz, ahValue));
+        return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue));
+        }
+
+    // assign the specified register on the caller's frame
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    private int returnValue(int iReturn, ObjectHandle hValue)
+        {
+        int iResult = f_framePrev.assignValue(iReturn, hValue);
         switch (iResult)
             {
+            case Op.R_NEXT:
+                return Op.R_RETURN;
+
+            case Op.R_CALL:
+                m_frameNext.setContinuation(frameCaller -> Op.R_RETURN);
+                return Op.R_CALL;
+
             case Op.R_EXCEPTION:
                 return Op.R_RETURN_EXCEPTION;
 
             case Op.R_BLOCK:
                 return Op.R_BLOCK_RETURN;
 
-            case Op.R_NEXT:
-                return Op.R_RETURN;
-
             default:
                 throw new IllegalArgumentException("iResult=" + iResult);
             }
         }
 
-    private ObjectHandle getReturnValue(int iArg)
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    public int returnTuple(TupleHandle hTuple)
         {
-        return iArg >= 0
-                ? f_ahVar[iArg]
-                : iArg <= Op.CONSTANT_OFFSET
-                        ? getConstHandle(iArg)
-                        : getPredefinedArgument(iArg);
+        switch (f_iReturn)
+            {
+            case Frame.RET_MULTI:
+                return returnValues(hTuple.m_ahValue);
+
+            case Frame.RET_TUPLE:
+                return returnValue(f_aiReturn[0], hTuple);
+
+            default:
+                // pass the tuple "as is"
+                return returnValue(f_iReturn, hTuple);
+            }
         }
 
     // return R_EXCEPTION
@@ -677,6 +751,17 @@ public class Frame
                 : getPredefinedArgument(iArg);
         }
 
+    // unlike getArgument(), this could return a non-completed FutureRef
+    // and it never throws
+    public ObjectHandle getReturnValue(int iArg)
+        {
+        return iArg >= 0
+                ? f_ahVar[iArg]
+                : iArg <= Op.CONSTANT_OFFSET
+                        ? getConstHandle(iArg)
+                        : getPredefinedArgument(iArg);
+        }
+
     // return the ObjectHandle[] or null if the value is "pending future", or
     // throw if the async assignment has failed
     public ObjectHandle[] getArguments(int[] aiArg, int cVars)
@@ -701,6 +786,7 @@ public class Frame
 
         return ahArg;
         }
+
 
     // return a non-negative value or -1 if the value is "pending future", or
     // throw if the async assignment has failed
@@ -798,6 +884,18 @@ public class Frame
                 f_function.getParam(nVar).getType().getPosition(), sName, VAR_STANDARD);
             }
         return info;
+        }
+
+    // nVar is either a register (>=0) or a local property indicator
+    public Type getVarType(int nVar)
+        {
+        if (nVar >= 0)
+            {
+            return getVarInfo(nVar).getType();
+            }
+
+        PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
+        return f_context.f_types.resolveType(constProperty.getType(), getActualTypes());
         }
 
     // construct-finally support
@@ -1034,7 +1132,7 @@ public class Frame
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {
                 TypeComposition clzCatch = context.f_types.
-                        ensureComposition(f_anClassConstId[iCatch], frame.getActualTypes());
+                    resolveClass(f_anClassConstId[iCatch], frame.getActualTypes());
                 if (clzException.isA(clzCatch))
                     {
                     introduceException(frame, iGuard, hException,

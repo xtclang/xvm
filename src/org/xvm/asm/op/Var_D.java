@@ -66,7 +66,7 @@ public class Var_D
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clz = frame.f_context.f_types.ensureComposition(m_nType, frame.getActualTypes());
+        TypeComposition clz = frame.f_context.f_types.resolveClass(m_nType, frame.getActualTypes());
 
         RefHandle hRef = clz.f_template.createRefHandle(clz, null);
 

@@ -45,7 +45,7 @@ public class Call_1T
         super(nFunction);
 
         m_nArgValue = nArg;
-        m_nRetValue = nRet;
+        m_nTupleRetValue = nRet;
         }
 
     /**
@@ -75,7 +75,7 @@ public class Call_1T
         super(readPackedInt(in));
 
         m_nArgValue = readPackedInt(in);
-        m_nRetValue = readPackedInt(in);
+        m_nTupleRetValue = readPackedInt(in);
         }
 
     @Override
@@ -87,11 +87,11 @@ public class Call_1T
         if (m_argValue != null)
             {
             m_nArgValue = encodeArgument(m_argValue, registry);
-            m_nRetValue = encodeArgument(m_regReturn, registry);
+            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
             }
 
         writePackedLong(out, m_nArgValue);
-        writePackedLong(out, m_nRetValue);
+        writePackedLong(out, m_nTupleRetValue);
         }
 
     @Override
@@ -123,12 +123,12 @@ public class Call_1T
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frame, ahArg, -m_nRetValue - 1);
+                        chain.callSuperN1(frame, ahArg, m_nTupleRetValue, true);
 
                     return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
 
-                return chain.callSuperN1(frame, new ObjectHandle[]{hArg}, -m_nRetValue - 1);
+                return chain.callSuperN1(frame, new ObjectHandle[]{hArg}, m_nTupleRetValue, true);
                 }
 
             if (m_nFunctionValue < 0)
@@ -175,7 +175,7 @@ public class Call_1T
         ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
         ahVar[0] = hArg;
 
-        return frame.call1(function, null, ahVar, -m_nRetValue - 1);
+        return frame.callT(function, null, ahVar, m_nTupleRetValue);
         }
 
     protected int complete(Frame frame, ObjectHandle hArg, FunctionHandle hFunction)
@@ -183,7 +183,7 @@ public class Call_1T
         ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
         ahVar[0] = hArg;
 
-        return hFunction.call1(frame, null, ahVar, -m_nRetValue - 1);
+        return hFunction.callT(frame, null, ahVar, m_nTupleRetValue);
         }
 
     @Override
@@ -195,7 +195,7 @@ public class Call_1T
         }
 
     private int m_nArgValue;
-    private int m_nRetValue;
+    private int m_nTupleRetValue;
 
     private Argument m_argValue;
     private Register m_regReturn;

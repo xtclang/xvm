@@ -124,8 +124,8 @@ public class NewG_1
                 }
             else
                 {
-                clzTarget = frame.f_context.f_types.ensureComposition(
-                        -m_nTypeValue, frame.getActualTypes());
+                clzTarget = frame.f_context.f_types.resolveClass(
+                    -m_nTypeValue, frame.getActualTypes());
                 }
 
             MethodStructure constructor = getMethodStructure(frame);

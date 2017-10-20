@@ -191,7 +191,7 @@ public abstract class Utils
                     return complete(frameCaller);
 
                 case Op.R_CALL:
-                    frameCaller.setContinuation(frame -> complete(frame));
+                    frameCaller.m_frameNext.setContinuation(frame -> complete(frame));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:
@@ -213,7 +213,7 @@ public abstract class Utils
                             setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
 
                 case Op.R_CALL:
-                    frameCaller.setContinuation(frame ->
+                    frameCaller.m_frameNext.setContinuation(frame ->
                          hTarget.f_clazz.f_template.
                             setPropertyValue(frame, hTarget, sPropName, hValueNew));
                     return Op.R_CALL;
@@ -252,7 +252,8 @@ public abstract class Utils
                     return complete(frameCaller, hValueOld);
 
                 case Op.R_CALL:
-                    frameCaller.setContinuation(frame -> complete(frame, hValueOld));
+                    frameCaller.m_frameNext.setContinuation(frame ->
+                        complete(frame, hValueOld));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:
@@ -274,7 +275,7 @@ public abstract class Utils
                             setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
 
                 case Op.R_CALL:
-                    frameCaller.setContinuation(frame ->
+                    frameCaller.m_frameNext.setContinuation(frame ->
                         hTarget.f_clazz.f_template.
                             setPropertyValue(frame, hTarget, sPropName, hValueNew));
                     return Op.R_CALL;
@@ -366,9 +367,9 @@ public abstract class Utils
 
         public int doNext(Frame frameCaller)
             {
-            for (int iStep = index++; iStep < ahVar.length; )
+            while (++index < ahVar.length)
                 {
-                ObjectHandle handle = ahVar[iStep];
+                ObjectHandle handle = ahVar[index];
                 if (handle == null)
                     {
                     // nulls can only be at the tail of the array
@@ -405,7 +406,7 @@ public abstract class Utils
 
         private final ObjectHandle[] ahVar;
         private final Frame.Continuation continuation;
-        private int index;
+        private int index = -1;
         }
 
     static public class AssignValues
@@ -419,7 +420,7 @@ public abstract class Utils
 
         public int proceed(Frame frameCaller)
             {
-            while (index++ < aiReturn.length)
+            while (++index < aiReturn.length)
                 {
                 switch (frameCaller.assignValue(aiReturn[index], ahValue[index]))
                     {
@@ -447,7 +448,7 @@ public abstract class Utils
         private final int[] aiReturn;
         private final ObjectHandle[] ahValue;
 
-        private int index;
+        private int index = -1;
         private boolean fBlock;
         }
     }

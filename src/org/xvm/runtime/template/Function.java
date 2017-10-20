@@ -113,6 +113,17 @@ public class Function
             return call1Impl(frame, hTarget, ahVar, iReturn);
             }
 
+        // call with one return Tuple value to be placed into the specified slot
+        // return either R_CALL or R_NEXT
+        public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            ObjectHandle[] ahVar = prepareVars(ahArg);
+
+            addBoundArguments(ahVar);
+
+            return callTImpl(frame, hTarget, ahVar, iReturn);
+            }
+
         // calls with multiple return values
         public int callN(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
             {
@@ -136,6 +147,14 @@ public class Function
             return f_function == null ?
                     frame.invoke1(f_chain, f_nDepth, hTarget, ahVar, iReturn) :
                     frame.call1(f_function, hTarget, ahVar, iReturn);
+            }
+
+        // invoke with one return Tuple value to be placed into the specified register;
+        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            return f_function == null ?
+                    frame.invokeT(f_chain, f_nDepth, hTarget, ahVar, iReturn) :
+                    frame.callT(f_function, hTarget, ahVar, iReturn);
             }
 
         // invoke with multiple return values;
@@ -191,6 +210,12 @@ public class Function
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
             return m_hDelegate.call1Impl(frame, hTarget, ahVar, iReturn);
+            }
+
+        @Override
+        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            return m_hDelegate.callTImpl(frame, hTarget, ahVar, iReturn);
             }
 
         @Override
@@ -262,6 +287,17 @@ public class Function
                 hTarget = m_hArg;
                 }
             return super.call1Impl(frame, hTarget, ahVar, iReturn);
+            }
+
+        @Override
+        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            if (m_iArg == -1)
+                {
+                assert hTarget == null;
+                hTarget = m_hArg;
+                }
+            return super.callTImpl(frame, hTarget, ahVar, iReturn);
             }
 
         @Override
@@ -407,6 +443,34 @@ public class Function
             // TODO: validate that all the arguments are immutable or ImmutableAble;
             //       replace functions with proxies
             int cReturns = iReturn == Frame.RET_UNUSED ? 0 : 1;
+
+            CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
+                    frame, this, ahVar, cReturns);
+
+            return cReturns == 0 ? Op.R_NEXT :
+                frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
+            }
+
+        @Override
+        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            ServiceHandle hService = (ServiceHandle) hTarget;
+
+            // native method on the service means "execute on the caller's thread"
+            if (f_chain.isNative() || frame.f_context == hService.m_context)
+                {
+                return super.callTImpl(frame, hTarget, ahVar, iReturn);
+                }
+
+            // TODO: validate that all the arguments are immutable or ImmutableAble;
+            //       replace functions with proxies
+            int cReturns = iReturn == Frame.RET_UNUSED ? 0 : 1;
+
+            if (cReturns == 1)
+                {
+                // TODO: add a "return a Tuple back" flag
+                throw new UnsupportedOperationException();
+                }
 
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
                     frame, this, ahVar, cReturns);

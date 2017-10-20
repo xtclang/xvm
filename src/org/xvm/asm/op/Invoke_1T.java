@@ -150,8 +150,8 @@ public class Invoke_1T
         ahVar[0] = hArg;
 
         return chain.isNative()
-            ? clz.f_template.invokeNative1(frame, chain.getTop(), hTarget, ahVar[0], -m_nTupleRetValue - 1)
-            : clz.f_template.invoke1(frame, chain, hTarget, ahVar, -m_nTupleRetValue - 1);
+            ? clz.f_template.invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nTupleRetValue)
+            : clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nTupleRetValue);
         }
 
     @Override
