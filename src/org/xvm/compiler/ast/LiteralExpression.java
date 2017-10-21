@@ -72,11 +72,6 @@ public class LiteralExpression
         return !piVal.isBig() && piVal.getLong() >= lLower && piVal.getLong() <= lUpper;
         }
 
-    private DecimalConstant toVarLenDecimalConstant(BigDecimal bigdec)
-        {
-        throw new UnsupportedOperationException("var-len decimal not implemented");
-        }
-
     @Override
     public long getStartPosition()
         {
@@ -164,6 +159,8 @@ public class LiteralExpression
             return isAssignableTo(typeThat.getUnderlyingType());
             }
 
+        // TODO allow UncheckedInt annotation, but only for int/uint types
+
         if (typeThat.isSingleDefiningConstant()
                 && typeThat.getDefiningConstant() instanceof ClassConstant
                 && ((ClassConstant) typeThat.getDefiningConstant()).getModuleConstant().isEcstasyModule()
@@ -206,6 +203,7 @@ public class LiteralExpression
                 case "UInt64":
                 case "UInt128":
                 case "VarUInt":
+                case "annotations.UncheckedInt":
                     return id == Id.LIT_INT;
 
                 case "Dec32":
@@ -241,7 +239,7 @@ public class LiteralExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
+    public Argument generateConstant(TypeConstant constType, ErrorListener errs)
         {
         if (constType.isSingleDefiningConstant()
                 && constType.getDefiningConstant() instanceof ClassConstant
@@ -263,214 +261,16 @@ public class LiteralExpression
                     return toConstant();
 
                 case "Sequential":
-                    // char and the various ints are sequential
-                    if (literal.getId() == Id.LIT_CHAR && literal.getId() == Id.LIT_INT)
-                        {
-                        return toConstant();
-                        }
-                    break;
-
-                case "Number":
-                    switch (literal.getId())
-                        {
-                        case LIT_INT:
-                        case LIT_DEC:
-                        case LIT_BIN:
-                            return toConstant();
-                        }
-                    break;
-
-                case "IntNumber":
-                    if (literal.getId() == Id.LIT_INT)
-                        {
-                        return toConstant();
-                        }
-                    break;
-
-                case "UIntNumber":
-                    if (literal.getId() == Id.LIT_INT)
-                        {
-                        // unsigned value must be >= 0
-                        PackedInteger piVal = (PackedInteger) literal.getValue();
-                        if (piVal.isNegative())
-                            {
-                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                    sName, literal.getString(getSource()));
-                            piVal = PackedInteger.ZERO;
-                            }
-
-                        int cBytes = piVal.getUnsignedByteSize();
-                        if (cBytes <= 8)
-                            {
-                            // as with "int", assume any unsigned int that fits in 64 bits is a
-                            // 64-bit unsigned int
-                            return pool.ensureIntConstant(piVal, Format.UInt64);
-                            }
-                        else if (cBytes <= 16)
-                            {
-                            // as with "int", if it doesn't fit in 64-bits, any int value up to
-                            // 128-bit unsigned int range is assumed to be a 128-bit unsigned int
-                            return pool.ensureIntConstant(piVal, Format.UInt128);
-                            }
-                        else
-                            {
-                            // if it doesn't fit in 128-bit unsigned int, then use var-uint
-                            return pool.ensureIntConstant(piVal, Format.VarUInt);
-                            }
-                        }
-                    break;
-
-                case "FPNumber":
-                    switch (literal.getId())
-                        {
-                        case LIT_INT:
-                        case LIT_DEC:
-                            return generateArgument(code, pool.ensureEcstasyTypeConstant(
-                                    "DecimalFPNumber"), fTupleOk, errs);
-
-                        case LIT_BIN:
-                            return generateArgument(code, pool.ensureEcstasyTypeConstant(
-                                    "BinaryFPNumber"), fTupleOk, errs);
-                        }
-                    break;
-
-                case "DecimalFPNumber":
-                    switch (literal.getId())
-                        {
-                        case LIT_INT:
-                        case LIT_DEC:
-                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                    : (BigDecimal) literal.getValue();
-                            try
-                                {
-                                return pool.ensureDecimalConstant(new Decimal64(bigdec));
-                                }
-                            catch (ArithmeticException e) {}
-                            try
-                                {
-                                return pool.ensureDecimalConstant(new Decimal128(bigdec));
-                                }
-                            catch (ArithmeticException e) {}
-                            return toVarLenDecimalConstant(bigdec);
-                        }
-                    break;
-
-                case "BinaryFPNumber":
-                    // TODO the idea is the same as int: 64-bit if it fits, otherwise 128-bit, otherwise var-len
-                    return generateArgument(code, pool.ensureEcstasyTypeConstant("Float64"), fTupleOk, errs);
-
-                case "Function":
-                    {
-                    // determine the constant value returned from the function (which is the value
-                    // of this expression)
-                    Argument argVal;
-                    if (constType.isParamsSpecified())
-                        {
-                        // it has type params, so it must be a Function; see:
-                        //      "@Auto function Object() to<function Object()>()"
-                        List<TypeConstant> listParamTypes = constType.getParamTypes();
-                        if (listParamTypes.size() == 2)
-                            {
-                            TypeConstant typeTParams = listParamTypes.get(0);
-                            TypeConstant typeTReturn = listParamTypes.get(1);
-                            if (typeTParams.isTuple()
-                                    && typeTParams.getTupleFieldCount() == 0
-                                    && typeTReturn.isTuple()
-                                    && typeTReturn.getTupleFieldCount() == 1)
-                                {
-                                // call back into this expression and ask it to render itself as the
-                                // return type from that function (a constant value), and then we'll
-                                // wrap that with the conversion function (from Object)
-                                argVal = generateArgument(
-                                        code, typeTReturn.getTupleFieldType(0), false, errs);
-                                }
-                            else
-                                {
-                                // error: function must take no parameters and return one value;
-                                // drop into the generic handling of the request for error handling
-                                break;
-                                }
-                            }
-                        else
-                            {
-                            // error: function must have 2 parameters (t-params & t-returns);
-                            // drop into the generic handling of the request for error handling
-                            break;
-                            }
-                        }
-                    else
-                        {
-                        argVal = toConstant();
-                        }
-
-                    // create a constant for this method on Object:
-                    //      "@Auto function Object() to<function Object()>()"
-                    TypeConstant   typeTuple   = pool.ensureEcstasyTypeConstant("collections.Tuple");
-                    TypeConstant   typeTParams = pool.ensureParameterizedTypeConstant(
-                            typeTuple, SignatureConstant.NO_TYPES);
-                    TypeConstant   typeTReturn = pool.ensureParameterizedTypeConstant(
-                            typeTuple, new TypeConstant[] {pool.ensureThisTypeConstant(
-                                    pool.ensureEcstasyClassConstant("Object"), null)});
-                    TypeConstant   typeFn      = pool.ensureParameterizedTypeConstant(
-                            pool.ensureEcstasyTypeConstant("Function"),
-                            new TypeConstant[] {typeTParams, typeTReturn});
-                    MethodConstant methodTo    = pool.ensureMethodConstant(
-                            pool.ensureEcstasyClassConstant("Object"), "to", Access.PUBLIC,
-                            SignatureConstant.NO_TYPES, new TypeConstant[] {typeFn});
-
-                    // generate the code that turns the constant value from this expression into a
-                    // function object that returns that value
-                    Var varResult = new Var(typeFn);
-                    code.add(varResult);
-                    code.add(new Invoke_01(argVal, methodTo, varResult.getRegister()));
-                    return varResult.getRegister();
-                    }
-
-                // untyped literals
-                case "IntLiteral":
-                    if (literal.getId() == Id.LIT_INT)
-                        {
-                        return pool.ensureLiteralConstant(
-                                Format.IntLiteral, literal.getString(getSource()));
-                        }
-                    break;
-
-                case "FPLiteral":
-                    switch (literal.getId())
-                        {
-                        case LIT_INT:
-                        case LIT_DEC:
-                        case LIT_BIN:
-                            return pool.ensureLiteralConstant(
-                                    Format.FPLiteral, literal.getString(getSource()));
-                        }
-                    break;
-
-                // typed literals
                 case "Char":
+                    // note: char is the only literal type that implements sequential
                     if (literal.getId() == Id.LIT_CHAR)
                         {
-                        return pool.ensureCharConstant(
-                                ((Character) literal.getValue()).charValue());
-                        }
-                    else if (literal.getId() == Id.LIT_INT)
-                        {
-                        int nVal = '?';
-                        PackedInteger piVal = (PackedInteger) literal.getValue();
-                        if (isIntInRange(0, 0x10FFFF))
-                            {
-                            nVal = piVal.getInt();
-                            }
-                        else
-                            {
-                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                    sName, literal.getString(getSource()));
-                            }
-                        return pool.ensureCharConstant(nVal);
+                        return toConstant();
                         }
                     break;
 
+                case "Sequence":
+                    // TODO verify Sequence or Sequence<Char>
                 case "String":
                     switch (literal.getId())
                         {
@@ -480,93 +280,56 @@ public class LiteralExpression
                         }
                     break;
 
-                case "Bit":
-                case "Nibble":
+                case "IntLiteral":
                     if (literal.getId() == Id.LIT_INT)
                         {
-                        // create the corresponding IntLiteral
-                        // - range of Bit is 0..1
-                        // - range of Nibble is 0..F (hexit)
-                        boolean fBit = sName.equals("Bit");
-                        if (!isIntInRange(0, fBit ? 1 : 0xF))
+                        return toConstant();
+                        }
+                    break;
+
+                case "FPLiteral":
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                        case LIT_BIN:
+                            return toConstant();
+                        }
+                    break;
+
+                case "Bit":
+                    if (literal.getId() == Id.LIT_INT)
+                        {
+                        int n;
+                        if (isIntInRange(0, 1))
                             {
+                            n = ((PackedInteger) literal.getValue()).getInt();
+                            }
+                        else
+                            {
+                            n = 0;
                             log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
                                     sName, literal.getString(getSource()));
                             }
-                        Argument argLit = this.generateArgument(code,
-                                pool.ensureEcstasyTypeConstant("IntLiteral"), false, errs);
-
-                        // Bit    = IntLiteral.to<Bit>()
-                        // Nibble = IntLiteral.to<Nibble>()
-                        TypeConstant typeResult = pool.ensureEcstasyTypeConstant(sName);
-                        MethodConstant methodTo = pool.ensureMethodConstant(
-                            pool.ensureEcstasyClassConstant("IntLiteral"), "to", Access.PUBLIC,
-                            SignatureConstant.NO_TYPES, new TypeConstant[]{typeResult});
-
-                        Var varResult = new Var(typeResult);
-                        code.add(varResult);
-                        code.add(new Invoke_01(argLit, methodTo, varResult.getRegister()));
-                        return varResult.getRegister();
+                        return pool.ensureBitConstant(n);
                         }
                     break;
 
-                case "Dec32":
-                    switch (literal.getId())
+                case "Nibble":
+                    if (literal.getId() == Id.LIT_INT)
                         {
-                        case LIT_INT:
-                        case LIT_DEC:
-                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                    : (BigDecimal) literal.getValue();
-                            try
-                                {
-                                return pool.ensureDecimalConstant(new Decimal32(bigdec));
-                                }
-                            catch (ArithmeticException e) {}
-                        }
-                    break;
-
-                case "Dec64":
-                    switch (literal.getId())
-                        {
-                        case LIT_INT:
-                        case LIT_DEC:
-                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                    : (BigDecimal) literal.getValue();
-                            try
-                                {
-                                return pool.ensureDecimalConstant(new Decimal64(bigdec));
-                                }
-                            catch (ArithmeticException e) {}
-                        }
-                    break;
-
-                case "Dec128":
-                    switch (literal.getId())
-                        {
-                        case LIT_INT:
-                        case LIT_DEC:
-                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                    : (BigDecimal) literal.getValue();
-                            try
-                                {
-                                return pool.ensureDecimalConstant(new Decimal128(bigdec));
-                                }
-                            catch (ArithmeticException e) {}
-                        }
-                    break;
-
-                case "VarDec":
-                    switch (literal.getId())
-                        {
-                        case LIT_INT:
-                        case LIT_DEC:
-                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                    : (BigDecimal) literal.getValue();
-                            return toVarLenDecimalConstant(bigdec);
+                        int n;
+                        if (isIntInRange(0x0, 0xF))
+                            {
+                            n = ((PackedInteger) literal.getValue()).getInt();
+                            }
+                        else
+                            {
+                            n = 0;
+                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                                    sName, literal.getString(getSource()));
+                            }
+                        return pool.ensureNibbleConstant(n);
                         }
                     break;
 
@@ -729,6 +492,67 @@ public class LiteralExpression
                         return pool.ensureIntConstant(piVal, Format.VarUInt);
                         }
 
+                case "Dec32":
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            try
+                                {
+                                return pool.ensureDecimalConstant(new Decimal32(bigdec));
+                                }
+                            catch (ArithmeticException e) {}
+                        }
+                    break;
+
+                case "Dec64":
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            try
+                                {
+                                return pool.ensureDecimalConstant(new Decimal64(bigdec));
+                                }
+                            catch (ArithmeticException e) {}
+                        }
+                    break;
+
+                case "Dec128":
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            try
+                                {
+                                return pool.ensureDecimalConstant(new Decimal128(bigdec));
+                                }
+                            catch (ArithmeticException e) {}
+                        }
+                    break;
+
+                case "VarDec":
+                    switch (literal.getId())
+                        {
+                        case LIT_INT:
+                        case LIT_DEC:
+                            BigDecimal bigdec = literal.getId() == Id.LIT_INT
+                                    ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
+                                    : (BigDecimal) literal.getValue();
+                            // TODO - support variable-length decimal
+                            throw new UnsupportedOperationException("var-len decimal not implemented");
+                        }
+                    break;
+
                 case "Float16":
                     switch (literal.getId())
                         {
@@ -810,20 +634,68 @@ public class LiteralExpression
                     break;
 
                 case "Float128":
-                    // TODO - how to support 128-bit float?
+                    // TODO - support 128-bit float
                     throw new UnsupportedOperationException("128-bit binary floating point not implemented");
 
                 case "VarFloat":
-                    // TODO - how to support var-len float?
+                    // TODO - support var-len float
                     throw new UnsupportedOperationException("var-len binary floating point not implemented");
-
-                default:
-                    // just let it fall through to the generic handling
-                    break;
                 }
             }
 
-        return validateAndConvertSingle(toConstant(), code, constType, errs);
+        return super.generateConstant(constType, errs);
+        }
+
+    @Override
+    public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
+        {
+        if (constType.isSingleDefiningConstant()
+                && constType.getDefiningConstant() instanceof ClassConstant
+                && ((ClassConstant) constType.getDefiningConstant()).getModuleConstant().isEcstasyModule()
+                && constType.getAccess() == Access.PUBLIC)
+            {
+            String sName = ((ClassConstant) constType.getDefiningConstant()).getPathString();
+            switch (sName)
+                {
+                case "Sequence":
+                    // TODO verify Sequence or Sequence<Char>
+                case "Object":
+                case "Const":
+                case "Orderable":
+                case "collections.Hashable":
+                case "Char":
+                case "Sequential":                  // char implements Sequential
+                case "String":
+                case "IntLiteral":
+                case "Bit":
+                case "Nibble":
+                case "Int8":
+                case "Int16":
+                case "Int32":
+                case "Int64":
+                case "Int128":
+                case "VarInt":
+                case "UInt8":
+                case "UInt16":
+                case "UInt32":
+                case "UInt64":
+                case "UInt128":
+                case "VarUInt":
+                case "Dec32":
+                case "Dec64":
+                case "Dec128":
+                case "VarDec":
+                case "FPLiteral":
+                case "Float16":
+                case "Float32":
+                case "Float64":
+                case "Float128":
+                case "VarFloat":
+                    return generateConstant(constType, errs);
+                }
+            }
+
+        return super.generateArgument(code, constType, fTupleOk, errs);
         }
 
 

@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -37,13 +38,6 @@ public abstract class Expression
         extends AstNode
     {
     // ----- accessors -----------------------------------------------------------------------------
-
-    // TODO remove
-    public Constant toConstant()
-        {
-        assert isConstant();
-        throw notImplemented();
-        }
 
     /**
      * @return this expression, converted to a type expression
@@ -94,11 +88,53 @@ public abstract class Expression
         }
 
     /**
+     * The type of assignability:
+     * <ul>
+     * <li>Constant - an item in the constant pool that cannot be assigned to</li>
+     * <li>Reserved - an item provided by the runtime, like "this", that cannot be assigned to</li>
+     * <li>Parameter - a register for a method parameter, which cannot be assigned to</li>
+     * <li>BlackHole - a write-only register that anyone can assign to, discarding the value</li>
+     * <li>LocalVar - a local variable of a method that can be assigned to</li>
+     * <li>LocalProp - a local (this:private) property that can be assigned to</li>
+     * <li>TargetProp - a property of a specified reference that can be assigned to</li>
+     * <li>Indexed - an index into a single-dimensioned array</li>
+     * <li>IndexedN - an index into a multi-dimensioned array</li>
+     * </ul>
+     */
+    enum Assignable {ReadOnly, BlackHole, LocalVar, LocalProp, TargetProp, Indexed, IndexedN}
+
+    public Assignable getAssignability()
+        {
+        assert !isAssignable();
+        return Assignable.ReadOnly;
+        }
+
+    // TODO how to handle assignments to the black hole / void?
+    // TODO is it a variable?
+    //  - what register?
+    //  - is it a read-only register?
+    // TODO is it a property?
+    //  - what is the property constant?
+    //  - what is the ref (target)? (argument?)
+    //  - is it a local property?
+    // TODO is it an array element?
+    //  - what is the ref (array)?
+    //  - how many dimensions?
+    //  - what is the index for each dimension?
+
+    /**
      * @return true iff the Expression is a constant value
      */
     public boolean isConstant()
         {
         return false;
+        }
+
+    // TODO remove?
+    public Constant toConstant()
+        {
+        assert isConstant();
+        throw notImplemented();
         }
 
     /**
@@ -303,7 +339,9 @@ public abstract class Expression
                     return true;
                     }
 
-                // this will probably need to be overwritten by various expressions
+                // an expression is assignable to a type, by default, if its implicit type is
+                // assignable to that type; this is over-ridden; this will probably need to be
+                // overwritten by various expressions
                 typeImplicit = getImplicitType();
                 if (typeImplicit.isA(typeThat))
                     {
@@ -317,24 +355,29 @@ public abstract class Expression
                 throw new IllegalStateException("format=" + typeThat.getFormat());
             }
 
-        // find all of the possible @Auto conversion functions for the type of the current
-        // expression, and for each one, test whether the result of the conversion is assignable to
-        // the specified type
+        // obtain the implicit type if we have not already done so
         if (typeImplicit == null)
             {
             typeImplicit = getImplicitType();
             }
 
-        Set<MethodConstant> setPossible   = new HashSet<>(typeImplicit.autoConverts());
-        Set<TypeConstant>   setEliminated = new HashSet<>();
-        while (!setPossible.isEmpty())
+        // find all of the possible @Auto conversion functions for the type of the current
+        // expression, and for each one, test whether the result of the conversion is assignable to
+        // the specified type:
+        // - if there are no solutions, then assignment is not possible
+        // - if there is one solution, then assignment is possible
+        // - if there is more than one solution, then assignment is only possible if all of the
+        //   solutions result in the same type
+        TypeConstant         typeSolution = null;
+        Set<TypeConstant>    setTested    = new HashSet<>();
+        List<MethodConstant> listPossible = new ArrayList<>(typeImplicit.autoConverts());
+        for (int i = 0; i < listPossible.size(); ++i)
             {
-            MethodConstant constMethod = setPossible.iterator().next();
+            MethodConstant constMethod = listPossible.get(i);
             TypeConstant   typeReturn  = constMethod.getRawReturns()[0];
 
             // make sure we don't try any more conversion methods that return the same type
-            setPossible.remove(constMethod);
-            if (!setEliminated.add(typeReturn))
+            if (!setTested.add(typeReturn))
                 {
                 // we already tested a conversion to this same type
                 continue;
@@ -343,20 +386,32 @@ public abstract class Expression
             // check to see if this conversion gets us where we want to go
             // TODO this needs to be a full "is assignable to" test, not just an "isA" test
             if (typeReturn.isA(typeThat))
-
                 {
-                // when we actually implement this, we will need a chain of conversions that got us
-                // here, but to answer this question, we just need to know that it is possible to
-                // get here at all
-                return true;
+                if (typeSolution == null)
+                    {
+                    // when we actually implement this, we will need a chain of conversions that got
+                    // us here, but to answer this question, we just need to know that it is
+                    // possible to get here at all
+                    typeSolution = typeReturn;
+                    }
+                else if (typeSolution.equals(typeReturn))
+                    {
+                    // we already found this solution
+                    continue;
+                    }
+                else
+                    {
+                    // two different solutions means no solution, i.e. the result is ambiguous
+                    return false;
+                    }
                 }
 
             // it is possible that the type that we got to can be further converted to get us where
             // we want to ultimately get to
-            setPossible.addAll(typeReturn.autoConverts());
+            listPossible.addAll(typeReturn.autoConverts());
             }
 
-        return false;
+        return typeSolution != null;
         }
 
     /**
@@ -450,9 +505,27 @@ public abstract class Expression
      */
     public List<Argument> generateArguments(Code code, List<TypeConstant> listTypes, boolean fTupleOk, ErrorListener errs)
         {
-        if (listTypes.size() == 1)
+        switch (listTypes.size())
             {
-            return Collections.singletonList(generateArgument(code, listTypes.get(0), fTupleOk, errs));
+            case 0:
+                // Void means that the results of the expression are discarded; method will override
+                // this to black-hole the results instead of creating arguments for them
+                generateArgument(code, getImplicitType(), true, errs);
+                return Collections.EMPTY_LIST;
+
+            case 1:
+                return Collections.singletonList(generateArgument(code, listTypes.get(0), fTupleOk, errs));
+
+            default:
+                if (fTupleOk)
+                    {
+                    ConstantPool pool = getConstantPool();
+                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
+                            pool.ensureEcstasyTypeConstant("collections.Tuple"),
+                            listTypes.toArray(new TypeConstant[listTypes.size()]));
+
+                    return Collections.singletonList(generateArgument(code, typeTuple, false, errs));
+                    }
             }
 
         log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, listTypes.size());
@@ -466,6 +539,15 @@ public abstract class Expression
         throw notImplemented();
         }
 
+    /**
+     *
+     *
+     * @param code       the code block
+     * @param label      the label to conditionally jump to
+     * @param fWhenTrue  indicates whether to jump when this expression evaluates to true, or
+     *                   whether to jump when this expression evaluates to false
+     * @param errs       the error list to log any errors to
+     */
     public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
         // this is just a generic implementation; sub-classes should override this simplify the
