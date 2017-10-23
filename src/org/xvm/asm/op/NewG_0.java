@@ -41,8 +41,9 @@ public class NewG_0
      */
     public NewG_0(int nConstructorId, int nType, int nRet)
         {
-        super(nConstructorId);
+        super((Argument) null);
 
+        m_nFunctionId = nConstructorId;
         m_nTypeValue = nType;
         m_nRetValue = nRet;
         }
@@ -71,7 +72,7 @@ public class NewG_0
     public NewG_0(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nTypeValue = readPackedInt(in);
         m_nRetValue = readPackedInt(in);

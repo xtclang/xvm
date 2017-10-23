@@ -40,8 +40,9 @@ public class Call_T0
      */
     public Call_T0(int nFunction, int nTupleArg)
         {
-        super(nFunction);
+        super((Argument) null);
 
+        m_nFunctionId = nFunction;
         m_nArgTupleValue = nTupleArg;
         }
 
@@ -67,7 +68,7 @@ public class Call_T0
     public Call_T0(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nArgTupleValue = readPackedInt(in);
         }
@@ -105,7 +106,7 @@ public class Call_T0
                 return R_REPEAT;
                 }
 
-            if (m_nFunctionValue == A_SUPER)
+            if (m_nFunctionId == A_SUPER)
                 {
                 CallChain chain = frame.m_chain;
                 if (chain == null)
@@ -124,7 +125,7 @@ public class Call_T0
                 return chain.callSuperNN(frame, ((TupleHandle) hArg).m_ahValue, Utils.ARGS_NONE);
                 }
 
-            if (m_nFunctionValue < 0)
+            if (m_nFunctionId < 0)
                 {
                 MethodStructure function = getMethodStructure(frame);
 
@@ -140,7 +141,7 @@ public class Call_T0
                 return complete(frame, function, (TupleHandle) hArg);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
             if (hFunction == null)
                 {
                 return R_REPEAT;

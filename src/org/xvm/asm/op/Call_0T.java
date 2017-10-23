@@ -38,8 +38,9 @@ public class Call_0T
      */
     public Call_0T(int nFunction, int nRet)
         {
-        super(nFunction);
+        super((Argument) null);
 
+        m_nFunctionId = nFunction;
         m_nTupleRetValue = nRet;
         }
 
@@ -65,7 +66,7 @@ public class Call_0T
     public Call_0T(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nTupleRetValue = readPackedInt(in);
         }
@@ -93,7 +94,7 @@ public class Call_0T
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (m_nFunctionValue == A_SUPER)
+        if (m_nFunctionId == A_SUPER)
             {
             CallChain chain = frame.m_chain;
             if (chain == null)
@@ -121,7 +122,7 @@ public class Call_0T
                 }
             }
 
-        if (m_nFunctionValue < 0)
+        if (m_nFunctionId < 0)
             {
             MethodStructure function = getMethodStructure(frame);
 
@@ -132,7 +133,7 @@ public class Call_0T
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
             if (hFunction == null)
                 {
                 return R_REPEAT;
