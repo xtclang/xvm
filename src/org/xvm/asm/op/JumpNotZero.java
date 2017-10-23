@@ -2,25 +2,23 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
+import org.xvm.runtime.Utils;
 
 
 /**
  * JMP_NZERO rvalue, addr ; jump if value is NOT zero
  */
 public class JumpNotZero
-        extends Op
+        extends JumpCond
     {
     /**
      * Construct a JMP_NZERO op.
@@ -30,8 +28,21 @@ public class JumpNotZero
      */
     public JumpNotZero(int nValue, int nRelAddr)
         {
-        m_nValue   = nValue;
-        m_nRelAddr = nRelAddr;
+        super((Argument) null, null);
+
+        m_nArg  = nValue;
+        m_ofJmp = nRelAddr;
+        }
+
+    /**
+     * Construct a JMP_NZERO op.
+     *
+     * @param arg  the argument to test
+     * @param op   the op to conditionally jump to
+     */
+    public JumpNotZero(Argument arg, Op op)
+        {
+        super(arg, op);
         }
 
     /**
@@ -43,18 +54,9 @@ public class JumpNotZero
     public JumpNotZero(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue   = readPackedInt(in);
-        m_nRelAddr = readPackedInt(in);
+        super(in, aconst);
         }
 
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_JMP_NZERO);
-        writePackedLong(out, m_nValue);
-        writePackedLong(out, m_nRelAddr);
-        }
 
     @Override
     public int getOpCode()
@@ -67,20 +69,26 @@ public class JumpNotZero
         {
         try
             {
-            JavaLong hTest = (JavaLong) frame.getArgument(m_nValue);
-            if (hTest == null)
+            ObjectHandle hArg = frame.getArgument(m_nArg);
+            if (hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hTest.getValue() == 0 ? iPC + 1 : iPC + m_nRelAddr;
+            if (isProperty(hArg))
+                {
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                Frame.Continuation stepNext = frameCaller ->
+                    ((JavaLong) ahArg[0]).getValue() == 0 ? iPC + 1 : iPC + m_ofJmp;
+
+                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                }
+
+            return ((JavaLong) hArg).getValue() == 0 ? iPC + 1 : iPC + m_ofJmp;
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
         }
-
-    private int m_nValue;
-    private int m_nRelAddr;
     }

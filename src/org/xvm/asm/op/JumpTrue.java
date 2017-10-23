@@ -8,8 +8,10 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 
@@ -69,13 +71,22 @@ public class JumpTrue
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nArg);
-            if (hTest == null)
+            ObjectHandle hArg = frame.getArgument(m_nArg);
+            if (hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            return hTest.get() ? iPC + m_ofJmp : iPC + 1;
+            if (isProperty(hArg))
+                {
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                Frame.Continuation stepNext = frameCaller ->
+                    ((BooleanHandle) ahArg[0]).get() ? iPC + m_ofJmp : iPC + 1;
+
+                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                }
+
+            return ((BooleanHandle) hArg).get() ? iPC + m_ofJmp : iPC + 1;
             }
         catch (ExceptionHandle.WrapperException e)
             {

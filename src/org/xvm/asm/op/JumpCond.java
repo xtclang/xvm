@@ -20,14 +20,30 @@ public abstract class JumpCond
         extends Op
     {
     /**
-     * Construct a conditional JMP op.
+     * Construct a unary conditional JMP op.
      *
      * @param op  the op to jump to
      */
-    public JumpCond(Argument arg, Op op)
+    protected JumpCond(Argument arg, Op op)
         {
+        assert !isBinaryOp();
+
         m_argVal = arg;
         m_opDest = op;
+        }
+
+    /**
+     * Construct a binary conditional JMP op.
+     *
+     * @param op  the op to jump to
+     */
+    protected JumpCond(Argument arg, Argument arg2, Op op)
+        {
+        assert isBinaryOp();
+
+        m_argVal  = arg;
+        m_argVal2 = arg2;
+        m_opDest  = op;
         }
 
     /**
@@ -36,10 +52,14 @@ public abstract class JumpCond
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public JumpCond(DataInput in, Constant[] aconst)
+    protected JumpCond(DataInput in, Constant[] aconst)
             throws IOException
         {
         m_nArg  = readPackedInt(in);
+        if (isBinaryOp())
+            {
+            m_nArg2 = readPackedInt(in);
+            }
         m_ofJmp = readPackedInt(in);
         }
 
@@ -50,9 +70,14 @@ public abstract class JumpCond
         if (m_argVal != null)
             {
             m_nArg = encodeArgument(m_argVal, registry);
+            if (isBinaryOp())
+                {
+                m_nArg2 = encodeArgument(m_argVal2, registry);
+                }
             }
 
         out.writeByte(getOpCode());
+
         writePackedLong(out, m_nArg);
         writePackedLong(out, m_ofJmp);
         }
@@ -77,8 +102,32 @@ public abstract class JumpCond
             }
         }
 
+    /**
+     * A "virtual constant" indicating whether or not this op is a binary one (has two arguments).
+     *
+     * @return true iff the op has two arguments
+     */
+    protected boolean isBinaryOp()
+        {
+        return false;
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArgument(m_argVal, registry);
+
+        if (isBinaryOp())
+            {
+            registerArgument(m_argVal2, registry);
+            }
+        }
+
     protected Argument m_argVal;
+    protected Argument m_argVal2;
     protected Op       m_opDest;
+
     protected int      m_nArg;
+    protected int      m_nArg2;
     protected int      m_ofJmp;
     }

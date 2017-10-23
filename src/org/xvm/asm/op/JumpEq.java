@@ -2,7 +2,6 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
@@ -12,18 +11,16 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * JMP_EQ rvalue1, rvalue2, addr ; jump if value1 is equal to value2
  */
 public class JumpEq
-        extends Op
+        extends JumpCond
     {
     /**
      * Construct a JMP_EQ op.
@@ -31,12 +28,28 @@ public class JumpEq
      * @param nValue1   the first value to compare
      * @param nValue2   the second value to compare
      * @param nRelAddr  the relative address to jump to
+     *
+     * @deprecated
      */
     public JumpEq(int nValue1, int nValue2, int nRelAddr)
         {
-        m_nValue1  = nValue1;
-        m_nValue2  = nValue2;
-        m_nRelAddr = nRelAddr;
+        super((Argument) null, null, null);
+
+        m_nArg  = nValue1;
+        m_nArg2 = nValue2;
+        m_ofJmp = nRelAddr;
+        }
+
+    /**
+     * Construct a JMP_EQ op.
+     *
+     * @param arg1  the first argument to compare
+     * @param arg2  the second argument to compare
+     * @param op    the op to conditionally jump to
+     */
+    public JumpEq(Argument arg1, Argument arg2, Op op)
+        {
+        super(arg1, arg2, op);
         }
 
     /**
@@ -48,19 +61,7 @@ public class JumpEq
     public JumpEq(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue1  = readPackedInt(in);
-        m_nValue2  = readPackedInt(in);
-        m_nRelAddr = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_JMP_EQ);
-        writePackedLong(out, m_nValue1);
-        writePackedLong(out, m_nValue2);
-        writePackedLong(out, m_nRelAddr);
+        super(in, aconst);
         }
 
     @Override
@@ -70,47 +71,33 @@ public class JumpEq
         }
 
     @Override
+    protected boolean isBinaryOp()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try
             {
-            ObjectHandle hTest1 = frame.getArgument(m_nValue1);
-            ObjectHandle hTest2 = frame.getArgument(m_nValue2);
-            if (hTest1 == null || hTest2 == null)
+            ObjectHandle hArg1 = frame.getArgument(m_nArg);
+            ObjectHandle hArg2 = frame.getArgument(m_nArg2);
+            if (hArg1 == null || hArg2 == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeComposition clz1 = frame.getArgumentClass(m_nValue1);
-            TypeComposition clz2 = frame.getArgumentClass(m_nValue2);
-            if (clz1 != clz2)
+            if (isProperty(hArg1) || isProperty(hArg2))
                 {
-                // this shouldn't have compiled
-                throw new IllegalStateException();
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg1, hArg2};
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frame, iPC, ahArg[0], ahArg[1]);
+
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            switch (clz1.callEquals(frame, hTest1, hTest2, Frame.RET_LOCAL))
-                {
-                case R_EXCEPTION:
-                    return R_EXCEPTION;
-
-                case R_NEXT:
-                    {
-                    BooleanHandle hResult = (BooleanHandle) frame.getFrameLocal();
-                    return hResult.get() ? iPC + m_nRelAddr : iPC + 1;
-                    }
-
-                case R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        {
-                        BooleanHandle hResult = (BooleanHandle) frame.getFrameLocal();
-                        return hResult.get() ? iPC + m_nRelAddr : iPC + 1;
-                        });
-                    return R_CALL;
-
-                default:
-                    throw new IllegalStateException();
-                }
+            return complete(frame, iPC, hArg1, hArg2);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -118,7 +105,37 @@ public class JumpEq
             }
         }
 
-    private int m_nValue1;
-    private int m_nValue2;
-    private int m_nRelAddr;
+    protected int complete(Frame frame, int iPC, ObjectHandle hArg1, ObjectHandle hArg2)
+        {
+        TypeComposition clz1 = frame.getArgumentClass(m_nArg);
+        TypeComposition clz2 = frame.getArgumentClass(m_nArg2);
+        if (clz1 != clz2)
+            {
+            // this shouldn't have compiled
+            throw new IllegalStateException();
+            }
+
+        switch (clz1.callEquals(frame, hArg1, hArg2, Frame.RET_LOCAL))
+            {
+            case R_NEXT:
+                {
+                BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
+                return hValue.get() ? iPC + m_ofJmp : iPC + 1;
+                }
+
+            case R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    {
+                    BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
+                    return hValue.get() ? iPC + m_ofJmp : iPC + 1;
+                    });
+                return R_CALL;
+
+            case R_EXCEPTION:
+                return R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
     }
