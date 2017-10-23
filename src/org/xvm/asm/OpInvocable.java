@@ -28,7 +28,7 @@ public abstract class OpInvocable extends Op
      * @param argTarget    the target Argument
      * @param constMethod  the method constant
      */
-    public OpInvocable(Argument argTarget, MethodConstant constMethod)
+    protected OpInvocable(Argument argTarget, MethodConstant constMethod)
         {
         m_argTarget   = argTarget;
         m_constMethod = constMethod;
@@ -40,7 +40,7 @@ public abstract class OpInvocable extends Op
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public OpInvocable(DataInput in, Constant[] aconst)
+    protected OpInvocable(DataInput in, Constant[] aconst)
             throws IOException
         {
         m_nTarget   = readPackedInt(in);

@@ -25,7 +25,7 @@ public abstract class OpCallable extends Op
      *
      * @param argFunction  the function Argument
      */
-    public OpCallable(Argument argFunction)
+    protected OpCallable(Argument argFunction)
         {
         m_argFunction = argFunction;
         }
@@ -36,7 +36,7 @@ public abstract class OpCallable extends Op
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public OpCallable(DataInput in, Constant[] aconst)
+    protected OpCallable(DataInput in, Constant[] aconst)
             throws IOException
         {
         m_nFunctionId = readPackedInt(in);

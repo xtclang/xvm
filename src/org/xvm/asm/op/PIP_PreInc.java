@@ -37,9 +37,11 @@ public class PIP_PreInc
      */
     public PIP_PreInc(int nPropId, int nTarget, int nRet)
         {
-        super(nPropId);
-        m_nTarget      = nTarget;
-        m_nRetValue    = nRet;
+        super(null);
+
+        m_nPropId = nPropId;
+        m_nTarget = nTarget;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -66,7 +68,7 @@ public class PIP_PreInc
     public PIP_PreInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nTarget   = readPackedInt(in);
         m_nRetValue = readPackedInt(in);
@@ -159,10 +161,12 @@ public class PIP_PreInc
         super.registerConstants(registry);
 
         registerArgument(m_argTarget, registry);
+        registerArgument(m_argReturn, registry);
         }
 
     private int m_nTarget;
     private int m_nRetValue;
 
     private Argument m_argTarget;
-    private Argument m_argReturn;    }
+    private Argument m_argReturn;
+    }

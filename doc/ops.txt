@@ -114,10 +114,10 @@
 
 // ("L"=) local property and ("P"=) property load/store operations
 // - lvalue return values can specify the "next register" to allocate
--L_GET       PROPERTY, lvalue                        ; get local property (move local property value to register)
--L_SET       PROPERTY, rvalue                        ; set local property (move register value to local property)
--P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
--P_SET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
++L_GET       PROPERTY, lvalue                        ; get local property (move local property value to register)
++L_SET       PROPERTY, rvalue                        ; set local property (move register value to local property)
++P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
++P_SET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
  P_REF       PROPERTY, rvalue-target, lvalue-dest    ; move reference-to-property to destination
 
 // register/local-property inc/dec ("A"=after, aka "post" / "B"=before, aka "pre"):
@@ -153,9 +153,9 @@
 // - lvalue return values can specify the "next register" to allocate
  PIP_INC     PROPERTY, rvalue-target                 ; in-place increment; no result
  PIP_DEC     PROPERTY, rvalue-target                 ; in-place decrement; no result
--PIP_INCA    PROPERTY, rvalue-target, lvalue         ; T++ -> T
++PIP_INCA    PROPERTY, rvalue-target, lvalue         ; T++ -> T
  PIP_DECA    PROPERTY, rvalue-target, lvalue         ; T-- -> T
--PIP_INCB    PROPERTY, rvalue-target, lvalue         ; ++T -> T
++PIP_INCB    PROPERTY, rvalue-target, lvalue         ; ++T -> T
  PIP_DECB    PROPERTY, rvalue-target, lvalue         ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ("P"=) property ops:

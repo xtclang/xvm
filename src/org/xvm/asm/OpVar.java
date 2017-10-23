@@ -35,10 +35,23 @@ public abstract class OpVar
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public OpVar(DataInput in, Constant[] aconst)
+    protected OpVar(DataInput in, Constant[] aconst)
             throws IOException
         {
         m_nType = readPackedInt(in);
+        }
+
+    @Override
+    public void write(DataOutput out, ConstantRegistry registry)
+            throws IOException
+        {
+        if (m_reg != null)
+            {
+            m_nType = encodeArgument(m_reg.getType(), registry);
+            }
+
+        out.writeByte(getOpCode());
+        writePackedLong(out, m_nType);
         }
 
     /**
@@ -55,19 +68,6 @@ public abstract class OpVar
     public Register getRegister()
         {
         return m_reg;
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        if (m_reg != null)
-            {
-            m_nType = encodeArgument(m_reg.getType(), registry);
-            }
-
-        out.writeByte(getOpCode());
-        writePackedLong(out, m_nType);
         }
 
     @Override
