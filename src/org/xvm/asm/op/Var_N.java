@@ -30,8 +30,9 @@ public class Var_N
      */
     public Var_N(int nType, int nNameId)
         {
-        super(nType);
+        super(null);
 
+        m_nType = nType;
         m_nNameId = nNameId;
         }
 
@@ -49,6 +50,7 @@ public class Var_N
             {
             throw new IllegalArgumentException("name required");
             }
+
         m_constName = constName;
         }
 
@@ -61,7 +63,7 @@ public class Var_N
     public Var_N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nNameId = readPackedInt(in);
         }
@@ -76,6 +78,7 @@ public class Var_N
             {
             m_nNameId = encodeArgument(m_constName, registry);
             }
+
         writePackedLong(out, m_nNameId);
         }
 

@@ -43,8 +43,9 @@ public class Var_TN
      */
     public Var_TN(int nType, int nNameId, int[] anValueId)
         {
-        super(nType);
+        super(null);
 
+        m_nType = nType;
         m_nNameId = nNameId;
         m_anArgValue = anValueId;
         }
@@ -64,6 +65,7 @@ public class Var_TN
             {
             throw new IllegalArgumentException("name and values required");
             }
+
         m_constName = constName;
         m_aArgValue = aArgValue;
         }
@@ -77,7 +79,7 @@ public class Var_TN
     public Var_TN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nNameId = readPackedInt(in);
         m_anArgValue = readIntArray(in);

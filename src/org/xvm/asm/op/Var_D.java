@@ -14,8 +14,6 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.Ref.RefHandle;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * VAR_D TYPE ; next register is an anonymous "dynamic reference" variable
@@ -32,7 +30,9 @@ public class Var_D
      */
     public Var_D(int nType)
         {
-        super(nType);
+        super(null);
+
+        m_nType = nType;
         }
 
     /**
@@ -54,7 +54,7 @@ public class Var_D
     public Var_D(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
         }
 
     @Override

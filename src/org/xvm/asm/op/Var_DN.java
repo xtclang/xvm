@@ -36,8 +36,9 @@ public class Var_DN
      */
     public Var_DN(int nType, int nNameId)
         {
-        super(nType);
+        super(null);
 
+        m_nType = nType;
         m_nNameId = nNameId;
         }
 
@@ -67,7 +68,7 @@ public class Var_DN
     public Var_DN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nNameId = readPackedInt(in);
         }
@@ -82,6 +83,7 @@ public class Var_DN
             {
             m_nNameId = encodeArgument(m_constName, registry);
             }
+
         writePackedLong(out, m_nNameId);
         }
 

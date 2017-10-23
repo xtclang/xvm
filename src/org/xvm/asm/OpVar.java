@@ -1,11 +1,12 @@
 package org.xvm.asm;
 
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import org.xvm.asm.constants.TypeConstant;
 
-
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -16,30 +17,28 @@ public abstract class OpVar
         extends Op
     {
     /**
-     * Construct a VAR op.
-     *
-     * @param nType  the variable type id
-     *
-     * @deprecated
-     */
-    protected OpVar(int nType)
-        {
-        m_nType = nType;
-        }
-
-    /**
      * Construct a variable that will hold the specified type.
      *
      * @param constType  the variable type
      */
     protected OpVar(TypeConstant constType)
         {
-        if (constType == null)
+        if (constType != null)
             {
-            throw new IllegalArgumentException("type required");
+            m_reg = new Register(constType);
             }
+        }
 
-        m_reg = new Register(constType);
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public OpVar(DataInput in, Constant[] aconst)
+            throws IOException
+        {
+        m_nType = readPackedInt(in);
         }
 
     /**
