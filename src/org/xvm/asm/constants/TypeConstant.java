@@ -313,7 +313,17 @@ public abstract class TypeConstant
         {
         TypeConstant constThis = (TypeConstant) this.simplify();
         assert !constThis.containsUnresolved();
-        return constThis.isEcstasy("Tuple");
+        return constThis.isEcstasy("collections.Tuple");
+        }
+
+    /**
+     * @return true iff the type is a tuple type
+     */
+    public boolean isArray()
+        {
+        TypeConstant constThis = (TypeConstant) this.simplify();
+        assert !constThis.containsUnresolved();
+        return constThis.isEcstasy("collections.array");
         }
 
     /**

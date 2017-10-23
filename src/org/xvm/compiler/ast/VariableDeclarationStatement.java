@@ -3,12 +3,14 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.Op;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 
+import org.xvm.asm.op.Var_TN;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
@@ -99,16 +101,39 @@ public class VariableDeclarationStatement
         if (value == null)
             {
             code.add(new Var_N(typeV, constName));
+            return true;
             }
-        else
+
+        boolean fCompletes = value.canComplete();
+
+        // tuple or array initialization: use this for NON-constant values, since with constant
+        // values, we can just use VAR_IN and point to the constant itself
+        if (typeV.isParamsSpecified() && !value.isConstant())
             {
-            // TODO type-specific handling
-            // +VAR_SN     TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("S"=) Sequence variable
-            // +VAR_TN     TYPE, #values:(rvalue)                  ; initialized ("N"=) named ("T"=) Tuple variable
+            int nOp = -1;
+            if (typeV.isTuple() && value instanceof TupleExpression)
+                {
+                // VAR_TN TYPE, STRING, #values:(rvalue)
+                nOp = Op.OP_VAR_TN;
+                }
+            else if ((typeV.isArray() || typeV.isA(getConstantPool().ensureEcstasyTypeConstant("collections.Sequence"))) && value instanceof ListExpression)
+                {
+                // VAR_SN TYPE, STRING, #values:(rvalue)
+                nOp = Op.OP_VAR_SN;
+                }
+
+            if (nOp >= 0)
+                {
+                // TODO
+                }
+            }
+
+        && ( || ))
+            {
             code.add(new Var_IN(typeV, constName, value.generateArgument(code, typeV, false, errs)));
             }
 
-        return value.canComplete();
+        return fCompletes;
         }
 
 

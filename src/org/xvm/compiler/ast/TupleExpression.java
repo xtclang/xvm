@@ -12,10 +12,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
-
-import org.xvm.util.Severity;
 
 
 /**
