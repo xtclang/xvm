@@ -124,13 +124,13 @@ public class Invoke_0T
 
         if (chain.isNative())
             {
-            return clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget,
-                    Utils.OBJECTS_NONE, -m_nTupleRetValue - 1);
+            return clz.f_template.invokeNativeT(frame, chain.getTop(), hTarget,
+                Utils.OBJECTS_NONE, m_nTupleRetValue);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
 
-        return clz.f_template.invoke1(frame, chain, hTarget, ahVar, -m_nTupleRetValue - 1);
+        return clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nTupleRetValue);
         }
 
     private int m_nTupleRetValue;

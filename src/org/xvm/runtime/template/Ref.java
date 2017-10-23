@@ -184,7 +184,7 @@ public class Ref
                     }
                  else
                     {
-                    return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
             }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);

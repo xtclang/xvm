@@ -161,9 +161,9 @@ public class Invoke_TT
             }
 
         return chain.isNative()
-            ? clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, -m_nTupleRetValue - 1)
-            : clz.f_template.invoke1(frame, chain, hTarget,
-                Utils.ensureSize(ahArg, method.getMaxVars()), -m_nTupleRetValue - 1);
+            ? clz.f_template.invokeNativeT(frame, method, hTarget, ahArg, m_nTupleRetValue)
+            : clz.f_template.invokeT(frame, chain, hTarget,
+                Utils.ensureSize(ahArg, method.getMaxVars()), m_nTupleRetValue);
         }
 
     @Override

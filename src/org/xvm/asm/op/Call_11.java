@@ -120,12 +120,12 @@ public class Call_11
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frame, ahArg, m_nRetValue);
+                        chain.callSuperN1(frame, ahArg, m_nRetValue, false);
 
                     return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
 
-                return chain.callSuperN1(frame, new ObjectHandle[]{hArg}, m_nRetValue);
+                return chain.callSuperN1(frame, new ObjectHandle[]{hArg}, m_nRetValue, false);
                 }
 
             if (m_nFunctionValue < 0)

@@ -223,8 +223,8 @@
  MIP_XOR     rvalue-target, #:(rvalue-ix), rvalue2
 
 // function calls
-// rvalue-fn DOES not support "local property" mode, but
-// lvalue-param and lvalue-return does
+// rvalue-fn does NOT support "local property" mode, but
+// lvalue-param and lvalue-return support "local property" mode
 // - first digit is # params: 0, 1, n, or "t"=tuple
 // - second digit is # returns: 0, 1, n, or "t"=tuple
 +CALL_00    rvalue-fn

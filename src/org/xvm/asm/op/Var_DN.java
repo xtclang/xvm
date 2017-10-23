@@ -99,8 +99,8 @@ public class Var_DN
         RefHandle hRef = m_ref;
         if (hRef == null)
             {
-            TypeComposition clz = frame.f_context.f_types.ensureComposition(
-                    m_nType, frame.getActualTypes());
+            TypeComposition clz = frame.f_context.f_types.resolveClass(
+                m_nType, frame.getActualTypes());
 
             hRef = clz.f_template.createRefHandle(clz, sName);
 

@@ -110,12 +110,12 @@ public class Call_N0
                 if (anyProperty(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED);
+                        chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED, false);
 
-                    return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
 
-                return chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED);
+                return chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED, false);
                 }
 
             if (m_nFunctionValue < 0)
@@ -133,7 +133,7 @@ public class Call_N0
                     Frame.Continuation stepNext = frameCaller ->
                         frame.call1(function, null, ahVar, Frame.RET_UNUSED);
 
-                    return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
                 return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
                 }
@@ -155,7 +155,7 @@ public class Call_N0
                 Frame.Continuation stepNext = frameCaller ->
                     hFunction.call1(frameCaller, null, ahVar, Frame.RET_UNUSED);
 
-                return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
 
             return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);

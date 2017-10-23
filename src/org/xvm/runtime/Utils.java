@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.sql.Timestamp;
 
+import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -14,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.template.Const;
 
 import org.xvm.runtime.template.Function;
+import org.xvm.runtime.template.annotations.xFutureRef;
 import org.xvm.runtime.template.types.xProperty.PropertyHandle;
 
 
@@ -183,20 +185,45 @@ public abstract class Utils
             {
             ObjectHandle hValueOld = frameCaller.getFrameLocal();
 
-            int iRes = hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
-            if (iRes == Op.R_EXCEPTION)
+            switch (hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL))
                 {
-                return Op.R_EXCEPTION;
-                }
+                case Op.R_NEXT:
+                    return complete(frameCaller);
 
-            ObjectHandle hValueNew = frameCaller.getFrameLocal();
-            iRes = frameCaller.assignValue(iReturn, hValueNew);
-            if (iRes == Op.R_EXCEPTION)
-                {
-                return Op.R_EXCEPTION;
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.setContinuation(frame -> complete(frame));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalArgumentException();
                 }
-            return hTarget.f_clazz.f_template.
-                    setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+            }
+
+        protected int complete(Frame frameCaller)
+            {
+            ObjectHandle hValueNew = frameCaller.getFrameLocal();
+
+            switch (frameCaller.assignValue(iReturn, hValueNew))
+                {
+                case Op.R_NEXT:
+                    return hTarget.f_clazz.f_template.
+                            setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.setContinuation(frame ->
+                         hTarget.f_clazz.f_template.
+                            setPropertyValue(frame, hTarget, sPropName, hValueNew));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalArgumentException();
+                }
             }
         }
 
@@ -219,19 +246,46 @@ public abstract class Utils
             {
             ObjectHandle hValueOld = frameCaller.getFrameLocal();
 
-            int iRes = frameCaller.assignValue(iReturn, hValueOld);
-            if (iRes == Op.R_EXCEPTION)
+            switch (frameCaller.assignValue(iReturn, hValueOld))
                 {
-                return Op.R_EXCEPTION;
+                case Op.R_NEXT:
+                    return complete(frameCaller, hValueOld);
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.setContinuation(frame ->
+                        complete(frame, hValueOld));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalArgumentException();
                 }
-            iRes = hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
-            if (iRes == Op.R_EXCEPTION)
-                {
-                return Op.R_EXCEPTION;
-                }
+            }
+
+        protected int complete(Frame frameCaller, ObjectHandle hValueOld)
+            {
             ObjectHandle hValueNew = frameCaller.getFrameLocal();
-            return hTarget.f_clazz.f_template.
-                    setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+
+            switch (hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL))
+                {
+                case Op.R_NEXT:
+                    return hTarget.f_clazz.f_template.
+                            setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.setContinuation(frame ->
+                        hTarget.f_clazz.f_template.
+                            setPropertyValue(frame, hTarget, sPropName, hValueNew));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalArgumentException();
+                }
             }
         }
 
@@ -291,10 +345,9 @@ public abstract class Utils
     static public class GetArguments
                 implements Frame.Continuation
         {
-        public GetArguments(ObjectHandle[] ahVar, int[] holderIx, Frame.Continuation continuation)
+        public GetArguments(ObjectHandle[] ahVar, Frame.Continuation continuation)
             {
             this.ahVar = ahVar;
-            this.holderIx = holderIx;
             this.continuation = continuation;
             }
 
@@ -309,14 +362,14 @@ public abstract class Utils
         protected void updateResult(Frame frameCaller)
             {
             // replace a property handle with the value
-            ahVar[holderIx[0]] = frameCaller.getFrameLocal();
+            ahVar[index] = frameCaller.getFrameLocal();
             }
 
         public int doNext(Frame frameCaller)
             {
-            for (int iStep = holderIx[0]++; iStep < ahVar.length; )
+            while (++index < ahVar.length)
                 {
-                ObjectHandle handle = ahVar[iStep];
+                ObjectHandle handle = ahVar[index];
                 if (handle == null)
                     {
                     // nulls can only be at the tail of the array
@@ -352,7 +405,50 @@ public abstract class Utils
             }
 
         private final ObjectHandle[] ahVar;
-        private final int[] holderIx;
         private final Frame.Continuation continuation;
+        private int index = -1;
+        }
+
+    static public class AssignValues
+            implements Frame.Continuation
+        {
+        public AssignValues(int[] aiReturn, ObjectHandle[] ahValue)
+            {
+            this.aiReturn = aiReturn;
+            this.ahValue = ahValue;
+            }
+
+        public int proceed(Frame frameCaller)
+            {
+            while (++index < aiReturn.length)
+                {
+                switch (frameCaller.assignValue(aiReturn[index], ahValue[index]))
+                    {
+                    case Op.R_BLOCK:
+                        fBlock = true;
+                        // fall through
+                    case Op.R_NEXT:
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            return fBlock ? Op.R_BLOCK : Op.R_NEXT;
+            }
+
+        private final int[] aiReturn;
+        private final ObjectHandle[] ahValue;
+
+        private int index = -1;
+        private boolean fBlock;
         }
     }

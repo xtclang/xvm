@@ -101,7 +101,24 @@ public class Call_0T
                 throw new IllegalStateException();
                 }
 
-            return chain.callSuper01(frame, -m_nTupleRetValue - 1);
+            switch (chain.callSuper01(frame, Frame.RET_LOCAL))
+                {
+                case R_NEXT:
+                    return frame.assignTuple(m_nTupleRetValue,
+                        new ObjectHandle[] {frame.getFrameLocal()});
+
+                case R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        frameCaller.assignTuple(m_nTupleRetValue,
+                            new ObjectHandle[] {frame.getFrameLocal()}));
+                    return R_CALL;
+
+                case R_EXCEPTION:
+                    return R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         if (m_nFunctionValue < 0)
@@ -110,7 +127,7 @@ public class Call_0T
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
-            return frame.call1(function, null, ahVar, -m_nTupleRetValue - 1);
+            return frame.callT(function, null, ahVar, m_nTupleRetValue);
             }
 
         try
@@ -121,7 +138,7 @@ public class Call_0T
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, -m_nTupleRetValue - 1);
+            return hFunction.callT(frame, null, Utils.OBJECTS_NONE, m_nTupleRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

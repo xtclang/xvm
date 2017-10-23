@@ -1076,15 +1076,13 @@ public abstract class Op
 
     /**
      * Result from process() method: some assignments were deferred; yield and check the "waiting"
-     * registers before
-     * executing the next op-code.
+     * registers before executing the next op-code.
      */
     public static final int R_BLOCK = -7;
 
     /**
      * Result from process() method: some assignments were deferred; yield and check the "waiting"
-     * registers before
-     * returning.
+     * registers before returning.
      */
     public static final int R_BLOCK_RETURN = -8;
 

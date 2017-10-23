@@ -125,11 +125,11 @@ public class Call_T1
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, m_nRetValue);
+                        chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, m_nRetValue, false);
 
                     return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
-                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, m_nRetValue);
+                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, m_nRetValue, false);
                 }
 
             if (m_nFunctionValue < 0)

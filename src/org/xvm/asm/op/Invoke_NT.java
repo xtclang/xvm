@@ -159,7 +159,7 @@ public class Invoke_NT
             {
             Frame.Continuation stepNext = frameCaller ->
                 complete(frameCaller, chain, hTarget, ahVar);
-            return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
             }
         return complete(frame, chain, hTarget, ahVar);
         }
@@ -169,8 +169,8 @@ public class Invoke_NT
         TypeComposition clz = hTarget.f_clazz;
 
         return chain.isNative()
-             ? clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget, ahVar, -m_nTupleRetValue - 1)
-             : clz.f_template.invoke1(frame, chain, hTarget, ahVar, -m_nTupleRetValue - 1);
+             ? clz.f_template.invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nTupleRetValue)
+             : clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nTupleRetValue);
         }
 
     @Override

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.security.auth.Refreshable;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -33,6 +34,7 @@ import org.xvm.runtime.template.Enum.EnumHandle;
 import org.xvm.runtime.template.Function.FullyBoundHandle;
 import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.Service;
+import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
@@ -696,6 +698,12 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
+    // invoke with return value of Tuple
+    public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        return frame.invokeT(chain, 0, hTarget, ahVar, iReturn);
+        }
+
     // invoke with more than one return value
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
@@ -739,6 +747,85 @@ public abstract class ClassTemplate
             }
 
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
+        }
+
+    // invokeNative with zero or more arguments and a Tuple return value
+    // return one of the Op.R_ values
+    public int invokeNativeT(Frame frame, MethodStructure method,
+                             ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        {
+        if (method.getParamCount() == 1)
+            {
+            switch (method.getReturnCount())
+                {
+                case 0:
+                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Frame.RET_UNUSED))
+                        {
+                        case Op.R_NEXT:
+                            return frame.assignValue(iReturn, xTuple.H_VOID);
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+
+                case 1:
+                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Frame.RET_LOCAL))
+                        {
+                        case Op.R_NEXT:
+                            return frame.assignTuple(iReturn, new ObjectHandle[]{frame.getFrameLocal()});
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+
+                default:
+                    // create a temporary frame with N registers; call invokeNativeNN into it
+                    // and then convert the results into a Tuple
+                    throw new UnsupportedOperationException();
+                }
+            }
+        else
+            {
+            switch (method.getReturnCount())
+                {
+                case 0:
+                    switch (invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_UNUSED))
+                        {
+                        case Op.R_NEXT:
+                            return frame.assignValue(iReturn, xTuple.H_VOID);
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+
+                case 1:
+                    switch (invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_LOCAL))
+                        {
+                        case Op.R_NEXT:
+                            return frame.assignTuple(iReturn, new ObjectHandle[]{frame.getFrameLocal()});
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+
+                default:
+                    // create a temporary frame with N registers; call invokeNativeNN into it
+                    // and then convert the results into a Tuple
+                    throw new UnsupportedOperationException();
+                }
+            }
         }
 
     // invokeNative with zero or more arguments and more than one return values

@@ -126,12 +126,6 @@ public class ClassStructure
      */
     public boolean extendsClass(IdentityConstant constClass)
         {
-        if (constClass.equals(getIdentityConstant()))
-            {
-            // while a class cannot technically extend itself, this does satisfy the "is-a" test
-            return true;
-            }
-
         if (constClass.equals(getConstantPool().ensureEcstasyClassConstant("Object")))
             {
             // everything is considered to extend Object (even interfaces)
@@ -142,6 +136,12 @@ public class ClassStructure
             {
             // interfaces do not extend; they implement
             return false;
+            }
+
+        if (constClass.equals(getIdentityConstant()))
+            {
+            // while a class cannot technically extend itself, this does satisfy the "is-a" test
+            return true;
             }
 
         ClassStructure structCur = this;

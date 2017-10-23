@@ -124,8 +124,8 @@ public class NewG_N
                 }
             else
                 {
-                clzTarget = frame.f_context.f_types.ensureComposition(
-                        -m_nTypeValue, frame.getActualTypes());
+                clzTarget = frame.f_context.f_types.resolveClass(
+                    -m_nTypeValue, frame.getActualTypes());
                 }
 
             MethodStructure constructor = getMethodStructure(frame);
@@ -144,7 +144,7 @@ public class NewG_N
                 Frame.Continuation stepNext = frameCaller ->
                     template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
 
-                return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
             return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
             }

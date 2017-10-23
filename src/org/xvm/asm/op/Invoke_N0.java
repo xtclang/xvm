@@ -150,7 +150,7 @@ public class Invoke_N0
             {
             Frame.Continuation stepNext = frameCaller ->
                 complete(frameCaller, chain, hTarget, ahVar);
-            return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
             }
         return complete(frame, chain, hTarget, ahVar);
         }

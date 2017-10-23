@@ -102,8 +102,8 @@ public class Var_SN
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clazzEl = frame.f_context.f_types.ensureComposition(
-                m_nType, frame.getActualTypes());
+        TypeComposition clazzEl = frame.f_context.f_types.resolveClass(
+            m_nType, frame.getActualTypes());
 
         try
             {

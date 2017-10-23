@@ -427,6 +427,13 @@ public class ServiceContext
         return new Frame(framePrev, template, hTarget, ahVar, iReturn, null);
         }
 
+    // create a new frame that returns a Tuple value into the specified slot
+    public Frame createFrameT(Frame framePrev, MethodStructure template,
+                              ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        return new Frame(framePrev, template, hTarget, ahVar, Frame.RET_TUPLE, new int[] {iReturn});
+        }
+
     public Frame createFrameN(Frame framePrev, MethodStructure template,
                              ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {

@@ -9,6 +9,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.Utils;
+
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -23,16 +26,6 @@ public class Return_1
     /**
      * Construct a RETURN_1 op.
      *
-     * @param arg  the value to return
-     */
-    public Return_1(Argument arg)
-        {
-        m_arg = arg;
-        }
-
-    /**
-     * Construct a RETURN_1 op.
-     *
      * @param nValue  the value to return
      *
      * @deprecated
@@ -40,6 +33,16 @@ public class Return_1
     public Return_1(int nValue)
         {
         m_nArg = nValue;
+        }
+
+    /**
+     * Construct a RETURN_1 op.
+     *
+     * @param arg  the value to return
+     */
+    public Return_1(Argument arg)
+        {
+        m_arg = arg;
         }
 
     /**
@@ -76,26 +79,26 @@ public class Return_1
     @Override
     public int process(Frame frame, int iPC)
         {
-        int iRet = frame.f_iReturn;
+        ObjectHandle hValue = frame.getReturnValue(m_nArg);
 
-        if (iRet >= 0 || iRet == Frame.RET_LOCAL)
+        if (isProperty(hValue))
             {
-            return frame.returnValue(iRet, m_nArg);
+            ObjectHandle[] ahValue = new ObjectHandle[]{hValue};
+            Frame.Continuation stepNext = frameCaller -> frameCaller.returnValue(ahValue[0]);
+
+            return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
             }
 
-        switch (iRet)
-            {
-            case Frame.RET_UNUSED:
-                return R_RETURN;
-
-            case Frame.RET_MULTI:
-                throw new IllegalStateException();
-
-            default:
-                return frame.returnTuple(-iRet - 1, new int[] {m_nArg});
-            }
+        return frame.returnValue(hValue);
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArgument(m_arg, registry);
+        }
+
+    private int m_nArg;
+
     private Argument m_arg;
-    private int      m_nArg;
     }

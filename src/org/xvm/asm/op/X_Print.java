@@ -14,6 +14,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.types.xProperty.PropertyHandle;
+
 import org.xvm.runtime.template.xString;
 
 /**
@@ -67,6 +69,13 @@ public class X_Print
                     sb.append("<waiting>...");
                     Utils.log(sb.toString());
                     return R_REPEAT;
+                    }
+
+                if (isProperty(hValue))
+                    {
+                    PropertyHandle hProp = (PropertyHandle) hValue;
+                    sb.append("Local property: " + hProp.m_constProperty.getName());
+                    return R_NEXT;
                     }
 
                 // call the "to<String>()" method for the object to get the value

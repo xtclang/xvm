@@ -49,7 +49,7 @@ public class xClass
         if (constant instanceof ParameterizedTypeConstant)
             {
             ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constant;
-            TypeComposition clzTarget = f_types.ensureComposition(constClass.getPosition(), Collections.emptyMap());
+            TypeComposition clzTarget = f_types.resolveClass(constClass.getPosition(), Collections.emptyMap());
 
             Map<String, Type> mapParams = new HashMap<>();
             mapParams.put("PublicType", clzTarget.ensurePublicType());

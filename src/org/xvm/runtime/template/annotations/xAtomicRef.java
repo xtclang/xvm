@@ -126,7 +126,7 @@ public class xAtomicRef
 
                         if (atomic.compareAndSet(hExpect, hNew))
                             {
-                            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                             }
 
                         TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
@@ -213,23 +213,7 @@ public class xAtomicRef
             this.iReturn = iReturn;
             }
 
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            if (frameCaller.getFrameLocal() == xBoolean.FALSE)
-                {
-                return frameCaller.assignValue(iReturn, xBoolean.FALSE);
-                }
-
-            if (atomic.compareAndSet(hExpect, hNew))
-                {
-                return frameCaller.assignValue(iReturn, xBoolean.TRUE);
-                }
-
-            return doNext(frameCaller);
-            }
-
-        public int doNext(Frame frameCaller)
+        protected int doNext(Frame frameCaller)
             {
             while (true)
                 {
@@ -262,6 +246,22 @@ public class xAtomicRef
                         throw new IllegalStateException();
                     }
                 }
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+                {
+                return frameCaller.assignValue(iReturn, xBoolean.FALSE);
+                }
+
+            if (atomic.compareAndSet(hExpect, hNew))
+                {
+                return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+                }
+
+            return doNext(frameCaller);
             }
         }
 
@@ -297,7 +297,7 @@ public class xAtomicRef
 
             if (atomic.compareAndSet(hExpect, hNew))
                 {
-                return frameCaller.assignValues(aiReturn, xBoolean.FALSE, null);
+                return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
                 }
 
             return doNext(frameCaller);
@@ -322,7 +322,7 @@ public class xAtomicRef
 
                         if (atomic.compareAndSet(hCurrent, hNew))
                             {
-                            return frameCaller.assignValues(aiReturn, xBoolean.FALSE, null);
+                            return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
                             }
                         hExpect = hCurrent;
                         break;

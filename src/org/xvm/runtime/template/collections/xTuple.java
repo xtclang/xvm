@@ -42,6 +42,7 @@ public class xTuple
         implements IndexSupport
     {
     public static xTuple INSTANCE;
+    public static xTuple.TupleHandle H_VOID;
 
     public xTuple(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -50,6 +51,7 @@ public class xTuple
         if (fInstance)
             {
             INSTANCE = this;
+            H_VOID = makeHandle(createCanonicalClass(), Utils.OBJECTS_NONE);
             }
         }
 
@@ -102,6 +104,11 @@ public class xTuple
 
         Constant[] aconst = constTuple.getValue();
         int c = aconst.length;
+
+        if (c == 0)
+            {
+            return H_VOID;
+            }
 
         ObjectHandle[] ahValue = new ObjectHandle[c];
         Type[] aType = new Type[c];

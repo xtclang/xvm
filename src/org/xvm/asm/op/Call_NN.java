@@ -120,7 +120,7 @@ public class Call_NN
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperNN(frame, ahVar, m_anRetValue);
 
-                    return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
 
                 return chain.callSuperNN(frame, ahVar, m_anRetValue);
@@ -141,7 +141,7 @@ public class Call_NN
                     Frame.Continuation stepNext = frameCaller ->
                         frame.callN(function, null, ahVar, m_anRetValue);
 
-                    return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
                 return frame.callN(function, null, ahVar, m_anRetValue);
                 }
@@ -163,7 +163,7 @@ public class Call_NN
                 Frame.Continuation stepNext = frameCaller ->
                     hFunction.callN(frameCaller, null, ahVar, m_anRetValue);
 
-                return new Utils.GetArguments(ahVar, new int[]{0}, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
 
             return hFunction.callN(frame, null, ahVar, m_anRetValue);

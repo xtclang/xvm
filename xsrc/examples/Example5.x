@@ -599,3 +599,41 @@ class C<T>
     void foo(T t) {...};
     void foo(Int i) {...};
     }
+
+**** Tuple return
+
+class MyClass
+    {
+    Tuple<Int, Sting> propT;
+    Int propI;
+
+    static (Int, String) foo() {...};
+    static Tuple<Int, String> foo2() {return 1, "s";}        // error
+    static Tuple<Int, String> foo2() {return (1, "s");};
+
+    Void bar()
+        {
+        // CALL_0N for a local property and a register (pre-allocated)
+        (propI, Sting s) = foo();
+
+        // CALL_0T on a register (pre-allocated)
+        Tuple<Int, Sting> t = foo();
+
+        // CALL_0T on a property
+        propT = foo();
+
+        // CALL_01 into a temp register and unboxing ops
+        (propI, Sting s) = foo2();
+        }
+    }
+
+
+    CALL_0T  rvalue-fn, lvalue-treturn
+    CALL_OT: ...        a) +N - register N (type is Tuple) -> into special
+                        b) -P - local property (type is Tuple)
+
+
+// CALL_?T      is generated when the caller expects a Tuple back,
+//              but the callee provides a single or multi-return
+// RETURN_T     is generated when the method signature requires multiple returns,
+//              but the return statement provides a Tuple (the number of elements musts match)

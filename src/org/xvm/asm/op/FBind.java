@@ -165,7 +165,7 @@ public class FBind
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, hFunction, ahParam);
 
-                return new Utils.GetArguments(ahParam, new int[]{0}, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahParam, stepNext).doNext(frame);
                 }
 
             return complete(frame, hFunction, ahParam);

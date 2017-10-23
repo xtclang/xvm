@@ -153,7 +153,8 @@ public class CallChain
         throw new IllegalStateException();
         }
 
-    public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn)
+    public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn,
+                           boolean fReturnTuple)
         {
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
@@ -166,13 +167,18 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.f_clazz.f_template.
-                    invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
+            return fReturnTuple
+                ? hThis.f_clazz.f_template.
+                    invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
+                : hThis.f_clazz.f_template.
+                    invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
             }
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
 
-        return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
+        return fReturnTuple
+            ? frame.invoke1(this, nDepth, hThis, ahVar, iReturn)
+            : frame.invokeT(this, nDepth, hThis, ahVar, iReturn);
         }
 
     public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
