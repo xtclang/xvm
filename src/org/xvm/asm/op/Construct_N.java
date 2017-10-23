@@ -14,8 +14,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * CONSTR_N CONST-CONSTRUCT, #params:(rvalue)
@@ -33,7 +31,7 @@ public class Construct_N
      */
     public Construct_N(int nConstructorId, int[] anArg)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nConstructorId;
         m_anArgValue = anArg;

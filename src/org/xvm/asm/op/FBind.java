@@ -9,12 +9,13 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.OpCallable;
 import org.xvm.asm.Register;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.Function.FunctionHandle;
 
@@ -40,7 +41,7 @@ public class FBind
      */
     public FBind(int nFunction, int[] anParamIx, int[] anParamValue, int nRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_anParamIx = anParamIx;

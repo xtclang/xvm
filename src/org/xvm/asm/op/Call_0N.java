@@ -18,8 +18,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * CALL_0N rvalue-function,  #returns:(lvalue)
@@ -37,7 +35,7 @@ public class Call_0N
      */
     public Call_0N(int nFunction, int[] anRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_anRetValue = anRet;

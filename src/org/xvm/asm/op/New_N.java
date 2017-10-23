@@ -39,7 +39,7 @@ public class New_N
      */
     public New_N(int nConstructorId, int[] anArg, int nRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nConstructorId;
         m_anArgValue = anArg;

@@ -34,7 +34,7 @@ public class Construct_1
      */
     public Construct_1(int nConstructorId, int nArg)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nConstructorId;
         m_nArgValue = nArg;

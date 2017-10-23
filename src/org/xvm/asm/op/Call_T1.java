@@ -42,7 +42,7 @@ public class Call_T1
      */
     public Call_T1(int nFunction, int nTupleArg, int nRetValue)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_nArgTupleValue = nTupleArg;

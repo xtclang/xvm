@@ -41,7 +41,7 @@ public class NewG_0
      */
     public NewG_0(int nConstructorId, int nType, int nRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nConstructorId;
         m_nTypeValue = nType;

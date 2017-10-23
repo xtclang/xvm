@@ -39,7 +39,7 @@ public class Call_NT
      */
     public Call_NT(int nFunction, int[] anArg, int nTupleRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_anArgValue = anArg;

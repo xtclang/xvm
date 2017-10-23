@@ -38,7 +38,7 @@ public class Call_0T
      */
     public Call_0T(int nFunction, int nRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_nTupleRetValue = nRet;

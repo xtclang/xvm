@@ -39,7 +39,7 @@ public class Call_N1
      */
     public Call_N1(int nFunction, int[] anArg, int nRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_anArgValue = anArg;

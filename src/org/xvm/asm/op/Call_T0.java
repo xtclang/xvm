@@ -40,7 +40,7 @@ public class Call_T0
      */
     public Call_T0(int nFunction, int nTupleArg)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_nArgTupleValue = nTupleArg;

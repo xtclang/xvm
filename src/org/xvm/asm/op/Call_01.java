@@ -37,7 +37,7 @@ public class Call_01
      */
     public Call_01(int nFunction, int nRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_nRetValue = nRet;

@@ -39,7 +39,7 @@ public class Call_11
      */
     public Call_11(int nFunction, int nArg, int nRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_nArgValue = nArg;

@@ -42,7 +42,7 @@ public class Call_1T
      */
     public Call_1T(int nFunction, int nArg, int nRet)
         {
-        super((Argument) null);
+        super(null);
 
         m_nFunctionId = nFunction;
         m_nArgValue = nArg;
