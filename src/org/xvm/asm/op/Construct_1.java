@@ -34,8 +34,9 @@ public class Construct_1
      */
     public Construct_1(int nConstructorId, int nArg)
         {
-        super(nConstructorId);
+        super(null);
 
+        m_nFunctionId = nConstructorId;
         m_nArgValue = nArg;
         }
 
@@ -61,7 +62,7 @@ public class Construct_1
     public Construct_1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nArgValue = readPackedInt(in);
         }

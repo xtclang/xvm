@@ -37,8 +37,9 @@ public class Call_10
      */
     public Call_10(int nFunction, int nArg)
         {
-        super(nFunction);
+        super(null);
 
+        m_nFunctionId = nFunction;
         m_nArgValue = nArg;
         }
 
@@ -64,7 +65,7 @@ public class Call_10
     public Call_10(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nArgValue = readPackedInt(in);
         }
@@ -100,7 +101,7 @@ public class Call_10
                 return R_REPEAT;
                 }
 
-            if (m_nFunctionValue == A_SUPER)
+            if (m_nFunctionId == A_SUPER)
                 {
                 CallChain chain = frame.m_chain;
                 if (chain == null)
@@ -120,7 +121,7 @@ public class Call_10
                 return chain.callSuper10(frame, hArg);
                 }
 
-            if (m_nFunctionValue < 0)
+            if (m_nFunctionId < 0)
                 {
                 MethodStructure function = getMethodStructure(frame);
 
@@ -136,7 +137,7 @@ public class Call_10
                 return complete(frame, hArg, function);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
             if (hFunction == null)
                 {
                 return R_REPEAT;

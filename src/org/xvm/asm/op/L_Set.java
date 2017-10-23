@@ -13,6 +13,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -25,15 +26,32 @@ public class L_Set
         extends OpProperty
     {
     /**
-     * Construct a L_SET op.
+     * Construct an L_SET op.
      *
      * @param nPropId  the property id
      * @param nValue   the value to set
+     *
+     * @deprecated
      */
     public L_Set(int nPropId, int nValue)
         {
-        super(nPropId);
-        m_nValue       = nValue;
+        super(null);
+
+        m_nPropId = nPropId;
+        m_nValue = nValue;
+        }
+
+    /**
+     * Construct an L_SET op based on the specified arguments.
+     *
+     * @param argProperty  the property Argument
+     * @param argValue     the value Argument
+     */
+    public L_Set(Argument argProperty, Argument argValue)
+        {
+        super(argProperty);
+
+        m_argValue = argValue;
         }
 
     /**
@@ -45,7 +63,8 @@ public class L_Set
     public L_Set(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
+
         m_nValue = readPackedInt(in);
         }
 
@@ -53,8 +72,13 @@ public class L_Set
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_L_SET);
-        writePackedLong(out, m_nPropId);
+        super.write(out, registry);
+
+        if (m_argValue != null)
+            {
+            m_nValue = encodeArgument(m_argValue, registry);
+            }
+
         writePackedLong(out, m_nValue);
         }
 
@@ -69,18 +93,27 @@ public class L_Set
         {
         try
             {
-            ObjectHandle hTarget = frame.getThis();
             ObjectHandle hValue = frame.getArgument(m_nValue);
-            if (hTarget == null || hValue == null)
+            if (hValue == null)
                 {
                 return R_REPEAT;
                 }
 
+            ObjectHandle hTarget = frame.getThis();
             PropertyConstant constProperty = (PropertyConstant)
                     frame.f_context.f_pool.getConstant(m_nPropId);
+            String sProperty = constProperty.getName();
 
-            return hTarget.f_clazz.f_template.setPropertyValue(
-                    frame, hTarget, constProperty.getName(), hValue);
+            if (isProperty(hValue))
+                {
+                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+                Frame.Continuation stepNext = frameCaller -> hTarget.f_clazz.f_template.
+                    setPropertyValue(frameCaller, hTarget, sProperty, ahValue[0]);
+
+                return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
+                }
+
+            return hTarget.f_clazz.f_template.setPropertyValue(frame, hTarget, sProperty, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -88,5 +121,15 @@ public class L_Set
             }
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argValue, registry);
+        }
+
     private int m_nValue;
+
+    private Argument m_argValue;
     }

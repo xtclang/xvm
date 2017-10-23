@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -8,6 +9,7 @@ import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.Frame;
 
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -19,23 +21,25 @@ import static org.xvm.util.Handy.writePackedLong;
 public abstract class OpCallable extends Op
     {
     /**
-     * Construct an op.
-     *
-     * @param nFunctionValue  r-value that specifies the function being called
-     */
-    protected OpCallable(int nFunctionValue)
-        {
-        m_nFunctionValue = nFunctionValue;
-        }
-
-    /**
      * Construct an op based on the passed argument.
      *
      * @param argFunction  the function Argument
      */
-    public OpCallable(Argument argFunction)
+    protected OpCallable(Argument argFunction)
         {
         m_argFunction = argFunction;
+        }
+
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    protected OpCallable(DataInput in, Constant[] aconst)
+            throws IOException
+        {
+        m_nFunctionId = readPackedInt(in);
         }
 
     @Override
@@ -44,12 +48,12 @@ public abstract class OpCallable extends Op
         {
         if (m_argFunction != null)
             {
-            m_nFunctionValue = encodeArgument(m_argFunction, registry);
+            m_nFunctionId = encodeArgument(m_argFunction, registry);
             }
 
         out.writeByte(getOpCode());
 
-        writePackedLong(out, m_nFunctionValue);
+        writePackedLong(out, m_nFunctionId);
         }
 
     @Override
@@ -67,16 +71,16 @@ public abstract class OpCallable extends Op
             return m_function;
             }
 
-        assert m_nFunctionValue < 0;
+        assert m_nFunctionId < 0;
 
         MethodConstant constFunction = (MethodConstant)
-                frame.f_context.f_pool.getConstant(-m_nFunctionValue);
+                frame.f_context.f_pool.getConstant(-m_nFunctionId);
 
         return m_function = (MethodStructure) constFunction.getComponent();
         }
 
 
-    protected int m_nFunctionValue;
+    protected int m_nFunctionId;
 
     private Argument m_argFunction;
 

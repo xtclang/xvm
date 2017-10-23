@@ -42,10 +42,11 @@ public class Call_TN
      */
     public Call_TN(int nFunction, int nTupleArg, int[] anRetValue)
         {
-        super(nFunction);
+        super(null);
 
+        m_nFunctionId = nFunction;
         m_nArgTupleValue = nTupleArg;
-        m_anRetValue     = anRetValue;
+        m_anRetValue = anRetValue;
         }
 
     /**
@@ -72,7 +73,7 @@ public class Call_TN
     public Call_TN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nArgTupleValue = readPackedInt(in);
         m_anRetValue     = readIntArray(in);
@@ -111,7 +112,7 @@ public class Call_TN
                 return R_REPEAT;
                 }
 
-            if (m_nFunctionValue == A_SUPER)
+            if (m_nFunctionId == A_SUPER)
                 {
                 CallChain chain = frame.m_chain;
                 if (chain == null)
@@ -130,7 +131,7 @@ public class Call_TN
                 return chain.callSuperNN(frame, ((TupleHandle) hArg).m_ahValue, m_anRetValue);
                 }
 
-            if (m_nFunctionValue < 0)
+            if (m_nFunctionId < 0)
                 {
                 MethodStructure function = getMethodStructure(frame);
 
@@ -146,7 +147,7 @@ public class Call_TN
                 return complete(frame, function, (TupleHandle) hArg);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
             if (hFunction == null)
                 {
                 return R_REPEAT;

@@ -34,11 +34,15 @@ public class Invoke_NN
      * @param nMethodId  r-value that specifies the method being invoked
      * @param anArg      the r-value locations of the method arguments
      * @param anRet      the l-value locations for the results
+     *
+     * @deprecated
      */
     public Invoke_NN(int nTarget, int nMethodId, int[] anArg, int[] anRet)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_anArgValue = anArg;
         m_anRetValue = anRet;
         }
@@ -68,7 +72,7 @@ public class Invoke_NN
     public Invoke_NN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_anArgValue = readIntArray(in);
         m_anRetValue = readIntArray(in);

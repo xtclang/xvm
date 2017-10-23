@@ -9,12 +9,13 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.OpCallable;
 import org.xvm.asm.Register;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.Function.FunctionHandle;
 
@@ -40,8 +41,9 @@ public class FBind
      */
     public FBind(int nFunction, int[] anParamIx, int[] anParamValue, int nRet)
         {
-        super(nFunction);
+        super(null);
 
+        m_nFunctionId = nFunction;
         m_anParamIx = anParamIx;
         m_anParamValue = anParamValue;
         m_nResultValue = nRet;
@@ -73,7 +75,7 @@ public class FBind
     public FBind(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         int c = readPackedInt(in);
 
@@ -123,7 +125,7 @@ public class FBind
             {
             FunctionHandle hFunction;
 
-            if (m_nFunctionValue == A_SUPER)
+            if (m_nFunctionId == A_SUPER)
                 {
                 CallChain chain = frame.m_chain;
                 if (chain == null)
@@ -132,13 +134,13 @@ public class FBind
                     }
                 hFunction = Function.makeHandle(chain, frame.m_nDepth + 1);
                 }
-            else if (m_nFunctionValue < 0)
+            else if (m_nFunctionId < 0)
                 {
                 hFunction = Function.makeHandle(getMethodStructure(frame));
                 }
             else
                 {
-                hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+                hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
                 if (hFunction == null)
                     {
                     return R_REPEAT;

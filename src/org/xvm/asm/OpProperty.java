@@ -1,14 +1,15 @@
 package org.xvm.asm;
 
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 /**
- * Common base for property related (P_) ops.
+ * Common base for property related ops.
  *
  * @author gg 2017.02.21
  */
@@ -17,21 +18,23 @@ public abstract class OpProperty extends Op
     /**
      * Construct an op.
      *
-     * @param nPropId  the property to increment
-     */
-    protected OpProperty(int nPropId)
-        {
-        m_nPropId = nPropId;
-        }
-
-    /**
-     * Construct an op.
-     *
      * @param argProperty  the property Argument
      */
     protected OpProperty(Argument argProperty)
         {
         m_argProperty = argProperty;
+        }
+
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    protected OpProperty(DataInput in, Constant[] aconst)
+            throws IOException
+        {
+        m_nPropId = readPackedInt(in);
         }
 
     @Override
@@ -56,5 +59,5 @@ public abstract class OpProperty extends Op
 
     protected int m_nPropId;
 
-    private Argument m_argProperty;
+    protected Argument m_argProperty;
     }

@@ -26,7 +26,7 @@ public class X_Print
     {
     public X_Print(int nValue)
         {
-        super(nValue, 0);
+        super((Argument) null, null);
 
         m_nValue = nValue;
         }

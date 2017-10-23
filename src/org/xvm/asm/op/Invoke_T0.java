@@ -38,11 +38,15 @@ public class Invoke_T0
      * @param nTarget    r-value that specifies the object on which the method being invoked
      * @param nMethodId  r-value that specifies the method being invoked
      * @param nArg       the r-value location of the tuple of method arguments
+     *
+     * @deprecated
      */
     public Invoke_T0(int nTarget, int nMethodId, int nArg)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_nArgTupleValue = nArg;
         }
 
@@ -69,7 +73,7 @@ public class Invoke_T0
     public Invoke_T0(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_nArgTupleValue = readPackedInt(in);
         }

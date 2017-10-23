@@ -10,8 +10,6 @@ import org.xvm.asm.OpVar;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * VAR TYPE ; (next register is an uninitialized anonymous variable)
@@ -28,7 +26,9 @@ public class Var
      */
     public Var(int nType)
         {
-        super(nType);
+        super(null);
+
+        m_nType = nType;
         }
 
     /**
@@ -50,7 +50,7 @@ public class Var
     public Var(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
         }
 
     @Override

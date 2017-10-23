@@ -37,8 +37,9 @@ public class Call_01
      */
     public Call_01(int nFunction, int nRet)
         {
-        super(nFunction);
+        super(null);
 
+        m_nFunctionId = nFunction;
         m_nRetValue = nRet;
         }
 
@@ -64,7 +65,7 @@ public class Call_01
     public Call_01(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nRetValue = readPackedInt(in);
         }
@@ -92,7 +93,7 @@ public class Call_01
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (m_nFunctionValue == A_SUPER)
+        if (m_nFunctionId == A_SUPER)
             {
             CallChain chain = frame.m_chain;
             if (chain == null)
@@ -103,7 +104,7 @@ public class Call_01
             return chain.callSuper01(frame, m_nRetValue);
             }
 
-        if (m_nFunctionValue < 0)
+        if (m_nFunctionId < 0)
             {
             MethodStructure function = getMethodStructure(frame);
 
@@ -114,7 +115,7 @@ public class Call_01
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
             if (hFunction == null)
                 {
                 return R_REPEAT;

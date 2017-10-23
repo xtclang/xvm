@@ -18,8 +18,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * CALL_0N rvalue-function,  #returns:(lvalue)
@@ -37,8 +35,9 @@ public class Call_0N
      */
     public Call_0N(int nFunction, int[] anRet)
         {
-        super(nFunction);
+        super(null);
 
+        m_nFunctionId = nFunction;
         m_anRetValue = anRet;
         }
 
@@ -64,7 +63,7 @@ public class Call_0N
     public Call_0N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_anRetValue = readIntArray(in);
         }
@@ -92,7 +91,7 @@ public class Call_0N
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (m_nFunctionValue == A_SUPER)
+        if (m_nFunctionId == A_SUPER)
             {
             CallChain chain = frame.m_chain;
             if (chain == null)
@@ -103,7 +102,7 @@ public class Call_0N
             return chain.callSuperNN(frame, Utils.OBJECTS_NONE, m_anRetValue);
             }
 
-        if (m_nFunctionValue < 0)
+        if (m_nFunctionId < 0)
             {
             MethodStructure function = getMethodStructure(frame);
 
@@ -114,7 +113,7 @@ public class Call_0N
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
             if (hFunction == null)
                 {
                 return R_REPEAT;

@@ -15,8 +15,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * NVOK_00 rvalue-target, rvalue-method
@@ -29,10 +27,15 @@ public class Invoke_00
      *
      * @param nTarget    r-value that specifies the object on which the method being invoked
      * @param nMethodId  r-value that specifies the method being invoked
+     *
+     * @deprecated
      */
     public Invoke_00(int nTarget, int nMethodId)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
+
+         m_nTarget   = nTarget;
+         m_nMethodId = nMethodId;
         }
 
     /**
@@ -55,7 +58,7 @@ public class Invoke_00
     public Invoke_00(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
         }
 
     @Override

@@ -16,8 +16,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * CALL_00 rvalue-function.
@@ -34,7 +32,9 @@ public class Call_00
      */
     public Call_00(int nFunction)
         {
-        super(nFunction);
+        super(null);
+
+        m_nFunctionId = nFunction;
         }
 
     /**
@@ -56,7 +56,7 @@ public class Call_00
     public Call_00(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
         }
 
     @Override
@@ -68,7 +68,7 @@ public class Call_00
     @Override
     public int process(Frame frame, int iPC)
         {
-        if (m_nFunctionValue == A_SUPER)
+        if (m_nFunctionId == A_SUPER)
             {
             CallChain chain = frame.m_chain;
             if (chain == null)
@@ -79,7 +79,7 @@ public class Call_00
             return chain.callSuperNN(frame, Utils.OBJECTS_NONE, Utils.ARGS_NONE);
             }
 
-        if (m_nFunctionValue < 0)
+        if (m_nFunctionId < 0)
             {
             MethodStructure function = getMethodStructure(frame);
 
@@ -90,7 +90,7 @@ public class Call_00
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionValue);
+            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
             if (hFunction == null)
                 {
                 return R_REPEAT;

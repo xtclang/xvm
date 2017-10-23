@@ -20,8 +20,6 @@ import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * VAR_T #values:(TYPE, rvalue-src) ; next register is an initialized anonymous Tuple variable
@@ -39,8 +37,9 @@ public class Var_T
      */
     public Var_T(int nType, int[] anValueId)
         {
-        super(nType);
+        super(null);
 
+        m_nType = nType;
         m_anArgValue = anValueId;
         }
 
@@ -58,6 +57,7 @@ public class Var_T
             {
             throw new IllegalArgumentException("values required");
             }
+
         m_aArgValue = aArgValue;
         }
 
@@ -70,7 +70,7 @@ public class Var_T
     public Var_T(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_anArgValue = readIntArray(in);
         }

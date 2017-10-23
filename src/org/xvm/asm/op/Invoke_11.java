@@ -35,11 +35,15 @@ public class Invoke_11
      * @param nMethodId  r-value that specifies the method being invoked
      * @param nArg       the r-value location of the method argument
      * @param nRet       the l-value location for the result
+     *
+     * @deprecated
      */
     public Invoke_11(int nTarget, int nMethodId, int nArg, int nRet)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_nArgValue = nArg;
         m_nRetValue = nRet;
         }
@@ -69,7 +73,7 @@ public class Invoke_11
     public Invoke_11(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_nArgValue = readPackedInt(in);
         m_nRetValue = readPackedInt(in);

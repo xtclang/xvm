@@ -34,11 +34,15 @@ public class Invoke_0T
      * @param nTarget    r-value that specifies the object on which the method being invoked
      * @param nMethodId  r-value that specifies the method being invoked
      * @param nRet       the l-value location for the tuple result
+     *
+     * @deprecated
      */
     public Invoke_0T(int nTarget, int nMethodId, int nRet)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_nTupleRetValue = nRet;
         }
 
@@ -65,7 +69,7 @@ public class Invoke_0T
     public Invoke_0T(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_nTupleRetValue = readPackedInt(in);
         }

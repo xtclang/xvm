@@ -39,8 +39,9 @@ public class New_1
      */
     public New_1(int nConstructorId, int nArg, int nRet)
         {
-        super(nConstructorId);
+        super(null);
 
+        m_nFunctionId = nConstructorId;
         m_nArgValue = nArg;
         m_nRetValue = nRet;
         }
@@ -69,7 +70,7 @@ public class New_1
     public New_1(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nArgValue = readPackedInt(in);
         m_nRetValue = readPackedInt(in);

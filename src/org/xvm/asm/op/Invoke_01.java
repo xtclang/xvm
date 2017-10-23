@@ -39,8 +39,10 @@ public class Invoke_01
      */
     public Invoke_01(int nTarget, int nMethodId, int nRet)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_nRetValue = nRet;
         }
 
@@ -67,7 +69,7 @@ public class Invoke_01
     public Invoke_01(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_nRetValue = readPackedInt(in);
         }

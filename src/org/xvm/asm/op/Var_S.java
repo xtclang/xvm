@@ -17,8 +17,6 @@ import org.xvm.runtime.Type;
 
 import org.xvm.runtime.template.collections.xArray;
 
-import static org.xvm.util.Handy.readPackedInt;
-
 
 /**
  * VAR_S TYPE, #values:(rvalue-src) ; next register is an initialized anonymous Sequence variable
@@ -36,8 +34,9 @@ public class Var_S
      */
     public Var_S(int nType, int[] anValueId)
         {
-        super(nType);
+        super(null);
 
+        m_nType = nType;
         m_anArgValue = anValueId;
         }
 
@@ -55,6 +54,7 @@ public class Var_S
             {
             throw new IllegalArgumentException("values required");
             }
+
         m_aArgValue = aArgValue;
         }
 
@@ -67,7 +67,7 @@ public class Var_S
     public Var_S(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_anArgValue = readIntArray(in);
         }

@@ -37,9 +37,10 @@ public class PIP_PostInc
      */
     public PIP_PostInc(int nPropId, int nTarget, int nRet)
         {
-        super(nPropId);
+        super(null);
 
-        m_nTarget   = nTarget;
+        m_nPropId = nPropId;
+        m_nTarget = nTarget;
         m_nRetValue = nRet;
         }
 
@@ -67,9 +68,9 @@ public class PIP_PostInc
     public PIP_PostInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
-        m_nTarget   = readPackedInt(in);
+        m_nTarget = readPackedInt(in);
         m_nRetValue = readPackedInt(in);
         }
 
@@ -160,6 +161,7 @@ public class PIP_PostInc
         super.registerConstants(registry);
 
         registerArgument(m_argTarget, registry);
+        registerArgument(m_argReturn, registry);
         }
 
     private int m_nTarget;

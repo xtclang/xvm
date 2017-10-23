@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 
+import org.xvm.asm.Scope;
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
@@ -24,15 +25,32 @@ public class L_Get
         extends OpProperty
     {
     /**
-     * Construct a L_GET op.
+     * Construct an L_GET op.
      *
      * @param nPropId  the property id
      * @param nRet     the location to store the result
+     *
+     * @deprecated
      */
     public L_Get(int nPropId, int nRet)
         {
-        super(nPropId);
-        m_nRetValue    = nRet;
+        super(null);
+
+        m_nPropId = nPropId;
+        m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct an L_GET op based on the specified arguments.
+     *
+     * @param argProperty  the property Argument
+     * @param argReturn    the return Argument
+     */
+    public L_Get(Argument argProperty, Argument argReturn)
+        {
+        super(argProperty);
+
+        m_argReturn = argReturn;
         }
 
     /**
@@ -44,16 +62,22 @@ public class L_Get
     public L_Get(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
-        m_nRetValue    = readPackedInt(in);
+        super(in, aconst);
+
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        out.writeByte(OP_L_GET);
-        writePackedLong(out, m_nPropId);
+        super.write(out, registry);
+
+        if (m_argReturn != null)
+            {
+            m_nRetValue = encodeArgument(m_argReturn, registry);
+            }
+
         writePackedLong(out, m_nRetValue);
         }
 
@@ -71,9 +95,35 @@ public class L_Get
         PropertyConstant constProperty = (PropertyConstant)
                 frame.f_context.f_pool.getConstant(m_nPropId);
 
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            int nTypeId = constProperty.getType().getPosition();
+
+            frame.introduceVar(nTypeId, 0, Frame.VAR_STANDARD, null);
+            }
+
         return hTarget.f_clazz.f_template.getPropertyValue(
                 frame, hTarget, constProperty.getName(), m_nRetValue);
         }
 
+    @Override
+    public void simulate(Scope scope)
+        {
+        if (scope.isNextRegister(m_nRetValue))
+            {
+            scope.allocVar();
+            }
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argReturn, registry);
+        }
+
     private int m_nRetValue;
+
+    private Argument m_argReturn;
     }

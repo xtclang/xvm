@@ -1,11 +1,12 @@
 package org.xvm.asm;
 
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import org.xvm.asm.constants.TypeConstant;
 
-
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -16,30 +17,41 @@ public abstract class OpVar
         extends Op
     {
     /**
-     * Construct a VAR op.
-     *
-     * @param nType  the variable type id
-     *
-     * @deprecated
-     */
-    protected OpVar(int nType)
-        {
-        m_nType = nType;
-        }
-
-    /**
      * Construct a variable that will hold the specified type.
      *
      * @param constType  the variable type
      */
     protected OpVar(TypeConstant constType)
         {
-        if (constType == null)
+        if (constType != null)
             {
-            throw new IllegalArgumentException("type required");
+            m_reg = new Register(constType);
+            }
+        }
+
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    protected OpVar(DataInput in, Constant[] aconst)
+            throws IOException
+        {
+        m_nType = readPackedInt(in);
+        }
+
+    @Override
+    public void write(DataOutput out, ConstantRegistry registry)
+            throws IOException
+        {
+        if (m_reg != null)
+            {
+            m_nType = encodeArgument(m_reg.getType(), registry);
             }
 
-        m_reg = new Register(constType);
+        out.writeByte(getOpCode());
+        writePackedLong(out, m_nType);
         }
 
     /**
@@ -56,19 +68,6 @@ public abstract class OpVar
     public Register getRegister()
         {
         return m_reg;
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        if (m_reg != null)
-            {
-            m_nType = encodeArgument(m_reg.getType(), registry);
-            }
-
-        out.writeByte(getOpCode());
-        writePackedLong(out, m_nType);
         }
 
     @Override

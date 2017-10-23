@@ -39,8 +39,9 @@ public class New_N
      */
     public New_N(int nConstructorId, int[] anArg, int nRet)
         {
-        super(nConstructorId);
+        super(null);
 
+        m_nFunctionId = nConstructorId;
         m_anArgValue = anArg;
         m_nRetValue = nRet;
         }
@@ -69,7 +70,7 @@ public class New_N
     public New_N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_anArgValue = readIntArray(in);
         m_nRetValue = readPackedInt(in);

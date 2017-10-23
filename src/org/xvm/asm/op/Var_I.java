@@ -32,8 +32,9 @@ public class Var_I
      */
     public Var_I(int nType, int nValueId)
         {
-        super(nType);
+        super(null);
 
+        m_nType = nType;
         m_nValueId = nValueId;
         }
 
@@ -63,7 +64,7 @@ public class Var_I
     public Var_I(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in));
+        super(in, aconst);
 
         m_nValueId = readPackedInt(in);
         }
