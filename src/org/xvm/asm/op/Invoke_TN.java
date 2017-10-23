@@ -41,11 +41,15 @@ public class Invoke_TN
      * @param nMethodId  r-value that specifies the method being invoked
      * @param nArg       the r-value location of the tuple of method arguments
      * @param anRet      the l-value locations for the results
+     *
+     * @deprecated
      */
     public Invoke_TN(int nTarget, int nMethodId, int nArg, int [] anRet)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_nArgTupleValue = nArg;
         m_anRetValue = anRet;
         }
@@ -75,7 +79,7 @@ public class Invoke_TN
     public Invoke_TN(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_nArgTupleValue = readPackedInt(in);
         m_anRetValue = readIntArray(in);

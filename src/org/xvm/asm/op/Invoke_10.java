@@ -38,8 +38,10 @@ public class Invoke_10
      */
     public Invoke_10(int nTarget, int nMethodId, int nArg)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_nArgValue = nArg;
         }
 
@@ -66,7 +68,7 @@ public class Invoke_10
     public Invoke_10(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_nArgValue = readPackedInt(in);
         }

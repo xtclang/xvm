@@ -23,7 +23,6 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -41,11 +40,15 @@ public class Invoke_TT
      * @param nMethodId  r-value that specifies the method being invoked
      * @param nArg       the r-value location of the tuple of method arguments
      * @param nRet       the l-value location for the tuple result
+     *
+     * @deprecated
      */
     public Invoke_TT(int nTarget, int nMethodId, int nArg, int nRet)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_nArgTupleValue = nArg;
         m_nTupleRetValue = nRet;
         }
@@ -75,7 +78,7 @@ public class Invoke_TT
     public Invoke_TT(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_nArgTupleValue = readPackedInt(in);
         m_nTupleRetValue = readPackedInt(in);

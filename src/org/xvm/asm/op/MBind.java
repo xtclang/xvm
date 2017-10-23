@@ -39,8 +39,10 @@ public class MBind
      */
     public MBind(int nTarget, int nMethodId, int nRet)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_nResultValue = nRet;
         }
 
@@ -67,7 +69,7 @@ public class MBind
     public MBind(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_nResultValue = readPackedInt(in);
         }

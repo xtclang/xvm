@@ -33,11 +33,15 @@ public class Invoke_0N
      * @param nTarget    r-value that specifies the object on which the method being invoked
      * @param nMethodId  r-value that specifies the method being invoked
      * @param anRet      the l-value locations for the results
+     *
+     * @deprecated
      */
     public Invoke_0N(int nTarget, int nMethodId, int[] anRet)
         {
-        super(nTarget, nMethodId);
+        super((Argument) null, null);
 
+        m_nTarget = nTarget;
+        m_nMethodId = nMethodId;
         m_anRetValue = anRet;
         }
 
@@ -64,7 +68,7 @@ public class Invoke_0N
     public Invoke_0N(DataInput in, Constant[] aconst)
             throws IOException
         {
-        super(readPackedInt(in), readPackedInt(in));
+        super(in, aconst);
 
         m_anRetValue = readIntArray(in);
         }

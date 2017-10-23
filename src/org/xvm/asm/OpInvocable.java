@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -10,6 +11,7 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -21,18 +23,6 @@ import static org.xvm.util.Handy.writePackedLong;
 public abstract class OpInvocable extends Op
     {
     /**
-     * Construct an op.
-     *
-     * @param nTarget    r-value that specifies the object on which the method being invoked
-     * @param nMethodId  r-value that specifies the method being invoked
-     */
-    protected OpInvocable(int nTarget, int nMethodId)
-        {
-        m_nTarget   = nTarget;
-        m_nMethodId = nMethodId;
-        }
-
-    /**
      * Construct an op based on the passed arguments.
      *
      * @param argTarget    the target Argument
@@ -42,6 +32,19 @@ public abstract class OpInvocable extends Op
         {
         m_argTarget   = argTarget;
         m_constMethod = constMethod;
+        }
+
+    /**
+     * Deserialization constructor.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     */
+    public OpInvocable(DataInput in, Constant[] aconst)
+            throws IOException
+        {
+        m_nTarget   = readPackedInt(in);
+        m_nMethodId = readPackedInt(in);
         }
 
     @Override
