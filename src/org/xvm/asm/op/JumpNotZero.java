@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -18,7 +19,7 @@ import org.xvm.runtime.Utils;
  * JMP_NZERO rvalue, addr ; jump if value is NOT zero
  */
 public class JumpNotZero
-        extends JumpCond
+        extends OpCondJump
     {
     /**
      * Construct a JMP_NZERO op.

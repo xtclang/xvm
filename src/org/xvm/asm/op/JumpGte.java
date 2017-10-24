@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -20,7 +21,7 @@ import org.xvm.runtime.template.xOrdered;
  * JMP_GTE rvalue1, rvalue2, addr ; jump if value is greater than or equal than value2
  */
 public class JumpGte
-        extends JumpCond
+        extends OpCondJump
     {
     /**
      * Construct a JMP_GTE op.

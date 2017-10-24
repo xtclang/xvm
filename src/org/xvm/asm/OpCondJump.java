@@ -1,22 +1,18 @@
-package org.xvm.asm.op;
+package org.xvm.asm;
 
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
-
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Base class for conditional jumps.
+ * Base class for conditional jump (JMP_*) op-codes.
  */
-public abstract class JumpCond
+public abstract class OpCondJump
         extends Op
     {
     /**
@@ -24,7 +20,7 @@ public abstract class JumpCond
      *
      * @param op  the op to jump to
      */
-    protected JumpCond(Argument arg, Op op)
+    protected OpCondJump(Argument arg, Op op)
         {
         assert !isBinaryOp();
 
@@ -37,7 +33,7 @@ public abstract class JumpCond
      *
      * @param op  the op to jump to
      */
-    protected JumpCond(Argument arg, Argument arg2, Op op)
+    protected OpCondJump(Argument arg, Argument arg2, Op op)
         {
         assert isBinaryOp();
 
@@ -52,7 +48,7 @@ public abstract class JumpCond
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    protected JumpCond(DataInput in, Constant[] aconst)
+    protected OpCondJump(DataInput in, Constant[] aconst)
             throws IOException
         {
         m_nArg  = readPackedInt(in);

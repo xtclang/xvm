@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -19,7 +20,7 @@ import org.xvm.runtime.template.xNullable;
  * JMP_NNULL rvalue, addr ; jump if value is NOT null
  */
 public class JumpNotNull
-        extends JumpCond
+        extends OpCondJump
     {
     /**
      * Construct a JMP_NNULL op.

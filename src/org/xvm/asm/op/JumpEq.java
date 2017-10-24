@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -20,7 +21,7 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
  * JMP_EQ rvalue1, rvalue2, addr ; jump if value1 is equal to value2
  */
 public class JumpEq
-        extends JumpCond
+        extends OpCondJump
     {
     /**
      * Construct a JMP_EQ op.

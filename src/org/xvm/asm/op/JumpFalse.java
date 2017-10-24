@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -17,7 +18,7 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
  * JMP_FALSE rvalue, addr ; jump if value is Boolean.False
  */
 public class JumpFalse
-        extends JumpCond
+        extends OpCondJump
     {
     /**
      * Construct a JMP_FALSE op.
