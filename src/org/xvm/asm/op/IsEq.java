@@ -2,26 +2,21 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpTest;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * IS_EQ rvalue, rvalue, lvalue-return ; T == T -> Boolean
  */
 public class IsEq
-        extends Op
+        extends OpTest
     {
     /**
      * Construct an IS_EQ op.
@@ -29,12 +24,28 @@ public class IsEq
      * @param nValue1  the first value to compare
      * @param nValue2  the second value to compare
      * @param nRet     the location to store the Boolean result
+     *
+     * @deprecated
      */
     public IsEq(int nValue1, int nValue2, int nRet)
         {
+        super(null, null, null);
+
         m_nValue1   = nValue1;
         m_nValue2   = nValue2;
         m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct an IS_EQ op based on the specified arguments.
+     *
+     * @param arg1       the first value Argument
+     * @param arg2       the second value Argument
+     * @param argReturn  the location to store the Boolean result
+     */
+    public IsEq(Argument arg1, Argument arg2, Argument argReturn)
+        {
+        super(arg1, arg2, argReturn);
         }
 
     /**
@@ -46,19 +57,7 @@ public class IsEq
     public IsEq(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue1   = readPackedInt(in);
-        m_nValue2   = readPackedInt(in);
-        m_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_IS_EQ);
-        writePackedLong(out, m_nValue1);
-        writePackedLong(out, m_nValue2);
-        writePackedLong(out, m_nRetValue);
+        super(in, aconst);
         }
 
     @Override
@@ -68,34 +67,15 @@ public class IsEq
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected boolean isBinaryOp()
         {
-        try
-            {
-            ObjectHandle hValue1 = frame.getArgument(m_nValue1);
-            ObjectHandle hValue2 = frame.getArgument(m_nValue2);
-            if (hValue1 == null || hValue2 == null)
-                {
-                return R_REPEAT;
-                }
-
-            TypeComposition clz1 = frame.getArgumentClass(m_nValue1);
-            TypeComposition clz2 = frame.getArgumentClass(m_nValue2);
-            if (clz1 != clz2)
-                {
-                // this shouldn't have compiled
-                throw new IllegalStateException();
-                }
-
-            return clz1.callEquals(frame, hValue1, hValue2, m_nRetValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return true;
         }
 
-    private int m_nValue1;
-    private int m_nValue2;
-    private int m_nRetValue;
+    @Override
+    protected int completeBinaryOp(Frame frame, TypeComposition clz,
+                                   ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return clz.callEquals(frame, hValue1, hValue2, m_nRetValue);
+        }
     }

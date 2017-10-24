@@ -9,7 +9,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
@@ -27,11 +29,23 @@ public class Assert
     /**
      * Construct an ASSERT op.
      *
-     * @param nValue  the r-value of the assertion expression
+     * @param nTest  the r-value of the assertion expression
+     *
+     * @deprecated
      */
-    public Assert(int nValue)
+    public Assert(int nTest)
         {
-        m_nValue = nValue;
+        m_nTest = nTest;
+        }
+
+    /**
+     * Construct an ASSERT op based on the specified arguments.
+     *
+     * @param argTest  the test Argument
+     */
+    public Assert(Argument argTest)
+        {
+        m_argTest = argTest;
         }
 
     /**
@@ -43,15 +57,20 @@ public class Assert
     public Assert(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue = readPackedInt(in);
+        m_nTest = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_argTest != null)
+            {
+            m_nTest = encodeArgument(m_argTest, registry);
+            }
+
         out.writeByte(OP_ASSERT);
-        writePackedLong(out, m_nValue);
+        writePackedLong(out, m_nTest);
         }
 
     @Override
@@ -65,18 +84,22 @@ public class Assert
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nValue);
-            if (hTest == null)
+            ObjectHandle hValue = frame.getArgument(m_nTest);
+            if (hValue == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (hTest.get())
+            if (isProperty(hValue))
                 {
-                return iPC + 1;
+                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frameCaller, iPC, (BooleanHandle) ahValue[0]);
+
+                return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
                 }
 
-            return frame.raiseException(xException.makeHandle("Assertion failed"));
+            return complete(frame, iPC, (BooleanHandle) hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -84,5 +107,25 @@ public class Assert
             }
         }
 
-    private int m_nValue;
+    protected int complete(Frame frame, int iPC, BooleanHandle hTest)
+        {
+        if (hTest.get())
+            {
+            return iPC + 1;
+            }
+
+        return frame.raiseException(xException.makeHandle("Assertion failed"));
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argTest, registry);
+        }
+
+    private int m_nTest;
+
+    private Argument m_argTest;
     }

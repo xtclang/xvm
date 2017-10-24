@@ -8,8 +8,12 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.StringConstant;
+
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
@@ -27,13 +31,27 @@ public class AssertM
     /**
      * Construct an ASSERT_T op.
      *
-     * @param nValue   the r-value to test
-     * @param nTextId  the text to display on assertion failure
+     * @param nTest  the r-value to test
+     * @param nMsgId  the text to display on assertion failure
+     *
+     * @deprecated
      */
-    public AssertM(int nValue, int nTextId)
+    public AssertM(int nTest, int nMsgId)
         {
-        m_nValue = nValue;
-        m_nTextConstId = nTextId;
+        m_nTest = nTest;
+        m_nMsgConstId = nMsgId;
+        }
+
+    /**
+     * Construct an ASSERT_T op based on the specified arguments.
+     *
+     * @param argTest   the test Argument
+     * @param constMsg  the message StringConstant
+     */
+    public AssertM(Argument argTest, StringConstant constMsg)
+        {
+        m_argTest = argTest;
+        m_constMsg = constMsg;
         }
 
     /**
@@ -45,17 +63,23 @@ public class AssertM
     public AssertM(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue = readPackedInt(in);
-        m_nTextConstId = readPackedInt(in);
+        m_nTest = readPackedInt(in);
+        m_nMsgConstId = readPackedInt(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_argTest != null)
+            {
+            m_nTest = encodeArgument(m_argTest, registry);
+            m_nMsgConstId = encodeArgument(m_constMsg, registry);
+            }
+
         out.writeByte(OP_ASSERT_M);
-        writePackedLong(out, m_nValue);
-        writePackedLong(out, m_nTextConstId);
+        writePackedLong(out, m_nTest);
+        writePackedLong(out, m_nMsgConstId);
         }
 
     @Override
@@ -69,19 +93,22 @@ public class AssertM
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nValue);
-            if (hTest == null)
+            ObjectHandle hValue = frame.getArgument(m_nTest);
+            if (hValue == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (hTest.get())
+            if (isProperty(hValue))
                 {
-                return iPC + 1;
+                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frameCaller, iPC, (BooleanHandle) ahValue[0]);
+
+                return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
                 }
 
-            return frame.raiseException(
-                    xException.makeHandle("Assertion failed: " + frame.getString(m_nTextConstId)));
+            return complete(frame, iPC, (BooleanHandle) hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -89,6 +116,29 @@ public class AssertM
             }
         }
 
-    private int m_nValue;
-    private int m_nTextConstId;
+    protected int complete(Frame frame, int iPC, BooleanHandle hTest)
+        {
+        if (hTest.get())
+            {
+            return iPC + 1;
+            }
+
+        return frame.raiseException(
+            xException.makeHandle("Assertion failed: " + frame.getString(m_nMsgConstId)));
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argTest, registry);
+        registerArgument(m_constMsg, registry);
+        }
+
+    private int m_nTest;
+    private int m_nMsgConstId;
+
+    private Argument m_argTest;
+    private StringConstant m_constMsg;
     }

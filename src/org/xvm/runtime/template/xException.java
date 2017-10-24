@@ -40,7 +40,7 @@ public class xException
     @Override
     public void initDeclared()
         {
-        // TODO: remove next two lines
+        // TODO: remove everything when compiler generates the constructors
         f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
         markNativeMethod("to", VOID, STRING);
 

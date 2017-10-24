@@ -2,27 +2,23 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpTest;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * IS_NOT rvalue, lvalue-return ; !T -> Boolean
  */
 public class IsNot
-        extends Op
+        extends OpTest
     {
     /**
      * Construct an IS_NOT op.
@@ -32,8 +28,21 @@ public class IsNot
      */
     public IsNot(int nValue, int nRet)
         {
-        m_nValue    = nValue;
+        super((Argument) null, null);
+
+        m_nValue1   = nValue;
         m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct an IS_NOT op based on the specified arguments.
+     *
+     * @param arg        the value Argument
+     * @param argReturn  the location to store the Boolean result
+     */
+     public IsNot(Argument arg, Argument argReturn)
+        {
+        super(arg, argReturn);
         }
 
     /**
@@ -45,17 +54,7 @@ public class IsNot
     public IsNot(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue    = readPackedInt(in);
-        m_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_IS_NOT);
-        writePackedLong(out, m_nValue);
-        writePackedLong(out, m_nRetValue);
+        super(in, aconst);
         }
 
     @Override
@@ -65,26 +64,8 @@ public class IsNot
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
         {
-        try
-            {
-            BooleanHandle hValue = (BooleanHandle) frame.getArgument(m_nValue);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
-
-            frame.assignValue(m_nRetValue, xBoolean.not(hValue));
-
-            return iPC + 1;
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return frame.assignValue(m_nRetValue, xBoolean.not((BooleanHandle) hValue));
         }
-
-    private int m_nValue;
-    private int m_nRetValue;
     }

@@ -1,25 +1,21 @@
 package org.xvm.asm.op;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpTest;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
+import org.xvm.runtime.TypeComposition;
 
 
 /**
  * IS_TYPE  rvalue, rvalue-type, lvalue-return ; T instanceof Type -> Boolean
  */
 public class IsType
-        extends Op
+        extends OpTest
     {
     /**
      * Construct an IS_TYPE op.
@@ -27,11 +23,15 @@ public class IsType
      * @param nValue  the value to test
      * @param nType   the type to test for
      * @param nRet    the location to store the Boolean result
+     *
+     * @deprecated
      */
     public IsType(int nValue, int nType, int nRet)
         {
-        m_nValue    = nValue;
-        m_nType     = nType;
+        super(null, null, null);
+
+        m_nValue1   = nValue;
+        m_nValue2   = nType;
         m_nRetValue = nRet;
         }
 
@@ -44,19 +44,7 @@ public class IsType
     public IsType(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue    = readPackedInt(in);
-        m_nType     = readPackedInt(in);
-        m_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_IS_TYPE);
-        writePackedLong(out, m_nValue);
-        writePackedLong(out, m_nType);
-        writePackedLong(out, m_nRetValue);
+        super(in, aconst);
         }
 
     @Override
@@ -66,27 +54,17 @@ public class IsType
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected boolean isBinaryOp()
         {
-        try
-            {
-            ObjectHandle hValue1 = frame.getArgument(m_nValue);
-            ObjectHandle hValue2 = frame.getArgument(m_nType);
-            if (hValue1 == null || hValue2 == null)
-                {
-                return R_REPEAT;
-                }
-
-            // TODO
-            return iPC + 1;
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        // while technically this op is not binary, we could re-use all the base logic
+        return true;
         }
 
-    private int m_nValue;
-    private int m_nType;
-    private int m_nRetValue;
+    @Override
+    protected int completeBinaryOp(Frame frame, TypeComposition clz,
+                                   ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        // TODO: Note that hValue2 represents the type
+        return R_NEXT;
+        }
     }

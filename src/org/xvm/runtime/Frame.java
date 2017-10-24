@@ -694,11 +694,18 @@ public class Frame
         return hException == null ? Op.R_NEXT : raiseException(hException);
         }
 
-    // return a string value of the specified constant
+    // return a string value of the specified StringConstant
     public String getString(int iArg)
         {
         StringConstant constText = (StringConstant) getConstant(iArg);
         return constText.getValue();
+        }
+
+    // return the type of the local property specified by the PropertyConstant
+    public Type getLocalPropertyType(int iArg)
+        {
+        PropertyConstant constProperty = (PropertyConstant) getConstant(iArg);
+        return f_context.f_types.resolveType(constProperty.getType(), getActualTypes());
         }
 
     // return the type of the specified argument
@@ -884,18 +891,6 @@ public class Frame
                 f_function.getParam(nVar).getType().getPosition(), sName, VAR_STANDARD);
             }
         return info;
-        }
-
-    // nVar is either a register (>=0) or a local property indicator
-    public Type getVarType(int nVar)
-        {
-        if (nVar >= 0)
-            {
-            return getVarInfo(nVar).getType();
-            }
-
-        PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
-        return f_context.f_types.resolveType(constProperty.getType(), getActualTypes());
         }
 
     // construct-finally support

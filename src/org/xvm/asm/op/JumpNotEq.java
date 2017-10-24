@@ -6,12 +6,11 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
@@ -20,7 +19,7 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
  * JMP_NEQ rvalue1, rvalue2, addr ; jump if value1 is NOT equal to value2
  */
 public class JumpNotEq
-        extends JumpCond
+        extends OpCondJump
     {
     /**
      * Construct a JMP_NEQ op.
@@ -77,45 +76,10 @@ public class JumpNotEq
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected int completeBinaryOp(Frame frame, int iPC, TypeComposition clz,
+                                   ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        try
-            {
-            ObjectHandle hArg1 = frame.getArgument(m_nArg);
-            ObjectHandle hArg2 = frame.getArgument(m_nArg2);
-            if (hArg1 == null || hArg2 == null)
-                {
-                return R_REPEAT;
-                }
-
-            if (isProperty(hArg1) || isProperty(hArg2))
-                {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg1, hArg2};
-                Frame.Continuation stepNext = frameCaller ->
-                    complete(frame, iPC, ahArg[0], ahArg[1]);
-
-                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
-
-            return complete(frame, iPC, hArg1, hArg2);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
-        }
-
-    protected int complete(Frame frame, int iPC, ObjectHandle hArg1, ObjectHandle hArg2)
-        {
-        TypeComposition clz1 = frame.getArgumentClass(m_nArg);
-        TypeComposition clz2 = frame.getArgumentClass(m_nArg2);
-        if (clz1 != clz2)
-            {
-            // this shouldn't have compiled
-            throw new IllegalStateException();
-            }
-
-        switch (clz1.callEquals(frame, hArg1, hArg2, Frame.RET_LOCAL))
+        switch (clz.callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL))
             {
             case R_NEXT:
                 {

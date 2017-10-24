@@ -6,11 +6,10 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xNullable;
 
@@ -19,7 +18,7 @@ import org.xvm.runtime.template.xNullable;
  * JMP_NNULL rvalue, addr ; jump if value is NOT null
  */
 public class JumpNotNull
-        extends JumpCond
+        extends OpCondJump
     {
     /**
      * Construct a JMP_NNULL op.
@@ -67,30 +66,8 @@ public class JumpNotNull
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
         {
-        try
-            {
-            ObjectHandle hArg = frame.getArgument(m_nArg);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
-
-            if (isProperty(hArg))
-                {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                Frame.Continuation stepNext = frameCaller ->
-                    hArg == xNullable.NULL ? iPC + 1 : iPC + m_ofJmp;
-
-                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
-                }
-
-            return hArg == xNullable.NULL ? iPC + 1 : iPC + m_ofJmp;
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return hValue == xNullable.NULL ? iPC + 1 : iPC + m_ofJmp;
         }
     }

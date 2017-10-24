@@ -88,6 +88,7 @@ public class VariableDeclarationStatement
         // TODO verify conditional usage (right hand side must have a conditional return?)
         // TODO peel ref-specific annotations off of the type (e.g. "@Future")
         // TODO make sure that # exprs == # type fields for tuple type
+        // TODO make sure that # type fields == 1 for sequence type
 
         boolean fValid = type.validate(ctx, errs);
         if (value != null)
@@ -126,7 +127,7 @@ public class VariableDeclarationStatement
                 nOp    = Op.OP_VAR_TN;
                 vals   = ((TupleExpression) value).getExpressions();
                 List<TypeConstant> types = typeV.getParamTypes();
-                typeOf = i -> types.get(i);                                 // TODO type needs to be verified
+                typeOf = i -> types.get(i);
                 }
             else if (value instanceof ListExpression && typeV.isA(getConstantPool()
                     .ensureEcstasyTypeConstant("collections.Sequence")))
@@ -134,7 +135,7 @@ public class VariableDeclarationStatement
                 // VAR_SN TYPE, STRING, #values:(rvalue)
                 nOp    = Op.OP_VAR_SN;
                 vals   = ((ListExpression) value).getExpressions();
-                TypeConstant typeElement = typeV.getParamTypes().get(0);    // TODO type must have exactly 1 param
+                TypeConstant typeElement = typeV.getParamTypes().get(0);
                 typeOf = i -> typeElement;
                 }
 

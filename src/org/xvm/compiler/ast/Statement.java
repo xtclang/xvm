@@ -8,7 +8,7 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.op.Label;
-import org.xvm.asm.op.Line_N;
+import org.xvm.asm.op.Nop;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
@@ -168,7 +168,7 @@ public abstract class Statement
             {
             if (nLine != m_nLine)
                 {
-                code.add(new Line_N(nLine - m_nLine));
+                code.add(new Nop(nLine - m_nLine));
                 m_nLine = nLine;
                 }
             }

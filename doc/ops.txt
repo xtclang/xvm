@@ -1,6 +1,8 @@
 // fundamentals
 +NOP                                                ; traditional no-op (i.e. it does nothing)
 +LINE_1                                             ; advance source code line counter by 1 line
++LINE_2                                             ; advance source code line counter by 2 line
++LINE_3                                             ; advance source code line counter by 3 line
 +LINE_N     #lines                                  ; advance source code line counter by n lines
 +BREAK                                              ; explicit break-point for a debugger
 +ENTER                                              ; variable scope begin
@@ -20,6 +22,7 @@
 +ASSERT_V   rvalue, STRING, #vals(rvalue)           ; assert with a message and ("V"=) values to print
 
 // returns
+// - rvalues support a local-property mode
 +RETURN_0                                           ; return (no return value)
 +RETURN_1   rvalue                                  ; return (single return value)
 +RETURN_N   #vals:(rvalue)                          ; return (multiple return value)
@@ -35,6 +38,7 @@
  RTYPE_N    TYPE, #type-params:(rvalue-type), lvalue
 
 // jumps (all addresses are relative to the PC of the jump op)
+// - rvalues support a local-property mode
 +JMP        addr                                    ; unconditional relative jump
 +JMP_TRUE   rvalue, addr                            ; jump if Boolean value is Boolean.True
 +JMP_FALSE  rvalue, addr                            ; jump if Boolean value is Boolean.False
@@ -56,6 +60,8 @@
  JMP_VAL    rvalue, #:(CONST, addr), addr-default   ; if value equals a constant, jump to address, otherwise default
 
 // Boolean checks
+// - rvalues support a local-property mode
+// - lvalue return values can specify the "next register" to allocate
 +IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
 +IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
 +IS_NULL    rvalue, lvalue-return                   ; T == null -> Boolean
@@ -69,9 +75,9 @@
 +IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
  IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
  IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
- IS_SVC     rvalue                                  ; (T is a service) -> Boolean
- IS_CONST   rvalue                                  ; (T is a const) -> Boolean
- IS_IMMUT   rvalue                                  ; (T is an immutable) -> Boolean
+ IS_SVC     rvalue, lvalue-return                   ; (T is a service) -> Boolean
+ IS_CONST   rvalue, lvalue-return                   ; (T is a const) -> Boolean
+ IS_IMMUT   rvalue, lvalue-return                   ; (T is an immutable) -> Boolean
 
 // next register allocation (variables, including refs)
 // - does NOT support "local property" mode
@@ -225,6 +231,7 @@
 // function calls
 // rvalue-fn does NOT support "local property" mode, but
 // lvalue-param and lvalue-return support "local property" mode
+// return values as the "next register" feature is deferred
 // - first digit is # params: 0, 1, n, or "t"=tuple
 // - second digit is # returns: 0, 1, n, or "t"=tuple
 +CALL_00    rvalue-fn
@@ -245,6 +252,8 @@
 +CALL_TT    rvalue-fn, rvalue-tparams, lvalue-treturn
 
 // method calls ("NVOK"=invoke)
+// lvalue-param and lvalue-return support "local property" mode
+// return values as the "next register" feature is deferred
 // - first digit is # params: 0, 1, n, or tuple
 // - second digit is # returns: 0, 1, n, or tuple
 +NVOK_00    rvalue-target, METHOD
