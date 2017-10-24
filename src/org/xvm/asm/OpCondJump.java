@@ -16,9 +16,10 @@ public abstract class OpCondJump
         extends Op
     {
     /**
-     * Construct a unary conditional JMP op.
+     * Construct a unary conditional JMP_ op.
      *
-     * @param op  the op to jump to
+     * @param arg  a value Argument
+     * @param op   the op to jump to
      */
     protected OpCondJump(Argument arg, Op op)
         {
@@ -29,9 +30,11 @@ public abstract class OpCondJump
         }
 
     /**
-     * Construct a binary conditional JMP op.
+     * Construct a binary conditional JMP_ op.
      *
-     * @param op  the op to jump to
+     * @param arg   a value Argument
+     * @param arg2  a second value Argument
+     * @param op    the op to jump to
      */
     protected OpCondJump(Argument arg, Argument arg2, Op op)
         {
@@ -119,11 +122,11 @@ public abstract class OpCondJump
             }
         }
 
-    protected Argument m_argVal;
-    protected Argument m_argVal2;
-    protected Op       m_opDest;
-
     protected int      m_nArg;
     protected int      m_nArg2;
     protected int      m_ofJmp;
+
+    protected Argument m_argVal;
+    protected Argument m_argVal2;
+    protected Op       m_opDest;
     }

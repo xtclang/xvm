@@ -2,29 +2,24 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpTest;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * IS_NEQ rvalue, rvalue, lvalue-return ; T != T -> Boolean
  */
 public class IsNotEq
-        extends Op
+        extends OpTest
     {
     /**
      * Construct an IS_NEQ op.
@@ -32,12 +27,28 @@ public class IsNotEq
      * @param nValue1  the first value to compare
      * @param nValue2  the second value to compare
      * @param nRet     the location to store the Boolean result
+     *
+     * @deprecated
      */
     public IsNotEq(int nValue1, int nValue2, int nRet)
         {
-        m_nValue1 = nValue1;
-        m_nValue2 = nValue2;
+        super(null, null, null);
+
+        m_nValue1   = nValue1;
+        m_nValue2   = nValue2;
         m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct an IS_NEQ op based on the specified arguments.
+     *
+     * @param arg1       the first value Argument
+     * @param arg2       the second value Argument
+     * @param argReturn  the location to store the Boolean result
+     */
+    public IsNotEq(Argument arg1, Argument arg2, Argument argReturn)
+        {
+        super(arg1, arg2, argReturn);
         }
 
     /**
@@ -49,19 +60,7 @@ public class IsNotEq
     public IsNotEq(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue1   = readPackedInt(in);
-        m_nValue2   = readPackedInt(in);
-        m_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_IS_NEQ);
-        writePackedLong(out, m_nValue1);
-        writePackedLong(out, m_nValue2);
-        writePackedLong(out, m_nRetValue);
+        super(in, aconst);
         }
 
     @Override
@@ -71,55 +70,34 @@ public class IsNotEq
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected boolean isBinaryOp()
         {
-        try
-            {
-            ObjectHandle hValue1 = frame.getArgument(m_nValue1);
-            ObjectHandle hValue2 = frame.getArgument(m_nValue2);
-            if (hValue1 == null || hValue2 == null)
-                {
-                return R_REPEAT;
-                }
-
-            TypeComposition clz1 = frame.getArgumentClass(m_nValue1);
-            TypeComposition clz2 = frame.getArgumentClass(m_nValue2);
-            if (clz1 != clz2)
-                {
-                // this shouldn't have compiled
-                throw new IllegalStateException();
-                }
-
-            switch (clz1.callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL))
-                {
-                case R_EXCEPTION:
-                    return R_EXCEPTION;
-
-                case R_NEXT:
-                    {
-                    BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
-                    return frame.assignValue(m_nRetValue, xBoolean.not(hValue));
-                    }
-
-                case R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        {
-                        BooleanHandle hValue = (BooleanHandle) frameCaller.getFrameLocal();
-                        return frame.assignValue(m_nRetValue, xBoolean.not(hValue));
-                        });
-                    return R_CALL;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return true;
         }
 
-    private int m_nValue1;
-    private int m_nValue2;
-    private int m_nRetValue;
+    @Override
+    protected int completeBinaryOp(Frame frame, TypeComposition clz,
+                                   ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        switch (clz.callEquals(frame, hValue1, hValue2, m_nRetValue))
+            {
+            case R_NEXT:
+                {
+                return frame.assignValue(m_nRetValue,
+                    xBoolean.not((BooleanHandle) frame.getFrameLocal()));
+                }
+
+            case R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    frameCaller.assignValue(m_nRetValue,
+                        xBoolean.not((BooleanHandle) frameCaller.getFrameLocal())));
+                return R_CALL;
+
+            case R_EXCEPTION:
+                return R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
     }
