@@ -10,9 +10,7 @@ import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.Utils;
 
 
 /**
@@ -67,30 +65,8 @@ public class JumpZero
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
         {
-        try
-            {
-            ObjectHandle hArg = frame.getArgument(m_nArg);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
-
-            if (isProperty(hArg))
-                {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                Frame.Continuation stepNext = frameCaller ->
-                    ((JavaLong) ahArg[0]).getValue() == 0 ? iPC + m_ofJmp : iPC + 1;
-
-                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
-                }
-
-            return ((JavaLong) hArg).getValue() == 0 ? iPC + m_ofJmp : iPC + 1;
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return ((JavaLong) hValue).getValue() == 0 ? iPC + m_ofJmp : iPC + 1;
         }
     }

@@ -9,7 +9,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
@@ -66,21 +66,8 @@ public class JumpFalse
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
         {
-        try
-            {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nArg);
-            if (hTest == null)
-                {
-                return R_REPEAT;
-                }
-
-            return hTest.get() ? iPC + 1 : iPC + m_ofJmp;
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return ((BooleanHandle) hValue).get() ? iPC + 1 : iPC + m_ofJmp;
         }
     }

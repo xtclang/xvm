@@ -7,10 +7,9 @@ import java.io.IOException;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
-
 import org.xvm.runtime.Utils;
-
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -129,7 +128,7 @@ public abstract class OpTest
 
             return completeUnaryOp(frame, hValue);
             }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+        catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
@@ -160,7 +159,7 @@ public abstract class OpTest
                 clz1 = frame.getArgumentClass(m_nValue1);
                 }
 
-            if (isProperty(hValue1))
+            if (isProperty(hValue2))
                 {
                 clz2 = frame.getLocalPropertyType(m_nValue2).f_clazz;
                 fAnyProp = true;
@@ -187,7 +186,7 @@ public abstract class OpTest
 
             return completeBinaryOp(frame, clz1, hValue1, hValue2);
             }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+        catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }

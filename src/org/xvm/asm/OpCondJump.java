@@ -5,6 +5,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -109,6 +115,114 @@ public abstract class OpCondJump
     protected boolean isBinaryOp()
         {
         return false;
+        }
+
+    @Override
+    public int process(Frame frame, int iPC)
+        {
+        return isBinaryOp() ? processBinaryOp(frame, iPC) : processUnaryOp(frame, iPC);
+        }
+
+    protected int processUnaryOp(Frame frame, int iPC)
+        {
+        try
+            {
+            ObjectHandle hValue = frame.getArgument(m_nArg);
+            if (hValue == null)
+                {
+                return R_REPEAT;
+                }
+
+            if (isProperty(hValue))
+                {
+                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+                Frame.Continuation stepNext = frameCaller ->
+                    completeUnaryOp(frame, iPC, ahValue[0]);
+
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
+
+            return completeUnaryOp(frame, iPC, hValue);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
+        }
+
+    protected int processBinaryOp(Frame frame, int iPC)
+        {
+        try
+            {
+            ObjectHandle hValue1 = frame.getArgument(m_nArg);
+            ObjectHandle hValue2 = frame.getArgument(m_nArg2);
+            if (hValue1 == null || hValue2 == null)
+                {
+                return R_REPEAT;
+                }
+
+            TypeComposition clz1;
+            TypeComposition clz2;
+            boolean fAnyProp = false;
+
+            if (isProperty(hValue1))
+                {
+                clz1 = frame.getLocalPropertyType(m_nArg).f_clazz;
+                fAnyProp = true;
+                }
+            else
+                {
+                clz1 = frame.getArgumentClass(m_nArg);
+                }
+
+            if (isProperty(hValue2))
+                {
+                clz2 = frame.getLocalPropertyType(m_nArg2).f_clazz;
+                fAnyProp = true;
+                }
+            else
+                {
+                clz2 = frame.getArgumentClass(m_nArg2);
+                }
+
+            if (clz1 != clz2)
+                {
+                // this shouldn't have compiled
+                throw new IllegalStateException();
+                }
+
+            if (fAnyProp)
+                {
+                ObjectHandle[] ahValue = new ObjectHandle[] {hValue1, hValue2};
+                Frame.Continuation stepNext = frameCaller ->
+                    completeBinaryOp(frame, iPC, clz1, ahValue[0], ahValue[1]);
+
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
+
+            return completeBinaryOp(frame, iPC, clz1, hValue1, hValue2);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
+        }
+
+    /**
+     * A completion of a unary op; must me overridden by all binary ops.
+     */
+    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * A completion of a binary op; must me overridden by all binary ops.
+     */
+    protected int completeBinaryOp(Frame frame, int iPC, TypeComposition clz,
+                                   ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        throw new UnsupportedOperationException();
         }
 
     @Override
