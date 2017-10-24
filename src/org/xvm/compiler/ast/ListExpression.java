@@ -28,6 +28,10 @@ public class ListExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public List<Expression> getExpressions()
+        {
+        return exprs;
+        }
 
     @Override
     public long getStartPosition()

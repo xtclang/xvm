@@ -1,15 +1,21 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.Op;
+import org.xvm.asm.Op.Argument;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 
+import org.xvm.asm.op.Var_SN;
 import org.xvm.asm.op.Var_TN;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -81,6 +87,7 @@ public class VariableDeclarationStatement
         {
         // TODO verify conditional usage (right hand side must have a conditional return?)
         // TODO peel ref-specific annotations off of the type (e.g. "@Future")
+        // TODO make sure that # exprs == # type fields for tuple type
 
         boolean fValid = type.validate(ctx, errs);
         if (value != null)
@@ -110,29 +117,44 @@ public class VariableDeclarationStatement
         // values, we can just use VAR_IN and point to the constant itself
         if (typeV.isParamsSpecified() && !value.isConstant())
             {
-            int nOp = -1;
-            if (typeV.isTuple() && value instanceof TupleExpression)
+            int                             nOp    = -1;
+            List<Expression>                vals   = null;
+            Function<Integer, TypeConstant> typeOf = null;
+            if (value instanceof TupleExpression && typeV.isTuple())
                 {
                 // VAR_TN TYPE, STRING, #values:(rvalue)
-                nOp = Op.OP_VAR_TN;
+                nOp    = Op.OP_VAR_TN;
+                vals   = ((TupleExpression) value).getExpressions();
+                List<TypeConstant> types = typeV.getParamTypes();
+                typeOf = i -> types.get(i);                                 // TODO type needs to be verified
                 }
-            else if ((typeV.isArray() || typeV.isA(getConstantPool().ensureEcstasyTypeConstant("collections.Sequence"))) && value instanceof ListExpression)
+            else if (value instanceof ListExpression && typeV.isA(getConstantPool()
+                    .ensureEcstasyTypeConstant("collections.Sequence")))
                 {
                 // VAR_SN TYPE, STRING, #values:(rvalue)
-                nOp = Op.OP_VAR_SN;
+                nOp    = Op.OP_VAR_SN;
+                vals   = ((ListExpression) value).getExpressions();
+                TypeConstant typeElement = typeV.getParamTypes().get(0);    // TODO type must have exactly 1 param
+                typeOf = i -> typeElement;
                 }
 
             if (nOp >= 0)
                 {
-                // TODO
+                int        cArgs = vals.size();
+                Argument[] aArgs = new Argument[cArgs];
+                for (int i = 0; i < cArgs; ++i)
+                    {
+                    aArgs[i] = vals.get(i).generateArgument(code, typeOf.apply(i), false, errs);
+                    }
+                code.add(nOp == Op.OP_VAR_TN
+                        ? new Var_TN(typeV, constName, aArgs)
+                        : new Var_SN(typeV, constName, aArgs));
+                return fCompletes;
                 }
             }
 
-        && ( || ))
-            {
-            code.add(new Var_IN(typeV, constName, value.generateArgument(code, typeV, false, errs)));
-            }
-
+        // declare and initialize named var
+        code.add(new Var_IN(typeV, constName, value.generateArgument(code, typeV, false, errs)));
         return fCompletes;
         }
 

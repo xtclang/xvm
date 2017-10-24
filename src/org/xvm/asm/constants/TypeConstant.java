@@ -15,6 +15,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.compiler.ast.ListExpression;
 import org.xvm.runtime.TypeSet;
 
 
@@ -323,7 +324,21 @@ public abstract class TypeConstant
         {
         TypeConstant constThis = (TypeConstant) this.simplify();
         assert !constThis.containsUnresolved();
-        return constThis.isEcstasy("collections.array");
+        return constThis.isA(getConstantPool().ensureEcstasyTypeConstant("collections.Array"));
+        }
+
+    /**
+     * @return true iff the type is a tuple type
+     */
+    public boolean isSequence()
+        {
+        TypeConstant constThis = (TypeConstant) this.simplify();
+        assert !constThis.containsUnresolved();
+        return     constThis.isEcstasy("String")
+                || constThis.isEcstasy("collections.Array")
+                || constThis.isEcstasy("collections.List")
+                || constThis.isEcstasy("collections.Sequence")
+                || constThis.isA(getConstantPool().ensureEcstasyTypeConstant("collections.Sequence"));
         }
 
     /**
