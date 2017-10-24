@@ -1,6 +1,8 @@
 // fundamentals
 +NOP                                                ; traditional no-op (i.e. it does nothing)
 +LINE_1                                             ; advance source code line counter by 1 line
++LINE_2                                             ; advance source code line counter by 2 line
++LINE_3                                             ; advance source code line counter by 3 line
 +LINE_N     #lines                                  ; advance source code line counter by n lines
 +BREAK                                              ; explicit break-point for a debugger
 +ENTER                                              ; variable scope begin

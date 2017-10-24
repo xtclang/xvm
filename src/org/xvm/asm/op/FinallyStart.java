@@ -1,10 +1,6 @@
 package org.xvm.asm.op;
 
 
-import java.io.DataInput;
-import java.io.IOException;
-
-import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
@@ -21,17 +17,6 @@ public class FinallyStart
      * Construct a FINALLY op.
      */
     public FinallyStart()
-        {
-        }
-
-    /**
-     * Deserialization constructor.
-     *
-     * @param in      the DataInput to read from
-     * @param aconst  an array of constants used within the method
-     */
-    public FinallyStart(DataInput in, Constant[] aconst)
-            throws IOException
         {
         }
 

@@ -37,8 +37,6 @@ public class Nop extends Op
      */
     public Nop(int cLines)
         {
-        f_cLines = cLines;
-
         int nOp;
         switch (cLines)
             {
@@ -58,7 +56,9 @@ public class Nop extends Op
                 nOp = OP_LINE_N;
                 break;
             }
+
         f_nOp = nOp;
+        f_cLines = cLines;
         }
 
     /**
@@ -70,8 +70,8 @@ public class Nop extends Op
     public Nop(DataInput in, Constant[] aconst)
             throws IOException
         {
-        f_cLines = readPackedInt(in);
         f_nOp = OP_LINE_N;
+        f_cLines = readPackedInt(in);
         }
 
     @Override
