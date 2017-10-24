@@ -19,6 +19,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpFalse;
@@ -28,6 +29,7 @@ import org.xvm.asm.op.Label;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
+import org.xvm.compiler.ast.Statement.Context;
 import org.xvm.util.Severity;
 
 
@@ -415,7 +417,7 @@ public abstract class Expression
         }
 
     /**
-     * @return true iff the Expression is the constant value "false"
+     * @return true iff the Expression is of the type "Boolean"
      */
     public boolean isTypeBoolean()
         {

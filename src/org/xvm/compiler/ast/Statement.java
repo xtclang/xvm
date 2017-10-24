@@ -4,6 +4,8 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Line_N;
@@ -136,6 +138,17 @@ public abstract class Statement
         public void enterScope()
             {
             // TODO
+            }
+
+        public void registerVar(String sName, Register reg, ErrorListener errs)
+            {
+            // TODO
+            }
+
+        public Argument resolveName(String sName)
+            {
+            // TODO
+            return null;
             }
 
         /**

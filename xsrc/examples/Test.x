@@ -150,4 +150,21 @@ module Test
         {
         return a + b;
         }
+
+    Int foo9(Iterator<Int> iter)
+        {
+        Int sum = 0;
+        while (Int i : iter.next())
+            {
+            sum += i;
+            }
+
+        // just for comparison
+        while (sum < 10)
+            {
+            ++sum;
+            }
+
+        return sum;
+        }
     }
