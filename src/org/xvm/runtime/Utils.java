@@ -3,7 +3,7 @@ package org.xvm.runtime;
 
 import java.sql.Timestamp;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.Iterator;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -15,7 +15,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.template.Const;
 
 import org.xvm.runtime.template.Function;
-import org.xvm.runtime.template.annotations.xFutureRef;
+import org.xvm.runtime.template.xString.StringHandle;
+
 import org.xvm.runtime.template.types.xProperty.PropertyHandle;
 
 
@@ -450,5 +451,89 @@ public abstract class Utils
 
         private int index = -1;
         private boolean fBlock;
+        }
+
+    // ----- toString support -----
+
+    public static class ArrayToString
+            implements Frame.Continuation
+        {
+        public ArrayToString(StringBuilder sb, ObjectHandle[] ahValue,
+                             String[] asLabel, Frame.Continuation nextStep)
+            {
+            this.sb = sb;
+            this.ahValue = ahValue;
+            this.asLabel = asLabel;
+            this.nextStep = nextStep;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            if (updateResult(frameCaller))
+                {
+                return doNext(frameCaller);
+                }
+
+            // too much text; enough for an output...
+            return nextStep.proceed(frameCaller);
+            }
+
+        // return false if the buffer is full
+        protected boolean updateResult(Frame frameCaller)
+            {
+            StringHandle hString = (StringHandle) frameCaller.getFrameLocal();
+            String sLabel = asLabel == null ? null : asLabel[index];
+
+            if (sLabel != null)
+                {
+                sb.append(sLabel).append('=');
+                }
+            sb.append(hString.getValue());
+
+            if (sb.length() < 1024*32)
+                {
+                sb.append(", ");
+                return true;
+                }
+
+            sb.append("...");
+            return false;
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (++index < ahValue.length)
+                {
+                switch (Utils.callToString(frameCaller, ahValue[index]))
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        continue;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            sb.setLength(sb.length() - 2); // remove the trailing ", "
+            sb.append(')');
+
+            return nextStep.proceed(frameCaller);
+            }
+
+        final private StringBuilder sb;
+        final private ObjectHandle[] ahValue;
+        final private String[] asLabel;
+        final private Frame.Continuation nextStep;
+
+        private int index = -1;
         }
     }

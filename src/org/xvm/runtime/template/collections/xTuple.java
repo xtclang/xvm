@@ -4,14 +4,12 @@ package org.xvm.runtime.template.collections;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -29,7 +27,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
@@ -242,79 +239,18 @@ public class xTuple
           .append('(');
 
         ObjectHandle[] ahValue = hTuple.m_ahValue;
-        Iterator<ObjectHandle> iterValues = new Iterator<ObjectHandle>()
+        if (ahValue.length > 0)
             {
-            private int i = 0;
-            public boolean hasNext()
-                {
-                return i < ahValue.length;
-                }
-            public ObjectHandle next()
-                {
-                return ahValue[i++];
-                }
-            };
+            Frame.Continuation stepNext = frameCaller ->
+                frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
 
-        return new ToString(sb, iterValues, iReturn).doNext(frame);
-        }
-
-    /**
-     * Helper class for buildStringValue() implementation.
-     */
-    protected static class ToString
-            implements Frame.Continuation
-        {
-        final private StringBuilder sb;
-        final private Iterator<ObjectHandle> iterValues;
-        final private int iReturn;
-
-        public ToString(StringBuilder sb, Iterator iterValues, int iReturn)
-            {
-            this.sb = sb;
-            this.iterValues = iterValues;
-            this.iReturn = iReturn;
+            return new Utils.ArrayToString(
+                sb, hTuple.m_ahValue, null, stepNext).doNext(frame);
             }
-
-        @Override
-        public int proceed(Frame frameCaller)
+        else
             {
-            updateResult(frameCaller);
-
-            return doNext(frameCaller);
-            }
-
-        protected void updateResult(Frame frameCaller)
-            {
-            sb.append(((StringHandle) frameCaller.getFrameLocal()).getValue())
-              .append(", ");
-            }
-
-        protected int doNext(Frame frameCaller)
-            {
-            while (iterValues.hasNext())
-                {
-                switch (Utils.callToString(frameCaller, iterValues.next()))
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        continue;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-
-            sb.setLength(sb.length() - 2); // remove the trailing ", "
             sb.append(')');
-
-            return frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
+            return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
             }
         }
 

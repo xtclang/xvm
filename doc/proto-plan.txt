@@ -74,8 +74,8 @@
     + allow local property for PIP_*
     + allow local property for Call_* and Invoke_* returns
     + allow local property for l-values (assignValue)
+    + allow next register for *GET
     - allow local property for IP_*
-    - allow next register for *GET/*SET
 
 - a test for auto-narrowing method invocation
 

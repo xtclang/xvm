@@ -8,12 +8,16 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.StringConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.types.xProperty.PropertyHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -28,15 +32,29 @@ public class AssertV
     /**
      * Construct an ASSERT_V op.
      *
-     * @param nValue   the r-value to test
-     * @param nTextId  the text to print on assertion failure
+     * @param nTest    the r-value to test
+     * @param nMsgId   the text to print on assertion failure
      * @param anValue  the values to print on assertion failure
      */
-    public AssertV(int nValue, int nTextId, int[] anValue)
+    public AssertV(int nTest, int nMsgId, int[] anValue)
         {
-        m_nValue       = nValue;
-        m_nTextConstId = nTextId;
-        m_anValue      = anValue;
+        m_nTest = nTest;
+        m_nMsgConstId = nMsgId;
+        m_anValue = anValue;
+        }
+
+    /**
+     * Construct an ASSERT_T op based on the specified arguments.
+     *
+     * @param argTest    the test Argument
+     * @param constMsg   the message StringConstant
+     * @param aArgValue  the value Arguments
+     */
+    public AssertV(Argument argTest, StringConstant constMsg, Argument[] aArgValue)
+        {
+        m_argTest = argTest;
+        m_constMsg = constMsg;
+        m_aArgValue = aArgValue;
         }
 
     /**
@@ -48,18 +66,25 @@ public class AssertV
     public AssertV(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nValue       = readPackedInt(in);
-        m_nTextConstId = readPackedInt(in);
-        m_anValue      = readIntArray(in);
+        m_nTest = readPackedInt(in);
+        m_nMsgConstId = readPackedInt(in);
+        m_anValue = readIntArray(in);
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        if (m_argTest != null)
+            {
+            m_nTest = encodeArgument(m_argTest, registry);
+            m_nMsgConstId = encodeArgument(m_constMsg, registry);
+            m_anValue = encodeArguments(m_aArgValue, registry);
+            }
+
         out.writeByte(OP_ASSERT_V);
-        writePackedLong(out, m_nValue);
-        writePackedLong(out, m_nTextConstId);
+        writePackedLong(out, m_nTest);
+        writePackedLong(out, m_nMsgConstId);
         writeIntArray(out, m_anValue);
         }
 
@@ -74,39 +99,23 @@ public class AssertV
         {
         try
             {
-            BooleanHandle hTest = (BooleanHandle) frame.getArgument(m_nValue);
-            if (hTest == null)
+            ObjectHandle hTest = frame.getArgument(m_nTest);
+            ObjectHandle[] ahValue = frame.getArguments(m_anValue, m_anValue.length);
+            if (hTest == null || ahValue == null)
                 {
                 return R_REPEAT;
                 }
 
-            if (hTest.get())
+            if (isProperty(hTest))
                 {
-                return iPC + 1;
+                ObjectHandle[] ahTest = new ObjectHandle[] {hTest};
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frameCaller, iPC, (BooleanHandle) ahTest[0], ahValue);
+
+                return new Utils.GetArgument(ahTest, stepNext).doNext(frame);
                 }
 
-            StringBuilder sb = new StringBuilder("Assertion failed: ");
-            sb.append(frame.getString(m_nTextConstId))
-              .append(" (");
-
-            for (int i = 0, c = m_anValue.length; i < c; i++)
-                {
-                if (i > 0)
-                    {
-                    sb.append(", ");
-                    }
-                int nValue = m_anValue[i];
-
-                Frame.VarInfo info = frame.getVarInfo(nValue);
-                ObjectHandle hValue = frame.getArgument(nValue);
-
-                sb.append(info.getName())
-                  .append('=')
-                  .append(hValue);
-                }
-            sb.append(')');
-
-            return frame.raiseException(xException.makeHandle(sb.toString()));
+            return complete(frame, iPC, (BooleanHandle) hTest, ahValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -114,7 +123,92 @@ public class AssertV
             }
         }
 
-    private int   m_nValue;
-    private int   m_nTextConstId;
+    protected int complete(Frame frame, int iPC, BooleanHandle hTest, ObjectHandle[] ahValue)
+        {
+        if (hTest.get())
+            {
+            return iPC + 1;
+            }
+
+        if (anyProperty(ahValue))
+            {
+            int cValues = ahValue.length;
+
+            ObjectHandle[] ahResolved = new ObjectHandle[cValues];
+            System.arraycopy(ahValue, 0, ahResolved, 0, cValues);
+
+            // ahValue still holds original PropertyHandles
+            Frame.Continuation stepNext = frameCaller ->
+                raiseException(frameCaller, ahResolved, ahValue);
+
+            return new Utils.GetArguments(ahResolved, stepNext).doNext(frame);
+            }
+
+        return raiseException(frame, ahValue, ahValue);
+        }
+
+    protected int raiseException(Frame frame, ObjectHandle[] ahResolved, ObjectHandle[] ahOrig)
+        {
+        StringBuilder sb = new StringBuilder("Assertion failed: ");
+        sb.append(frame.getString(m_nMsgConstId))
+          .append(" (");
+
+        // get the variable/local property names
+
+        int[] anValue = m_anValue;
+        int   cValues = anValue.length;
+
+        String[] asName = new String[cValues];
+        for (int i = 0; i < cValues; i++)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+
+            int nValue = anValue[i];
+            if (nValue >= 0)
+                {
+                // nValue points to a register
+                asName[i] = frame.getVarInfo(nValue).getName();
+                }
+            else
+                {
+                // nValue points to a local property or a constant;
+                // in the local property case the property handle must be in the ahOrig array
+                ObjectHandle hValueOrig = ahOrig[i];
+                if (isProperty(hValueOrig))
+                    {
+                    asName[i] = ((PropertyHandle) hValueOrig).m_constProperty.getName();
+                    }
+                else // simply a constant; no label
+                    {
+                    asName[i] = "";
+                    }
+                }
+            }
+
+        Frame.Continuation stepNext = frameCaller ->
+            frameCaller.raiseException(xException.makeHandle(sb.toString()));
+
+        return new Utils.ArrayToString(sb, ahResolved, asName, stepNext).doNext(frame);
+        }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argTest, registry);
+        registerArgument(m_constMsg, registry);
+        registerArguments(m_aArgValue, registry);
+        }
+
+    private int m_nTest;
+    private int m_nMsgConstId;
     private int[] m_anValue;
+
+    private Argument m_argTest;
+    private StringConstant m_constMsg;
+    private Argument[] m_aArgValue;
     }
