@@ -63,6 +63,12 @@ public class GP_Neg
         }
 
     @Override
+    protected boolean isBinaryOp()
+        {
+        return false;
+        }
+
+    @Override
     protected int completeUnary(Frame frame, ObjectHandle hTarget)
         {
         super.completeUnary(frame, hTarget);
