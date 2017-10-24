@@ -20,6 +20,7 @@
 +ASSERT_V   rvalue, STRING, #vals(rvalue)           ; assert with a message and ("V"=) values to print
 
 // returns
+// - rvalues support a local-property mode
 +RETURN_0                                           ; return (no return value)
 +RETURN_1   rvalue                                  ; return (single return value)
 +RETURN_N   #vals:(rvalue)                          ; return (multiple return value)

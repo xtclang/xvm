@@ -562,9 +562,11 @@ public abstract class Op
         {
         switch (nOp)
             {
-            case OP_NOP:         return new Nop         (in, aconst);
-            case OP_LINE_1:      return new Line_1      (in, aconst);
-            case OP_LINE_N:      return new Line_N      (in, aconst);
+            case OP_NOP:         return new Nop         ();
+            case OP_LINE_1:      return new Nop         (1);
+            case OP_LINE_2:      return new Nop         (2);
+            case OP_LINE_3:      return new Nop         (3);
+            case OP_LINE_N:      return new Nop         (in, aconst);
             case OP_BREAK:       return new Break       (in, aconst);
             case OP_ENTER:       return new Enter       (in, aconst);
             case OP_EXIT:        return new Exit        (in, aconst);
