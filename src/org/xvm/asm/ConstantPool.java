@@ -937,6 +937,11 @@ public class ConstantPool
                 sClz = "LazyRef";
                 break;
 
+            case "Obscure":
+                sPkg = "annotations";
+                sClz = "ObscuringRef";
+                break;
+
             case "Op":
                 sPkg = "annotations";
                 sClz = "Operator";
