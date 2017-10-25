@@ -30,6 +30,7 @@ public abstract class Statement
         Label label = m_labelBegin;
         if (label == null)
             {
+            assert !m_fEmitted;
             m_labelBegin = label = new Label();
             }
         return label;
@@ -43,6 +44,7 @@ public abstract class Statement
         Label label = m_labelEnd;
         if (label == null)
             {
+            assert !m_fEmitted;
             m_labelEnd = label = new Label();
             }
         return label;
@@ -55,6 +57,25 @@ public abstract class Statement
         {
         m_fShortCircuited = true;
         }
+
+    /**
+     * This method is used to indicate to the statement that it is being used by an "if" or "while"
+     * statement as the condition. This method must be invoked before the statement is validated.
+     */
+    public void markAsIfCondition(Label labelElse)
+        {
+        throw new IllegalStateException("not supported by " + getClass().getSimpleName());
+        }
+
+    /**
+     * This method is used to indicate to the statement that it is being used by a "for"
+     * statement as the condition. This method must be invoked before the statement is validated.
+     */
+    public void markAsForCondition(Label labelExit)
+        {
+        throw new IllegalStateException("not supported by " + getClass().getSimpleName());
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -72,18 +93,24 @@ public abstract class Statement
         {
         ctx.updateLineNumber(code, Source.calculateLine(getStartPosition()));
 
-        if (m_labelBegin != null)
+        boolean fBeginLabel = m_labelBegin != null;
+        if (fBeginLabel)
             {
             code.add(m_labelBegin);
             }
 
         boolean fCompletes = fReachable & emit(ctx, fReachable, code, errs);
 
+        // a being label should not have been requested during the emit stage unless it had been
+        // requested previously (since it's too late to add it now!)
+        assert fBeginLabel == (m_labelBegin != null);
+
         if (m_labelEnd != null)
             {
             code.add(m_labelEnd);
             }
 
+        m_fEmitted = true;
         return fCompletes || m_fShortCircuited;
         }
 
@@ -130,6 +157,17 @@ public abstract class Statement
         public ConstantPool getPool()
             {
             return m_method.getConstantPool();
+            }
+
+        Context fork()
+            {
+            // TODO
+            return null;
+            }
+
+        void join(Context... contexts)
+            {
+            // TODO
             }
 
         /**
@@ -183,4 +221,5 @@ public abstract class Statement
     private Label   m_labelBegin;
     private Label   m_labelEnd;
     private boolean m_fShortCircuited;
+    private boolean m_fEmitted;
     }
