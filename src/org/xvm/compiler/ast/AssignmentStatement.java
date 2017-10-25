@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.op.Label;
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -59,6 +62,39 @@ public class AssignmentStatement
         }
 
 
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public void markAsIfCondition(Label labelElse)
+        {
+        assert !m_fForCond;
+        m_fIfCond = true;
+        m_label   = labelElse;
+        }
+
+    @Override
+    public void markAsForCondition(Label labelExit)
+        {
+        assert !m_fIfCond;
+        m_fForCond = true;
+        m_label    = labelExit;
+        }
+
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        // TODO
+        return true;
+        }
+
+    @Override
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+        {
+        // TODO
+        return true;
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -93,6 +129,10 @@ public class AssignmentStatement
     protected Expression rvalue;
     protected boolean    cond;
     protected boolean    term;
+
+    private boolean m_fIfCond;
+    private boolean m_fForCond;
+    private Label   m_label;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "rvalue");
     }

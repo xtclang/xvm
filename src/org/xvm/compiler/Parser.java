@@ -1978,7 +1978,7 @@ public class Parser
                 // it's an assignment or conditional expression, but it doesn't declare a new var
                 return new AssignmentStatement(expr, current(), parseExpression(), false);
 
-            case COMMA:
+            case COMMA:     // TODO could indicate multiple declaration/assignment
             case SEMICOLON:
             case R_PAREN:
                 // definitely stop if there is ',', ';', or ')'
@@ -1993,6 +1993,7 @@ public class Parser
         Token name = expect(Id.IDENTIFIER);
 
         // could be either ':' or '='
+        // TODO an Id.COMMA would indicate multiple declaration/assignment
         Token op = fAllowAsn ? match(Id.ASN) : null;
         if (op == null)
             {
