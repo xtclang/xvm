@@ -10,39 +10,47 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
+
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Base class for IP_ (in-place) op codes.
+ * Base class for PIP_ (property in-place) op codes.
  *
- * Note: "in-place assign" ops derive from OpInPlaceAssign
+ * Note: "property in-place assign" ops derive from OpPropInPlaceAssign
  */
-public abstract class OpInPlace
-        extends Op
+public abstract class OpPropInPlace
+        extends OpProperty
     {
     /**
-     * Construct an "in-place" op for the passed target.
+     * Construct a "property in-place" op for the passed arguments.
      *
-     * @param argTarget  the target Argument
+     * @param constProperty  the property constant
+     * @param argTarget      the target Argument
      */
-    protected OpInPlace(Argument argTarget)
+    protected OpPropInPlace(PropertyConstant constProperty, Argument argTarget)
         {
+        super(constProperty);
+
         assert(!isAssignOp());
 
         m_argTarget = argTarget;
         }
 
     /**
-     * Construct an "in-place and assign" op for the passed arguments.
+     * Construct a "property in-place and assign" op for the passed arguments.
      *
-     * @param argTarget  the target Argument
-     * @param argReturn  the Argument to store the result into
+     * @param constProperty  the property constant
+     * @param argTarget      the target Argument
+     * @param argReturn      the Argument to store the result into
      */
-    protected OpInPlace(Argument argTarget, Argument argReturn)
+    protected OpPropInPlace(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
         {
+        super(constProperty);
+
         assert(isAssignOp());
 
         m_argTarget = argTarget;
@@ -55,9 +63,11 @@ public abstract class OpInPlace
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    protected OpInPlace(DataInput in, Constant[] aconst)
+    protected OpPropInPlace(DataInput in, Constant[] aconst)
             throws IOException
         {
+        super(in, aconst);
+
         m_nTarget = readPackedInt(in);
         if (isAssignOp())
             {
@@ -69,6 +79,8 @@ public abstract class OpInPlace
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
+        super.write(out, registry);
+
         if (m_argTarget != null)
             {
             m_nTarget = encodeArgument(m_argTarget, registry);
@@ -77,8 +89,6 @@ public abstract class OpInPlace
                 m_nRetValue = encodeArgument(m_argReturn,  registry);
                 }
             }
-
-        out.writeByte(getOpCode());
 
         writePackedLong(out, m_nTarget);
         if (isAssignOp())
@@ -103,35 +113,26 @@ public abstract class OpInPlace
         {
         try
             {
-            if (m_nTarget >= 0)
+            ObjectHandle hTarget = frame.getArgument(m_nTarget);
+            if (hTarget == null)
                 {
-                // operation on a register
-                ObjectHandle hTarget = frame.getArgument(m_nTarget);
-                if (hTarget == null)
-                    {
-                    return R_REPEAT;
-                    }
-
-                if (isAssignOp() && frame.isNextRegister(m_nRetValue))
-                    {
-                    frame.introduceVarCopy(m_nTarget);
-                    }
-
-                return completeWithRegister(frame, hTarget);
+                return R_REPEAT;
                 }
-            else
+
+            if (isAssignOp() && frame.isNextRegister(m_nRetValue))
                 {
-                // operation on a local property
-                if (isAssignOp() && frame.isNextRegister(m_nRetValue))
-                    {
-                    frame.introduceVarCopy(m_nTarget);
-                    }
-
-                PropertyConstant constProperty = (PropertyConstant)
-                    frame.getConstant(m_nTarget);
-
-                return completeWithProperty(frame, constProperty.getName());
+                frame.introduceVarCopy(m_nTarget);
                 }
+
+            if (isProperty(hTarget))
+                {
+                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahTarget[0]);
+
+                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                }
+
+            return complete(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -139,12 +140,7 @@ public abstract class OpInPlace
             }
         }
 
-    protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    protected int completeWithProperty(Frame frame, String sProperty)
+    protected int complete(Frame frame, ObjectHandle hTarget)
         {
         throw new UnsupportedOperationException();
         }
@@ -161,6 +157,8 @@ public abstract class OpInPlace
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
+        super.registerConstants(registry);
+
         registerArgument(m_argTarget, registry);
         if (isAssignOp())
             {

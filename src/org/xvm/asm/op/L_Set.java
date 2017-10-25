@@ -44,12 +44,12 @@ public class L_Set
     /**
      * Construct an L_SET op based on the specified arguments.
      *
-     * @param argProperty  the property Argument
-     * @param argValue     the value Argument
+     * @param constProperty  the property constant
+     * @param argValue       the value Argument
      */
-    public L_Set(Argument argProperty, Argument argValue)
+    public L_Set(PropertyConstant constProperty, Argument argValue)
         {
-        super(argProperty);
+        super(constProperty);
 
         m_argValue = argValue;
         }

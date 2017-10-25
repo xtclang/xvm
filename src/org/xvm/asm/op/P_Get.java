@@ -47,13 +47,13 @@ public class P_Get
     /**
      * Construct a P_GET op based on the specified arguments.
      *
-     * @param argProperty  the property Argument
-     * @param argTarget    the target Argument
-     * @param argReturn    the return Argument
+     * @param constProperty  the property constant
+     * @param argTarget      the target Argument
+     * @param argReturn      the return Argument
      */
-    public P_Get(Argument argProperty, Argument argTarget,  Argument argReturn)
+    public P_Get(PropertyConstant constProperty, Argument argTarget,  Argument argReturn)
         {
-        super(argProperty);
+        super(constProperty);
 
         m_argTarget = argTarget;
         m_argReturn = argReturn;
