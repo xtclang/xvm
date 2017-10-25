@@ -2,10 +2,10 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.MethodStructure.Code;
-
 import org.xvm.asm.Op.Argument;
-import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.SingletonConstant;
+
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
@@ -70,6 +70,7 @@ public class IfStatement
         // ExpressionStatement - contains the expression that the "if" is evaluating
         // AssignmentStatement - contains an assignment in the form "expr : expr"
         // VariableDeclarationStatement - contains a declaration in the form "type name : expr"
+        // TODO MultipleDeclarationStatement
         boolean fValid;
         boolean fScope;
         Context ctxThen;
@@ -201,8 +202,6 @@ public class IfStatement
     protected Statement cond;
     protected Statement stmtThen;
     protected Statement stmtElse;
-
-    private boolean m_fScope;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "cond", "stmtThen", "stmtElse");
     }
