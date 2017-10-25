@@ -21,7 +21,7 @@ public abstract class OpGeneral
         extends Op
     {
     /**
-     * Construct an unary op for the passed arguments.
+     * Construct a unary op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argReturn  the Argument to move the result into
@@ -35,7 +35,7 @@ public abstract class OpGeneral
         }
 
     /**
-     * Construct an binary op for the passed arguments.
+     * Construct a binary op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argValue   the second value Argument
@@ -81,7 +81,8 @@ public abstract class OpGeneral
             m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        out.writeByte(OP_GP_ADD);
+        out.writeByte(getOpCode());
+
         writePackedLong(out, m_nTarget);
         if (isBinaryOp())
             {

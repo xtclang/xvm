@@ -130,11 +130,11 @@
 // - the lvalue-target indicates the register or the local-property indicator (PROPERTY)
 // - the lvalue can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
--IP_INC      lvalue-target                           ; in-place increment; no result
++IP_INC      lvalue-target                           ; in-place increment; no result
  IP_DEC      lvalue-target                           ; in-place decrement; no result
--IP_INCA     lvalue-target, lvalue                   ; T++ -> T
++IP_INCA     lvalue-target, lvalue                   ; T++ -> T
  IP_DECA     lvalue-target, lvalue                   ; T-— -> T
--IP_INCB     lvalue-target, lvalue                   ; ++T -> T
++IP_INCB     lvalue-target, lvalue                   ; ++T -> T
  IP_DECB     lvalue-target, lvalue                   ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ops:
@@ -181,9 +181,9 @@
  PIP_XOR     PROPERTY, rvalue-target, rvalue2        ; T ^= T
 
 // ("I"=) index-based (tuple and single-dimensioned array) ops
-+I_GET       rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
-+I_SET       rvalue-target, rvalue-ix, rvalue        ; T[ix] = T
-+I_REF       rvalue-target, rvalue-ix, lvalue        ; Ref<T> = &T[ix]
+-I_GET       rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
+-I_SET       rvalue-target, rvalue-ix, rvalue        ; T[ix] = T
+-I_REF       rvalue-target, rvalue-ix, lvalue        ; Ref<T> = &T[ix]
 
 // ("I"=) index-based ("IP"=) in-place ops:
  IIP_INC     rvalue-target, rvalue-ix                ; ++T[ix] (no result)

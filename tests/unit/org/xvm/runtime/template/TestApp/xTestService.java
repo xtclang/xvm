@@ -78,7 +78,7 @@ public class xTestService extends Service
             {
             new X_Print(adapter.ensureValueConstantId("# in TestService.increment #")),
             new Var(adapter.getClassTypeConstId("Int64")), // #0
-            new IP_PreInc(-adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
+            new IP_PreInc(adapter.getNegativePropertyConstId("TestApp.TestService", "counter"), 0),
             new Return_1(0),
             });
 

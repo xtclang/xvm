@@ -2,36 +2,43 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-
-import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.OpInPlace;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * IP_INC lvalue-target ; in-place increment; no result
  */
 public class IP_Inc
-        extends Op
+        extends OpInPlace
     {
     /**
      * Construct an IP_INC op.
      *
-     * @param nArg  indicates the incrementable target
+     * @param nTarget  indicates the incrementable target
+     *
+     * @deprecated
      */
-    public IP_Inc(int nArg)
+    public IP_Inc(int nTarget)
         {
-        m_nArgValue = nArg;
+        super(null);
+
+        m_nTarget = nTarget;
+        }
+
+    /**
+     * Construct an IP_INC op for the passed arguments.
+     *
+     * @param argTarget  the target Argument
+     */
+    public IP_Inc(Argument argTarget)
+        {
+        super(argTarget);
         }
 
     /**
@@ -43,15 +50,7 @@ public class IP_Inc
     public IP_Inc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nArgValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_IP_INC);
-        writePackedLong(out, m_nArgValue);
+        super(in, aconst);
         }
 
     @Override
@@ -61,38 +60,23 @@ public class IP_Inc
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected boolean isAssignOp()
         {
-        try
-            {
-            if (m_nArgValue >= 0)
-                {
-                // operation on a register
-                ObjectHandle hValue = frame.getArgument(m_nArgValue);
-                if (hValue == null)
-                    {
-                    return R_REPEAT;
-                    }
-
-                return hValue.f_clazz.f_template.invokeNext(frame, hValue, m_nArgValue);
-                }
-            else
-                {
-                // operation on a local property
-                ObjectHandle hTarget = frame.getThis();
-
-                PropertyConstant constProperty = (PropertyConstant)
-                        frame.f_context.f_pool.getConstant(-m_nArgValue);
-
-                return hTarget.f_clazz.f_template.invokePostInc(
-                        frame, hTarget, constProperty.getName(), Frame.RET_UNUSED);
-                }
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return false;
         }
 
-    private int m_nArgValue;
+    @Override
+    protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
+        {
+        return hTarget.f_clazz.f_template.invokeNext(frame, hTarget, m_nTarget);
+        }
+
+    @Override
+    protected int completeWithProperty(Frame frame, String sProperty)
+        {
+        ObjectHandle hTarget = frame.getThis();
+
+        return hTarget.f_clazz.f_template.invokePostInc(
+            frame, hTarget, sProperty, Frame.RET_UNUSED);
+        }
     }
