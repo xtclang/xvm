@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javax.security.auth.Refreshable;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -873,15 +872,15 @@ public abstract class ClassTemplate
         {
         switch (getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL))
             {
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
             case Op.R_NEXT:
                 return new Utils.PreInc(hTarget, sPropName, iReturn).proceed(frame);
 
             case Op.R_CALL:
                 frame.m_frameNext.setContinuation(new Utils.PreInc(hTarget, sPropName, iReturn));
                 return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
             default:
                 throw new IllegalStateException();
@@ -894,15 +893,15 @@ public abstract class ClassTemplate
         {
         switch (getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL))
             {
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
             case Op.R_NEXT:
                 return new Utils.PostInc(hTarget, sPropName, iReturn).proceed(frame);
 
             case Op.R_CALL:
                 frame.m_frameNext.setContinuation(new Utils.PostInc(hTarget, sPropName, iReturn));
                 return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
             default:
                 throw new IllegalStateException();

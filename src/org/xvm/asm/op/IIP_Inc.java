@@ -9,42 +9,40 @@ import org.xvm.asm.OpIndex;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
 
 
 /**
- * IIP_INCB rvalue-target, rvalue-ix, lvalue ; ++T[ix] -> T
+ * IIP_INC rvalue-target, rvalue-ix ; ++T[ix] (no result)
  */
-public class IIP_PreInc
+public class IIP_Inc
         extends OpIndex
     {
     /**
-     * Construct an IIP_INCB op.
+     * Construct an IIP_INC op.
      *
      * @param nTarget  the target array
      * @param nIndex   the index of the value to increment
-     * @param nRet     the location to store the pre-incremented value
      */
-    public IIP_PreInc(int nTarget, int nIndex, int nRet)
+    public IIP_Inc(int nTarget, int nIndex)
         {
-        super(null, null, null);
+        super((Argument) null, null);
 
         m_nTarget = nTarget;
         m_nIndex = nIndex;
-        m_nRetValue = nRet;
         }
 
     /**
-     * Construct an IIP_INCB op for the passed arguments.
+     * Construct an IIP_INC op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
-     * @param argReturn  the Argument to store the result into
      */
-    public IIP_PreInc(Argument argTarget, Argument argIndex, Argument argReturn)
+    public IIP_Inc(Argument argTarget, Argument argIndex)
         {
-        super(argTarget, argIndex, argReturn);
+        super(argTarget, argIndex);
         }
 
     /**
@@ -53,7 +51,7 @@ public class IIP_PreInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IIP_PreInc(DataInput in, Constant[] aconst)
+    public IIP_Inc(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -62,14 +60,20 @@ public class IIP_PreInc
     @Override
     public int getOpCode()
         {
-        return OP_IIP_INCB;
+        return OP_IIP_INC;
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle.JavaLong hIndex)
+    protected boolean isAssignOp()
+        {
+        return false;
+        }
+
+    @Override
+    protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
         IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-        return template.invokePreInc(frame, hTarget, hIndex.getValue(), m_nRetValue);
+        return template.invokePreInc(frame, hTarget, hIndex.getValue(), Frame.RET_UNUSED);
         }
     }

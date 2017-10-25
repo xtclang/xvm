@@ -15,7 +15,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.compiler.ast.ListExpression;
 import org.xvm.runtime.TypeSet;
 
 
@@ -459,7 +458,7 @@ public abstract class TypeConstant
         return getUnderlyingType().extendsOrImpersonatesClass(constClass)
                 || isRelationalType() && getUnderlyingType2().extendsOrImpersonatesClass(constClass);
         }
-    
+
     public Set<MethodConstant> autoConverts()
         {
         // TODO this is temporary (it just finds the one @Auto that exists on Object itself)

@@ -181,18 +181,20 @@
  PIP_XOR     PROPERTY, rvalue-target, rvalue2        ; T ^= T
 
 // ("I"=) index-based (tuple and single-dimensioned array) ops
--I_GET       rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
--I_SET       rvalue-target, rvalue-ix, rvalue        ; T[ix] = T
--I_REF       rvalue-target, rvalue-ix, lvalue        ; Ref<T> = &T[ix]
+// - all rvalues support the "local property" mode
+// - lvalue return values can specify the "next register" to allocate
++I_GET       rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
++I_SET       rvalue-target, rvalue-ix, rvalue        ; T[ix] = T
++I_REF       rvalue-target, rvalue-ix, lvalue        ; Ref<T> = &T[ix]
 
 // ("I"=) index-based ("IP"=) in-place ops:
- IIP_INC     rvalue-target, rvalue-ix                ; ++T[ix] (no result)
++IIP_INC     rvalue-target, rvalue-ix                ; ++T[ix] (no result)
  IIP_DEC     rvalue-target, rvalue-ix                ; --T[ix] (no result)
  IIP_INCA    rvalue-target, rvalue-ix, lvalue        ; T[ix]++ -> T
  IIP_DECA    rvalue-target, rvalue-ix, lvalue        ; T[ix]-— -> T
--IIP_INCB    rvalue-target, rvalue-ix, lvalue        ; ++T[ix] -> T
++IIP_INCB    rvalue-target, rvalue-ix, lvalue        ; ++T[ix] -> T
  IIP_DECB    rvalue-target, rvalue-ix, lvalue        ; --T[ix] -> T
- IIP_ADD     rvalue-target, rvalue-ix, rvalue2
++IIP_ADD     rvalue-target, rvalue-ix, rvalue2
  IIP_SUB     rvalue-target, rvalue-ix, rvalue2
  IIP_MUL     rvalue-target, rvalue-ix, rvalue2
  IIP_DIV     rvalue-target, rvalue-ix, rvalue2
