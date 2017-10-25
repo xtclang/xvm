@@ -74,6 +74,12 @@ public class StringConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().ensureEcstasyTypeConstant("String");
+        }
+
+    @Override
     public Object getLocator()
         {
         return m_sVal;

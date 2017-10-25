@@ -867,11 +867,23 @@ public class Frame
     // Note: this method increments up the "nextVar" index
     public void introduceVarCopy(int nVarFrom)
         {
-        VarInfo infoFrom = f_aInfo[nVarFrom];
-
         int nVar = f_anNextVar[m_iScope]++;
 
-        f_aInfo[nVar] = new VarInfo(infoFrom.m_type, null, infoFrom.m_nStyle);
+        if (nVarFrom >= 0)
+            {
+            VarInfo infoFrom = f_aInfo[nVarFrom];
+
+            f_aInfo[nVar] = infoFrom.m_type == null
+                ? new VarInfo(infoFrom.m_nTypeId, null, VAR_STANDARD)
+                : new VarInfo(infoFrom.m_type, null, VAR_STANDARD);
+            }
+        else
+            {
+            // "local property" or a literal constant
+            Constant constFrom = getConstant(nVarFrom);
+
+            f_aInfo[nVar] = new VarInfo(constFrom.getType().getPosition(), null, VAR_STANDARD);
+            }
         }
 
     public VarInfo getVarInfo(int nVar)

@@ -16,7 +16,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.types.xProperty.PropertyHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -107,16 +106,20 @@ public class PIP_PreInc
                 return R_REPEAT;
                 }
 
+            if (frame.isNextRegister(m_nRetValue))
+                {
+                frame.introduceVarCopy(m_nTarget);
+                }
+
             if (isProperty(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, (PropertyHandle) hTarget, ahTarget[0]);
+                Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahTarget[0]);
 
                 return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
-            return complete(frame, null, hTarget);
+            return complete(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -124,23 +127,9 @@ public class PIP_PreInc
             }
         }
 
-    protected int complete(Frame frame, PropertyHandle hProperty, ObjectHandle hTarget)
+    protected int complete(Frame frame, ObjectHandle hTarget)
         {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
-
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            if (m_nTarget >= 0)
-                {
-                frame.introduceVarCopy(m_nTarget);
-                }
-            else // m_nTarget points to a local property, therefore hProperty is not null
-                {
-                int nTypeId = hProperty.m_constProperty.getType().getPosition();
-
-                frame.introduceVar(nTypeId, 0, Frame.VAR_STANDARD, null);
-                }
-            }
 
         return hTarget.f_clazz.f_template.invokePreInc(
                 frame, hTarget, constProperty.getName(), m_nRetValue);

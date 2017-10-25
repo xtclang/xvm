@@ -103,7 +103,7 @@
 // - rvalues could be a register or a constant value or a local-property indicator (PROPERTY)
 // - the lvalue(s) can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
--GP_ADD     rvalue1, rvalue2, lvalue                ; T + T -> T
++GP_ADD     rvalue1, rvalue2, lvalue                ; T + T -> T
  GP_SUB     rvalue1, rvalue2, lvalue                ; T - T -> T
  GP_MUL     rvalue1, rvalue2, lvalue                ; T * T -> T
  GP_DIV     rvalue1, rvalue2, lvalue                ; T / T -> T
@@ -115,7 +115,7 @@
  GP_OR      rvalue1, rvalue2, lvalue                ; T | T -> T
  GP_XOR     rvalue1, rvalue2, lvalue                ; T ^ T -> T
  GP_DIVMOD  rvalue1, rvalue2, lvalue-div, lvalue-mod; T /% T -> T, T
--GP_NEG     rvalue, lvalue                          ; -T -> T
++GP_NEG     rvalue, lvalue                          ; -T -> T
  GP_COMPL   rvalue, lvalue                          ; ~T -> T
 
 // ("L"=) local property and ("P"=) property load/store operations

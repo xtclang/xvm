@@ -117,6 +117,11 @@ public abstract class OpGeneral
                 return R_REPEAT;
                 }
 
+            if (frame.isNextRegister(m_nRetValue))
+                {
+                frame.introduceVarCopy(m_nTarget);
+                }
+
             if (isProperty(hTarget))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hTarget};
@@ -136,11 +141,7 @@ public abstract class OpGeneral
 
     protected int completeUnary(Frame frame, ObjectHandle hTarget)
         {
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            frame.introduceVarCopy(m_nTarget);
-            }
-        return Op.R_NEXT;
+        throw new UnsupportedOperationException();
         }
 
     protected int processBinaryOp(Frame frame)
@@ -152,6 +153,11 @@ public abstract class OpGeneral
             if (hTarget == null || hArg == null)
                 {
                 return R_REPEAT;
+                }
+
+            if (frame.isNextRegister(m_nRetValue))
+                {
+                frame.introduceVarCopy(m_nTarget);
                 }
 
             if (isProperty(hTarget) || isProperty(hArg))
@@ -173,11 +179,7 @@ public abstract class OpGeneral
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            frame.introduceVarCopy(m_nTarget);
-            }
-        return Op.R_NEXT;
+        throw new UnsupportedOperationException();
         }
 
     @Override

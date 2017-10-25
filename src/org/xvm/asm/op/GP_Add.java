@@ -67,8 +67,6 @@ public class GP_Add
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        super.completeBinary(frame, hTarget, hArg);
-
         return hTarget.f_clazz.f_template.invokeAdd(frame, hTarget, hArg, m_nRetValue);
         }
     }
