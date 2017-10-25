@@ -2,33 +2,44 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpJump;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
- * END_GUARD rel_addr
+ * GUARD_E addr
  */
 public class GuardEnd
-        extends Op
+        extends OpJump
     {
     /**
-     * Construct an END_GUARD op.
+     * Construct an GUARD_E op.
      *
      * @param iRelAddr  the address of the next op to execute after the guarded block
+     *
+     * @deprecated
      */
     public GuardEnd(int iRelAddr)
         {
-        m_nRelAddr = iRelAddr;
+        super(null);
+
+        m_ofJmp = iRelAddr;
+        }
+
+    /**
+     * Construct a GUARD_E op based on the destination Op.
+     *
+     * @param op  the Op to jump to when the guarded section completes
+     */
+    public GuardEnd(Op op)
+        {
+        super(op);
         }
 
     /**
@@ -38,17 +49,9 @@ public class GuardEnd
      * @param aconst  an array of constants used within the method
      */
     public GuardEnd(DataInput in, Constant[] aconst)
-            throws IOException
+    throws IOException
         {
-        m_nRelAddr = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_GUARD_END);
-        writePackedLong(out, m_nRelAddr);
+        super(in, aconst);
         }
 
     @Override
@@ -62,7 +65,7 @@ public class GuardEnd
         {
         frame.popGuard();
         frame.exitScope();
-        return iPC + m_nRelAddr;
+        return iPC + m_ofJmp;
         }
 
     @Override
@@ -70,6 +73,4 @@ public class GuardEnd
         {
         scope.exit();
         }
-
-    private int m_nRelAddr;
     }

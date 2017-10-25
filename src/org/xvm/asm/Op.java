@@ -270,6 +270,34 @@ public abstract class Op
         return false;
         }
 
+    /**
+     * Calculate a relative address from the specified program counter (iPC) to the
+     * specified destination op-code.
+     *
+     * @param code    the Code
+     * @param iPC     the "current" program counter
+     * @param opDest  the destination Op
+     *
+     * @return the offset from the current PC to the destination Op
+     */
+    protected static int resolveAddress(MethodStructure.Code code, int iPC, Op opDest)
+        {
+        assert (opDest != null);
+
+        int iPCThat = code.addressOf(opDest);
+        if (iPCThat < 0)
+            {
+            throw new IllegalStateException("cannot find op: " + opDest);
+            }
+
+        // calculate relative offset
+        int ofJmp = iPCThat - iPC;
+        if (ofJmp == 0)
+            {
+            throw new IllegalStateException("infinite loop: code=" + code + "; PC=" + iPC);
+            }
+        return ofJmp;
+        }
 
     // ----- inner class: Prefix Op ----------------------------------------------------------------
 

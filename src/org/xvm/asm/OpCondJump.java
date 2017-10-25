@@ -92,18 +92,7 @@ public abstract class OpCondJump
         {
         if (m_opDest != null && m_ofJmp == 0)
             {
-            int iPCThat = code.addressOf(m_opDest);
-            if (iPCThat < 0)
-                {
-                throw new IllegalStateException("cannot find op: " + m_opDest);
-                }
-
-            // calculate relative offset
-            m_ofJmp = iPCThat - iPC;
-            if (m_ofJmp == 0)
-                {
-                throw new IllegalStateException("infinite loop: " + this);
-                }
+            m_ofJmp = resolveAddress(code, iPC, m_opDest);
             }
         }
 
@@ -240,7 +229,7 @@ public abstract class OpCondJump
     protected int      m_nArg2;
     protected int      m_ofJmp;
 
-    protected Argument m_argVal;
-    protected Argument m_argVal2;
-    protected Op       m_opDest;
+    private Argument m_argVal;
+    private Argument m_argVal2;
+    private Op       m_opDest;
     }

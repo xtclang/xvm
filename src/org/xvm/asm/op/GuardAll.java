@@ -2,34 +2,45 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpJump;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.AllGuard;
 
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
-
 
 /**
- * GUARD_ALL addr ; (implicit ENTER)
+ * GUARDALL addr ; (implicit ENTER)
  */
 public class GuardAll
-        extends Op
+        extends OpJump
     {
     /**
-     * Construct a GUARD_ALL op.
+     * Construct a GUARDALL op.
      *
      * @param nRelAddress  the relative address of the finally block
+     *
+     * @deprecated
      */
     public GuardAll(int nRelAddress)
         {
-        m_nFinallyRelAddress = nRelAddress;
+        super(null);
+
+        m_ofJmp = nRelAddress;
+        }
+
+    /**
+     * Construct a GUARDALL op based on the destination Op.
+     *
+     * @param op  the Op to jump to when the guarded section completes
+     */
+    public GuardAll(Op op)
+        {
+        super(op);
         }
 
     /**
@@ -41,15 +52,7 @@ public class GuardAll
     public GuardAll(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nFinallyRelAddress = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_GUARD_ALL);
-        writePackedLong(out, m_nFinallyRelAddress);
+        super(in, aconst);
         }
 
     @Override
@@ -66,7 +69,7 @@ public class GuardAll
         AllGuard guard = m_guard;
         if (guard == null)
             {
-            m_guard = guard = new AllGuard(iPC, iScope, m_nFinallyRelAddress);
+            m_guard = guard = new AllGuard(iPC, iScope, m_ofJmp);
             }
         frame.pushGuard(guard);
 
@@ -78,8 +81,6 @@ public class GuardAll
         {
         scope.enter();
         }
-
-    private int m_nFinallyRelAddress;
 
     private transient AllGuard m_guard; // cached struct
     }

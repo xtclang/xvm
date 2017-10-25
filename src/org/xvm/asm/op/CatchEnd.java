@@ -2,33 +2,44 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpJump;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * CATCH_END addr ; finish an exception handler with a jump
  */
 public class CatchEnd
-        extends Op
+        extends OpJump
     {
     /**
      * Construct a CATCH_END op.
      *
      * @param iRelAddr  the relative address to jump to when the handler completes
+     *
+     * @deprecated
      */
     public CatchEnd(int iRelAddr)
         {
-        m_nRelAddr = iRelAddr;
+        super(null);
+
+        m_ofJmp = iRelAddr;
+        }
+
+    /**
+     * Construct a CATCH_END op based on the destination Op.
+     *
+     * @param op  the Op to jump to when the handler completes
+     */
+    public CatchEnd(Op op)
+        {
+        super(op);
         }
 
     /**
@@ -40,15 +51,7 @@ public class CatchEnd
     public CatchEnd(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nRelAddr = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_CATCH_END);
-        writePackedLong(out, m_nRelAddr);
+        super(in, aconst);
         }
 
     @Override
@@ -61,7 +64,7 @@ public class CatchEnd
     public int process(Frame frame, int iPC)
         {
         frame.exitScope();
-        return iPC + m_nRelAddr;
+        return iPC + m_ofJmp;
         }
 
     @Override
@@ -69,6 +72,4 @@ public class CatchEnd
         {
         scope.exit();
         }
-
-    private int m_nRelAddr;
     }
