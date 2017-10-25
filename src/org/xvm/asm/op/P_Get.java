@@ -107,8 +107,7 @@ public class P_Get
                 return R_REPEAT;
                 }
 
-            PropertyConstant constProperty = (PropertyConstant)
-                    frame.f_context.f_pool.getConstant(m_nPropId);
+            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
             String sProperty = constProperty.getName();
 
             if (frame.isNextRegister(m_nRetValue))

@@ -92,8 +92,7 @@ public class L_Get
         {
         ObjectHandle hTarget = frame.getThis();
 
-        PropertyConstant constProperty = (PropertyConstant)
-                frame.f_context.f_pool.getConstant(m_nPropId);
+        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
         if (frame.isNextRegister(m_nRetValue))
             {

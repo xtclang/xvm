@@ -100,8 +100,8 @@ public class L_Set
                 }
 
             ObjectHandle hTarget = frame.getThis();
-            PropertyConstant constProperty = (PropertyConstant)
-                    frame.f_context.f_pool.getConstant(m_nPropId);
+
+            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
             String sProperty = constProperty.getName();
 
             if (isProperty(hValue))

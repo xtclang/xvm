@@ -232,11 +232,11 @@ public class xTestApp extends xModule
             .add(new CatchEnd(1))
 
             .add(new Var(adapter.getClassTypeConstId("Int64"))) // #8
-            .add(new PIP_PreInc(adapter.getNegativePropertyConstId("TestApp.TestService", "counter2"), 0,
+            .add(new PIP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 0,
                 8))
             .add(new X_Print(8))
 
-            .add(new PIP_PostInc(adapter.getNegativePropertyConstId("TestApp.TestService", "counter"), 0,
+            .add(new PIP_PostInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0,
                 8))
             .add(new X_Print(8))
             .add(new Invoke_01(0,

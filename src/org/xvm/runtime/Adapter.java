@@ -227,11 +227,6 @@ public class Adapter
         return method;
         }
 
-    public int getNegativePropertyConstId(String sClassName, String sPropName)
-        {
-        return Op.CONSTANT_OFFSET - getPropertyConstId(sClassName, sPropName);
-        }
-
     public int getPropertyConstId(String sClassName, String sPropName)
         {
         try
@@ -239,7 +234,7 @@ public class Adapter
             ClassConstant constClass = f_container.f_types.getClassConstant(sClassName);
             ClassStructure struct = (ClassStructure) constClass.getComponent();
             PropertyStructure prop = (PropertyStructure) struct.getChild(sPropName);
-            return prop.getIdentityConstant().getPosition();
+            return Op.CONSTANT_OFFSET - prop.getIdentityConstant().getPosition();
             }
         catch (NullPointerException e)
             {

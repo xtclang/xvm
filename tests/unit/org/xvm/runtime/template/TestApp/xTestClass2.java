@@ -58,7 +58,7 @@ public class xTestClass2 extends ClassTemplate
             {
             new X_Print(adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
             new Call_01(Op.A_SUPER,
-                adapter.getNegativePropertyConstId("TestApp.TestClass2", "temp")),
+                adapter.getPropertyConstId("TestApp.TestClass2", "temp")),
             new Var(adapter.getClassTypeConstId("Int64")), // #0
             new L_Get(adapter.getPropertyConstId("TestApp.TestClass2", "temp"), 0),
             new Var(adapter.getClassTypeConstId("Int64")), // #1
