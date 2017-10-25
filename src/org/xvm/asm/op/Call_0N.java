@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
-import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -45,13 +44,13 @@ public class Call_0N
      * Construct a CALL_0N op based on the passed arguments.
      *
      * @param argFunction  the function Argument
-     * @param aRegReturn    the return Registers
+     * @param aArgReturn    the return Registers
      */
-    public Call_0N(Argument argFunction, Register[] aRegReturn)
+    public Call_0N(Argument argFunction, Argument[] aArgReturn)
         {
         super(argFunction);
 
-        m_aRegReturn = aRegReturn;
+        m_aArgReturn = aArgReturn;
         }
 
     /**
@@ -74,9 +73,9 @@ public class Call_0N
         {
         super.write(out, registry);
 
-        if (m_aRegReturn != null)
+        if (m_aArgReturn != null)
             {
-            m_anRetValue = encodeArguments(m_aRegReturn, registry);
+            m_anRetValue = encodeArguments(m_aArgReturn, registry);
             }
 
         writeIntArray(out, m_anRetValue);
@@ -127,7 +126,15 @@ public class Call_0N
             }
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgReturn, registry);
+        }
+
     private int[] m_anRetValue;
 
-    private Register[] m_aRegReturn;
+    private Argument[] m_aArgReturn;
     }

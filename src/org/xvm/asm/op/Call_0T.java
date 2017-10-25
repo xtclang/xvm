@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
-import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -48,13 +47,13 @@ public class Call_0T
      * Construct a CALL_0T op based on the passed arguments.
      *
      * @param argFunction  the function Argument
-     * @param regReturn    the return Register
+     * @param argReturn    the return Register
      */
-    public Call_0T(Argument argFunction, Register regReturn)
+    public Call_0T(Argument argFunction, Argument argReturn)
         {
         super(argFunction);
 
-        m_regReturn = regReturn;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -77,9 +76,9 @@ public class Call_0T
         {
         super.write(out, registry);
 
-        if (m_regReturn != null)
+        if (m_argReturn != null)
             {
-            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
+            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nTupleRetValue);
@@ -147,7 +146,15 @@ public class Call_0T
             }
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argReturn, registry);
+        }
+
     private int m_nTupleRetValue;
 
-    private Register m_regReturn;
+    private Argument m_argReturn;
     }

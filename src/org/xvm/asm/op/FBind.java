@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.OpCallable;
-import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -55,15 +54,15 @@ public class FBind
      * @param argFunction  the function Argument
      * @param anParamIx    the indexes of parameter(s) to bind (sorted in ascending order)
      * @param aArgValue    the array of Arguments to bind the values to
-     * @param regReturn    the return Register
+     * @param argReturn    the return Register
      */
-    public FBind(Argument argFunction, int[] anParamIx, Argument[] aArgValue, Register regReturn)
+    public FBind(Argument argFunction, int[] anParamIx, Argument[] aArgValue, Argument argReturn)
         {
         super(argFunction);
 
         m_anParamIx = anParamIx;
         m_aArgParam = aArgValue;
-        m_regReturn = regReturn;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -99,7 +98,7 @@ public class FBind
         if (m_aArgParam != null)
             {
             m_anParamValue = encodeArguments(m_aArgParam, registry);
-            m_nResultValue = encodeArgument(m_regReturn, registry);
+            m_nResultValue = encodeArgument(m_argReturn, registry);
             }
 
         int c = m_anParamIx.length;
@@ -195,6 +194,7 @@ public class FBind
         super.registerConstants(registry);
 
         registerArguments(m_aArgParam, registry);
+        registerArgument(m_argReturn, registry);
         }
 
     private int[] m_anParamIx;
@@ -202,5 +202,5 @@ public class FBind
     private int   m_nResultValue;
 
     private Argument[] m_aArgParam;
-    private Register m_regReturn;
+    private Argument m_argReturn;
     }

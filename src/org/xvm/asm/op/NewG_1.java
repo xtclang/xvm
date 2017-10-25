@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IdentityConstant;
 
@@ -57,15 +56,15 @@ public class NewG_1
      * @param argConstructor  the constructor Argument
      * @param argType         the type Argument
      * @param argValue        the array of value Arguments
-     * @param regReturn       the return Register
+     * @param argReturn       the return Register
      */
-    public NewG_1(Argument argConstructor, Argument argType, Argument argValue, Register regReturn)
+    public NewG_1(Argument argConstructor, Argument argType, Argument argValue, Argument argReturn)
         {
         super(argConstructor);
 
         m_argType = argType;
         m_argValue = argValue;
-        m_regReturn = regReturn;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -94,7 +93,7 @@ public class NewG_1
             {
             m_nTypeValue = encodeArgument(m_argType, registry);
             m_nArgValue = encodeArgument(m_argValue, registry);
-            m_nRetValue = encodeArgument(m_regReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nTypeValue);
@@ -164,6 +163,7 @@ public class NewG_1
 
         registerArgument(m_argType, registry);
         registerArgument(m_argValue, registry);
+        registerArgument(m_argReturn, registry);
         }
 
     private int m_nTypeValue;
@@ -172,5 +172,5 @@ public class NewG_1
 
     private Argument m_argType;
     private Argument m_argValue;
-    private Register m_regReturn;
+    private Argument m_argReturn;
     }

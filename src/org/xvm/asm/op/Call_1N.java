@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
-import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -51,14 +50,14 @@ public class Call_1N
      *
      * @param argFunction  the function Argument
      * @param argValue     the value Argument
-     * @param aRegReturn   the return Registers
+     * @param aArgReturn   the return Registers
      */
-    public Call_1N(Argument argFunction, Argument argValue, Register[] aRegReturn)
+    public Call_1N(Argument argFunction, Argument argValue, Argument[] aArgReturn)
         {
         super(argFunction);
 
         m_argValue = argValue;
-        m_aRegReturn = aRegReturn;
+        m_aArgReturn = aArgReturn;
         }
 
     /**
@@ -85,7 +84,7 @@ public class Call_1N
         if (m_argValue != null)
             {
             m_nArgValue = encodeArgument(m_argValue, registry);
-            m_anRetValue = encodeArguments(m_aRegReturn, registry);
+            m_anRetValue = encodeArguments(m_aArgReturn, registry);
             }
 
         writePackedLong(out, m_nArgValue);
@@ -190,11 +189,12 @@ public class Call_1N
         super.registerConstants(registry);
 
         registerArgument(m_argValue, registry);
+        registerArguments(m_aArgReturn, registry);
         }
 
     private int   m_nArgValue;
     private int[] m_anRetValue;
 
     private Argument m_argValue;
-    private Register[] m_aRegReturn;
+    private Argument[] m_aArgReturn;
     }

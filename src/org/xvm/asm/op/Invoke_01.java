@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 
@@ -51,13 +50,13 @@ public class Invoke_01
      *
      * @param argTarget    the target argument
      * @param constMethod  the method constant
-     * @param regReturn    the return value register
+     * @param argReturn    the return value register
      */
-    public Invoke_01(Argument argTarget, MethodConstant constMethod, Register regReturn)
+    public Invoke_01(Argument argTarget, MethodConstant constMethod, Argument argReturn)
         {
         super(argTarget, constMethod);
 
-        m_regReturn = regReturn;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -80,9 +79,9 @@ public class Invoke_01
         {
         super.write(out, registry);
 
-        if (m_regReturn != null)
+        if (m_argReturn != null)
             {
-            m_nRetValue = encodeArgument(m_regReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nRetValue);
@@ -137,7 +136,15 @@ public class Invoke_01
         return clz.f_template.invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argReturn, registry);
+        }
+
     private int m_nRetValue;
 
-    private Register m_regReturn;
+    private Argument m_argReturn;
     }

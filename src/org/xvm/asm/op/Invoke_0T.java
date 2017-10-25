@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 
@@ -51,13 +50,13 @@ public class Invoke_0T
      *
      * @param argTarget    the target Argument
      * @param constMethod  the method constant
-     * @param regReturn    the Register to move the result into
+     * @param argReturn    the Argument to move the result into
      */
-    public Invoke_0T(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Register regReturn)
+    public Invoke_0T(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Argument argReturn)
         {
         super(argTarget, constMethod);
 
-        m_regReturn = regReturn;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -80,9 +79,9 @@ public class Invoke_0T
         {
         super.write(out, registry);
 
-        if (m_regReturn != null)
+        if (m_argReturn != null)
             {
-            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
+            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nTupleRetValue);
@@ -137,7 +136,15 @@ public class Invoke_0T
         return clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nTupleRetValue);
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArgument(m_argReturn, registry);
+        }
+
     private int m_nTupleRetValue;
 
-    private Register m_regReturn;
+    private Argument m_argReturn;
     }

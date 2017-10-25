@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
-import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -54,14 +53,14 @@ public class Call_TT
      *
      * @param argFunction  the function Argument
      * @param argValue     the value Argument
-     * @param regReturn    the return Register
+     * @param argReturn    the return Register
      */
-    public Call_TT(Argument argFunction, Argument argValue, Register regReturn)
+    public Call_TT(Argument argFunction, Argument argValue, Argument argReturn)
         {
         super(argFunction);
 
         m_argValue = argValue;
-        m_regReturn = regReturn;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -88,7 +87,7 @@ public class Call_TT
         if (m_argValue != null)
             {
             m_nArgTupleValue = encodeArgument(m_argValue, registry);
-            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
+            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nArgTupleValue);
@@ -204,6 +203,7 @@ public class Call_TT
         super.registerConstants(registry);
 
         registerArgument(m_argValue, registry);
+        registerArgument(m_argReturn, registry);
         }
 
 
@@ -211,5 +211,5 @@ public class Call_TT
     private int m_nTupleRetValue;
 
     private Argument m_argValue;
-    private Register m_regReturn;
+    private Argument m_argReturn;
     }

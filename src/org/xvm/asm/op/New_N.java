@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IdentityConstant;
 
@@ -51,14 +50,14 @@ public class New_N
      *
      * @param argConstructor  the constructor Argument
      * @param aArgValue       the array of value Arguments
-     * @param regReturn       the return Register
+     * @param argReturn       the return Register
      */
-    public New_N(Argument argConstructor, Argument[] aArgValue, Register regReturn)
+    public New_N(Argument argConstructor, Argument[] aArgValue, Argument argReturn)
         {
         super(argConstructor);
 
         m_aArgValue = aArgValue;
-        m_regReturn = regReturn;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -85,7 +84,7 @@ public class New_N
         if (m_aArgValue != null)
             {
             m_anArgValue = encodeArguments(m_aArgValue, registry);
-            m_nRetValue = encodeArgument(m_regReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writeIntArray(out, m_anArgValue);
@@ -136,11 +135,12 @@ public class New_N
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
+        registerArgument(m_argReturn, registry);
         }
 
     private int[] m_anArgValue;
     private int   m_nRetValue;
 
     private Argument[] m_aArgValue;
-    private Register m_regReturn;
+    private Argument m_argReturn;
     }

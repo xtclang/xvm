@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 
@@ -17,8 +16,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
-
-import static org.xvm.util.Handy.readPackedInt;
 
 
 /**
@@ -50,13 +47,13 @@ public class Invoke_0N
      *
      * @param argTarget    the target Argument
      * @param constMethod  the method constant
-     * @param aRegReturn   the array of Registers to move the results into
+     * @param aArgReturn   the array of Registers to move the results into
      */
-    public Invoke_0N(Argument argTarget, MethodConstant constMethod, Register[] aRegReturn)
+    public Invoke_0N(Argument argTarget, MethodConstant constMethod, Argument[] aArgReturn)
         {
         super(argTarget, constMethod);
 
-        m_aRegReturn = aRegReturn;
+        m_aArgReturn = aArgReturn;
         }
 
     /**
@@ -79,9 +76,9 @@ public class Invoke_0N
         {
         super.write(out, registry);
 
-        if (m_aRegReturn != null)
+        if (m_aArgReturn != null)
             {
-            m_anRetValue = encodeArguments(m_aRegReturn, registry);
+            m_anRetValue = encodeArguments(m_aArgReturn, registry);
             }
 
         writeIntArray(out, m_anRetValue);
@@ -136,7 +133,15 @@ public class Invoke_0N
         return clz.f_template.invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        registerArguments(m_aArgReturn, registry);
+        }
+
     private int[] m_anRetValue;
 
-    private Register[] m_aRegReturn;
+    private Argument[] m_aArgReturn;
     }

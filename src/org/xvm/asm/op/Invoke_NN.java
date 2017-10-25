@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 
@@ -53,14 +52,14 @@ public class Invoke_NN
      * @param argTarget    the target Argument
      * @param constMethod  the method constant
      * @param aArgValue    the array of Argument values
-     * @param aRegReturn   the Register array to move the results into
+     * @param aArgReturn   the Register array to move the results into
      */
-    public Invoke_NN(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Register[] aRegReturn)
+    public Invoke_NN(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Argument[] aArgReturn)
         {
         super(argTarget, constMethod);
 
         m_aArgValue = aArgValue;
-        m_aRegReturn = aRegReturn;
+        m_aArgReturn = aArgReturn;
         }
 
     /**
@@ -87,7 +86,7 @@ public class Invoke_NN
         if (m_aArgValue != null)
             {
             m_anArgValue = encodeArguments(m_aArgValue, registry);
-            m_anRetValue = encodeArguments(m_aRegReturn, registry);
+            m_anRetValue = encodeArguments(m_aArgReturn, registry);
             }
 
         writeIntArray(out, m_anArgValue);
@@ -183,11 +182,12 @@ public class Invoke_NN
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
+        registerArguments(m_aArgReturn, registry);
         }
 
     private int[] m_anArgValue;
     private int[] m_anRetValue;
 
     private Argument[] m_aArgValue;
-    private Register[] m_aRegReturn;
+    private Argument[] m_aArgReturn;
     }

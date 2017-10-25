@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 
@@ -52,14 +51,14 @@ public class Invoke_1T
      * @param argTarget    the target Argument
      * @param constMethod  the method constant
      * @param argValue     the value Argument
-     * @param regReturn    the Register to move the result into
+     * @param argReturn    the Argument to move the result into
      */
-    public Invoke_1T(Argument argTarget, MethodConstant constMethod, Argument argValue, Register regReturn)
+    public Invoke_1T(Argument argTarget, MethodConstant constMethod, Argument argValue, Argument argReturn)
         {
         super(argTarget, constMethod);
 
         m_argValue = argValue;
-        m_regReturn = regReturn;
+        m_argReturn = argReturn;
         }
 
     /**
@@ -86,7 +85,7 @@ public class Invoke_1T
         if (m_argValue != null)
             {
             m_nArgValue = encodeArgument(m_argValue, registry);
-            m_nTupleRetValue = encodeArgument(m_regReturn, registry);
+            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nArgValue);
@@ -162,11 +161,12 @@ public class Invoke_1T
         super.registerConstants(registry);
 
         registerArgument(m_argValue, registry);
+        registerArgument(m_argReturn, registry);
         }
 
     private int m_nArgValue;
     private int m_nTupleRetValue;
 
     private Argument m_argValue;
-    private Register m_regReturn;
+    private Argument m_argReturn;
     }
