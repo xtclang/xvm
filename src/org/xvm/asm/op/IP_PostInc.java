@@ -2,38 +2,44 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
-
-import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.OpInPlace;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * IP_INCA lvalue-target, lvalue ; T++ -> T
  */
 public class IP_PostInc
-        extends Op
+        extends OpInPlace
     {
     /**
-     * Construct a IP_INCA op.
+     * Construct an IP_INCA op.
      *
-     * @param nArg  the location to increment
-     * @param nRet  the location to store the post-incremented value
+     * @param nTarget  the location to increment
+     * @param nRet     the location to store the post-incremented value
      */
-    public IP_PostInc(int nArg, int nRet)
+    public IP_PostInc(int nTarget, int nRet)
         {
-        m_nArgValue = nArg;
+        super((Argument) null, null);
+
+        m_nTarget = nTarget;
         m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct an IP_INCA op for the passed arguments.
+     *
+     * @param argTarget  the target Argument
+     * @param argReturn  the Argument to store the result into
+     */
+    public IP_PostInc(Argument argTarget, Argument argReturn)
+        {
+        super(argTarget, argReturn);
         }
 
     /**
@@ -45,17 +51,7 @@ public class IP_PostInc
     public IP_PostInc(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nArgValue = readPackedInt(in);
-        m_nRetValue = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_IP_INCA);
-        writePackedLong(out, m_nArgValue);
-        writePackedLong(out, m_nRetValue);
+        super(in, aconst);
         }
 
     @Override
@@ -65,48 +61,33 @@ public class IP_PostInc
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        try
+        switch (hTarget.f_clazz.f_template.invokeNext(frame, hTarget, Frame.RET_LOCAL))
             {
-            int nArg = m_nArgValue;
-            if (nArg >= 0)
-                {
-                // operation on a register
-                ObjectHandle hValue = frame.getArgument(nArg);
-                if (hValue == null)
-                    {
-                    return R_REPEAT;
-                    }
+            case R_NEXT:
+                return frame.assignValues(new int[]{m_nRetValue, m_nTarget},
+                    hTarget, frame.getFrameLocal());
 
-                if (hValue.f_clazz.f_template.invokeNext(frame, hValue, Frame.RET_LOCAL) == R_EXCEPTION)
-                    {
-                    return R_EXCEPTION;
-                    }
+            case R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    frameCaller.assignValues(new int[]{m_nRetValue, m_nTarget},
+                        hTarget, frameCaller.getFrameLocal()));
+                return R_CALL;
 
-                ObjectHandle hValueNew = frame.getFrameLocal();
-                return m_nRetValue == nArg
-                    ? frame.assignValue(nArg, hValueNew)
-                    : frame.assignValues(new int[]{m_nRetValue, nArg}, hValue, hValueNew);
-                }
-            else
-                {
-                // operation on a local property
-                ObjectHandle hTarget = frame.getThis();
+            case R_EXCEPTION:
+                return R_EXCEPTION;
 
-                PropertyConstant constProperty = (PropertyConstant)
-                        frame.f_context.f_pool.getConstant(-nArg);
-
-                return hTarget.f_clazz.f_template.invokePostInc(
-                        frame, hTarget, constProperty.getName(), m_nRetValue);
-                }
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
+            default:
+                throw new IllegalStateException();
             }
         }
 
-    private int m_nArgValue;
-    private int m_nRetValue;
+    @Override
+    protected int completeWithProperty(Frame frame, String sProperty)
+        {
+        ObjectHandle hTarget = frame.getThis();
+
+        return hTarget.f_clazz.f_template.invokePostInc(frame, hTarget, sProperty, m_nRetValue);
+        }
     }

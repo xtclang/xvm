@@ -31,6 +31,7 @@ import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+import org.xvm.runtime.template.xObject;
 
 
 /**
@@ -794,35 +795,6 @@ public class Frame
         return ahArg;
         }
 
-
-    // return a non-negative value or -1 if the value is "pending future", or
-    // throw if the async assignment has failed
-    public long getIndex(int iArg)
-            throws ExceptionHandle.WrapperException
-        {
-        long lIndex;
-        if (iArg >= 0)
-            {
-            JavaLong hLong = (JavaLong) getArgument(iArg);
-            if (hLong == null)
-                {
-                return -1l;
-                }
-            lIndex = hLong.m_lValue;
-            }
-        else
-            {
-            IntConstant constant = (IntConstant) getConstant(iArg);
-            lIndex = constant.getValue().getLong();
-            }
-
-        if (lIndex < 0)
-            {
-            throw IndexSupport.outOfRange(lIndex, 0).getException();
-            }
-        return lIndex;
-        }
-
     // check if the specified index points to a next available register
     public boolean isNextRegister(int nVar)
         {
@@ -851,7 +823,11 @@ public class Frame
             }
         }
 
-    // Note: this method increments up the "nextVar" index
+    /**
+     * Introduce a new standard variable for the specified type, style and optional value.
+     *
+     * Note: this method increments up the "nextVar" index
+     */
     public void introduceVar(Type type, String sName, int nStyle, ObjectHandle hValue)
         {
         int nVar = f_anNextVar[m_iScope]++;
@@ -864,14 +840,70 @@ public class Frame
             }
         }
 
-    // Note: this method increments up the "nextVar" index
+    /**
+     * Introduce a new standard variable by copying the type from the specified argument.
+     *
+     * Note: this method increments up the "nextVar" index
+     *
+     * @param nVarFrom  if positive, the register number; otherwise a constant id
+     */
     public void introduceVarCopy(int nVarFrom)
         {
-        VarInfo infoFrom = f_aInfo[nVarFrom];
-
         int nVar = f_anNextVar[m_iScope]++;
 
-        f_aInfo[nVar] = new VarInfo(infoFrom.m_type, null, infoFrom.m_nStyle);
+        if (nVarFrom >= 0)
+            {
+            VarInfo infoFrom = f_aInfo[nVarFrom];
+
+            f_aInfo[nVar] = infoFrom.m_type == null
+                ? new VarInfo(infoFrom.m_nTypeId, null, VAR_STANDARD)
+                : new VarInfo(infoFrom.m_type, null, VAR_STANDARD);
+            }
+        else
+            {
+            // "local property" or a literal constant
+            Constant constFrom = getConstant(nVarFrom);
+
+            f_aInfo[nVar] = new VarInfo(constFrom.getType().getPosition(), null, VAR_STANDARD);
+            }
+        }
+
+    /**
+     * Introduce a new standard variable by copying the type the specified from array element.
+     *
+     * Note: this method increments up the "nextVar" index
+     *
+     * @param nVarFrom  if positive, the register number holding an array;
+     *                  otherwise a constant id pointing to an array type
+     */
+    public void introduceElementVarCopy(int nVarFrom)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        if (nVarFrom >= 0)
+            {
+            VarInfo infoFrom = f_aInfo[nVarFrom];
+            TypeComposition clzArray = infoFrom.getType().f_clazz;
+            Type typeElement = clzArray.getActualParamType("ElementType");
+
+            f_aInfo[nVar] = new VarInfo(typeElement, null, VAR_STANDARD);
+            }
+        else
+            {
+            // "local property" or a literal constant
+            Constant constFrom = getConstant(nVarFrom);
+            TypeConstant typeArray = constFrom.getType();
+
+            if (typeArray.isParamsSpecified())
+                {
+                TypeConstant typeElement = typeArray.getParamTypes().get(0);
+                f_aInfo[nVar] = new VarInfo(typeElement.getPosition(), null, VAR_STANDARD);
+                }
+            else
+                {
+                f_aInfo[nVar] = new VarInfo(xObject.TYPE, null, VAR_STANDARD);
+                }
+            }
         }
 
     public VarInfo getVarInfo(int nVar)

@@ -43,12 +43,12 @@ public class L_Get
     /**
      * Construct an L_GET op based on the specified arguments.
      *
-     * @param argProperty  the property Argument
-     * @param argReturn    the return Argument
+     * @param constProperty  the property constant
+     * @param argReturn      the return Argument
      */
-    public L_Get(Argument argProperty, Argument argReturn)
+    public L_Get(PropertyConstant constProperty, Argument argReturn)
         {
-        super(argProperty);
+        super(constProperty);
 
         m_argReturn = argReturn;
         }
@@ -92,8 +92,7 @@ public class L_Get
         {
         ObjectHandle hTarget = frame.getThis();
 
-        PropertyConstant constProperty = (PropertyConstant)
-                frame.f_context.f_pool.getConstant(m_nPropId);
+        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
         if (frame.isNextRegister(m_nRetValue))
             {

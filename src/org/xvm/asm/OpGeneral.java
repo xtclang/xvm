@@ -21,7 +21,7 @@ public abstract class OpGeneral
         extends Op
     {
     /**
-     * Construct an unary op for the passed arguments.
+     * Construct a unary op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argReturn  the Argument to move the result into
@@ -35,7 +35,7 @@ public abstract class OpGeneral
         }
 
     /**
-     * Construct an binary op for the passed arguments.
+     * Construct a binary op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argValue   the second value Argument
@@ -81,7 +81,8 @@ public abstract class OpGeneral
             m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        out.writeByte(OP_GP_ADD);
+        out.writeByte(getOpCode());
+
         writePackedLong(out, m_nTarget);
         if (isBinaryOp())
             {
@@ -117,6 +118,11 @@ public abstract class OpGeneral
                 return R_REPEAT;
                 }
 
+            if (frame.isNextRegister(m_nRetValue))
+                {
+                frame.introduceVarCopy(m_nTarget);
+                }
+
             if (isProperty(hTarget))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hTarget};
@@ -136,11 +142,7 @@ public abstract class OpGeneral
 
     protected int completeUnary(Frame frame, ObjectHandle hTarget)
         {
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            frame.introduceVarCopy(m_nTarget);
-            }
-        return Op.R_NEXT;
+        throw new UnsupportedOperationException();
         }
 
     protected int processBinaryOp(Frame frame)
@@ -152,6 +154,11 @@ public abstract class OpGeneral
             if (hTarget == null || hArg == null)
                 {
                 return R_REPEAT;
+                }
+
+            if (frame.isNextRegister(m_nRetValue))
+                {
+                frame.introduceVarCopy(m_nTarget);
                 }
 
             if (isProperty(hTarget) || isProperty(hArg))
@@ -173,11 +180,7 @@ public abstract class OpGeneral
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            frame.introduceVarCopy(m_nTarget);
-            }
-        return Op.R_NEXT;
+        throw new UnsupportedOperationException();
         }
 
     @Override

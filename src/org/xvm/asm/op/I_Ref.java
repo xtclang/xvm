@@ -2,27 +2,23 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.OpIndex;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * I_REF rvalue-target, rvalue-ix, lvalue ; Ref<T> = &T[ix]
  */
 public class I_Ref
-        extends Op
+        extends OpIndex
     {
     /**
      * Construct an I_REF op.
@@ -30,12 +26,28 @@ public class I_Ref
      * @param nTarget  the target array
      * @param nIndex   the index of the value in the array
      * @param nRet     the location to store the reference to the value in the array
+     *
+     * @deprecated
      */
     public I_Ref(int nTarget, int nIndex, int nRet)
         {
-        m_nTargetValue = nTarget;
-        m_nIndexValue = nIndex;
+        super(null, null, null);
+
+        m_nTarget = nTarget;
+        m_nIndex = nIndex;
         m_nRetValue = nRet;
+        }
+
+    /**
+     * Construct an I_REF op for the passed arguments.
+     *
+     * @param argTarget  the target Argument
+     * @param argIndex   the index Argument
+     * @param argReturn  the Argument to store the result into
+     */
+    public I_Ref(Argument argTarget, Argument argIndex, Argument argReturn)
+        {
+        super(argTarget, argIndex, argReturn);
         }
 
     /**
@@ -47,19 +59,7 @@ public class I_Ref
     public I_Ref(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nTargetValue = readPackedInt(in);
-        m_nIndexValue  = readPackedInt(in);
-        m_nRetValue    = readPackedInt(in);
-        }
-
-    @Override
-    public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
-        out.writeByte(OP_I_REF);
-        writePackedLong(out, m_nTargetValue);
-        writePackedLong(out, m_nIndexValue);
-        writePackedLong(out, m_nRetValue);
+        super(in, aconst);
         }
 
     @Override
@@ -69,29 +69,10 @@ public class I_Ref
         }
 
     @Override
-    public int process(Frame frame, int iPC)
+    protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
-        try
-            {
-            ObjectHandle hTarget = frame.getArgument(m_nTargetValue);
-            long lIndex = frame.getIndex(m_nIndexValue);
+        IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-            if (hTarget == null || lIndex == -1)
-                {
-                return R_REPEAT;
-                }
-
-            IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
-
-            return template.makeRef(frame, hTarget, lIndex, m_nRetValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return template.makeRef(frame, hTarget, hIndex.getValue(), m_nRetValue);
         }
-
-    private int m_nTargetValue;
-    private int m_nIndexValue;
-    private int m_nRetValue;
     }

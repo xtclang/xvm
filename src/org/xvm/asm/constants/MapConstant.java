@@ -169,7 +169,7 @@ public class MapConstant
     @Override
     public Map<Constant, Constant> getValue()
         {
-        return new ROMap<Constant,Constant>(m_aconstKey, m_aconstVal);
+        return new ROMap<>(m_aconstKey, m_aconstVal);
         }
 
 

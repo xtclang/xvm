@@ -78,7 +78,7 @@ public class xTestService extends Service
             {
             new X_Print(adapter.ensureValueConstantId("# in TestService.increment #")),
             new Var(adapter.getClassTypeConstId("Int64")), // #0
-            new IP_PreInc(-adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
+            new IP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
             new Return_1(0),
             });
 
@@ -115,7 +115,7 @@ public class xTestService extends Service
                     adapter.getMethodVarId("TestApp.TestService", "lambda_1")), // #3
             new MoveRef(2, 4), // #4 (&iRet)
             new FBind(3, new int[] {0, 1}, new int[] {4, 0}, 3),
-            new Invoke_N0(adapter.getNegativePropertyConstId("TestApp.TestService", "runtimeClock"),
+            new Invoke_N0(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"),
                     adapter.getMethodConstId("Clock", "scheduleAlarm"),
                     new int[] {3, 0}),
             new Return_1(2),

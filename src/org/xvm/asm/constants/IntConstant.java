@@ -159,6 +159,12 @@ public class IntConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().ensureEcstasyTypeConstant("Int");
+        }
+
+    @Override
     public Object getLocator()
         {
         return m_pint;

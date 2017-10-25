@@ -47,13 +47,13 @@ public class P_Set
     /**
      * Construct a P_SET op based on the specified arguments.
      *
-     * @param argProperty  the property Argument
-     * @param argTarget    the target Argument
-     * @param argValue     the value Argument
+     * @param constProperty  the property constant
+     * @param argTarget      the target Argument
+     * @param argValue       the value Argument
      */
-    public P_Set(Argument argProperty, Argument argTarget, Argument argValue)
+    public P_Set(PropertyConstant constProperty, Argument argTarget, Argument argValue)
         {
-        super(argProperty);
+        super(constProperty);
 
         m_argTarget = argTarget;
         m_argValue = argValue;
@@ -106,8 +106,7 @@ public class P_Set
                 return R_REPEAT;
                 }
 
-            PropertyConstant constProperty = (PropertyConstant)
-                    frame.f_context.f_pool.getConstant(m_nPropId);
+            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
             String sProperty = constProperty.getName();
 
             if (isProperty(hTarget) || isProperty(hValue))

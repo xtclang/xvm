@@ -78,7 +78,9 @@
     + allow local property for IS_*
     + allow local property for JMP_*
     + allow local property for GP_*
-    - allow local property for IP_*
+    + allow local property for IP_*
+    + allow local property for IIP_*
+
 
 - a test for auto-narrowing method invocation
 

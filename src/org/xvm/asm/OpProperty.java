@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.PropertyConstant;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -18,11 +20,11 @@ public abstract class OpProperty extends Op
     /**
      * Construct an op.
      *
-     * @param argProperty  the property Argument
+     * @param constProperty  the property constant
      */
-    protected OpProperty(Argument argProperty)
+    protected OpProperty(PropertyConstant constProperty)
         {
-        m_argProperty = argProperty;
+        m_constProperty = constProperty;
         }
 
     /**
@@ -43,9 +45,9 @@ public abstract class OpProperty extends Op
         {
         out.writeByte(getOpCode());
 
-        if (m_argProperty != null)
+        if (m_constProperty != null)
             {
-            m_nPropId = encodeArgument(m_argProperty, registry);
+            m_nPropId = encodeArgument(m_constProperty, registry);
             }
 
         writePackedLong(out, m_nPropId);
@@ -54,10 +56,10 @@ public abstract class OpProperty extends Op
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argProperty, registry);
+        registerArgument(m_constProperty, registry);
         }
 
     protected int m_nPropId;
 
-    protected Argument m_argProperty;
+    private PropertyConstant m_constProperty;
     }

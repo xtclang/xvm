@@ -73,6 +73,12 @@ public class CharConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().ensureEcstasyTypeConstant("Char");
+        }
+
+    @Override
     public Object getLocator()
         {
         // Integer only guarantees that up to 0x7F is cached

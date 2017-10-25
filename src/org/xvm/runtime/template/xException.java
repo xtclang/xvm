@@ -47,8 +47,8 @@ public class xException
         MethodStructure ct = ensureMethodStructure("construct", new String[] {"String", "Exception"});
         ct.setOps(new Op[] // #0 - text, #1 - cause
             {
-            new L_Set(getProperty("text").getIdentityConstant().getPosition(), 0),
-            new L_Set(getProperty("cause").getIdentityConstant().getPosition(), 1),
+            new L_Set(Op.CONSTANT_OFFSET - getProperty("text").getIdentityConstant().getPosition(), 0),
+            new L_Set(Op.CONSTANT_OFFSET - getProperty("cause").getIdentityConstant().getPosition(), 1),
             new Return_0(),
             });
         }
