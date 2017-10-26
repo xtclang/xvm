@@ -870,42 +870,16 @@ public abstract class ClassTemplate
     // return R_NEXT, R_CALL or R_EXCEPTION
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        switch (getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL))
-            {
-            case Op.R_NEXT:
-                return new Utils.PreInc(hTarget, sPropName, iReturn).proceed(frame);
-
-            case Op.R_CALL:
-                frame.m_frameNext.setContinuation(new Utils.PreInc(hTarget, sPropName, iReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
+        return new Utils.IncDec(Utils.IncDec.PRE_INC, this,
+            hTarget, sPropName, iReturn).doNext(frame);
         }
 
     // place the property value into the specified frame register and increment it
     // return R_NEXT, R_CALL or R_EXCEPTION
     public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        switch (getPropertyValue(frame, hTarget, sPropName, Frame.RET_LOCAL))
-            {
-            case Op.R_NEXT:
-                return new Utils.PostInc(hTarget, sPropName, iReturn).proceed(frame);
-
-            case Op.R_CALL:
-                frame.m_frameNext.setContinuation(new Utils.PostInc(hTarget, sPropName, iReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
+        return new Utils.IncDec(Utils.IncDec.POST_INC,
+            this, hTarget, sPropName, iReturn).doNext(frame);
         }
 
     // ----- OpCode support: property operations -----

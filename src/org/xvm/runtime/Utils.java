@@ -3,7 +3,6 @@ package org.xvm.runtime;
 
 import java.sql.Timestamp;
 
-import java.util.Iterator;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -165,17 +164,33 @@ public abstract class Utils
         }
 
 
-    // ----- Pre/PostInc support -----
+    // ----- Pre/Post-Inc/Dec support -----
 
-    public static class PreInc
+    protected static class IncDec
             implements Frame.Continuation
         {
+        public enum Step {Get, Increment, Decrement, AssignOld, AssignNew, Set}
+
+        public static Step[] PRE_INC = {Step.Get, Step.Increment, Step.AssignNew, Step.Set};
+        public static Step[] POST_INC = {Step.Get, Step.Increment, Step.AssignOld, Step.Set};
+        public static Step[] PRE_DEC = {Step.Get, Step.Decrement, Step.AssignNew, Step.Set};
+        public static Step[] POST_DEC = {Step.Get, Step.Decrement, Step.AssignOld, Step.Set};
+
+        private final ClassTemplate template;
         private final ObjectHandle hTarget;
         private final String sPropName;
         private final int iReturn;
+        private final Step[] algorithm;
 
-        public PreInc(ObjectHandle hTarget, String sPropName, int iReturn)
+        private ObjectHandle hValueOld;
+        private ObjectHandle hValueNew;
+        private int ixStep = -1;
+
+        protected IncDec(Step[] algorithm, ClassTemplate template,
+                         ObjectHandle hTarget, String sPropName, int iReturn)
             {
+            this.algorithm = algorithm;
+            this.template = template;
             this.hTarget = hTarget;
             this.sPropName = sPropName;
             this.iReturn = iReturn;
@@ -184,108 +199,93 @@ public abstract class Utils
         @Override
         public int proceed(Frame frameCaller)
             {
-            ObjectHandle hValueOld = frameCaller.getFrameLocal();
+            updateResult(frameCaller);
 
-            switch (hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL))
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            switch (algorithm[ixStep])
                 {
-                case Op.R_NEXT:
-                    return complete(frameCaller);
+                case Get:
+                    hValueOld = frameCaller.getFrameLocal();
+                    break;
 
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.setContinuation(frame -> complete(frame));
-                    return Op.R_CALL;
+                case AssignOld:
+                case AssignNew:
+                case Set:
+                    break;
 
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
+                case Increment:
+                case Decrement:
+                    hValueNew = frameCaller.getFrameLocal();
+                    break;
 
                 default:
-                    throw new IllegalArgumentException();
+                    throw new IllegalStateException();
                 }
             }
 
-        protected int complete(Frame frameCaller)
+        public int doNext(Frame frameCaller)
             {
-            ObjectHandle hValueNew = frameCaller.getFrameLocal();
-
-            switch (frameCaller.assignValue(iReturn, hValueNew))
+            while (true)
                 {
-                case Op.R_NEXT:
-                    return hTarget.f_clazz.f_template.
-                            setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+                Step step = algorithm[++ixStep];
 
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.setContinuation(frame ->
-                         hTarget.f_clazz.f_template.
-                            setPropertyValue(frame, hTarget, sPropName, hValueNew));
-                    return Op.R_CALL;
+                int iResult;
+                switch (step)
+                    {
+                    case Get:
+                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
+                        break;
 
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
+                    case Increment:
+                        iResult = hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
+                        break;
 
-                default:
-                    throw new IllegalArgumentException();
-                }
-            }
-        }
+                    case Decrement:
+                        iResult = hValueOld.f_clazz.f_template.invokePrev(frameCaller, hValueOld, Frame.RET_LOCAL);
+                        break;
 
-    public static class PostInc
-            implements Frame.Continuation
-        {
-        private final ObjectHandle hTarget;
-        private final String sPropName;
-        private final int iReturn;
+                    case AssignOld:
+                        iResult = frameCaller.assignValue(iReturn, hValueOld);
+                        break;
 
-        public PostInc(ObjectHandle hTarget, String sPropName, int iReturn)
-            {
-            this.hTarget = hTarget;
-            this.sPropName = sPropName;
-            this.iReturn = iReturn;
-            }
+                    case AssignNew:
+                        iResult = frameCaller.assignValue(iReturn, hValueNew);
+                        break;
 
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            ObjectHandle hValueOld = frameCaller.getFrameLocal();
+                    case Set:
+                        iResult = template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+                        break;
 
-            switch (frameCaller.assignValue(iReturn, hValueOld))
-                {
-                case Op.R_NEXT:
-                    return complete(frameCaller, hValueOld);
+                    default:
+                        throw new IllegalStateException();
+                    }
 
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.setContinuation(frame ->
-                        complete(frame, hValueOld));
-                    return Op.R_CALL;
+                if (ixStep == algorithm.length - 1)
+                    {
+                    // teh last step; no need to come back
+                    return iResult;
+                    }
 
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        break;
 
-                default:
-                    throw new IllegalArgumentException();
-                }
-            }
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
 
-        protected int complete(Frame frameCaller, ObjectHandle hValueOld)
-            {
-            ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
-            switch (hValueOld.f_clazz.f_template.invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL))
-                {
-                case Op.R_NEXT:
-                    return hTarget.f_clazz.f_template.
-                            setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
-
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.setContinuation(frame ->
-                        hTarget.f_clazz.f_template.
-                            setPropertyValue(frame, hTarget, sPropName, hValueNew));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalArgumentException();
+                    default:
+                        throw new IllegalArgumentException();
+                    }
                 }
             }
         }
