@@ -225,9 +225,9 @@ public abstract class OpCondJump
             }
         }
 
-    protected int      m_nArg;
-    protected int      m_nArg2;
-    protected int      m_ofJmp;
+    protected int m_nArg;
+    protected int m_nArg2;
+    protected int m_ofJmp;
 
     private Argument m_argVal;
     private Argument m_argVal2;

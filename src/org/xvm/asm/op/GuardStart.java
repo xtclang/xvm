@@ -6,8 +6,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
+
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.MultiGuard;
@@ -28,6 +32,8 @@ public class GuardStart
      * @param nClassConstId  the exception class to catch
      * @param nNameConstId   the name of the catch exception variable
      * @param nCatchAddress  the address of the catch handler
+     *
+     * @deprecated
      */
     public GuardStart(int nClassConstId, int nNameConstId, int nCatchAddress)
         {
@@ -40,14 +46,46 @@ public class GuardStart
      * @param anClassConstId  the exception classes to catch
      * @param anNameConstId   the names of each catch exception variable
      * @param anCatch         the addresses of each catch handler
+     *
+     * @deprecated
      */
     public GuardStart(int[] anClassConstId, int[] anNameConstId, int[] anCatch)
         {
         assert anClassConstId.length == anCatch.length;
 
-        m_anClassConstId    = anClassConstId;
-        m_anNameConstId     = anNameConstId;
-        m_anCatchRelAddress = anCatch;
+        m_anTypeId = anClassConstId;
+        m_anNameId = anNameConstId;
+        m_aofCatch = anCatch;
+        }
+
+    /**
+     * Construct a GUARD op for a single exception.
+     *
+     * @param typeException  the exception type to catch
+     * @param constName      the name constant for the catch exception variable
+     * @param opCatch        the first op of the catch handler
+     */
+    public GuardStart(TypeConstant typeException, StringConstant constName, Op opCatch)
+        {
+        this(new TypeConstant[] {typeException},
+            new StringConstant[] {constName}, new Op[] {opCatch});
+        }
+
+    /**
+     * Construct a GUARD op for multiple exceptions.
+     *
+     * @param aTypeException  the exception type to catch
+     * @param aConstName      the name constant for the catch exception variable
+     * @param aOpCatch         the first op of the catch handler
+     */
+    public GuardStart(TypeConstant[] aTypeException, StringConstant[] aConstName, Op[] aOpCatch)
+        {
+        assert aTypeException.length == aConstName.length;
+        assert aTypeException.length == aOpCatch.length;
+
+        m_aTypeException = aTypeException;
+        m_aConstName = aConstName;
+        m_aOpCatch = aOpCatch;
         }
 
     /**
@@ -61,30 +99,51 @@ public class GuardStart
         {
         int c = readPackedInt(in);
 
-        m_anClassConstId    = new int[c];
-        m_anNameConstId     = new int[c];
-        m_anCatchRelAddress = new int[c];
+        m_anTypeId = new int[c];
+        m_anNameId = new int[c];
+        m_aofCatch = new int[c];
         for (int i = 0; i < c; i++)
             {
-            m_anClassConstId[i]    = readPackedInt(in);
-            m_anNameConstId[i]     = readPackedInt(in);
-            m_anCatchRelAddress[i] = readPackedInt(in);
+            m_anTypeId[i] = readPackedInt(in);
+            m_anNameId[i] = readPackedInt(in);
+            m_aofCatch[i] = readPackedInt(in);
             }
         }
 
     @Override
-    public void write(DataOutput out, ConstantRegistry registry) throws IOException
+    public void write(DataOutput out, ConstantRegistry registry)
+            throws IOException
         {
+        if (m_aTypeException != null)
+            {
+            m_anTypeId = encodeArguments(m_aTypeException, registry);
+            m_anNameId = encodeArguments(m_aConstName, registry);
+            }
         out.writeByte(OP_GUARD);
 
-        int c = m_anClassConstId.length;
+        int c = m_anTypeId.length;
         writePackedLong(out, c);
 
         for (int i = 0; i < c; i++)
             {
-            writePackedLong(out, m_anClassConstId[i]);
-            writePackedLong(out, m_anNameConstId[i]);
-            writePackedLong(out, m_anCatchRelAddress[i]);
+            writePackedLong(out, m_anTypeId[i]);
+            writePackedLong(out, m_anNameId[i]);
+            writePackedLong(out, m_aofCatch[i]);
+            }
+        }
+
+    @Override
+    public void resolveAddress(MethodStructure.Code code, int iPC)
+        {
+        if (m_aOpCatch != null && m_aofCatch == null)
+            {
+            int c = m_aOpCatch.length;
+            m_aofCatch = new int[c];
+
+            for (int i = 0; i < c; i++)
+                {
+                m_aofCatch[i] = resolveAddress(code, iPC, m_aOpCatch[i]);
+                }
             }
         }
 
@@ -103,7 +162,7 @@ public class GuardStart
         if (guard == null)
             {
             m_guard = guard = new MultiGuard(iPC, iScope,
-                    m_anClassConstId, m_anNameConstId, m_anCatchRelAddress);
+                m_anTypeId, m_anNameId, m_aofCatch);
             }
         frame.pushGuard(guard);
 
@@ -116,9 +175,20 @@ public class GuardStart
         scope.enter();
         }
 
-    private int[] m_anClassConstId;
-    private int[] m_anNameConstId;
-    private int[] m_anCatchRelAddress;
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        registerArguments(m_aTypeException, registry);
+        registerArguments(m_aConstName, registry);
+        }
+
+    private int[] m_anTypeId;
+    private int[] m_anNameId;
+    private int[] m_aofCatch;
+
+    private TypeConstant[] m_aTypeException;
+    private StringConstant[] m_aConstName;
+    private Op[] m_aOpCatch;
 
     private transient MultiGuard m_guard; // cached struct
     }
