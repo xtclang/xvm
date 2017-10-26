@@ -27,7 +27,7 @@ public class Construct_N
      * Construct a CONSTR_N op.
      *
      * @param nConstructorId  identifies the construct function
-     * @param anArg           r-values for the construct function arguments
+     * @param anArg           r-values for the construct arguments
      *
      * @deprecated
      */
