@@ -75,8 +75,8 @@ public class IP_PreInc
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     {
-                    ObjectHandle hValueNew = frame.getFrameLocal();
-                    return frame.assignValues(new int[]{m_nRetValue, m_nTarget},
+                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    return frameCaller.assignValues(new int[]{m_nRetValue, m_nTarget},
                         hValueNew, hValueNew);
                     });
                 return R_CALL;

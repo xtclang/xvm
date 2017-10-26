@@ -92,7 +92,7 @@ public class IIP_Add
                     frame.m_frameNext.setContinuation(frameCaller ->
                         {
                         ExceptionHandle hException = template.assignArrayValue(hTarget, lIndex, hValue);
-                        return hException == null ? Op.R_NEXT : frame.raiseException(hException);
+                        return hException == null ? Op.R_NEXT : frameCaller.raiseException(hException);
                         });
                     return R_CALL;
 

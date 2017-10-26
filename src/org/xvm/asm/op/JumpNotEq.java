@@ -90,7 +90,7 @@ public class JumpNotEq
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     {
-                    BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
+                    BooleanHandle hValue = (BooleanHandle) frameCaller.getFrameLocal();
                     return hValue.get() ? iPC + 1 : iPC + m_ofJmp;
                     });
                 return R_CALL;

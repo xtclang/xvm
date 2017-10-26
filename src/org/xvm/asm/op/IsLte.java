@@ -87,7 +87,7 @@ public class IsLte
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                    frame.assignValue(m_nRetValue, xBoolean.makeHandle(
+                    frameCaller.assignValue(m_nRetValue, xBoolean.makeHandle(
                             frameCaller.getFrameLocal() != xOrdered.GREATER)));
                 return R_CALL;
 
