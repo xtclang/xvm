@@ -68,34 +68,6 @@ public abstract class Statement
         Label getContinueLabel();
         }
 
-    /**
-     * This method is used to indicate to the statement that it is being used by an "if" statement
-     * as the condition. This method must be invoked before the statement is validated.
-     */
-    public void markAsIfCondition(Label labelElse)
-        {
-        throw new IllegalStateException("not supported by " + getClass().getSimpleName());
-        }
-
-    /**
-     * This method is used to indicate to the statement that it is being used by a "while" statement
-     * as the condition. This method must be invoked before the statement is validated.
-     */
-    public void markAsWhileCondition(Label labelRepeat)
-        {
-        throw new IllegalStateException("not supported by " + getClass().getSimpleName());
-        }
-
-    /**
-     * This method is used to indicate to the statement that it is being used by a "for"
-     * statement as the condition. This method must be invoked before the statement is validated.
-     */
-    public void markAsForCondition(Label labelExit)
-        {
-        throw new IllegalStateException("not supported by " + getClass().getSimpleName());
-        }
-
-
     // ----- compilation ---------------------------------------------------------------------------
 
     /**
@@ -110,7 +82,14 @@ public abstract class Statement
      */
     protected boolean completes(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        ctx.updateLineNumber(code, Source.calculateLine(getStartPosition()));
+        if (fReachable)
+            {
+            ctx.updateLineNumber(code, Source.calculateLine(getStartPosition()));
+            }
+        else
+            {
+            code = code.blackhole();
+            }
 
         boolean fBeginLabel = m_labelBegin != null;
         if (fBeginLabel)
@@ -180,8 +159,7 @@ public abstract class Statement
 
         Context fork()
             {
-            // TODO
-            return null;
+            return new NestedContext(this);
             }
 
         void join(Context... contexts)
@@ -232,6 +210,34 @@ public abstract class Statement
 
         private MethodStructure m_method;
         private int m_nLine = 0;
+        }
+
+
+    /**
+     * TODO - consider making Context into an interface with 2 discrete sub-classes
+     */
+    public static class NestedContext
+            extends Context
+        {
+        public NestedContext(Context ctxOuter)
+            {
+            super(ctxOuter.getMethod());
+            m_ctxOuter = ctxOuter;
+            }
+
+        @Override
+        public int getLineNumber()
+            {
+            return m_ctxOuter.getLineNumber();
+            }
+
+        @Override
+        public void updateLineNumber(Code code, int nLine)
+            {
+            m_ctxOuter.updateLineNumber(code, nLine);
+            }
+
+        Context m_ctxOuter;
         }
 
 

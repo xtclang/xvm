@@ -4,9 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op.Argument;
-
-import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -15,6 +12,8 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
+
+import org.xvm.compiler.ast.ConditionalStatement.Usage;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -27,12 +26,12 @@ public class IfStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public IfStatement(Token keyword, Statement cond, StatementBlock block)
+    public IfStatement(Token keyword, ConditionalStatement cond, StatementBlock block)
         {
         this(keyword, cond, block, null);
         }
 
-    public IfStatement(Token keyword, Statement cond, StatementBlock stmtThen, Statement stmtElse)
+    public IfStatement(Token keyword, ConditionalStatement cond, StatementBlock stmtThen, Statement stmtElse)
         {
         this.keyword   = keyword;
         this.cond      = cond;
@@ -67,34 +66,19 @@ public class IfStatement
     @Override
     protected boolean validate(Context ctx, ErrorListener errs)
         {
-        // the "cond" statement is one of:
-        // ExpressionStatement - contains the expression that the "if" is evaluating
-        // AssignmentStatement - contains an assignment in the form "expr : expr"
-        // VariableDeclarationStatement - contains a declaration in the form "type name : expr"
-        // TODO MultipleDeclarationStatement
-        boolean fValid;
-        boolean fScope;
-        Context ctxThen;
-        if (cond instanceof ExpressionStatement)
+        // let the conditional statement know that it is indeed being used as a condition
+        cond.markConditional(Usage.If, new Label());
+
+        boolean fScope = cond.isScopeRequired();
+        if (fScope)
             {
-            Expression exprCond = ((ExpressionStatement) cond).expr;
-            fValid  = exprCond.validate(ctx, errs);
-            fScope  = false;
-            ctxThen = ctx.fork();
-            }
-        else
-            {
-            // an "if" statement has its own scope if it declares a variable, which it does behind
-            // the scenes for a "conditional" invocation; the statement results in assignments that
-            // are only assigned for the "then" branch
-            cond.markAsIfCondition(stmtElse == null ? this.getEndLabel() : stmtElse.getBeginLabel());
             ctx.enterScope();
-            fScope  = true;
-            ctxThen = ctx.fork();
-            fValid  = cond.validate(ctxThen, errs);
             }
 
-        fValid &= stmtThen.validate(ctxThen, errs);
+        // TODO consider what to do when the condition is always true or false (is a fork still required?)
+        Context ctxThen = ctx.fork();
+        boolean fValid  = cond.validate(ctxThen, errs)
+                        & stmtThen.validate(ctxThen, errs);
 
         if (stmtElse != null)
             {
@@ -114,63 +98,78 @@ public class IfStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        Label   labelElse    = stmtElse == null ? this.getEndLabel() : stmtElse.getBeginLabel();
-        boolean fAlwaysTrue  = false;
-        boolean fAlwaysFalse = false;
-        boolean fCompletes   = fReachable;
-        boolean fMustExit    = false;
-        if (cond instanceof ExpressionStatement)
+        boolean fCompletes;
+        if (cond.isAlwaysFalse() || cond.isAlwaysTrue())
             {
-            Expression exprCond = ((ExpressionStatement) cond).expr;
+            // "if (false) {stmtThen}" is optimized out altogether.
+            // "if (false) {stmtThen} else {stmtElse}" is compiled as "{stmtElse}"
+            // "if (true) {stmtThen}" is compiled as "{stmtThen}"
+            // "if (true) {stmtThen} else {stmtElse}" is compiled as "{stmtThen}"
 
-            // handle situations in which the expression is always true or always false
-            if (exprCond.isConstant())
-                {
-                Argument arg = exprCond.generateConstant(getConstantPool()
-                        .ensureEcstasyTypeConstant("Boolean"), errs);
+            // the condition shouldn't produce any code, but it's checked here just in case it has
+            // any errors to report
+            cond.completes(ctx, false, code, errs);
 
-                // there are only two values that we're interested in; assume anything else
-                // indicates a compiler error, and that's someone else's problem to deal with
-                if (arg instanceof SingletonConstant)
-                    {
-                    String sClass = ((SingletonConstant) arg).getValue().getName();
-                    fAlwaysTrue  = sClass.equals("True");
-                    fAlwaysFalse = sClass.equals("False");
-                    }
-                }
-            // else if (...) TODO make sure ConditionalConstant is handled correctly (JMP_COND)
-            else
+            fCompletes = stmtThen.completes(ctx, fReachable & cond.isAlwaysTrue(), code, errs);
+
+            if (stmtElse != null)
                 {
-                fCompletes &= exprCond.canComplete();
-                exprCond.generateConditionalJump(code, labelElse, false, errs);
+                fCompletes |= stmtElse.completes(ctx, fReachable & cond.isAlwaysFalse(), code, errs);
                 }
             }
         else
             {
-            code.add(new Enter());
-            // the conditional jump is actually encoded by the statement representing the condition,
-            // based on the label that was provided during the validate stage
-            fCompletes = cond.emit(ctx, fCompletes, code, errs);
-            fMustExit  = true;
+            // "if (cond) {stmtThen}" is compiled as:
+            //
+            //   ENTER                  // iff cond specifies that it needs a scope
+            //   [cond]
+            //   JMP_FALSE cond Else    // this line or similar would be generated as part of [cond]
+            //   [stmtThen]
+            //   Else:
+            //   Exit:
+            //   EXIT                   // iff cond specifies that it needs a scope
+            //
+            // "if (cond) {stmtThen} else {stmtElse}" is compiled as:
+            //
+            //   ENTER                  // iff cond specifies that it needs a scope
+            //   [cond]
+            //   JMP_FALSE cond Else    // this line or similar would be generated as part of [cond]
+            //   [stmtThen]
+            //   JMP Exit
+            //   Else:
+            //   [stmtElse]
+            //   Exit:
+            //   EXIT                   // iff cond specifies that it needs a scope
+            Label labelElse = cond.getLabel();
+            Label labelExit = new Label();
+
+            if (cond.isScopeRequired())
+                {
+                code.add(new Enter());
+                }
+            boolean fCompletesCond = cond.completes(ctx, fReachable, code, errs);
+
+            boolean fCompletesThen = stmtThen.completes(ctx, fCompletesCond, code, errs);
+            if (stmtElse != null)
+                {
+                code.add(new Jump(labelExit));
+                }
+
+            code.add(labelElse);
+            boolean fCompletesElse = stmtElse == null
+                    ? fCompletesCond
+                    : stmtElse.completes(ctx, fCompletesCond, code, errs);
+
+            code.add(labelExit);
+            if (cond.isScopeRequired())
+                {
+                code.add(new Exit());
+                }
+
+            fCompletes = fCompletesThen | fCompletesElse;
             }
 
-        boolean fReachesThen   = fCompletes && !fAlwaysFalse;
-        boolean fCompletesThen = fReachesThen && stmtThen.emit(ctx, fReachesThen, code, errs);
-
-        boolean fReachesElse   = fCompletes && !fAlwaysTrue;
-        boolean fCompletesElse = fReachesElse;
-        if (fReachesElse && stmtElse != null)
-            {
-            code.add(new Jump(getEndLabel()));
-            fCompletesElse = stmtElse.emit(ctx, fReachesElse, code, errs);
-            }
-
-        if (fMustExit)
-            {
-            code.add(new Exit());
-            }
-
-        return fCompletesThen | fCompletesElse;
+        return fCompletes;
         }
 
 
@@ -206,10 +205,10 @@ public class IfStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token     keyword;
-    protected Statement cond;
-    protected Statement stmtThen;
-    protected Statement stmtElse;
+    protected Token                keyword;
+    protected ConditionalStatement cond;
+    protected Statement            stmtThen;
+    protected Statement            stmtElse;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "cond", "stmtThen", "stmtElse");
     }

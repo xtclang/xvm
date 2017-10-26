@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
 import java.util.List;
 
 import java.util.function.Function;
@@ -14,7 +15,6 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 import org.xvm.asm.op.Var_SN;
@@ -31,7 +31,7 @@ import org.xvm.compiler.Token;
  * Additionally, this can represent the combination of a variable "conditional declaration".
  */
 public class VariableDeclarationStatement
-        extends Statement
+        extends ConditionalStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -57,6 +57,9 @@ public class VariableDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff the operator is ':'
+     */
     public boolean isConditional()
         {
         return cond;
@@ -81,31 +84,19 @@ public class VariableDeclarationStatement
         }
 
 
+    // ----- ConditionalStatement methods ----------------------------------------------------------
+
+    @Override
+    protected void split()
+        {
+        // TODO for now pretend that this only declares but does not assign
+        long      lPos    = getEndPosition();
+        Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
+        configureSplit(this, stmtNOP);
+        }
+
+
     // ----- compilation ---------------------------------------------------------------------------
-
-    @Override
-    public void markAsIfCondition(Label labelElse)
-        {
-        assert !m_fForCond && !m_fWhileCond;
-        m_fIfCond = true;
-        m_label   = labelElse;
-        }
-
-    @Override
-    public void markAsWhileCondition(Label labelRepeat)
-        {
-        assert !m_fForCond && !m_fIfCond;
-        m_fWhileCond = true;
-        m_label      = labelRepeat;
-        }
-
-    @Override
-    public void markAsForCondition(Label labelExit)
-        {
-        assert !m_fIfCond && !m_fWhileCond;
-        m_fForCond = true;
-        m_label    = labelExit;
-        }
 
     @Override
     protected boolean validate(Context ctx, ErrorListener errs)
@@ -226,11 +217,6 @@ public class VariableDeclarationStatement
     protected Expression     value;
     protected boolean        cond;
     protected boolean        term;
-
-    private boolean m_fIfCond;
-    private boolean m_fWhileCond;
-    private boolean m_fForCond;
-    private Label   m_label;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type", "value");
     }

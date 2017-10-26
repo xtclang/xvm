@@ -807,6 +807,11 @@ public class MethodStructure
             calcVars();
             }
 
+        Code(Code wrappee)
+            {
+            assert this == wrappee;
+            }
+
         // ----- Code methods -----------------------------------------------------------------
 
         /**
@@ -906,6 +911,67 @@ public class MethodStructure
         public MethodStructure getMethodStructure()
             {
             return MethodStructure.this;
+            }
+
+        /**
+         * @return a blackhole if the code is not reachable
+         */
+        public Code onlyIf(boolean fReachable)
+            {
+            return fReachable ? this : blackhole();
+            }
+
+        /**
+         * @return a Code instance that pretends to be this but ignores any attempt to add ops
+         */
+        public Code blackhole()
+            {
+            Code hole = m_hole;
+            if (hole == null)
+                {
+                m_hole = hole = new BlackHole(this);
+                }
+
+            return m_hole;
+            }
+
+        // ----- read-only wrapper ------------------------------------------------------------
+
+        /**
+         * An implementation of Code that delegates most functionality to a "real" Code object, but
+         * silently ignores any attempt to actually change the code.
+         */
+        class BlackHole
+                extends Code
+            {
+            BlackHole(Code wrappee)
+                {
+                super(wrappee);
+                }
+
+            @Override
+            public Code add(Op op)
+                {
+                return this;
+                }
+
+            @Override
+            public int addressOf(Op op)
+                {
+                return Code.this.addressOf(op);
+                }
+
+            @Override
+            public Op[] getOps()
+                {
+                throw new IllegalStateException();
+                }
+
+            @Override
+            public Code blackhole()
+                {
+                return this;
+                }
             }
 
         // ----- internal ---------------------------------------------------------------------
@@ -1011,6 +1077,11 @@ public class MethodStructure
          * The array of ops.
          */
         private Op[] m_aop;
+
+        /**
+         * A coding black hole.
+         */
+        private Code m_hole;
         }
 
 

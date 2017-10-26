@@ -1439,7 +1439,7 @@ public class Parser
         StatementBlock block = parseStatementBlock();
         expect(Id.WHILE);
         expect(Id.L_PAREN);
-        Statement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseConditionalDeclaration(false);
         long lEndPos = expect(Id.R_PAREN).getEndPosition();
         expect(Id.SEMICOLON);
         return new WhileStatement(keyword, cond, block, lEndPos);
@@ -1590,7 +1590,7 @@ public class Parser
         {
         Token keyword = expect(Id.IF);
         expect(Id.L_PAREN);
-        Statement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseConditionalDeclaration(false);
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
 
@@ -1871,7 +1871,7 @@ public class Parser
         {
         Token keyword = expect(Id.WHILE);
         expect(Id.L_PAREN);
-        Statement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseConditionalDeclaration(false);
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
         return new WhileStatement(keyword, cond, block);
@@ -1962,7 +1962,7 @@ public class Parser
      *
      * @return
      */
-    Statement parseConditionalDeclaration(boolean fAllowAsn)
+    ConditionalStatement parseConditionalDeclaration(boolean fAllowAsn)
         {
         Expression expr = parseExpression();
         switch (peek().getId())
