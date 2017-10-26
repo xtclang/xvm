@@ -58,11 +58,30 @@ public abstract class Statement
         m_fShortCircuited = true;
         }
 
+    public interface Breakable
+        {
+        Label getBreakLabel();
+        }
+
+    public interface Continuable
+        {
+        Label getContinueLabel();
+        }
+
     /**
-     * This method is used to indicate to the statement that it is being used by an "if" or "while"
-     * statement as the condition. This method must be invoked before the statement is validated.
+     * This method is used to indicate to the statement that it is being used by an "if" statement
+     * as the condition. This method must be invoked before the statement is validated.
      */
     public void markAsIfCondition(Label labelElse)
+        {
+        throw new IllegalStateException("not supported by " + getClass().getSimpleName());
+        }
+
+    /**
+     * This method is used to indicate to the statement that it is being used by a "while" statement
+     * as the condition. This method must be invoked before the statement is validated.
+     */
+    public void markAsWhileCondition(Label labelRepeat)
         {
         throw new IllegalStateException("not supported by " + getClass().getSimpleName());
         }
@@ -111,7 +130,7 @@ public abstract class Statement
             }
 
         m_fEmitted = true;
-        return fCompletes || m_fShortCircuited;
+        return fCompletes || fReachable && m_fShortCircuited;
         }
 
     /**

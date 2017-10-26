@@ -1,19 +1,20 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.asm.op.Enter;
+import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
-
-import java.lang.reflect.Field;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -117,6 +118,7 @@ public class IfStatement
         boolean fAlwaysTrue  = false;
         boolean fAlwaysFalse = false;
         boolean fCompletes   = fReachable;
+        boolean fMustExit    = false;
         if (cond instanceof ExpressionStatement)
             {
             Expression exprCond = ((ExpressionStatement) cond).expr;
@@ -149,6 +151,7 @@ public class IfStatement
             // the conditional jump is actually encoded by the statement representing the condition,
             // based on the label that was provided during the validate stage
             fCompletes = cond.emit(ctx, fCompletes, code, errs);
+            fMustExit  = true;
             }
 
         boolean fReachesThen   = fCompletes && !fAlwaysFalse;
@@ -160,6 +163,11 @@ public class IfStatement
             {
             code.add(new Jump(getEndLabel()));
             fCompletesElse = stmtElse.emit(ctx, fReachesElse, code, errs);
+            }
+
+        if (fMustExit)
+            {
+            code.add(new Exit());
             }
 
         return fCompletesThen | fCompletesElse;

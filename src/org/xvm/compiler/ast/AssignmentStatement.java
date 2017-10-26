@@ -1,20 +1,20 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
-
-import java.lang.reflect.Field;
 
 
 /**
  * An assignment statement specifies an l-value, an assignment operator, and an r-value.
  *
  * Additionally, this can represent the assignment portion of a "conditional declaration".
- *
- * @author cp 2017.04.09
  */
 public class AssignmentStatement
         extends Statement
@@ -67,15 +67,23 @@ public class AssignmentStatement
     @Override
     public void markAsIfCondition(Label labelElse)
         {
-        assert !m_fForCond;
+        assert !m_fForCond && !m_fWhileCond;
         m_fIfCond = true;
         m_label   = labelElse;
         }
 
     @Override
+    public void markAsWhileCondition(Label labelRepeat)
+        {
+        assert !m_fForCond && !m_fIfCond;
+        m_fWhileCond = true;
+        m_label      = labelRepeat;
+        }
+
+    @Override
     public void markAsForCondition(Label labelExit)
         {
-        assert !m_fIfCond;
+        assert !m_fIfCond && !m_fWhileCond;
         m_fForCond = true;
         m_label    = labelExit;
         }
@@ -131,6 +139,7 @@ public class AssignmentStatement
     protected boolean    term;
 
     private boolean m_fIfCond;
+    private boolean m_fWhileCond;
     private boolean m_fForCond;
     private Label   m_label;
 

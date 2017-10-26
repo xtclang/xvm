@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
 import java.util.List;
 
 import java.util.function.Function;
@@ -20,8 +22,6 @@ import org.xvm.asm.op.Var_TN;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
-
-import java.lang.reflect.Field;
 
 
 /**
@@ -86,15 +86,23 @@ public class VariableDeclarationStatement
     @Override
     public void markAsIfCondition(Label labelElse)
         {
-        assert !m_fForCond;
+        assert !m_fForCond && !m_fWhileCond;
         m_fIfCond = true;
         m_label   = labelElse;
         }
 
     @Override
+    public void markAsWhileCondition(Label labelRepeat)
+        {
+        assert !m_fForCond && !m_fIfCond;
+        m_fWhileCond = true;
+        m_label      = labelRepeat;
+        }
+
+    @Override
     public void markAsForCondition(Label labelExit)
         {
-        assert !m_fIfCond;
+        assert !m_fIfCond && !m_fWhileCond;
         m_fForCond = true;
         m_label    = labelExit;
         }
@@ -220,6 +228,7 @@ public class VariableDeclarationStatement
     protected boolean        term;
 
     private boolean m_fIfCond;
+    private boolean m_fWhileCond;
     private boolean m_fForCond;
     private Label   m_label;
 

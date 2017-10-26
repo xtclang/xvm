@@ -48,19 +48,6 @@ module Ecstasy.xtclang.org
         {
         mixin Override {}
 
-        mixin InjectedRef<RefType> into Ref<RefType>
-            {
-            @Override
-            RefType get()
-                {
-                return super();
-                }
-
-            @Override
-            Void set(RefType value)
-                {
-                assert false;
-                }
-            }
+        mixin InjectedRef<RefType> into Ref<RefType> {}
         }
     }
