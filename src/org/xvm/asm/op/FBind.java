@@ -54,7 +54,7 @@ public class FBind
      * @param argFunction  the function Argument
      * @param anParamIx    the indexes of parameter(s) to bind (sorted in ascending order)
      * @param aArgValue    the array of Arguments to bind the values to
-     * @param argReturn    the return Register
+     * @param argReturn    the return Argument
      */
     public FBind(Argument argFunction, int[] anParamIx, Argument[] aArgValue, Argument argReturn)
         {

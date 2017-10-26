@@ -50,7 +50,7 @@ public class Call_N1
      *
      * @param argFunction  the function Argument
      * @param aArgValue    the array of value Arguments
-     * @param argReturn    the return Register
+     * @param argReturn    the return Argument
      */
     public Call_N1(Argument argFunction, Argument[] aArgValue, Argument argReturn)
         {

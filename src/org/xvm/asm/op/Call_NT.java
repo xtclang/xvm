@@ -50,7 +50,7 @@ public class Call_NT
      *
      * @param argFunction  the function Argument
      * @param aArgValue    the array of value Arguments
-     * @param argReturn    the return Register
+     * @param argReturn    the return Argument
      */
     public Call_NT(Argument argFunction, Argument[] aArgValue, Argument argReturn)
         {

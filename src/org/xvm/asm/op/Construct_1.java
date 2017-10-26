@@ -9,6 +9,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
+import org.xvm.asm.constants.MethodConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -19,7 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * CONSTR_1 CONST-CONSTRUCT, rvalue
+ * CONSTR_1 CONSTRUCT, rvalue
  */
 public class Construct_1
         extends OpCallable
@@ -43,12 +45,12 @@ public class Construct_1
     /**
      * Construct a CONSTR_1 op based on the passed arguments.
      *
-     * @param argConstructor  the constructor Argument
+     * @param constMethod  the constructor method
      * @param argValue        the value Argument
      */
-    public Construct_1(Argument argConstructor, Argument argValue)
+    public Construct_1(MethodConstant constMethod, Argument argValue)
         {
-        super(argConstructor);
+        super(constMethod);
 
         m_argValue = argValue;
         }

@@ -10,6 +10,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -50,13 +51,13 @@ public class NewG_0
     /**
      * Construct a NEWG_0 op based on the passed arguments.
      *
-     * @param argConstructor  the constructor Argument
-     * @param argType         the type Argument
-     * @param argReturn       the return Register
+     * @param constMethod  the constructor method
+     * @param argType      the type Argument
+     * @param argReturn    the return Argument
      */
-    public NewG_0(Argument argConstructor, Argument argType, Argument argReturn)
+    public NewG_0(MethodConstant constMethod, Argument argType, Argument argReturn)
         {
-        super(argConstructor);
+        super(constMethod);
 
         m_argType = argType;
         m_argReturn = argReturn;

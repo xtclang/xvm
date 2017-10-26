@@ -15,23 +15,20 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
 
-import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.Function.FullyBoundHandle;
 import org.xvm.runtime.template.Ref.RefHandle;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xObject;
 
 import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
-import org.xvm.runtime.template.xObject;
 
 
 /**
