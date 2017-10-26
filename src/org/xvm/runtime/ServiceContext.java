@@ -292,27 +292,29 @@ public class ServiceContext
 
                 case Op.R_RETURN:
                     {
-                    Frame frameCaller = frame.f_framePrev;
                     Frame.Continuation continuation = frame.m_continuation;
+                    frame = m_frameCurrent = frame.f_framePrev; // GC the old frame
+
                     if (continuation != null)
                         {
-                        switch (continuation.proceed(frameCaller))
+                        switch (continuation.proceed(frame))
                             {
                             case Op.R_NEXT:
                                 break;
 
                             case Op.R_EXCEPTION:
                                 // continuation is allowed to "throw"
-                                assert frameCaller.m_hException != null;
+                                assert frame.m_hException != null;
 
                                 iPC = Op.R_EXCEPTION;
                                 continue nextOp;
 
                             case Op.R_CALL:
-                                assert frameCaller.m_frameNext != null;
+                                assert frame.m_frameNext != null;
 
-                                frame = m_frameCurrent = frameCaller.m_frameNext;
-                                frameCaller.m_frameNext = null;
+                                m_frameCurrent = frame.m_frameNext;
+                                frame.m_frameNext = null;
+                                frame = m_frameCurrent;
                                 abOp = frame.f_aOp;
                                 iPC = 0;
                                 continue nextOp;
@@ -322,7 +324,6 @@ public class ServiceContext
                             }
                         }
 
-                    frame = m_frameCurrent = frameCaller;
                     if (frame == null)
                         {
                         // all done
@@ -371,7 +372,8 @@ public class ServiceContext
                         // it will process the exception
                         if (frame.m_continuation == null)
                             {
-                            throw new IllegalStateException("Proto-frame is missing the continuation: " + hException);
+                            throw new IllegalStateException(
+                                "Proto-frame is missing the continuation: " + hException);
                             }
 
                         frame.raiseException(hException);
