@@ -69,6 +69,13 @@ public class I_Ref
         }
 
     @Override
+    protected void introduceReturnVar(Frame frame)
+        {
+        // we intentionally do not call super() here;
+        // the Ref var will be introduced by makeRef() method called from complete()
+        }
+
+    @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
         IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;

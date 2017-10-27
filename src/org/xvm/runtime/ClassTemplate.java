@@ -1049,7 +1049,7 @@ public abstract class ClassTemplate
             }
 
         // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = findCompareFunction("equals", xBoolean.TYPES);
+        MethodStructure functionEquals = findCompareFunction("equals", xBoolean.PARAMETERS);
         if (functionEquals != null)
             {
             return frame.call1(functionEquals, null,

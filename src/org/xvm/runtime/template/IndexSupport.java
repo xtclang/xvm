@@ -5,6 +5,7 @@ import java.util.Collections;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.Op;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -47,7 +48,15 @@ public interface IndexSupport
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 
-            return frame.assignValue(iReturn, hRef);
+            if (frame.isNextRegister(iReturn))
+                {
+                frame.introduceVar(clzRef.ensurePublicType(), null, Frame.VAR_STANDARD, hRef);
+                return Op.R_NEXT;
+                }
+            else
+                {
+                return frame.assignValue(iReturn, hRef);
+                }
             }
         catch (ExceptionHandle.WrapperException e)
             {

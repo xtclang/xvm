@@ -76,7 +76,7 @@ public class Const
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = findCompareFunction("equals", xBoolean.TYPES);
+        MethodStructure functionEquals = findCompareFunction("equals", xBoolean.PARAMETERS);
         if (functionEquals != null)
             {
             return frame.call1(functionEquals, null,
