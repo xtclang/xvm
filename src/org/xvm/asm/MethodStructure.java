@@ -843,6 +843,23 @@ public class MethodStructure
             }
 
         /**
+         * @return the register created by the last-added op
+         */
+        public Register lastRegister()
+            {
+            List<Op> list = m_listOps;
+            if (!list.isEmpty())
+                {
+                Op op = list.get(list.size() - 1);
+                if (op instanceof OpVar)
+                    {
+                    return ((OpVar) op).getRegister();
+                    }
+                }
+            throw new IllegalStateException();
+            }
+
+        /**
          * Find the specified op in the sequence of op codes.
          *
          * @param op  the op to find
@@ -953,6 +970,12 @@ public class MethodStructure
             public Code add(Op op)
                 {
                 return this;
+                }
+
+            @Override
+            public Register lastRegister()
+                {
+                return Code.this.lastRegister();
                 }
 
             @Override

@@ -532,7 +532,16 @@ public abstract class Expression
         return Collections.EMPTY_LIST;
         }
 
+    // TODO expression or argument?
     public void generateAssignment(Code code, Expression exprLValue, ErrorListener errs)
+        {
+        // TODO should be abstract
+        assert isAssignable();
+        throw notImplemented();
+        }
+
+    // TODO expression or argument? (probably expression)
+    public void generateAssignments(Code code, Argument[] aexprLValue, ErrorListener errs)
         {
         // TODO should be abstract
         assert isAssignable();

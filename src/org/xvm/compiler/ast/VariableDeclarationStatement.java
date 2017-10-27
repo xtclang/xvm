@@ -12,16 +12,23 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 
+import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.JumpTrue;
+import org.xvm.asm.op.Var;
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 import org.xvm.asm.op.Var_SN;
 import org.xvm.asm.op.Var_TN;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -50,7 +57,7 @@ public class VariableDeclarationStatement
         this.name  = name;
         this.type  = type;
         this.value = value;
-        this.cond  = op != null && op.getId() == Token.Id.COLON;
+        this.op    = op;
         this.term  = standalone;
         }
 
@@ -62,7 +69,7 @@ public class VariableDeclarationStatement
      */
     public boolean isConditional()
         {
-        return cond;
+        return op != null && op.getId() == Token.Id.COLON;
         }
 
     @Override
@@ -89,10 +96,20 @@ public class VariableDeclarationStatement
     @Override
     protected void split()
         {
-        // TODO for now pretend that this only declares but does not assign
-        long      lPos    = getEndPosition();
-        Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
-        configureSplit(this, stmtNOP);
+        if (value == null)
+            {
+            // this already declares and does not assign, so the split is already effectively done
+            long      lPos    = getEndPosition();
+            Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
+            configureSplit(this, stmtNOP);
+            }
+        else
+            {
+            // actually split this declaration statement into separate declaration and assignment
+            Statement stmtDecl = new VariableDeclarationStatement(type, name, null, null, false);
+            Statement stmtAsn  = new AssignmentStatement(new NameExpression(name), op, value, false);
+            configureSplit(stmtDecl, stmtAsn);
+            }
         }
 
 
@@ -101,12 +118,20 @@ public class VariableDeclarationStatement
     @Override
     protected boolean validate(Context ctx, ErrorListener errs)
         {
-        // TODO verify conditional usage (right hand side must have a conditional return?)
+        boolean fValid = true;
+
+        if (getUsage() != Usage.Standalone && value == null)
+            {
+            // right hand side must have a conditional return
+            log(errs, Severity.ERROR, Compiler.VALUE_REQUIRED);
+            fValid = false;
+            }
+
         // TODO peel ref-specific annotations off of the type (e.g. "@Future")
         // TODO make sure that # exprs == # type fields for tuple type
         // TODO make sure that # type fields == 1 for sequence type
 
-        boolean fValid = type.validate(ctx, errs);
+        fValid &= type.validate(ctx, errs);
         if (value != null)
             {
             fValid &= value.validate(ctx, errs);
@@ -117,7 +142,36 @@ public class VariableDeclarationStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        // TODO conditional support  - m_fIfCond m_fForCond m_label
+        switch (getUsage())
+            {
+            case While:
+            case If:
+                // in the form "Type varname : conditional"
+                // first, declare an unnamed Boolean variable that will hold the conditional result
+                code.add(new Var(getConstantPool().ensureEcstasyTypeConstant("Boolean")));
+                Register regCond = code.lastRegister();
+                // next, declare the named variable
+                code.add(new Var_N(type.getTypeConstant(), getConstantPool().ensureStringConstant((String) name.getValue())));
+                Register regVal = code.lastRegister();
+                // next, assign the r-value to the two variables
+                value.generateAssignments(code, new Argument[] {regCond, regVal}, errs);
+                code.add(getUsage() == Usage.If
+                        ? new JumpFalse(regCond, getLabel())
+                        : new JumpTrue (regCond, getLabel()));
+                return fReachable & value.canComplete();
+
+            case For:
+                // in the form "Type varname : Iterable"
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case Switch:
+                // TODO - this one might just be the same as non-conditional usage
+                // fall through
+            default:
+                break;
+            }
+
         // TODO DVAR support
 
         TypeConstant   typeV     = type.ensureTypeConstant();
@@ -171,6 +225,7 @@ public class VariableDeclarationStatement
             }
 
         // declare and initialize named var
+        // TODO this is wrong; push down the declaration into the RValue expression
         code.add(new Var_IN(typeV, constName, value.generateArgument(code, typeV, false, errs)));
         return fCompletes;
         }
@@ -190,7 +245,7 @@ public class VariableDeclarationStatement
         if (value != null)
             {
             sb.append(' ')
-            .append(cond ? ':' : '=')
+            .append(isConditional() ? ':' : '=')
             .append(' ')
             .append(value);
             }
@@ -214,8 +269,8 @@ public class VariableDeclarationStatement
 
     protected TypeExpression type;
     protected Token          name;
+    protected Token          op;
     protected Expression     value;
-    protected boolean        cond;
     protected boolean        term;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type", "value");

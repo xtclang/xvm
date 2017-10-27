@@ -406,6 +406,10 @@ public class Compiler
      * Expression does not evaluate to a constant value.
      */
     public static final String CONSTANT_REQUIRED                  = "COMPILER-47";
+    /**
+     * A value is required.
+     */
+    public static final String VALUE_REQUIRED                     = "COMPILER-48";
 
 
     // ----- data members --------------------------------------------------------------------------
