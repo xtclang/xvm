@@ -3,17 +3,16 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
 import java.util.List;
 
 
 /**
  * This is a complicated form of the variable declaration statement that allows for multiple
  * L-values to be assigned, of which any number can be a new variable declaration.
- *
- * @author cp 2017.04.10
  */
 public class MultipleDeclarationStatement
-        extends Statement
+        extends ConditionalStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -26,7 +25,6 @@ public class MultipleDeclarationStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
 
     @Override
     public long getStartPosition()
@@ -45,6 +43,23 @@ public class MultipleDeclarationStatement
         {
         return CHILD_FIELDS;
         }
+
+
+    // ----- ConditionalStatement methods ----------------------------------------------------------
+
+    @Override
+    protected void split()
+        {
+        // TODO for now pretend that this only declares but does not assign
+        long      lPos    = getEndPosition();
+        Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
+        configureSplit(this, stmtNOP);
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    // TODO
 
 
     // ----- debugging assistance ------------------------------------------------------------------

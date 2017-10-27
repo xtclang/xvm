@@ -3,9 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.MethodStructure.Code;
+import java.util.Collections;
 
-import org.xvm.asm.op.Label;
+import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -17,7 +17,7 @@ import org.xvm.compiler.Token;
  * Additionally, this can represent the assignment portion of a "conditional declaration".
  */
 public class AssignmentStatement
-        extends Statement
+        extends ConditionalStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -62,31 +62,19 @@ public class AssignmentStatement
         }
 
 
+    // ----- ConditionalStatement methods ----------------------------------------------------------
+
+    @Override
+    protected void split()
+        {
+        // there's no declaration portion, so just use a "no-op" for that statement
+        long      lPos    = getStartPosition();
+        Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
+        configureSplit(stmtNOP, this);
+        }
+
+
     // ----- compilation ---------------------------------------------------------------------------
-
-    @Override
-    public void markAsIfCondition(Label labelElse)
-        {
-        assert !m_fForCond && !m_fWhileCond;
-        m_fIfCond = true;
-        m_label   = labelElse;
-        }
-
-    @Override
-    public void markAsWhileCondition(Label labelRepeat)
-        {
-        assert !m_fForCond && !m_fIfCond;
-        m_fWhileCond = true;
-        m_label      = labelRepeat;
-        }
-
-    @Override
-    public void markAsForCondition(Label labelExit)
-        {
-        assert !m_fIfCond && !m_fWhileCond;
-        m_fForCond = true;
-        m_label    = labelExit;
-        }
 
     @Override
     protected boolean validate(Context ctx, ErrorListener errs)
@@ -137,11 +125,6 @@ public class AssignmentStatement
     protected Expression rvalue;
     protected boolean    cond;
     protected boolean    term;
-
-    private boolean m_fIfCond;
-    private boolean m_fWhileCond;
-    private boolean m_fForCond;
-    private Label   m_label;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "rvalue");
     }
