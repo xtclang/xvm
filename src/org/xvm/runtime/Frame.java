@@ -19,6 +19,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.Function.FullyBoundHandle;
+import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
@@ -886,7 +887,7 @@ public class Frame
     /**
      * Introduce a new standard variable by copying the type from the specified argument.
      *
-     * Note: this method increments up the "nextVar" index
+     * Note: this method increments the "nextVar" index.
      *
      * @param nVarFrom  if positive, the register number; otherwise a constant id
      */
@@ -904,6 +905,8 @@ public class Frame
             }
         else
             {
+            // TODO: the type id could be cached on the corresponding op-code
+
             // "local property" or a literal constant
             Constant constFrom = getConstant(nVarFrom);
 
@@ -912,20 +915,21 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable by copying the type the specified from array element.
+     * Introduce a new standard variable of the "ElementType" for the specified array variable.
      *
-     * Note: this method increments up the "nextVar" index
+     * Note: this method increments the "nextVar" index.
      *
-     * @param nVarFrom  if positive, the register number holding an array;
-     *                  otherwise a constant id pointing to an array type
+     * @param nVarArray  if positive, the register number holding an array handle;
+     *                   otherwise a constant id pointing to an array type
      */
-    public void introduceElementVarCopy(int nVarFrom)
+    public void introduceElementVar(int nVarArray)
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        if (nVarFrom >= 0)
+        // TODO: the type could be cached on the corresponding op-code
+        if (nVarArray >= 0)
             {
-            VarInfo infoFrom = f_aInfo[nVarFrom];
+            VarInfo infoFrom = f_aInfo[nVarArray];
             TypeComposition clzArray = infoFrom.getType().f_clazz;
             Type typeElement = clzArray.getActualParamType("ElementType");
 
@@ -934,7 +938,7 @@ public class Frame
         else
             {
             // "local property" or a literal constant
-            Constant constFrom = getConstant(nVarFrom);
+            Constant constFrom = getConstant(nVarArray);
             TypeConstant typeArray = constFrom.getType();
 
             if (typeArray.isParamsSpecified())
@@ -947,6 +951,49 @@ public class Frame
                 f_aInfo[nVar] = new VarInfo(xObject.TYPE, null, VAR_STANDARD);
                 }
             }
+        }
+
+    /**
+     * Introduce a new standard variable of the Ref<ElementType> for the specified array variable.
+     *
+     * Note: this method increments the "nextVar" index.
+     *
+     * @param nVarArray  if positive, the register number holding an array handle;
+     *                   otherwise a constant id pointing to an array type
+     */
+    public void introduceElementRef(int nVarArray)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        Type typeElement;
+        if (nVarArray >= 0)
+            {
+            VarInfo infoFrom = f_aInfo[nVarArray];
+            TypeComposition clzArray = infoFrom.getType().f_clazz;
+            typeElement = clzArray.getActualParamType("ElementType");
+            }
+        else
+            {
+            // "local property" or a literal constant
+            Constant constFrom = getConstant(nVarArray);
+            TypeConstant typeArray = constFrom.getType();
+
+            if (typeArray.isParamsSpecified())
+                {
+                TypeConstant constElementType = typeArray.getParamTypes().get(0);
+                typeElement = f_context.f_types.resolveType(constElementType, getActualTypes());
+                }
+            else
+                {
+                // Ref<Object>
+                f_aInfo[nVar] = new VarInfo(Ref.TYPE, null, VAR_STANDARD);
+                return;
+                }
+            }
+
+        TypeComposition clzRef = Ref.INSTANCE.ensureClass(
+            Collections.singletonMap("RefType", typeElement));
+        f_aInfo[nVar] = new VarInfo(clzRef.ensurePublicType(), null, VAR_STANDARD);
         }
 
     public VarInfo getVarInfo(int nVar)
