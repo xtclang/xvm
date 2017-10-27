@@ -148,7 +148,7 @@ public class VariableDeclarationStatement
             case If:
                 // in the form "Type varname : conditional"
                 // first, declare an unnamed Boolean variable that will hold the conditional result
-                code.add(new Var(pool().ensureEcstasyTypeConstant("Boolean")));
+                code.add(new Var(pool().typeBoolean()));
                 Register regCond = code.lastRegister();
                 // next, declare the named variable
                 code.add(new Var_N(type.getTypeConstant(), pool().ensureStringConstant((String) name.getValue())));
@@ -199,8 +199,7 @@ public class VariableDeclarationStatement
                 List<TypeConstant> types = typeV.getParamTypes();
                 typeOf = i -> types.get(i);
                 }
-            else if (value instanceof ListExpression && typeV.isA(pool()
-                    .ensureEcstasyTypeConstant("collections.Sequence")))
+            else if (value instanceof ListExpression && typeV.isA(pool().typeSequence()))
                 {
                 // VAR_SN TYPE, STRING, #values:(rvalue)
                 nOp    = Op.OP_VAR_SN;

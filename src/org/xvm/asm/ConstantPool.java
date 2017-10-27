@@ -802,7 +802,7 @@ public class ConstantPool
      */
     public ClassConstant ensureEcstasyClassConstant(String sClass)
         {
-        IdentityConstant constParent = ensureModuleConstant(ECSTASY_MODULE);
+        IdentityConstant constParent = modEcstasy();
         int              ofStart     = 0;
         int              ofEnd       = sClass.indexOf('.');
         while (ofEnd >= 0)
@@ -848,10 +848,21 @@ public class ConstantPool
             case "Boolean":
             case "Char":
             case "Class":
+            case "Const":
+            case "Enum":
+            case "Enumeration":
+            case "Exception":
+            case "Function":
+            case "FPLiteral":
+            case "IntLiteral":
             case "Iterable":
             case "Iterator":
+            case "Module":
+            case "Nullable":
             case "Object":
+            case "Package":
             case "Ref":
+            case "Service":
             case "String":
             case "Type":
                 sClz = sName;
@@ -879,6 +890,7 @@ public class ConstantPool
             case "Set":
             case "Sequence":
             case "Array":
+            case "Hashable":
                 sPkg = "collections";
                 sClz = sName;
                 break;
@@ -896,16 +908,19 @@ public class ConstantPool
                 break;
 
             case "null":
+            case "Null":
                 sClz = "Nullable";
                 sSub = "Null";
                 break;
 
             case "true":
+            case "True":
                 sClz = "Boolean";
                 sSub = "True";
                 break;
 
             case "false":
+            case "False":
                 sClz = "Boolean";
                 sSub = "False";
                 break;
@@ -975,7 +990,7 @@ public class ConstantPool
                 return null;
             }
 
-        IdentityConstant constId = ensureModuleConstant(ECSTASY_MODULE);
+        IdentityConstant constId = modEcstasy();
 
         if (sPkg != null)
             {
@@ -1513,9 +1528,7 @@ public class ConstantPool
      */
     public IntersectionTypeConstant ensureNullableTypeConstant(TypeConstant constType)
         {
-        TypeConstant constNullable = ensureEcstasyTypeConstant(
-                org.xvm.compiler.Constants.X_CLASS_NULLABLE);
-        return ensureIntersectionTypeConstant(constNullable, constType);
+        return ensureIntersectionTypeConstant(typeNullable(), constType);
         }
 
     /**
@@ -1571,7 +1584,6 @@ public class ConstantPool
     public ClassConstant     clzClass()         {ClassConstant     c = m_clzClass;        if (c == null) {m_clzClass        = c = (ClassConstant) getImplicitlyImportedIdentity("Class"      );} return c;}
     public ClassConstant     clzConst()         {ClassConstant     c = m_clzConst;        if (c == null) {m_clzConst        = c = (ClassConstant) getImplicitlyImportedIdentity("Const"      );} return c;}
     public ClassConstant     clzService()       {ClassConstant     c = m_clzService;      if (c == null) {m_clzService      = c = (ClassConstant) getImplicitlyImportedIdentity("Service"    );} return c;}
-    public ClassConstant     clzMixin()         {ClassConstant     c = m_clzMixin;        if (c == null) {m_clzMixin        = c = (ClassConstant) getImplicitlyImportedIdentity("Mixin"      );} return c;}
     public ClassConstant     clzModule()        {ClassConstant     c = m_clzModule;       if (c == null) {m_clzModule       = c = (ClassConstant) getImplicitlyImportedIdentity("Module"     );} return c;}
     public ClassConstant     clzPackage()       {ClassConstant     c = m_clzPackage;      if (c == null) {m_clzPackage      = c = (ClassConstant) getImplicitlyImportedIdentity("Package"    );} return c;}
     public ClassConstant     clzEnum()          {ClassConstant     c = m_clzEnum;         if (c == null) {m_clzEnum         = c = (ClassConstant) getImplicitlyImportedIdentity("Enum"       );} return c;}
@@ -1593,7 +1605,7 @@ public class ConstantPool
     public ClassConstant     clzSequence()      {ClassConstant     c = m_clzSequence;     if (c == null) {m_clzSequence     = c = (ClassConstant) getImplicitlyImportedIdentity("Sequence"   );} return c;}
     public ClassConstant     clzHashable()      {ClassConstant     c = m_clzHashable;     if (c == null) {m_clzHashable     = c = (ClassConstant) getImplicitlyImportedIdentity("Hashable"   );} return c;}
     public ClassConstant     clzIterable()      {ClassConstant     c = m_clzIterable;     if (c == null) {m_clzIterable     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterable"   );} return c;}
-    public ClassConstant     clzIteration()     {ClassConstant     c = m_clzIteration;    if (c == null) {m_clzIteration    = c = (ClassConstant) getImplicitlyImportedIdentity("Iteration"  );} return c;}
+    public ClassConstant     clzIterator()      {ClassConstant     c = m_clzIterator;     if (c == null) {m_clzIterator     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterator"   );} return c;}
     public ClassConstant     clzTuple()         {ClassConstant     c = m_clzTuple;        if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"      );} return c;}
 
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
@@ -1601,7 +1613,6 @@ public class ConstantPool
     public TypeConstant      typeClass()        {TypeConstant      c = m_typeClass;       if (c == null) {m_typeClass       = c = ensureTerminalTypeConstant(clzClass()                      );} return c;}
     public TypeConstant      typeConst()        {TypeConstant      c = m_typeConst;       if (c == null) {m_typeConst       = c = ensureTerminalTypeConstant(clzConst()                      );} return c;}
     public TypeConstant      typeService()      {TypeConstant      c = m_typeService;     if (c == null) {m_typeService     = c = ensureTerminalTypeConstant(clzService()                    );} return c;}
-    public TypeConstant      typeMixin()        {TypeConstant      c = m_typeMixin;       if (c == null) {m_typeMixin       = c = ensureTerminalTypeConstant(clzMixin()                      );} return c;}
     public TypeConstant      typeModule()       {TypeConstant      c = m_typeModule;      if (c == null) {m_typeModule      = c = ensureTerminalTypeConstant(clzModule()                     );} return c;}
     public TypeConstant      typePackage()      {TypeConstant      c = m_typePackage;     if (c == null) {m_typePackage     = c = ensureTerminalTypeConstant(clzPackage()                    );} return c;}
     public TypeConstant      typeEnum()         {TypeConstant      c = m_typeEnum;        if (c == null) {m_typeEnum        = c = ensureTerminalTypeConstant(clzEnum()                       );} return c;}
@@ -1623,7 +1634,7 @@ public class ConstantPool
     public TypeConstant      typeSequence()     {TypeConstant      c = m_typeSequence;    if (c == null) {m_typeSequence    = c = ensureTerminalTypeConstant(clzSequence()                   );} return c;}
     public TypeConstant      typeHashable()     {TypeConstant      c = m_typeHashable;    if (c == null) {m_typeHashable    = c = ensureTerminalTypeConstant(clzHashable()                   );} return c;}
     public TypeConstant      typeIterable()     {TypeConstant      c = m_typeIterable;    if (c == null) {m_typeIterable    = c = ensureTerminalTypeConstant(clzIterable()                   );} return c;}
-    public TypeConstant      typeIteration()    {TypeConstant      c = m_typeIteration;   if (c == null) {m_typeIteration   = c = ensureTerminalTypeConstant(clzIteration()                  );} return c;}
+    public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
 
     public IntConstant       val0()             {IntConstant       c = m_val0;            if (c == null) {m_val0            = c = ensureIntConstant(0)                                        ;} return c;}
@@ -2206,7 +2217,6 @@ public class ConstantPool
     private transient ClassConstant     m_clzClass;
     private transient ClassConstant     m_clzConst;
     private transient ClassConstant     m_clzService;
-    private transient ClassConstant     m_clzMixin;
     private transient ClassConstant     m_clzModule;
     private transient ClassConstant     m_clzPackage;
     private transient ClassConstant     m_clzEnum;
@@ -2228,19 +2238,17 @@ public class ConstantPool
     private transient ClassConstant     m_clzSequence;
     private transient ClassConstant     m_clzHashable;
     private transient ClassConstant     m_clzIterable;
-    private transient ClassConstant     m_clzIteration;
+    private transient ClassConstant     m_clzIterator;
     private transient ClassConstant     m_clzTuple;
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeType;
     private transient TypeConstant      m_typeClass;
     private transient TypeConstant      m_typeConst;
     private transient TypeConstant      m_typeService;
-    private transient TypeConstant      m_typeMixin;
     private transient TypeConstant      m_typeModule;
     private transient TypeConstant      m_typePackage;
     private transient TypeConstant      m_typeEnum;
     private transient TypeConstant      m_typeEnumeration;
-    private transient TypeConstant      m_typeAnnotation;
     private transient TypeConstant      m_typeException;
     private transient TypeConstant      m_typeFunction;
     private transient TypeConstant      m_typeBoolean;
@@ -2258,7 +2266,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeSequence;
     private transient TypeConstant      m_typeHashable;
     private transient TypeConstant      m_typeIterable;
-    private transient TypeConstant      m_typeIteration;
+    private transient TypeConstant      m_typeIterator;
     private transient TypeConstant      m_typeTuple;
     private transient IntConstant       m_val0;
     private transient IntConstant       m_val1;

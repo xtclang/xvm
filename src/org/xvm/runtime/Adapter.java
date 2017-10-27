@@ -78,9 +78,7 @@ public class Adapter
                 }
 
             ConstantPool pool = f_container.f_pool;
-
-            constType = pool.ensureParameterizedTypeConstant(
-                pool.ensureEcstasyTypeConstant("collections.Tuple"), aconstTypes);
+            constType = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aconstTypes);
             }
 
         int nTypeId = constType.getPosition();
@@ -325,20 +323,19 @@ public class Adapter
                 switch (constVal.getFormat())
                     {
                     case String:
-                        constType = pool.ensureEcstasyTypeConstant("String");
+                        constType = pool.typeString();
                         break;
                     case Int64:
-                        constType = pool.ensureEcstasyTypeConstant("Int64");
+                        constType = pool.typeInt();
                         break;
                     default:
-                        constType = pool.ensureEcstasyTypeConstant("Object");
+                        constType = pool.typeObject();
                         break;
                     }
                 atype[i]  = constType;
                 aconst[i] = constVal;
                 }
-            TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("collections.Tuple"), atype);
+            TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atype);
             return pool.ensureTupleConstant(typeTuple, aconst);
             }
 

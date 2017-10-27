@@ -70,9 +70,7 @@ public class FunctionTypeExpression
     protected TypeConstant instantiateTypeConstant()
         {
         ConstantPool pool = pool();
-        return pool.ensureClassTypeConstant(
-                pool.ensureEcstasyClassConstant(Constants.X_CLASS_FUNCTION),
-                null,
+        return pool.ensureClassTypeConstant(pool.clzFunction(), null,
                 toTupleType(toTypeConstantArray(returnValues)),
                 toTupleType(toTypeConstantArray(paramTypes)));
         }
@@ -80,8 +78,7 @@ public class FunctionTypeExpression
     private TypeConstant toTupleType(TypeConstant[] aconstTypes)
         {
         ConstantPool pool = pool();
-        return pool.ensureClassTypeConstant(
-                pool.ensureEcstasyClassConstant(Constants.X_CLASS_TUPLE), null, aconstTypes);
+        return pool.ensureClassTypeConstant(pool.clzTuple(), null, aconstTypes);
         }
 
     private static TypeConstant[] toTypeConstantArray(List<TypeExpression> list)

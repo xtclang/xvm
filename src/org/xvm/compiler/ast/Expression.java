@@ -448,7 +448,7 @@ public abstract class Expression
         {
         // TODO this does not seem correct
         return getImplicitType().isEcstasy("Nullable.Null");
-        // perhaps: return isAssignableTo(pool().ensureEcstasyTypeConstant("Nullable"));
+        // perhaps: return isAssignableTo(pool().typeNullable());
         }
 
     /**
@@ -535,8 +535,7 @@ public abstract class Expression
                 if (fTupleOk)
                     {
                     ConstantPool pool = pool();
-                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
-                            pool.ensureEcstasyTypeConstant("collections.Tuple"),
+                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(),
                             listTypes.toArray(new TypeConstant[listTypes.size()]));
 
                     return Collections.singletonList(generateArgument(code, typeTuple, false, errs));
@@ -576,7 +575,7 @@ public abstract class Expression
         {
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(code, pool().ensureEcstasyTypeConstant("Boolean"), false, errs);
+        Argument arg = generateArgument(code, pool().typeBoolean(), false, errs);
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));

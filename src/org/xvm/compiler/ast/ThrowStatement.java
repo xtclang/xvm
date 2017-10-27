@@ -64,7 +64,7 @@ public class ThrowStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool pool  = pool();
-        TypeConstant typeE = pool.ensureEcstasyTypeConstant("Exception");
+        TypeConstant typeE = pool.typeException();
         Argument     argE  = expr.generateArgument(code, typeE, false, errs);
         code.add(new Throw(argE));
 

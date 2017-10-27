@@ -112,7 +112,7 @@ public class TupleExpression
                     }
                 ConstantPool pool = pool();
                 constType = pool.ensureParameterizedTypeConstant(
-                        pool.ensureEcstasyTypeConstant("collections.Tuple"), aconstTypes);
+                        pool.typeTuple(), aconstTypes);
                 }
             else
                 {
@@ -143,7 +143,7 @@ public class TupleExpression
             {
             TypeConstant constFType = i < cFields
                     ? constTType.getTupleFieldType(i)
-                    : pool().ensureEcstasyTypeConstant("Object");
+                    : pool().typeObject();
             aconst[i] = listExprs.get(i).toConstant();
             }
         return pool().ensureTupleConstant(constTType, aconst);

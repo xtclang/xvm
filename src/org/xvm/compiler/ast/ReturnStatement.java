@@ -156,8 +156,7 @@ public class ReturnStatement
                 }
 
             ConstantPool pool   = pool();
-            TypeConstant typeT  = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("collections.Tuple"), atypeR);
+            TypeConstant typeT  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeR);
             Argument     arg    = listExprs.get(0).generateArgument(code, typeT, false, errs);
             code.add(new Return_T(arg));
             }

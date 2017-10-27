@@ -607,7 +607,7 @@ public class TypeCompositionStatement
 
         // validate that type parameters are allowed, and register them (the actual validation of
         // the type parameters themselves happens in a later phase)
-        final ClassConstant OBJECT_CLASS = pool.ensureEcstasyClassConstant("Object");
+        final ClassConstant OBJECT_CLASS = pool.clzObject();
         switch (component.getFormat())
             {
             case MODULE:
@@ -672,8 +672,8 @@ public class TypeCompositionStatement
 
                             // each type parameter also has a synthetic property of the same name,
                             // whose type is of type"Type<exprType>"
-                            TypeConstant constPropType = pool.ensureClassTypeConstant(pool
-                                    .ensureEcstasyClassConstant("Type"), null, constType);
+                            TypeConstant constPropType = pool.ensureClassTypeConstant(
+                                    pool.clzType(), null, constType);
 
                             // create the property and mark it as synthetic
                             component.createProperty(false, Access.PUBLIC, constPropType, sParam)
