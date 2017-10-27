@@ -594,6 +594,42 @@ public class Frame
             }
         }
 
+    // assign the specified register on the caller's frame
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    private int returnValue(int iReturn, ObjectHandle hValue)
+        {
+        int iResult = f_framePrev.assignValue(iReturn, hValue);
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                return Op.R_RETURN;
+
+            case Op.R_CALL:
+                m_frameNext.setContinuation(frameCaller -> Op.R_RETURN);
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_RETURN_EXCEPTION;
+
+            case Op.R_BLOCK:
+                return Op.R_BLOCK_RETURN;
+
+            default:
+                throw new IllegalArgumentException("iResult=" + iResult);
+            }
+        }
+
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    private int returnAsTuple(ObjectHandle[] ahValue)
+        {
+        assert f_iReturn == RET_TUPLE;
+
+        int iReturn = f_aiReturn[0];
+
+        TypeComposition clazz = f_framePrev.getVarInfo(iReturn).getType().f_clazz;
+        return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue));
+        }
+
     // assign the return registers on the caller's frame
     // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
     public int returnValues(ObjectHandle[] ahValue)
@@ -624,42 +660,6 @@ public class Frame
 
             default:
                 throw new IllegalArgumentException("iReturn=" + f_iReturn);
-            }
-        }
-
-    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
-    private int returnAsTuple(ObjectHandle[] ahValue)
-        {
-        assert f_iReturn == RET_TUPLE;
-
-        int iReturn = f_aiReturn[0];
-
-        TypeComposition clazz = f_framePrev.getVarInfo(iReturn).getType().f_clazz;
-        return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue));
-        }
-
-    // assign the specified register on the caller's frame
-    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
-    public int returnValue(int iReturn, ObjectHandle hValue)
-        {
-        int iResult = f_framePrev.assignValue(iReturn, hValue);
-        switch (iResult)
-            {
-            case Op.R_NEXT:
-                return Op.R_RETURN;
-
-            case Op.R_CALL:
-                m_frameNext.setContinuation(frameCaller -> Op.R_RETURN);
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_RETURN_EXCEPTION;
-
-            case Op.R_BLOCK:
-                return Op.R_BLOCK_RETURN;
-
-            default:
-                throw new IllegalArgumentException("iResult=" + iResult);
             }
         }
 
