@@ -63,7 +63,7 @@ public class ThrowStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        ConstantPool pool  = getConstantPool();
+        ConstantPool pool  = pool();
         TypeConstant typeE = pool.ensureEcstasyTypeConstant("Exception");
         Argument     argE  = expr.generateArgument(code, typeE, false, errs);
         code.add(new Throw(argE));

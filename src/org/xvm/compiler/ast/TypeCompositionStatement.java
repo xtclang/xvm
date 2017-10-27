@@ -288,7 +288,7 @@ public class TypeCompositionStatement
         String              sName     = (String) name.getValue();
         Access              access    = getDefaultAccess();
         Component           container = parent == null ? null : parent.getComponent();
-        ConstantPool        pool      = getConstantPool();
+        ConstantPool        pool      = pool();
         ConditionalConstant constCond = condition == null ? null : condition.toConditionalConstant();
         if (container instanceof ModuleStructure && sName.equals(X_PKG_IMPORT))
             {

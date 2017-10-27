@@ -47,10 +47,10 @@ public abstract class ComponentStatement
         }
 
     @Override
-    protected ConstantPool getConstantPool()
+    protected ConstantPool pool()
         {
         return component == null
-                ? super.getConstantPool()
+                ? super.pool()
                 : component.getConstantPool();
         }
 

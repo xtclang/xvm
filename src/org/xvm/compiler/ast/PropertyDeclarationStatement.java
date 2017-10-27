@@ -120,7 +120,7 @@ public class PropertyDeclarationStatement
                 // namespace at this point in the compilation
                 // if (container.getProperty(sName) != null) ...
 
-                ConstantPool      pool      = getConstantPool();
+                ConstantPool      pool      = pool();
                 TypeConstant      constType = type.ensureTypeConstant();
                 PropertyStructure prop      = container.createProperty(
                         isStatic(), getDefaultAccess(), constType, sName);

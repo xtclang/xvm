@@ -74,7 +74,7 @@ public class ArrayTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant()
         {
-        final ConstantPool pool = getConstantPool();
+        final ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.ensureEcstasyClassConstant(Constants.X_CLASS_ARRAY),
                 null, type.ensureTypeConstant());
         }

@@ -75,7 +75,7 @@ public class CharConstant
     @Override
     public TypeConstant getType()
         {
-        return getConstantPool().ensureEcstasyTypeConstant("Char");
+        return getConstantPool().typeChar();
         }
 
     @Override

@@ -161,7 +161,7 @@ public class IntConstant
     @Override
     public TypeConstant getType()
         {
-        return getConstantPool().ensureEcstasyTypeConstant("Int");
+        return getConstantPool().typeInt();
         }
 
     @Override

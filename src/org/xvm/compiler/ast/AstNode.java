@@ -195,12 +195,12 @@ public abstract class AstNode
     /**
      * @return the constant pool
      */
-    protected ConstantPool getConstantPool()
+    protected ConstantPool pool()
         {
         AstNode nodeParent = getParent();
         return nodeParent == null
                 ? null
-                : nodeParent.getConstantPool();
+                : nodeParent.pool();
         }
 
     /**

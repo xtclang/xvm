@@ -98,7 +98,7 @@ public class AnnotatedTypeExpression
                 }
             }
 
-        return getConstantPool().ensureAnnotatedTypeConstant(
+        return pool().ensureAnnotatedTypeConstant(
                 constAnnotationType.getDefiningConstant(), aconstParam, type.ensureTypeConstant());
         }
 

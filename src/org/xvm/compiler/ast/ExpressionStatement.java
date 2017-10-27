@@ -112,7 +112,7 @@ public class ExpressionStatement
                 {
                 // there are only two values that we're interested in; assume anything else
                 // indicates a compiler error, and that's someone else's problem to deal with
-                Argument arg = expr.generateConstant(getConstantPool()
+                Argument arg = expr.generateConstant(pool()
                         .ensureEcstasyTypeConstant("Boolean"), errs);
                 m_rte = arg instanceof SingletonConstant
                         && ((SingletonConstant) arg).getValue().getName().equals("True")

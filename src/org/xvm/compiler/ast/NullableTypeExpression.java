@@ -60,7 +60,7 @@ public class NullableTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant()
         {
-        return getConstantPool().ensureNullableTypeConstant(type.ensureTypeConstant());
+        return pool().ensureNullableTypeConstant(type.ensureTypeConstant());
         }
 
 

@@ -64,7 +64,7 @@ public class SequenceTypeExpression
     protected TypeConstant instantiateTypeConstant()
         {
         // build an Array type
-        ConstantPool pool = getConstantPool();
+        ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(
                 pool.ensureEcstasyClassConstant(Constants.X_CLASS_SEQUENCE),
                 null, type.ensureTypeConstant());

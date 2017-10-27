@@ -148,10 +148,10 @@ public class VariableDeclarationStatement
             case If:
                 // in the form "Type varname : conditional"
                 // first, declare an unnamed Boolean variable that will hold the conditional result
-                code.add(new Var(getConstantPool().ensureEcstasyTypeConstant("Boolean")));
+                code.add(new Var(pool().ensureEcstasyTypeConstant("Boolean")));
                 Register regCond = code.lastRegister();
                 // next, declare the named variable
-                code.add(new Var_N(type.getTypeConstant(), getConstantPool().ensureStringConstant((String) name.getValue())));
+                code.add(new Var_N(type.getTypeConstant(), pool().ensureStringConstant((String) name.getValue())));
                 Register regVal = code.lastRegister();
                 // next, assign the r-value to the two variables
                 value.generateAssignments(code, new Argument[] {regCond, regVal}, errs);
@@ -175,7 +175,7 @@ public class VariableDeclarationStatement
         // TODO DVAR support
 
         TypeConstant   typeV     = type.ensureTypeConstant();
-        StringConstant constName = getConstantPool().ensureStringConstant((String) name.getValue());
+        StringConstant constName = pool().ensureStringConstant((String) name.getValue());
         if (value == null)
             {
             code.add(new Var_N(typeV, constName));
@@ -199,7 +199,7 @@ public class VariableDeclarationStatement
                 List<TypeConstant> types = typeV.getParamTypes();
                 typeOf = i -> types.get(i);
                 }
-            else if (value instanceof ListExpression && typeV.isA(getConstantPool()
+            else if (value instanceof ListExpression && typeV.isA(pool()
                     .ensureEcstasyTypeConstant("collections.Sequence")))
                 {
                 // VAR_SN TYPE, STRING, #values:(rvalue)

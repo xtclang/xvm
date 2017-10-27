@@ -155,7 +155,7 @@ public class ReturnStatement
                 atypeR[i] = listRets.get(i).getType();
                 }
 
-            ConstantPool pool   = getConstantPool();
+            ConstantPool pool   = pool();
             TypeConstant typeT  = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("collections.Tuple"), atypeR);
             Argument     arg    = listExprs.get(0).generateArgument(code, typeT, false, errs);

@@ -52,7 +52,7 @@ public class NameExpression
         {
         if (validateCondition(null))
             {
-            ConstantPool pool = getConstantPool();
+            ConstantPool pool = pool();
             return pool.ensurePresentCondition(new UnresolvedNameConstant(pool, getUpToDotName()));
             }
 

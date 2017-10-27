@@ -303,7 +303,7 @@ public abstract class TypeConstant
 
         return isParamsSpecified()
                 ? getParamTypes().get(0)
-                : getConstantPool().ensureEcstasyTypeConstant("Object");
+                : getConstantPool().typeObject();
         }
 
     /**
@@ -323,7 +323,7 @@ public abstract class TypeConstant
         {
         TypeConstant constThis = (TypeConstant) this.simplify();
         assert !constThis.containsUnresolved();
-        return constThis.isA(getConstantPool().ensureEcstasyTypeConstant("collections.Array"));
+        return constThis.isA(getConstantPool().typeArray());
         }
 
     /**
@@ -337,7 +337,7 @@ public abstract class TypeConstant
                 || constThis.isEcstasy("collections.Array")
                 || constThis.isEcstasy("collections.List")
                 || constThis.isEcstasy("collections.Sequence")
-                || constThis.isA(getConstantPool().ensureEcstasyTypeConstant("collections.Sequence"));
+                || constThis.isA(getConstantPool().typeSequence());
         }
 
     /**
@@ -463,7 +463,7 @@ public abstract class TypeConstant
         {
         // TODO this is temporary (it just finds the one @Auto that exists on Object itself)
         // TODO make sure that @Override without @Auto hides the underlying @Auto method!!! (see Function.x)
-        for (MethodStructure method : getConstantPool().ensureEcstasyClassConstant("Object")
+        for (MethodStructure method : getConstantPool().clzObject()
                 .getComponent().ensureMultiMethodStructure("to").methods())
             {
             if (method.getReturn(0).getType().isEcstasy("Function"))
@@ -543,7 +543,7 @@ public abstract class TypeConstant
     public TypeConstant getType()
         {
         ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.ensureEcstasyTypeConstant("Type"),
+        return pool.ensureParameterizedTypeConstant(pool.typeType(),
                 new TypeConstant[] {this});
         }
 
