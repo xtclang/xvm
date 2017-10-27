@@ -214,7 +214,7 @@ public class xArray
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
-        return hArray.f_clazz.f_mapGenericActual.get("ElementType");
+        return hArray.f_clazz.getActualParamType("ElementType");
         }
 
     @Override

@@ -47,7 +47,7 @@ public class Call_0T
      * Construct a CALL_0T op based on the passed arguments.
      *
      * @param argFunction  the function Argument
-     * @param argReturn    the return Register
+     * @param argReturn    the return Argument
      */
     public Call_0T(Argument argFunction, Argument argReturn)
         {

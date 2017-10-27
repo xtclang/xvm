@@ -16,39 +16,41 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * CONSTR_1 CONSTRUCT, rvalue
+ * CONSTR_T CONSTRUCT, rvalue-tparams
  */
-public class Construct_1
+public class Construct_T
         extends OpCallable
     {
     /**
-     * Construct a CONSTR_1 op.
+     * Construct a CONSTR_T op.
      *
      * @param nConstructorId  identifies the construct function
-     * @param nArg            r-value for the construct argument
+     * @param nArg            r-value for the construct tuple argument
      *
      * @deprecated
      */
-    public Construct_1(int nConstructorId, int nArg)
+    public Construct_T(int nConstructorId, int nArg)
         {
         super(null);
 
         m_nFunctionId = nConstructorId;
-        m_nArgValue = nArg;
+        m_nArgTupleValue = nArg;
         }
 
     /**
-     * Construct a CONSTR_1 op based on the passed arguments.
+     * Construct a CONSTR_T op based on the passed arguments.
      *
      * @param constMethod  the constructor method
-     * @param argValue        the value Argument
+     * @param argValue     the tuple value Argument
      */
-    public Construct_1(MethodConstant constMethod, Argument argValue)
+    public Construct_T(MethodConstant constMethod, Argument argValue)
         {
         super(constMethod);
 
@@ -61,12 +63,12 @@ public class Construct_1
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public Construct_1(DataInput in, Constant[] aconst)
+    public Construct_T(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
 
-        m_nArgValue = readPackedInt(in);
+        m_nArgTupleValue = readPackedInt(in);
         }
 
     @Override
@@ -77,16 +79,16 @@ public class Construct_1
 
         if (m_argValue != null)
             {
-            m_nArgValue = encodeArgument(m_argValue, registry);
+            m_nArgTupleValue = encodeArgument(m_argValue, registry);
             }
 
-        writePackedLong(out, m_nArgValue);
+        writePackedLong(out, m_nArgTupleValue);
         }
 
     @Override
     public int getOpCode()
         {
-        return OP_CONSTR_1;
+        return OP_CONSTR_T;
         }
 
     @Override
@@ -94,25 +96,22 @@ public class Construct_1
         {
         try
             {
-            ObjectHandle hArg = frame.getArgument(m_nArgValue);
+            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
             if (hArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            MethodStructure constructor = getMethodStructure(frame);
-
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
-            ahVar[0] = hArg;
-
             if (isProperty(hArg))
                 {
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, constructor, ahVar);
-                return new Utils.GetArgument(ahVar, stepNext).doNext(frame);
+                    complete(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue);
+
+                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, constructor, ahVar);
+            return complete(frame, ((TupleHandle) hArg).m_ahValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -120,9 +119,12 @@ public class Construct_1
             }
         }
 
-    protected int complete(Frame frame, MethodStructure constructor, ObjectHandle[] ahVar)
+    protected int complete(Frame frame, ObjectHandle[] ahArg)
         {
+        MethodStructure constructor = getMethodStructure(frame);
         ObjectHandle hStruct = frame.getThis();
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, constructor.getMaxVars());
 
         frame.chainFinalizer(Utils.makeFinalizer(constructor, hStruct, ahVar));
 
@@ -137,7 +139,7 @@ public class Construct_1
         registerArgument(m_argValue, registry);
         }
 
-    private int m_nArgValue;
+    private int m_nArgTupleValue;
 
     private Argument m_argValue;
     }

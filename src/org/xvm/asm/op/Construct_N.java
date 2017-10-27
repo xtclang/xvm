@@ -9,6 +9,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
+import org.xvm.asm.constants.MethodConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -16,7 +18,7 @@ import org.xvm.runtime.Utils;
 
 
 /**
- * CONSTR_N CONST-CONSTRUCT, #params:(rvalue)
+ * CONSTR_N CONSTRUCT, #params:(rvalue)
  */
 public class Construct_N
         extends OpCallable
@@ -25,7 +27,7 @@ public class Construct_N
      * Construct a CONSTR_N op.
      *
      * @param nConstructorId  identifies the construct function
-     * @param anArg           r-values for the construct function arguments
+     * @param anArg           r-values for the construct arguments
      *
      * @deprecated
      */
@@ -40,12 +42,12 @@ public class Construct_N
     /**
      * Construct a CONSTR_N op based on the passed arguments.
      *
-     * @param argConstructor  the constructor Argument
+     * @param constMethod  the constructor method
      * @param aArgValue       the array of value Arguments
      */
-    public Construct_N(Argument argConstructor, Argument[] aArgValue)
+    public Construct_N(MethodConstant constMethod, Argument[] aArgValue)
         {
-        super(argConstructor);
+        super(constMethod);
 
         m_aArgValue = aArgValue;
         }

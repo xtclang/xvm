@@ -80,10 +80,13 @@
     + allow local property for GP_*
     + allow local property for IP_*
     + allow local property for IIP_*
+    + allow next register for IS_*
+    - allow next register for Call_* and Invoke_*
+
+- a test for "local property" mode
 
 - access exchange (public vs private vs struct) during invocations
 
-- a test for "local property" mode
 - a test for auto-narrowing method invocation
 
 - createConst() processing for Array, Set, Map etc.

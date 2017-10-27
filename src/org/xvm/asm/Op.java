@@ -719,8 +719,10 @@ public abstract class Op
             case OP_NEWG_1:      return new NewG_1      (in, aconst);
             case OP_NEWG_N:      return new NewG_N      (in, aconst);
 
+            case OP_CONSTR_0:    return new Construct_0 (in, aconst);
             case OP_CONSTR_1:    return new Construct_1 (in, aconst);
             case OP_CONSTR_N:    return new Construct_N (in, aconst);
+            case OP_CONSTR_T:    return new Construct_T (in, aconst);
 
             default:
                 throw new IllegalStateException("op=" + byteToHexString(nOp));

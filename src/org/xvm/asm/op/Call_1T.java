@@ -53,7 +53,7 @@ public class Call_1T
      *
      * @param argFunction  the function Argument
      * @param argValue     the value Argument
-     * @param argReturn    the return Register
+     * @param argReturn    the return Argument
      */
     public Call_1T(Argument argFunction, Argument argValue, Argument argReturn)
         {

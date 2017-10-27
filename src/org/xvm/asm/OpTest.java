@@ -11,6 +11,8 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xBoolean;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -104,6 +106,10 @@ public abstract class OpTest
     @Override
     public int process(Frame frame, int iPC)
         {
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceVar(xBoolean.TYPE, null, Frame.VAR_STANDARD, null);
+            }
         return isBinaryOp() ? processBinaryOp(frame) : processUnaryOp(frame);
         }
 
@@ -213,11 +219,19 @@ public abstract class OpTest
     public void registerConstants(ConstantRegistry registry)
         {
         registerArgument(m_argVal1, registry);
-        registerArgument(m_argReturn, registry);
-
         if (isBinaryOp())
             {
             registerArgument(m_argVal2, registry);
+            }
+        registerArgument(m_argReturn, registry);
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        if (scope.isNextRegister(m_nRetValue))
+            {
+            scope.allocVar();
             }
         }
 

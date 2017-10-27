@@ -59,11 +59,8 @@ public class xTestClass2 extends ClassTemplate
             new X_Print(adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
             new Call_01(Op.A_SUPER,
                 adapter.getPropertyConstId("TestApp.TestClass2", "temp")),
-            new Var(adapter.getClassTypeConstId("Int64")), // #0
-            new L_Get(adapter.getPropertyConstId("TestApp.TestClass2", "temp"), 0),
-            new Var(adapter.getClassTypeConstId("Int64")), // #1
-            new L_Get(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 1),
-            new GP_Add(0, 1, 0),
+            new L_Get(adapter.getPropertyConstId("TestApp.TestClass2", "temp"), 0), // next register #0
+            new GP_Add(0, adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 0),
             new Return_1(0),
             });
 
@@ -74,10 +71,9 @@ public class xTestClass2 extends ClassTemplate
             new Call_01(Op.A_SUPER, 0),
             new GP_Add(0, adapter.ensureValueConstantId(", prop2="), 0),
             new Var(adapter.getClassTypeConstId("Int64")), // #1
-            new L_Get(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 1),
-            new Var(adapter.getClassTypeConstId("String")), // #2
-            new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
-            new GP_Add(0, 2, 0),
+            new Invoke_01(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"),
+                adapter.getMethodConstId("Object", "to"), 1),
+            new GP_Add(0, 1, 0),
             new Return_1(0),
             });
         }

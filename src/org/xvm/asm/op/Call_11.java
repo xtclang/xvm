@@ -50,7 +50,7 @@ public class Call_11
      *
      * @param argFunction  the function Argument
      * @param argValue     the value Argument
-     * @param argReturn    the return Register
+     * @param argReturn    the return Argument
      */
     public Call_11(Argument argFunction, Argument argValue, Argument argReturn)
         {

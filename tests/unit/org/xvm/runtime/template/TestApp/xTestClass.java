@@ -66,8 +66,7 @@ public class xTestClass extends ClassTemplate
             new Var_I(adapter.getClassTypeConstId("String"),
                     adapter.ensureValueConstantId("world")), // #2
             new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"), 2, 1),
-            new Var(adapter.getClassTypeConstId("Int64")), // #3
-            new P_Get(adapter.getPropertyConstId("String", "size"), 0, 3),
+            new P_Get(adapter.getPropertyConstId("String", "size"), 0, 3), // next register #3
             new GP_Add(3, 1, 3),
             new Return_1(3),
             });
@@ -91,10 +90,9 @@ public class xTestClass extends ClassTemplate
             new Call_01(Op.A_SUPER, 0),
             new GP_Add(0, adapter.ensureValueConstantId(": prop1="), 0),
             new Var(adapter.getClassTypeConstId("String")), // #1
-            new L_Get(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 1),
-            new Var(adapter.getClassTypeConstId("String")), // #2
-            new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
-            new GP_Add(0, 2, 0),
+            new Invoke_01(adapter.getPropertyConstId("TestApp.TestClass", "prop1"),
+                adapter.getMethodConstId("Object", "to"), 1),
+            new GP_Add(0, 1, 0),
             new Return_1(0),
             });
         }

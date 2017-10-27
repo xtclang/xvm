@@ -77,8 +77,7 @@ public class xTestService extends Service
         mtIncrement.setOps(new Op[]
             {
             new X_Print(adapter.ensureValueConstantId("# in TestService.increment #")),
-            new Var(adapter.getClassTypeConstId("Int64")), // #0
-            new IP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
+            new IP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0), // next register #0
             new Return_1(0),
             });
 
@@ -93,8 +92,7 @@ public class xTestService extends Service
         MethodStructure mtExceptional = ensureMethodStructure("exceptional", INT, INT);
         mtExceptional.setOps(new Op[]
             { // #0 - cDelay
-            new Var(adapter.getClassTypeConstId("Boolean")), // #1
-            new IsZero(0, 1),
+            new IsZero(0, 1), // next register #1
             new JumpFalse(1, 6), // -> Enter
 
             new Enter(),
@@ -113,7 +111,7 @@ public class xTestService extends Service
 
             new Var_I(adapter.getClassTypeConstId("Function"),
                     adapter.getMethodVarId("TestApp.TestService", "lambda_1")), // #3
-            new MoveRef(2, 4), // #4 (&iRet)
+            new MoveRef(2, 4), // next register #4 (&iRet)
             new FBind(3, new int[] {0, 1}, new int[] {4, 0}, 3),
             new Invoke_N0(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"),
                     adapter.getMethodConstId("Clock", "scheduleAlarm"),
@@ -131,10 +129,9 @@ public class xTestService extends Service
             new Call_01(Op.A_SUPER, 0),
             new GP_Add(0, adapter.ensureValueConstantId(": counter2="), 0),
             new Var(adapter.getClassTypeConstId("Int64")), // #1
-            new L_Get(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 1),
-            new Var(adapter.getClassTypeConstId("String")), // #2
-            new Invoke_01(1, adapter.getMethodConstId("Object", "to"), 2),
-            new GP_Add(0, 2, 0),
+            new Invoke_01(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
+                adapter.getMethodConstId("Object", "to"), 1),
+            new GP_Add(0, 1, 0),
             new Return_1(0),
             });
         }

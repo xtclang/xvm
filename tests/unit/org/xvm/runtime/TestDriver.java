@@ -17,11 +17,11 @@ public class TestDriver
         {
         Runtime runtime = new Runtime();
 
-        CommandLine cmd = new CommandLine(asArg);
+        CommandLine cmd = new CommandLine(new String[0]);
 
         ModuleRepository repository = cmd.build();
 
-        runtime.createContainer("TestApp", repository);
+        runtime.createContainer(asArg[0], repository);
 
         while (runtime.isIdle())
             {
