@@ -165,6 +165,25 @@ public class MethodConstant
         return getParentConstant().getName();
         }
 
+    @Override
+    protected StringBuilder buildPath()
+        {
+        StringBuilder sb = getParentConstant().buildPath();
+
+        sb.append('(');
+        TypeConstant[] aParamType = getRawParams();
+        for (int i = 0, c = aParamType.length; i < c; i++)
+            {
+            TypeConstant typeParam = aParamType[i];
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+            sb.append(typeParam.getValueString());
+            }
+        sb.append(')');
+        return sb;
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

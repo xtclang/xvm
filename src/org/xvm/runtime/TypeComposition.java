@@ -453,7 +453,7 @@ public class TypeComposition
             return null;
             }
 
-        Frame frameBase = frame.f_context.createFrame1(frame, chain.getMethod(cMethods - 1),
+        Frame frameBase = frame.createFrame1(chain.getMethod(cMethods - 1),
             hStruct, ahVar, Frame.RET_UNUSED);
 
         if (cMethods > 1)

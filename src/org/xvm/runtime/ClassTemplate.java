@@ -660,7 +660,7 @@ public abstract class ClassTemplate
                 frameCaller -> frameCaller.assignValue(iReturn,
                     hStruct.f_clazz.ensureAccess(hStruct, Access.PUBLIC));
 
-        Frame frameRC1 = frame.f_context.createFrame1(frame, constructor, hStruct, ahVar, Frame.RET_UNUSED);
+        Frame frameRC1 = frame.createFrame1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
 
         Frame frameDC0 = clazz.callDefaultConstructors(frame, hStruct, ahVar,
                 frameCaller -> frameCaller.call(frameRC1));
@@ -692,6 +692,7 @@ public abstract class ClassTemplate
     // ----- OpCode support ------
 
     // invoke with a zero or one return value
+    // return R_CALL or R_BLOCK
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
@@ -723,7 +724,7 @@ public abstract class ClassTemplate
 
     // invokeNative with exactly one argument and zero or one return value
     // place the result into the specified frame register
-    // return one of the Op.R_ values
+    // return R_NEXT or R_CALL
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {

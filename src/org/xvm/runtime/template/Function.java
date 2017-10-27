@@ -15,12 +15,14 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Service.ServiceHandle;
 import org.xvm.runtime.template.annotations.xFutureRef;
+import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
 
 
 /**
@@ -103,7 +105,7 @@ public class Function
         // ----- FunctionHandle interface -----
 
         // call with one return value to be placed into the specified slot
-        // return either R_CALL or R_NEXT
+        // return either R_CALL, R_NEXT or R_BLOCK
         public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
             ObjectHandle[] ahVar = prepareVars(ahArg);
@@ -114,7 +116,6 @@ public class Function
             }
 
         // call with one return Tuple value to be placed into the specified slot
-        // return either R_CALL or R_NEXT
         public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
             ObjectHandle[] ahVar = prepareVars(ahArg);
@@ -445,10 +446,10 @@ public class Function
             int cReturns = iReturn == Frame.RET_UNUSED ? 0 : 1;
 
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
-                    frame, this, ahVar, cReturns);
+                frame, this, ahVar, cReturns);
 
-            return cReturns == 0 ? Op.R_NEXT :
-                frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
+            // in the case of zero returns - fire and forget
+            return cReturns == 0 ? Op.R_NEXT : assignResult(frame, iReturn, cfResult);
             }
 
         @Override
@@ -464,19 +465,38 @@ public class Function
 
             // TODO: validate that all the arguments are immutable or ImmutableAble;
             //       replace functions with proxies
-            int cReturns = iReturn == Frame.RET_UNUSED ? 0 : 1;
-
-            if (cReturns == 1)
+            if (true)
                 {
                 // TODO: add a "return a Tuple back" flag
                 throw new UnsupportedOperationException();
                 }
 
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
-                    frame, this, ahVar, cReturns);
+                    frame, this, ahVar, 1);
 
-            return cReturns == 0 ? Op.R_NEXT :
-                frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
+            return assignResult(frame, iReturn, cfResult);
+            }
+
+        private int assignResult(Frame frame, int iReturn, CompletableFuture<ObjectHandle> cfResult)
+            {
+            FutureHandle hFuture = xFutureRef.makeHandle(cfResult);
+            if (iReturn >= 0)
+                {
+                return frame.assignValue(iReturn, hFuture);
+                }
+
+            // the return value is either a RET_LOCAL or a local property;
+            // in either case there is no "VarInfo" to mark as "waiting", so we need to create
+            // a pseudo frame to deal with the wait
+            Op[] aop = new Op[]{GET_AND_RETURN};
+
+            ObjectHandle[] ahFuture = new ObjectHandle[]{hFuture};
+            Frame frameNext = frame.createNativeFrame(aop, ahFuture, iReturn, null);
+
+            frameNext.f_aInfo[0] = frame.new VarInfo(xFutureRef.TYPE, null, Frame.VAR_DYNAMIC_REF);
+
+            frame.m_frameNext = frameNext;
+            return Op.R_CALL;
             }
 
         @Override
@@ -495,48 +515,40 @@ public class Function
             int cReturns = aiReturn.length;
 
             CompletableFuture<ObjectHandle[]> cfResult = hService.m_context.sendInvokeNRequest(
-                    frame, this, ahVar, cReturns);
+                frame, this, ahVar, cReturns);
 
             if (cReturns == 0)
                 {
+                // fire and forget
                 return Op.R_NEXT;
                 }
 
-            return new Frame.Continuation()
+            if (cReturns == 1)
                 {
-                private boolean fBlock;
-                private int index;
+                CompletableFuture<ObjectHandle> cfReturn =
+                        cfResult.thenApply(ahResult -> ahResult[0]);
+                return assignResult(frame, aiReturn[0], cfReturn);
+                }
 
-                public int proceed(Frame frameCaller)
-                    {
-                    while (index++ < cReturns)
-                        {
-                        CompletableFuture<ObjectHandle> cfReturn =
-                                cfResult.thenApply(ahResult -> ahResult[index]);
+            Op[] aop = new Op[]{GET_AND_RETURN};
 
-                        switch (frame.assignValue(aiReturn[index], xFutureRef.makeHandle(cfReturn)))
-                            {
-                            case Op.R_BLOCK:
-                                fBlock = true;
-                                // fall through
-                            case Op.R_NEXT:
-                                break;
+            ObjectHandle[] ahFuture = new ObjectHandle[cReturns];
+            Frame frameNext = frame.createNativeFrame(aop, ahFuture, Frame.RET_MULTI, aiReturn);
 
-                            case Op.R_CALL:
-                                frameCaller.m_frameNext.setContinuation(this);
-                                return Op.R_CALL;
+            // create a pseudo frame to deal with the multiple waits
+            for (int i = 0; i < cReturns; i++)
+                {
+                int iResult = i;
 
-                            case Op.R_EXCEPTION:
-                                return Op.R_EXCEPTION;
+                CompletableFuture<ObjectHandle> cfReturn =
+                        cfResult.thenApply(ahResult -> ahResult[iResult]);
 
-                            default:
-                                throw new IllegalStateException();
-                            }
-                        }
+                ahFuture[i] = xFutureRef.makeHandle(cfReturn);
+                frameNext.f_aInfo[i] = frame.new VarInfo(xFutureRef.TYPE, null, Frame.VAR_DYNAMIC_REF);
+                }
 
-                    return fBlock ? Op.R_BLOCK : Op.R_NEXT;
-                    }
-                }.proceed(frame);
+            frame.m_frameNext = frameNext;
+            return Op.R_CALL;
             }
         }
 
@@ -554,4 +566,48 @@ public class Function
         {
         return new FunctionHandle(INSTANCE.f_clazzCanonical, function);
         }
+
+    private static final Op GET_AND_RETURN = new Op()
+        {
+        public int process(Frame frame, int iPC)
+            {
+            try
+                {
+                int cValues = frame.f_ahVar.length;
+
+                assert cValues > 0;
+
+                if (cValues == 1)
+                    {
+                    assert frame.f_aiReturn == null;
+
+                    ObjectHandle hValue = frame.getArgument(0);
+                    if (hValue == null)
+                        {
+                        return R_REPEAT;
+                        }
+                    return frame.returnValue(hValue);
+                    }
+
+                assert frame.f_iReturn == Frame.RET_MULTI;
+
+                ObjectHandle[] ahValue = new ObjectHandle[cValues];
+                for (int i = 0; i < cValues; i++)
+                    {
+                    ObjectHandle hValue = frame.getArgument(i);
+                    if (hValue == null)
+                        {
+                        return R_REPEAT;
+                        }
+                    ahValue[i] = hValue;
+                    }
+
+                return frame.returnValues(ahValue);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
+            }
+        };
     }

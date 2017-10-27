@@ -6,8 +6,6 @@ import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -131,6 +129,57 @@ public class Frame
         f_aiReturn = aiReturn;
         }
 
+    // construct a native frame with the same target as the caller's target
+    protected Frame(Frame framePrev, Op[] aopNative, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
+        {
+        f_context = framePrev.f_context;
+        f_iId = f_context.m_iFrameCounter++;
+        f_fiber = framePrev.f_fiber;
+
+        f_framePrev = framePrev;
+        f_iPCPrev = framePrev.m_iPC;
+
+        f_adapter = f_context.f_types.f_adapter;
+
+        f_function = null;
+        f_aOp = aopNative;
+
+        f_hTarget = framePrev.f_hTarget;
+        f_ahVar = ahVar;
+        f_aInfo = new VarInfo[ahVar.length];
+
+        f_anNextVar = null;
+
+        f_iReturn = iReturn;
+        f_aiReturn = aiReturn;
+        }
+
+    // create a new frame that returns zero or one value into the specified slot
+    public Frame createFrame1(MethodStructure template,
+                              ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        return new Frame(this, template, hTarget, ahVar, iReturn, null);
+        }
+
+    // create a new frame that returns a Tuple value into the specified slot
+    public Frame createFrameT(MethodStructure template,
+                              ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+        {
+        return new Frame(this, template, hTarget, ahVar, Frame.RET_TUPLE, new int[] {iReturn});
+        }
+
+    public Frame createFrameN(MethodStructure template,
+                              ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        return new Frame(this, template, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
+        }
+
+    // create a new pseudo-frame on the same target
+    public Frame createNativeFrame(Op[] aop, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
+        {
+        return new Frame(this, aop, ahVar, iReturn, aiReturn);
+        }
+
     // a convenience method
     public int call(Frame frameNext)
         {
@@ -141,29 +190,28 @@ public class Frame
     // a convenience method; ahVar - prepared variables
     public int call1(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = f_context.createFrame1(this, method, hTarget, ahVar, iReturn);
+        m_frameNext = createFrame1(method, hTarget, ahVar, iReturn);
         return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
     public int callT(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = f_context.createFrameT(this, method, hTarget, ahVar, iReturn);
+        m_frameNext = createFrameT(method, hTarget, ahVar, iReturn);
         return Op.R_CALL;
         }
 
     // a convenience method
     public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        m_frameNext = f_context.createFrameN(this, method, hTarget, ahVar, aiReturn);
+        m_frameNext = createFrameN(method, hTarget, ahVar, aiReturn);
         return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
     public int invoke1(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        Frame frameNext = m_frameNext = f_context.createFrame1(this,
-            chain.getMethod(nDepth), hTarget, ahVar, iReturn);
+        Frame frameNext = m_frameNext = createFrame1(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
         return Op.R_CALL;
@@ -172,8 +220,7 @@ public class Frame
     // a convenience method; ahVar - prepared variables
     public int invokeT(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        Frame frameNext = m_frameNext = f_context.createFrameT(this,
-            chain.getMethod(nDepth), hTarget, ahVar, iReturn);
+        Frame frameNext = m_frameNext = createFrameT(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
         return Op.R_CALL;
@@ -182,8 +229,7 @@ public class Frame
     // a convenience method
     public int invokeN(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        Frame frameNext = m_frameNext = f_context.createFrameN(this,
-            chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
+        Frame frameNext = m_frameNext = createFrameN(chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
         return Op.R_CALL;
@@ -593,7 +639,7 @@ public class Frame
 
     // assign the specified register on the caller's frame
     // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
-    private int returnValue(int iReturn, ObjectHandle hValue)
+    public int returnValue(int iReturn, ObjectHandle hValue)
         {
         int iResult = f_framePrev.assignValue(iReturn, hValue);
         switch (iResult)
@@ -1003,7 +1049,7 @@ public class Frame
         while (true)
             {
             sb.append("\n  - ")
-              .append(formatFrameDetails(f_context, frame.f_function, iPC, frame.f_aOp));
+              .append(formatFrameDetails(f_context, frame.f_function, iPC, frame.f_aOp, frame.f_framePrev));
 
             iPC = frame.f_iPCPrev;
             frame = frame.f_framePrev;
@@ -1026,7 +1072,7 @@ public class Frame
                     MethodStructure fnCaller = fiber.f_fnCaller;
                     sb.append("\n  ")
                       .append(formatFrameDetails(fiberCaller.f_context, fnCaller,
-                              iPC, fnCaller.getOps()));
+                              iPC, fnCaller.getOps(), null));
                     break;
                     }
                 fiber = fiberCaller;
@@ -1039,27 +1085,24 @@ public class Frame
         }
 
     protected static String formatFrameDetails(ServiceContext ctx, MethodStructure function,
-                                               int iPC, Op[] aOp)
+                                               int iPC, Op[] aOp, Frame framePrev)
         {
         StringBuilder sb = new StringBuilder("Frame: ");
 
         if (function == null)
             {
-            sb.append('<').append(ctx.f_sName).append('>');
+            if (framePrev == null)
+                {
+                sb.append('<').append(ctx.f_sName).append('>');
+                }
+            else
+                {
+                sb.append("proxy for ").append(framePrev);
+                }
             }
         else
             {
-            Component container = function.getParent().getParent();
-
-            sb.append(container.getName())
-                    .append('.')
-                    .append(function.getName());
-
-            while (!(container instanceof ClassStructure))
-                {
-                container = container.getParent();
-                sb.insert(0, container.getName() + '.');
-                }
+            sb.append(function.getIdentityConstant().getPathString());
             }
 
         if (iPC >= 0)
@@ -1075,7 +1118,7 @@ public class Frame
     @Override
     public String toString()
         {
-        return formatFrameDetails(f_context, f_function, -1, null);
+        return formatFrameDetails(f_context, f_function, -1, null, f_framePrev);
         }
 
     // try-catch support

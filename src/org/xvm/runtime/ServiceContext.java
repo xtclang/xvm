@@ -17,6 +17,8 @@ import org.xvm.asm.op.Return_0;
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
+
 import org.xvm.runtime.template.Function.FunctionHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
@@ -420,26 +422,6 @@ public class ServiceContext
                     throw new IllegalStateException("Invalid code: " + iPC);
                 }
             }
-        }
-
-    // create a new frame that returns zero or one value into the specified slot
-    public Frame createFrame1(Frame framePrev, MethodStructure template,
-                              ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
-        {
-        return new Frame(framePrev, template, hTarget, ahVar, iReturn, null);
-        }
-
-    // create a new frame that returns a Tuple value into the specified slot
-    public Frame createFrameT(Frame framePrev, MethodStructure template,
-                              ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
-        {
-        return new Frame(framePrev, template, hTarget, ahVar, Frame.RET_TUPLE, new int[] {iReturn});
-        }
-
-    public Frame createFrameN(Frame framePrev, MethodStructure template,
-                             ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
-        {
-        return new Frame(framePrev, template, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
         }
 
     // create a "proto"-frame
