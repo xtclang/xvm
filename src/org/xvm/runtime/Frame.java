@@ -32,8 +32,6 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 /**
  * A call stack frame.
- *
- * @author gg 2017.02.15
  */
 public class Frame
     {

@@ -488,8 +488,10 @@ public class TypeComposition
     // retrieve the call chain for the specified method
     public CallChain getMethodCallChain(SignatureConstant constSignature, Access access)
         {
-        return m_mapMethods.computeIfAbsent(constSignature,
-            sig -> collectMethodCallChain(sig, access));
+        // we only cache the PUBLIC access chains; all others are only cached at the op-code level
+        return access == Access.PUBLIC
+            ? m_mapMethods.computeIfAbsent(constSignature, sig -> collectMethodCallChain(sig, access))
+            : collectMethodCallChain(constSignature, access);
         }
 
     // find a matching method and add to the list

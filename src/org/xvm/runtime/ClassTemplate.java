@@ -655,7 +655,6 @@ public abstract class ClassTemplate
         // we need to create the call chain in the revers order;
         // the very last frame should also assign the resulting new object
 
-        // this:private -> this:public
         Frame.Continuation contAssign =
                 frameCaller -> frameCaller.assignValue(iReturn,
                     hStruct.f_clazz.ensureAccess(hStruct, Access.PUBLIC));
@@ -677,8 +676,8 @@ public abstract class ClassTemplate
 
             FullyBoundHandle hF = frameRC1.m_hfnFinally;
 
-            // this:struct -> this:private
-            return hF.callChain(frameCaller, Access.PRIVATE, contAssign);
+            // this:struct -> this:public
+            return hF.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
         return frame.call(frameDC0 == null ? frameRC1 : frameDC0);
