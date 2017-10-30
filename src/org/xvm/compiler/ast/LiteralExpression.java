@@ -175,8 +175,12 @@ public class LiteralExpression
                     return id == Id.LIT_CHAR;
 
                 case "Sequence":
-                    // TODO String implements Sequence<Char>; verify no type param, or 1 type param compatible with Char
-                    // if (typeThat.isParamsSpecified() && typeThat.getParamTypes().get(0) is assignable from Char)
+                    if (typeThat.isParamsSpecified() && !(typeThat.isParamsSpecified(1)
+                            && typeThat.getParamTypes().get(0).isA(pool().typeChar())))
+                        {
+                        return false;
+                        }
+                    // fall through
                 case "String":
                     return id == Id.LIT_CHAR || id == Id.LIT_STRING;
 
@@ -262,7 +266,12 @@ public class LiteralExpression
                     break;
 
                 case "Sequence":
-                    // TODO verify Sequence or Sequence<Char>
+                    if (constType.isParamsSpecified() && !(constType.isParamsSpecified(1)
+                            && constType.getParamTypes().get(0).isA(pool().typeChar())))
+                        {
+                        break;
+                        }
+                    // fall through
                 case "String":
                     switch (literal.getId())
                         {
@@ -650,7 +659,12 @@ public class LiteralExpression
             switch (sName)
                 {
                 case "Sequence":
-                    // TODO verify Sequence or Sequence<Char>
+                    if (constType.isParamsSpecified() && !(constType.isParamsSpecified(1)
+                            && constType.getParamTypes().get(0).isA(pool().typeChar())))
+                        {
+                        break;
+                        }
+                    // fall through
                 case "Object":
                 case "Const":
                 case "Orderable":

@@ -257,6 +257,209 @@ public class PackedInteger
         }
 
     /**
+     * Add the value of a specified PackedInteger to this PackedInteger, resulting in a new
+     * PackedInteger.
+     * 
+     * @param that  a second PackedInteger to add to this
+     * 
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger add(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().add(that.getBigInteger()));
+        }
+
+    /**
+     * Subtract the value of a specified PackedInteger from this PackedInteger, resulting in a new
+     * PackedInteger.
+     *
+     * @param that  a second PackedInteger to subtract from this
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger sub(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().subtract(that.getBigInteger()));
+        }
+    
+    /**
+     * Multiply the value of a specified PackedInteger by this PackedInteger, resulting in a new
+     * PackedInteger.
+     *
+     * @param that  a second PackedInteger to multiply this by
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger mul(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().multiply(that.getBigInteger()));
+        }
+    
+    /**
+     * Divide the value of this PackedInteger by the specified PackedInteger, resulting in a new
+     * PackedInteger.
+     *
+     * @param that  a second PackedInteger to divide this by
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger div(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().divide(that.getBigInteger()));
+        }
+    
+    /**
+     * Calculate the modulo of the value of this PackedInteger and the value of a specified
+     * PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger to divide this by, resulting in a modulo
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger mod(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().mod(that.getBigInteger()));
+        }
+    
+    /**
+     * Shift left the bits in the value of this PackedInteger by the value of a specified
+     * PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger specifying the shift amount
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger shl(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().shiftLeft(that.getInt()));
+        }
+    
+    /**
+     * Logical shift right the bits in the value of this PackedInteger by the value of a specified
+     * PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger specifying the shift amount
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger shr(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
+        }
+    
+    /**
+     * Arithmetic (aka "unsigned") shift right the bits in the value of this PackedInteger by the
+     * value of a specified PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger specifying the shift amount
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger usrh(PackedInteger that)
+        {
+        // TODO
+        return new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
+        }
+    
+    /**
+     * TODO the value of a specified PackedInteger TODO this PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger to TODO
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger cmp(PackedInteger that)
+        {
+        // TODO
+        return null;
+        }
+    
+    /**
+     * TODO the value of a specified PackedInteger TODO this PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger to TODO
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger and(PackedInteger that)
+        {
+        // TODO
+        return null;
+        }
+    
+    /**
+     * TODO the value of a specified PackedInteger TODO this PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger to TODO
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger or(PackedInteger that)
+        {
+        // TODO
+        return null;
+        }
+    
+    /**
+     * TODO the value of a specified PackedInteger TODO this PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger to TODO
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger xor(PackedInteger that)
+        {
+        // TODO
+        return null;
+        }
+    
+    /**
+     * Format the PackedInteger as a String of the specified radix, including a radix prefix for
+     * any non-decimal radix.
+     *
+     * @param radix  2, 8, 10, or 16
+     *
+     * @return the String value of this PackedInteger in the format of the specified radix
+     */
+    public String toString(int radix)
+        {
+        if (radix == 10)
+            {
+            return toString();
+            }
+
+        StringBuilder sb = new StringBuilder();
+        if (isNegative())
+            {
+            sb.append('-');
+            }
+
+        switch (radix)
+            {
+            case 2:
+                sb.append("0b");
+                break;
+
+            case 8:
+                sb.append("0o");
+                break;
+
+            case 16:
+                sb.append("0x");
+                break;
+
+            default:
+                throw new IllegalArgumentException("radix=" + radix);
+            }
+
+        sb.append(isBig()
+                ? getBigInteger().abs().toString(radix)
+                : Long.toUnsignedString(Math.abs(getLong()), radix));
+
+        return sb.toString();
+        }
+
+    /**
      * Read a PackedInteger from a stream.
      *
      * @param in  a DataInput stream to read from

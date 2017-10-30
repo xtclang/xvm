@@ -178,6 +178,14 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff exactly the number of specified params are specified
+     */
+    public boolean isParamsSpecified(int n)
+        {
+        return isParamsSpecified() && getParamTypes().size() == n;
+        }
+
+    /**
      * @return the type parameters, iff the type has parameters specified
      *
      * @throws UnsupportedOperationException if there are no type parameters specified, or if the

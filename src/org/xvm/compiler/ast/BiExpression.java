@@ -1,14 +1,20 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.Op.Argument;
+
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
+import org.xvm.util.PackedInteger;
 
 
 /**
@@ -171,6 +177,7 @@ public class BiExpression
         return false;
         }
 
+    @Override
     public Argument generateConstant(TypeConstant constType, ErrorListener errs)
         {
         if (isConstant())
@@ -185,34 +192,72 @@ public class BiExpression
                 case COND_ELSE:
                     return (expr1.isConstantNull() ? expr2 : expr1).generateConstant(constType, errs);
 
+                case BIT_OR:
+                    if (constType.equals(pool.typeIntLiteral()))
+                        {
+                        Argument arg1 = expr1.generateConstant(constType, errs);
+                        Argument arg2 = expr1.generateConstant(constType, errs);
+                        if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
+                            {
+                            PackedInteger pi1      = ((LiteralConstant) arg1).getIntegerValue();
+                            PackedInteger pi2      = ((LiteralConstant) arg2).getIntegerValue();
+                            int           radix    = ((LiteralConstant) arg1).getIntegerRadix();
+                            PackedInteger piResult = pi1.isBig() || pi2.isBig()
+                                    ? new PackedInteger(pi1.getBigInteger().or(pi2.getBigInteger()))
+                                    : PackedInteger.valueOf(pi1.getLong() | pi2.getLong());
+                            return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(radix));
+                            }
+                        }
+                    else if (constType.equals(pool.typeInt()))
+                        {
+                        Argument arg1 = expr1.generateConstant(constType, errs);
+                        Argument arg2 = expr1.generateConstant(constType, errs);
+                        if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
+                            {
+                            PackedInteger pi1      = ((LiteralConstant) arg1).getIntegerValue();
+                            PackedInteger pi2      = ((LiteralConstant) arg2).getIntegerValue();
+                            int           radix    = ((LiteralConstant) arg1).getIntegerRadix();
+                            PackedInteger piResult = pi1.isBig() || pi2.isBig()
+                                    ? new PackedInteger(pi1.getBigInteger().or(pi2.getBigInteger()))
+                                    : PackedInteger.valueOf(pi1.getLong() | pi2.getLong());
+                            return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(radix));
+                            }
+                        }
+                    // else if (...) TODO Int and UInt 8-128 and Var length
+                    // else if (constType.equals())     TODO type | type
+
+                    // fall through for logical boolean "or"
                 case COND_OR:
                     if (constType.equals(pool.typeBoolean()))
                         {
                         // if the first expression is a boolean true, then the result is a boolean
-                        // true
-
-                        // otherwise if the second expression is a boolean true, then the result is
-                        // a boolean true
-
-                        // otherwise the result is a boolean false
-
-                        return expr1.generateConstant(pool.typeBoolean(), errs).equals(pool.valTrue()) ||
-                                expr2.isConstantTrue()
-                                ? pool().valTrue()
-                                : pool().valFalse();
+                        // true;  otherwise if the second expression is a boolean true, then the
+                        // result is a boolean true; otherwise the result is a boolean false
+                        Argument arg = expr1.generateConstant(constType, errs);
+                        return pool.valTrue().equals(arg)
+                                ? arg
+                                : expr2.generateConstant(constType, errs);
                         }
                     break;
 
-                case COND_AND:
-                    return expr1.isConstantTrue() && expr2.isConstantTrue()
-                            ? pool().valTrue()
-                            : pool().valFalse();
+                case BIT_AND:
+                    // TODO integer
 
-                case BIT_OR:
-                    // integer - IntLiteral
+                    // fall through for logical boolean "and"
+                case COND_AND:
+                    if (constType.equals(pool.typeBoolean()))
+                        {
+                        // if the first expression is a boolean false, then the result is a boolean
+                        // false;  otherwise if the second expression is a boolean true, then the
+                        // result is a boolean true; otherwise the result is a boolean false
+                        Argument arg = expr1.generateConstant(constType, errs);
+                        return pool.valFalse().equals(arg)
+                                ? arg
+                                : expr2.generateConstant(constType, errs);
+                        }
+                    break;
 
                 case BIT_XOR:
-                case BIT_AND:
                 case COMP_EQ:
                 case COMP_NEQ:
                 case COMP_LT:
@@ -227,17 +272,25 @@ public class BiExpression
                 case SHL:
                 case SHR:
                 case USHR:
+
                 case ADD:
+                    // applies to:
+                    // Int8/16/32/64/128, VarInt
+                    // UInt8/16/32/64/128, VarUInt
+                    // Dec32/64/128, VarDec
+                    // Float16/32/64/128, VarFloat
+                    // String
+                    // Type
 
                 case SUB:
-
                 case MUL:
 
+                case DIVMOD:
+                    // TODO same as DIV? or a Tuple result? and if so, then shouldn't all support that?
+                    // fall through
                 case DIV:
 
                 case MOD:
-
-                case DIVMOD:
                 }
             }
 

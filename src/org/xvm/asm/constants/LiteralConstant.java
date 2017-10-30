@@ -5,10 +5,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.math.BigInteger;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -150,6 +153,55 @@ public class LiteralConstant
     public String getValue()
         {
         return m_constStr.getValue();
+        }
+
+    /**
+     * @return the radix of an IntLiteral
+     */
+    public int getIntegerRadix()
+        {
+        assert getFormat() == Format.IntLiteral;
+        String s = getValue();
+
+        // if the next character is '0', it is potentially part of a prefix denoting a radix
+        if (s.length() > 2 && s.charAt(0) == '0')
+            {
+            switch (s.charAt(1))
+                {
+                case 'B':
+                case 'b':
+                    return 2;
+                case 'o':
+                    return 8;
+                case 'X':
+                case 'x':
+                    return 16;
+                }
+            }
+
+        return 10;
+        }
+
+    /**
+     * @return the PackedInteger value of an IntLiteral
+     */
+    public PackedInteger getIntegerValue()
+        {
+        assert getFormat() == Format.IntLiteral;
+        String s = getValue();
+        int    r = getIntegerRadix();
+        if (r == 10)
+            {
+            return s.length() < 20
+                    ? PackedInteger.valueOf(Long.parseLong(s))
+                    : new PackedInteger(new BigInteger(s));
+            }
+        else
+            {
+            return s.length() < 2 + (64 / Integer.numberOfTrailingZeros(r))
+                    ? new PackedInteger(Long.parseLong(s.substring(2), r))
+                    : new PackedInteger(new BigInteger(s.substring(2), r));
+            }
         }
 
 
