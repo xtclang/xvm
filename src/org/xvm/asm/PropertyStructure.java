@@ -75,7 +75,7 @@ public class PropertyStructure
         TypeConstant constPropType = m_type;
         if (!(constPropType.isSingleDefiningConstant()                          // must be a class
                 && constPropType.getDefiningConstant().equals(
-                        getConstantPool().ensureEcstasyClassConstant("Type")))) // must be "Type"
+                        getConstantPool().clzType())))                          // must be "Type"
             {
             return false;
             }
@@ -126,7 +126,7 @@ public class PropertyStructure
 
         return m_type.isParamsSpecified()
                 ? m_type.getParamTypes().get(0)
-                : m_type.getConstantPool().ensureEcstasyTypeConstant("Object");
+                : m_type.getConstantPool().typeObject();
         }
 
     /**

@@ -21,7 +21,13 @@ public class TestDriver
 
         ModuleRepository repository = cmd.build();
 
-        runtime.createContainer(asArg[0], repository);
+        String sApp = asArg[0];
+        if (sApp == null || sApp.trim().length() == 0)
+            {
+            sApp = "TestApp";
+            }
+
+        runtime.createContainer(sApp, repository);
 
         while (runtime.isIdle())
             {

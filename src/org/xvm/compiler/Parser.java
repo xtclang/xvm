@@ -1041,7 +1041,6 @@ public class Parser
             case MUL_ASN:
             case DIV_ASN:
             case MOD_ASN:
-            case DIVMOD_ASN:
             case SHL_ASN:
             case SHR_ASN:
             case USHR_ASN:
@@ -1550,7 +1549,6 @@ public class Parser
                 case MUL_ASN:
                 case DIV_ASN:
                 case MOD_ASN:
-                case DIVMOD_ASN:
                 case SHL_ASN:
                 case SHR_ASN:
                 case USHR_ASN:
@@ -2272,6 +2270,7 @@ s     *
                     break;
 
                 case AS:
+                case IS:
                 case INSTANCEOF:
                     expr = new BiExpression(expr, current(), parseTypeExpression());
                     break;
@@ -2505,6 +2504,7 @@ s     *
                             }
 
                         case AS:
+                        case IS:
                         case INSTANCEOF:
                             {
                             Token keyword = current();

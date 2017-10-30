@@ -76,7 +76,7 @@ public class StringConstant
     @Override
     public TypeConstant getType()
         {
-        return getConstantPool().ensureEcstasyTypeConstant("String");
+        return getConstantPool().typeString();
         }
 
     @Override

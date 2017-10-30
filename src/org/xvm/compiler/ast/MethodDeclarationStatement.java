@@ -124,8 +124,7 @@ public class MethodDeclarationStatement
                 org.xvm.asm.Parameter[] aReturns = new org.xvm.asm.Parameter[cReturns];
                 if (conditional != null)
                     {
-                    aReturns[0] = new org.xvm.asm.Parameter(pool,
-                            pool.ensureEcstasyTypeConstant("Boolean"), null, null, true, 0, true);
+                    aReturns[0] = new org.xvm.asm.Parameter(pool, pool.typeBoolean(), null, null, true, 0, true);
                     }
                 for (int i = ofReturn; i < cReturns; ++i)
                     {
@@ -141,10 +140,9 @@ public class MethodDeclarationStatement
                     {
                     Parameter      param = typeParams.get(i);
                     TypeExpression exprType  = param.getType();
-                    TypeConstant   constType = pool.ensureClassTypeConstant(
-                            pool.ensureEcstasyClassConstant("Type"), null,
+                    TypeConstant   constType = pool.ensureClassTypeConstant(pool.clzType(), null,
                             exprType == null
-                                    ? pool.ensureEcstasyTypeConstant("Object")
+                                    ? pool.typeObject()
                                     : exprType.ensureTypeConstant());
                     aParams[i] = new org.xvm.asm.Parameter(pool, constType, param.getName(), null, false, i, true);
                     }

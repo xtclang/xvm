@@ -7,14 +7,10 @@ import java.util.List;
 
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
-
-import org.xvm.util.Severity;
 
 
 /**
@@ -72,7 +68,7 @@ public class BiTypeExpression
         TypeConstant constType1 = type1.ensureTypeConstant();
         TypeConstant constType2 = type2.ensureTypeConstant();
 
-        final ConstantPool pool = getConstantPool();
+        final ConstantPool pool = pool();
         switch (operator.getId())
             {
             case ADD:

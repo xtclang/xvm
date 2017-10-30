@@ -419,6 +419,7 @@ public abstract class Expression
      */
     public boolean isTypeBoolean()
         {
+        // TODO this does not seem correct
         return getImplicitType().isEcstasy("Boolean");
         }
 
@@ -427,6 +428,7 @@ public abstract class Expression
      */
     public boolean isConstantFalse()
         {
+        // TODO this does not seem correct
         return getImplicitType().isEcstasy("Boolean.False");
         }
 
@@ -435,7 +437,18 @@ public abstract class Expression
      */
     public boolean isConstantTrue()
         {
+        // TODO this does not seem correct
         return getImplicitType().isEcstasy("Boolean.True");
+        }
+
+    /**
+     * @return true iff the Expression is the constant value "Null"
+     */
+    public boolean isConstantNull()
+        {
+        // TODO this does not seem correct
+        return getImplicitType().isEcstasy("Nullable.Null");
+        // perhaps: return isAssignableTo(pool().typeNullable());
         }
 
     /**
@@ -445,6 +458,8 @@ public abstract class Expression
         {
         return true;
         }
+
+    // TODO need something similar to canComplete() to handle short-circuitable expressions e.g. "a?.b?.c"
 
     /**
      * Convert this expression to a constant value, which is possible iff {@link #isConstant}
@@ -519,9 +534,8 @@ public abstract class Expression
             default:
                 if (fTupleOk)
                     {
-                    ConstantPool pool = getConstantPool();
-                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
-                            pool.ensureEcstasyTypeConstant("collections.Tuple"),
+                    ConstantPool pool = pool();
+                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(),
                             listTypes.toArray(new TypeConstant[listTypes.size()]));
 
                     return Collections.singletonList(generateArgument(code, typeTuple, false, errs));
@@ -561,7 +575,7 @@ public abstract class Expression
         {
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(code, getConstantPool().ensureEcstasyTypeConstant("Boolean"), false, errs);
+        Argument arg = generateArgument(code, pool().typeBoolean(), false, errs);
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));

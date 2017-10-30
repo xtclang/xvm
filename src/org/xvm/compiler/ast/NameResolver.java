@@ -16,7 +16,6 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
-import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.constants.TypedefConstant;
@@ -419,7 +418,7 @@ public class NameResolver
      */
     private ConstantPool getPool()
         {
-        return m_node.getConstantPool();
+        return m_node.pool();
         }
 
 

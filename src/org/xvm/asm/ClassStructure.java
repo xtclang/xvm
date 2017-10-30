@@ -126,7 +126,7 @@ public class ClassStructure
      */
     public boolean extendsClass(IdentityConstant constClass)
         {
-        if (constClass.equals(getConstantPool().ensureEcstasyClassConstant("Object")))
+        if (constClass.equals(getConstantPool().clzObject()))
             {
             // everything is considered to extend Object (even interfaces)
             return true;

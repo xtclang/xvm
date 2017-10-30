@@ -64,7 +64,7 @@ public class UInt8ArrayConstant
         {
         ConstantPool pool = getConstantPool();
         return pool.ensureClassTypeConstant(pool.getImplicitlyImportedIdentity("Array"),
-                null, pool.ensureEcstasyTypeConstant("UInt8"));
+                null, pool.typeByte());
         }
 
     /**

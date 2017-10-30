@@ -93,7 +93,7 @@ public class NamedTypeExpression
         Constant constId = m_constId;
         if (constId == null)
             {
-            m_constId = constId = new UnresolvedNameConstant(getConstantPool(), getNames());
+            m_constId = constId = new UnresolvedNameConstant(pool(), getNames());
             }
         else if (constId instanceof ResolvableConstant)
             {
@@ -213,7 +213,7 @@ public class NamedTypeExpression
             return (TypeConstant) constId;
             }
 
-        ConstantPool pool      = getConstantPool();
+        ConstantPool pool      = pool();
         TypeConstant constType = pool.ensureTerminalTypeConstant(constId);
 
         if (paramTypes != null)

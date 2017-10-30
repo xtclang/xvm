@@ -809,7 +809,6 @@ public class MethodStructure
 
         Code(Code wrappee)
             {
-            assert this == wrappee;
             }
 
         // ----- Code methods -----------------------------------------------------------------
@@ -964,6 +963,7 @@ public class MethodStructure
             BlackHole(Code wrappee)
                 {
                 super(wrappee);
+                assert wrappee == Code.this;
                 }
 
             @Override

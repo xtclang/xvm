@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.math.BigDecimal;
 
-import java.util.List;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
@@ -13,15 +11,9 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.DecimalConstant;
 import org.xvm.asm.constants.Float16Constant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.asm.op.Invoke_01;
-import org.xvm.asm.op.Var;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
@@ -103,7 +95,7 @@ public class LiteralExpression
         // - FPLiteral
         // other types are possible to obtain because there are conversion methods on the literal
         // types that provide support for other constant types
-        ConstantPool pool = getConstantPool();
+        ConstantPool pool = pool();
         switch (literal.getId())
             {
             case LIT_CHAR:
@@ -128,22 +120,22 @@ public class LiteralExpression
     @Override
     public TypeConstant getImplicitType()
         {
-        ConstantPool pool = getConstantPool();
+        ConstantPool pool = pool();
         switch (literal.getId())
             {
             case LIT_CHAR:
-                return pool.ensureEcstasyTypeConstant("Char");
+                return pool.typeChar();
 
             case TODO:              // the T0D0 keyword has a String text for the token's value
             case LIT_STRING:
-                return pool.ensureEcstasyTypeConstant("String");
+                return pool.typeString();
 
             case LIT_INT:
-                return pool.ensureEcstasyTypeConstant("IntLiteral");
+                return pool.typeIntLiteral();
 
             case LIT_DEC:
             case LIT_BIN:
-                return pool.ensureEcstasyTypeConstant("FPLiteral");
+                return pool.typeFPLiteral();
 
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
@@ -246,7 +238,7 @@ public class LiteralExpression
                 && ((ClassConstant) constType.getDefiningConstant()).getModuleConstant().isEcstasyModule()
                 && (!constType.isAccessSpecified() || constType.getAccess() == Access.PUBLIC))
             {
-            ConstantPool  pool     = getConstantPool();
+            ConstantPool  pool     = pool();
             ClassConstant constClz = (ClassConstant) constType.getDefiningConstant();
             String        sName    = constClz.getPathString();
 

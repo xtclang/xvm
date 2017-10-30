@@ -1,7 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Op.Argument;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
@@ -11,7 +13,35 @@ import java.lang.reflect.Field;
 /**
  * Generic expression for something that follows the pattern "expression operator expression".
  *
- * @author cp 2017.04.06
+ * <ul>
+ * <li><tt>":"</tt> - an "else" for nullability checks</li>
+ * <li><tt>"?:"</tt> - the "elvis" operator</li>
+ * <li><tt>"||"</tt> - </li>
+ * <li><tt>"&&"</tt> - </li>
+ * <li><tt>"|"</tt> - </li>
+ * <li><tt>"^"</tt> - </li>
+ * <li><tt>"&"</tt> - </li>
+ * <li><tt>"=="</tt> - </li>
+ * <li><tt>"!="</tt> - </li>
+ * <li><tt>"<"</tt> - </li>
+ * <li><tt>"><tt>"</tt> - </li>
+ * <li><tt>"<="</tt> - </li>
+ * <li><tt>">="</tt> - </li>
+ * <li><tt>"<=><tt>"</tt> - </li>
+ * <li><tt>"as"</tt> - </li>
+ * <li><tt>"is"</tt> - </li>
+ * <li><tt>"instanceof"</tt> - </li>
+ * <li><tt>".."</tt> - </li>
+ * <li><tt>"<<"</tt> - </li>
+ * <li><tt>">><tt>"</tt> - </li>
+ * <li><tt>">>><tt>"</tt> - </li>
+ * <li><tt>"+"</tt> - </li>
+ * <li><tt>"-"</tt> - </li>
+ * <li><tt>"*"</tt> - </li>
+ * <li><tt>"/"</tt> - </li>
+ * <li><tt>"%"</tt> - </li>
+ * <li><tt>"/%"</tt> - </li>
+ * </ul>
  */
 public class BiExpression
         extends Expression
@@ -93,6 +123,131 @@ public class BiExpression
         {
         return CHILD_FIELDS;
         }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public boolean isConstant()
+        {
+        if (expr1.isConstant() && expr2.isConstant())
+            {
+            return true;
+            }
+
+        if (expr1.isConstant())
+            {
+            switch (operator.getId())
+                {
+                case COLON:
+                    // if the thing on the left of the colon evaluates to a constant value, then
+                    // that is the result
+                    return true;
+
+                case COND_ELSE:
+                    // as long as the thing on the left of the colon is not null, then the result
+                    // is the thing on the left of the colon, which is constant
+                    return !expr1.isConstantNull();
+
+                case COND_OR:
+                    // short circuit logic
+                    return expr1.isConstantTrue();
+
+                case COND_AND:
+                    // short circuit logic
+                    return expr1.isConstantFalse();
+
+                default:
+                    // - each of these could have side-effects from the right hand side, so they are
+                    //   not considered to be constant, even if we know what the resulting value is
+                    // - or they are comparisons, so we'd have to know both the left AND right hand
+                    //   side values
+                    // - or interval/range can't be constant if we don't know the upper limit
+                    return false;
+                }
+            }
+
+        return false;
+        }
+
+    public Argument generateConstant(TypeConstant constType, ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            switch (operator.getId())
+                {
+                case COLON:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case COND_ELSE:
+                    return (expr1.isConstantNull() ? expr2 : expr1).generateConstant(constType, errs);
+
+                case COND_OR:
+                    // TODO return expr1.isConstantTrue() || expr2.isConstantTrue() ? ... ;
+
+                case COND_AND:
+                    // TODO return expr1.isConstantTrue() && expr2.isConstantTrue() ? ... ;
+
+                case BIT_OR:
+                case BIT_XOR:
+                case BIT_AND:
+                case COMP_EQ:
+                case COMP_NEQ:
+                case COMP_LT:
+                case COMP_GT:
+                case COMP_LTEQ:
+                case COMP_GTEQ:
+                case COMP_ORD:
+                case AS:
+                case IS:
+                case INSTANCEOF:
+                case DOTDOT:
+                case SHL:
+                case SHR:
+                case USHR:
+                case ADD:
+                case SUB:
+                case MUL:
+                case DIV:
+                case MOD:
+                case DIVMOD:
+                }
+            }
+
+        return super.generateConstant(constType, errs);
+        }
+
+//            switch (operator.getId())
+//                {
+//                case COLON:
+//                case COND_ELSE:
+//                case COND_OR:
+//                case COND_AND:
+//                case BIT_OR:
+//                case BIT_XOR:
+//                case BIT_AND:
+//                case COMP_EQ:
+//                case COMP_NEQ:
+//                case COMP_LT:
+//                case COMP_GT:
+//                case COMP_LTEQ:
+//                case COMP_GTEQ:
+//                case COMP_ORD:
+//                case AS:
+//                case IS:
+//                case INSTANCEOF:
+//                case DOTDOT:
+//                case SHL:
+//                case SHR:
+//                case USHR:
+//                case ADD:
+//                case SUB:
+//                case MUL:
+//                case DIV:
+//                case MOD:
+//                case DIVMOD:
+//                }
 
 
     // ----- debugging assistance ------------------------------------------------------------------

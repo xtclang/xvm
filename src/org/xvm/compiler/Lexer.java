@@ -299,14 +299,6 @@ public class Lexer
                             return new Token(lInitPos, source.getPosition(), Id.DIV_ASN);
 
                         case '%':
-                            if (source.hasNext())
-                                {
-                                if (nextChar() == '=')
-                                    {
-                                    return new Token(lInitPos, source.getPosition(), Id.DIVMOD_ASN);
-                                    }
-                                source.rewind();
-                                }
                             return new Token(lInitPos, source.getPosition(), Id.DIVMOD);
                         }
                     source.rewind();
