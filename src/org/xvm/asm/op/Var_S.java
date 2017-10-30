@@ -95,8 +95,7 @@ public class Var_S
     @Override
     public int process(Frame frame, int iPC)
         {
-        Type typeEl = frame.f_context.f_types.resolveClass(
-            m_nType, frame.getActualTypes()).ensurePublicType();
+        Type typeEl = frame.resolveClass(m_nType).ensurePublicType();
 
         try
             {

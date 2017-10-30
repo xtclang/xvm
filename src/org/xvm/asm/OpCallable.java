@@ -71,10 +71,7 @@ public abstract class OpCallable extends Op
             return m_function;
             }
 
-        assert m_nFunctionId < 0;
-
-        MethodConstant constFunction = (MethodConstant)
-                frame.f_context.f_pool.getConstant(-m_nFunctionId);
+        MethodConstant constFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
 
         return m_function = (MethodStructure) constFunction.getComponent();
         }

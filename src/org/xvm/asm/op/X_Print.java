@@ -119,7 +119,7 @@ public class X_Print
             }
         else
             {
-            Constant constValue = frame.f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - nValue);
+            Constant constValue = frame.getConstant(nValue);
 
             if (constValue instanceof StringConstant)
                 {

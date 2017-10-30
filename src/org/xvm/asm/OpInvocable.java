@@ -73,15 +73,12 @@ public abstract class OpInvocable extends Op
     // helper method
     protected CallChain getCallChain(Frame frame, TypeComposition clazz)
         {
-        assert (m_nMethodId >= 0);
-
         if (m_chain != null && m_clazz == clazz)
             {
             return m_chain;
             }
 
-        MethodConstant constMethod = (MethodConstant)
-            frame.f_context.f_pool.getConstant(m_nMethodId);
+        MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
 
         m_clazz = clazz;
 

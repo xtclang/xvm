@@ -702,6 +702,12 @@ public class Frame
         return f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
         }
 
+    public TypeComposition resolveClass(int iArg)
+        {
+        assert iArg < Op.CONSTANT_OFFSET;
+        return f_context.f_types.resolveClass(Op.CONSTANT_OFFSET - iArg, getActualTypes());
+        }
+
     public int checkWaitingRegisters()
         {
         ExceptionHandle hException = null;
@@ -852,6 +858,8 @@ public class Frame
         throw new IllegalStateException("Invalid register index");
         }
 
+    // Note: the typeId is an "absolute" (positive, ConstantPool based) number
+    // (see Op.convertId())
     // Note: this method increments up the "nextVar" index
     public void introduceVar(int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
         {
@@ -1238,13 +1246,11 @@ public class Frame
 
         public int handle(Frame frame, ExceptionHandle hException, int iGuard)
             {
-            ServiceContext context = frame.f_context;
             TypeComposition clzException = hException.f_clazz;
 
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {
-                TypeComposition clzCatch = context.f_types.
-                    resolveClass(f_anClassConstId[iCatch], frame.getActualTypes());
+                TypeComposition clzCatch = frame.resolveClass(f_anClassConstId[iCatch]);
                 if (clzException.isA(clzCatch))
                     {
                     introduceException(frame, iGuard, hException,

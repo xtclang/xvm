@@ -214,7 +214,7 @@ public abstract class Op
     protected static int encodeArgument(Argument arg, ConstantRegistry registry)
         {
         return arg instanceof Constant
-                ? ((Constant) arg).getPosition()   // TODO eventually: registry.indexOf((Constant) arg)
+                ? Op.CONSTANT_OFFSET - ((Constant) arg).getPosition()   // TODO eventually: registry.indexOf((Constant) arg)
                 : ((Register) arg).getIndex();
         }
 
@@ -297,6 +297,15 @@ public abstract class Op
             throw new IllegalStateException("infinite loop: code=" + code + "; PC=" + iPC);
             }
         return ofJmp;
+        }
+
+    /**
+     * Convert a relative const id into an absolute one.
+     */
+    protected static int convertId(int id)
+        {
+        assert id < 0;
+        return CONSTANT_OFFSET - id;
         }
 
     // ----- inner class: Prefix Op ----------------------------------------------------------------

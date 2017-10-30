@@ -98,8 +98,7 @@ public class Var_T
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeConstant constType = (TypeConstant)
-                frame.f_context.f_pool.getConstant(m_nType);
+        TypeConstant constType = (TypeConstant) frame.getConstant(m_nType);
         assert constType.isParamsSpecified();
 
         int cArgs = m_anArgValue.length;
@@ -125,7 +124,7 @@ public class Var_T
 
             TupleHandle hTuple = xTuple.makeHandle(aType, ahArg);
 
-            frame.introduceVar(m_nType, 0, Frame.VAR_STANDARD, hTuple);
+            frame.introduceVar(convertId(m_nType), 0, Frame.VAR_STANDARD, hTuple);
 
             return iPC + 1;
             }

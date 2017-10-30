@@ -77,7 +77,7 @@ public class xTestClass extends ClassTemplate
         mtExceptional.setOps(new Op[]
             { // #0 = s
             new Var(adapter.getClassTypeConstId("Exception")), // #1
-            new New_N(-adapter.getMethodConstId("Exception", "construct"),
+            new New_N(adapter.getMethodConstId("Exception", "construct"),
                     new int[] {0, adapter.ensureValueConstantId(null)}, 1),
             new Throw(1),
             });
