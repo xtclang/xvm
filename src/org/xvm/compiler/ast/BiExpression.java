@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -174,6 +175,7 @@ public class BiExpression
         {
         if (isConstant())
             {
+            ConstantPool pool = pool();
             switch (operator.getId())
                 {
                 case COLON:
@@ -184,12 +186,31 @@ public class BiExpression
                     return (expr1.isConstantNull() ? expr2 : expr1).generateConstant(constType, errs);
 
                 case COND_OR:
-                    // TODO return expr1.isConstantTrue() || expr2.isConstantTrue() ? ... ;
+                    if (constType.equals(pool.typeBoolean()))
+                        {
+                        // if the first expression is a boolean true, then the result is a boolean
+                        // true
+
+                        // otherwise if the second expression is a boolean true, then the result is
+                        // a boolean true
+
+                        // otherwise the result is a boolean false
+
+                        return expr1.generateConstant(pool.typeBoolean(), errs).equals(pool.valTrue()) ||
+                                expr2.isConstantTrue()
+                                ? pool().valTrue()
+                                : pool().valFalse();
+                        }
+                    break;
 
                 case COND_AND:
-                    // TODO return expr1.isConstantTrue() && expr2.isConstantTrue() ? ... ;
+                    return expr1.isConstantTrue() && expr2.isConstantTrue()
+                            ? pool().valTrue()
+                            : pool().valFalse();
 
                 case BIT_OR:
+                    // integer - IntLiteral
+
                 case BIT_XOR:
                 case BIT_AND:
                 case COMP_EQ:
@@ -207,10 +228,15 @@ public class BiExpression
                 case SHR:
                 case USHR:
                 case ADD:
+
                 case SUB:
+
                 case MUL:
+
                 case DIV:
+
                 case MOD:
+
                 case DIVMOD:
                 }
             }
