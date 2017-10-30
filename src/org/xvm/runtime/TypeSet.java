@@ -7,13 +7,13 @@ import java.net.URL;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 
@@ -110,12 +110,14 @@ public class TypeSet
     // see Container.start()
     protected void initNativeInterfaces()
         {
+        ConstantPool pool = f_container.f_pool;
+
         // initialize necessary INSTANCE references
-        new Enum(this, (ClassStructure) getClassConstant("Enum").getComponent(), true).initDeclared();
-        new Const(this, (ClassStructure) getClassConstant("Const").getComponent(), true).initDeclared();
-        new Function(this, (ClassStructure) getClassConstant("Function").getComponent(), true).initDeclared();
-        new Service(this, (ClassStructure) getClassConstant("Service").getComponent(), true).initDeclared();
-        new Ref(this, (ClassStructure) getClassConstant("Ref").getComponent(), true).initDeclared();
+        new Enum(this, (ClassStructure) pool.clzEnum().getComponent(), true).initDeclared();
+        new Const(this, (ClassStructure) pool.clzConst().getComponent(), true).initDeclared();
+        new Function(this, (ClassStructure) pool.clzFunction().getComponent(), true).initDeclared();
+        new Service(this, (ClassStructure) pool.clzService().getComponent(), true).initDeclared();
+        new Ref(this, (ClassStructure) pool.clzRef().getComponent(), true).initDeclared();
         }
 
     // ----- templates -----

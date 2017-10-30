@@ -287,26 +287,25 @@ public class Adapter
 
     protected Constant ensureValueConstant(Object oValue)
         {
+        ConstantPool pool = f_container.f_pool;
         if (oValue instanceof Integer || oValue instanceof Long)
             {
-            return f_container.f_pool.ensureIntConstant(((Number) oValue).longValue());
+            return pool.ensureIntConstant(((Number) oValue).longValue());
             }
 
         if (oValue instanceof String)
             {
-            return f_container.f_pool.ensureStringConstant((String) oValue);
+            return pool.ensureStringConstant((String) oValue);
             }
 
         if (oValue instanceof Character)
             {
-            return f_container.f_pool.ensureCharConstant(((Character) oValue).charValue());
+            return pool.ensureCharConstant(((Character) oValue).charValue());
             }
 
         if (oValue instanceof Boolean)
             {
-            ClassConstant constClass = f_container.f_types.getClassConstant(
-                    ((Boolean) oValue).booleanValue() ? "Boolean.True" : "Boolean.False");
-            return f_container.f_pool.ensureSingletonConstConstant(constClass);
+            return ((Boolean) oValue).booleanValue() ? pool.valTrue() : pool.valFalse();
             }
 
         if (oValue instanceof Object[])
@@ -315,7 +314,6 @@ public class Adapter
             int c = ao.length;
             TypeConstant[] atype = new TypeConstant[c];
             Constant[] aconst = new Constant[c];
-            ConstantPool pool = f_container.f_pool;
             for (int i = 0; i < c; i++)
                 {
                 Constant constVal = ensureValueConstant(ao[i]);
@@ -341,8 +339,7 @@ public class Adapter
 
         if (oValue == null)
             {
-            ClassConstant constClass = f_container.f_types.getClassConstant("Nullable.Null");
-            return f_container.f_pool.ensureSingletonConstConstant(constClass);
+            return pool.ensureSingletonConstConstant(pool.clzNull());
             }
 
         throw new IllegalArgumentException();

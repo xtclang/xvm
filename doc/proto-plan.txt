@@ -81,9 +81,8 @@
     + allow local property for IP_*
     + allow local property for IIP_*
     + allow next register for IS_*
-    - allow next register for Call_* and Invoke_*
 
-- a test for "local property" mode
++ change tests using "local property" mode
 
 - access exchange (public vs private vs struct) during invocations
 
@@ -104,6 +103,8 @@
 
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
+
+- allow next register for Call_* and Invoke_* (DEFERRED)
 
 - TypeSet and TypeComposition could be mutated by different threads
     (hence the use of ConcurrentHashMap in TypeSet and synchronization in TypeComposition)

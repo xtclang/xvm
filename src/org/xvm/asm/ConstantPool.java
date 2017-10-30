@@ -374,7 +374,7 @@ public class ConstantPool
      *                {@link Format#Int32}, {@link Format#Int64}, {@link Format#Int128},
      *                {@link Format#VarInt}, {@link Format#UInt16}, {@link Format#UInt32},
      *                {@link Format#UInt64}, {@link Format#UInt128}, or {@link Format#VarUInt}
-     *                
+     *
      * @return an IntConstant for the passed PackedInteger value
      */
     public IntConstant ensureIntConstant(PackedInteger pint, Format format)
@@ -1580,6 +1580,7 @@ public class ConstantPool
     public ModuleConstant    modEcstasy()       {ModuleConstant    c = m_valEcstasy;      if (c == null) {m_valEcstasy      = c = ensureModuleConstant(ECSTASY_MODULE)                        ;} return c;}
 
     public ClassConstant     clzObject()        {ClassConstant     c = m_clzObject;       if (c == null) {m_clzObject       = c = (ClassConstant) getImplicitlyImportedIdentity("Object"     );} return c;}
+    public ClassConstant     clzRef()           {ClassConstant     c = m_clzRef;          if (c == null) {m_clzRef          = c = (ClassConstant) getImplicitlyImportedIdentity("Ref"        );} return c;}
     public ClassConstant     clzType()          {ClassConstant     c = m_clzType;         if (c == null) {m_clzType         = c = (ClassConstant) getImplicitlyImportedIdentity("Type"       );} return c;}
     public ClassConstant     clzClass()         {ClassConstant     c = m_clzClass;        if (c == null) {m_clzClass        = c = (ClassConstant) getImplicitlyImportedIdentity("Class"      );} return c;}
     public ClassConstant     clzConst()         {ClassConstant     c = m_clzConst;        if (c == null) {m_clzConst        = c = (ClassConstant) getImplicitlyImportedIdentity("Const"      );} return c;}
@@ -2213,6 +2214,7 @@ public class ConstantPool
 
     private transient ModuleConstant    m_valEcstasy;
     private transient ClassConstant     m_clzObject;
+    private transient ClassConstant     m_clzRef;
     private transient ClassConstant     m_clzType;
     private transient ClassConstant     m_clzClass;
     private transient ClassConstant     m_clzConst;
