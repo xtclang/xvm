@@ -235,15 +235,15 @@ public class LiteralExpression
         }
 
     @Override
-    public Argument generateConstant(TypeConstant constType, ErrorListener errs)
+    public Argument generateConstant(TypeConstant type, ErrorListener errs)
         {
-        if (constType.isSingleDefiningConstant()
-                && constType.getDefiningConstant() instanceof ClassConstant
-                && ((ClassConstant) constType.getDefiningConstant()).getModuleConstant().isEcstasyModule()
-                && (!constType.isAccessSpecified() || constType.getAccess() == Access.PUBLIC))
+        if (type.isSingleDefiningConstant()
+                && type.getDefiningConstant() instanceof ClassConstant
+                && ((ClassConstant) type.getDefiningConstant()).getModuleConstant().isEcstasyModule()
+                && (!type.isAccessSpecified() || type.getAccess() == Access.PUBLIC))
             {
             ConstantPool  pool     = pool();
-            ClassConstant constClz = (ClassConstant) constType.getDefiningConstant();
+            ClassConstant constClz = (ClassConstant) type.getDefiningConstant();
             String        sName    = constClz.getPathString();
 
             switch (sName)
@@ -266,8 +266,8 @@ public class LiteralExpression
                     break;
 
                 case "Sequence":
-                    if (constType.isParamsSpecified() && !(constType.isParamsSpecified(1)
-                            && constType.getParamTypes().get(0).isA(pool().typeChar())))
+                    if (type.isParamsSpecified() && !(type.isParamsSpecified(1)
+                            && type.getParamTypes().get(0).isA(pool().typeChar())))
                         {
                         break;
                         }
@@ -644,23 +644,23 @@ public class LiteralExpression
                 }
             }
 
-        return super.generateConstant(constType, errs);
+        return super.generateConstant(type, errs);
         }
 
     @Override
-    public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
         {
-        if (constType.isSingleDefiningConstant()
-                && constType.getDefiningConstant() instanceof ClassConstant
-                && ((ClassConstant) constType.getDefiningConstant()).getModuleConstant().isEcstasyModule()
-                && constType.getAccess() == Access.PUBLIC)
+        if (type.isSingleDefiningConstant()
+                && type.getDefiningConstant() instanceof ClassConstant
+                && ((ClassConstant) type.getDefiningConstant()).getModuleConstant().isEcstasyModule()
+                && type.getAccess() == Access.PUBLIC)
             {
-            String sName = ((ClassConstant) constType.getDefiningConstant()).getPathString();
+            String sName = ((ClassConstant) type.getDefiningConstant()).getPathString();
             switch (sName)
                 {
                 case "Sequence":
-                    if (constType.isParamsSpecified() && !(constType.isParamsSpecified(1)
-                            && constType.getParamTypes().get(0).isA(pool().typeChar())))
+                    if (type.isParamsSpecified() && !(type.isParamsSpecified(1)
+                            && type.getParamTypes().get(0).isA(pool().typeChar())))
                         {
                         break;
                         }
@@ -697,11 +697,11 @@ public class LiteralExpression
                 case "Float64":
                 case "Float128":
                 case "VarFloat":
-                    return generateConstant(constType, errs);
+                    return generateConstant(type, errs);
                 }
             }
 
-        return super.generateArgument(code, constType, fTupleOk, errs);
+        return super.generateArgument(code, type, fTupleOk, errs);
         }
 
 

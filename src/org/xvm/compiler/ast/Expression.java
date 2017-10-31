@@ -19,6 +19,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpFalse;
@@ -33,6 +34,56 @@ import org.xvm.util.Severity;
 
 /**
  * Base class for all Ecstasy expressions.
+ * <p/>
+ * Concepts:
+ * <pre>
+ * 1. You've got to be able to ask an expression some simple, obvious questions:
+ *    a. Single or multi? Most expressions represent a single L-value or R-value, but some
+ *       expressions can represent a number of L-values or R-values
+ *       - including "conditional" results
+ *    b. What is your type? (implicit type)
+ *    c. Are you a constant? (i.e. could you be if I asked you to?)
+ *    d. Is it possible for you to complete? (e.g. T0D0 does not)
+ *    e. Can I use you as an L-Value, i.e. something that I can assign something to?
+ *    f. Do you short-circuit? e.g. "a?.b" will short-circuit iff "a" is Null
+ *
+ * 2. When an expression is capable of being an L-Value, there has to be some sort of L-Value
+ *    representation that it can provide. For example, in the assignment "a.b.c.d = e", the left
+ *    side expression of "a.b.c.d" needs to produce some code that does the "a.b.c" part, and
+ *    then yields an L-Value structure that says "it's the 'd' property on this 'c' thing that
+ *    I've resolved up to".
+ *    a. local variable (register)
+ *       - including the "black hole"
+ *    b. property (target and property identifier)
+ *       - including knowledge as to whether it can be treated as a "local" property
+ *    c. array index (target and index)
+ *       - including support for multi-dimensioned arrays (multiple indexes)
+ *
+ * 3. When an expression is capable of being an L-Value, it can represent more than one L-Value,
+ *    for example when it is the left-hand-side of a multi-assignment, or when it represents a
+ *    "conditional" value. That means that any expression that can provide more than one L-Value
+ *    must implement a plural form of that method.
+ *
+ * 4. When an expression is capable of being an R-Value, it can represent more than one R-Value,
+ *    for example when it is the right-hand-side of a multi-assignment, or when it represents a
+ *    "conditional" value. That means that any expression that can provide more than one R-Value
+ *    must implement a plural form of that method.
+ *
+ * 5. When an expression is being used as an R-Value,
+ *    a. as a Constant of a specified type
+ *    b. as one or more arguments
+ *    c. as a conditional jump
+ *    d. assignment to one or more L-values
+ *
+ * 6. An expression that is allowed to short-circuit must be provided with a label to which it can
+ *    short-circuit. This also affects the definite assignment rules.
+ * </pre>
+ * <p/>
+ * <ul> <li>TODO need to pass in Scope but one that knows name->Register association?
+ * </li><li>TODO how to do captures?
+ * </li><li>TODO how to do definite assignment?
+ * </li><li>TODO a version of this for conditional? or just a boolean parameter that says this is asking for a conditional?
+ * </li></ul>
  */
 public abstract class Expression
         extends AstNode
@@ -79,13 +130,100 @@ public abstract class Expression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-    /*
-     * Thoughts:
+    /**
+     * Determine the number of values represented by the expression.
+     * <ul>
+     * <li>A {@code Void} expression represents no values</li>
+     * <li>An {@link #isSingle() isSingle()==true} expression represents exactly one value (most common)</li>
+     * <li>A multi-value expression represents more than one value</li>
+     * </ul>
+     * <p/>
+     * This method must be overridden by any expression that represents any number of values other
+     * than one, or that could be composed of other expressions in such a way that the result is
+     * that this expression could represent a number of values other than one.
      *
+     * @return the number of values represented by the expression
      */
-
+    public int getValueCount()
+        {
+        return 1;
+        }
 
     /**
+     * @return true iff the Expression represents exactly one value
+     */
+    public boolean isSingle()
+        {
+        return getValueCount() == 1;
+        }
+
+    /**
+     * Determine if the expression represents a {@code conditional} result.
+     * <p/>
+     * This method must be overridden by any expression that represents or could represent a
+     * conditional result, including as the result of composition of other expressions that could
+     * represent a conditional result.
+     *
+     * @return true iff the Expression represents a conditional value
+     */
+    public boolean isConditional()
+        {
+        return false;
+        }
+
+    /**
+     * Determine the implicit (or "natural") type of the expression, which is the type that the
+     * expression would naturally compile to if no type were specified. For a multi-value
+     * expression, the TypeConstant is returned as a tuple of the types of the multiple values.
+     * A Void type is indicated by a paramterized tuple type of zero parameters (fields).
+     * <p/>
+     * Either this method or {@link #getImplicitTypes()} must be overridden.
+     * @return the implicit type of the expression
+     */
+    public TypeConstant getImplicitType()
+        {
+        if (isSingle())
+            {
+            return getImplicitTypes()[0];
+            }
+        else
+            {
+            return pool().ensureParameterizedTypeConstant(pool().typeTuple(), getImplicitTypes());
+            }
+        }
+
+    /**
+     * Obtain an array of types, one for each value that this expression represents.
+     * <p/>
+     * Either this method or {@link #getImplicitType()} must be overridden.
+     *
+     * @return the implicit types of the multiple values of the expression; a zero-length array
+     *         indicates a Void type
+     */
+    public TypeConstant[] getImplicitTypes()
+        {
+        TypeConstant type = getImplicitType();
+        if (isSingle())
+            {
+            return new TypeConstant[] {type};
+            }
+        else
+            {
+            // it's reasonable to expect that classes will override this method as appropriate to
+            // avoid this type of inefficiency
+            assert type.isTuple() && type.isParamsSpecified();
+            List<TypeConstant> list = type.getParamTypes(); 
+            return list.toArray(new TypeConstant[list.size()]);
+            }
+        }
+
+    /**
+     * Determine if the expression represents an L-Value, which means that this expression can be
+     * assigned to.
+     * <p/>
+     * This method must be overridden by any expression that represents an L-Value, or that could
+     * be composed of other expressions such that the result represents an L-Value.
+     *
      * @return true iff the Expression represents an "L-value" to which a value can be assigned
      */
     public boolean isAssignable()
@@ -94,6 +232,33 @@ public abstract class Expression
         }
 
     /**
+     * Determine if the expression can complete.
+     * <p/>
+     * This method must be overridden by any expression does not complete, or that contains
+     * another expression that may not be completable.
+     *
+     * @return true iff the expression is capable of completing normally
+     */
+    public boolean isCompletable()
+        {
+        return true;
+        }
+
+    /**
+     * Determine if the expression can short-circuit.
+     * <p/>
+     * This method must be overridden by any expression can short circuit, or that contains
+     * another expression that may be short-circuiting.
+     *
+     * @return true iff the expression is capable of short-circuiting
+     */
+    public boolean isShortCircuiting()
+        {
+        return false;
+        }
+
+    /**
+     * TODO
      * The type of assignability:
      * <ul>
      * <li>Constant - an item in the constant pool that cannot be assigned to</li>
@@ -106,54 +271,237 @@ public abstract class Expression
      * <li>Indexed - an index into a single-dimensioned array</li>
      * <li>IndexedN - an index into a multi-dimensioned array</li>
      * </ul>
+     * enum Assignable {ReadOnly, BlackHole, LocalVar, LocalProp, TargetProp, Indexed, IndexedN}
+     * how to handle assignments to the black hole / void?
+     * is it a variable?
+     *  - what register?
+     *  - is it a read-only register?
+     * is it a property?
+     *  - what is the property constant?
+     *  - what is the ref (target)? (argument?)
+     *  - is it a local property?
+     * is it an array element?
+     *  - what is the ref (array)?
+     *  - how many dimensions?
+     *  - what is the index for each dimension?
      */
-    enum Assignable {ReadOnly, BlackHole, LocalVar, LocalProp, TargetProp, Indexed, IndexedN}
-
-    public Assignable getAssignability()
+    public interface Assignable
         {
-        assert !isAssignable();
-        return Assignable.ReadOnly;
+        /**
+         * @return the type of the L-Value
+         */
+        TypeConstant getType();
+
+        void assign(Argument arg, Code code, ErrorListener errs);
+
+        enum Form {BlackHole, LocalVar, LocalProp, TargetProp, Indexed, IndexedN}
+
+        Form getForm();
+
+        Register getRegister();
+
+        Argument getTarget();
+
+        PropertyConstant getProperty();
+
+        Argument getIndex();
+
+        Argument[] getIndexes();
         }
 
-    // TODO how to handle assignments to the black hole / void?
-    // TODO is it a variable?
-    //  - what register?
-    //  - is it a read-only register?
-    // TODO is it a property?
-    //  - what is the property constant?
-    //  - what is the ref (target)? (argument?)
-    //  - is it a local property?
-    // TODO is it an array element?
-    //  - what is the ref (array)?
-    //  - how many dimensions?
-    //  - what is the index for each dimension?
+    /**
+     * For an L-Value expression with exactly one value, create a representation of the L-Value.
+     * <p/>
+     * An exception is generated if the expression is not assignable.
+     *
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
+     *
+     * @return
+     */
+    public Assignable generateAssignable(Code code, ErrorListener errs)
+        {
+        if (!isAssignable())
+            {
+            throw new IllegalStateException();
+            }
+
+        assert isSingle();
+        throw notImplemented();
+        }
+
+    /**
+     * For an L-Value expression, create representations of the L-Values.
+     * <p/>
+     * An exception is generated if the expression is not assignable.
+     *
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
+     *
+     * @return an array of {@link #getValueCount()} Assignable objects
+     */
+    public Assignable[] generateAssignables(Code code, ErrorListener errs)
+        {
+        if (!isAssignable())
+            {
+            throw new IllegalStateException();
+            }
+
+        switch (getValueCount())
+            {
+            case 0:
+                return new Assignable[0];
+
+            case 1:
+                return new Assignable[] {generateAssignable(code, errs)};
+
+            default:
+                throw notImplemented();
+            }
+        }
 
     /**
      * @return true iff the Expression is a constant value
      */
-    public boolean isConstant()
-        {
-        return false;
-        }
+    public abstract boolean isConstant();
 
-    // TODO remove?
+    /**
+     * For a constant expression, create a constant representations of the value.
+     * <p/>
+     * An exception is generated if the expression is not constant.
+     *
+     * @return the default constant form of the expression, iff the expression is constant
+     */
     public Constant toConstant()
         {
-        assert isConstant();
+        if (!isConstant())
+            {
+            throw new IllegalStateException();
+            }
+
         throw notImplemented();
         }
 
     /**
-     * Determine the implicit (or "natural") type of the expression, which is the type that the
-     * expression would naturally compile to if no type were specified.
+     * Convert this expression to a constant value, which is possible iff {@link #isConstant}
+     * returns true.
      *
-     * @return the implicit type of the expression
+     * @param type  the constant type required
+     * @param errs  the error list to log any errors to if this expression cannot be made into
+     *              a constant value of the specified type
+     *
+     * @return a constant of the specified type
      */
-    public TypeConstant getImplicitType()
+    public Argument generateConstant(TypeConstant type, ErrorListener errs)
         {
-        // TODO this should be an abstract method
+        if (isConstant())
+            {
+            return validateAndConvertConstant(toConstant(), type, errs);
+            }
+
+        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+        return generateBlackHole(type);
+        }
+
+    /**
+     * Generate an argument that represents the result of this expression.
+     *
+     * @param code      the code block
+     * @param type      the type that the expression must evaluate to
+     * @param fTupleOk  true if the result can be a tuple of the the specified type
+     * @param errs      the error list to log any errors to
+     *
+     * @return a resulting argument of the specified type, or of a tuple of the specified type if
+     *         that is both allowed and "free" to produce
+     */
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            return generateConstant(type, errs);
+            }
+
         throw notImplemented();
         }
+
+    /**
+     * Generate arguments of the specified types for this expression, or generate an error if that
+     * is not possible.
+     *
+     * @param code      the code block
+     * @param atype     an array of types that the expression must evaluate to
+     * @param fTupleOk  true if the result can be a tuple of the the specified types
+     * @param errs      the error list to log any errors to
+     *
+     * @return a list of resulting arguments, which will either be the same size as the passed list,
+     *         or size 1 for a tuple result if that is both allowed and "free" to produce
+     */
+    public List<Argument> generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk, ErrorListener errs)
+        {
+        switch (atype.length)
+            {
+            case 0:
+                // Void means that the results of the expression are black-holed
+                generateAssignments(code, atype, errs);
+                return Collections.EMPTY_LIST;
+
+            case 1:
+                return Collections.singletonList(generateArgument(code, atype[0], fTupleOk, errs));
+
+            default:
+                if (fTupleOk)
+                    {
+                    ConstantPool pool = pool();
+                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atype);
+                    return Collections.singletonList(generateArgument(code, typeTuple, false, errs));
+                    }
+            }
+
+        log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atype.length);
+        return Collections.EMPTY_LIST;
+        }
+
+    /**
+     *
+     * @param code
+     * @param LVal
+     * @param errs
+     */
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        // TODO should be abstract
+        assert isAssignable();
+        throw notImplemented();
+        }
+
+    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
+        {
+        // TODO should be abstract
+        assert isAssignable();
+        throw notImplemented();
+        }
+
+    /**
+     *
+     *
+     * @param code       the code block
+     * @param label      the label to conditionally jump to
+     * @param fWhenTrue  indicates whether to jump when this expression evaluates to true, or
+     *                   whether to jump when this expression evaluates to false
+     * @param errs       the error list to log any errors to
+     */
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+        {
+        // this is just a generic implementation; sub-classes should override this simplify the
+        // generated code (e.g. by not having to always generate a separate boolean value)
+        Argument arg = generateArgument(code, pool().typeBoolean(), false, errs);
+        code.add(fWhenTrue
+                ? new JumpTrue(arg, label)
+                : new JumpFalse(arg, label));
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
 
     /**
      * Determine if this expression can generate an argument of the specified type, or that can be
@@ -456,135 +804,39 @@ public abstract class Expression
         return getImplicitType().isEcstasy("Nullable.Null");
         // perhaps: return isAssignableTo(pool().typeNullable());
         }
-
+    
     /**
-     * @return true iff the expression is capable of completing normally
-     */
-    public boolean canComplete()
-        {
-        return true;
-        }
-
-    // TODO need something similar to canComplete() to handle short-circuitable expressions e.g. "a?.b?.c"
-
-    /**
-     * Convert this expression to a constant value, which is possible iff {@link #isConstant}
-     * returns true.
+     * Given an constant, verify that it can be assigned to (or somehow converted to) the specified
+     * type, and do so.
      *
-     * @param constType  the constant type required
-     * @param errs       the error list to log any errors to if this expression cannot be made into
-     *                   a constant value of the specified type
+     * @param constIn  the constant that needs to be validated as assignable
+     * @param typeOut  the type that the constant must be assignable to
+     * @param errs     the error list to log any errors to, for example if the constant cannot be
+     *                 coerced in a manner to make it assignable
      *
-     * @return a constant of the specified type
+     * @return the constant to use
      */
-    public Argument generateConstant(TypeConstant constType, ErrorListener errs)
+    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut,
+            ErrorListener errs)
         {
-        if (isConstant())
+        // assume that the result is the same as what was passed in
+        Constant constOut = constIn;
+
+        TypeConstant typeIn =  constIn.getType();
+        if (!typeIn.equals(typeOut))
             {
-            throw notImplemented();
+            // verify that a conversion is possible
+            if (!typeIn.isA(typeOut))
+                {
+                // TODO isA() doesn't handle a lot of things that are actually assignable
+                // TODO for things provably not assignable, check for an @Auto method
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
+                }
+
+            // TODO hard-coded conversions
             }
 
-        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
-        return generateBlackHole(constType);
-        }
-
-    /**
-     * Generate an argument that represents the result of this expression.
-     *
-     * <p/>
-     * <ul> <li>TODO need to pass in Scope but one that knows name->Register association?
-     * </li><li>TODO how to do captures?
-     * </li><li>TODO how to do definite assignment?
-     * </li><li>TODO a version of this for conditional? or just a boolean parameter that says this is asking for a conditional?
-     * </li></ul>
-     *
-     * @param code       the code block
-     * @param constType  the type that the expression must evaluate to
-     * @param fTupleOk   true if the result can be a tuple of the the specified type
-     * @param errs       the error list to log any errors to
-     *
-     * @return a resulting argument of the specified type, or of a tuple of the specified type if
-     *         that is both allowed and "free" to produce
-     */
-    public Argument generateArgument(Code code, TypeConstant constType, boolean fTupleOk, ErrorListener errs)
-        {
-        // TODO should be abstract
-        throw notImplemented();
-        }
-
-    /**
-     * Generate arguments of the specified types for this expression, or generate an error if that
-     * is not possible.
-     *
-     * @param code       the code block
-     * @param listTypes  a list of types that the expression must evaluate to
-     * @param fTupleOk   true if the result can be a tuple of the the specified types
-     * @param errs       the error list to log any errors to
-     *
-     * @return a list of resulting arguments, which will either be the same size as the passed list,
-     *         or size 1 for a tuple result if that is both allowed and "free" to produce
-     */
-    public List<Argument> generateArguments(Code code, List<TypeConstant> listTypes, boolean fTupleOk, ErrorListener errs)
-        {
-        switch (listTypes.size())
-            {
-            case 0:
-                // Void means that the results of the expression are discarded; method will override
-                // this to black-hole the results instead of creating arguments for them
-                generateArgument(code, getImplicitType(), true, errs);
-                return Collections.EMPTY_LIST;
-
-            case 1:
-                return Collections.singletonList(generateArgument(code, listTypes.get(0), fTupleOk, errs));
-
-            default:
-                if (fTupleOk)
-                    {
-                    ConstantPool pool = pool();
-                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(),
-                            listTypes.toArray(new TypeConstant[listTypes.size()]));
-
-                    return Collections.singletonList(generateArgument(code, typeTuple, false, errs));
-                    }
-            }
-
-        log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, listTypes.size());
-        return Collections.EMPTY_LIST;
-        }
-
-    // TODO expression or argument?
-    public void generateAssignment(Code code, Expression exprLValue, ErrorListener errs)
-        {
-        // TODO should be abstract
-        assert isAssignable();
-        throw notImplemented();
-        }
-
-    // TODO expression or argument? (probably expression)
-    public void generateAssignments(Code code, Argument[] aexprLValue, ErrorListener errs)
-        {
-        // TODO should be abstract
-        assert isAssignable();
-        throw notImplemented();
-        }
-
-    /**
-     *
-     *
-     * @param code       the code block
-     * @param label      the label to conditionally jump to
-     * @param fWhenTrue  indicates whether to jump when this expression evaluates to true, or
-     *                   whether to jump when this expression evaluates to false
-     * @param errs       the error list to log any errors to
-     */
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
-        {
-        // this is just a generic implementation; sub-classes should override this simplify the
-        // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(code, pool().typeBoolean(), false, errs);
-        code.add(fWhenTrue
-                ? new JumpTrue(arg, label)
-                : new JumpFalse(arg, label));
+        return constOut;
         }
 
     /**
@@ -635,6 +887,11 @@ public abstract class Expression
         return new Register(type, Op.A_IGNORE);
         }
 
+    /**
+     *
+     * @param listTypes
+     * @return
+     */
     protected List<Register> generateBlackHoles(List<TypeConstant> listTypes)
         {
         int       cTypes   = listTypes == null ? 0 : listTypes.size();

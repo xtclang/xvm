@@ -130,7 +130,7 @@ public class TupleExpression
         }
 
     @Override
-    public Constant generateConstant(TypeConstant constType, ErrorListener errs)
+    public Constant generateConstant(TypeConstant type, ErrorListener errs)
         {
         // TODO current design does not allow conformance to the tuple type that was specified
         TypeConstant     constTType = getImplicitType();
@@ -150,10 +150,10 @@ public class TupleExpression
         }
 
     @Override
-    public Op.Argument generateArgument(MethodStructure.Code code, TypeConstant constType,
+    public Op.Argument generateArgument(MethodStructure.Code code, TypeConstant type,
             boolean fTupleOk, ErrorListener errs)
         {
-        if (constType.isTuple())
+        if (type.isTuple())
             {
             // this is the expected case, i.e. that someone is asking for this expression to be
             // represented as a tuple

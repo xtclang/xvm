@@ -26,7 +26,7 @@ public class TodoExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    public boolean canComplete()
+    public boolean isCompletable()
         {
         return false;
         }

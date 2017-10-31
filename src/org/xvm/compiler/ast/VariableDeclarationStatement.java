@@ -158,7 +158,7 @@ public class VariableDeclarationStatement
                 code.add(getUsage() == Usage.If
                         ? new JumpFalse(regCond, getLabel())
                         : new JumpTrue (regCond, getLabel()));
-                return fReachable & value.canComplete();
+                return fReachable & value.isCompletable();
 
             case For:
                 // in the form "Type varname : Iterable"
@@ -182,7 +182,7 @@ public class VariableDeclarationStatement
             return true;
             }
 
-        boolean fCompletes = value.canComplete();
+        boolean fCompletes = value.isCompletable();
 
         // tuple or array initialization: use this for NON-constant values, since with constant
         // values, we can just use VAR_IN and point to the constant itself

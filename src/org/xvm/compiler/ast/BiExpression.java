@@ -178,7 +178,7 @@ public class BiExpression
         }
 
     @Override
-    public Argument generateConstant(TypeConstant constType, ErrorListener errs)
+    public Argument generateConstant(TypeConstant type, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -190,13 +190,13 @@ public class BiExpression
                     throw new UnsupportedOperationException();
 
                 case COND_ELSE:
-                    return (expr1.isConstantNull() ? expr2 : expr1).generateConstant(constType, errs);
+                    return (expr1.isConstantNull() ? expr2 : expr1).generateConstant(type, errs);
 
                 case BIT_OR:
-                    if (constType.equals(pool.typeIntLiteral()))
+                    if (type.equals(pool.typeIntLiteral()))
                         {
-                        Argument arg1 = expr1.generateConstant(constType, errs);
-                        Argument arg2 = expr1.generateConstant(constType, errs);
+                        Argument arg1 = expr1.generateConstant(type, errs);
+                        Argument arg2 = expr1.generateConstant(type, errs);
                         if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
                             {
                             PackedInteger pi1      = ((LiteralConstant) arg1).getIntegerValue();
@@ -208,10 +208,10 @@ public class BiExpression
                             return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(radix));
                             }
                         }
-                    else if (constType.equals(pool.typeInt()))
+                    else if (type.equals(pool.typeInt()))
                         {
-                        Argument arg1 = expr1.generateConstant(constType, errs);
-                        Argument arg2 = expr1.generateConstant(constType, errs);
+                        Argument arg1 = expr1.generateConstant(type, errs);
+                        Argument arg2 = expr1.generateConstant(type, errs);
                         if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
                             {
                             PackedInteger pi1      = ((LiteralConstant) arg1).getIntegerValue();
@@ -228,15 +228,15 @@ public class BiExpression
 
                     // fall through for logical boolean "or"
                 case COND_OR:
-                    if (constType.equals(pool.typeBoolean()))
+                    if (type.equals(pool.typeBoolean()))
                         {
                         // if the first expression is a boolean true, then the result is a boolean
                         // true;  otherwise if the second expression is a boolean true, then the
                         // result is a boolean true; otherwise the result is a boolean false
-                        Argument arg = expr1.generateConstant(constType, errs);
+                        Argument arg = expr1.generateConstant(type, errs);
                         return pool.valTrue().equals(arg)
                                 ? arg
-                                : expr2.generateConstant(constType, errs);
+                                : expr2.generateConstant(type, errs);
                         }
                     break;
 
@@ -245,15 +245,15 @@ public class BiExpression
 
                     // fall through for logical boolean "and"
                 case COND_AND:
-                    if (constType.equals(pool.typeBoolean()))
+                    if (type.equals(pool.typeBoolean()))
                         {
                         // if the first expression is a boolean false, then the result is a boolean
                         // false;  otherwise if the second expression is a boolean true, then the
                         // result is a boolean true; otherwise the result is a boolean false
-                        Argument arg = expr1.generateConstant(constType, errs);
+                        Argument arg = expr1.generateConstant(type, errs);
                         return pool.valFalse().equals(arg)
                                 ? arg
-                                : expr2.generateConstant(constType, errs);
+                                : expr2.generateConstant(type, errs);
                         }
                     break;
 
@@ -294,7 +294,7 @@ public class BiExpression
                 }
             }
 
-        return super.generateConstant(constType, errs);
+        return super.generateConstant(type, errs);
         }
 
 //            switch (operator.getId())

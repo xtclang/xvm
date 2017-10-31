@@ -126,7 +126,7 @@ public class ExpressionStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable & expr.canComplete();
+        boolean fCompletes = fReachable & expr.isCompletable();
 
         if (getUsage() == Usage.Standalone)
             {

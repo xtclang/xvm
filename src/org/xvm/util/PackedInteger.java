@@ -344,6 +344,7 @@ public class PackedInteger
      */
     public PackedInteger shr(PackedInteger that)
         {
+        // TODO verify
         return new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
         }
     
@@ -355,7 +356,7 @@ public class PackedInteger
      *
      * @return the resulting PackedInteger
      */
-    public PackedInteger usrh(PackedInteger that)
+    public PackedInteger ushr(PackedInteger that)
         {
         // TODO
         return new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));

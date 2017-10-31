@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.util.ListMap;
 
 import java.util.Map;
@@ -41,6 +44,29 @@ public class BinaryExpression
     public long getEndPosition()
         {
         return lEndPos;
+        }
+
+
+    // ----- Expression methods --------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getImplicitType()
+        {
+        final ConstantPool pool = pool();
+        return pool.ensureImmutableTypeConstant(pool.ensureParameterizedTypeConstant(
+                pool.typeArray(), new TypeConstant[] {pool.typeByte()}));
+        }
+
+    @Override
+    public boolean isConstant()
+        {
+        return true;
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        return pool().ensureByteStringConstant(bytes);
         }
 
 

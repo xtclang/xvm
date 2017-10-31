@@ -8,6 +8,9 @@ import org.xvm.asm.op.Label;
  * A ConditionalStatement represents any statement that can appear as any combination of a variable
  * declaration and/or variable assignment in the parenthesized conditional expression location of an
  * "if", "for", "while", "do-while", or "switch" statement.
+ * <p/>
+ * If the expression condition in the ConditionalStatement short-ciruits, the result must be
+ * identical to the expression resulting in the value of {@code Boolean.False}.
  */
 public abstract class ConditionalStatement
         extends Statement
