@@ -79,6 +79,12 @@ public abstract class Expression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+    /*
+     * Thoughts:
+     *
+     */
+
+
     /**
      * @return true iff the Expression represents an "L-value" to which a value can be assigned
      */
