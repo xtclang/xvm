@@ -309,27 +309,38 @@ public class Adapter
             int c = ao.length;
             TypeConstant[] aType = new TypeConstant[c];
             Constant[] aconst = new Constant[c];
+            TypeConstant typeUniform = null;
+
             for (int i = 0; i < c; i++)
                 {
                 Constant constVal = ensureValueConstant(ao[i]);
-                TypeConstant constType;
-                switch (constVal.getFormat())
+                TypeConstant type = constVal.getType();
+
+                if (i == 0)
                     {
-                    case String:
-                        constType = pool.typeString();
-                        break;
-                    case Int64:
-                        constType = pool.typeInt();
-                        break;
-                    default:
-                        constType = pool.typeObject();
-                        break;
+                    typeUniform = type;
                     }
-                aType[i]  = constType;
+                else if (type != typeUniform)
+                    {
+                    typeUniform = null;
+                    }
+
+                aType[i]  = type;
                 aconst[i] = constVal;
                 }
-            TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aType);
-            return pool.ensureTupleConstant(typeTuple, aconst);
+
+            if (typeUniform == null)
+                {
+                TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
+                    pool.typeTuple(), aType);
+                return pool.ensureTupleConstant(typeTuple, aconst);
+                }
+            else
+                {
+                TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
+                    pool.typeArray(), typeUniform);
+                return pool.ensureArrayConstant(typeArray, aconst);
+                }
             }
 
         if (oValue == null)

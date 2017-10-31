@@ -93,6 +93,8 @@ public class xTuple
         {
         ArrayConstant constTuple = (ArrayConstant) constant;
 
+        assert constTuple.getFormat() == Constant.Format.Tuple;
+
         ObjectHeap heap = f_types.f_container.f_heapGlobal;
 
         TypeConstant constType = constTuple.getType();

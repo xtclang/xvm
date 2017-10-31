@@ -84,7 +84,7 @@
 
 + change tests using "local property" mode
 
-- access exchange (public vs private vs struct) during invocations
++ access exchange (public vs private vs struct) during invocations
 
 - a test for auto-narrowing method invocation
 
@@ -104,7 +104,7 @@
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
-- allow next register for Call_* and Invoke_* (DEFERRED)
+- allow a next register for Call_* and Invoke_* (DEFERRED)
 
 - TypeSet and TypeComposition could be mutated by different threads
     (hence the use of ConcurrentHashMap in TypeSet and synchronization in TypeComposition)
