@@ -182,14 +182,9 @@ public abstract class Expression
      */
     public TypeConstant getImplicitType()
         {
-        if (isSingle())
-            {
-            return getImplicitTypes()[0];
-            }
-        else
-            {
-            return pool().ensureParameterizedTypeConstant(pool().typeTuple(), getImplicitTypes());
-            }
+        return isSingle()
+                ? getImplicitTypes()[0]
+                : pool().ensureParameterizedTypeConstant(pool().typeTuple(), getImplicitTypes());
         }
 
     /**
@@ -258,12 +253,20 @@ public abstract class Expression
         }
 
     /**
+     * Determine if the expression is constant.
+     * <p/>
+     * This method must be overridden by any expression is not guaranteed to be constant.
+     *
      * @return true iff the Expression is a constant value
      */
-    public abstract boolean isConstant();
+    public boolean isConstant()
+        {
+        return true;
+        }
 
     /**
-     * For a constant expression, create a constant representations of the value.
+     * For a constant expression, create a constant representations of the value. The type of the
+     * constant will match the result of {@link #getImplicitType()}.
      * <p/>
      * An exception is generated if the expression is not constant.
      *
@@ -271,7 +274,7 @@ public abstract class Expression
      */
     public Constant toConstant()
         {
-        if (!isConstant())
+        if (!isConstant() || !isSingle())
             {
             throw new IllegalStateException();
             }
@@ -284,15 +287,14 @@ public abstract class Expression
      * returns true.
      *
      *
-     * @param code
+     * @param code  the code block
      * @param type  the constant type required
      * @param errs  the error list to log any errors to if this expression cannot be made into
      *              a constant value of the specified type
      *
      * @return a constant of the specified type
      */
-    public Argument generateConstant(Code code, TypeConstant type,
-            ErrorListener errs)
+    public Argument generateConstant(Code code, TypeConstant type, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -314,8 +316,7 @@ public abstract class Expression
      * @return a resulting argument of the specified type, or of a tuple of the specified type if
      *         that is both allowed and "free" to produce
      */
-    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk,
-            ErrorListener errs)
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -337,18 +338,17 @@ public abstract class Expression
      * @return a list of resulting arguments, which will either be the same size as the passed list,
      *         or size 1 for a tuple result if that is both allowed and "free" to produce
      */
-    public List<Argument> generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk,
-            ErrorListener errs)
+    public Argument[] generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk, ErrorListener errs)
         {
         switch (atype.length)
             {
             case 0:
                 // Void means that the results of the expression are black-holed
                 generateAssignments(code, NO_LVALUES, errs);
-                return Collections.EMPTY_LIST;
+                return NO_RVALUES;
 
             case 1:
-                return Collections.singletonList(generateArgument(code, atype[0], fTupleOk, errs));
+                return new Argument[] {generateArgument(code, atype[0], fTupleOk, errs)};
 
             default:
                 if (fTupleOk)
@@ -356,13 +356,12 @@ public abstract class Expression
                     ConstantPool pool = pool();
                     TypeConstant typeTuple =
                             pool.ensureParameterizedTypeConstant(pool.typeTuple(), atype);
-                    return Collections.singletonList(
-                            generateArgument(code, typeTuple, false, errs));
+                    return new Argument[] {generateArgument(code, typeTuple, false, errs)};
                     }
             }
 
         log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atype.length);
-        return Collections.EMPTY_LIST;
+        return NO_RVALUES;
         }
 
     /**
@@ -377,12 +376,11 @@ public abstract class Expression
      */
     public Assignable generateAssignable(Code code, ErrorListener errs)
         {
-        if (!isAssignable())
+        if (!isAssignable() || !isSingle())
             {
             throw new IllegalStateException();
             }
 
-        assert isSingle();
         throw notImplemented();
         }
 
@@ -412,25 +410,54 @@ public abstract class Expression
                 return new Assignable[] {generateAssignable(code, errs)};
 
             default:
-                throw notImplemented();
+                throw notImplemented(); // TODO or is it a compiler error?
             }
         }
 
     /**
+     * Generate the necessary code that assigns the value of this expression to the specified
+     * L-Value, or generate an error if that is not possible.
      *
-     * @param code
-     * @param LVal
-     * @param errs
+     * @param code  the code block
+     * @param LVal  the Assignable object representing the L-Value
+     * @param errs  the error list to log any errors to
      */
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        // TODO should be abstract
-        assert isAssignable();
-        throw notImplemented();
+        // this will be overridden by classes that can push down the work
+        Argument arg = generateArgument(code, LVal.getType(), false, errs);
+        LVal.assign(arg, code, errs);
         }
 
+    /**
+     * Generate the necessary code that assigns the values of this expression to the specified
+     * L-Values, or generate an error if that is not possible.
+     *
+     * @param code   the code block
+     * @param aLVal  an array of Assignable objects representing the L-Values
+     * @param errs   the error list to log any errors to
+     */
     public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
         {
+        int cLVals = aLVal.length;
+        if (cLVals == 1)
+            {
+            generateAssignment(code, aLVal[0], errs);
+            return;
+            }
+
+        TypeConstant[] aType = new TypeConstant[cLVals];
+        for (int i = 0; i < cLVals; ++i)
+            {
+            aType[i] = aLVal[i].getType();
+            }
+        Argument[] aArg = generateArguments(code, aType, false, errs);
+
+        int cArgs  = getValueCount();
+
+        // this will be overridden by classes that can push down the work
+        LVal.assign(arg, code, errs);
+
         // TODO should be abstract
         assert isAssignable();
         throw notImplemented();
@@ -870,20 +897,33 @@ public abstract class Expression
         {
         // ----- constructors ------------------------------------------------------------------
 
+        /**
+         * Construct a black hole L-Value.
+         */
         public Assignable()
             {
             m_nForm = BlackHole;
             }
-
+// TODO docs
+        /**
+         * local variable
+         *
+         * @param regVar
+         */
         public Assignable(Register regVar)
             {
             m_nForm = LocalVar;
             m_arg   = regVar;
             }
 
+        /**
+         * property (either local or target)
+         *
+         * @param argTarget
+         * @param constProp
+         */
         public Assignable(Argument argTarget, PropertyConstant constProp)
             {
-            // TODO verify with GG that A_TARGET is correct (or is it A_PRIVATE?)
             m_nForm  = argTarget instanceof Register && ((Register) argTarget).getIndex() == Op.A_TARGET
                     ? LocalProp
                     : TargetProp;
@@ -891,6 +931,12 @@ public abstract class Expression
             m_oExtra = constProp;
             }
 
+        /**
+         * single dimension array
+         *
+         * @param regArray
+         * @param index
+         */
         public Assignable(Register regArray, Argument index)
             {
             m_nForm  = Indexed;
@@ -898,11 +944,23 @@ public abstract class Expression
             m_oExtra = index;
             }
 
+        /**
+         * multi (any) dimension array
+         *
+         * @param regArray
+         * @param indexes
+         */
         public Assignable(Register regArray, Argument[] indexes)
             {
-            m_nForm  = IndexedN;
+            assert indexes != null && indexes.length > 0;
+
+            m_nForm  = indexes.length == 1
+                    ? Indexed
+                    : IndexedN;
             m_arg    = regArray;
-            m_oExtra = indexes;
+            m_oExtra = indexes.length == 1
+                    ? indexes[0]
+                    : indexes;
             }
 
         // ----- accessors ---------------------------------------------------------------------
@@ -926,6 +984,7 @@ public abstract class Expression
 
                 case Indexed:
                 case IndexedN:
+                    return getArray().getType();
 
                 default:
                     throw new IllegalStateException();
@@ -1010,15 +1069,6 @@ public abstract class Expression
                 return (Argument) m_oExtra;
                 }
 
-            if (m_nForm == IndexedN)
-                {
-                Argument[] args = (Argument[]) m_oExtra;
-                if (args.length == 1)
-                    {
-                    return args[0];
-                    }
-                }
-
             throw new IllegalStateException();
             }
 
@@ -1072,4 +1122,5 @@ public abstract class Expression
     // ----- fields --------------------------------------------------------------------------------
 
     public static final Assignable[] NO_LVALUES = new Assignable[0];
+    public static final Argument[]   NO_RVALUES = new Argument[0];
     }

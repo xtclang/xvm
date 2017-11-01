@@ -3,11 +3,19 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op.Argument;
 
+import org.xvm.asm.Register;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
@@ -57,7 +65,6 @@ public class TodoExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
-
 
     @Override
     public TypeConstant getImplicitType()
@@ -120,21 +127,24 @@ public class TodoExpression
         generateTodo(code, errs);
         }
 
+    /**
+     * Generate the actual code that a T0D0 expression evaluates to.
+     *
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
+     */
     public void generateTodo(Code code, ErrorListener errs)
         {
         // throw new UnsupportedOperationException(message, null)
-        ConstantPool pool = pool();
-        code.add(new Var(pool.typeException()));
-        Argument argEx  = code.lastRegister();
-        Argument argMsg = message.generateArgument(code, pool.typeString(), false, errs);
-        code.add(new New_N(pool.ensureMethodConstant(
-                pool.ensureEcstasyClassConstant("UnsupportedOperationException"),
-                pool.ensureSignatureConstant("construct", new TypeConstant[]
-                        {
-                        pool.ensureNullableTypeConstant(pool.typeString()),
-                        pool.ensureNullableTypeConstant(pool.typeException())
-                        }, ConstantPool.NO_TYPES),
-                Constants.Access.PUBLIC), new Argument[] {argMsg, pool.valNull()}, argEx));
+        ConstantPool   pool     = pool();
+        ClassConstant  constEx  = pool.ensureEcstasyClassConstant("UnsupportedOperationException");
+        MethodConstant constNew = pool.ensureEcstasyConstructor(constEx, pool.typeString१(), pool.typeException१());
+        Argument       argEx    = new Register(constEx.asTypeConstant());
+        Argument       argMsg   = message == null
+                ? pool.valNull()
+                : message.generateArgument(code, pool.typeString(), false, errs);
+
+        code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
         code.add(new Throw(argEx));
         }
 
