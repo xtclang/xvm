@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -178,7 +179,8 @@ public class BiExpression
         }
 
     @Override
-    public Argument generateConstant(TypeConstant type, ErrorListener errs)
+    public Argument generateConstant(MethodStructure.Code code, TypeConstant type,
+            ErrorListener errs)
         {
         if (isConstant())
             {
@@ -190,13 +192,13 @@ public class BiExpression
                     throw new UnsupportedOperationException();
 
                 case COND_ELSE:
-                    return (expr1.isConstantNull() ? expr2 : expr1).generateConstant(type, errs);
+                    return (expr1.isConstantNull() ? expr2 : expr1).generateConstant(code, type, errs);
 
                 case BIT_OR:
                     if (type.equals(pool.typeIntLiteral()))
                         {
-                        Argument arg1 = expr1.generateConstant(type, errs);
-                        Argument arg2 = expr1.generateConstant(type, errs);
+                        Argument arg1 = expr1.generateConstant(code, type, errs);
+                        Argument arg2 = expr1.generateConstant(code, type, errs);
                         if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
                             {
                             PackedInteger pi1      = ((LiteralConstant) arg1).getIntegerValue();
@@ -210,8 +212,8 @@ public class BiExpression
                         }
                     else if (type.equals(pool.typeInt()))
                         {
-                        Argument arg1 = expr1.generateConstant(type, errs);
-                        Argument arg2 = expr1.generateConstant(type, errs);
+                        Argument arg1 = expr1.generateConstant(code, type, errs);
+                        Argument arg2 = expr1.generateConstant(code, type, errs);
                         if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
                             {
                             PackedInteger pi1      = ((LiteralConstant) arg1).getIntegerValue();
@@ -233,10 +235,10 @@ public class BiExpression
                         // if the first expression is a boolean true, then the result is a boolean
                         // true;  otherwise if the second expression is a boolean true, then the
                         // result is a boolean true; otherwise the result is a boolean false
-                        Argument arg = expr1.generateConstant(type, errs);
+                        Argument arg = expr1.generateConstant(code, type, errs);
                         return pool.valTrue().equals(arg)
                                 ? arg
-                                : expr2.generateConstant(type, errs);
+                                : expr2.generateConstant(code, type, errs);
                         }
                     break;
 
@@ -250,10 +252,10 @@ public class BiExpression
                         // if the first expression is a boolean false, then the result is a boolean
                         // false;  otherwise if the second expression is a boolean true, then the
                         // result is a boolean true; otherwise the result is a boolean false
-                        Argument arg = expr1.generateConstant(type, errs);
+                        Argument arg = expr1.generateConstant(code, type, errs);
                         return pool.valFalse().equals(arg)
                                 ? arg
-                                : expr2.generateConstant(type, errs);
+                                : expr2.generateConstant(code, type, errs);
                         }
                     break;
 
@@ -294,7 +296,7 @@ public class BiExpression
                 }
             }
 
-        return super.generateConstant(type, errs);
+        return super.generateConstant(code, type, errs);
         }
 
 //            switch (operator.getId())

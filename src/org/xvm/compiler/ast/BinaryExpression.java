@@ -47,7 +47,7 @@ public class BinaryExpression
         }
 
 
-    // ----- Expression methods --------------------------------------------------------------------
+    // ----- compilation ---------------------------------------------------------------------------
 
     @Override
     public TypeConstant getImplicitType()

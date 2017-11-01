@@ -130,7 +130,8 @@ public class TupleExpression
         }
 
     @Override
-    public Constant generateConstant(TypeConstant type, ErrorListener errs)
+    public Constant generateConstant(MethodStructure.Code code, TypeConstant type,
+            ErrorListener errs)
         {
         // TODO current design does not allow conformance to the tuple type that was specified
         TypeConstant     constTType = getImplicitType();

@@ -3,14 +3,25 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.Argument;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.Label;
+import org.xvm.asm.op.New_N;
+import org.xvm.asm.op.Throw;
+import org.xvm.asm.op.Var;
+
+import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 
 /**
  * A to-do expression raises an exception indicating missing functionality, with an optional
  * message. It can be used as an expression, or as a statement.
- *
- * @author cp 2017.03.28
  */
 public class TodoExpression
         extends Expression
@@ -25,11 +36,6 @@ public class TodoExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
-    public boolean isCompletable()
-        {
-        return false;
-        }
 
     @Override
     public long getStartPosition()
@@ -47,6 +53,103 @@ public class TodoExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+
+    @Override
+    public TypeConstant getImplicitType()
+        {
+        // it would be really nice to know what type they actually want, because we'd be glad to
+        // pretend that we can provide one of those
+        return pool().typeObject();
+        }
+
+    @Override
+    public boolean isAssignable()
+        {
+        // sure, you can use this where an assignable is required
+        return true;
+        }
+
+    @Override
+    public boolean isCompletable()
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isConstant()
+        {
+        // sure, you can use this where a constant is required, i.e. a "case" statement
+        return true;
+        }
+
+    @Override
+    public Argument generateConstant(Code code, TypeConstant type, ErrorListener errs)
+        {
+        generateTodo(code, errs);
+        return generateBlackHole(type);
+        }
+
+    @Override
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
+        {
+        generateTodo(code, errs);
+        return generateBlackHole(type);
+        }
+
+    @Override
+    public Assignable generateAssignable(Code code, ErrorListener errs)
+        {
+        generateTodo(code, errs);
+        return new Assignable();
+        }
+
+    @Override
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        generateTodo(code, errs);
+        }
+
+    @Override
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+        {
+        generateTodo(code, errs);
+        }
+
+    public void generateTodo(Code code, ErrorListener errs)
+        {
+        // throw new UnsupportedOperationException(message, null)
+        ConstantPool pool = pool();
+        code.add(new Var(pool.typeException()));
+        Argument argEx  = code.lastRegister();
+        Argument argMsg = message.generateArgument(code, pool.typeString(), false, errs);
+        code.add(new New_N(pool.ensureMethodConstant(
+                pool.ensureEcstasyClassConstant("UnsupportedOperationException"),
+                pool.ensureSignatureConstant("construct", new TypeConstant[]
+                        {
+                        pool.ensureNullableTypeConstant(pool.typeString()),
+                        pool.ensureNullableTypeConstant(pool.typeException())
+                        }, ConstantPool.NO_TYPES),
+                Constants.Access.PUBLIC), new Argument[] {argMsg, pool.valNull()}, argEx));
+        code.add(new Throw(argEx));
+        }
+
+    @Override
+    public boolean isAssignableTo(TypeConstant typeThat)
+        {
+        // sure, this expression can be one of those, whatever that is
+        return true;
+        }
+
+    @Override
+    public boolean isTypeBoolean()
+        {
+        // sure, whatever you want
+        return true;
         }
 
 

@@ -8,8 +8,14 @@ import java.lang.reflect.Field;
 
 /**
  * Generic expression for something that follows the pattern "expression operator".
- *
- * @author cp 2017.04.06
+ * <p/>
+ * <pre>
+ * PostfixExpression
+ *     PostfixExpression "++"
+ *     PostfixExpression "--"
+ *     PostfixExpression NoWhitespace "?"
+ *     ...
+ * </pre>
  */
 public class PostfixExpression
         extends Expression

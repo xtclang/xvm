@@ -258,55 +258,111 @@ public abstract class Expression
         }
 
     /**
-     * TODO
-     * The type of assignability:
-     * <ul>
-     * <li>Constant - an item in the constant pool that cannot be assigned to</li>
-     * <li>Reserved - an item provided by the runtime, like "this", that cannot be assigned to</li>
-     * <li>Parameter - a register for a method parameter, which cannot be assigned to</li>
-     * <li>BlackHole - a write-only register that anyone can assign to, discarding the value</li>
-     * <li>LocalVar - a local variable of a method that can be assigned to</li>
-     * <li>LocalProp - a local (this:private) property that can be assigned to</li>
-     * <li>TargetProp - a property of a specified reference that can be assigned to</li>
-     * <li>Indexed - an index into a single-dimensioned array</li>
-     * <li>IndexedN - an index into a multi-dimensioned array</li>
-     * </ul>
-     * enum Assignable {ReadOnly, BlackHole, LocalVar, LocalProp, TargetProp, Indexed, IndexedN}
-     * how to handle assignments to the black hole / void?
-     * is it a variable?
-     *  - what register?
-     *  - is it a read-only register?
-     * is it a property?
-     *  - what is the property constant?
-     *  - what is the ref (target)? (argument?)
-     *  - is it a local property?
-     * is it an array element?
-     *  - what is the ref (array)?
-     *  - how many dimensions?
-     *  - what is the index for each dimension?
+     * @return true iff the Expression is a constant value
      */
-    public interface Assignable
+    public abstract boolean isConstant();
+
+    /**
+     * For a constant expression, create a constant representations of the value.
+     * <p/>
+     * An exception is generated if the expression is not constant.
+     *
+     * @return the default constant form of the expression, iff the expression is constant
+     */
+    public Constant toConstant()
         {
-        /**
-         * @return the type of the L-Value
-         */
-        TypeConstant getType();
+        if (!isConstant())
+            {
+            throw new IllegalStateException();
+            }
 
-        void assign(Argument arg, Code code, ErrorListener errs);
+        throw notImplemented();
+        }
 
-        enum Form {BlackHole, LocalVar, LocalProp, TargetProp, Indexed, IndexedN}
+    /**
+     * Convert this expression to a constant value, which is possible iff {@link #isConstant}
+     * returns true.
+     *
+     *
+     * @param code
+     * @param type  the constant type required
+     * @param errs  the error list to log any errors to if this expression cannot be made into
+     *              a constant value of the specified type
+     *
+     * @return a constant of the specified type
+     */
+    public Argument generateConstant(Code code, TypeConstant type,
+            ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            return validateAndConvertConstant(toConstant(), type, errs);
+            }
 
-        Form getForm();
+        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+        return generateBlackHole(type);
+        }
 
-        Register getRegister();
+    /**
+     * Generate an argument that represents the result of this expression.
+     *
+     * @param code      the code block
+     * @param type      the type that the expression must evaluate to
+     * @param fTupleOk  true if the result can be a tuple of the the specified type
+     * @param errs      the error list to log any errors to
+     *
+     * @return a resulting argument of the specified type, or of a tuple of the specified type if
+     *         that is both allowed and "free" to produce
+     */
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk,
+            ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            return generateConstant(code, type, errs);
+            }
 
-        Argument getTarget();
+        throw notImplemented();
+        }
 
-        PropertyConstant getProperty();
+    /**
+     * Generate arguments of the specified types for this expression, or generate an error if that
+     * is not possible.
+     *
+     * @param code      the code block
+     * @param atype     an array of types that the expression must evaluate to
+     * @param fTupleOk  true if the result can be a tuple of the the specified types
+     * @param errs      the error list to log any errors to
+     *
+     * @return a list of resulting arguments, which will either be the same size as the passed list,
+     *         or size 1 for a tuple result if that is both allowed and "free" to produce
+     */
+    public List<Argument> generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk,
+            ErrorListener errs)
+        {
+        switch (atype.length)
+            {
+            case 0:
+                // Void means that the results of the expression are black-holed
+                generateAssignments(code, NO_LVALUES, errs);
+                return Collections.EMPTY_LIST;
 
-        Argument getIndex();
+            case 1:
+                return Collections.singletonList(generateArgument(code, atype[0], fTupleOk, errs));
 
-        Argument[] getIndexes();
+            default:
+                if (fTupleOk)
+                    {
+                    ConstantPool pool = pool();
+                    TypeConstant typeTuple =
+                            pool.ensureParameterizedTypeConstant(pool.typeTuple(), atype);
+                    return Collections.singletonList(
+                            generateArgument(code, typeTuple, false, errs));
+                    }
+            }
+
+        log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atype.length);
+        return Collections.EMPTY_LIST;
         }
 
     /**
@@ -361,107 +417,6 @@ public abstract class Expression
         }
 
     /**
-     * @return true iff the Expression is a constant value
-     */
-    public abstract boolean isConstant();
-
-    /**
-     * For a constant expression, create a constant representations of the value.
-     * <p/>
-     * An exception is generated if the expression is not constant.
-     *
-     * @return the default constant form of the expression, iff the expression is constant
-     */
-    public Constant toConstant()
-        {
-        if (!isConstant())
-            {
-            throw new IllegalStateException();
-            }
-
-        throw notImplemented();
-        }
-
-    /**
-     * Convert this expression to a constant value, which is possible iff {@link #isConstant}
-     * returns true.
-     *
-     * @param type  the constant type required
-     * @param errs  the error list to log any errors to if this expression cannot be made into
-     *              a constant value of the specified type
-     *
-     * @return a constant of the specified type
-     */
-    public Argument generateConstant(TypeConstant type, ErrorListener errs)
-        {
-        if (isConstant())
-            {
-            return validateAndConvertConstant(toConstant(), type, errs);
-            }
-
-        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
-        return generateBlackHole(type);
-        }
-
-    /**
-     * Generate an argument that represents the result of this expression.
-     *
-     * @param code      the code block
-     * @param type      the type that the expression must evaluate to
-     * @param fTupleOk  true if the result can be a tuple of the the specified type
-     * @param errs      the error list to log any errors to
-     *
-     * @return a resulting argument of the specified type, or of a tuple of the specified type if
-     *         that is both allowed and "free" to produce
-     */
-    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
-        {
-        if (isConstant())
-            {
-            return generateConstant(type, errs);
-            }
-
-        throw notImplemented();
-        }
-
-    /**
-     * Generate arguments of the specified types for this expression, or generate an error if that
-     * is not possible.
-     *
-     * @param code      the code block
-     * @param atype     an array of types that the expression must evaluate to
-     * @param fTupleOk  true if the result can be a tuple of the the specified types
-     * @param errs      the error list to log any errors to
-     *
-     * @return a list of resulting arguments, which will either be the same size as the passed list,
-     *         or size 1 for a tuple result if that is both allowed and "free" to produce
-     */
-    public List<Argument> generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk, ErrorListener errs)
-        {
-        switch (atype.length)
-            {
-            case 0:
-                // Void means that the results of the expression are black-holed
-                generateAssignments(code, atype, errs);
-                return Collections.EMPTY_LIST;
-
-            case 1:
-                return Collections.singletonList(generateArgument(code, atype[0], fTupleOk, errs));
-
-            default:
-                if (fTupleOk)
-                    {
-                    ConstantPool pool = pool();
-                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atype);
-                    return Collections.singletonList(generateArgument(code, typeTuple, false, errs));
-                    }
-            }
-
-        log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atype.length);
-        return Collections.EMPTY_LIST;
-        }
-
-    /**
      *
      * @param code
      * @param LVal
@@ -490,7 +445,8 @@ public abstract class Expression
      *                   whether to jump when this expression evaluates to false
      * @param errs       the error list to log any errors to
      */
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue,
+            ErrorListener errs)
         {
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
@@ -519,191 +475,192 @@ public abstract class Expression
         switch (typeThat.getFormat())
             {
             case UnionType:
+            {
+            TypeConstant typeThat1 = typeThat.getUnderlyingType();
+            TypeConstant typeThat2 = typeThat.getUnderlyingType2();
+            if (!(isAssignableTo(typeThat1) && isAssignableTo(typeThat2)))
                 {
-                TypeConstant typeThat1 = typeThat.getUnderlyingType();
-                TypeConstant typeThat2 = typeThat.getUnderlyingType2();
-                if (!(isAssignableTo(typeThat1) && isAssignableTo(typeThat2)))
-                    {
-                    break;
-                    }
+                break;
+                }
 
-                // even though each of the two types was individually assignable to, there are rare
-                // examples that are NOT allowable, such as the literal 0 being assignable to two
-                // different Int classes
-                if (typeThat1.isClassType() && typeThat2.isClassType())
+            // even though each of the two types was individually assignable to, there are rare
+            // examples that are NOT allowable, such as the literal 0 being assignable to two
+            // different Int classes
+            if (typeThat1.isClassType() && typeThat2.isClassType())
+                {
+                HashSet<IdentityConstant> setClasses = new HashSet<>(5);
+                setClasses.addAll(typeThat1.underlyingClasses());
+                setClasses.addAll(typeThat2.underlyingClasses());
+                if (setClasses.size() > 1)
                     {
-                    HashSet<IdentityConstant> setClasses = new HashSet<>(5);
-                    setClasses.addAll(typeThat1.underlyingClasses());
-                    setClasses.addAll(typeThat2.underlyingClasses());
-                    if (setClasses.size() > 1)
+                    // first check if the implicit type is a sub-class and/or impersonator of
+                    // all of the classes implied by the union type
+                    typeImplicit = getImplicitType();
+                    if (typeImplicit.isA(typeThat))
                         {
-                        // first check if the implicit type is a sub-class and/or impersonator of
-                        // all of the classes implied by the union type
-                        typeImplicit = getImplicitType();
-                        if (typeImplicit.isA(typeThat))
-                            {
-                            return true;
-                            }
+                        return true;
+                        }
 
-                        // find a solution where there is one class that is a sub-class and/or
-                        // impersonator of all other classes
-                        int              cClz = setClasses.size();
-                        ClassStructure[] aclz = new ClassStructure[cClz];
-                        int              iClz = 0;
-                        for (IdentityConstant constClz : setClasses)
-                            {
-                            aclz[iClz++] = (ClassStructure) constClz.getComponent();
-                            }
+                    // find a solution where there is one class that is a sub-class and/or
+                    // impersonator of all other classes
+                    int cClz = setClasses.size();
+                    ClassStructure[] aclz = new ClassStructure[cClz];
+                    int iClz = 0;
+                    for (IdentityConstant constClz : setClasses)
+                        {
+                        aclz[iClz++] = (ClassStructure) constClz.getComponent();
+                        }
 
-                        // TODO currently this checks "extendsClass", but it needs a broader check that includes mixins, impersonation, etc.
-                        ClassStructure clzSub = aclz[0];
-                        NextClass: for (iClz = 1; iClz < cClz; ++iClz)
-                            {
-                            ClassStructure clzCur = aclz[iClz];
-                            if (clzSub == null)
-                                {
-                                // no current solution; see if the current class can be a sub to all
-                                // the previous classes
-                                for (int iSuper = 0; iSuper < iClz; ++iSuper)
-                                    {
-                                    if (!clzSub.extendsClass(aclz[iSuper].getIdentityConstant()))
-                                        {
-                                        // the current one is not a sub of all the previous ones
-                                        continue NextClass;
-                                        }
-                                    }
-
-                                // the current one IS a sub of all the previous ones!
-                                clzSub = clzCur;
-                                }
-                            else if (clzSub.extendsClass(clzCur.getIdentityConstant()))
-                                {
-                                // the current solution is still a good solution
-                                continue NextClass;
-                                }
-                            else if (clzCur.extendsClass(clzSub.getIdentityConstant()))
-                                {
-                                // the current one appears to be a better solution than the previous
-                                clzSub = clzCur;
-                                }
-                            else
-                                {
-                                // neither is a sub of the other
-                                clzSub = null;
-                                }
-                            }
-
+                    // TODO currently this checks "extendsClass", but it needs a broader check that includes mixins, impersonation, etc.
+                    ClassStructure clzSub = aclz[0];
+                    NextClass:
+                    for (iClz = 1; iClz < cClz; ++iClz)
+                        {
+                        ClassStructure clzCur = aclz[iClz];
                         if (clzSub == null)
                             {
-                            // no solution found
-                            break;
+                            // no current solution; see if the current class can be a sub to all
+                            // the previous classes
+                            for (int iSuper = 0; iSuper < iClz; ++iSuper)
+                                {
+                                if (!clzSub.extendsClass(aclz[iSuper].getIdentityConstant()))
+                                    {
+                                    // the current one is not a sub of all the previous ones
+                                    continue NextClass;
+                                    }
+                                }
+
+                            // the current one IS a sub of all the previous ones!
+                            clzSub = clzCur;
+                            }
+                        else if (clzSub.extendsClass(clzCur.getIdentityConstant()))
+                            {
+                            // the current solution is still a good solution
+                            continue NextClass;
+                            }
+                        else if (clzCur.extendsClass(clzSub.getIdentityConstant()))
+                            {
+                            // the current one appears to be a better solution than the previous
+                            clzSub = clzCur;
+                            }
+                        else
+                            {
+                            // neither is a sub of the other
+                            clzSub = null;
                             }
                         }
-                    }
 
-                return true;
+                    if (clzSub == null)
+                        {
+                        // no solution found
+                        break;
+                        }
+                    }
                 }
+
+            return true;
+            }
 
             case IntersectionType:
+            {
+            if (isAssignableTo(typeThat.getUnderlyingType()) ||
+                    isAssignableTo(typeThat.getUnderlyingType2()))
                 {
-                if (    isAssignableTo(typeThat.getUnderlyingType()) ||
-                        isAssignableTo(typeThat.getUnderlyingType2()   ))
-                    {
-                    return true;
-                    }
-
-                // even though neither of the two types was individually assignable to, it is
-                // possible that the intersection represents a duck-type-able interface, assuming
-                // that none of the underlying types is a class
-                // TODO - verify that none of the underlying types is a class type
-                // TODO - resolve the intersection type into an interface type, and test assignability to that
-
-                break;
+                return true;
                 }
+
+            // even though neither of the two types was individually assignable to, it is
+            // possible that the intersection represents a duck-type-able interface, assuming
+            // that none of the underlying types is a class
+            // TODO - verify that none of the underlying types is a class type
+            // TODO - resolve the intersection type into an interface type, and test assignability to that
+
+            break;
+            }
 
             case DifferenceType:
-                {
-                // TODO - resolve the difference type into an interface type, and test assignability to that
+            {
+            // TODO - resolve the difference type into an interface type, and test assignability to that
 
-                break;
-                }
+            break;
+            }
 
             case ImmutableType:
+            {
+            // it is assumed that the expression is assignable to an immutable type if the
+            // expression can be assigned to the specified type (without immutability specified),
+            // and the expression is constant (which implies that the expression must be smart
+            // enough to know how to compile itself as an immutable-type expression)
+            if (isConstant() && isAssignableTo(typeThat.getUnderlyingType()))
                 {
-                // it is assumed that the expression is assignable to an immutable type if the
-                // expression can be assigned to the specified type (without immutability specified),
-                // and the expression is constant (which implies that the expression must be smart
-                // enough to know how to compile itself as an immutable-type expression)
-                if (isConstant() && isAssignableTo(typeThat.getUnderlyingType()))
-                    {
-                    return true;
-                    }
-
-                break;
+                return true;
                 }
+
+            break;
+            }
 
             case AccessType:
+            {
+            // regardless of the accessibility override, assignability to the non-overridden
+            // type is a pre-requisite
+            if (!isAssignableTo(typeThat.getUnderlyingType()))
                 {
-                // regardless of the accessibility override, assignability to the non-overridden
-                // type is a pre-requisite
-                if (!isAssignableTo(typeThat.getUnderlyingType()))
-                    {
-                    break;
-                    }
-
-                if (typeThat.getAccess() != Access.PUBLIC)
-                    {
-                    // the non-public type needs to be flattened to an interface and evaluated
-                    // TODO - resolve the non-public type into an interface type, and test assignability to that
-
-                    break;
-                    }
-
-                return true;
+                break;
                 }
+
+            if (typeThat.getAccess() != Access.PUBLIC)
+                {
+                // the non-public type needs to be flattened to an interface and evaluated
+                // TODO - resolve the non-public type into an interface type, and test assignability to that
+
+                break;
+                }
+
+            return true;
+            }
 
             case ParameterizedType:
+            {
+            if (!isAssignableTo(typeThat.getUnderlyingType()))
                 {
-                if (!isAssignableTo(typeThat.getUnderlyingType()))
-                    {
-                    break;
-                    }
+                break;
+                }
 
-                // either this expression evaluates implicitly to the same parameterized type (or a  itself, or we
+            // either this expression evaluates implicitly to the same parameterized type (or a  itself, or we
 
-                // the non-parameterized type was assignable to; flatten the parameterized type into an
-                // interface and evaluate
-                // TODO
+            // the non-parameterized type was assignable to; flatten the parameterized type into an
+            // interface and evaluate
+            // TODO
 
+            return true;
+            }
+
+            case AnnotatedType:
+            {
+            // TODO
+            notImplemented();
+            break;
+            }
+
+            case TerminalType:
+            {
+            if (typeThat.isEcstasy("Object"))
+                {
+                // everything is assignable to Object
                 return true;
                 }
 
-            case AnnotatedType:
+            // an expression is assignable to a type, by default, if its implicit type is
+            // assignable to that type; this is over-ridden; this will probably need to be
+            // overwritten by various expressions
+            typeImplicit = getImplicitType();
+            if (typeImplicit.isA(typeThat))
                 {
-                // TODO
-                notImplemented();
-                break;
+                return true;
                 }
 
-            case TerminalType:
-                {
-                if (typeThat.isEcstasy("Object"))
-                    {
-                    // everything is assignable to Object
-                    return true;
-                    }
-
-                // an expression is assignable to a type, by default, if its implicit type is
-                // assignable to that type; this is over-ridden; this will probably need to be
-                // overwritten by various expressions
-                typeImplicit = getImplicitType();
-                if (typeImplicit.isA(typeThat))
-                    {
-                    return true;
-                    }
-
-                break;
-                }
+            break;
+            }
 
             default:
                 throw new IllegalStateException("format=" + typeThat.getFormat());
@@ -902,4 +859,217 @@ public abstract class Expression
             }
         return listRegs;
         }
+
+
+    // ----- inner class: Assignable ---------------------------------------------------------------
+
+    /**
+     * Assignable represents an L-Value.
+     */
+    public class Assignable
+        {
+        // ----- constructors ------------------------------------------------------------------
+
+        public Assignable()
+            {
+            m_nForm = BlackHole;
+            }
+
+        public Assignable(Register regVar)
+            {
+            m_nForm = LocalVar;
+            m_arg   = regVar;
+            }
+
+        public Assignable(Argument argTarget, PropertyConstant constProp)
+            {
+            // TODO verify with GG that A_TARGET is correct (or is it A_PRIVATE?)
+            m_nForm  = argTarget instanceof Register && ((Register) argTarget).getIndex() == Op.A_TARGET
+                    ? LocalProp
+                    : TargetProp;
+            m_arg    = argTarget;
+            m_oExtra = constProp;
+            }
+
+        public Assignable(Register regArray, Argument index)
+            {
+            m_nForm  = Indexed;
+            m_arg    = regArray;
+            m_oExtra = index;
+            }
+
+        public Assignable(Register regArray, Argument[] indexes)
+            {
+            m_nForm  = IndexedN;
+            m_arg    = regArray;
+            m_oExtra = indexes;
+            }
+
+        // ----- accessors ---------------------------------------------------------------------
+
+        /**
+         * @return the type of the L-Value
+         */
+        public TypeConstant getType()
+            {
+            switch (m_nForm)
+                {
+                case BlackHole:
+                    return pool().typeObject();
+
+                case LocalVar:
+                    return getRegister().getType();
+
+                case LocalProp:
+                case TargetProp:
+                    return getProperty().getType();
+
+                case Indexed:
+                case IndexedN:
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        /**
+         * Determine the type of assignability:
+         * <ul>
+         * <li>{@link #BlackHole} - a write-only register that anyone can assign to, resulting in
+         *     the value being discarded</li>
+         * <li>{@link #LocalVar} - a local variable of a method that can be assigned</li>
+         * <li>{@link #LocalProp} - a local (this:private) property that can be assigned</li>
+         * <li>{@link #TargetProp} - a property of a specified reference that can be assigned</li>
+         * <li>{@link #Indexed} - an index into a single-dimensioned array</li>
+         * <li>{@link #IndexedN} - an index into a multi-dimensioned array</li>
+         * </ul>
+         *
+         * @return the form of the Assignable, one of: {@link #BlackHole}, {@link #LocalVar},
+         *         {@link #LocalProp}, {@link #TargetProp}, {@link #Indexed}, {@link #IndexedN}
+         */
+        public int getForm()
+            {
+            return m_nForm;
+            }
+
+        /**
+         * @return the register, iff this Assignable represents a local variable
+         */
+        public Register getRegister()
+            {
+            if (m_nForm != LocalVar)
+                {
+                throw new IllegalStateException();
+                }
+            return (Register) m_arg;
+            }
+
+        /**
+         * @return the property target, iff this Assignable represents a property
+         */
+        public Argument getTarget()
+            {
+            if (m_nForm != LocalProp && m_nForm != TargetProp)
+                {
+                throw new IllegalStateException();
+                }
+            return m_arg;
+            }
+
+        /**
+         * @return the property, iff this Assignable represents a property
+         */
+        public PropertyConstant getProperty()
+            {
+            if (m_nForm != LocalProp && m_nForm != TargetProp)
+                {
+                throw new IllegalStateException();
+                }
+            return (PropertyConstant) m_oExtra;
+            }
+
+        /**
+         * @return the register for the array, iff this Assignable represents an array
+         */
+        public Register getArray()
+            {
+            if (m_nForm != Indexed && m_nForm != IndexedN)
+                {
+                throw new IllegalStateException();
+                }
+            return (Register) m_arg;
+            }
+
+        /**
+         * @return the array index, iff this Assignable represents a 1-dimensional array
+         */
+        public Argument getIndex()
+            {
+            if (m_nForm == Indexed)
+                {
+                return (Argument) m_oExtra;
+                }
+
+            if (m_nForm == IndexedN)
+                {
+                Argument[] args = (Argument[]) m_oExtra;
+                if (args.length == 1)
+                    {
+                    return args[0];
+                    }
+                }
+
+            throw new IllegalStateException();
+            }
+
+        /**
+         * @return the array indexes, iff this Assignable represents an any-dimensional array
+         */
+        public Argument[] getIndexes()
+            {
+            if (m_nForm == Indexed)
+                {
+                return new Argument[] {(Argument) m_oExtra};
+                }
+
+            if (m_nForm == IndexedN)
+                {
+                return (Argument[]) m_oExtra;
+                }
+
+            throw new IllegalStateException();
+            }
+
+        // ----- compilation -------------------------------------------------------------------
+
+        /**
+         * TODO
+         *
+         * @param arg
+         * @param code
+         * @param errs
+         */
+        public void assign(Argument arg, Code code, ErrorListener errs)
+            {
+            // TODO
+            }
+
+        // ----- fields ------------------------------------------------------------------------
+
+        public static final int BlackHole  = 0;
+        public static final int LocalVar   = 1;
+        public static final int LocalProp  = 2;
+        public static final int TargetProp = 3;
+        public static final int Indexed    = 4;
+        public static final int IndexedN   = 5;
+
+        private int      m_nForm;
+        private Argument m_arg;
+        private Object   m_oExtra;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    public static final Assignable[] NO_LVALUES = new Assignable[0];
     }

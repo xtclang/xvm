@@ -235,7 +235,8 @@ public class LiteralExpression
         }
 
     @Override
-    public Argument generateConstant(TypeConstant type, ErrorListener errs)
+    public Argument generateConstant(Code code, TypeConstant type,
+            ErrorListener errs)
         {
         if (type.isSingleDefiningConstant()
                 && type.getDefiningConstant() instanceof ClassConstant
@@ -644,7 +645,7 @@ public class LiteralExpression
                 }
             }
 
-        return super.generateConstant(type, errs);
+        return super.generateConstant(code, type, errs);
         }
 
     @Override
@@ -697,7 +698,7 @@ public class LiteralExpression
                 case "Float64":
                 case "Float128":
                 case "VarFloat":
-                    return generateConstant(type, errs);
+                    return generateConstant(code, type, errs);
                 }
             }
 

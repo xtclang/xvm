@@ -8,8 +8,6 @@ import org.xvm.compiler.Token;
 
 /**
  * A version literal.
- *
- * @author cp 2017.06.20
  */
 public class VersionExpression
         extends LiteralExpression

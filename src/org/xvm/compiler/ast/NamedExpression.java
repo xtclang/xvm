@@ -8,8 +8,6 @@ import java.lang.reflect.Field;
 
 /**
  * Used for named arguments.
- *
- * @author cp 2017.04.08
  */
 public class NamedExpression
         extends Expression
@@ -42,6 +40,10 @@ public class NamedExpression
         {
         return CHILD_FIELDS;
         }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
 
 
     // ----- debugging assistance ------------------------------------------------------------------
