@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
+import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.PropertyConstant;
@@ -138,6 +139,12 @@ public class P_Get
     @Override
     public void simulate(Scope scope)
         {
+        if (isNextRegister(m_argReturn))
+            {
+            ((Register) m_argReturn).assignIndex(scope.allocVar());
+            }
+        // TODO: remove when deprecated construction is removed
+        else
         if (scope.isNextRegister(m_nRetValue))
             {
             scope.allocVar();

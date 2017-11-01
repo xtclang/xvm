@@ -229,6 +229,12 @@ public abstract class OpTest
     @Override
     public void simulate(Scope scope)
         {
+        if (isNextRegister(m_argReturn))
+            {
+            ((Register) m_argReturn).assignIndex(scope.allocVar());
+            }
+        // TODO: remove when deprecated construction is removed
+        else
         if (scope.isNextRegister(m_nRetValue))
             {
             scope.allocVar();

@@ -152,6 +152,12 @@ public abstract class OpInPlace
     @Override
     public void simulate(Scope scope)
         {
+        if (isAssignOp() && isNextRegister(m_argReturn))
+            {
+            ((Register) m_argReturn).assignIndex(scope.allocVar());
+            }
+        // TODO: remove when deprecated construction is removed
+        else
         if (isAssignOp() && scope.isNextRegister(m_nRetValue))
             {
             scope.allocVar();

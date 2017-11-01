@@ -144,6 +144,18 @@ public abstract class Op
         }
 
     /**
+     * Check if the specified Argument represents "the next available" register.
+     *
+     * @param arg  the argument
+     *
+     * @return true iff the specified Argument represents "the next available" register
+     */
+    public boolean isNextRegister(Argument arg)
+        {
+        return arg instanceof Register && ((Register) arg).isUnknown();
+        }
+
+    /**
      * Determine if the specified Argument is readable. This is equivalent to the Ref for the
      * argument supporting the get() operation.
      *
