@@ -958,31 +958,7 @@ public class Frame
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        // TODO: the type could be cached on the corresponding op-code
-        if (nVarArray >= 0)
-            {
-            VarInfo infoFrom = f_aInfo[nVarArray];
-            TypeComposition clzArray = infoFrom.getType().f_clazz;
-            Type typeElement = clzArray.getActualParamType("ElementType");
-
-            f_aInfo[nVar] = new VarInfo(typeElement, null, VAR_STANDARD);
-            }
-        else
-            {
-            // "local property" or a literal constant
-            Constant constFrom = getConstant(nVarArray);
-            TypeConstant typeArray = constFrom.getType();
-
-            if (typeArray.isParamsSpecified())
-                {
-                TypeConstant typeElement = typeArray.getParamTypes().get(0);
-                f_aInfo[nVar] = new VarInfo(typeElement.getPosition(), null, VAR_STANDARD);
-                }
-            else
-                {
-                f_aInfo[nVar] = new VarInfo(xObject.TYPE, null, VAR_STANDARD);
-                }
-            }
+        f_aInfo[nVar] = new VarInfo(nVarArray, ARRAY_ELEMENT_RESOLVER);
         }
 
     /**
@@ -997,35 +973,7 @@ public class Frame
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        Type typeElement;
-        if (nVarArray >= 0)
-            {
-            VarInfo infoFrom = f_aInfo[nVarArray];
-            TypeComposition clzArray = infoFrom.getType().f_clazz;
-            typeElement = clzArray.getActualParamType("ElementType");
-            }
-        else
-            {
-            // "local property" or a literal constant
-            Constant constFrom = getConstant(nVarArray);
-            TypeConstant typeArray = constFrom.getType();
-
-            if (typeArray.isParamsSpecified())
-                {
-                TypeConstant constElementType = typeArray.getParamTypes().get(0);
-                typeElement = f_context.f_types.resolveType(constElementType, getActualTypes());
-                }
-            else
-                {
-                // Ref<Object>
-                f_aInfo[nVar] = new VarInfo(Ref.TYPE, null, VAR_STANDARD);
-                return;
-                }
-            }
-
-        TypeComposition clzRef = Ref.INSTANCE.ensureClass(
-            Collections.singletonMap("RefType", typeElement));
-        f_aInfo[nVar] = new VarInfo(clzRef.ensurePublicType(), null, VAR_STANDARD);
+        f_aInfo[nVar] = new VarInfo(nVar, ARRAY_ELEMENT_REF_RESOLVER);
         }
 
     public VarInfo getVarInfo(int nVar)
@@ -1298,6 +1246,7 @@ public class Frame
         private String m_sVarName;
         private int m_nStyle; // one of the VAR_* values
         private RefHandle m_ref; // an "active" reference to this register
+        private TypeResolver m_resolver;
 
         public VarInfo(int nTypeId, int nNameId, int nStyle)
             {
@@ -1320,6 +1269,14 @@ public class Frame
             m_nStyle = nStyle;
             }
 
+        // in this case the nTypeId is an argument to the resolver
+        public VarInfo(int nTypeId, TypeResolver resolver)
+            {
+            m_nTypeId = nTypeId;
+            m_nStyle = VAR_STANDARD;
+            m_resolver = resolver;
+            }
+
         public String getName()
             {
             String sName = m_sVarName;
@@ -1335,9 +1292,16 @@ public class Frame
             Type type = m_type;
             if (type == null)
                 {
-                TypeConstant constType = (TypeConstant) f_context.f_pool.getConstant(m_nTypeId);
+                if (m_resolver == null)
+                    {
+                    TypeConstant constType = (TypeConstant) f_context.f_pool.getConstant(m_nTypeId);
 
-                type = m_type = f_context.f_types.resolveType(constType, getActualTypes());
+                    type = m_type = f_context.f_types.resolveType(constType, getActualTypes());
+                    }
+                else
+                    {
+                    type = m_resolver.resolve(Frame.this, m_nTypeId);
+                    }
                 }
             return type;
             }
@@ -1370,6 +1334,12 @@ public class Frame
             {
             return getName() + ": " + getType();
             }
+
+        }
+
+    interface TypeResolver
+        {
+        Type resolve(Frame frame, int iTypeId);
         }
 
     public interface Continuation
@@ -1378,4 +1348,44 @@ public class Frame
         // return either R_NEXT, R_CALL or R_EXCEPTION
         int proceed(Frame frameCaller);
         }
+
+    protected static final TypeResolver ARRAY_ELEMENT_RESOLVER = new TypeResolver()
+        {
+        @Override
+        public Type resolve(Frame frame, int nVarArray)
+            {
+            if (nVarArray >= 0)
+                {
+                VarInfo infoArray = frame.f_aInfo[nVarArray];
+                TypeComposition clzArray = infoArray.getType().f_clazz;
+                return clzArray.getActualParamType("ElementType");
+                }
+
+            // "local property" or a literal constant
+            TypeConstant typeArray = frame.getConstant(nVarArray).getType();
+            if (typeArray.isParamsSpecified())
+                {
+                TypeConstant constElType = typeArray.getParamTypes().get(0);
+                return frame.f_context.f_types.resolveType(constElType, frame.getActualTypes());
+                }
+            return xObject.TYPE;
+            }
+        };
+
+    protected static final TypeResolver ARRAY_ELEMENT_REF_RESOLVER = new TypeResolver()
+        {
+        @Override
+        public Type resolve(Frame frame, int nVarArray)
+            {
+            Type typeElement = ARRAY_ELEMENT_RESOLVER.resolve(frame, nVarArray);
+            if (typeElement == xObject.TYPE)
+                {
+                return Ref.TYPE;
+                }
+
+            TypeComposition clzRef = Ref.INSTANCE.ensureClass(
+                Collections.singletonMap("RefType", typeElement));
+            return clzRef.ensurePublicType();
+            }
+        };
     }
