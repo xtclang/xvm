@@ -48,15 +48,7 @@ public interface IndexSupport
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 
-            if (frame.isNextRegister(iReturn))
-                {
-                frame.introduceVar(clzRef.ensurePublicType(), null, Frame.VAR_STANDARD, hRef);
-                return Op.R_NEXT;
-                }
-            else
-                {
-                return frame.assignValue(iReturn, hRef);
-                }
+            return frame.assignValue(iReturn, hRef);
             }
         catch (ExceptionHandle.WrapperException e)
             {

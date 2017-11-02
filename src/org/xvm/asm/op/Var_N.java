@@ -91,7 +91,7 @@ public class Var_N
     @Override
     public int process(Frame frame, int iPC)
         {
-        frame.introduceVar(m_nType, m_nNameId, Frame.VAR_STANDARD, null);
+        frame.introduceVar(convertId(m_nType), m_nNameId, Frame.VAR_STANDARD, null);
 
         return iPC + 1;
         }

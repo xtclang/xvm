@@ -19,6 +19,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.Function.FullyBoundHandle;
+import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
@@ -31,8 +32,6 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 /**
  * A call stack frame.
- *
- * @author gg 2017.02.15
  */
 public class Frame
     {
@@ -593,6 +592,42 @@ public class Frame
             }
         }
 
+    // assign the specified register on the caller's frame
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    private int returnValue(int iReturn, ObjectHandle hValue)
+        {
+        int iResult = f_framePrev.assignValue(iReturn, hValue);
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                return Op.R_RETURN;
+
+            case Op.R_CALL:
+                m_frameNext.setContinuation(frameCaller -> Op.R_RETURN);
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_RETURN_EXCEPTION;
+
+            case Op.R_BLOCK:
+                return Op.R_BLOCK_RETURN;
+
+            default:
+                throw new IllegalArgumentException("iResult=" + iResult);
+            }
+        }
+
+    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
+    private int returnAsTuple(ObjectHandle[] ahValue)
+        {
+        assert f_iReturn == RET_TUPLE;
+
+        int iReturn = f_aiReturn[0];
+
+        TypeComposition clazz = f_framePrev.getVarInfo(iReturn).getType().f_clazz;
+        return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue));
+        }
+
     // assign the return registers on the caller's frame
     // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
     public int returnValues(ObjectHandle[] ahValue)
@@ -623,42 +658,6 @@ public class Frame
 
             default:
                 throw new IllegalArgumentException("iReturn=" + f_iReturn);
-            }
-        }
-
-    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
-    private int returnAsTuple(ObjectHandle[] ahValue)
-        {
-        assert f_iReturn == RET_TUPLE;
-
-        int iReturn = f_aiReturn[0];
-
-        TypeComposition clazz = f_framePrev.getVarInfo(iReturn).getType().f_clazz;
-        return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue));
-        }
-
-    // assign the specified register on the caller's frame
-    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
-    public int returnValue(int iReturn, ObjectHandle hValue)
-        {
-        int iResult = f_framePrev.assignValue(iReturn, hValue);
-        switch (iResult)
-            {
-            case Op.R_NEXT:
-                return Op.R_RETURN;
-
-            case Op.R_CALL:
-                m_frameNext.setContinuation(frameCaller -> Op.R_RETURN);
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_RETURN_EXCEPTION;
-
-            case Op.R_BLOCK:
-                return Op.R_BLOCK_RETURN;
-
-            default:
-                throw new IllegalArgumentException("iResult=" + iResult);
             }
         }
 
@@ -701,6 +700,12 @@ public class Frame
         {
         assert iArg < Op.CONSTANT_OFFSET;
         return f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
+        }
+
+    public TypeComposition resolveClass(int iArg)
+        {
+        assert iArg < Op.CONSTANT_OFFSET;
+        return f_context.f_types.resolveClass(Op.CONSTANT_OFFSET - iArg, getActualTypes());
         }
 
     public int checkWaitingRegisters()
@@ -853,6 +858,8 @@ public class Frame
         throw new IllegalStateException("Invalid register index");
         }
 
+    // Note: the typeId is an "absolute" (positive, ConstantPool based) number
+    // (see Op.convertId())
     // Note: this method increments up the "nextVar" index
     public void introduceVar(int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
         {
@@ -886,7 +893,7 @@ public class Frame
     /**
      * Introduce a new standard variable by copying the type from the specified argument.
      *
-     * Note: this method increments up the "nextVar" index
+     * Note: this method increments the "nextVar" index.
      *
      * @param nVarFrom  if positive, the register number; otherwise a constant id
      */
@@ -904,6 +911,8 @@ public class Frame
             }
         else
             {
+            // TODO: the type id could be cached on the corresponding op-code
+
             // "local property" or a literal constant
             Constant constFrom = getConstant(nVarFrom);
 
@@ -912,20 +921,21 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable by copying the type the specified from array element.
+     * Introduce a new standard variable of the "ElementType" for the specified array variable.
      *
-     * Note: this method increments up the "nextVar" index
+     * Note: this method increments the "nextVar" index.
      *
-     * @param nVarFrom  if positive, the register number holding an array;
-     *                  otherwise a constant id pointing to an array type
+     * @param nVarArray  if positive, the register number holding an array handle;
+     *                   otherwise a constant id pointing to an array type
      */
-    public void introduceElementVarCopy(int nVarFrom)
+    public void introduceElementVar(int nVarArray)
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        if (nVarFrom >= 0)
+        // TODO: the type could be cached on the corresponding op-code
+        if (nVarArray >= 0)
             {
-            VarInfo infoFrom = f_aInfo[nVarFrom];
+            VarInfo infoFrom = f_aInfo[nVarArray];
             TypeComposition clzArray = infoFrom.getType().f_clazz;
             Type typeElement = clzArray.getActualParamType("ElementType");
 
@@ -934,7 +944,7 @@ public class Frame
         else
             {
             // "local property" or a literal constant
-            Constant constFrom = getConstant(nVarFrom);
+            Constant constFrom = getConstant(nVarArray);
             TypeConstant typeArray = constFrom.getType();
 
             if (typeArray.isParamsSpecified())
@@ -947,6 +957,49 @@ public class Frame
                 f_aInfo[nVar] = new VarInfo(xObject.TYPE, null, VAR_STANDARD);
                 }
             }
+        }
+
+    /**
+     * Introduce a new standard variable of the Ref<ElementType> for the specified array variable.
+     *
+     * Note: this method increments the "nextVar" index.
+     *
+     * @param nVarArray  if positive, the register number holding an array handle;
+     *                   otherwise a constant id pointing to an array type
+     */
+    public void introduceElementRef(int nVarArray)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        Type typeElement;
+        if (nVarArray >= 0)
+            {
+            VarInfo infoFrom = f_aInfo[nVarArray];
+            TypeComposition clzArray = infoFrom.getType().f_clazz;
+            typeElement = clzArray.getActualParamType("ElementType");
+            }
+        else
+            {
+            // "local property" or a literal constant
+            Constant constFrom = getConstant(nVarArray);
+            TypeConstant typeArray = constFrom.getType();
+
+            if (typeArray.isParamsSpecified())
+                {
+                TypeConstant constElementType = typeArray.getParamTypes().get(0);
+                typeElement = f_context.f_types.resolveType(constElementType, getActualTypes());
+                }
+            else
+                {
+                // Ref<Object>
+                f_aInfo[nVar] = new VarInfo(Ref.TYPE, null, VAR_STANDARD);
+                return;
+                }
+            }
+
+        TypeComposition clzRef = Ref.INSTANCE.ensureClass(
+            Collections.singletonMap("RefType", typeElement));
+        f_aInfo[nVar] = new VarInfo(clzRef.ensurePublicType(), null, VAR_STANDARD);
         }
 
     public VarInfo getVarInfo(int nVar)
@@ -1193,13 +1246,11 @@ public class Frame
 
         public int handle(Frame frame, ExceptionHandle hException, int iGuard)
             {
-            ServiceContext context = frame.f_context;
             TypeComposition clzException = hException.f_clazz;
 
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {
-                TypeComposition clzCatch = context.f_types.
-                    resolveClass(f_anClassConstId[iCatch], frame.getActualTypes());
+                TypeComposition clzCatch = frame.resolveClass(f_anClassConstId[iCatch]);
                 if (clzException.isA(clzCatch))
                     {
                     introduceException(frame, iGuard, hException,

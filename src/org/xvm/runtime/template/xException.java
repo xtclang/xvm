@@ -1,6 +1,7 @@
 package org.xvm.runtime.template;
 
 
+import com.sun.istack.internal.Nullable;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -88,7 +89,8 @@ public class xException
 
         INSTANCE.setFieldValue(hException, INSTANCE.getProperty("stackTrace"),
                 xString.makeHandle(frame.getStackTrace()));
-        INSTANCE.setFieldValue(hException, INSTANCE.getProperty("cause"), hCause);
+        INSTANCE.setFieldValue(hException, INSTANCE.getProperty("cause"),
+            hCause == null ? xNullable.NULL : hCause);
 
         return hException;
         }

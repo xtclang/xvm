@@ -97,7 +97,7 @@ public class xTestService extends Service
 
             new Enter(),
             new Var(this.adapter.getClassTypeConstId("Exception")), // #2
-            new New_N(-adapter.getMethodConstId("Exception", "construct"),
+            new New_N(adapter.getMethodConstId("Exception", "construct"),
                     new int[] {
                             adapter.ensureValueConstantId("test"),
                             adapter.ensureValueConstantId(null)
@@ -110,7 +110,7 @@ public class xTestService extends Service
                      adapter.ensureValueConstantId("iRet")), // #2 (iRet)
 
             new Var_I(adapter.getClassTypeConstId("Function"),
-                    adapter.getMethodVarId("TestApp.TestService", "lambda_1")), // #3
+                    adapter.getMethodConstId("TestApp.TestService", "lambda_1")), // #3
             new MoveRef(2, 4), // next register #4 (&iRet)
             new FBind(3, new int[] {0, 1}, new int[] {4, 0}, 3),
             new Invoke_N0(adapter.getPropertyConstId("TestApp.TestService", "runtimeClock"),

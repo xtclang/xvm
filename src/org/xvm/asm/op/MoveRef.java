@@ -41,12 +41,12 @@ public class MoveRef
     /**
      * Construct a REF op for the passed arguments.
      *
-     * @param argSrc   the source Register
+     * @param regSrc   the source Register
      * @param regDest  the destination Register
      */
-    public MoveRef(Argument argSrc, Register regDest)
+    public MoveRef(Register regSrc, Register regDest)
         {
-        super(argSrc, regDest);
+        super(regSrc, regDest);
         }
 
     /**

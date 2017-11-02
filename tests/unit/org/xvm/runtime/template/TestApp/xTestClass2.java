@@ -39,7 +39,7 @@ public class xTestClass2 extends ClassTemplate
             new X_Print(
                     adapter.ensureValueConstantId("# in constructor: TestClass2 #")),
             new L_Set(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 0),
-            new Construct_1(-adapter.getMethodConstId("TestApp.TestClass", "construct"),
+            new Construct_1(adapter.getMethodConstId("TestApp.TestClass", "construct"),
                     1),
             new Return_0(),
             });

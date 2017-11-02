@@ -117,7 +117,7 @@ public abstract class OpIndex
 
             if (isAssignOp() && frame.isNextRegister(m_nRetValue))
                 {
-                introduceReturnVar(frame);
+                introduceAssignVar(frame);
                 }
 
             if (isProperty(hTarget) || isProperty(hIndex))
@@ -138,13 +138,13 @@ public abstract class OpIndex
         }
 
     /**
-     * Introduce a register for the the return value.
+     * Introduce a register for the resulting value.
      *
      * This method should be overridden by I_Ref to introduce a Ref of an element instead.
      */
-    protected void introduceReturnVar(Frame frame)
+    protected void introduceAssignVar(Frame frame)
         {
-        frame.introduceElementVarCopy(m_nTarget);
+        frame.introduceElementVar(m_nTarget);
         }
 
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)

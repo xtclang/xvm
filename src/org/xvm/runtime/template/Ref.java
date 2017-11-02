@@ -10,6 +10,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
@@ -23,6 +24,7 @@ public class Ref
         extends ClassTemplate
     {
     public static Ref INSTANCE;
+    public static Type TYPE;
 
     public Ref(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -31,6 +33,7 @@ public class Ref
         if (fInstance)
             {
             INSTANCE = this;
+            TYPE = f_clazzCanonical.ensurePublicType();
             }
         }
 
