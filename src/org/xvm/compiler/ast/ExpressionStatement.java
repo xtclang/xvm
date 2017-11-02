@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.Collections;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
@@ -131,7 +132,7 @@ public class ExpressionStatement
         if (getUsage() == Usage.Standalone)
             {
             // so an expression is being used as a statement; blackhole the results
-            expr.generateArguments(code, Collections.EMPTY_LIST, false, errs);
+            expr.generateAssignments(code, Expression.NO_LVALUES, errs);
             }
         else if (m_rte == RuntimeEval.RequiresEval)
             {

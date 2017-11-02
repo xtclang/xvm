@@ -28,6 +28,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.ast.Expression.Assignable;
+
 import org.xvm.util.Severity;
 
 
@@ -154,7 +156,8 @@ public class VariableDeclarationStatement
                 code.add(new Var_N(type.getTypeConstant(), pool().ensureStringConstant((String) name.getValue())));
                 Register regVal = code.lastRegister();
                 // next, assign the r-value to the two variables
-                value.generateAssignments(code, new Argument[] {regCond, regVal}, errs);
+                value.generateAssignments(code, new Assignable[]
+                        {value.new Assignable(regCond), value.new Assignable(regVal)}, errs);
                 code.add(getUsage() == Usage.If
                         ? new JumpFalse(regCond, getLabel())
                         : new JumpTrue (regCond, getLabel()));

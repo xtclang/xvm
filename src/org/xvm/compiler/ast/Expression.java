@@ -452,15 +452,10 @@ public abstract class Expression
             aType[i] = aLVal[i].getType();
             }
         Argument[] aArg = generateArguments(code, aType, false, errs);
-
-        int cArgs  = getValueCount();
-
-        // this will be overridden by classes that can push down the work
-        LVal.assign(arg, code, errs);
-
-        // TODO should be abstract
-        assert isAssignable();
-        throw notImplemented();
+        for (int i = 0; i < cLVals; ++i)
+            {
+            aLVal[i].assign(aArg[i], code, errs);
+            }
         }
 
     /**
@@ -757,8 +752,7 @@ public abstract class Expression
      */
     public boolean isTypeBoolean()
         {
-        // TODO this does not seem correct
-        return getImplicitType().isEcstasy("Boolean");
+        return getImplicitType().isEcstasy("Boolean") || isAssignableTo(pool().typeBoolean());
         }
 
     /**
@@ -766,8 +760,7 @@ public abstract class Expression
      */
     public boolean isConstantFalse()
         {
-        // TODO this does not seem correct
-        return getImplicitType().isEcstasy("Boolean.False");
+        return toConstant().equals(pool().valFalse());
         }
 
     /**
@@ -775,8 +768,7 @@ public abstract class Expression
      */
     public boolean isConstantTrue()
         {
-        // TODO this does not seem correct
-        return getImplicitType().isEcstasy("Boolean.True");
+        return toConstant().equals(pool().valTrue());
         }
 
     /**
@@ -784,9 +776,7 @@ public abstract class Expression
      */
     public boolean isConstantNull()
         {
-        // TODO this does not seem correct
-        return getImplicitType().isEcstasy("Nullable.Null");
-        // perhaps: return isAssignableTo(pool().typeNullable());
+        return toConstant().equals(pool().valNull());
         }
     
     /**
