@@ -13,6 +13,8 @@ import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Var_T;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
@@ -176,6 +178,24 @@ public class TupleExpression
         }
 
     @Override
+    public Constant toConstant()
+        {
+        if (isConstant())
+            {
+            List<Expression> listExprs    = m_exprs;
+            int              cFields      = listExprs == null ? 0 : listExprs.size();
+            Constant[]       aconstFields = new Constant[cFields];
+            for (int i = 0; i < cFields; ++i)
+                {
+                aconstFields[i] = listExprs.get(i).toConstant();
+                }
+            return pool().ensureTupleConstant(getImplicitType(), aconstFields);
+            }
+
+        return super.toConstant();
+        }
+
+    @Override
     public TypeConstant getImplicitType()
         {
         TypeConstant constType = m_constType;
@@ -188,40 +208,67 @@ public class TupleExpression
         }
 
     @Override
-    public Constant generateConstant(MethodStructure.Code code, TypeConstant type,
-            ErrorListener errs)
+    public Argument generateConstant(MethodStructure.Code code, TypeConstant type, ErrorListener errs)
         {
-        // TODO current design does not allow conformance to the tuple type that was specified
-        TypeConstant     constTType = getImplicitType();
-        assert constTType.isTuple();
-        int              cFields    = constTType.getTupleFieldCount();
-        List<Expression> listExprs  = m_exprs;
-        int              cExprs     = listExprs.size();
-        Constant[]       aconst     = new Constant[cExprs];
+        assert isConstant();
+
+        if (!isAssignableTo(type))
+            {
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, getImplicitType(), type);
+            return generateBlackHole(type);
+            }
+
+        // we'll need to know the type to ask for for each field, even if the caller didn't specify
+        // field types (in which case we'll use the implicit type)
+        TypeConstant typeTuple = type.isTuple() && type.isParamsSpecified()
+                ? type
+                : getImplicitType();
+
+        // for each field, generate an argument representing the value of that field
+        List<Expression> listExprs = m_exprs;
+        int              cExprs    = listExprs.size();
+        Constant[]       aField    = new Constant[cExprs];
         for (int i = 0; i < cExprs; ++i)
             {
-            TypeConstant constFType = i < cFields
-                    ? constTType.getTupleFieldType(i)
-                    : pool().typeObject();
-            aconst[i] = listExprs.get(i).toConstant();
+            // TODO Argument or Constant
+            aField[i] = (Constant) listExprs.get(i).generateConstant(code, typeTuple.getTupleFieldType(i), errs);
             }
-        return pool().ensureTupleConstant(constTType, aconst);
+
+        return pool().ensureTupleConstant(type, aField);
         }
 
     @Override
-    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk,
-            ErrorListener errs)
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
         {
-        if (type.isTuple())
+        if (isConstant())
             {
-            // this is the expected case, i.e. that someone is asking for this expression to be
-            // represented as a tuple
+            return generateConstant(code, type, errs);
             }
-        else
+
+        if (!isAssignableTo(type))
             {
-            // TODO log(errs, Severity.ERROR, Compiler)
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, getImplicitType(), type);
+            return generateBlackHole(type);
             }
-        return super.generateArgument(code, type, fTupleOk, errs);
+
+        // we'll need to know the type to ask for for each field, even if the caller didn't specify
+        // field types (in which case we'll use the implicit type)
+        TypeConstant typeTuple = type.isTuple() && type.isParamsSpecified()
+                ? type
+                : getImplicitType();
+
+        // for each field, generate an argument representing the value of that field
+        List<Expression> listExprs = m_exprs;
+        int              cExprs    = listExprs.size();
+        Argument[]       aField    = new Argument[cExprs];
+        for (int i = 0; i < cExprs; ++i)
+            {
+            aField[i] = listExprs.get(i).generateArgument(code, typeTuple.getTupleFieldType(i), false, errs);
+            }
+
+        // generate the tuple itself, and return it as an argument
+        code.add(new Var_T(type, aField));
+        return code.lastRegister();
         }
 
     @Override

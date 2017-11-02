@@ -4,6 +4,7 @@ module Ecstasy.xtclang.org
 
     class Object
         {
+        function Object() to<function Object()>();
         }
 
     class Int64
