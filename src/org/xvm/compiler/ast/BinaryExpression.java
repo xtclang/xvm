@@ -3,7 +3,13 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.ErrorListener;
+
+import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.util.ListMap;
 
 import java.util.Map;
@@ -14,8 +20,6 @@ import static org.xvm.util.Handy.byteArrayToHexString;
 
 /**
  * A binary expression specifies a literal binary value. As in, bytes.
- *
- * @author cp 2017.03.28
  */
 public class BinaryExpression
         extends Expression
@@ -48,6 +52,14 @@ public class BinaryExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        // a literal is validated by the lexer/parser, and there is nothing left to validate at this
+        // point
+        return true;
+        }
 
     @Override
     public TypeConstant getImplicitType()

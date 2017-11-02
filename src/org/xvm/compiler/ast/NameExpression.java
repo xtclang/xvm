@@ -1,6 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
+import java.util.Collections;
+import java.util.List;
+
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -9,17 +14,12 @@ import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
-import java.lang.reflect.Field;
-
-import java.util.Collections;
-import java.util.List;
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
  * A name expression specifies a name. This handles both a simple name, a qualified name, and a name
  * with type parameters.
- *
- * @author cp 2017.03.28
  */
 public class NameExpression
         extends Expression
@@ -143,6 +143,27 @@ public class NameExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        boolean fValid = true;
+
+        // TODO - @see NameResolver to resolve names: List<Token> names
+
+        if (params != null)
+            {
+            for (TypeExpression type : params)
+                {
+                fValid &= type.validate(ctx, errs);
+                }
+            }
+
+        return fValid;
         }
 
 

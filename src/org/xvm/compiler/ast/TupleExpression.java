@@ -9,12 +9,16 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
+
+import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -74,6 +78,86 @@ public class TupleExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        boolean fValid = true;
+
+        TypeConstant[] atypeField = null;
+        if (m_type != null)
+            {
+            fValid &= m_type.validate(ctx, errs);
+
+            // validate that the type is a tuple, and if it specifies any field types, then grab
+            // those so that we can subsequently validate the values of those fields
+            TypeConstant type = m_type.ensureTypeConstant();
+            if (type.isTuple())
+                {
+                if (type.isParamsSpecified())
+                    {
+                    atypeField  = type.getParamTypesArray();
+                    m_constType = type;
+                    }
+                }
+            else
+                {
+                // log an error
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, pool().typeTuple(), type);
+                fValid = false;
+                }
+            }
+
+        List<Expression> listExprs = m_exprs;
+        int cExprs = listExprs == null ? 0 : listExprs.size();
+        int cTypes = atypeField == null ? 0 : atypeField.length;
+
+        boolean        fMismatch   = atypeField != null && cExprs != cTypes;
+        boolean        fBuildType  = atypeField == null || fMismatch;
+        TypeConstant[] atypeActual = fBuildType ? new TypeConstant[cExprs] : null;
+
+        for (int i = 0; i < cExprs; ++i)
+            {
+            // validate the field expression
+            Expression expr = listExprs.get(i);
+            fValid &= expr.validate(ctx, errs);
+
+            // validate the type of the field expression (if field types were specified)
+            if (i < cTypes)
+                {
+                TypeConstant typeField = atypeField[i];
+                if (!expr.isAssignableTo(typeField))
+                    {
+                    expr.log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeField, expr.getImplicitType());
+                    fValid = false;
+                    }
+                }
+
+            if (fBuildType)
+                {
+                atypeActual[i] = expr.getImplicitType();
+                }
+            }
+
+        TypeConstant typeActual = null;
+        if (fBuildType)
+            {
+            ConstantPool pool = pool();
+            typeActual = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeActual);
+            if (m_constType == null)
+                {
+                m_constType = typeActual;
+                }
+            }
+
+        if (fMismatch)
+            {
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, m_type.ensureTypeConstant(), typeActual);
+            fValid = false;
+            }
+
+        return fValid;
+        }
+
+    @Override
     public boolean isConstant()
         {
         List<Expression> exprs = getExpressions();
@@ -97,35 +181,7 @@ public class TupleExpression
         TypeConstant constType = m_constType;
         if (constType == null)
             {
-            // obviously the type is "tuple", but "tuple of what?", and there are two ways that the
-            // fields of the tuple can be typed:
-            // 1) by specifying a type for the tuple, which defines the types of each field, or
-            // 2) by not specifying a type, and getting the implicit type by asking each field for its
-            //    own type
-            List<Expression> listExprs = m_exprs;
-            TypeExpression   exprType  = this.m_type;
-            if (exprType == null)
-                {
-                int              cExprs      = listExprs.size();
-                TypeConstant[]   aconstTypes = new TypeConstant[cExprs];
-                for (int i = 0; i < cExprs; ++i)
-                    {
-                    aconstTypes[i] = listExprs.get(i).getImplicitType();
-                    }
-                ConstantPool pool = pool();
-                constType = pool.ensureParameterizedTypeConstant(
-                        pool.typeTuple(), aconstTypes);
-                }
-            else
-                {
-                // let's start by evaluating the type that the tuple was told that it is
-                constType = exprType.ensureTypeConstant();
-                assert constType.isTuple();
-                // note: the type might not match the # of expressions; that will be figured out by
-                // a call to one of the generateArgument(s) methods
-                }
-
-            m_constType = constType;
+            throw new IllegalStateException("implicit type not available before validate()");
             }
 
         return constType;
@@ -176,7 +232,7 @@ public class TupleExpression
         }
 
 
-// ----- debugging assistance ------------------------------------------------------------------
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()

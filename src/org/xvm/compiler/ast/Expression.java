@@ -182,6 +182,8 @@ public abstract class Expression
      */
     public TypeConstant getImplicitType()
         {
+        checkDepth();
+
         return isSingle()
                 ? getImplicitTypes()[0]
                 : pool().ensureParameterizedTypeConstant(pool().typeTuple(), getImplicitTypes());
@@ -197,6 +199,8 @@ public abstract class Expression
      */
     public TypeConstant[] getImplicitTypes()
         {
+        checkDepth();
+
         TypeConstant type = getImplicitType();
         if (isSingle())
             {
@@ -285,7 +289,9 @@ public abstract class Expression
     /**
      * Convert this expression to a constant value, which is possible iff {@link #isConstant}
      * returns true.
-     *
+     * <p/>
+     * This method may be overridden by any expression that can produce better code than the default
+     * constant conversion code, or can do so more efficiently.
      *
      * @param code  the code block
      * @param type  the constant type required
@@ -309,6 +315,8 @@ public abstract class Expression
 
     /**
      * Generate an argument that represents the result of this expression.
+     * <p/>
+     * This method must be overridden by any expression that is not always constant.
      *
      * @param code      the code block
      * @param type      the type that the expression must evaluate to
@@ -333,6 +341,8 @@ public abstract class Expression
     /**
      * Generate arguments of the specified types for this expression, or generate an error if that
      * is not possible.
+     * <p/>
+     * This method may be overridden by any expression that is multi-value-aware.
      *
      * @param code      the code block
      * @param atype     an array of types that the expression must evaluate to
@@ -374,6 +384,9 @@ public abstract class Expression
      * For an L-Value expression with exactly one value, create a representation of the L-Value.
      * <p/>
      * An exception is generated if the expression is not assignable.
+     * <p/>
+     * This method must be overridden by any expression that is assignable, unless the multi-value
+     * version of this method is overridden instead.
      *
      * @param code  the code block
      * @param errs  the error list to log any errors to
@@ -382,18 +395,22 @@ public abstract class Expression
      */
     public Assignable generateAssignable(Code code, ErrorListener errs)
         {
+        checkDepth();
+
         if (!isAssignable() || !isSingle())
             {
             throw new IllegalStateException();
             }
 
-        throw notImplemented();
+        return generateAssignables(code, errs)[0];
         }
 
     /**
      * For an L-Value expression, create representations of the L-Values.
      * <p/>
      * An exception is generated if the expression is not assignable.
+     * <p/>
+     * This method must be overridden by any expression that is assignable and multi-value-aware.
      *
      * @param code  the code block
      * @param errs  the error list to log any errors to
@@ -418,13 +435,17 @@ public abstract class Expression
                 return new Assignable[] {generateAssignable(code, errs)};
 
             default:
-                throw notImplemented(); // TODO or is it a compiler error?
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, getValueCount());
+                return NO_LVALUES;
             }
         }
 
     /**
      * Generate the necessary code that assigns the value of this expression to the specified
      * L-Value, or generate an error if that is not possible.
+     * <p/>
+     * This method should be overridden by any expression that can produce better code than the
+     * default assignment code.
      *
      * @param code  the code block
      * @param LVal  the Assignable object representing the L-Value
@@ -442,6 +463,9 @@ public abstract class Expression
     /**
      * Generate the necessary code that assigns the values of this expression to the specified
      * L-Values, or generate an error if that is not possible.
+     * <p/>
+     * This method should be overridden by any expression that must support multi-values and can
+     * produce better code than the default assignment code.
      *
      * @param code   the code block
      * @param aLVal  an array of Assignable objects representing the L-Values

@@ -199,6 +199,20 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return type type parameters as an array, iff the type has parameters specified
+     *
+     * @throws UnsupportedOperationException if there are no type parameters specified, or if the
+     *         type is a relational type
+     */
+    public TypeConstant[] getParamTypesArray()
+        {
+        List<TypeConstant> list = getParamTypes();
+        return list == null || list.isEmpty()
+                ? ConstantPool.NO_TYPES
+                : list.toArray(new TypeConstant[list.size()]);
+        }
+
+    /**
      * @return true iff annotations of the type are specified
      */
     public boolean isAnnotated()
@@ -321,7 +335,7 @@ public abstract class TypeConstant
         {
         TypeConstant constThis = (TypeConstant) this.simplify();
         assert !constThis.containsUnresolved();
-        return constThis.isEcstasy("collections.Tuple");
+        return constThis.isEcstasy("Tuple");
         }
 
     /**
@@ -342,9 +356,9 @@ public abstract class TypeConstant
         TypeConstant constThis = (TypeConstant) this.simplify();
         assert !constThis.containsUnresolved();
         return     constThis.isEcstasy("String")
-                || constThis.isEcstasy("collections.Array")
-                || constThis.isEcstasy("collections.List")
-                || constThis.isEcstasy("collections.Sequence")
+                || constThis.isEcstasy("Array")
+                || constThis.isEcstasy("List")
+                || constThis.isEcstasy("Sequence")
                 || constThis.isA(getConstantPool().typeSequence());
         }
 

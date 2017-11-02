@@ -20,6 +20,7 @@ import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.Statement.Context;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 import org.xvm.type.Decimal128;
@@ -78,6 +79,14 @@ public class LiteralExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        // a literal is validated by the lexer/parser, and there is nothing left to validate at this
+        // point
+        return true;
+        }
 
     @Override
     public boolean isConstant()

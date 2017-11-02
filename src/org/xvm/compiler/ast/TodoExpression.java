@@ -3,28 +3,23 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op.Argument;
-
 import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MultiMethodConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.New_N;
 import org.xvm.asm.op.Throw;
-import org.xvm.asm.op.Var;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
+
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -65,6 +60,19 @@ public class TodoExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        boolean fValid = true;
+
+        if (message != null)
+            {
+            fValid &= message.validate(ctx, errs);
+            }
+
+        return fValid;
+        }
 
     @Override
     public TypeConstant getImplicitType()

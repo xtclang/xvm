@@ -934,6 +934,7 @@ public class ConstantPool
             case "Set":
             case "Sequence":
             case "Array":
+            case "List":
             case "Hashable":
                 sPkg = "collections";
                 sClz = sName;
