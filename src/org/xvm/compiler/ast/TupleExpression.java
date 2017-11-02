@@ -8,7 +8,9 @@ import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
+import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -151,8 +153,8 @@ public class TupleExpression
         }
 
     @Override
-    public Op.Argument generateArgument(MethodStructure.Code code, TypeConstant type,
-            boolean fTupleOk, ErrorListener errs)
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk,
+            ErrorListener errs)
         {
         if (type.isTuple())
             {
@@ -163,20 +165,18 @@ public class TupleExpression
             {
             // TODO log(errs, Severity.ERROR, Compiler)
             }
-        // TODO
-        return null;
+        return super.generateArgument(code, type, fTupleOk, errs);
         }
 
     @Override
-    public List<Op.Argument> generateArguments(MethodStructure.Code code,
-            List<TypeConstant> listTypes, boolean fTupleOk, ErrorListener errs)
+    public Argument[] generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk,
+            ErrorListener errs)
         {
-        // TODO
-        return super.generateArguments(code, listTypes, fTupleOk, errs);
+        return super.generateArguments(code, atype, fTupleOk, errs);
         }
 
 
-    // ----- debugging assistance ------------------------------------------------------------------
+// ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()

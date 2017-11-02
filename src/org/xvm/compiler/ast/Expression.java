@@ -296,6 +296,8 @@ public abstract class Expression
      */
     public Argument generateConstant(Code code, TypeConstant type, ErrorListener errs)
         {
+        checkDepth();
+
         if (isConstant())
             {
             return validateAndConvertConstant(toConstant(), type, errs);
@@ -318,6 +320,8 @@ public abstract class Expression
      */
     public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
         {
+        checkDepth();
+
         if (isConstant())
             {
             return generateConstant(code, type, errs);
@@ -340,6 +344,8 @@ public abstract class Expression
      */
     public Argument[] generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk, ErrorListener errs)
         {
+        checkDepth();
+
         switch (atype.length)
             {
             case 0:
@@ -396,6 +402,8 @@ public abstract class Expression
      */
     public Assignable[] generateAssignables(Code code, ErrorListener errs)
         {
+        checkDepth();
+
         if (!isAssignable())
             {
             throw new IllegalStateException();
@@ -424,6 +432,8 @@ public abstract class Expression
      */
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
+        checkDepth();
+
         // this will be overridden by classes that can push down the work
         Argument arg = generateArgument(code, LVal.getType(), false, errs);
         LVal.assign(arg, code, errs);
@@ -439,6 +449,8 @@ public abstract class Expression
      */
     public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
         {
+        checkDepth();
+
         int cLVals = aLVal.length;
         if (cLVals == 1)
             {
@@ -470,6 +482,8 @@ public abstract class Expression
     public void generateConditionalJump(Code code, Label label, boolean fWhenTrue,
             ErrorListener errs)
         {
+        checkDepth();
+
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
         Argument arg = generateArgument(code, pool().typeBoolean(), false, errs);
@@ -790,8 +804,7 @@ public abstract class Expression
      *
      * @return the constant to use
      */
-    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut,
-            ErrorListener errs)
+    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
         {
         // assume that the result is the same as what was passed in
         Constant constOut = constIn;
@@ -876,6 +889,20 @@ public abstract class Expression
             }
         return listRegs;
         }
+
+    /**
+     * Temporary to prevent stack overflow from methods that haven't yet been overridden.
+     *
+     * @throws UnsupportedOperationException if it appears that there is an infinite loop
+     */
+    protected void checkDepth()
+        {
+        if (++m_cDepth > 20)
+            {
+            throw notImplemented();
+            }
+        }
+    private int m_cDepth;
 
 
     // ----- inner class: Assignable ---------------------------------------------------------------
