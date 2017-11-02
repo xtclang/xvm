@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.math.BigDecimal;
 
+import java.util.List;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
@@ -21,6 +23,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 import org.xvm.type.Decimal128;
@@ -54,17 +57,6 @@ public class LiteralExpression
         return literal.getId() == Id.TODO;
         }
 
-    private boolean isIntInRange(long lLower, long lUpper)
-        {
-        if (literal.getId() != Id.LIT_INT)
-            {
-            return false;
-            }
-
-        PackedInteger piVal = (PackedInteger) literal.getValue();
-        return !piVal.isBig() && piVal.getLong() >= lLower && piVal.getLong() <= lUpper;
-        }
-
     @Override
     public long getStartPosition()
         {
@@ -85,12 +77,6 @@ public class LiteralExpression
         {
         // a literal is validated by the lexer/parser, and there is nothing left to validate at this
         // point
-        return true;
-        }
-
-    @Override
-    public boolean isConstant()
-        {
         return true;
         }
 
@@ -130,25 +116,32 @@ public class LiteralExpression
     public TypeConstant getImplicitType()
         {
         ConstantPool pool = pool();
+        TypeConstant type;
         switch (literal.getId())
             {
             case LIT_CHAR:
-                return pool.typeChar();
+                type = pool.typeChar();
+                break;
 
             case TODO:              // the T0D0 keyword has a String text for the token's value
             case LIT_STRING:
-                return pool.typeString();
+                type = pool.typeString();
+                break;
 
             case LIT_INT:
-                return pool.typeIntLiteral();
+                type = pool.typeIntLiteral();
+                break;
 
             case LIT_DEC:
             case LIT_BIN:
-                return pool.typeFPLiteral();
+                type = pool.typeFPLiteral();
+                break;
 
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
+
+        return pool.ensureImmutableTypeConstant(type);
         }
 
     @Override
@@ -275,11 +268,16 @@ public class LiteralExpression
                         }
                     break;
 
-                case "Sequence":
-                    if (type.isParamsSpecified() && !(type.isParamsSpecified(1)
-                            && type.getParamTypes().get(0).isA(pool().typeChar())))
+                case "collections.Sequence":
+                    if (type.isParamsSpecified())
                         {
-                        break;
+                        // it must be Sequence<Char> (or something that Sequence<Char> can be
+                        // assigned to)
+                        List<TypeConstant> listParamTypes = type.getParamTypes();
+                        if (!(listParamTypes.size() == 1 && pool.typeChar().isA(listParamTypes.get(0))))
+                            {
+                            break;
+                            }
                         }
                     // fall through
                 case "String":
@@ -657,61 +655,24 @@ public class LiteralExpression
         return super.generateConstant(code, type, errs);
         }
 
-    @Override
-    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
+    /**
+     * Test the integer value of this constant to see if it in the specified (inclusive) range.
+     *
+     * @param lLower  inclusive lower bound of the range
+     * @param lUpper  inclusive upper bound of the range
+     *
+     * @return true iff this expression is an integer expression whose value is in the specified
+     *         range
+     */
+    private boolean isIntInRange(long lLower, long lUpper)
         {
-        if (type.isSingleDefiningConstant()
-                && type.getDefiningConstant() instanceof ClassConstant
-                && ((ClassConstant) type.getDefiningConstant()).getModuleConstant().isEcstasyModule()
-                && type.getAccess() == Access.PUBLIC)
+        if (literal.getId() != Id.LIT_INT)
             {
-            String sName = ((ClassConstant) type.getDefiningConstant()).getPathString();
-            switch (sName)
-                {
-                case "Sequence":
-                    if (type.isParamsSpecified() && !(type.isParamsSpecified(1)
-                            && type.getParamTypes().get(0).isA(pool().typeChar())))
-                        {
-                        break;
-                        }
-                    // fall through
-                case "Object":
-                case "Const":
-                case "Orderable":
-                case "collections.Hashable":
-                case "Char":
-                case "Sequential":                  // char implements Sequential
-                case "String":
-                case "IntLiteral":
-                case "Bit":
-                case "Nibble":
-                case "Int8":
-                case "Int16":
-                case "Int32":
-                case "Int64":
-                case "Int128":
-                case "VarInt":
-                case "UInt8":
-                case "UInt16":
-                case "UInt32":
-                case "UInt64":
-                case "UInt128":
-                case "VarUInt":
-                case "Dec32":
-                case "Dec64":
-                case "Dec128":
-                case "VarDec":
-                case "FPLiteral":
-                case "Float16":
-                case "Float32":
-                case "Float64":
-                case "Float128":
-                case "VarFloat":
-                    return generateConstant(code, type, errs);
-                }
+            return false;
             }
 
-        return super.generateArgument(code, type, fTupleOk, errs);
+        PackedInteger piVal = (PackedInteger) literal.getValue();
+        return !piVal.isBig() && piVal.getLong() >= lLower && piVal.getLong() <= lUpper;
         }
 
 

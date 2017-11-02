@@ -1,9 +1,16 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+import java.util.Map;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.Argument;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ErrorListener;
@@ -11,8 +18,6 @@ import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.ListMap;
-
-import java.util.Map;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;
 import static org.xvm.util.Handy.byteArrayToHexString;
@@ -70,15 +75,47 @@ public class BinaryExpression
         }
 
     @Override
-    public boolean isConstant()
-        {
-        return true;
-        }
-
-    @Override
     public Constant toConstant()
         {
         return pool().ensureByteStringConstant(bytes);
+        }
+
+    @Override
+    public Argument generateConstant(Code code, TypeConstant type, ErrorListener errs)
+        {
+        if (type.isSingleDefiningConstant()
+                && type.getDefiningConstant() instanceof ClassConstant
+                && ((ClassConstant) type.getDefiningConstant()).getModuleConstant().isEcstasyModule()
+                && (!type.isAccessSpecified() || type.getAccess() == Access.PUBLIC))
+            {
+            ConstantPool  pool     = pool();
+            ClassConstant constClz = (ClassConstant) type.getDefiningConstant();
+            String        sName    = constClz.getPathString();
+            switch (sName)
+                {
+                case "Iterable":
+                case "collections.Sequence":
+                case "collections.Array":
+                    if (type.isParamsSpecified())
+                        {
+                        // it must be Array<UInt8> (or something that Array<UInt8> can be
+                        // assigned to)
+                        List<TypeConstant> listParamTypes = type.getParamTypes();
+                        if (!(listParamTypes.size() == 1 && pool.typeByte().isA(listParamTypes.get(0))))
+                            {
+                            break;
+                            }
+                        }
+                    // fall through
+                case "Object":
+                case "Const":
+                case "Orderable":
+                case "collections.Hashable":
+                    return toConstant();
+                }
+            }
+
+        return super.generateConstant(code, type, errs);
         }
 
 
