@@ -849,11 +849,12 @@ public class MethodStructure
             List<Op> list = m_listOps;
             if (!list.isEmpty())
                 {
-                Op op = list.get(list.size() - 1);
+                Op op = list.get(list.size() - 1);  // TODO walk back until we find one
                 if (op instanceof OpVar)
                     {
                     return ((OpVar) op).getRegister();
                     }
+                // TODO else some op that could have gen'd a new register
                 }
             throw new IllegalStateException();
             }

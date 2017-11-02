@@ -34,7 +34,7 @@ public class BadTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public boolean canComplete()
+    public boolean isCompletable()
         {
         return false;
         }

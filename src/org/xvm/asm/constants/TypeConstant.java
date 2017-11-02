@@ -178,6 +178,14 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff exactly the number of specified params are specified
+     */
+    public boolean isParamsSpecified(int n)
+        {
+        return isParamsSpecified() && getParamTypes().size() == n;
+        }
+
+    /**
      * @return the type parameters, iff the type has parameters specified
      *
      * @throws UnsupportedOperationException if there are no type parameters specified, or if the
@@ -188,6 +196,20 @@ public abstract class TypeConstant
         return isModifyingType()
                 ? getUnderlyingType().getParamTypes()
                 : Collections.EMPTY_LIST;
+        }
+
+    /**
+     * @return type type parameters as an array, iff the type has parameters specified
+     *
+     * @throws UnsupportedOperationException if there are no type parameters specified, or if the
+     *         type is a relational type
+     */
+    public TypeConstant[] getParamTypesArray()
+        {
+        List<TypeConstant> list = getParamTypes();
+        return list == null || list.isEmpty()
+                ? ConstantPool.NO_TYPES
+                : list.toArray(new TypeConstant[list.size()]);
         }
 
     /**
@@ -313,7 +335,7 @@ public abstract class TypeConstant
         {
         TypeConstant constThis = (TypeConstant) this.simplify();
         assert !constThis.containsUnresolved();
-        return constThis.isEcstasy("collections.Tuple");
+        return constThis.isEcstasy("Tuple");
         }
 
     /**
@@ -334,9 +356,9 @@ public abstract class TypeConstant
         TypeConstant constThis = (TypeConstant) this.simplify();
         assert !constThis.containsUnresolved();
         return     constThis.isEcstasy("String")
-                || constThis.isEcstasy("collections.Array")
-                || constThis.isEcstasy("collections.List")
-                || constThis.isEcstasy("collections.Sequence")
+                || constThis.isEcstasy("Array")
+                || constThis.isEcstasy("List")
+                || constThis.isEcstasy("Sequence")
                 || constThis.isA(getConstantPool().typeSequence());
         }
 

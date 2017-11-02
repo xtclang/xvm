@@ -5,10 +5,8 @@ import java.lang.reflect.Field;
 
 import java.util.Collections;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op.Argument;
-
-import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.asm.op.Label;
 
@@ -112,9 +110,9 @@ public class ExpressionStatement
                 {
                 // there are only two values that we're interested in; assume anything else
                 // indicates a compiler error, and that's someone else's problem to deal with
-                Argument arg = expr.generateConstant(pool().typeBoolean(), errs);
-                m_rte = arg instanceof SingletonConstant
-                        && ((SingletonConstant) arg).getValue().getName().equals("True")
+                Constant constVal = expr.validateAndConvertConstant(expr.toConstant(),
+                        pool().typeBoolean(), errs);
+                m_rte = constVal.equals(pool().valTrue())
                             ? RuntimeEval.AlwaysTrue
                             : RuntimeEval.AlwaysFalse;
                 }
@@ -126,12 +124,12 @@ public class ExpressionStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable & expr.canComplete();
+        boolean fCompletes = fReachable & expr.isCompletable();
 
         if (getUsage() == Usage.Standalone)
             {
             // so an expression is being used as a statement; blackhole the results
-            expr.generateArguments(code, Collections.EMPTY_LIST, false, errs);
+            expr.generateAssignments(code, Expression.NO_LVALUES, errs);
             }
         else if (m_rte == RuntimeEval.RequiresEval)
             {

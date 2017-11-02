@@ -848,6 +848,50 @@ public class ConstantPool
         }
 
     /**
+     * Find the specified constructor of the specified class in the Ecstasy module.
+     *
+     * @param constClass  the class to find a constructor for
+     * @param types       the types of the constructor parameters
+     *
+     * @return the constructor; never null
+     *
+     * @throws IllegalStateException if the constructor cannot be found
+     */
+    public MethodConstant ensureEcstasyConstructor(ClassConstant constClass, TypeConstant... types)
+        {
+        ClassStructure structClz = (ClassStructure) constClass.getComponent();
+        if (structClz == null)
+            {
+            throw new IllegalStateException("could not find class " + constClass);
+            }
+
+        MultiMethodStructure structMM = (MultiMethodStructure) structClz.getChild("construct");
+        if (structMM == null)
+            {
+            throw new IllegalStateException("no constructors on " + constClass);
+            }
+
+        int cParams = types.length;
+        NextMethod: for (MethodStructure structMethod : structMM.methods())
+            {
+            if (structMethod.getParamCount() == cParams)
+                {
+                for (int i = 0; i < cParams; ++i)
+                    {
+                    if (!structMethod.getParam(i).getType().equals(types[i]))
+                        {
+                        continue NextMethod;
+                        }
+                    }
+
+                return structMethod.getIdentityConstant();
+                }
+            }
+
+        throw new IllegalStateException("no such constructor for " + cParams + " params on " + constClass);
+        }
+
+    /**
      * This is the implementation of the "automatically imported" names that constitute the default
      * set of known names in the language. This implementation should correspond to the source file
      * "implicit.x".
@@ -920,6 +964,7 @@ public class ConstantPool
             case "Set":
             case "Sequence":
             case "Array":
+            case "List":
             case "Hashable":
                 sPkg = "collections";
                 sClz = sName;
@@ -1668,6 +1713,9 @@ public class ConstantPool
     public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
 
+    public TypeConstant      typeException१()   {TypeConstant      c = m_typeException१;  if (c == null) {m_typeException१  = c = ensureNullableTypeConstant(typeException()                 );} return c;}
+    public TypeConstant      typeString१()      {TypeConstant      c = m_typeString१;     if (c == null) {m_typeString१     = c = ensureNullableTypeConstant(typeString()                    );} return c;}
+
     public IntConstant       val0()             {IntConstant       c = m_val0;            if (c == null) {m_val0            = c = ensureIntConstant(0)                                        ;} return c;}
     public IntConstant       val1()             {IntConstant       c = m_val1;            if (c == null) {m_val1            = c = ensureIntConstant(1)                                        ;} return c;}
     public SingletonConstant valFalse()         {SingletonConstant c = m_valFalse;        if (c == null) {m_valFalse        = c = ensureSingletonConstConstant(clzFalse())                    ;} return c;}
@@ -2282,6 +2330,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeEnum;
     private transient TypeConstant      m_typeEnumeration;
     private transient TypeConstant      m_typeException;
+    private transient TypeConstant      m_typeException१;
     private transient TypeConstant      m_typeFunction;
     private transient TypeConstant      m_typeBoolean;
     private transient TypeConstant      m_typeTrue;
@@ -2292,6 +2341,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeIntLiteral;
     private transient TypeConstant      m_typeFPLiteral;
     private transient TypeConstant      m_typeString;
+    private transient TypeConstant      m_typeString१;
     private transient TypeConstant      m_typeByte;
     private transient TypeConstant      m_typeInt;
     private transient TypeConstant      m_typeArray;

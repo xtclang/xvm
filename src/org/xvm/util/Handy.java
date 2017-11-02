@@ -770,8 +770,9 @@ public class Handy
                     : in.readShort()) << 5) | ((b >> 3) & 0x1F);
             }
 
-        // the size of the integer value is defined by the third to fifth bit,
-        // such that the number of bytes is (1 << nSize)
+        // the size of the integer value is defined by bits 2 through 7, representing the
+        // power-of-two number of bytes in the integer, such that a value of 0 is 1 byte (8 bits),
+        // a value of 1 is 2 bytes (16 bits), and so on
         final int cBits = 1 << ((b & 0x1C) >> 2) + 3;
         if (cBits == 64)
             {

@@ -9,8 +9,12 @@ import java.util.List;
 /**
  * A list expression is an expression containing some number (0 or more) expressions of some common
  * type.
- *
- * @author cp 2017.04.07
+ * <p/>
+ * <pre>
+ * ListLiteral
+ *     "{" ExpressionList-opt "}"
+ *     "List:{" ExpressionList-opt "}"
+ * </pre>
  */
 public class ListExpression
         extends Expression
@@ -50,6 +54,10 @@ public class ListExpression
         {
         return CHILD_FIELDS;
         }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
 
 
     // ----- debugging assistance ------------------------------------------------------------------
