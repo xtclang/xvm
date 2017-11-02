@@ -128,7 +128,7 @@ public class NewG_0
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVar(clzTarget.ensurePublicType(), null, Frame.VAR_STANDARD, null);
+                frame.introduceVar(clzTarget.ensurePublicType());
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];

@@ -858,23 +858,18 @@ public class Frame
         throw new IllegalStateException("Invalid register index");
         }
 
-    // Note: the typeId is an "absolute" (positive, ConstantPool based) number
-    // (see Op.convertId())
-    // Note: this method increments up the "nextVar" index
-    public void introduceVar(int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
+    /**
+     * Introduce a new unnamed standard variable for the specified type.
+     *
+     * Note: this method increments up the "nextVar" index
+     */
+    public void introduceVar(Type type)
         {
-        int nVar = f_anNextVar[m_iScope]++;
-
-        f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
-
-        if (hValue != null)
-            {
-            f_ahVar[nVar] = hValue;
-            }
+        introduceVar(type, null, VAR_STANDARD, null);
         }
 
     /**
-     * Introduce a new standard variable for the specified type, style and optional value.
+     * Introduce a new variable for the specified type, style and an optional value.
      *
      * Note: this method increments up the "nextVar" index
      */
@@ -883,6 +878,37 @@ public class Frame
         int nVar = f_anNextVar[m_iScope]++;
 
         f_aInfo[nVar] = new VarInfo(type, sName, nStyle);
+
+        if (hValue != null)
+            {
+            f_ahVar[nVar] = hValue;
+            }
+        }
+
+    /**
+     * Introduce a new unnamed standard variable for the specified type id.
+     *
+     * Note: this method increments up the "nextVar" index
+     *
+     * @param nTypeId  an "absolute" (positive, ConstantPool based) number (see Op.convertId())
+     */
+    public void introduceVar(int nTypeId)
+        {
+        introduceVar(nTypeId, 0, VAR_STANDARD, null);
+        }
+
+    /**
+     * Introduce a new variable for the specified type id, name id style and an optional value.
+     *
+     * Note: this method increments up the "nextVar" index
+     *
+     * @param nTypeId  an "absolute" (positive, ConstantPool based) number (see Op.convertId())
+     */
+    public void introduceVar(int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
 
         if (hValue != null)
             {

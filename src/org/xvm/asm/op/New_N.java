@@ -118,7 +118,7 @@ public class New_N
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVar(constClass.asTypeConstant().getPosition(), 0, Frame.VAR_STANDARD, null);
+                frame.introduceVar(constClass.asTypeConstant().getPosition());
                 }
 
             if (anyProperty(ahVar))

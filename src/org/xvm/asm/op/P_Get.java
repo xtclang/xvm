@@ -113,9 +113,7 @@ public class P_Get
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                int nTypeId = constProperty.getType().getPosition();
-
-                frame.introduceVar(nTypeId, 0, Frame.VAR_STANDARD, null);
+                frame.introduceVar(constProperty.getType().getPosition());
                 }
 
             if (isProperty(hTarget))

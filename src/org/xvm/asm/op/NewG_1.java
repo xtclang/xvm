@@ -144,7 +144,7 @@ public class NewG_1
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVar(clzTarget.ensurePublicType(), null, Frame.VAR_STANDARD, null);
+                frame.introduceVar(clzTarget.ensurePublicType());
                 }
 
             if (isProperty(ahVar[0]))
