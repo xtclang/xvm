@@ -63,12 +63,11 @@ public class xTestClass extends ClassTemplate
             new L_Get(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0),
             new Var_N(adapter.getClassTypeConstId("Int64"),
                     adapter.ensureValueConstantId("of")), // #1 (of)
-            new Var_I(adapter.getClassTypeConstId("String"),
-                    adapter.ensureValueConstantId("world")), // #2
-            new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"), 2, 1),
-            new P_Get(adapter.getPropertyConstId("String", "size"), 0, 3), // next register #3
-            new GP_Add(3, 1, 3),
-            new Return_1(3),
+            new Invoke_11(0, adapter.getMethodConstId("String", "indexOf"),
+                adapter.ensureValueConstantId("world"), 1),
+            new P_Get(adapter.getPropertyConstId("String", "size"), 0, 2), // next register #3
+            new GP_Add(2, 1, 2),
+            new Return_1(2),
             });
 
         // ----- exceptional()
@@ -76,9 +75,8 @@ public class xTestClass extends ClassTemplate
                 new String[] {"String?"}, INT);
         mtExceptional.setOps(new Op[]
             { // #0 = s
-            new Var(adapter.getClassTypeConstId("Exception")), // #1
             new New_N(adapter.getMethodConstId("Exception", "construct"),
-                    new int[] {0, adapter.ensureValueConstantId(null)}, 1),
+                    new int[] {0, adapter.ensureValueConstantId(null)}, 1), // next register #1
             new Throw(1),
             });
 
