@@ -164,6 +164,15 @@ public class TerminalTypeConstant
         return (TypeConstant) simplify();
         }
 
+    @Override
+    public boolean isOnlyNullable()
+        {
+        TypeConstant typeResolved = resolveTypedefs();
+        return this == typeResolved
+                ? m_constId.equals(getConstantPool().clzNullable())
+                : typeResolved.isOnlyNullable();
+        }
+
 
     // ----- run-time support -------------------------------------------------------------------
 

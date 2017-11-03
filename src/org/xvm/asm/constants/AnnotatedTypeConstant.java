@@ -154,6 +154,21 @@ public class AnnotatedTypeConstant
                         getAnnotationParamsAsArray(), constResolved);
         }
 
+    @Override
+    public boolean isNullable()
+        {
+        return m_constType.isNullable();
+        }
+
+    @Override
+    public TypeConstant nonNullable()
+        {
+        return isNullable()
+                ? getConstantPool().ensureAnnotatedTypeConstant(m_constClass,
+                        getAnnotationParamsAsArray(), m_constType.nonNullable())
+                : this;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

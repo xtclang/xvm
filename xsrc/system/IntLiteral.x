@@ -20,6 +20,7 @@
  * 0x80 would be the value 128. TODO ... and???
  */
 const IntLiteral(String text)
+        implements Sequential
     {
     construct IntLiteral(String text)
         {

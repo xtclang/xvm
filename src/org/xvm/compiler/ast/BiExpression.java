@@ -16,6 +16,7 @@ import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
+import org.xvm.compiler.Token.Id;
 import org.xvm.util.PackedInteger;
 
 
@@ -135,6 +136,91 @@ public class BiExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+
+    @Override
+    public int getValueCount()
+        {
+        // the "/%" operator results in two values
+        return operator.getId() == Id.DIVMOD ? 2 : 1;
+        }
+
+    @Override
+    public TypeConstant getImplicitType()
+        {
+        switch (operator.getId())
+            {
+            case COMP_EQ:
+            case COMP_NEQ:
+            case COMP_LT:
+            case COMP_GT:
+            case COMP_LTEQ:
+            case COMP_GTEQ:
+            case AS:
+            case IS:
+            case INSTANCEOF:
+                return pool().typeBoolean();
+
+            case COMP_ORD:
+                return pool().typeOrdered();
+
+            case COLON:
+                return expr1.getImplicitType();
+
+            case COND_ELSE:
+                {
+                // TODO a?.b?.c : d
+                return expr1.getImplicitType().nonNullable();
+                }
+
+            case DOTDOT:
+                // Sequential: Range<expr1.getImplicitType()>
+                // Orderable: Interval<expr1.getImplicitType()>
+                // otherwise: will be detected as compiler error by validate(), so assume Orderable
+                {
+                ConstantPool pool = pool();
+                TypeConstant typeElement  = expr1.getImplicitType();
+                TypeConstant typeInterval = typeElement.isA(pool.typeSequential())
+                        ? pool.typeRange()
+                        : pool.typeInterval();
+                return pool.ensureParameterizedTypeConstant(typeInterval,
+                        new TypeConstant[] {typeElement});
+                }
+
+            case COND_OR:
+            case COND_AND:
+            case BIT_OR:
+            case BIT_XOR:
+            case BIT_AND:
+            case SHL:
+            case SHR:
+            case USHR:
+            case ADD:
+            case SUB:
+            case MUL:
+            case DIV:
+            case MOD:
+                // TODO examine expr1's type's methods for @Op's and determine result type from that
+                return expr1.getImplicitType();
+
+            case DIVMOD:
+            default:
+                throw new IllegalStateException(operator.toString());
+            }
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes()
+        {
+        if (operator.getId() == Id.DIVMOD)
+            {
+            // TODO examine expr1's type's methods for @Op's and determine result types from that
+            TypeConstant type = expr1.getImplicitType();
+            return new TypeConstant[] {type, type};
+            }
+
+        return super.getImplicitTypes();
+        }
 
     @Override
     public boolean isConstant()

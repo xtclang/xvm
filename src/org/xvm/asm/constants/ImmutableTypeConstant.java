@@ -88,6 +88,20 @@ public class ImmutableTypeConstant
                 : getConstantPool().ensureImmutableTypeConstant(constResolved);
         }
 
+    @Override
+    public boolean isNullable()
+        {
+        return m_constType.isNullable();
+        }
+
+    @Override
+    public TypeConstant nonNullable()
+        {
+        return isNullable()
+                ? getConstantPool().ensureImmutableTypeConstant(m_constType.nonNullable())
+                : this;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

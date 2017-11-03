@@ -130,6 +130,13 @@ public class AccessTypeConstant
         return getUnderlyingType().producesFormalType(sTypeName, types, m_access);
         }
 
+    @Override
+    public boolean isNullable()
+        {
+        assert !m_constType.isNullable();
+        return false;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

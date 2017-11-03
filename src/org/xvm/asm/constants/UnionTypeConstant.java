@@ -93,6 +93,21 @@ public class UnionTypeConstant
                 : getConstantPool().ensureUnionTypeConstant(constResolved1, constResolved2);
         }
 
+    @Override
+    public boolean isNullable()
+        {
+        return m_constType1.isNullable() && m_constType2.isNullable();
+        }
+
+    @Override
+    public TypeConstant nonNullable()
+        {
+        return isNullable()
+                ? getConstantPool().ensureUnionTypeConstant(m_constType1.nonNullable(),
+                                                            m_constType2.nonNullable())
+                : this;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

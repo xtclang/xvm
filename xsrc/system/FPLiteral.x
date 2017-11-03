@@ -3,6 +3,7 @@
  * legal representation of an FPNumber into any of the built-in FPNumber implementations.
  */
 const FPLiteral(String text)
+        implements Orderable
     {
     /**
      * Convert the number to a variable-length binary radix floating point number.

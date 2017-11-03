@@ -306,6 +306,33 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type is a nullable type
+     */
+    public boolean isNullable()
+        {
+        // a type is only considered nullable if it is a "(nullable | type)"
+        return false;
+        }
+
+    public boolean isOnlyNullable()
+        {
+        // a type is considered only nullable if it is the Nullable type itself, or a simple
+        // modification of the same
+        return getUnderlyingType().isOnlyNullable()
+                && (!isRelationalType() || getUnderlyingType2().isOnlyNullable());
+        }
+
+    /**
+     * If this type is a nullable type, calculate the type without the nullability.
+     *
+     * @return a TypeConstant without
+     */
+    public TypeConstant nonNullable()
+        {
+        return this;
+        }
+
+    /**
      * @return this same type, but without any typedefs in it
      */
     public abstract TypeConstant resolveTypedefs();

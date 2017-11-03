@@ -93,6 +93,37 @@ public class IntersectionTypeConstant
                 : getConstantPool().ensureIntersectionTypeConstant(constResolved1, constResolved2);
         }
 
+    @Override
+    public boolean isNullable()
+        {
+        return (m_constType1.isOnlyNullable() ^ m_constType2.isOnlyNullable())
+                || m_constType1.isNullable() || m_constType2.isNullable();
+        }
+
+    @Override
+    public TypeConstant nonNullable()
+        {
+        if (!isNullable())
+            {
+            return this;
+            }
+
+        if (m_constType1.isOnlyNullable())
+            {
+            assert !m_constType2.isOnlyNullable();
+            return m_constType2.nonNullable();
+            }
+
+        if (m_constType2.isOnlyNullable())
+            {
+            assert !m_constType1.isOnlyNullable();
+            return m_constType1.nonNullable();
+            }
+
+        return getConstantPool().ensureIntersectionTypeConstant(m_constType1.nonNullable(),
+                                                                m_constType2.nonNullable());
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
