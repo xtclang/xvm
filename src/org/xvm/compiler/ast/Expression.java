@@ -495,7 +495,7 @@ public abstract class Expression
         }
 
     /**
-     *
+     * TODO
      *
      * @param code       the code block
      * @param label      the label to conditionally jump to
@@ -503,8 +503,7 @@ public abstract class Expression
      *                   whether to jump when this expression evaluates to false
      * @param errs       the error list to log any errors to
      */
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue,
-            ErrorListener errs)
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
         checkDepth();
 

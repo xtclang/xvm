@@ -146,9 +146,9 @@ public class WhileStatement
             //   [body]
             //   Continue:
             //   Break:
+            fCompletes &= block.completes(ctx, fReachable & fDoWhile, code, errs);
             if (fDoWhile)
                 {
-                fCompletes &= block.completes(ctx, fReachable, code, errs);
                 code.add(labelContinue);
                 code.add(labelBreak);
                 }
