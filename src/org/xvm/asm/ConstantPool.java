@@ -1713,6 +1713,8 @@ public class ConstantPool
     public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
 
+    public TypeConstant      typeVoid()         {TypeConstant      c = m_typeVoid;        if (c == null) {m_typeVoid        = c = ensureParameterizedTypeConstant(typeTuple(), NO_TYPES      );} return c;}
+
     public TypeConstant      typeException१()   {TypeConstant      c = m_typeException१;  if (c == null) {m_typeException१  = c = ensureNullableTypeConstant(typeException()                 );} return c;}
     public TypeConstant      typeString१()      {TypeConstant      c = m_typeString१;     if (c == null) {m_typeString१     = c = ensureNullableTypeConstant(typeString()                    );} return c;}
 
@@ -1721,6 +1723,7 @@ public class ConstantPool
     public SingletonConstant valFalse()         {SingletonConstant c = m_valFalse;        if (c == null) {m_valFalse        = c = ensureSingletonConstConstant(clzFalse())                    ;} return c;}
     public SingletonConstant valTrue()          {SingletonConstant c = m_valTrue;         if (c == null) {m_valTrue         = c = ensureSingletonConstConstant(clzTrue())                     ;} return c;}
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
+    public ArrayConstant     valVoid()          {ArrayConstant     c = m_valVoid;         if (c == null) {m_valVoid         = c = ensureTupleConstant(typeVoid(), Constant.NO_CONSTS)         ;} return c;}
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
@@ -2350,9 +2353,11 @@ public class ConstantPool
     private transient TypeConstant      m_typeIterable;
     private transient TypeConstant      m_typeIterator;
     private transient TypeConstant      m_typeTuple;
+    private transient TypeConstant      m_typeVoid;
     private transient IntConstant       m_val0;
     private transient IntConstant       m_val1;
     private transient SingletonConstant m_valFalse;
     private transient SingletonConstant m_valTrue;
     private transient SingletonConstant m_valNull;
+    private transient ArrayConstant     m_valVoid;
     }
