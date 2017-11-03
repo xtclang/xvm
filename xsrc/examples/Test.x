@@ -111,6 +111,10 @@ module Test
         {
         }
 
+    String foo1MissingReturn()
+        {
+        }
+
     Void foo2()
         {
         return;

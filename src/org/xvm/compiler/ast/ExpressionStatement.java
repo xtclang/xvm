@@ -155,7 +155,7 @@ public class ExpressionStatement
                     throw new IllegalStateException();
                 }
 
-            expr.generateConditionalJump(code, getLabel(), false, errs);
+            expr.generateConditionalJump(code, getLabel(), fJumpIfTrue, errs);
             }
 
         return fCompletes;

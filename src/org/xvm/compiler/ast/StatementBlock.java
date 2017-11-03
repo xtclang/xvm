@@ -163,7 +163,7 @@ public class StatementBlock
      * @param code  the code object to which the assembly is added
      * @param errs  the error listener to log to
      */
-    public void emit(Code code, ErrorListener errs)
+    public void compileMethod(Code code, ErrorListener errs)
         {
         Context ctx = new Context(code.getMethodStructure());
 
@@ -171,10 +171,18 @@ public class StatementBlock
             {
             boolean fCompletes = completes(ctx, true, code, errs);
 
-            if (fCompletes && code.getMethodStructure().getReturns().isEmpty())
+            if (fCompletes)
                 {
-                // a void method has an implicit "return;" at the end of it
-                code.add(new Return_0());
+                if (code.getMethodStructure().getReturns().isEmpty())
+                    {
+                    // a void method has an implicit "return;" at the end of it
+                    code.add(new Return_0());
+                    }
+                else
+                    {
+                    errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, source,
+                            getEndPosition(), getEndPosition());
+                    }
                 }
             }
         }

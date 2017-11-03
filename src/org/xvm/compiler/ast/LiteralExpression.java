@@ -10,7 +10,6 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.Float16Constant;
@@ -237,7 +236,7 @@ public class LiteralExpression
         }
 
     @Override
-    public Argument generateConstant(Code code, TypeConstant type,
+    public Constant generateConstant(Code code, TypeConstant type,
             ErrorListener errs)
         {
         if (type.isSingleDefiningConstant()

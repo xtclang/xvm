@@ -231,3 +231,82 @@ Summer      s0 = bs;            // compile-time error
 Summer      s1 = bs.as(Summer); // compile-time warning, run-time error
 Summer      s2 = bi;            // ok (type of bi is SimpleBag<Int>, which implies Summer<Int>)
 Summer<Int> s3 = bi;            // ok (same as above)
+
+
+// short-circuiting expressions
+
+Int x = a?.b?.c : -1;
+// NVAR Int x
+// JMP_NULL a, DEFAULT
+// VAR b_tmp
+// P_GET "b" a b_tmp
+// JMP_NULL b_tmp, DEFAULT
+// P_GET "c" b_tmp x
+// JMP EXIT
+// DEFAULT:
+// MOV -1 -> x
+// EXIT:
+
+foo(a?.b?.c);
+// VAR Int              ; #7
+// JMP_NULL a, EXIT
+// VAR b_tmp
+// P_GET "b" a b_tmp
+// JMP_NULL b_tmp, EXIT
+// P_GET "c" b_tmp #7
+// NVOK_10 "foo" #7
+// EXIT:
+
+
+// assignable
+a[6].b(c[d, foo(e)]).f.g = foo()
+
+
+// while vs. do..while with conditional statement decl+asn
+
+List<Int> list = ...
+Iterator<Int> iter = list.iterator();
+Int sum = 0;
+while (Int n : iter.next())
+    {
+    sum += n;
+    }
+
+List<Int> list = ...
+Iterator<Int> iter = list.iterator();
+Int n = 0;
+Int sum = 0;
+do
+    {
+    sum += n;
+    }
+while (n : iter.next())
+
+for (Int n : list)
+    {
+    sum += n;
+    }
+
+
+// why condition is at the bottom:
+
+// while(cond)              do-while(cond)              do-while(declAndOrAssign)
+//
+//   JMP Continue
+//   Repeat:                  Repeat:                     Repeat:
+//   [body]                   [body]                      [body]
+//   Continue:                Continue:                   Continue:
+//                                                        ENTER
+//   [cond]                   [cond]                      [declAndOrAssign]
+//  +JMP_TRUE cond Repeat    +JMP_TRUE cond Repeat        JMP_TRUE cond Repeat
+//   Break:                   Break:                      Break:
+
+// while(cond)
+//
+//   Repeat:
+//   [cond]
+//   JMP_FALSE cond Break
+//   [body]
+//   Continue:
+//   JMP Repeat
+//   Break:

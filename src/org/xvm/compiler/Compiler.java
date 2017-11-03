@@ -410,6 +410,10 @@ public class Compiler
      * A value is required.
      */
     public static final String VALUE_REQUIRED                     = "COMPILER-48";
+    /**
+     * Return is missing.
+     */
+    public static final String RETURN_REQUIRED                    = "COMPILER-49";
 
 
     // ----- data members --------------------------------------------------------------------------

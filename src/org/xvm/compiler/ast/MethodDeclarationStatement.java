@@ -13,7 +13,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.op.Return_0;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -189,7 +188,7 @@ public class MethodDeclarationStatement
             Code code = method.createCode();
             try
                 {
-                body.emit(code, errs);
+                body.compileMethod(code, errs);
                 }
             catch (UnsupportedOperationException e) // TODO temporary
                 {
