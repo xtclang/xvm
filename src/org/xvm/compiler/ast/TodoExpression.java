@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
@@ -103,10 +104,10 @@ public class TodoExpression
         }
 
     @Override
-    public Argument generateConstant(Code code, TypeConstant type, ErrorListener errs)
+    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
         {
         generateTodo(code, errs);
-        return generateBlackHole(type);
+        return generateFakeConstant(type);
         }
 
     @Override

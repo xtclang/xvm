@@ -300,7 +300,7 @@ public abstract class Expression
      *
      * @return a constant of the specified type
      */
-    public Argument generateConstant(Code code, TypeConstant type, ErrorListener errs)
+    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
         {
         checkDepth();
 
@@ -310,7 +310,7 @@ public abstract class Expression
             }
 
         log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
-        return generateBlackHole(type);
+        return generateFakeConstant(type);
         }
 
     /**
@@ -911,6 +911,20 @@ public abstract class Expression
             listRegs.add(generateBlackHole(listTypes.get(i)));
             }
         return listRegs;
+        }
+
+    /**
+     * When an error occurs during compilation, but a constant of a specific type is required, this
+     * method comes to the rescue.
+     *
+     * @param type  the type of the constant
+     *
+     * @return a constant of the specified type
+     */
+    protected Constant generateFakeConstant(TypeConstant type)
+        {
+        // TODO
+        return pool().valFalse();
         }
 
     /**

@@ -8,7 +8,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -81,7 +80,7 @@ public class BinaryExpression
         }
 
     @Override
-    public Argument generateConstant(Code code, TypeConstant type, ErrorListener errs)
+    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
         {
         if (type.isSingleDefiningConstant()
                 && type.getDefiningConstant() instanceof ClassConstant

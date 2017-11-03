@@ -7,7 +7,6 @@ import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
@@ -185,11 +184,16 @@ public class TupleExpression
             List<Expression> listExprs    = m_exprs;
             int              cFields      = listExprs == null ? 0 : listExprs.size();
             Constant[]       aconstFields = new Constant[cFields];
+            TypeConstant[]   atypeFields  = new TypeConstant[cFields];
             for (int i = 0; i < cFields; ++i)
                 {
-                aconstFields[i] = listExprs.get(i).toConstant();
+                Constant constVal = listExprs.get(i).toConstant();
+                aconstFields[i] = constVal;
+                atypeFields [i] = constVal.getType();
                 }
-            return pool().ensureTupleConstant(getImplicitType(), aconstFields);
+            TypeConstant typeTuple =
+                    pool().ensureParameterizedTypeConstant(pool().typeTuple(), atypeFields);
+            return pool().ensureTupleConstant(typeTuple, aconstFields);
             }
 
         return super.toConstant();
@@ -208,14 +212,14 @@ public class TupleExpression
         }
 
     @Override
-    public Argument generateConstant(MethodStructure.Code code, TypeConstant type, ErrorListener errs)
+    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
         {
         assert isConstant();
 
         if (!isAssignableTo(type))
             {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE, getImplicitType(), type);
-            return generateBlackHole(type);
+            return generateFakeConstant(type);
             }
 
         // we'll need to know the type to ask for for each field, even if the caller didn't specify
@@ -230,8 +234,8 @@ public class TupleExpression
         Constant[]       aField    = new Constant[cExprs];
         for (int i = 0; i < cExprs; ++i)
             {
-            // TODO Argument or Constant
-            aField[i] = (Constant) listExprs.get(i).generateConstant(code, typeTuple.getTupleFieldType(i), errs);
+            TypeConstant typeField = typeTuple.getTupleFieldType(i);
+            aField[i] = listExprs.get(i).generateConstant(code, typeField, errs);
             }
 
         return pool().ensureTupleConstant(type, aField);

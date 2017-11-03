@@ -1,10 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -179,7 +180,7 @@ public class BiExpression
         }
 
     @Override
-    public Argument generateConstant(MethodStructure.Code code, TypeConstant type,
+    public Constant generateConstant(Code code, TypeConstant type,
             ErrorListener errs)
         {
         if (isConstant())
@@ -235,9 +236,9 @@ public class BiExpression
                         // if the first expression is a boolean true, then the result is a boolean
                         // true;  otherwise if the second expression is a boolean true, then the
                         // result is a boolean true; otherwise the result is a boolean false
-                        Argument arg = expr1.generateConstant(code, type, errs);
-                        return pool.valTrue().equals(arg)
-                                ? arg
+                        Constant constVal = expr1.generateConstant(code, type, errs);
+                        return pool.valTrue().equals(constVal)
+                                ? constVal
                                 : expr2.generateConstant(code, type, errs);
                         }
                     break;
@@ -252,9 +253,9 @@ public class BiExpression
                         // if the first expression is a boolean false, then the result is a boolean
                         // false;  otherwise if the second expression is a boolean true, then the
                         // result is a boolean true; otherwise the result is a boolean false
-                        Argument arg = expr1.generateConstant(code, type, errs);
-                        return pool.valFalse().equals(arg)
-                                ? arg
+                        Constant constVal = expr1.generateConstant(code, type, errs);
+                        return pool.valFalse().equals(constVal)
+                                ? constVal
                                 : expr2.generateConstant(code, type, errs);
                         }
                     break;
