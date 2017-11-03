@@ -493,7 +493,7 @@ public class Function
             ObjectHandle[] ahFuture = new ObjectHandle[]{hFuture};
             Frame frameNext = frame.createNativeFrame(aop, ahFuture, iReturn, null);
 
-            frameNext.f_aInfo[0] = frame.new VarInfo(xFutureRef.TYPE, null, Frame.VAR_DYNAMIC_REF);
+            frameNext.f_aInfo[0] = frame.new VarInfo(xFutureRef.TYPE, Frame.VAR_DYNAMIC_REF);
 
             frame.m_frameNext = frameNext;
             return Op.R_CALL;
@@ -544,7 +544,7 @@ public class Function
                         cfResult.thenApply(ahResult -> ahResult[iResult]);
 
                 ahFuture[i] = xFutureRef.makeHandle(cfReturn);
-                frameNext.f_aInfo[i] = frame.new VarInfo(xFutureRef.TYPE, null, Frame.VAR_DYNAMIC_REF);
+                frameNext.f_aInfo[i] = frame.new VarInfo(xFutureRef.TYPE, Frame.VAR_DYNAMIC_REF);
                 }
 
             frame.m_frameNext = frameNext;

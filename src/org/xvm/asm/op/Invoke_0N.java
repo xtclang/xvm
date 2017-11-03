@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -91,6 +92,12 @@ public class Invoke_0N
         }
 
     @Override
+    protected boolean isMultiReturn()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try
@@ -121,27 +128,31 @@ public class Invoke_0N
         {
         TypeComposition clz = hTarget.f_clazz;
         CallChain chain = getCallChain(frame, clz);
+        MethodStructure method = chain.getTop();
+
+        for (int i = 0, c = m_anRetValue.length; i < c; i++)
+            {
+            if (frame.isNextRegister(m_anRetValue[i]))
+                {
+                if (i == 0)
+                    {
+                    frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+                    }
+                else
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                }
+            }
 
         if (chain.isNative())
             {
-            return clz.f_template.invokeNativeNN(frame, chain.getTop(), hTarget,
+            return clz.f_template.invokeNativeNN(frame, method, hTarget,
                     Utils.OBJECTS_NONE, m_anRetValue);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
         return clz.f_template.invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
-
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        super.registerConstants(registry);
-
-        registerArguments(m_aArgReturn, registry);
-        }
-
-    private int[] m_anRetValue;
-
-    private Argument[] m_aArgReturn;
     }

@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -136,13 +137,19 @@ public class Invoke_N1
     protected int resolveArgs(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
+        MethodStructure method = chain.getTop();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+            }
 
         ObjectHandle[] ahVar;
         if (ahArg == null)
             {
             try
                 {
-                ahVar = frame.getArguments(m_anArgValue, chain.getTop().getMaxVars());
+                ahVar = frame.getArguments(m_anArgValue, method.getMaxVars());
                 if (ahVar == null)
                     {
                     return R_REPEAT;
@@ -155,7 +162,7 @@ public class Invoke_N1
             }
         else
             {
-            ahVar = Utils.ensureSize(ahArg, chain.getTop().getMaxVars());
+            ahVar = Utils.ensureSize(ahArg, method.getMaxVars());
             }
 
         if (anyProperty(ahVar))
@@ -182,12 +189,9 @@ public class Invoke_N1
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
-        registerArgument(m_argReturn, registry);
         }
 
     private int[] m_anArgValue;
-    private int   m_nRetValue;
 
     private Argument[] m_aArgValue;
-    private Argument   m_argReturn;
     }

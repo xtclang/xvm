@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -42,7 +43,7 @@ public class Invoke_0T
 
         m_nTarget = nTarget;
         m_nMethodId = nMethodId;
-        m_nTupleRetValue = nRet;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -70,7 +71,7 @@ public class Invoke_0T
         {
         super(in, aconst);
 
-        m_nTupleRetValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -81,10 +82,10 @@ public class Invoke_0T
 
         if (m_argReturn != null)
             {
-            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        writePackedLong(out, m_nTupleRetValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -124,27 +125,22 @@ public class Invoke_0T
         {
         TypeComposition clz = hTarget.f_clazz;
         CallChain chain = getCallChain(frame, clz);
+        MethodStructure method = chain.getTop();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnTuple(m_nTarget, method.getIdentityConstant());
+            }
 
         if (chain.isNative())
             {
-            return clz.f_template.invokeNativeT(frame, chain.getTop(), hTarget,
-                Utils.OBJECTS_NONE, m_nTupleRetValue);
+            return clz.f_template.invokeNativeT(frame, method, hTarget,
+                Utils.OBJECTS_NONE, m_nRetValue);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
-        return clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nTupleRetValue);
+        return clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        super.registerConstants(registry);
-
-        registerArgument(m_argReturn, registry);
-        }
-
-    private int m_nTupleRetValue;
-
-    private Argument m_argReturn;
     }

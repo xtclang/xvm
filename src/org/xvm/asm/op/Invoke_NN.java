@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -16,8 +17,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
-
-import static org.xvm.util.Handy.readPackedInt;
 
 
 /**
@@ -100,6 +99,12 @@ public class Invoke_NN
         }
 
     @Override
+    protected boolean isMultiReturn()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try
@@ -136,13 +141,29 @@ public class Invoke_NN
     protected int resolveArgs(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
+        MethodStructure method = chain.getTop();
+
+        for (int i = 0, c = m_anRetValue.length; i < c; i++)
+            {
+            if (frame.isNextRegister(m_anRetValue[i]))
+                {
+                if (i == 0)
+                    {
+                    frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+                    }
+                else
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                }
+            }
 
         ObjectHandle[] ahVar;
         if (ahArg == null)
             {
             try
                 {
-                ahVar = frame.getArguments(m_anArgValue, chain.getTop().getMaxVars());
+                ahVar = frame.getArguments(m_anArgValue, method.getMaxVars());
                 if (ahVar == null)
                     {
                     return R_REPEAT;
@@ -155,7 +176,7 @@ public class Invoke_NN
             }
         else
             {
-            ahVar = Utils.ensureSize(ahArg, chain.getTop().getMaxVars());
+            ahVar = Utils.ensureSize(ahArg, method.getMaxVars());
             }
 
         if (anyProperty(ahVar))
@@ -176,18 +197,7 @@ public class Invoke_NN
              : clz.f_template.invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        super.registerConstants(registry);
-
-        registerArguments(m_aArgValue, registry);
-        registerArguments(m_aArgReturn, registry);
-        }
-
     private int[] m_anArgValue;
-    private int[] m_anRetValue;
 
     private Argument[] m_aArgValue;
-    private Argument[] m_aArgReturn;
     }

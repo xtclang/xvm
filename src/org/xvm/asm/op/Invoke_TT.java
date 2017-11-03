@@ -49,7 +49,7 @@ public class Invoke_TT
         m_nTarget = nTarget;
         m_nMethodId = nMethodId;
         m_nArgTupleValue = nArg;
-        m_nTupleRetValue = nRet;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -80,7 +80,7 @@ public class Invoke_TT
         super(in, aconst);
 
         m_nArgTupleValue = readPackedInt(in);
-        m_nTupleRetValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -92,11 +92,11 @@ public class Invoke_TT
         if (m_argValue != null)
             {
             m_nArgTupleValue = encodeArgument(m_argValue, registry);
-            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nArgTupleValue);
-        writePackedLong(out, m_nTupleRetValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -153,7 +153,6 @@ public class Invoke_TT
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
         TypeComposition clz = hTarget.f_clazz;
-
         CallChain chain = getCallChain(frame, clz);
         MethodStructure method = chain.getTop();
 
@@ -162,10 +161,15 @@ public class Invoke_TT
             return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
             }
 
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnTuple(m_nTarget, method.getIdentityConstant());
+            }
+
         return chain.isNative()
-            ? clz.f_template.invokeNativeT(frame, method, hTarget, ahArg, m_nTupleRetValue)
+            ? clz.f_template.invokeNativeT(frame, method, hTarget, ahArg, m_nRetValue)
             : clz.f_template.invokeT(frame, chain, hTarget,
-                Utils.ensureSize(ahArg, method.getMaxVars()), m_nTupleRetValue);
+                Utils.ensureSize(ahArg, method.getMaxVars()), m_nRetValue);
         }
 
     @Override
@@ -174,12 +178,9 @@ public class Invoke_TT
         super.registerConstants(registry);
 
         registerArgument(m_argValue, registry);
-        registerArgument(m_argReturn, registry);
         }
 
     private int m_nArgTupleValue;
-    private int m_nTupleRetValue;
 
     private Argument m_argValue;
-    private Argument m_argReturn;
     }

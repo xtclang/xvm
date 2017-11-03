@@ -17,8 +17,6 @@ import org.xvm.asm.op.Return_0;
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
-
 import org.xvm.runtime.template.Function.FunctionHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
@@ -436,7 +434,7 @@ public class ServiceContext
 
         for (int nVar = 0; nVar < cReturns; nVar++)
             {
-            frame.f_aInfo[nVar] = frame.new VarInfo(xObject.TYPE, null, Frame.VAR_STANDARD);
+            frame.f_aInfo[nVar] = frame.new VarInfo(xObject.TYPE, Frame.VAR_STANDARD);
             }
         return frame;
         }

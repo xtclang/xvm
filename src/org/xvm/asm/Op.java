@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import com.sun.org.apache.xpath.internal.Arg;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -144,15 +145,39 @@ public abstract class Op
         }
 
     /**
-     * Check if the specified Argument represents "the next available" register.
+     * Check if the specified Argument represents "the next available" register and if
+     * so, assign its index to the next allocated variable.
      *
-     * @param arg  the argument
-     *
-     * @return true iff the specified Argument represents "the next available" register
+     * @param scope  the scope
+     * @param arg    the argument
      */
-    public boolean isNextRegister(Argument arg)
+    public void checkNextRegister(Scope scope, Argument arg)
         {
-        return arg instanceof Register && ((Register) arg).isUnknown();
+        if (arg instanceof Register && ((Register) arg).isUnknown())
+            {
+            ((Register) arg).assignIndex(scope.allocVar());
+            }
+        }
+
+    /**
+     * Check if any of the specified Arguments represent "the next available" register and if
+     * so, assign its index to the next allocated variable.
+     *
+     * @param scope  the scope
+     * @param aArg   the argument array
+     */
+    public void checkNextRegisters(Scope scope, Argument[] aArg)
+        {
+        if (aArg != null)
+            {
+            for (Argument arg : aArg)
+                {
+                if (arg instanceof Register && ((Register) arg).isUnknown())
+                    {
+                    ((Register) arg).assignIndex(scope.allocVar());
+                    }
+                }
+            }
         }
 
     /**

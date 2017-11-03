@@ -164,12 +164,9 @@ public class NewG_N
     @Override
     public void simulate(Scope scope)
         {
-        if (isNextRegister(m_argReturn))
-            {
-            ((Register) m_argReturn).assignIndex(scope.allocVar());
-            }
+        checkNextRegister(scope, m_argReturn);
+
         // TODO: remove when deprecated construction is removed
-        else
         if (scope.isNextRegister(m_nRetValue))
             {
             scope.allocVar();

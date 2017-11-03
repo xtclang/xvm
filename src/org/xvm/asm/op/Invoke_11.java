@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -146,14 +147,19 @@ public class Invoke_11
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
         TypeComposition clz = hTarget.f_clazz;
-
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
+        MethodStructure method = chain.getTop();
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;
 
         return chain.isNative()
-            ? clz.f_template.invokeNative1(frame, chain.getTop(), hTarget, ahVar[0], m_nRetValue)
+            ? clz.f_template.invokeNative1(frame, method, hTarget, ahVar[0], m_nRetValue)
             : clz.f_template.invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
@@ -163,12 +169,9 @@ public class Invoke_11
         super.registerConstants(registry);
 
         registerArgument(m_argValue, registry);
-        registerArgument(m_argReturn, registry);
         }
 
     private int m_nArgValue;
-    private int m_nRetValue;
 
     private Argument m_argValue;
-    private Argument m_argReturn;
     }

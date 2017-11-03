@@ -66,24 +66,23 @@ public class xTestApp extends xModule
             .add(new X_Print(2))
 
             .add(new Enter())
-            .add(new Var(adapter.getClassTypeConstId("Boolean"))) // #3
             .add(new Var_N(adapter.getClassTypeConstId("Int64"),
-                adapter.ensureValueConstantId("of"))) // #4 (of)
+                adapter.ensureValueConstantId("of"))) // #3 (of)
             .add(new Invoke_NN(1, adapter.getMethodConstId("String", "indexOf"),
                 new int[]{
                     adapter.ensureValueConstantId("world"),
                     adapter.ensureValueConstantId(null)
                 },
-                new int[]{3, 4}))
-            .add(new JumpFalse(3, 10)) // -> Exit
+                new int[]{4, 3})) // next register #4
+            .add(new JumpFalse(4, 10)) // -> Exit
 
             .add(new P_Get(adapter.getPropertyConstId("String", "size"), 1, 5)) // next register #5
-            .add(new GP_Add(5, 4, 5))
+            .add(new GP_Add(5, 3, 5))
             .add(new IsEq(5, adapter.ensureValueConstantId(18), 6)) // next register #6
             .add(new Assert(6))
 
-            .add(new Var(adapter.getClassTypeConstId("String"))) // #7
-            .add(new Invoke_01(4, adapter.getMethodConstId("Int64", "to", VOID, STRING), 7))
+            .add(new Invoke_01(3, adapter.getMethodConstId("Int64", "to", VOID, STRING),
+                7))  // next register #7
             .add(new X_Print(7))
             .add(new Exit())
 
@@ -101,9 +100,8 @@ public class xTestApp extends xModule
             .add(new X_Print(0))
             .add(new P_Get(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 0, 1)) // next register #1
             .add(new X_Print(1))
-            .add(new Var(adapter.getClassTypeConstId("Int64")))    // #2
             .add(new Invoke_01(0, adapter.getMethodConstId("TestApp.TestClass", "method1"),
-                2))
+                2)) // next register #2
             .add(new X_Print(2))
 
             .add(new GuardStart(adapter.getClassTypeConstId("Exception"),
@@ -124,10 +122,11 @@ public class xTestApp extends xModule
                     adapter.ensureValueConstantId("Goodbye")
                 }, 3))
             .add(new X_Print(3))
-            .add(new P_Get(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 3, 4)) // next register #4
+            .add(new P_Get(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 3,
+                4)) // next register #4
             .add(new X_Print(4))
-            .add(new Var(adapter.getClassTypeConstId("Int64")))    // #5
-            .add(new Invoke_01(3, adapter.getMethodConstId("TestApp.TestClass", "method1"), 5))
+            .add(new Invoke_01(3, adapter.getMethodConstId("TestApp.TestClass", "method1"),
+                5)) // next register #5
             .add(new X_Print(5))
 
             .add(new Var_N(adapter.getClassTypeConstId("Function"),
@@ -254,9 +253,9 @@ public class xTestApp extends xModule
                 new String[] {"Service"}, INT);
         ftTestReturn.createCode()
             // #0 = svc
-            .add(new Var(adapter.getClassTypeConstId("Int64"))) // #1
             .add(new Invoke_01(0,
-                    adapter.getMethodConstId("TestApp.TestService", "increment"), 1))
+                adapter.getMethodConstId("TestApp.TestService", "increment"),
+                1)) // next register #1
             .add(new Return_1(1));
 
         MethodStructure ftTestService2 = ensureMethodStructure("testService2", VOID);
@@ -334,41 +333,40 @@ public class xTestApp extends xModule
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testRef() #")))
 
             .add(new Var_N(adapter.getClassTypeConstId("Ref<String>"),
-                    adapter.ensureValueConstantId("ra"))) // #1 (ra)
+                adapter.ensureValueConstantId("ra"))) // #1 (ra)
             .add(new MoveRef(0, 1))
 
-            .add(new Var(adapter.getClassTypeConstId("String"))) // #2
-            .add(new Invoke_01(1, adapter.getMethodConstId("Ref", "get"), 2))
+            .add(new Invoke_01(1, adapter.getMethodConstId("Ref", "get"), 2)) // next register #2
             .add(new X_Print(2))
             .add(new Invoke_10(1, adapter.getMethodConstId("Ref", "set"),
                     adapter.ensureValueConstantId("bye")))
             .add(new X_Print(0))
 
             .add(new Var_N(adapter.getClassTypeConstId("Ref<Int64>"),
-                    adapter.ensureValueConstantId("ri"))) // #3 (ri)
+                adapter.ensureValueConstantId("ri"))) // #3 (ri)
             .add(new Enter())
             .add(new Var_IN(adapter.getClassTypeConstId("Int64"),
-                    adapter.ensureValueConstantId("i"),
-                    adapter.ensureValueConstantId(1))) // #4 (i)
+                adapter.ensureValueConstantId("i"),
+                adapter.ensureValueConstantId(1))) // #4 (i)
             .add(new Var_N(adapter.getClassTypeConstId("Ref<Int64>"),
-                    adapter.ensureValueConstantId("ri2"))) // #5 (ri2)
+                adapter.ensureValueConstantId("ri2"))) // #5 (ri2)
             .add(new MoveRef(4, 5))
             .add(new MoveRef(4, 3))
 
-            .add(new Var(adapter.getClassTypeConstId("Int64"))) // #6
-            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 6))
+            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"),
+                6)) // next register #6
             .add(new X_Print(6))
 
             .add(new Invoke_10(3, adapter.getMethodConstId("Ref", "set"),
-                    adapter.ensureValueConstantId(2)))
+                adapter.ensureValueConstantId(2)))
             .add(new X_Print(4))
 
             .add(new Move(adapter.ensureValueConstantId(3), 4))
             .add(new X_Print(5))
             .add(new Exit())
 
-            .add(new Var(adapter.getClassTypeConstId("Int64"))) // #4
-            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 4))
+            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"),
+                4)) // next register #4
             .add(new X_Print(4))
 
             .add(new Return_0());
@@ -380,9 +378,9 @@ public class xTestApp extends xModule
         ftLambda$2.createCode()
             // #0 = i
             .add(new Var_I(adapter.getClassTypeConstId("String"),
-                    adapter.ensureValueConstantId("value "))) // #1
-            .add(new Var(adapter.getClassTypeConstId("String"))) // #2
-            .add(new Invoke_01(0, adapter.getMethodConstId("Int64", "to", VOID, STRING), 2))
+                adapter.ensureValueConstantId("value "))) // #1
+            .add(new Invoke_01(0, adapter.getMethodConstId("Int64", "to", VOID, STRING),
+                2)) // next register #
             .add(new GP_Add(1, 2, 1))
             .add(new Return_1(1));
 
@@ -395,7 +393,7 @@ public class xTestApp extends xModule
                 adapter.getClassTypeConstId("collections.Array<Int64>"),
                 adapter.ensureValueConstantId(0), 0))
             .add(new I_Set(0, adapter.ensureValueConstantId(0),
-                    adapter.ensureValueConstantId(1)))
+                adapter.ensureValueConstantId(1)))
             .add(new I_Set(0, adapter.ensureValueConstantId(1),
                 adapter.ensureValueConstantId(2)))
             .add(new X_Print(0))
@@ -424,7 +422,7 @@ public class xTestApp extends xModule
             .add(new Invoke_01(4, adapter.getMethodConstId("Ref", "get"), 3))
             .add(new X_Print(3))
             .add(new Invoke_10(4, adapter.getMethodConstId("Ref", "set"),
-                    adapter.ensureValueConstantId("zero")))
+                adapter.ensureValueConstantId("zero")))
             .add(new I_Get(2, adapter.ensureValueConstantId(0), 3))
             .add(new X_Print(3))
 
@@ -527,10 +525,10 @@ public class xTestApp extends xModule
         MethodStructure mtTo = ctPoint.ensureMethodStructure("to", VOID, STRING);
         mtTo.createCode()
             .add(new Var_I(adapter.getClassTypeConstId("String"),
-                    adapter.ensureValueConstantId("("))) // #0
+                adapter.ensureValueConstantId("("))) // #0
             .add(new L_Get(adapter.getPropertyConstId("TestApp.Point", "x"), 1)) // next register #1
-            .add(new Var(adapter.getClassTypeConstId("String"))) // #2
-            .add(new Invoke_01(1, adapter.getMethodConstId("Object", "to", VOID, STRING), 2))
+            .add(new Invoke_01(1, adapter.getMethodConstId("Object", "to", VOID, STRING),
+                2)) // next register #2
             .add(new GP_Add(0, 2, 0))
             .add(new GP_Add(0, adapter.ensureValueConstantId(", "), 0))
             .add(new L_Get(adapter.getPropertyConstId("TestApp.Point", "y"), 1))
