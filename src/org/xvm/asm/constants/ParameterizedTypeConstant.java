@@ -15,9 +15,11 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeSet;
+
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -27,8 +29,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * A TypeConstant that represents the type of a module, package, or class.
- *
- * @author cp 2017.04.25
  */
 public class ParameterizedTypeConstant
         extends TypeConstant
@@ -220,7 +220,15 @@ public class ParameterizedTypeConstant
         return false;
         }
 
-// ----- Constant methods ----------------------------------------------------------------------
+    @Override
+    public boolean isNullable()
+        {
+        assert !m_constType.isNullable();
+        return false;
+        }
+
+
+    // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     public Format getFormat()

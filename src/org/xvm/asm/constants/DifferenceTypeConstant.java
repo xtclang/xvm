@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.Collections;
 import java.util.Set;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -142,6 +143,13 @@ public class DifferenceTypeConstant
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
         return Collections.EMPTY_SET;
+        }
+
+    @Override
+    public boolean isOnlyNullable()
+        {
+        // difference types are never nullable
+        return false;
         }
 
 

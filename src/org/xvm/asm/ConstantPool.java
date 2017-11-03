@@ -903,12 +903,15 @@ public class ConstantPool
             case "Iterator":
             case "Module":
             case "Nullable":
+            case "Ordered":
             case "Object":
             case "Package":
             case "Ref":
             case "Service":
             case "String":
             case "Type":
+            case "Orderable":
+            case "Sequential":
                 sClz = sName;
                 break;
 
@@ -1640,6 +1643,7 @@ public class ConstantPool
     public ClassConstant     clzTrue()          {ClassConstant     c = m_clzTrue;         if (c == null) {m_clzTrue         = c = (ClassConstant) getImplicitlyImportedIdentity("True"       );} return c;}
     public ClassConstant     clzFalse()         {ClassConstant     c = m_clzFalse;        if (c == null) {m_clzFalse        = c = (ClassConstant) getImplicitlyImportedIdentity("False"      );} return c;}
     public ClassConstant     clzNullable()      {ClassConstant     c = m_clzNullable;     if (c == null) {m_clzNullable     = c = (ClassConstant) getImplicitlyImportedIdentity("Nullable"   );} return c;}
+    public ClassConstant     clzOrdered()       {ClassConstant     c = m_clzOrdered;      if (c == null) {m_clzOrdered      = c = (ClassConstant) getImplicitlyImportedIdentity("Ordered"    );} return c;}
     public ClassConstant     clzNull()          {ClassConstant     c = m_clzNull;         if (c == null) {m_clzNull         = c = (ClassConstant) getImplicitlyImportedIdentity("Null"       );} return c;}
     public ClassConstant     clzChar()          {ClassConstant     c = m_clzChar;         if (c == null) {m_clzChar         = c = (ClassConstant) getImplicitlyImportedIdentity("Char"       );} return c;}
     public ClassConstant     clzIntLiteral()    {ClassConstant     c = m_clzIntLiteral;   if (c == null) {m_clzIntLiteral   = c = (ClassConstant) getImplicitlyImportedIdentity("IntLiteral" );} return c;}
@@ -1649,6 +1653,10 @@ public class ConstantPool
     public ClassConstant     clzInt()           {ClassConstant     c = m_clzInt;          if (c == null) {m_clzInt          = c = (ClassConstant) getImplicitlyImportedIdentity("Int"        );} return c;}
     public ClassConstant     clzArray()         {ClassConstant     c = m_clzArray;        if (c == null) {m_clzArray        = c = (ClassConstant) getImplicitlyImportedIdentity("Array"      );} return c;}
     public ClassConstant     clzSequence()      {ClassConstant     c = m_clzSequence;     if (c == null) {m_clzSequence     = c = (ClassConstant) getImplicitlyImportedIdentity("Sequence"   );} return c;}
+    public ClassConstant     clzOrderable()     {ClassConstant     c = m_clzOrderable;    if (c == null) {m_clzOrderable    = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"  );} return c;}
+    public ClassConstant     clzSequential()    {ClassConstant     c = m_clzSequential;   if (c == null) {m_clzSequential   = c = (ClassConstant) getImplicitlyImportedIdentity("Sequential" );} return c;}
+    public ClassConstant     clzRange()         {ClassConstant     c = m_clzRange;        if (c == null) {m_clzRange        = c = (ClassConstant) getImplicitlyImportedIdentity("Range"      );} return c;}
+    public ClassConstant     clzInterval()      {ClassConstant     c = m_clzInterval;     if (c == null) {m_clzInterval     = c = (ClassConstant) getImplicitlyImportedIdentity("Interval"   );} return c;}
     public ClassConstant     clzHashable()      {ClassConstant     c = m_clzHashable;     if (c == null) {m_clzHashable     = c = (ClassConstant) getImplicitlyImportedIdentity("Hashable"   );} return c;}
     public ClassConstant     clzIterable()      {ClassConstant     c = m_clzIterable;     if (c == null) {m_clzIterable     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterable"   );} return c;}
     public ClassConstant     clzIterator()      {ClassConstant     c = m_clzIterator;     if (c == null) {m_clzIterator     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterator"   );} return c;}
@@ -1669,6 +1677,7 @@ public class ConstantPool
     public TypeConstant      typeTrue()         {TypeConstant      c = m_typeTrue;        if (c == null) {m_typeTrue        = c = ensureTerminalTypeConstant(clzTrue()                       );} return c;}
     public TypeConstant      typeFalse()        {TypeConstant      c = m_typeFalse;       if (c == null) {m_typeFalse       = c = ensureTerminalTypeConstant(clzFalse()                      );} return c;}
     public TypeConstant      typeNullable()     {TypeConstant      c = m_typeNullable;    if (c == null) {m_typeNullable    = c = ensureTerminalTypeConstant(clzNullable()                   );} return c;}
+    public TypeConstant      typeOrdered()      {TypeConstant      c = m_typeOrdered;     if (c == null) {m_typeOrdered     = c = ensureTerminalTypeConstant(clzOrdered()                    );} return c;}
     public TypeConstant      typeNull()         {TypeConstant      c = m_typeNull;        if (c == null) {m_typeNull        = c = ensureTerminalTypeConstant(clzNull()                       );} return c;}
     public TypeConstant      typeChar()         {TypeConstant      c = m_typeChar;        if (c == null) {m_typeChar        = c = ensureTerminalTypeConstant(clzChar()                       );} return c;}
     public TypeConstant      typeIntLiteral()   {TypeConstant      c = m_typeIntLiteral;  if (c == null) {m_typeIntLiteral  = c = ensureTerminalTypeConstant(clzIntLiteral()                 );} return c;}
@@ -1678,6 +1687,10 @@ public class ConstantPool
     public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                        );} return c;}
     public TypeConstant      typeArray()        {TypeConstant      c = m_typeArray;       if (c == null) {m_typeArray       = c = ensureTerminalTypeConstant(clzArray()                      );} return c;}
     public TypeConstant      typeSequence()     {TypeConstant      c = m_typeSequence;    if (c == null) {m_typeSequence    = c = ensureTerminalTypeConstant(clzSequence()                   );} return c;}
+    public TypeConstant      typeOrderable()    {TypeConstant      c = m_typeOrderable;   if (c == null) {m_typeOrderable   = c = ensureTerminalTypeConstant(clzOrderable()                  );} return c;}
+    public TypeConstant      typeSequential()   {TypeConstant      c = m_typeSequential;  if (c == null) {m_typeSequential  = c = ensureTerminalTypeConstant(clzSequential()                 );} return c;}
+    public TypeConstant      typeRange()        {TypeConstant      c = m_typeRange;       if (c == null) {m_typeRange       = c = ensureTerminalTypeConstant(clzRange()                      );} return c;}
+    public TypeConstant      typeInterval()     {TypeConstant      c = m_typeInterval;    if (c == null) {m_typeInterval    = c = ensureTerminalTypeConstant(clzInterval()                   );} return c;}
     public TypeConstant      typeHashable()     {TypeConstant      c = m_typeHashable;    if (c == null) {m_typeHashable    = c = ensureTerminalTypeConstant(clzHashable()                   );} return c;}
     public TypeConstant      typeIterable()     {TypeConstant      c = m_typeIterable;    if (c == null) {m_typeIterable    = c = ensureTerminalTypeConstant(clzIterable()                   );} return c;}
     public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
@@ -2280,6 +2293,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzTrue;
     private transient ClassConstant     m_clzFalse;
     private transient ClassConstant     m_clzNullable;
+    private transient ClassConstant     m_clzOrdered;
     private transient ClassConstant     m_clzNull;
     private transient ClassConstant     m_clzChar;
     private transient ClassConstant     m_clzIntLiteral;
@@ -2289,7 +2303,11 @@ public class ConstantPool
     private transient ClassConstant     m_clzInt;
     private transient ClassConstant     m_clzArray;
     private transient ClassConstant     m_clzSequence;
+    private transient ClassConstant     m_clzOrderable;
+    private transient ClassConstant     m_clzSequential;
     private transient ClassConstant     m_clzHashable;
+    private transient ClassConstant     m_clzRange;
+    private transient ClassConstant     m_clzInterval;
     private transient ClassConstant     m_clzIterable;
     private transient ClassConstant     m_clzIterator;
     private transient ClassConstant     m_clzTuple;
@@ -2309,6 +2327,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeTrue;
     private transient TypeConstant      m_typeFalse;
     private transient TypeConstant      m_typeNullable;
+    private transient TypeConstant      m_typeOrdered;
     private transient TypeConstant      m_typeNull;
     private transient TypeConstant      m_typeChar;
     private transient TypeConstant      m_typeIntLiteral;
@@ -2319,7 +2338,11 @@ public class ConstantPool
     private transient TypeConstant      m_typeInt;
     private transient TypeConstant      m_typeArray;
     private transient TypeConstant      m_typeSequence;
+    private transient TypeConstant      m_typeOrderable;
+    private transient TypeConstant      m_typeSequential;
     private transient TypeConstant      m_typeHashable;
+    private transient TypeConstant      m_typeRange;
+    private transient TypeConstant      m_typeInterval;
     private transient TypeConstant      m_typeIterable;
     private transient TypeConstant      m_typeIterator;
     private transient TypeConstant      m_typeTuple;
