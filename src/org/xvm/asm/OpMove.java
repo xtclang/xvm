@@ -58,6 +58,9 @@ public abstract class OpMove
     @Override
     public void simulate(Scope scope)
         {
+        checkNextRegister(scope, m_regTo);
+
+        // TODO: remove when deprecated construction is removed
         if (scope.isNextRegister(m_nToValue))
             {
             scope.allocVar();

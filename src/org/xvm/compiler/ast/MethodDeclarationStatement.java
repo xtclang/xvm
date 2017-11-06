@@ -14,6 +14,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.ErrorList;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -188,7 +189,25 @@ public class MethodDeclarationStatement
             Code code = method.createCode();
             try
                 {
+                ErrorList errList = (ErrorList) errs; // TODO: temporary
+                errList.clear();
+
                 body.compileMethod(code, errs);
+
+                // TODO: temporary
+                if (errList.getErrors().isEmpty())
+                    {
+                    System.out.println("Successfully compiled: " +
+                        method.getParent().getParent().getName() + "." + method.getIdentityConstant());
+                    }
+                else
+                    {
+                    System.err.println("Compilation error: " +
+                        method.getParent().getParent().getName() + "." + method.getIdentityConstant());
+                    System.err.println(errList.getErrors());
+                    errList.clear();
+                    method.setNative(true);
+                    }
                 }
             catch (UnsupportedOperationException e) // TODO temporary
                 {

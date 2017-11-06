@@ -82,6 +82,8 @@ public class Scope
      * @param nVar  the register index
      *
      * @return true iff the specified index points to the next available register
+     *
+     * @deprecated remove when the deprecated Op constructors are removed
      */
     public boolean isNextRegister(int nVar)
         {

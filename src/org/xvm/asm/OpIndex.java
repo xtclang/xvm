@@ -155,6 +155,12 @@ public abstract class OpIndex
     @Override
     public void simulate(Scope scope)
         {
+        if (isAssignOp())
+            {
+            checkNextRegister(scope, m_argReturn);
+            }
+
+        // TODO: remove when deprecated construction is removed
         if (isAssignOp() && scope.isNextRegister(m_nRetValue))
             {
             scope.allocVar();

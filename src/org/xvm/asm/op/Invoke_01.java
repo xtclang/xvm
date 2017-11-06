@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -124,27 +125,21 @@ public class Invoke_01
         {
         TypeComposition clz = hTarget.f_clazz;
         CallChain chain = getCallChain(frame, clz);
+        MethodStructure method = chain.getTop();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+            }
 
         if (chain.isNative())
             {
-            return clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget,
+            return clz.f_template.invokeNativeN(frame, method, hTarget,
                     Utils.OBJECTS_NONE, m_nRetValue);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
         return clz.f_template.invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
         }
-
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        super.registerConstants(registry);
-
-        registerArgument(m_argReturn, registry);
-        }
-
-    private int m_nRetValue;
-
-    private Argument m_argReturn;
     }

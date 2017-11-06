@@ -63,11 +63,58 @@ public abstract class OpInvocable extends Op
         writePackedLong(out, m_nMethodId);
         }
 
+    /**
+     * A "virtual constant" indicating whether or not this op has multiple return values.
+     *
+     * @return true iff the op has multiple return values.
+     */
+    protected boolean isMultiReturn()
+        {
+        return false;
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        if (isMultiReturn())
+            {
+            checkNextRegisters(scope, m_aArgReturn);
+
+            // TODO: remove when deprecated construction is removed
+            for (int i = 0, c = m_anRetValue.length; i < c; i++)
+                {
+                if (scope.isNextRegister(m_anRetValue[i]))
+                    {
+                    scope.allocVar();
+                    }
+                }
+            }
+        else
+            {
+            checkNextRegister(scope, m_argReturn);
+
+            // TODO: remove when deprecated construction is removed
+            if (scope.isNextRegister(m_nRetValue))
+                {
+                scope.allocVar();
+                }
+            }
+        }
+
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
         registerArgument(m_argTarget, registry);
         registerArgument(m_constMethod, registry);
+
+        if (isMultiReturn())
+            {
+            registerArguments(m_aArgReturn, registry);
+            }
+        else
+            {
+            registerArgument(m_argReturn, registry);
+            }
         }
 
     // helper method
@@ -95,11 +142,15 @@ public abstract class OpInvocable extends Op
         return m_chain;
         }
 
-    protected int m_nTarget;
-    protected int m_nMethodId;
+    protected int   m_nTarget;
+    protected int   m_nMethodId;
+    protected int   m_nRetValue = Frame.RET_UNUSED;
+    protected int[] m_anRetValue;
 
-    private Argument       m_argTarget;
-    private MethodConstant m_constMethod;
+    protected Argument       m_argTarget;
+    protected MethodConstant m_constMethod;
+    protected Argument       m_argReturn;  // optional
+    protected Argument[]     m_aArgReturn; // optional
 
     private TypeComposition m_clazz;        // cached class
     private CallChain       m_chain;        // cached call chain

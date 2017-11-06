@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -42,7 +43,7 @@ public class Invoke_1T
         m_nTarget = nTarget;
         m_nMethodId = nMethodId;
         m_nArgValue = nArg;
-        m_nTupleRetValue = nRet;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -73,7 +74,7 @@ public class Invoke_1T
         super(in, aconst);
 
         m_nArgValue = readPackedInt(in);
-        m_nTupleRetValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -85,11 +86,11 @@ public class Invoke_1T
         if (m_argValue != null)
             {
             m_nArgValue = encodeArgument(m_argValue, registry);
-            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nArgValue);
-        writePackedLong(out, m_nTupleRetValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -144,15 +145,20 @@ public class Invoke_1T
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
         TypeComposition clz = hTarget.f_clazz;
-
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
+        MethodStructure method = chain.getTop();
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnTuple(m_nTarget, method.getIdentityConstant());
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;
 
         return chain.isNative()
-            ? clz.f_template.invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nTupleRetValue)
-            : clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nTupleRetValue);
+            ? clz.f_template.invokeNativeT(frame, method, hTarget, ahVar, m_nRetValue)
+            : clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     @Override
@@ -161,12 +167,9 @@ public class Invoke_1T
         super.registerConstants(registry);
 
         registerArgument(m_argValue, registry);
-        registerArgument(m_argReturn, registry);
         }
 
     private int m_nArgValue;
-    private int m_nTupleRetValue;
 
     private Argument m_argValue;
-    private Argument m_argReturn;
     }

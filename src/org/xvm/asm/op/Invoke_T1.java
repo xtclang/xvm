@@ -152,13 +152,17 @@ public class Invoke_T1
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
         TypeComposition clz = hTarget.f_clazz;
-
         CallChain chain = getCallChain(frame, clz);
         MethodStructure method = chain.getTop();
 
         if (ahArg.length != method.getParamCount())
             {
             return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
+            }
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
             }
 
         return chain.isNative()
@@ -173,12 +177,9 @@ public class Invoke_T1
         super.registerConstants(registry);
 
         registerArgument(m_argValue, registry);
-        registerArgument(m_argReturn, registry);
         }
 
     private int m_nArgTupleValue;
-    private int m_nRetValue;
 
     private Argument m_argValue;
-    private Argument m_argReturn;
     }

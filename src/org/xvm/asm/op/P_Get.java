@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
+import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.PropertyConstant;
@@ -112,9 +113,7 @@ public class P_Get
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                int nTypeId = constProperty.getType().getPosition();
-
-                frame.introduceVar(nTypeId, 0, Frame.VAR_STANDARD, null);
+                frame.introduceVar(constProperty.getType());
                 }
 
             if (isProperty(hTarget))
@@ -138,6 +137,9 @@ public class P_Get
     @Override
     public void simulate(Scope scope)
         {
+        checkNextRegister(scope, m_argReturn);
+
+        // TODO: remove when deprecated construction is removed
         if (scope.isNextRegister(m_nRetValue))
             {
             scope.allocVar();

@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import com.sun.org.apache.xpath.internal.Arg;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -141,6 +142,42 @@ public abstract class Op
     protected static boolean isRegister(Argument arg)
         {
         return arg instanceof Register;
+        }
+
+    /**
+     * Check if the specified Argument represents "the next available" register and if
+     * so, assign its index to the next allocated variable.
+     *
+     * @param scope  the scope
+     * @param arg    the argument
+     */
+    public void checkNextRegister(Scope scope, Argument arg)
+        {
+        if (arg instanceof Register && ((Register) arg).isUnknown())
+            {
+            ((Register) arg).assignIndex(scope.allocVar());
+            }
+        }
+
+    /**
+     * Check if any of the specified Arguments represent "the next available" register and if
+     * so, assign its index to the next allocated variable.
+     *
+     * @param scope  the scope
+     * @param aArg   the argument array
+     */
+    public void checkNextRegisters(Scope scope, Argument[] aArg)
+        {
+        if (aArg != null)
+            {
+            for (Argument arg : aArg)
+                {
+                if (arg instanceof Register && ((Register) arg).isUnknown())
+                    {
+                    ((Register) arg).assignIndex(scope.allocVar());
+                    }
+                }
+            }
         }
 
     /**

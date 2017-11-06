@@ -7,10 +7,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -774,6 +776,19 @@ public class Frame
                 : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg).f_clazzCanonical;
         }
 
+    // same as getArgumentClass, but treats the negative ids as "local-property" reference
+    public TypeComposition getLocalClass(int iArg)
+        {
+        if (iArg >= 0)
+            {
+            return getVarInfo(iArg).getType().f_clazz;
+            }
+
+        // "local property"
+        TypeConstant typeProp = getConstant(iArg).getType();
+        return f_context.f_types.resolveClass(typeProp, getActualTypes());
+        }
+
     // return the ObjectHandle, or null if the value is "pending future", or
     // throw if the async assignment has failed
     public ObjectHandle getArgument(int iArg)
@@ -858,23 +873,18 @@ public class Frame
         throw new IllegalStateException("Invalid register index");
         }
 
-    // Note: the typeId is an "absolute" (positive, ConstantPool based) number
-    // (see Op.convertId())
-    // Note: this method increments up the "nextVar" index
-    public void introduceVar(int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
+    /**
+     * Introduce a new unnamed standard variable for the specified type.
+     *
+     * Note: this method increments up the "nextVar" index
+     */
+    public void introduceVar(Type type)
         {
-        int nVar = f_anNextVar[m_iScope]++;
-
-        f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
-
-        if (hValue != null)
-            {
-            f_ahVar[nVar] = hValue;
-            }
+        introduceVar(type, null, VAR_STANDARD, null);
         }
 
     /**
-     * Introduce a new standard variable for the specified type, style and optional value.
+     * Introduce a new variable for the specified type, style and an optional value.
      *
      * Note: this method increments up the "nextVar" index
      */
@@ -882,7 +892,40 @@ public class Frame
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        f_aInfo[nVar] = new VarInfo(type, sName, nStyle);
+        VarInfo info = new VarInfo(type, nStyle);
+        info.setName(sName);
+
+        f_aInfo[nVar] = info;
+        if (hValue != null)
+            {
+            f_ahVar[nVar] = hValue;
+            }
+        }
+
+    /**
+     * Introduce a new unnamed standard variable for the specified type.
+     *
+     * Note: this method increments up the "nextVar" index
+     *
+     * @param constType  the type constant
+     */
+    public void introduceVar(TypeConstant constType)
+        {
+        introduceVar(constType.getPosition(), 0, VAR_STANDARD, null);
+        }
+
+    /**
+     * Introduce a new variable for the specified type id, name id style and an optional value.
+     *
+     * Note: this method increments up the "nextVar" index
+     *
+     * @param nTypeId  an "absolute" (positive, ConstantPool based) number (see Op.convertId())
+     */
+    public void introduceVar(int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
 
         if (hValue != null)
             {
@@ -906,8 +949,8 @@ public class Frame
             VarInfo infoFrom = f_aInfo[nVarFrom];
 
             f_aInfo[nVar] = infoFrom.m_type == null
-                ? new VarInfo(infoFrom.m_nTypeId, null, VAR_STANDARD)
-                : new VarInfo(infoFrom.m_type, null, VAR_STANDARD);
+                ? new VarInfo(infoFrom.m_nTypeId, VAR_STANDARD)
+                : new VarInfo(infoFrom.m_type, VAR_STANDARD);
             }
         else
             {
@@ -916,8 +959,45 @@ public class Frame
             // "local property" or a literal constant
             Constant constFrom = getConstant(nVarFrom);
 
-            f_aInfo[nVar] = new VarInfo(constFrom.getType().getPosition(), null, VAR_STANDARD);
+            f_aInfo[nVar] = new VarInfo(constFrom.getType().getPosition(), VAR_STANDARD);
             }
+        }
+
+    /**
+     * Introduce a new standard variable that has a return type of the specified method
+     * in the context of the specified target.
+     *
+     * Note: this method increments the "nextVar" index.
+     *
+     * @param nTargetId    if positive, the register number holding a target (handle);
+     *                      otherwise a constant id pointing to local property holding the target
+     * @param constMethod  the method constant whose return type needs to be resolved in the context
+     *                      of the target class
+     */
+    public void introduceReturnVar(int nTargetId, MethodConstant constMethod)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(nTargetId, constMethod.getPosition(), RETURN_RESOLVER);
+        }
+
+    /**
+     * Introduce a new standard variable that has a return type of a Tuple of the
+     * specified method return types in the context of the specified target.
+     *
+     * Note: this method increments the "nextVar" index.
+     *
+     * @param nTargetId    if positive, the register number holding a target (handle);
+     *                      otherwise a constant id pointing to local property holding the target
+     * @param constMethod  the method constant whose return types need to be resolved in the context
+     *                      of the target class
+     */
+    public void introduceReturnTuple(int nTargetId, MethodConstant constMethod)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(nTargetId, constMethod.getPosition(), TUPLE_RESOLVER);
+        f_aInfo[nVar].getType(); // TODO: remove
         }
 
     /**
@@ -925,38 +1005,14 @@ public class Frame
      *
      * Note: this method increments the "nextVar" index.
      *
-     * @param nVarArray  if positive, the register number holding an array handle;
+     * @param nArrayReg  if positive, the register number holding an array handle;
      *                   otherwise a constant id pointing to an array type
      */
-    public void introduceElementVar(int nVarArray)
+    public void introduceElementVar(int nArrayReg)
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        // TODO: the type could be cached on the corresponding op-code
-        if (nVarArray >= 0)
-            {
-            VarInfo infoFrom = f_aInfo[nVarArray];
-            TypeComposition clzArray = infoFrom.getType().f_clazz;
-            Type typeElement = clzArray.getActualParamType("ElementType");
-
-            f_aInfo[nVar] = new VarInfo(typeElement, null, VAR_STANDARD);
-            }
-        else
-            {
-            // "local property" or a literal constant
-            Constant constFrom = getConstant(nVarArray);
-            TypeConstant typeArray = constFrom.getType();
-
-            if (typeArray.isParamsSpecified())
-                {
-                TypeConstant typeElement = typeArray.getParamTypes().get(0);
-                f_aInfo[nVar] = new VarInfo(typeElement.getPosition(), null, VAR_STANDARD);
-                }
-            else
-                {
-                f_aInfo[nVar] = new VarInfo(xObject.TYPE, null, VAR_STANDARD);
-                }
-            }
+        f_aInfo[nVar] = new VarInfo(nArrayReg, 0, ARRAY_ELEMENT_RESOLVER);
         }
 
     /**
@@ -964,42 +1020,14 @@ public class Frame
      *
      * Note: this method increments the "nextVar" index.
      *
-     * @param nVarArray  if positive, the register number holding an array handle;
+     * @param nArrayReg  if positive, the register number holding an array handle;
      *                   otherwise a constant id pointing to an array type
      */
-    public void introduceElementRef(int nVarArray)
+    public void introduceElementRef(int nArrayReg)
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        Type typeElement;
-        if (nVarArray >= 0)
-            {
-            VarInfo infoFrom = f_aInfo[nVarArray];
-            TypeComposition clzArray = infoFrom.getType().f_clazz;
-            typeElement = clzArray.getActualParamType("ElementType");
-            }
-        else
-            {
-            // "local property" or a literal constant
-            Constant constFrom = getConstant(nVarArray);
-            TypeConstant typeArray = constFrom.getType();
-
-            if (typeArray.isParamsSpecified())
-                {
-                TypeConstant constElementType = typeArray.getParamTypes().get(0);
-                typeElement = f_context.f_types.resolveType(constElementType, getActualTypes());
-                }
-            else
-                {
-                // Ref<Object>
-                f_aInfo[nVar] = new VarInfo(Ref.TYPE, null, VAR_STANDARD);
-                return;
-                }
-            }
-
-        TypeComposition clzRef = Ref.INSTANCE.ensureClass(
-            Collections.singletonMap("RefType", typeElement));
-        f_aInfo[nVar] = new VarInfo(clzRef.ensurePublicType(), null, VAR_STANDARD);
+        f_aInfo[nVar] = new VarInfo(nArrayReg, 0, ARRAY_ELEMENT_REF_RESOLVER);
         }
 
     public VarInfo getVarInfo(int nVar)
@@ -1008,15 +1036,14 @@ public class Frame
         if (info == null)
             {
             int cArgs = f_function.getParamCount();
-            String sName = "<arg " + nVar + ">";
-
             if (nVar >= cArgs)
                 {
                 throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
                 }
 
             info = f_aInfo[nVar] = new VarInfo(
-                f_function.getParam(nVar).getType().getPosition(), sName, VAR_STANDARD);
+                f_function.getParam(nVar).getType().getPosition(), VAR_STANDARD);
+            info.setName(f_function.getParam(nVar).getName());
             }
         return info;
         }
@@ -1272,6 +1299,8 @@ public class Frame
         private String m_sVarName;
         private int m_nStyle; // one of the VAR_* values
         private RefHandle m_ref; // an "active" reference to this register
+        private TypeResolver m_resolver;
+        private int m_nTargetId; // an id of the target used to resolve this VarInfo's type
 
         public VarInfo(int nTypeId, int nNameId, int nStyle)
             {
@@ -1280,18 +1309,24 @@ public class Frame
             m_nStyle = nStyle;
             }
 
-        public VarInfo(int nTypeId, String sName, int nStyle)
+        public VarInfo(int nTypeId, int nStyle)
             {
             m_nTypeId = nTypeId;
-            m_sVarName = sName;
             m_nStyle = nStyle;
             }
 
-        public VarInfo(Type type, String sName, int nStyle)
+        public VarInfo(Type type, int nStyle)
             {
             m_type = type;
-            m_sVarName = sName;
             m_nStyle = nStyle;
+            }
+
+        public VarInfo(int nTargetId, int nTypeId, TypeResolver resolver)
+            {
+            m_nTargetId = nTargetId;
+            m_nTypeId = nTypeId;
+            m_nStyle = VAR_STANDARD;
+            m_resolver = resolver;
             }
 
         public String getName()
@@ -1304,14 +1339,26 @@ public class Frame
             return sName;
             }
 
+        public void setName(String sName)
+            {
+            m_sVarName = sName;
+            }
+
         public Type getType()
             {
             Type type = m_type;
             if (type == null)
                 {
-                TypeConstant constType = (TypeConstant) f_context.f_pool.getConstant(m_nTypeId);
+                if (m_resolver == null)
+                    {
+                    TypeConstant constType = (TypeConstant) f_context.f_pool.getConstant(m_nTypeId);
 
-                type = m_type = f_context.f_types.resolveType(constType, getActualTypes());
+                    type = m_type = f_context.f_types.resolveType(constType, getActualTypes());
+                    }
+                else
+                    {
+                    type = m_type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
+                    }
                 }
             return type;
             }
@@ -1346,10 +1393,90 @@ public class Frame
             }
         }
 
+    interface TypeResolver
+        {
+        Type resolve(Frame frame, int nTargetReg, int iTypeId);
+        }
+
     public interface Continuation
         {
         // @param frame  the frame which has just "returned"
         // return either R_NEXT, R_CALL or R_EXCEPTION
         int proceed(Frame frameCaller);
         }
+
+    protected static final TypeResolver ARRAY_ELEMENT_RESOLVER = new TypeResolver()
+        {
+        @Override
+        public Type resolve(Frame frame, int nTargetReg, int nTypeId)
+            {
+            if (nTargetReg >= 0)
+                {
+                VarInfo infoArray = frame.f_aInfo[nTargetReg];
+                TypeComposition clzArray = infoArray.getType().f_clazz;
+                return clzArray.getActualParamType("ElementType");
+                }
+
+            // "local property" or a literal constant
+            TypeConstant typeArray = frame.getConstant(nTargetReg).getType();
+            if (typeArray.isParamsSpecified())
+                {
+                TypeConstant constElType = typeArray.getParamTypes().get(0);
+                return frame.f_context.f_types.resolveType(constElType, frame.getActualTypes());
+                }
+            return xObject.TYPE;
+            }
+        };
+
+    protected static final TypeResolver ARRAY_ELEMENT_REF_RESOLVER = new TypeResolver()
+        {
+        @Override
+        public Type resolve(Frame frame, int nTargetReg, int nTypeId)
+            {
+            Type typeElement = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, nTargetReg);
+            if (typeElement == xObject.TYPE)
+                {
+                return Ref.TYPE;
+                }
+
+            TypeComposition clzRef = Ref.INSTANCE.ensureClass(
+                Collections.singletonMap("RefType", typeElement));
+            return clzRef.ensurePublicType();
+            }
+        };
+
+    protected static final TypeResolver RETURN_RESOLVER = new TypeResolver()
+        {
+        // nTargetReg - the target register (or property)
+        // nMethodId  - the MethodConstant id
+        @Override
+        public Type resolve(Frame frame, int nTargetReg, int nMethodId)
+            {
+            ConstantPool pool = frame.f_context.f_pool;
+
+            MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
+            TypeConstant constRetType = constMethod.getRawReturns()[0];
+
+            TypeComposition clzTarget = frame.getLocalClass(nTargetReg);
+            return frame.f_context.f_types.resolveType(constRetType, clzTarget.f_mapGenericActual);
+            }
+        };
+
+    protected static final TypeResolver TUPLE_RESOLVER = new TypeResolver()
+        {
+        // nTargetReg - the target register (or property)
+        // nMethodId  - the MethodConstant id
+        @Override
+        public Type resolve(Frame frame, int nTargetReg, int nMethodId)
+            {
+            ConstantPool pool = frame.f_context.f_pool;
+
+            MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
+            TypeConstant constRetType = pool.ensureParameterizedTypeConstant(
+                pool.typeTuple(), constMethod.getRawReturns());
+
+            TypeComposition clzTarget = frame.getLocalClass(nTargetReg);
+            return frame.f_context.f_types.resolveType(constRetType, clzTarget.f_mapGenericActual);
+            }
+        };
     }

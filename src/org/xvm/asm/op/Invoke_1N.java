@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -99,6 +100,12 @@ public class Invoke_1N
         }
 
     @Override
+    protected boolean isMultiReturn()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try
@@ -144,29 +151,33 @@ public class Invoke_1N
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
         TypeComposition clz = hTarget.f_clazz;
-
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
+        MethodStructure method = chain.getTop();
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        for (int i = 0, c = m_anRetValue.length; i < c; i++)
+            {
+            if (frame.isNextRegister(m_anRetValue[i]))
+                {
+                if (i == 0)
+                    {
+                    frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+                    }
+                else
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                }
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;
 
         return chain.isNative()
-            ? clz.f_template.invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)
+            ? clz.f_template.invokeNativeNN(frame, method, hTarget, ahVar, m_anRetValue)
             : clz.f_template.invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        super.registerConstants(registry);
-
-        registerArgument(m_argValue, registry);
-        registerArguments(m_aArgReturn, registry);
-        }
-
-    private int   m_nArgValue;
-    private int[] m_anRetValue;
+    private int m_nArgValue;
 
     private Argument m_argValue;
-    private Argument[] m_aArgReturn;
     }

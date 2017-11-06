@@ -22,7 +22,6 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -107,6 +106,12 @@ public class Invoke_TN
         }
 
     @Override
+    protected boolean isMultiReturn()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try
@@ -154,7 +159,6 @@ public class Invoke_TN
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
         TypeComposition clz = hTarget.f_clazz;
-
         CallChain chain = getCallChain(frame, clz);
         MethodStructure method = chain.getTop();
 
@@ -163,24 +167,28 @@ public class Invoke_TN
             return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
             }
 
+        for (int i = 0, c = m_anRetValue.length; i < c; i++)
+            {
+            if (frame.isNextRegister(m_anRetValue[i]))
+                {
+                if (i == 0)
+                    {
+                    frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+                    }
+                else
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                }
+            }
+
         return chain.isNative()
             ? clz.f_template.invokeNativeNN(frame, method, hTarget, ahArg, m_anRetValue)
             : clz.f_template.invokeN(frame, chain, hTarget,
                 Utils.ensureSize(ahArg, method.getMaxVars()), m_anRetValue);
         }
 
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        super.registerConstants(registry);
-
-        registerArgument(m_argValue, registry);
-        registerArguments(m_aArgReturn, registry);
-        }
-
-    private int   m_nArgTupleValue;
-    private int[] m_anRetValue;
+    private int m_nArgTupleValue;
 
     private Argument m_argValue;
-    private Argument[] m_aArgReturn;
     }

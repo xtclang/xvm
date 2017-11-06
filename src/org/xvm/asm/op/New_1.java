@@ -9,6 +9,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
+import org.xvm.asm.Register;
+import org.xvm.asm.Scope;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 
@@ -115,6 +117,11 @@ public class New_1
             IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
             ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
 
+            if (frame.isNextRegister(m_nRetValue))
+                {
+                frame.introduceVar(constClass.asTypeConstant());
+                }
+
             if (isProperty(ahVar[0]))
                 {
                 Frame.Continuation stepNext = frameCaller -> template.construct(frame, constructor,
@@ -129,6 +136,18 @@ public class New_1
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
+            }
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        checkNextRegister(scope, m_argReturn);
+
+        // TODO: remove when deprecated construction is removed
+        if (scope.isNextRegister(m_nRetValue))
+            {
+            scope.allocVar();
             }
         }
 

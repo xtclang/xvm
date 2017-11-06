@@ -147,6 +147,17 @@ public class Register
         }
 
     /**
+     * Determine if this register has an "unknown" index. This is used to indicate a "next"
+     * index.
+     *
+     * @return true iff this register has an "unknown" index
+     */
+    public boolean isUnknown()
+        {
+        return m_iArg == UNKNOWN;
+        }
+
+    /**
      * Determine if this register is readable. This is equivalent to the Ref for the register
      * supporting the get() operation.
      *

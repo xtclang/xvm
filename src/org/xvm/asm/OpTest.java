@@ -108,7 +108,7 @@ public abstract class OpTest
         {
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceVar(xBoolean.TYPE, null, Frame.VAR_STANDARD, null);
+            frame.introduceVar(xBoolean.TYPE);
             }
         return isBinaryOp() ? processBinaryOp(frame) : processUnaryOp(frame);
         }
@@ -229,6 +229,9 @@ public abstract class OpTest
     @Override
     public void simulate(Scope scope)
         {
+        checkNextRegister(scope, m_argReturn);
+
+        // TODO: remove when deprecated construction is removed
         if (scope.isNextRegister(m_nRetValue))
             {
             scope.allocVar();

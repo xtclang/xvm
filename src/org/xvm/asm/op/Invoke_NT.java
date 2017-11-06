@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -44,7 +45,7 @@ public class Invoke_NT
         m_nTarget = nTarget;
         m_nMethodId = nMethodId;
         m_anArgValue = anArg;
-        m_nTupleRetValue = nTupleRet;
+        m_nRetValue = nTupleRet;
         }
 
     /**
@@ -75,7 +76,7 @@ public class Invoke_NT
         super(in, aconst);
 
         m_anArgValue = readIntArray(in);
-        m_nTupleRetValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -87,11 +88,11 @@ public class Invoke_NT
         if (m_aArgValue != null)
             {
             m_anArgValue = encodeArguments(m_aArgValue, registry);
-            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writeIntArray(out, m_anArgValue);
-        writePackedLong(out, m_nTupleRetValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -136,13 +137,19 @@ public class Invoke_NT
     protected int resolveArgs(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
+        MethodStructure method = chain.getTop();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnTuple(m_nTarget, method.getIdentityConstant());
+            }
 
         ObjectHandle[] ahVar;
         if (ahArg == null)
             {
             try
                 {
-                ahVar = frame.getArguments(m_anArgValue, chain.getTop().getMaxVars());
+                ahVar = frame.getArguments(m_anArgValue, method.getMaxVars());
                 if (ahVar == null)
                     {
                     return R_REPEAT;
@@ -155,7 +162,7 @@ public class Invoke_NT
             }
         else
             {
-            ahVar = Utils.ensureSize(ahArg, chain.getTop().getMaxVars());
+            ahVar = Utils.ensureSize(ahArg, method.getMaxVars());
             }
 
         if (anyProperty(ahVar))
@@ -172,8 +179,8 @@ public class Invoke_NT
         TypeComposition clz = hTarget.f_clazz;
 
         return chain.isNative()
-             ? clz.f_template.invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nTupleRetValue)
-             : clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nTupleRetValue);
+             ? clz.f_template.invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nRetValue)
+             : clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     @Override
@@ -182,12 +189,9 @@ public class Invoke_NT
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
-        registerArgument(m_argReturn, registry);
         }
 
     private int[] m_anArgValue;
-    private int m_nTupleRetValue;
 
     private Argument[] m_aArgValue;
-    private Argument m_argReturn;
     }

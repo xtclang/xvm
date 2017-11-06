@@ -519,6 +519,36 @@ public class ConstantPool
         }
 
     /**
+     * Create an array constant value.
+     *
+     * @param constType  the type of the array
+     * @param aconst     an array of constant values
+     *
+     * @return a constant representing the tuple value
+     */
+    public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant[] aconst)
+        {
+        checkElementsNonNull(aconst);
+
+        return (ArrayConstant) register(new ArrayConstant(this, Format.Array, constType, aconst.clone()));
+        }
+
+    /**
+     * Create a set constant value.
+     *
+     * @param constType  the type of the set
+     * @param aconst     an array of constant values
+     *
+     * @return a constant representing the tuple value
+     */
+    public ArrayConstant ensureSetConstant(TypeConstant constType, Constant[] aconst)
+        {
+        checkElementsNonNull(aconst);
+
+        return (ArrayConstant) register(new ArrayConstant(this, Format.Set, constType, aconst.clone()));
+        }
+
+    /**
      * Create a tuple constant value.
      *
      * @param constType  the type of the tuple
@@ -1307,7 +1337,7 @@ public class ConstantPool
      *
      * @return a type constant with the specified type parameter types
      */
-    public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant[] constTypes)
+    public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant... constTypes)
         {
         if (constType.isParamsSpecified())
             {

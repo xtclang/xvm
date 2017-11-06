@@ -96,12 +96,11 @@ public class xTestService extends Service
             new JumpFalse(1, 6), // -> Enter
 
             new Enter(),
-            new Var(this.adapter.getClassTypeConstId("Exception")), // #2
             new New_N(adapter.getMethodConstId("Exception", "construct"),
                     new int[] {
                             adapter.ensureValueConstantId("test"),
                             adapter.ensureValueConstantId(null)
-                    }, 2),
+                    }, 2), // next register #2
             new Throw(2),
             new Exit(), // optimize out; unreachable
 
