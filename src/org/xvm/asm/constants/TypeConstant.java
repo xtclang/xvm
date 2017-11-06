@@ -287,6 +287,20 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return the Ecstasy class name, including package name(s)
+     */
+    public String getEcstasyClassName()
+        {
+        // TODO might require additonal checks
+        return isSingleDefiningConstant()
+                    && getDefiningConstant() instanceof ClassConstant
+                    && ((ClassConstant) getDefiningConstant()).getModuleConstant().isEcstasyModule()
+                    && getAccess() == Access.PUBLIC
+                ? ((ClassConstant) getDefiningConstant()).getPathString()
+                : "?";
+        }
+
+    /**
      * Determine if this is "Void".
      *
      * @return true iff this is provably "Void"

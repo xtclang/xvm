@@ -64,6 +64,34 @@ public class StringConstant
         return m_sVal;
         }
 
+    /**
+     * Add the value of a CharConstant to the value of this StringConstant to produce a new
+     * StringConstant, following the same rules that the runtime String class would use.
+     *
+     * @param that  the CharConstant
+     *
+     * @return a resulting concatenated StringConstant
+     */
+    public StringConstant add(CharConstant that)
+        {
+        assert Character.isValidCodePoint((int) that.getValue());
+        return getConstantPool().ensureStringConstant(this.m_sVal
+                + Character.valueOf((char) (int) that.getValue()));
+        }
+
+    /**
+     * Add the value of another StringConstant to the value of this StringConstant to produce a new
+     * StringConstant, following the same rules that the runtime String class would use.
+     *
+     * @param that  another StringConstant
+     *
+     * @return a resulting concatenated StringConstant
+     */
+    public StringConstant add(StringConstant that)
+        {
+        return getConstantPool().ensureStringConstant(this.m_sVal + that.m_sVal);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

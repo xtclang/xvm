@@ -5,7 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -114,6 +116,12 @@ public class LiteralConstant
         m_constStr = pool.ensureStringConstant(sVal);
         }
 
+    /**
+     * Internal constructor.
+     *
+     * @param pool    constant pool
+     * @param format  format of this constant
+     */
     private LiteralConstant(ConstantPool pool, Format format)
         {
         super(pool);
@@ -202,6 +210,219 @@ public class LiteralConstant
                     ? new PackedInteger(Long.parseLong(s.substring(2), r))
                     : new PackedInteger(new BigInteger(s.substring(2), r));
             }
+        }
+
+    /**
+     * Obtain the radix of the floating point literal.
+     * <p/>
+     * This should only be called if the constant is an FPLiteral.
+     *
+     * @return 2 iff the floating point literal specifies a binary radix, otherwise 10
+     */
+    public int getFPRadix()
+        {
+        // Ecstasy always uses decimal by default, unless forced to use base 2 floating point
+        assert getFormat() == Format.FPLiteral;
+        return m_constStr.getValue().indexOf('E') >= 0 || m_constStr.getValue().indexOf('e') >= 0
+                ? 2
+                : 10;
+        }
+
+    /**
+     * Obtain the decimal value of the floating point literal.
+     * <p/>
+     * This should only be called if the constant is an FPLiteral and the value's radix is 10.
+     *
+     * @return the decimal value of the floating point literal
+     */
+    public BigDecimal getFPDecimal()
+        {
+        assert getFormat() == Format.FPLiteral && getFPRadix() == 10;
+
+        // BigDecimal uses "E" to indicate a decimal exponent, while ISO uses "P"
+        return new BigDecimal(m_constStr.getValue().replace('p', 'e').replace('P', 'E'));
+        }
+
+    /**
+     * Obtain the radix-2 value of the floating point literal.
+     * <p/>
+     * This should only be called if the constant is an FPLiteral.
+     *
+     * @return the decimal value of the floating point literal
+     */
+    public double getFPDouble()
+        {
+        assert getFormat() == Format.FPLiteral;
+        return getFPRadix() == 2
+                ? Double.parseDouble(m_constStr.getValue())
+                : getFPDecimal().doubleValue();
+        }
+
+    /**
+     * Convert the LiteralConstant to an Int8Constant, iff the LiteralConstant is an IntLiteral
+     * whose value is in the range -128..127.
+     *
+     * @return an Int8Constant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public Int8Constant toInt8Constant()
+        {
+        if (getFormat() != Format.IntLiteral)
+            {
+            throw new IllegalStateException("format=" + getFormat());
+            }
+
+        PackedInteger pi = getIntegerValue();
+        if (pi.isBig() || pi.getLong() < -128 || pi.getLong() > 127)
+            {
+            throw new ArithmeticException("out of range: " + pi);
+            }
+
+        return getConstantPool().ensureInt8Constant(pi.getInt());
+        }
+
+    /**
+     * Convert the LiteralConstant to an UInt8Constant, iff the LiteralConstant is an IntLiteral
+     * whose value is in the range 0..255.
+     *
+     * @return a UInt8Constant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public UInt8Constant toUInt8Constant()
+        {
+        if (getFormat() != Format.IntLiteral)
+            {
+            throw new IllegalStateException("format=" + getFormat());
+            }
+
+        PackedInteger pi = getIntegerValue();
+        if (pi.isBig() || pi.getLong() < 0 || pi.getLong() > 255)
+            {
+            throw new ArithmeticException("out of range: " + pi);
+            }
+
+        return getConstantPool().ensureUInt8Constant(pi.getInt());
+        }
+
+    /**
+     * Convert the LiteralConstant to an IntConstant of the specified format.
+     *
+     * @param format  the format of the IntConstant to use
+     *
+     * @return an IntConstant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public IntConstant toIntConstant(Format format)
+        {
+        if (getFormat() != Format.IntLiteral)
+            {
+            throw new IllegalStateException("format=" + getFormat());
+            }
+
+        PackedInteger pi = getIntegerValue();
+        if (       pi.compareTo(IntConstant.getMinLimit(format)) < 0
+                || pi.compareTo(IntConstant.getMaxLimit(format)) > 0)
+            {
+            throw new ArithmeticException("out of range: " + pi);
+            }
+
+        return getConstantPool().ensureIntConstant(pi, format);
+        }
+
+    /**
+     * Add the value of a LiteralConstant to the value of this LiteralConstant, resulting in the
+     * creation of a result LiteralConstant.
+     *
+     * @param that  another LiteralConstant of a type that can be added to the type of this
+     *
+     * @return a new LiteralConstant representing the result of adding <i>that</i> to <i>this</i>
+     */
+    public LiteralConstant add(LiteralConstant that)
+        {
+        ConstantPool pool = getConstantPool();
+        String       sLit = null;
+        switch (m_fmt)
+            {
+            case IntLiteral:
+                // can add an FPLiteral (commutative)
+                if (that.m_fmt == Format.FPLiteral)
+                    {
+                    return that.add(this);
+                    }
+
+                if (that.m_fmt == Format.IntLiteral)
+                    {
+                    sLit = getIntegerValue().add(that.getIntegerValue()).toString(getIntegerRadix());
+                    }
+                break;
+
+            case FPLiteral:
+                {
+                // can add either an FPLiteral or an IntLiteral to an FPLiteral, resulting in a new
+                // FPLiteral
+                if (getFPRadix() == 2)
+                    {
+                    double dflThis = getFPDouble();
+                    if (that.getFormat() == Format.FPLiteral)
+                        {
+                        sLit = Double.toString(dflThis + that.getFPDouble());
+                        }
+                    else if (that.getFormat() == Format.IntLiteral)
+                        {
+                        PackedInteger piThat = that.getIntegerValue();
+                        double dflSum = piThat.isBig()
+                                ? dflThis + piThat.getBigInteger().doubleValue()
+                                : dflThis + piThat.getLong();
+                        sLit = Double.toString(dflSum);
+                        }
+                    }
+                else
+                    {
+                    BigDecimal decThis = getFPDecimal();
+                    if (that.getFormat() == Format.FPLiteral)
+                        {
+                        sLit = decThis.add(new BigDecimal(that.getIntegerValue().getBigInteger()))
+                                .toString().replace('E', 'P');
+                        }
+                    else if (that.getFormat() == Format.IntLiteral)
+                        {
+                        sLit = decThis.add(new BigDecimal(that.getIntegerValue().getBigInteger()))
+                                .toString().replace('E', 'P');
+                        }
+                    }
+                }
+                break;
+
+            case Date:
+                // TODO can add a duration
+                throw new UnsupportedOperationException();
+
+            case Time:
+                // TODO can add a duration
+                throw new UnsupportedOperationException();
+
+            case DateTime:
+                // TODO can add a duration
+                throw new UnsupportedOperationException();
+
+            case Duration:
+                // TODO can add another duration
+                throw new UnsupportedOperationException();
+
+            case TimeInterval:
+                // TODO not sure why we even have this type - can you add another time interval? a duration?
+                throw new UnsupportedOperationException();
+            }
+
+        if (sLit != null)
+            {
+            return pool.ensureLiteralConstant(this.getFormat(), sLit);
+            }
+
+        throw new IllegalStateException("this=" + this.getFormat().name() + ", that=" + that.getFormat().name());
         }
 
 

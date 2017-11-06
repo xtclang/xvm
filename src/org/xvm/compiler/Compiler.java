@@ -414,6 +414,10 @@ public class Compiler
      * Return is missing.
      */
     public static final String RETURN_REQUIRED                    = "COMPILER-49";
+    /**
+     * Invalid operation.
+     */
+    public static final String INVALID_OPERATION                  = "COMPILER-50";
 
 
     // ----- data members --------------------------------------------------------------------------

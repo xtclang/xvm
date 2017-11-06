@@ -83,6 +83,30 @@ public class UInt8Constant
         }
 
 
+    // ----- type-specific methods -----------------------------------------------------------------
+
+    /**
+     * Add the value of another Int8Constant to the value of this Int8Constant, resulting in a new
+     * Int8Constant.
+     *
+     * @param that  another Int8Constant to add to this
+     *
+     * @return the sum
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public UInt8Constant add(UInt8Constant that)
+        {
+        int nSum = this.getValue() + that.getValue();
+        if (nSum < 0 || nSum > 255)
+            {
+            throw new ArithmeticException("overflow");
+            }
+
+        return getConstantPool().ensureUInt8Constant(nSum);
+        }
+
+
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**

@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.PackedInteger;
 
 
 /**
@@ -47,6 +48,30 @@ public class Int8Constant
             throw new IllegalArgumentException("Int8 must be in range -128..127 (n=" + nVal + ")");
             }
         m_nVal = nVal;
+        }
+
+
+    // ----- type-specific methods -----------------------------------------------------------------
+
+    /**
+     * Add the value of another Int8Constant to the value of this Int8Constant, resulting in a new
+     * Int8Constant.
+     *
+     * @param that  another Int8Constant to add to this
+     *
+     * @return the sum
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public Int8Constant add(Int8Constant that)
+        {
+        int nSum = this.getValue() + that.getValue();
+        if (nSum < -128 || nSum > 127)
+            {
+            throw new ArithmeticException("overflow");
+            }
+
+        return getConstantPool().ensureInt8Constant(nSum);
         }
 
 

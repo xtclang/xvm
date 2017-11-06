@@ -12,7 +12,11 @@ import org.xvm.util.PackedInteger;
 
 
 /**
- * Represent a 64-bit signed integer constant.
+ * Represent a 64-bit signed integer constant, and a bunch of lesser-known formats of integer
+ * constants as well, but NOT the 8-bit integer constants.
+ *
+ * @see Int8Constant
+ * @see UInt8Constant
  */
 public class IntConstant
         extends ValueConstant
@@ -87,7 +91,8 @@ public class IntConstant
                 fUnsigned = false;
                 break;
             case VarInt:
-                cBytes    = 16384;      // some arbitrary limit
+                // some arbitrary limit that only exists in the Java implementation
+                cBytes    = 32;
                 fUnsigned = false;
                 break;
 
@@ -108,7 +113,8 @@ public class IntConstant
                 fUnsigned = true;
                 break;
             case VarUInt:
-                cBytes    = 16384;
+                // some arbitrary limit that only exists in the Java implementation
+                cBytes    = 32;
                 fUnsigned = true;
                 break;
 
@@ -147,6 +153,196 @@ public class IntConstant
     public PackedInteger getValue()
         {
         return m_pint;
+        }
+    
+    /**
+     * @return true iff the format is an unsigned integer format
+     */
+    public boolean isUnsigned()
+        {
+        switch (m_fmt)
+            {
+            case Int16:
+            case Int32:
+            case Int64:
+            case Int128:
+            case VarInt:
+                return false;
+
+            case UInt16:
+            case UInt32:
+            case UInt64:
+            case UInt128:
+            case VarUInt:
+                return true;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return the minimum value for the format of this IntConstant
+     */
+    public PackedInteger getMinLimit()
+        {
+        return getMinLimit(m_fmt);
+        }
+
+    /**
+     * @param format  the format to determine the minimum value of
+     *
+     * @return the minimum value for the specified format of IntConstant
+     */
+    public static PackedInteger getMinLimit(Format format)
+        {
+        switch (format)
+            {
+            case Int16:
+                return PackedInteger.SINT2_MIN;
+            
+            case Int32:
+                return PackedInteger.SINT4_MIN;
+            
+            case Int64:
+                return PackedInteger.SINT8_MIN;
+            
+            case Int128:
+                return PackedInteger.SINT16_MIN;
+            
+            case VarInt:
+                // note: just an arbitrary limit; no such limit in Ecstasy
+                return PackedInteger.SINT32_MIN;    
+
+            case UInt16:
+            case UInt32:
+            case UInt64:
+            case UInt128:
+            case VarUInt:
+                return PackedInteger.ZERO;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return the maximum value for the format of this IntConstant
+     */
+    public PackedInteger getMaxLimit()
+        {
+        return getMaxLimit(m_fmt);
+        }
+
+    /**
+     * @param format  the format to determine the maximum value of
+     *
+     * @return the maximum value for the specified format of IntConstant
+     */
+    public static PackedInteger getMaxLimit(Format format)
+        {
+        switch (format)
+            {
+            case Int16:
+                return PackedInteger.SINT2_MAX;
+            
+            case Int32:
+                return PackedInteger.SINT4_MAX;
+            
+            case Int64:
+                return PackedInteger.SINT8_MAX;
+            
+            case Int128:
+                return PackedInteger.SINT16_MAX;
+            
+            case VarInt:
+                // note: just an arbitrary limit; no such limit in Ecstasy
+                return PackedInteger.SINT32_MAX;    
+
+            case UInt16:
+                return PackedInteger.UINT2_MAX;
+
+            case UInt32:
+                return PackedInteger.UINT4_MAX;
+
+            case UInt64:
+                return PackedInteger.UINT8_MAX;
+
+            case UInt128:
+                return PackedInteger.UINT16_MAX;
+
+            case VarUInt:
+                // note: just an arbitrary limit; no such limit in Ecstasy
+                return PackedInteger.UINT32_MAX;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Add another IntConstant to the value of this IntConstant.
+     *
+     * @param that  an IntConstant that must be of the same format as this
+     *
+     * @return the sum, as an IntConstant of the same format as this
+     *
+     * @throws IllegalStateException  if the formats do not match
+     * @throws ArithmeticException    on overflow
+     */
+    public IntConstant add(IntConstant that)
+        {
+        if (this.getFormat() != that.getFormat())
+            {
+            throw new IllegalStateException("format mismatch: this=" + this.getFormat()
+                    + ", that=" + that.getFormat());
+            }
+
+        return add(that.getValue());
+        }
+
+    /**
+     *
+     * @param that
+     * @return
+     *
+     * @throws IllegalStateException  if the passed literal is not an integer literal
+     * @throws ArithmeticException    on overflow
+     */
+    public IntConstant add(LiteralConstant that)
+        {
+        if (that.getFormat() != Format.IntLiteral)
+            {
+            throw new IllegalStateException();
+            }
+
+        PackedInteger piThat = that.getIntegerValue();
+        if (piThat.compareTo(getMinLimit()) < 0 || piThat.compareTo(getMaxLimit()) > 0)
+            {
+            throw new ArithmeticException("value to add is out of range");
+            }
+
+        return add(piThat);
+        }
+
+    /**
+     * Add a PackedInteger to the value of this IntConstant.
+     *
+     * @param piThat  a PackedInteger
+     *
+     * @return the sum, as an IntConstant of the same format as this
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    protected IntConstant add(PackedInteger piThat)
+        {
+        PackedInteger piVal = this.getValue().add(piThat);
+        if (piVal.compareTo(getMinLimit()) < 0 || piVal.compareTo(getMaxLimit()) > 0)
+            {
+            throw new ArithmeticException("overflow");
+            }
+
+        return getConstantPool().ensureIntConstant(piVal, getFormat());
         }
 
 
