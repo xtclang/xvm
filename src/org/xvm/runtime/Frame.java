@@ -1,8 +1,10 @@
 package org.xvm.runtime;
 
 
+import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -11,6 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -287,7 +290,7 @@ public class Frame
                     }
                 return Function.makeHandle(m_chain, m_nDepth).bind(0, f_hTarget);
 
-            case Op.A_TARGET: // TODO: return what we were called as
+            case Op.A_TARGET:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
@@ -407,8 +410,47 @@ public class Frame
         {
         if (f_hTarget == null)
             {
-            // TODO: do we need to collect formal type parameters for a function?
-            return Collections.EMPTY_MAP;
+            // alternatively we could collect and cache a map of formal type parameters
+            return new AbstractMap<String, Type>()
+                {
+                @Override
+                public Type get(Object key)
+                    {
+                    String sKey = (String) key;
+                    for (int i = 0, c = f_function.getParamCount(); i < c; i++)
+                        {
+                        Parameter param = f_function.getParam(i);
+                        if (param.isTypeParameter())
+                            {
+                            if (sKey.equals(param.getName()))
+                                {
+                                return f_context.f_types.resolveType(
+                                    param.getType(), Collections.EMPTY_MAP);
+                                }
+                            }
+                        }
+                    return null;
+                    }
+
+                public int size()
+                    {
+                    int count = 0;
+                    for (int i = 0, c = f_function.getParamCount(); i < c; i++)
+                        {
+                        Parameter param = f_function.getParam(i);
+                        if (param.isTypeParameter())
+                            {
+                            count++;
+                            }
+                        }
+                    return count;
+                    }
+
+                public Set<Entry<String, Type>> entrySet()
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                };
             }
         return f_hTarget.f_clazz.f_mapGenericActual;
         }
@@ -997,7 +1039,6 @@ public class Frame
         int nVar = f_anNextVar[m_iScope]++;
 
         f_aInfo[nVar] = new VarInfo(nTargetId, constMethod.getPosition(), TUPLE_RESOLVER);
-        f_aInfo[nVar].getType(); // TODO: remove
         }
 
     /**
