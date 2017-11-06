@@ -178,6 +178,7 @@ public abstract class Expression
      * A Void type is indicated by a paramterized tuple type of zero parameters (fields).
      * <p/>
      * Either this method or {@link #getImplicitTypes()} must be overridden.
+     *
      * @return the implicit type of the expression
      */
     public TypeConstant getImplicitType()
