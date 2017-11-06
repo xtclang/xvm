@@ -45,7 +45,7 @@ public class FBind
         m_nFunctionId = nFunction;
         m_anParamIx = anParamIx;
         m_anParamValue = anParamValue;
-        m_nResultValue = nRet;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -86,7 +86,7 @@ public class FBind
             m_anParamIx[i]    = readPackedInt(in);
             m_anParamValue[i] = readPackedInt(in);
             }
-        m_nResultValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -98,7 +98,7 @@ public class FBind
         if (m_aArgParam != null)
             {
             m_anParamValue = encodeArguments(m_aArgParam, registry);
-            m_nResultValue = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
         int c = m_anParamIx.length;
@@ -108,7 +108,7 @@ public class FBind
             writePackedLong(out, m_anParamIx[i]);
             writePackedLong(out, m_anParamValue[i]);
             }
-        writePackedLong(out, m_nResultValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -185,7 +185,7 @@ public class FBind
             hFunction = hFunction.bind(m_anParamIx[i], ahParam[i]);
             }
 
-        return frame.assignValue(m_nResultValue, hFunction);
+        return frame.assignValue(m_nRetValue, hFunction);
         }
 
     @Override
@@ -194,13 +194,10 @@ public class FBind
         super.registerConstants(registry);
 
         registerArguments(m_aArgParam, registry);
-        registerArgument(m_argReturn, registry);
         }
 
     private int[] m_anParamIx;
     private int[] m_anParamValue;
-    private int   m_nResultValue;
 
     private Argument[] m_aArgParam;
-    private Argument m_argReturn;
     }

@@ -117,7 +117,7 @@ public abstract class OpInvocable extends Op
             }
         }
 
-    // helper method
+    // helper methods
     protected CallChain getCallChain(Frame frame, TypeComposition clazz)
         {
         if (m_chain != null && m_clazz == clazz)
@@ -140,6 +140,47 @@ public abstract class OpInvocable extends Op
             }
 
         return m_chain;
+        }
+
+    protected void checkReturnRegister(Frame frame, MethodStructure method)
+        {
+        assert !isMultiReturn();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+            }
+        }
+
+    protected void checkReturnTupleRegister(Frame frame, MethodStructure method)
+        {
+        assert !isMultiReturn();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnTuple(m_nTarget, method.getIdentityConstant());
+            }
+        }
+
+    protected void checkReturnRegisters(Frame frame, MethodStructure method)
+        {
+        assert isMultiReturn();
+
+        int[] anRet = m_anRetValue;
+        for (int i = 0, c = anRet.length; i < c; i++)
+            {
+            if (frame.isNextRegister(anRet[i]))
+                {
+                if (i == 0)
+                    {
+                    frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+                    }
+                else
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                }
+            }
         }
 
     protected int   m_nTarget;

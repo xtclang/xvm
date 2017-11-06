@@ -42,7 +42,7 @@ public class MBind
 
         m_nTarget = nTarget;
         m_nMethodId = nMethodId;
-        m_nResultValue = nRet;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -70,7 +70,7 @@ public class MBind
         {
         super(in, aconst);
 
-        m_nResultValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -81,10 +81,10 @@ public class MBind
 
         if (m_argReturn != null)
             {
-            m_nResultValue = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        writePackedLong(out, m_nResultValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -126,20 +126,8 @@ public class MBind
 
         CallChain chain = getCallChain(frame, clz);
 
-        return frame.assignValue(m_nResultValue, clz.f_template.isService() ?
+        return frame.assignValue(m_nRetValue, clz.f_template.isService() ?
                 Function.makeAsyncHandle(chain, 0).bindTarget(hTarget) :
                 Function.makeHandle(chain, 0).bindTarget(hTarget));
         }
-
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        super.registerConstants(registry);
-
-        registerArgument(m_argReturn, registry);
-        }
-
-    private int m_nResultValue;
-
-    private Argument m_argReturn;
     }

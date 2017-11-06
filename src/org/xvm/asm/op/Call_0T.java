@@ -40,7 +40,7 @@ public class Call_0T
         super(null);
 
         m_nFunctionId = nFunction;
-        m_nTupleRetValue = nRet;
+        m_nRetValue = nRet;
         }
 
     /**
@@ -67,7 +67,7 @@ public class Call_0T
         {
         super(in, aconst);
 
-        m_nTupleRetValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -78,10 +78,10 @@ public class Call_0T
 
         if (m_argReturn != null)
             {
-            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        writePackedLong(out, m_nTupleRetValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -101,15 +101,17 @@ public class Call_0T
                 throw new IllegalStateException();
                 }
 
+            checkReturnTupleRegister(frame, chain.getSuper(frame).getIdentityConstant());
+
             switch (chain.callSuper01(frame, Frame.RET_LOCAL))
                 {
                 case R_NEXT:
-                    return frame.assignTuple(m_nTupleRetValue,
+                    return frame.assignTuple(m_nRetValue,
                         new ObjectHandle[] {frame.getFrameLocal()});
 
                 case R_CALL:
                     frame.m_frameNext.setContinuation(frameCaller ->
-                        frameCaller.assignTuple(m_nTupleRetValue,
+                        frameCaller.assignTuple(m_nRetValue,
                             new ObjectHandle[] {frame.getFrameLocal()}));
                     return R_CALL;
 
@@ -125,9 +127,11 @@ public class Call_0T
             {
             MethodStructure function = getMethodStructure(frame);
 
+            checkReturnTupleRegister(frame, function.getIdentityConstant());
+
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
-            return frame.callT(function, null, ahVar, m_nTupleRetValue);
+            return frame.callT(function, null, ahVar, m_nRetValue);
             }
 
         try
@@ -138,7 +142,9 @@ public class Call_0T
                 return R_REPEAT;
                 }
 
-            return hFunction.callT(frame, null, Utils.OBJECTS_NONE, m_nTupleRetValue);
+            checkReturnTupleRegister(frame, hFunction.getMethodId());
+
+            return hFunction.callT(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -153,8 +159,4 @@ public class Call_0T
 
         registerArgument(m_argReturn, registry);
         }
-
-    private int m_nTupleRetValue;
-
-    private Argument m_argReturn;
     }

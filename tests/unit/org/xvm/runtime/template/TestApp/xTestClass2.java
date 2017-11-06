@@ -67,8 +67,7 @@ public class xTestClass2 extends ClassTemplate
         MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
             {
-            new Var(adapter.getClassTypeConstId("String")), // #0
-            new Call_01(Op.A_SUPER, 0),
+            new Call_01(Op.A_SUPER, 0), // next register #0
             new GP_Add(0, adapter.ensureValueConstantId(", prop2="), 0),
             new Invoke_01(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"),
                 adapter.getMethodConstId("Object", "to"), 1), // next register #1

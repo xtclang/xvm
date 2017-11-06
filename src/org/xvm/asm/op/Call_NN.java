@@ -107,6 +107,8 @@ public class Call_NN
                     throw new IllegalStateException();
                     }
 
+                checkReturnRegisters(frame, chain.getSuper(frame).getIdentityConstant());
+
                 ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
                 if (ahVar == null)
                     {
@@ -134,6 +136,8 @@ public class Call_NN
                     return R_REPEAT;
                     }
 
+                checkReturnRegisters(frame, function.getIdentityConstant());
+
                 if (anyProperty(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
@@ -155,6 +159,8 @@ public class Call_NN
                 {
                 return R_REPEAT;
                 }
+
+            checkReturnRegisters(frame, hFunction.getMethodId());
 
             if (anyProperty(ahVar))
                 {
@@ -182,8 +188,6 @@ public class Call_NN
         }
 
     private int[] m_anArgValue;
-    private int[] m_anRetValue;
 
     private Argument[] m_aArgValue;
-    private Argument[] m_aArgReturn;
     }

@@ -132,8 +132,7 @@ public class xTestApp extends xModule
             .add(new Var_N(adapter.getClassTypeConstId("Function"),
                 adapter.ensureValueConstantId("fn"))) // #6 (fn)
             .add(new MBind(3, adapter.getMethodConstId("TestApp.TestClass", "method1"), 6))
-            .add(new Var(adapter.getClassTypeConstId("Int64")))    // #7
-            .add(new Call_01(6, 7))
+            .add(new Call_01(6, 7)) // next register #7
             .add(new X_Print(7))
 
             .add(new Return_0());
@@ -493,18 +492,16 @@ public class xTestApp extends xModule
             .add(new AssertV(5, adapter.ensureValueConstantId("of == 4"), new int[]{4}))
 
             .add(new Enter())
-            .add(new Var(adapter.getClassTypeConstId("Boolean"))) // #6
             .add(new Var_N(adapter.getClassTypeConstId("String"),
-                    adapter.ensureValueConstantId("s"))) // #7
+                adapter.ensureValueConstantId("s"))) // #6
             .add(new Call_1N(adapter.getMethodConstId("TestApp", "testConditional"),
-                    adapter.ensureValueConstantId(1), new int[] {6, 7}))
-            .add(new JumpFalse(6, 2))
-            .add(new X_Print(7))
+                adapter.ensureValueConstantId(1), new int[]{7, 6})) // next register #7
+            .add(new JumpFalse(7, 2))
+            .add(new X_Print(6))
             .add(new Exit())
 
-            .add(new Var(adapter.getClassTypeConstId("collections.Tuple<Boolean,String>"))) // #6
             .add(new Call_1T(adapter.getMethodConstId("TestApp", "testConditional"),
-                adapter.ensureValueConstantId(-1), 6))
+                adapter.ensureValueConstantId(-1), 6)) // next register #6
             .add(new X_Print(6))
 
             .add(new Return_0());
@@ -547,9 +544,9 @@ public class xTestApp extends xModule
             .add(new Return_1(0));
 
         ClassTemplate ctRectangle = f_types.getTemplate("TestApp.Rectangle");
-        adapter.addMethod(ctRectangle.f_struct, "construct", new String[] {"TestApp.Point", "TestApp.Point"}, VOID);
+        adapter.addMethod(ctRectangle.f_struct, "construct", new String[]{"TestApp.Point", "TestApp.Point"}, VOID);
         MethodStructure mtRectangle = ctRectangle.ensureMethodStructure("construct",
-                new String[] {"TestApp.Point", "TestApp.Point"});
+            new String[]{"TestApp.Point", "TestApp.Point"});
         mtRectangle.createCode()
             // #0 = tl; #1 = br
             .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "tl"), 0))
@@ -622,8 +619,7 @@ public class xTestApp extends xModule
         MethodStructure mtToString = ctFormatter.ensureMethodStructure("to", VOID, STRING);
         mtToString.createCode()
             .add(new L_Get(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0))  // next register #0
-            .add(new Var(adapter.getClassTypeConstId("String"))) // #1
-            .add(new Call_01(Op.A_SUPER, 1))
+            .add(new Call_01(Op.A_SUPER, 1)) // next register #1
             .add(new GP_Add(0, 1, 0))
             .add(new Return_1(0));
 

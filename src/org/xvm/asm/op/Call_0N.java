@@ -88,6 +88,12 @@ public class Call_0N
         }
 
     @Override
+    protected boolean isMultiReturn()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         if (m_nFunctionId == A_SUPER)
@@ -98,12 +104,16 @@ public class Call_0N
                 throw new IllegalStateException();
                 }
 
+            checkReturnRegisters(frame, chain.getSuper(frame).getIdentityConstant());
+
             return chain.callSuperNN(frame, Utils.OBJECTS_NONE, m_anRetValue);
             }
 
         if (m_nFunctionId < 0)
             {
             MethodStructure function = getMethodStructure(frame);
+
+            checkReturnRegisters(frame, function.getIdentityConstant());
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
@@ -117,6 +127,8 @@ public class Call_0N
                 {
                 return R_REPEAT;
                 }
+
+            checkReturnRegisters(frame, hFunction.getMethodId());
 
             return hFunction.callN(frame, null, Utils.OBJECTS_NONE, m_anRetValue);
             }
@@ -133,8 +145,4 @@ public class Call_0N
 
         registerArguments(m_aArgReturn, registry);
         }
-
-    private int[] m_anRetValue;
-
-    private Argument[] m_aArgReturn;
     }

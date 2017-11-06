@@ -1498,6 +1498,11 @@ public class Frame
             MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
             TypeConstant constRetType = constMethod.getRawReturns()[0];
 
+            if (nTargetReg == Op.A_FRAME)
+                {
+                // a static method (function) resolution
+                return frame.f_context.f_types.resolveType(constRetType, frame.getActualTypes());
+                }
             TypeComposition clzTarget = frame.getLocalClass(nTargetReg);
             return frame.f_context.f_types.resolveType(constRetType, clzTarget.f_mapGenericActual);
             }
@@ -1516,6 +1521,11 @@ public class Frame
             TypeConstant constRetType = pool.ensureParameterizedTypeConstant(
                 pool.typeTuple(), constMethod.getRawReturns());
 
+            if (nTargetReg == Op.A_FRAME)
+                {
+                // a static method (function) resolution
+                return frame.f_context.f_types.resolveType(constRetType, frame.getActualTypes());
+                }
             TypeComposition clzTarget = frame.getLocalClass(nTargetReg);
             return frame.f_context.f_types.resolveType(constRetType, clzTarget.f_mapGenericActual);
             }

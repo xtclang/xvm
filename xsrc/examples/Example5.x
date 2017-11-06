@@ -398,15 +398,6 @@ FutureRef<Int> rf = &fi; // doesn't block
 
 Int i = fi; // blocks
 
-
-static <T> Boolean bar(T t1, T t2)
-    {
-    Boolean f = ...;
-
-    T t = f ? t1 : t2; // NVAR Object, "t"
-    }
-}
-
 // mixin: "incorporate" vs. "encapsulate":
 
 @ThisMixinEncapsulates class MyClass
@@ -637,3 +628,19 @@ class MyClass
 //              but the callee provides a single or multi-return
 // RETURN_T     is generated when the method signature requires multiple returns,
 //              but the return statement provides a Tuple (the number of elements musts match)
+
+*** generic function parameters
+
+// method struct:
+// method.getReturn(0): type = Terminal -> Register 0
+// method.getParam(0): name = "T"; type = Parameterized -> Type<Number>
+// method.getParam(1): name = "t1"; type = Terminal -> Register 0
+// method.getParam(2): name = "t2"; type = Terminal -> Register 0
+static <T extends Number> T bar(T t1, T t2)
+    {
+    Boolean f = ...;
+
+    return f ? t1 : t2; // VAR ?
+    }
+
+

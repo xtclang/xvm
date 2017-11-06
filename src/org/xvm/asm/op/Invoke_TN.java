@@ -167,20 +167,7 @@ public class Invoke_TN
             return frame.raiseException(xException.makeHandle("Invalid tuple argument"));
             }
 
-        for (int i = 0, c = m_anRetValue.length; i < c; i++)
-            {
-            if (frame.isNextRegister(m_anRetValue[i]))
-                {
-                if (i == 0)
-                    {
-                    frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
-                    }
-                else
-                    {
-                    throw new UnsupportedOperationException();
-                    }
-                }
-            }
+        checkReturnRegisters(frame, method);
 
         return chain.isNative()
             ? clz.f_template.invokeNativeNN(frame, method, hTarget, ahArg, m_anRetValue)

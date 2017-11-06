@@ -45,7 +45,7 @@ public class Call_TT
 
         m_nFunctionId = nFunction;
         m_nArgTupleValue = nTupleArg;
-        m_nTupleRetValue = nRetTupleValue;
+        m_nRetValue = nRetTupleValue;
         }
 
     /**
@@ -75,7 +75,7 @@ public class Call_TT
         super(in, aconst);
 
         m_nArgTupleValue = readPackedInt(in);
-        m_nTupleRetValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -87,11 +87,11 @@ public class Call_TT
         if (m_argValue != null)
             {
             m_nArgTupleValue = encodeArgument(m_argValue, registry);
-            m_nTupleRetValue = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
         writePackedLong(out, m_nArgTupleValue);
-        writePackedLong(out, m_nTupleRetValue);
+        writePackedLong(out, m_nRetValue);
         }
 
     @Override
@@ -121,20 +121,24 @@ public class Call_TT
                     throw new IllegalStateException();
                     }
 
+                checkReturnTupleRegister(frame, chain.getSuper(frame).getIdentityConstant());
+
                 if (isProperty(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, m_nTupleRetValue, true);
+                        chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, m_nRetValue, true);
 
                     return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                     }
-                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, m_nTupleRetValue, true);
+                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, m_nRetValue, true);
                 }
 
             if (m_nFunctionId < 0)
                 {
                 MethodStructure function = getMethodStructure(frame);
+
+                checkReturnTupleRegister(frame, function.getIdentityConstant());
 
                 if (isProperty(hArg))
                     {
@@ -153,6 +157,8 @@ public class Call_TT
                 {
                 return R_REPEAT;
                 }
+
+            checkReturnTupleRegister(frame, hFunction.getMethodId());
 
             if (isProperty(hArg))
                 {
@@ -181,7 +187,7 @@ public class Call_TT
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
 
-        return frame.callT(function, null, ahVar, m_nTupleRetValue);
+        return frame.callT(function, null, ahVar, m_nRetValue);
         }
 
     protected int complete(Frame frame, FunctionHandle hFunction, TupleHandle hArg)
@@ -194,7 +200,7 @@ public class Call_TT
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount());
 
-        return hFunction.callT(frame, null, ahVar, m_nTupleRetValue);
+        return hFunction.callT(frame, null, ahVar, m_nRetValue);
         }
 
     @Override
@@ -208,8 +214,6 @@ public class Call_TT
 
 
     private int m_nArgTupleValue;
-    private int m_nTupleRetValue;
 
     private Argument m_argValue;
-    private Argument m_argReturn;
     }
