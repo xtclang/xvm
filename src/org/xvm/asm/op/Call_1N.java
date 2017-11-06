@@ -98,6 +98,12 @@ public class Call_1N
         }
 
     @Override
+    protected boolean isMultiReturn()
+        {
+        return true;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try
@@ -116,6 +122,8 @@ public class Call_1N
                     throw new IllegalStateException();
                     }
 
+                checkReturnRegisters(frame, chain.getSuper(frame).getIdentityConstant());
+
                 if (isProperty(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
@@ -131,6 +139,8 @@ public class Call_1N
             if (m_nFunctionId < 0)
                 {
                 MethodStructure function = getMethodStructure(frame);
+
+                checkReturnRegisters(frame, function.getIdentityConstant());
 
                 if (isProperty(hArg))
                     {
@@ -149,6 +159,8 @@ public class Call_1N
                 {
                 return R_REPEAT;
                 }
+
+            checkReturnRegisters(frame, hFunction.getMethodId());
 
             if (isProperty(hArg))
                 {
@@ -192,9 +204,7 @@ public class Call_1N
         registerArguments(m_aArgReturn, registry);
         }
 
-    private int   m_nArgValue;
-    private int[] m_anRetValue;
+    private int m_nArgValue;
 
     private Argument m_argValue;
-    private Argument[] m_aArgReturn;
     }

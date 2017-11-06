@@ -154,20 +154,7 @@ public class Invoke_1N
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
         MethodStructure method = chain.getTop();
 
-        for (int i = 0, c = m_anRetValue.length; i < c; i++)
-            {
-            if (frame.isNextRegister(m_anRetValue[i]))
-                {
-                if (i == 0)
-                    {
-                    frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
-                    }
-                else
-                    {
-                    throw new UnsupportedOperationException();
-                    }
-                }
-            }
+        checkReturnRegisters(frame, method);
 
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;

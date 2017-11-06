@@ -56,11 +56,60 @@ public abstract class OpCallable extends Op
         writePackedLong(out, m_nFunctionId);
         }
 
+    /**
+     * A "virtual constant" indicating whether or not this op has multiple return values.
+     *
+     * @return true iff the op has multiple return values.
+     */
+    protected boolean isMultiReturn()
+        {
+        return false;
+        }
+
+    @Override
+    public void simulate(Scope scope)
+        {
+        if (isMultiReturn())
+            {
+            checkNextRegisters(scope, m_aArgReturn);
+
+            // TODO: remove when deprecated construction is removed
+            for (int i = 0, c = m_anRetValue.length; i < c; i++)
+                {
+                if (scope.isNextRegister(m_anRetValue[i]))
+                    {
+                    scope.allocVar();
+                    }
+                }
+            }
+        else
+            {
+            checkNextRegister(scope, m_argReturn);
+
+            // TODO: remove when deprecated construction is removed
+            if (scope.isNextRegister(m_nRetValue))
+                {
+                scope.allocVar();
+                }
+            }
+        }
+
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
         registerArgument(m_argFunction, registry);
+
+        if (isMultiReturn())
+            {
+            registerArguments(m_aArgReturn, registry);
+            }
+        else
+            {
+            registerArgument(m_argReturn, registry);
+            }
         }
+
+    // ----- helper methods -----
 
     // get the structure for the function constant
     protected MethodStructure getMethodStructure(Frame frame)
@@ -76,10 +125,54 @@ public abstract class OpCallable extends Op
         return m_function = (MethodStructure) constFunction.getComponent();
         }
 
+    protected void checkReturnRegister(Frame frame, MethodConstant constMethod)
+        {
+        assert !isMultiReturn();
 
-    protected int m_nFunctionId;
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnVar(A_FRAME, constMethod);
+            }
+        }
 
-    private Argument m_argFunction;
+    protected void checkReturnTupleRegister(Frame frame, MethodConstant constMethod)
+        {
+        assert !isMultiReturn();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceReturnVar(A_FRAME, constMethod);
+            }
+        }
+
+    protected void checkReturnRegisters(Frame frame, MethodConstant constMethod)
+        {
+        assert isMultiReturn();
+
+        int[] anRet = m_anRetValue;
+        for (int i = 0, c = anRet.length; i < c; i++)
+            {
+            if (frame.isNextRegister(anRet[i]))
+                {
+                if (i == 0)
+                    {
+                    frame.introduceReturnVar(A_FRAME, constMethod);
+                    }
+                else
+                    {
+                    throw new UnsupportedOperationException();
+                    }
+                }
+            }
+        }
+
+    protected int   m_nFunctionId;
+    protected int   m_nRetValue = Frame.RET_UNUSED;
+    protected int[] m_anRetValue;
+
+    protected Argument   m_argFunction;
+    protected Argument   m_argReturn;  // optional
+    protected Argument[] m_aArgReturn; // optional
 
     // function caching
     private MethodStructure m_function;   // cached function

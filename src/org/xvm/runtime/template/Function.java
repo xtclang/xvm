@@ -92,6 +92,11 @@ public class Function
             f_nDepth = nDepth;
             }
 
+        public MethodConstant getMethodId()
+            {
+            return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getIdentityConstant();
+            }
+
         public int getParamCount()
             {
             return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getParamCount();
@@ -232,6 +237,18 @@ public class Function
             }
 
         @Override
+        public MethodConstant getMethodId()
+            {
+            return m_hDelegate.getMethodId();
+            }
+
+        @Override
+        public int getParamCount()
+            {
+            return m_hDelegate.getParamCount();
+            }
+
+        @Override
         public int getVarCount()
             {
             return m_hDelegate.getVarCount();
@@ -260,6 +277,24 @@ public class Function
         public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
             return f_op.invoke(frame, ahArg, iReturn);
+            }
+
+        @Override
+        public MethodConstant getMethodId()
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public int getParamCount()
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public int getVarCount()
+            {
+            return getParamCount();
             }
         }
 

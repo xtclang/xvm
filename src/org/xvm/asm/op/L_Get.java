@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 
-import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 import org.xvm.asm.constants.PropertyConstant;
 

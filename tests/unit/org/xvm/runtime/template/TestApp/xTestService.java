@@ -43,8 +43,7 @@ public class xTestService extends Service
             {
             new X_Print(
                 adapter.ensureValueConstantId("# in TestService.counter.get #")),
-            new Var(adapter.getClassTypeConstId("Int64")), // (#0)
-            new Call_01(Op.A_SUPER, 0),
+            new Call_01(Op.A_SUPER, 0), // next register #0
             new Return_1(0),
             });
 
@@ -124,12 +123,10 @@ public class xTestService extends Service
             {
             new X_Print(adapter.ensureValueConstantId(
                 "\n# in TestService.to<String>() #")),
-            new Var(adapter.getClassTypeConstId("String")), // #0
-            new Call_01(Op.A_SUPER, 0),
+            new Call_01(Op.A_SUPER, 0), // next register #0
             new GP_Add(0, adapter.ensureValueConstantId(": counter2="), 0),
-            new Var(adapter.getClassTypeConstId("Int64")), // #1
             new Invoke_01(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
-                adapter.getMethodConstId("Object", "to"), 1),
+                adapter.getMethodConstId("Object", "to"), 1), // next register #1
             new GP_Add(0, 1, 0),
             new Return_1(0),
             });

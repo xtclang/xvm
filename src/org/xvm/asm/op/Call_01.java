@@ -101,12 +101,16 @@ public class Call_01
                 throw new IllegalStateException();
                 }
 
+            checkReturnRegister(frame, chain.getSuper(frame).getIdentityConstant());
+
             return chain.callSuper01(frame, m_nRetValue);
             }
 
         if (m_nFunctionId < 0)
             {
             MethodStructure function = getMethodStructure(frame);
+
+            checkReturnRegister(frame, function.getIdentityConstant());
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
@@ -121,6 +125,8 @@ public class Call_01
                 return R_REPEAT;
                 }
 
+            checkReturnRegister(frame, hFunction.getMethodId());
+
             return hFunction.call1(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
@@ -128,16 +134,4 @@ public class Call_01
             return frame.raiseException(e);
             }
         }
-
-    @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
-        super.registerConstants(registry);
-
-        registerArgument(m_argReturn, registry);
-        }
-
-    private int m_nRetValue;
-
-    private Argument m_argReturn;
     }

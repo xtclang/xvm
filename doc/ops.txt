@@ -29,7 +29,7 @@
 +RETURN_T   rvalue-tuple                            ; return (multiple return from a tuple)
 
 // method and function binding
-// - does NOT support "local property" mode
+// - does NOT support "local property" mode nor "next register"
 +BIND_M      rvalue-target, METHOD, lvalue-fn-result
 +BIND_F      rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
 
@@ -233,7 +233,7 @@
 // function calls
 // rvalue-fn does NOT support "local property" mode, but
 // lvalue-param and lvalue-return support "local property" mode
-// return values as the "next register" feature is deferred
+// return values can specify the "next register" to allocate
 // - first digit is # params: 0, 1, n, or "t"=tuple
 // - second digit is # returns: 0, 1, n, or "t"=tuple
 +CALL_00    rvalue-fn
@@ -255,7 +255,7 @@
 
 // method calls ("NVOK"=invoke)
 // lvalue-param and lvalue-return support "local property" mode
-// return values as the "next register" feature is deferred
+// return values can specify the "next register" to allocate
 // - first digit is # params: 0, 1, n, or tuple
 // - second digit is # returns: 0, 1, n, or tuple
 +NVOK_00    rvalue-target, METHOD

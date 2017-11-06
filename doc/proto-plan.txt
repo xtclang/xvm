@@ -81,6 +81,8 @@
     + allow local property for IP_*
     + allow local property for IIP_*
     + allow next register for IS_*
+    + allow next register for Invoke_*
+    + allow next register for Call_*
 
 + change tests using "local property" mode
 

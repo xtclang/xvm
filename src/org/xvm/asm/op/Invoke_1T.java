@@ -148,10 +148,7 @@ public class Invoke_1T
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
         MethodStructure method = chain.getTop();
 
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            frame.introduceReturnTuple(m_nTarget, method.getIdentityConstant());
-            }
+        checkReturnTupleRegister(frame, method);
 
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hArg;

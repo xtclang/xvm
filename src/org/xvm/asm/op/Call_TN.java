@@ -119,6 +119,8 @@ public class Call_TN
                     throw new IllegalStateException();
                     }
 
+                checkReturnRegisters(frame, chain.getSuper(frame).getIdentityConstant());
+
                 if (isProperty(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
@@ -133,6 +135,8 @@ public class Call_TN
             if (m_nFunctionId < 0)
                 {
                 MethodStructure function = getMethodStructure(frame);
+
+                checkReturnRegisters(frame, function.getIdentityConstant());
 
                 if (isProperty(hArg))
                     {
@@ -151,6 +155,8 @@ public class Call_TN
                 {
                 return R_REPEAT;
                 }
+
+            checkReturnRegisters(frame, hFunction.getMethodId());
 
             if (isProperty(hArg))
                 {
@@ -204,9 +210,7 @@ public class Call_TN
         registerArguments(m_aArgReturn, registry);
         }
 
-    private int   m_nArgTupleValue;
-    private int[] m_anRetValue;
+    private int m_nArgTupleValue;
 
     private Argument m_argValue;
-    private Argument[] m_aArgReturn;
 }
