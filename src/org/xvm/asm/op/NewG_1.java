@@ -9,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
-import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -118,6 +117,7 @@ public class NewG_1
             TypeComposition clzTarget;
             if (m_nTypeValue >= 0)
                 {
+                 // TODO: is this really a possibility?
                 ClassHandle hClass = (ClassHandle) frame.getArgument(m_nTypeValue);
                 if (hClass == null)
                     {
