@@ -88,9 +88,11 @@
 
 + access exchange (public vs private vs struct) during invocations
 
-- a test for auto-narrowing method invocation
-
 - createConst() processing for Array, Set, Map etc.
+
+- change VAR_S to confirm with others (TYPE = Sequence type)
+
+- a test for auto-narrowing method invocation
 
 - Property and Method
 
