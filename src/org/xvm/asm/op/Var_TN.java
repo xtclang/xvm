@@ -17,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Type;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
 import org.xvm.runtime.template.collections.xTuple;
@@ -110,31 +111,17 @@ public class Var_TN
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeConstant constType = (TypeConstant) frame.getConstant(m_nType);
-        assert constType.isParamsSpecified();
-
-        int cArgs = m_anArgValue.length;
-        List<TypeConstant> listTypes = constType.getParamTypes();
-        assert listTypes.size() == cArgs;
+        TypeComposition clzTuple = frame.resolveClass(m_nType);
 
         try
             {
-            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, cArgs);
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
             if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeSet           types     = frame.f_context.f_types;
-            Map<String, Type> mapActual = frame.getActualTypes();
-
-            Type[] aType = new Type[cArgs];
-            for (int i = 0; i < cArgs; i++)
-                {
-                aType[i] = types.resolveType(listTypes.get(i), mapActual);
-                }
-
-            TupleHandle hTuple = xTuple.makeHandle(aType, ahArg);
+            TupleHandle hTuple = xTuple.makeHandle(clzTuple, ahArg);
 
             frame.introduceVar(convertId(m_nType), m_nNameId, Frame.VAR_STANDARD, hTuple);
 
