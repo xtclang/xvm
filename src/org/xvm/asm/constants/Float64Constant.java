@@ -46,6 +46,21 @@ public class Float64Constant
         }
 
 
+    // ----- type-specific methods -----------------------------------------------------------------
+
+    /**
+     * Add another FloatConstant to the value of this FloatConstant.
+     *
+     * @param that  a Float64Constant
+     *
+     * @return the sum, as a Float64Constant
+     */
+    public Float64Constant add(Float64Constant that)
+        {
+        return getConstantPool().ensureFloat64Constant(this.m_dflVal + that.m_dflVal);
+        }
+
+
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**

@@ -11,6 +11,11 @@ import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.DecimalConstant;
+import org.xvm.asm.constants.Float128Constant;
+import org.xvm.asm.constants.Float16Constant;
+import org.xvm.asm.constants.Float32Constant;
+import org.xvm.asm.constants.Float64Constant;
 import org.xvm.asm.constants.Int8Constant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -200,20 +205,20 @@ public class BiExpression
                                 case "String":
                                     m_constType = type1;
                                     m_constVal  = ((StringConstant) expr1.toConstant())
-                                            .add((StringConstant) expr2.toConstant());
+                                              .add((StringConstant) expr2.toConstant());
                                     break;
 
                                 case "Char":
                                     m_constType = pool.typeString();
                                     m_constVal  = ((CharConstant) expr1.toConstant())
-                                            .add((CharConstant) expr2.toConstant());
+                                              .add((CharConstant) expr2.toConstant());
                                     break;
 
                                 case "FPLiteral":
                                 case "IntLiteral":
                                     m_constType = type1;
                                     m_constVal  = ((LiteralConstant) expr1.toConstant())
-                                            .add((LiteralConstant) expr2.toConstant());
+                                              .add((LiteralConstant) expr2.toConstant());
                                     break;
 
                                 case "Int8":
@@ -221,7 +226,7 @@ public class BiExpression
                                     try
                                         {
                                         m_constVal = ((Int8Constant) expr1.toConstant())
-                                                .add((Int8Constant) expr2.toConstant());
+                                                 .add((Int8Constant) expr2.toConstant());
                                         }
                                     catch (ArithmeticException e)
                                         {
@@ -239,7 +244,7 @@ public class BiExpression
                                     try
                                         {
                                         m_constVal = ((UInt8Constant) expr1.toConstant())
-                                                .add((UInt8Constant) expr2.toConstant());
+                                                 .add((UInt8Constant) expr2.toConstant());
                                         }
                                     catch (ArithmeticException e)
                                         {
@@ -266,7 +271,7 @@ public class BiExpression
                                     try
                                         {
                                         m_constVal = ((IntConstant) expr1.toConstant())
-                                                .add((IntConstant) expr2.toConstant());
+                                                 .add((IntConstant) expr2.toConstant());
                                         }
                                     catch (ArithmeticException e)
                                         {
@@ -280,7 +285,65 @@ public class BiExpression
                                         }
                                     break;
 
-                                // TODO case "type + type"
+                                case "Float16":
+                                    m_constType = type1;
+                                    m_constVal  = ((Float16Constant) expr1.toConstant())
+                                              .add((Float16Constant) expr2.toConstant());
+                                    break;
+
+                                case "Float32":
+                                    m_constType = type1;
+                                    m_constVal  = ((Float32Constant) expr1.toConstant())
+                                              .add((Float32Constant) expr2.toConstant());
+                                    break;
+
+                                case "Float64":
+                                    m_constType = type1;
+                                    m_constVal  = ((Float64Constant) expr1.toConstant())
+                                              .add((Float64Constant) expr2.toConstant());
+                                    break;
+
+                                case "Float128":
+                                    m_constType = type1;
+                                    m_constVal  = ((Float128Constant) expr1.toConstant())
+                                              .add((Float128Constant) expr2.toConstant());
+                                    break;
+
+                                case "Dec32":
+                                case "Dec64":
+                                case "Dec128":
+                                    m_constType = type1;
+                                    try
+                                        {
+                                        m_constVal = ((DecimalConstant) expr1.toConstant())
+                                                 .add((DecimalConstant) expr2.toConstant());
+                                        }
+                                    catch (ArithmeticException e)
+                                        {
+                                        fValid = false;
+                                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
+                                                getSource().toString(getStartPosition(), getEndPosition()));
+
+                                        // use a zero value, since it's an error anyways
+                                        m_constVal = pool.ensureFloat32Constant(0.0f);
+                                        }
+                                    break;
+
+                                case "VarFloat":
+                                case "VarDec":
+                                    // TODO FP types
+                                    break;
+
+                                case "TerminalType":
+                                case "ImmutableType":
+                                case "AccessType":
+                                case "AnnotatedType":
+                                case "ParameterizedType":
+                                case "UnionType":
+                                case "IntersectionType":
+                                case "DifferenceType":
+                                    // TODO case "type + type"
+                                    break;
 
                                 default:
                                     fValid = false;
@@ -298,39 +361,110 @@ public class BiExpression
                                         {
                                         m_constType = type1;
                                         m_constVal = ((StringConstant) expr1.toConstant())
-                                                .add((StringConstant) expr2.toConstant());
+                                                 .add((CharConstant  ) expr2.toConstant());
                                         }
                                     break;
 
                                 case "Char":
                                     if (type2.getEcstasyClassName().equals("String"))
                                     m_constType = pool.typeString();
-                                    m_constVal  = ((CharConstant) expr1.toConstant())
-                                            .add((CharConstant) expr2.toConstant());
+                                    m_constVal  = ((CharConstant  ) expr1.toConstant())
+                                              .add((StringConstant) expr2.toConstant());
                                     break;
 
                                 case "FPLiteral":
                                 case "IntLiteral":
-                                    m_constType = type1;
-                                    m_constVal  = ((LiteralConstant) expr1.toConstant())
-                                            .add((LiteralConstant) expr2.toConstant());
+                                    switch (sConvertTo)
+                                        {
+                                        case "Int8":
+                                            m_constType = type2;
+                                            try
+                                                {
+                                                m_constVal = ((LiteralConstant) expr1.toConstant()).toInt8Constant()
+                                                         .add((Int8Constant) expr2.toConstant());
+                                                }
+                                            catch (ArithmeticException e)
+                                                {
+                                                fValid = false;
+                                                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
+                                                        getSource().toString(getStartPosition(), getEndPosition()));
+
+                                                // use a zero value, since it's an error anyways
+                                                m_constVal = pool.ensureInt8Constant(0);
+                                                }
+                                            break;
+
+                                        case "UInt8":
+                                            m_constType = type2;
+                                            try
+                                                {
+                                                m_constVal = ((LiteralConstant) expr1.toConstant()).toUInt8Constant()
+                                                         .add((UInt8Constant) expr2.toConstant());
+                                                }
+                                            catch (ArithmeticException e)
+                                                {
+                                                fValid = false;
+                                                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
+                                                        getSource().toString(getStartPosition(), getEndPosition()));
+
+                                                // use a zero value, since it's an error anyways
+                                                m_constVal = pool.ensureUInt8Constant(0);
+                                                }
+                                            break;
+
+                                        case "Int16":
+                                        case "Int32":
+                                        case "Int64":
+                                        case "Int128":
+                                        case "VarInt":
+                                        case "UInt16":
+                                        case "UInt32":
+                                        case "UInt64":
+                                        case "UInt128":
+                                        case "VarUInt":
+                                            m_constType = type2;
+                                            try
+                                                {
+                                                LiteralConstant const1 = (LiteralConstant) expr1.toConstant();
+                                                IntConstant     const2 = (IntConstant    ) expr2.toConstant();
+                                                m_constVal = const1.toIntConstant(const2.getFormat()).add(
+                                                        const2);
+                                                }
+                                            catch (ArithmeticException e)
+                                                {
+                                                fValid = false;
+                                                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
+                                                        getSource().toString(getStartPosition(), getEndPosition()));
+
+                                                // use a zero value, since it's an error anyways
+                                                m_constVal = pool.ensureIntConstant(PackedInteger.ZERO,
+                                                        expr1.toConstant().getFormat());
+                                                }
+                                            break;
+
+                                        }
                                     break;
 
                                 case "Int8":
-                                    m_constType = type1;
-                                    try
+                                    if (sConvertTo.equals("IntLiteral"))
                                         {
-                                        m_constVal = ((Int8Constant) expr1.toConstant())
-                                                .add((Int8Constant) expr2.toConstant());
-                                        }
-                                    catch (ArithmeticException e)
-                                        {
-                                        fValid = false;
-                                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
-                                                getSource().toString(getStartPosition(), getEndPosition()));
+                                        m_constType = type1;
+                                        try
+                                            {
+                                            m_constVal = ((Int8Constant) expr1.toConstant())
+                                                    .add((Int8Constant) expr2.toConstant());
+                                            }
+                                        catch (ArithmeticException e)
+                                            {
+                                            fValid = false;
+                                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                                                    type1,
+                                                    getSource().toString(getStartPosition(),
+                                                            getEndPosition()));
 
-                                        // use a zero value, since it's an error anyways
-                                        m_constVal = pool.ensureInt8Constant(0);
+                                            // use a zero value, since it's an error anyways
+                                            m_constVal = pool.ensureInt8Constant(0);
+                                            }
                                         }
                                     break;
 
@@ -385,15 +519,14 @@ public class BiExpression
 
                                 }
 
+                            // if the constant result wasn't calculated, that is an error, but if
+                            // fValid is already set to false, that means that the error was logged
                             if (fValid && m_constVal == null)
                                 {
                                 fValid = false;
                                 log(errs, Severity.ERROR, Compiler.INVALID_OPERATION);
                                 }
 
-                            // otherwise:
-                            // - char + string                  = string
-                            // - string + char                  = string
                             // - some int type + intliteral     = same int type
                             // - intliteral + some int type     = same int type
                             // - some fp type + intliteral      = same fp type

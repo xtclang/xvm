@@ -46,6 +46,21 @@ public class Float32Constant
         }
 
 
+    // ----- type-specific methods -----------------------------------------------------------------
+
+    /**
+     * Add another FloatConstant to the value of this FloatConstant.
+     *
+     * @param that  a Float32Constant
+     *
+     * @return the sum, as a Float32Constant
+     */
+    public Float32Constant add(Float32Constant that)
+        {
+        return getConstantPool().ensureFloat32Constant(this.m_flVal + that.m_flVal);
+        }
+
+
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**

@@ -55,6 +55,21 @@ public class Float128Constant
         }
 
 
+    // ----- type-specific methods -----------------------------------------------------------------
+
+    /**
+     * Add another FloatConstant to the value of this FloatConstant.
+     *
+     * @param that  a Float128Constant
+     *
+     * @return the sum, as a Float128Constant
+     */
+    public Float128Constant add(Float128Constant that)
+        {
+        throw new UnsupportedOperationException("(unsupported)");
+        }
+
+
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**

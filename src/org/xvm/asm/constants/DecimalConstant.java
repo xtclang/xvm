@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.math.BigDecimal;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -74,6 +75,45 @@ public class DecimalConstant
             default:
                 throw new IllegalArgumentException("unsupported decimal length: " + dec.getBitLength());
             }
+        }
+
+
+    // ----- type-specific methods -----------------------------------------------------------------
+
+    /**
+     * Add another DecimalConstant to the value of this DecimalConstant.
+     *
+     * @param that  a DecimalConstant of the same format
+     *
+     * @return the sum, as a DecimalConstant of the same format
+     */
+    public DecimalConstant add(DecimalConstant that)
+        {
+        if (this.getFormat() != that.getFormat())
+            {
+            throw new IllegalStateException();
+            }
+
+        BigDecimal bigdecSum = this.m_dec.toBigDecimal().add(that.m_dec.toBigDecimal());
+
+        Decimal decSum;
+        switch (m_dec.getBitLength())
+            {
+            case 32:
+                decSum = new Decimal32(bigdecSum);
+                break;
+            case 64:
+                decSum = new Decimal64(bigdecSum);
+                break;
+            case 128:
+                decSum = new Decimal128(bigdecSum);
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+
+        return getConstantPool().ensureDecimalConstant(decSum);
         }
 
 

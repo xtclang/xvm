@@ -51,6 +51,21 @@ public class Float16Constant
         }
 
 
+    // ----- type-specific methods -----------------------------------------------------------------
+
+    /**
+     * Add another FloatConstant to the value of this FloatConstant.
+     *
+     * @param that  a Float16Constant
+     *
+     * @return the sum, as a Float16Constant
+     */
+    public Float16Constant add(Float16Constant that)
+        {
+        return getConstantPool().ensureFloat16Constant(this.m_flVal + that.m_flVal);
+        }
+
+
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**
