@@ -737,7 +737,12 @@ public class Frame
 
     private ObjectHandle getConstHandle(int iArg)
         {
-        return f_context.f_heapGlobal.ensureConstHandle(this, Op.CONSTANT_OFFSET - iArg);
+        ObjectHandle hValue = f_context.f_heapGlobal.ensureConstHandle(this, Op.CONSTANT_OFFSET - iArg);
+        if (hValue == null)
+            {
+            throw new IllegalStateException("Unsupported constant " + getConstant(iArg));
+            }
+        return hValue;
         }
 
     public Constant getConstant(int iArg)

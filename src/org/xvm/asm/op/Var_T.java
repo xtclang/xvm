@@ -5,17 +5,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.List;
-import java.util.Map;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Type;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -98,33 +95,19 @@ public class Var_T
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeConstant constType = (TypeConstant) frame.getConstant(m_nType);
-        assert constType.isParamsSpecified();
-
-        int cArgs = m_anArgValue.length;
-        List<TypeConstant> listTypes = constType.getParamTypes();
-        assert listTypes.size() == cArgs;
+        TypeComposition clzTuple = frame.resolveClass(m_nType);
 
         try
             {
-            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, cArgs);
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
             if (ahArg == null)
                 {
                 return R_REPEAT;
                 }
 
-            TypeSet           types     = frame.f_context.f_types;
-            Map<String, Type> mapActual = frame.getActualTypes();
+            TupleHandle hTuple = xTuple.makeHandle(clzTuple, ahArg);
 
-            Type[] aType = new Type[cArgs];
-            for (int i = 0; i < cArgs; i++)
-                {
-                aType[i] = types.resolveType(listTypes.get(i), mapActual);
-                }
-
-            TupleHandle hTuple = xTuple.makeHandle(aType, ahArg);
-
-            frame.introduceVar(convertId(m_nType), 0, Frame.VAR_STANDARD, hTuple);
+            frame.introduceVar(clzTuple.ensurePublicType(), null, Frame.VAR_STANDARD, hTuple);
 
             return iPC + 1;
             }

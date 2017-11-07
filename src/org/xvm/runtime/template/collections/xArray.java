@@ -4,14 +4,19 @@ package org.xvm.runtime.template.collections;
 import java.util.Collections;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+
+import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -53,17 +58,62 @@ public class xArray
         markNativeMethod("construct", INT);
         markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT, new String[] {"Ref<ElementType>"});
-        markNativeMethod("reify", VOID, new String[] {"collections.Array<ElementType>"});
+        markNativeMethod("reify", VOID, new String[]{"collections.Array<ElementType>"});
+        }
+
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+        {
+        ArrayConstant constArray = (ArrayConstant) constant;
+
+        assert constArray.getFormat() == Constant.Format.Array;
+
+        TypeConstant constTypeArray = constArray.getType();
+        TypeComposition clzArray = f_types.resolveClass(constTypeArray, frame.getActualTypes());
+
+        Type typeEl = clzArray.f_mapGenericActual.get("ElementType");
+        TypeComposition clzEl = typeEl == null ? xObject.CLASS : typeEl.f_clazz;
+        ClassTemplate templateEl = clzEl.f_template;
+
+        Constant[] aconst = constArray.getValue();
+        int cSize = aconst.length;
+
+        int nR = templateEl.createArrayStruct(frame, clzArray, cSize, Frame.RET_LOCAL);
+        if (nR == Op.R_EXCEPTION)
+            {
+            throw new IllegalStateException("Failed to create an array " + clzArray);
+            }
+
+        ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
+        IndexSupport templateArray = (IndexSupport) hArray.f_clazz.f_template;
+
+        ObjectHeap heap = f_types.f_container.f_heapGlobal;
+
+        for (int i = 0; i < cSize; i++)
+            {
+            Constant constValue = aconst[i];
+
+            ObjectHandle hValue = heap.ensureConstHandle(frame, constValue.getPosition());
+
+            ExceptionHandle hException =
+                    templateArray.assignArrayValue(hArray, i, hValue);
+            if (hException != null)
+                {
+                throw new IllegalStateException("Failed to initialize an array " + hException);
+                }
+            }
+
+        hArray.makeImmutable();
+        return hArray;
         }
 
     @Override
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
+        // this is a native constructor
         Type typeEl = clzArray.f_mapGenericActual.get("ElementType");
-        TypeComposition clzEl = typeEl.f_clazz;
-
-        ClassTemplate templateEl = clzEl == null ? xObject.INSTANCE : clzEl.f_template;
+        TypeComposition clzEl = typeEl == null ? xObject.CLASS : typeEl.f_clazz;
+        ClassTemplate templateEl = clzEl.f_template;
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
 
@@ -82,41 +132,8 @@ public class xArray
             if (ahVar.length == 2)
                 {
                 FunctionHandle hSupplier = (FunctionHandle) ahVar[1];
-                xArray array = (xArray) hArray.f_clazz.f_template;
 
-                ObjectHandle[] ahArg = new ObjectHandle[hSupplier.getVarCount()];
-                ahArg[0] = xInt64.makeHandle(0);
-
-                // TODO: what if the supplier produces a "future" result
-                hSupplier.call1(frame, null, ahArg, Frame.RET_LOCAL);
-
-                frame.m_frameNext.setContinuation(new Frame.Continuation()
-                    {
-                    private int index;
-
-                    public int proceed(Frame frameCaller)
-                        {
-                        ExceptionHandle hException =
-                                array.assignArrayValue(hArray, index++, frameCaller.getFrameLocal());
-                        if (hException != null)
-                            {
-                            return frameCaller.raiseException(hException);
-                            }
-
-                        if (index < cCapacity)
-                            {
-                            ahArg[0] = xInt64.makeHandle(index);
-
-                            hSupplier.call1(frameCaller, null, ahArg, Frame.RET_LOCAL);
-                            frameCaller.m_frameNext.setContinuation(this);
-                            return Op.R_CALL;
-                            }
-
-                        return frameCaller.assignValue(iReturn, hArray);
-                        }
-                    });
-
-                return Op.R_CALL;
+                return new Fill(this, hArray, cCapacity, hSupplier, iReturn).doNext(frame);
                 }
             }
 
@@ -228,6 +245,71 @@ public class xArray
     // ----- helper classes -----
 
     /**
+     * Helper class for array initialization.
+     */
+    protected static class Fill
+            implements Frame.Continuation
+        {
+        private final xArray template;
+        private final ArrayHandle hArray;
+        private final long cCapacity;
+        private final FunctionHandle hSupplier;
+        private final int iReturn;
+
+        private final ObjectHandle[] ahVar;
+        private int index = -1;
+
+        public Fill(xArray template, ArrayHandle hArray, long cCapacity,
+                    FunctionHandle hSupplier, int iReturn)
+            {
+            this.template = template;
+            this.hArray = hArray;
+            this.cCapacity = cCapacity;
+            this.hSupplier = hSupplier;
+            this.iReturn = iReturn;
+
+            this.ahVar = new ObjectHandle[hSupplier.getVarCount()];
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ExceptionHandle hException =
+                    template.assignArrayValue(hArray, index, frameCaller.getFrameLocal());
+            if (hException != null)
+                {
+                return frameCaller.raiseException(hException);
+                }
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (++index < cCapacity)
+                {
+                ahVar[0] = xInt64.makeHandle(index);
+
+                switch (hSupplier.call1(frameCaller, null, ahVar, Frame.RET_LOCAL))
+                    {
+                    case Op.R_NEXT:
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            return frameCaller.assignValue(iReturn, hArray);
+            }
+
+        }
+    /**
      * Helper class for equals() implementation.
      */
     protected static class Equals
@@ -321,6 +403,7 @@ public class xArray
             super(clzArray);
 
             m_ahValue = ahValue;
+            m_cSize = ahValue.length;
             }
 
         protected GenericArrayHandle(TypeComposition clzArray, long cCapacity)

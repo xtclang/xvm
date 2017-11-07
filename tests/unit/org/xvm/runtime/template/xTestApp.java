@@ -239,11 +239,11 @@ public class xTestApp extends xModule
             .add(new X_Print(9))
 
             .add(new Invoke_00(Op.A_SERVICE,
-                    adapter.getMethodConstId("TestApp.TestService", "yield")))
+                adapter.getMethodConstId("TestApp.TestService", "yield")))
 
             .add(new Invoke_10(0,
-                    adapter.getMethodConstId("TestApp.TestService", "exceptional"),
-                    adapter.ensureValueConstantId(0)))
+                adapter.getMethodConstId("TestApp.TestService", "exceptional"),
+                adapter.ensureValueConstantId(0)))
             .add(new Return_0());
 
         // --- testService2 ---
@@ -282,7 +282,7 @@ public class xTestApp extends xModule
             .add(new X_Print(3))
 
             .add(new GuardStart(adapter.getClassTypeConstId("Exception"),
-                    adapter.ensureValueConstantId("e"), +3))
+                adapter.ensureValueConstantId("e"), +3))
             .add(new Call_01(adapter.getMethodConstId("TestApp", "getIntValue"), 3))
             .add(new GuardEnd(+4))
             .add(new CatchStart()) // #4 (e)
@@ -290,25 +290,25 @@ public class xTestApp extends xModule
             .add(new CatchEnd(1))
 
             .add(new Invoke_10(Op.A_SERVICE,
-                    adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
-                    adapter.ensureValueConstantId(2000)))
+                adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
+                adapter.ensureValueConstantId(2000)))
             .add(new GuardAll(+4))
             .add(new Invoke_11(0,
-                    adapter.getMethodConstId("TestApp.TestService", "exceptional"),
-                    adapter.ensureValueConstantId(1000), 2))
+                adapter.getMethodConstId("TestApp.TestService", "exceptional"),
+                adapter.ensureValueConstantId(1000), 2))
             .add(new X_Print(2))
             .add(new FinallyStart())
             .add(new Invoke_10(Op.A_SERVICE,
-                    adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
-                    adapter.ensureValueConstantId(0)))
+                adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
+                adapter.ensureValueConstantId(0)))
             .add(new FinallyEnd())
 
             .add(new Invoke_10(Op.A_SERVICE,
-                    adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
-                    adapter.ensureValueConstantId(500)))
+                adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
+                adapter.ensureValueConstantId(500)))
             .add(new GuardAll(+9))
             .add(new GuardStart(adapter.getClassTypeConstId("Exception"),
-                    adapter.ensureValueConstantId("e"), +4))
+                adapter.ensureValueConstantId("e"), +4))
             .add(new Invoke_11(0,
                     adapter.getMethodConstId("TestApp.TestService", "exceptional"),
                     adapter.ensureValueConstantId(200000), 2))
@@ -319,8 +319,8 @@ public class xTestApp extends xModule
             .add(new CatchEnd(1))
             .add(new FinallyStart())
             .add(new Invoke_10(Op.A_SERVICE,
-                    adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
-                    adapter.ensureValueConstantId(0)))
+                adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
+                adapter.ensureValueConstantId(0)))
             .add(new FinallyEnd())
             .add(new Return_0());
 
@@ -424,6 +424,12 @@ public class xTestApp extends xModule
                 adapter.ensureValueConstantId("zero")))
             .add(new I_Get(2, adapter.ensureValueConstantId(0), 3))
             .add(new X_Print(3))
+
+            .add(new Var_IN(adapter.getClassTypeConstId("collections.Array<Int64>"),
+                adapter.ensureValueConstantId("ai"),
+                adapter.ensureValueConstantId(new Object[]{40, 41, 42}))) // #5
+            .add(new I_Get(5, adapter.ensureValueConstantId(2), 6)) // next register #6
+            .add(new X_Print(6))
 
             .add(new Return_0());
 

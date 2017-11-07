@@ -350,6 +350,9 @@ class TestApp
         print(rs.get());
         rs.set("zero");
         print(as1[0]);
+
+        Int[] ai = {1, 2, 3}; // constant
+        print(ai[2]);
         }
 
      static conditional String testConditional(Int i)

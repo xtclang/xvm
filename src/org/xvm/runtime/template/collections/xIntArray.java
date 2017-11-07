@@ -5,6 +5,10 @@ import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.IntConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -41,6 +45,27 @@ public class xIntArray
     @Override
     public void initDeclared()
         {
+        }
+
+    @Override
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+        {
+        ArrayConstant constArray = (ArrayConstant) constant;
+
+        assert constArray.getFormat() == Constant.Format.Array;
+
+        Constant[] aconst = constArray.getValue();
+        int c = aconst.length;
+
+        long[] alValue = new long[c];
+        for (int i = 0; i < c; i++)
+            {
+            alValue[i] = ((IntConstant) aconst[i]).getValue().getLong();
+            }
+
+        ArrayHandle hArray = makeIntArrayInstance(alValue);
+        hArray.makeImmutable();
+        return hArray;
         }
 
     @Override
@@ -118,6 +143,11 @@ public class xIntArray
                 xBoolean.makeHandle(Arrays.equals(h1.m_alValue, h2.m_alValue)));
         }
 
+    public static IntArrayHandle makeIntArrayInstance(long[] alValue)
+        {
+        return new IntArrayHandle(INSTANCE.f_clazzCanonical, alValue);
+        }
+
     public static IntArrayHandle makeIntArrayInstance(long cCapacity)
         {
         return new IntArrayHandle(INSTANCE.f_clazzCanonical, cCapacity);
@@ -127,6 +157,14 @@ public class xIntArray
             extends ArrayHandle
         {
         public long[] m_alValue;
+
+        protected IntArrayHandle(TypeComposition clzArray, long[] alValue)
+            {
+            super(clzArray);
+
+            m_alValue = alValue;
+            m_cSize = alValue.length;
+            }
 
         protected IntArrayHandle(TypeComposition clzArray, long cCapacity)
             {
