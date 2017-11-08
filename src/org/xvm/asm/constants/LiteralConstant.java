@@ -13,6 +13,13 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.compiler.Token;
+
+import org.xvm.type.Decimal;
+import org.xvm.type.Decimal128;
+import org.xvm.type.Decimal32;
+import org.xvm.type.Decimal64;
+
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -333,96 +340,95 @@ public class LiteralConstant
         }
 
     /**
-     * Add the value of a LiteralConstant to the value of this LiteralConstant, resulting in the
-     * creation of a result LiteralConstant.
-     *
-     * @param that  another LiteralConstant of a type that can be added to the type of this
-     *
-     * @return a new LiteralConstant representing the result of adding <i>that</i> to <i>this</i>
+     * @return the equivalent Float16Constant for this LiteralConstant
      */
-    public LiteralConstant add(LiteralConstant that)
+    public Float16Constant toFloat16Constant()
         {
-        ConstantPool pool = getConstantPool();
-        String       sLit = null;
-        switch (m_fmt)
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureFloat16Constant(m_fmt == Format.IntLiteral
+                ? getIntegerValue().getBigInteger().floatValue()
+                : (float) getFPDouble());
+        }
+
+    /**
+     * @return the equivalent Float32Constant for this LiteralConstant
+     */
+    public Float32Constant toFloat32Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureFloat32Constant(m_fmt == Format.IntLiteral
+                ? getIntegerValue().getBigInteger().floatValue()
+                : (float) getFPDouble());
+        }
+
+    /**
+     * @return the equivalent Float64Constant for this LiteralConstant
+     */
+    public Float64Constant toFloat64Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureFloat64Constant(m_fmt == Format.IntLiteral
+                ? getIntegerValue().getBigInteger().doubleValue()
+                : getFPDouble());
+        }
+
+    /**
+     * @return the equivalent Float128Constant for this LiteralConstant
+     */
+    public Float128Constant toFloat128Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * @return the equivalent VarFPConstant of type VarFloat for this LiteralConstant holding a
+     *         FPLiteral value
+     */
+    public VarFPConstant toVarFloatConstant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * @return the equivalent DecimalConstant of the specified format for this LiteralConstant
+     *         holding a FPLiteral value
+     */
+    public DecimalConstant toDecimalConstant(Format format)
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+
+        BigDecimal bigdec = m_fmt == Format.IntLiteral
+                ? new BigDecimal(getIntegerValue().getBigInteger())
+                : getFPDecimal();
+
+        Decimal dec;
+        switch (format)
             {
-            case IntLiteral:
-                // can add an FPLiteral (commutative)
-                if (that.m_fmt == Format.FPLiteral)
-                    {
-                    return that.add(this);
-                    }
-
-                if (that.m_fmt == Format.IntLiteral)
-                    {
-                    sLit = getIntegerValue().add(that.getIntegerValue()).toString(getIntegerRadix());
-                    }
+            case Dec32:
+                dec = new Decimal32(bigdec);
                 break;
-
-            case FPLiteral:
-                {
-                // can add either an FPLiteral or an IntLiteral to an FPLiteral, resulting in a new
-                // FPLiteral
-                if (getFPRadix() == 2)
-                    {
-                    double dflThis = getFPDouble();
-                    if (that.getFormat() == Format.FPLiteral)
-                        {
-                        sLit = Double.toString(dflThis + that.getFPDouble());
-                        }
-                    else if (that.getFormat() == Format.IntLiteral)
-                        {
-                        PackedInteger piThat = that.getIntegerValue();
-                        double dflSum = piThat.isBig()
-                                ? dflThis + piThat.getBigInteger().doubleValue()
-                                : dflThis + piThat.getLong();
-                        sLit = Double.toString(dflSum);
-                        }
-                    }
-                else
-                    {
-                    BigDecimal decThis = getFPDecimal();
-                    if (that.getFormat() == Format.FPLiteral)
-                        {
-                        sLit = decThis.add(new BigDecimal(that.getIntegerValue().getBigInteger()))
-                                .toString().replace('E', 'P');
-                        }
-                    else if (that.getFormat() == Format.IntLiteral)
-                        {
-                        sLit = decThis.add(new BigDecimal(that.getIntegerValue().getBigInteger()))
-                                .toString().replace('E', 'P');
-                        }
-                    }
-                }
+            case Dec64:
+                dec = new Decimal64(bigdec);
                 break;
-
-            case Date:
-                // TODO can add a duration
-                throw new UnsupportedOperationException();
-
-            case Time:
-                // TODO can add a duration
-                throw new UnsupportedOperationException();
-
-            case DateTime:
-                // TODO can add a duration
-                throw new UnsupportedOperationException();
-
-            case Duration:
-                // TODO can add another duration
-                throw new UnsupportedOperationException();
-
-            case TimeInterval:
-                // TODO not sure why we even have this type - can you add another time interval? a duration?
-                throw new UnsupportedOperationException();
+            case Dec128:
+                dec = new Decimal128(bigdec);
+                break;
+            default:
+                throw new IllegalStateException();
             }
+        return getConstantPool().ensureDecimalConstant(dec);
+        }
 
-        if (sLit != null)
-            {
-            return pool.ensureLiteralConstant(this.getFormat(), sLit);
-            }
-
-        throw new IllegalStateException("this=" + this.getFormat().name() + ", that=" + that.getFormat().name());
+    /**
+     * @return the equivalent VarFPConstant of type VarFloat for this LiteralConstant holding a
+     *         FPLiteral value
+     */
+    public VarFPConstant toVarDecConstant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        throw new UnsupportedOperationException();
         }
 
 
@@ -439,6 +445,108 @@ public class LiteralConstant
         {
         m_constStr = (StringConstant) m_constStr.simplify();
         return this;
+        }
+
+    @Override
+    public Constant apply(Token.Id op, Constant that)
+        {
+        ConstantPool pool = getConstantPool();
+        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+            {
+            case "IntLiteral+IntLiteral":
+                return pool.ensureLiteralConstant(Format.IntLiteral,
+                        this.getIntegerValue().add(((LiteralConstant) that).getIntegerValue())
+                                .toString(this.getIntegerRadix()));
+
+            case "FPLiteral+FPLiteral":
+                {
+                String sLit;
+                if (getFPRadix() == 2)
+                    {
+                    sLit = Double.toString(this.getFPDouble() + ((LiteralConstant) that).getFPDouble());
+                    }
+                else
+                    {
+                    BigDecimal decThis = this.getFPDecimal();
+                    BigDecimal decThat = ((LiteralConstant) that).getFPDecimal();
+                    sLit = decThis.add(decThat).toString().replace('E', 'P');
+                    }
+                return pool.ensureLiteralConstant(Format.FPLiteral, sLit);
+                }
+
+            case "FPLiteral+IntLiteral":
+                {
+                String sLit;
+                if (getFPRadix() == 2)
+                    {
+                    double        dflThis = getFPDouble();
+                    PackedInteger piThat  = ((LiteralConstant) that).getIntegerValue();
+                    double        dflSum  = piThat.isBig()
+                            ? dflThis + piThat.getBigInteger().doubleValue()
+                            : dflThis + piThat.getLong();
+                    sLit = Double.toString(dflSum);
+                    }
+                else
+                    {
+                    BigDecimal decThis = getFPDecimal();
+                    BigDecimal decThat = new BigDecimal(((LiteralConstant) that).getIntegerValue().getBigInteger());
+                    sLit = decThis.add(decThat).toString().replace('E', 'P');
+                    }
+                return pool.ensureLiteralConstant(Format.FPLiteral, sLit);
+                }
+
+            // commutative
+            case "IntLiteral+FPLiteral":
+                return that.apply(op, this);
+            case "IntLiteral+Int8":
+                return that.apply(op, this.toInt8Constant());
+            case "IntLiteral+UInt8":
+                return that.apply(op, this.toUInt8Constant());
+            case "IntLiteral+Int16":
+            case "IntLiteral+Int32":
+            case "IntLiteral+Int64":
+            case "IntLiteral+Int128":
+            case "IntLiteral+VarInt":
+            case "IntLiteral+UInt16":
+            case "IntLiteral+UInt32":
+            case "IntLiteral+UInt64":
+            case "IntLiteral+UInt128":
+            case "IntLiteral+VarUInt":
+                return that.apply(op, this.toIntConstant(that.getFormat()));
+            case "IntLiteral+Float16":
+            case "FPLiteral+Float16":
+                return that.apply(op, this.toFloat16Constant());
+            case "IntLiteral+Float32":
+            case "FPLiteral+Float32":
+                return that.apply(op, this.toFloat32Constant());
+            case "IntLiteral+Float64":
+            case "FPLiteral+Float64":
+                return that.apply(op, this.toFloat64Constant());
+            case "IntLiteral+Float128":
+            case "FPLiteral+Float128":
+                return that.apply(op, this.toFloat128Constant());
+            case "IntLiteral+VarFloat":
+            case "FPLiteral+VarFloat":
+                return that.apply(op, this.toVarFloatConstant());
+            case "IntLiteral+Dec32":
+            case "IntLiteral+Dec64":
+            case "IntLiteral+Dec128":
+            case "FPLiteral+Dec32":
+            case "FPLiteral+Dec64":
+            case "FPLiteral+Dec128":
+                return that.apply(op, this.toDecimalConstant(that.getFormat()));
+            case "IntLiteral+VarDec":
+            case "FPLiteral+VarDec":
+                return that.apply(op, this.toVarDecConstant());
+
+            // case Date: // TODO can add a duration
+            // case Time: // TODO can add a duration
+            // case DateTime: // TODO can add a duration
+            // case Duration: // TODO can add another duration
+            // case TimeInterval: // TODO not sure why we even have this type - can you add another time interval? a duration?
+            }
+
+        return super.apply(op, that);
         }
 
     @Override

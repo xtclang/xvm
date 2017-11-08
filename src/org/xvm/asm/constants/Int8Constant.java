@@ -7,6 +7,8 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.compiler.Token;
 import org.xvm.util.PackedInteger;
 
 
@@ -54,24 +56,32 @@ public class Int8Constant
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
-     * Add the value of another Int8Constant to the value of this Int8Constant, resulting in a new
-     * Int8Constant.
+     * Create a new Int8Constant with the specified value, but only if it is in the legal range.
      *
-     * @param that  another Int8Constant to add to this
+     * @param n  an integer value
      *
-     * @return the sum
+     * @return the corresponding Int8Constant
      *
-     * @throws ArithmeticException  on overflow
+     * @throws ArithmeticException  if the value is out of range
      */
-    public Int8Constant add(Int8Constant that)
+    public Int8Constant validate(int n)
         {
-        int nSum = this.getValue() + that.getValue();
-        if (nSum < -128 || nSum > 127)
+        if (n < -128 || n > 127)
             {
             throw new ArithmeticException("overflow");
             }
 
-        return getConstantPool().ensureInt8Constant(nSum);
+        return getConstantPool().ensureInt8Constant(n);
+        }
+
+    static int nonzero(int n)
+        {
+        if (n == 0)
+            {
+            throw new ArithmeticException("zero");
+            }
+
+        return n;
         }
 
 
@@ -94,6 +104,35 @@ public class Int8Constant
     public Format getFormat()
         {
         return Format.Int8;
+        }
+
+    @Override
+    public Constant apply(Token.Id op, Constant that)
+        {
+        switch (op.TEXT + that.getFormat().name())
+            {
+            case "+IntLiteral":
+            case "-IntLiteral":
+            case "*IntLiteral":
+            case "/IntLiteral":
+            case "%IntLiteral":
+                return apply(op, ((LiteralConstant) that).toInt8Constant());
+
+            case "+Int8":
+                return validate(this.getValue() + ((Int8Constant) that).getValue());
+            case "-Int8":
+                return validate(this.getValue() - ((Int8Constant) that).getValue());
+            case "*Int8":
+                return validate(this.getValue() * ((Int8Constant) that).getValue());
+            case "/Int8":
+                return validate(this.getValue() / nonzero(((Int8Constant) that).getValue()));
+            case "%Int8":
+                int nDivisor = nonzero(((Int8Constant) that).getValue());
+                int nModulo  = this.getValue() % nDivisor;
+                return validate(nModulo < 0 ? nModulo + nDivisor : nModulo);
+            }
+
+        return super.apply(op, that);
         }
 
     @Override

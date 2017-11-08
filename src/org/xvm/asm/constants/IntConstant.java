@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.compiler.Token;
 import org.xvm.util.PackedInteger;
 
 
@@ -345,6 +346,36 @@ public class IntConstant
         return getConstantPool().ensureIntConstant(piVal, getFormat());
         }
 
+    /**
+     * Create a new IntConstant with the specified value, but only if it is in the legal range of
+     * this IntConstant.
+     *
+     * @param n  a PackedInteger value
+     *
+     * @return the corresponding Int8Constant
+     *
+     * @throws ArithmeticException  if the value is out of range
+     */
+    public IntConstant validate(PackedInteger n)
+        {
+        if (n.compareTo(getMinLimit()) < 0 || n.compareTo(getMaxLimit()) > 0)
+            {
+            throw new ArithmeticException("overflow");
+            }
+
+        return getConstantPool().ensureIntConstant(n, getFormat());
+        }
+
+    static PackedInteger nonzero(PackedInteger n)
+        {
+        if (!n.isBig() && n.getInt() == 0)
+            {
+            throw new ArithmeticException("zero");
+            }
+
+        return n;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -354,6 +385,127 @@ public class IntConstant
         return m_fmt;
         }
 
+    @Override
+    public Constant apply(Token.Id op, Constant that)
+        {
+        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+            {
+            case "Int16+IntLiteral":
+            case "Int16-IntLiteral":
+            case "Int16*IntLiteral":
+            case "Int16/IntLiteral":
+            case "Int16%IntLiteral":
+            case "Int32+IntLiteral":
+            case "Int32-IntLiteral":
+            case "Int32*IntLiteral":
+            case "Int32/IntLiteral":
+            case "Int32%IntLiteral":
+            case "Int64+IntLiteral":
+            case "Int64-IntLiteral":
+            case "Int64*IntLiteral":
+            case "Int64/IntLiteral":
+            case "Int64%IntLiteral":
+            case "Int128+IntLiteral":
+            case "Int128-IntLiteral":
+            case "Int128*IntLiteral":
+            case "Int128/IntLiteral":
+            case "Int128%IntLiteral":
+            case "VarInt+IntLiteral":
+            case "VarInt-IntLiteral":
+            case "VarInt*IntLiteral":
+            case "VarInt/IntLiteral":
+            case "VarInt%IntLiteral":
+            case "UInt16+IntLiteral":
+            case "UInt16-IntLiteral":
+            case "UInt16*IntLiteral":
+            case "UInt16/IntLiteral":
+            case "UInt16%IntLiteral":
+            case "UInt32+IntLiteral":
+            case "UInt32-IntLiteral":
+            case "UInt32*IntLiteral":
+            case "UInt32/IntLiteral":
+            case "UInt32%IntLiteral":
+            case "UInt64+IntLiteral":
+            case "UInt64-IntLiteral":
+            case "UInt64*IntLiteral":
+            case "UInt64/IntLiteral":
+            case "UInt64%IntLiteral":
+            case "UInt128+IntLiteral":
+            case "UInt128-IntLiteral":
+            case "UInt128*IntLiteral":
+            case "UInt128/IntLiteral":
+            case "UInt128%IntLiteral":
+            case "VarUInt+IntLiteral":
+            case "VarUInt-IntLiteral":
+            case "VarUInt*IntLiteral":
+            case "VarUInt/IntLiteral":
+            case "VarUInt%IntLiteral":
+                return apply(op, ((LiteralConstant) that).toIntConstant(getFormat()));
+
+            case "Int16+Int16":
+            case "Int32+Int32":
+            case "Int64+Int64":
+            case "Int128+Int128":
+            case "VarInt+VarInt":
+            case "UInt16+UInt16":
+            case "UInt32+UInt32":
+            case "UInt64+UInt64":
+            case "UInt128+UInt128":
+            case "VarUInt+VarUInt":
+                return validate(this.getValue().add(((IntConstant) that).getValue()));
+
+            case "Int16-Int16":
+            case "Int32-Int32":
+            case "Int64-Int64":
+            case "Int128-Int128":
+            case "VarInt-VarInt":
+            case "UInt16-UInt16":
+            case "UInt32-UInt32":
+            case "UInt64-UInt64":
+            case "UInt128-UInt128":
+            case "VarUInt-VarUInt":
+                return validate(this.getValue().sub(((IntConstant) that).getValue()));
+
+            case "Int16*Int16":
+            case "Int32*Int32":
+            case "Int64*Int64":
+            case "Int128*Int128":
+            case "VarInt*VarInt":
+            case "UInt16*UInt16":
+            case "UInt32*UInt32":
+            case "UInt64*UInt64":
+            case "UInt128*UInt128":
+            case "VarUInt*VarUInt":
+                return validate(this.getValue().mul(((IntConstant) that).getValue()));
+
+            case "Int16/Int16":
+            case "Int32/Int32":
+            case "Int64/Int64":
+            case "Int128/Int128":
+            case "VarInt/VarInt":
+            case "UInt16/UInt16":
+            case "UInt32/UInt32":
+            case "UInt64/UInt64":
+            case "UInt128/UInt128":
+            case "VarUInt/VarUInt":
+                return validate(this.getValue().div(((IntConstant) that).getValue()));
+
+            case "Int16%Int16":
+            case "Int32%Int32":
+            case "Int64%Int64":
+            case "Int128%Int128":
+            case "VarInt%VarInt":
+            case "UInt16%UInt16":
+            case "UInt32%UInt32":
+            case "UInt64%UInt64":
+            case "UInt128%UInt128":
+            case "VarUInt%VarUInt":
+                return validate(this.getValue().mod(((IntConstant) that).getValue()));
+            }
+
+        return super.apply(op, that);
+        }
+    
     @Override
     public TypeConstant getType()
         {
