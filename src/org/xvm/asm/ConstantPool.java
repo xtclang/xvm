@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import java.util.Map;
 import org.xvm.asm.Constant.Format;
 
 import org.xvm.asm.constants.AccessTypeConstant;
@@ -27,6 +28,7 @@ import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DifferenceTypeConstant;
+import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.Float128Constant;
 import org.xvm.asm.constants.Float16Constant;
@@ -561,6 +563,50 @@ public class ConstantPool
         checkElementsNonNull(aconst);
 
         return (ArrayConstant) register(new ArrayConstant(this, Format.Tuple, constType, aconst.clone()));
+        }
+
+    /**
+     * Create a Map Entry constant.
+     *
+     * @param constType  the type of the Map Entry
+     * @param constKey   the value of the key
+     * @param constVal   the value of the entry
+     *
+     * @return the MapConstant representing the single Map Entry constant
+     */
+    public MapConstant ensureMapEntryConstant(TypeConstant constType, Constant constKey, Constant constVal)
+        {
+        // TODO validations
+        return new MapConstant(this, constType, constKey, constVal);
+        }
+
+
+    /**
+     * Create a Map constant.
+     *
+     * @param constType  the type of the Map
+     * @param map        the contents of the Map constant
+     *
+     * @return the MapConstant representing the Map
+     */
+    public MapConstant ensureMapConstant(TypeConstant constType, Map<Constant, Constant> map)
+        {
+        // TODO validations
+        return new MapConstant(this, constType, map);
+        }
+
+    /**
+     * Create an Interval constant, which is also a Range constant for Sequential types.
+     *
+     * @param const1  the start value for the Interval
+     * @param const2  the end value for the Interval
+     *
+     * @return the IntervalConstant representing the interval or range
+     */
+    public IntervalConstant ensureIntervalConstant(Constant const1, Constant const2)
+        {
+        // TODO validations
+        return new IntervalConstant(this, const1, const2);
         }
 
     /**
@@ -1945,6 +1991,10 @@ public class ConstantPool
                 case MapEntry:
                 case Map:
                     constant = new MapConstant(this, format, in);
+                    break;
+
+                case Interval:
+                    constant = new IntervalConstant(this, format, in);
                     break;
 
                 /*

@@ -15,4 +15,22 @@ interface Set<ElementType>
         {
         return true;
         }
+
+    /**
+     * The "union" operator.
+     */
+    @Override
+    @Op("|") conditional Set<ElementType> addAll(Set!<ElementType> values);
+
+    /**
+     * The "symmetric difference" operator.
+     */
+    @Override
+    @Op("^") conditional Set<ElementType> removeAll(Set!<ElementType> values);
+
+    /**
+     * The "union" operator.
+     */
+    @Override
+    @Op("&") conditional Set<ElementType> retainAll(Set!<ElementType> values);
     }

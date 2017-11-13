@@ -9,6 +9,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
+
 import org.xvm.util.PackedInteger;
 
 
@@ -660,6 +661,42 @@ public class IntConstant
             case "VarUInt^VarUInt":
                 return validate(this.getValue().xor(((IntConstant) that).getValue()));
 
+            case "Int16<<Int64":
+            case "Int32<<Int64":
+            case "Int64<<Int64":
+            case "Int128<<Int64":
+            case "VarInt<<Int64":
+            case "UInt16<<Int64":
+            case "UInt32<<Int64":
+            case "UInt64<<Int64":
+            case "UInt128<<Int64":
+            case "VarUInt<<Int64":
+                return validate(this.getValue().shl(((IntConstant) that).getValue()));
+
+            case "Int16>>Int64":
+            case "Int32>>Int64":
+            case "Int64>>Int64":
+            case "Int128>>Int64":
+            case "VarInt>>Int64":
+            case "UInt16>>Int64":
+            case "UInt32>>Int64":
+            case "UInt64>>Int64":
+            case "UInt128>>Int64":
+            case "VarUInt>>Int64":
+                return validate(this.getValue().shr(((IntConstant) that).getValue()));
+
+            case "Int16>>>Int64":
+            case "Int32>>>Int64":
+            case "Int64>>>Int64":
+            case "Int128>>>Int64":
+            case "VarInt>>>Int64":
+            case "UInt16>>>Int64":
+            case "UInt32>>>Int64":
+            case "UInt64>>>Int64":
+            case "UInt128>>>Int64":
+            case "VarUInt>>>Int64":
+                return validate(this.getValue().ushr(((IntConstant) that).getValue()));
+
             case "Int16==Int16":
             case "Int32==Int32":
             case "Int64==Int64":
@@ -731,42 +768,6 @@ public class IntConstant
             case "UInt128<=>UInt128":
             case "VarUInt<=>VarUInt":
                 return translateOrder(this.getValue().cmp(((IntConstant) that).getValue()), op);
-
-            case "Int16<<Int64":
-            case "Int32<<Int64":
-            case "Int64<<Int64":
-            case "Int128<<Int64":
-            case "VarInt<<Int64":
-            case "UInt16<<Int64":
-            case "UInt32<<Int64":
-            case "UInt64<<Int64":
-            case "UInt128<<Int64":
-            case "VarUInt<<Int64":
-                return validate(this.getValue().shl(((IntConstant) that).getValue()));
-
-            case "Int16>>Int64":
-            case "Int32>>Int64":
-            case "Int64>>Int64":
-            case "Int128>>Int64":
-            case "VarInt>>Int64":
-            case "UInt16>>Int64":
-            case "UInt32>>Int64":
-            case "UInt64>>Int64":
-            case "UInt128>>Int64":
-            case "VarUInt>>Int64":
-                return validate(this.getValue().shr(((IntConstant) that).getValue()));
-
-            case "Int16>>>Int64":
-            case "Int32>>>Int64":
-            case "Int64>>>Int64":
-            case "Int128>>>Int64":
-            case "VarInt>>>Int64":
-            case "UInt16>>>Int64":
-            case "UInt32>>>Int64":
-            case "UInt64>>>Int64":
-            case "UInt128>>>Int64":
-            case "VarUInt>>>Int64":
-                return validate(this.getValue().ushr(((IntConstant) that).getValue()));
             }
 
         return super.apply(op, that);

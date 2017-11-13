@@ -18,7 +18,7 @@ interface Stream<ElementType>
      *
      * @return a new stream representing the concatenation of the two input streams
      */
-    Stream<ElementType> concat(Stream<ElementType> that);
+    Stream<ElementType> concat(Stream!<ElementType> that);
 
     /**
      * Returns a stream consisting of the elements of this stream that match the given predicate.
@@ -59,7 +59,7 @@ interface Stream<ElementType>
      * @return a new stream representing the concatenated results of applying the specified function
      *         to each element in this stream
      */
-    <MappedType> Stream<MappedType> flatMap(function Stream<MappedType> (ElementType) flatten);
+    <MappedType> Stream<MappedType> flatMap(function Stream!<MappedType> (ElementType) flatten);
 
     /**
      * Returns a stream representing the _distinct_ elements of this stream.
